@@ -14,9 +14,9 @@ document.getElementById('formUsuario').addEventListener('submit', async function
   const senha = document.getElementById('senha').value;
 
   const { data, error } = await supabase
-    .from('usuarios')
-    .insert([{ codigo, nome, funcao, senha }])
-    .select();
+  .from('usuarios')
+  .insert([{ codigo, nome, funcao, senha }])
+  .select();
 
   if (error) {
     alert('❌ Erro ao cadastrar: ' + error.message);
