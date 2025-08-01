@@ -1,56 +1,28 @@
-<ul id="resultados"></ul>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestão de Usuários</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Cadastro de Usuários</h2>
+  <form id="formUsuario">
+    <input type="text" id="codigo" placeholder="Código" required>
+    <input type="text" id="nome" placeholder="Nome" required>
+    <input type="text" id="funcao" placeholder="Função" required>
+    <input type="password" id="senha" placeholder="Senha" required>
+    <button type="submit">Cadastrar</button>
+  </form>
 
-<script>
-  const usuarios = [];
+  <h3>Buscar Usuário</h3>
+  <input type="text" id="busca" placeholder="Buscar por nome ou código">
 
-  document.getElementById('formUsuario').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const novoUsuario = {
-      codigo: document.getElementById('codigo').value,
-      nome: document.getElementById('nome').value,
-      funcao: document.getElementById('funcao').value,
-      senha: document.getElementById('senha').value
-    };
-    usuarios.push(novoUsuario);
-    alert('Usuário cadastrado com sucesso!');
-    this.reset();
-    mostrarUsuarios();
-  });
+  <ul id="resultados"></ul>
 
-  document.getElementById('busca').addEventListener('input', mostrarUsuarios);
-
-  function mostrarUsuarios() {
-    const termo = document.getElementById('busca').value.toLowerCase();
-    const lista = document.getElementById('resultados');
-    lista.innerHTML = '';
-
-    usuarios
-      .filter(u => u.nome.toLowerCase().includes(termo) || u.codigo.toLowerCase().includes(termo))
-      .forEach((u, index) => {
-        const item = document.createElement('li');
-        item.innerHTML = `
-          ${u.codigo} - ${u.nome} (${u.funcao})
-          <button onclick="editarUsuario(${index})">Editar</button>
-          <button onclick="excluirUsuario(${index})">Excluir</button>
-        `;
-        lista.appendChild(item);
-      });
-  }
-
-  function editarUsuario(index) {
-    const u = usuarios[index];
-    document.getElementById('codigo').value = u.codigo;
-    document.getElementById('nome').value = u.nome;
-    document.getElementById('funcao').value = u.funcao;
-    document.getElementById('senha').value = u.senha;
-    usuarios.splice(index, 1); // Remove para regravar após edição
-  }
-
-  function excluirUsuario(index) {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      usuarios.splice(index, 1);
-      mostrarUsuarios();
-    }
-  }
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Seu script JavaScript aqui (o que você já escreveu)
+  </script>
+</body>
+</html>
