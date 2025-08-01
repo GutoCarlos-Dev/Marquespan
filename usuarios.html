@@ -2,94 +2,8 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Gestão de Usuários</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-    }
-
-    .container {
-      background-color: #fff;
-      padding: 30px;
-      margin-top: 50px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 600px;
-    }
-
-    h2, h3 {
-      text-align: center;
-      color: #333;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    input {
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    button {
-      padding: 10px;
-      font-size: 16px;
-      background-color: #0078D4;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #005fa3;
-    }
-
-    #busca {
-      margin-top: 20px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 20px;
-    }
-
-    li {
-      background-color: #f9f9f9;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    li button {
-      margin-left: 10px;
-      background-color: #e74c3c;
-    }
-
-    li button:first-child {
-      background-color: #f1c40f;
-    }
-
-    li button:hover {
-      opacity: 0.9;
-    }
-  </style>
+  <title>Gestão de Usuários - Marquespan</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
@@ -110,7 +24,57 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Seu script JavaScript permanece igual
+    const usuarios = [];
+
+    document.getElementById('formUsuario').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const novoUsuario = {
+        codigo: document.getElementById('codigo').value,
+        nome: document.getElementById('nome').value,
+        funcao: document.getElementById('funcao').value,
+        senha: document.getElementById('senha').value
+      };
+      usuarios.push(novoUsuario);
+      alert('Usuário cadastrado com sucesso!');
+      this.reset();
+      mostrarUsuarios();
+    });
+
+    document.getElementById('busca').addEventListener('input', mostrarUsuarios);
+
+    function mostrarUsuarios() {
+      const termo = document.getElementById('busca').value.toLowerCase();
+      const lista = document.getElementById('resultados');
+      lista.innerHTML = '';
+
+      usuarios
+        .filter(u => u.nome.toLowerCase().includes(termo) || u.codigo.toLowerCase().includes(termo))
+        .forEach((u, index) => {
+          const item = document.createElement('li');
+          item.innerHTML = `
+            ${u.codigo} - ${u.nome} (${u.funcao})
+            <button onclick="editarUsuario(${index})">Editar</button>
+            <button onclick="excluirUsuario(${index})">Excluir</button>
+          `;
+          lista.appendChild(item);
+        });
+    }
+
+    function editarUsuario(index) {
+      const u = usuarios[index];
+      document.getElementById('codigo').value = u.codigo;
+      document.getElementById('nome').value = u.nome;
+      document.getElementById('funcao').value = u.funcao;
+      document.getElementById('senha').value = u.senha;
+      usuarios.splice(index, 1);
+    }
+
+    function excluirUsuario(index) {
+      if (confirm('Tem certeza que deseja excluir este usuário?')) {
+        usuarios.splice(index, 1);
+        mostrarUsuarios();
+      }
+    }
   </script>
 </body>
 </html>
