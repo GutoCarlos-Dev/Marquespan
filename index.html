@@ -2,19 +2,33 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Login - Controle Interno</title>
+  <title>Login - Marquespan</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="login-container">
+  <div class="container">
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
     <h2>Login</h2>
-    <form id="loginForm">
-      <input type="text" id="username" placeholder="Usuário" required>
-      <input type="password" id="password" placeholder="Senha" required>
+    <form onsubmit="return login()">
+      <input type="text" id="usuario" placeholder="Usuário" required>
+      <input type="password" id="senha" placeholder="Senha" required>
       <button type="submit">Entrar</button>
     </form>
-    <p id="message"></p>
   </div>
-  <script src="script.js"></script>
+
+  <script>
+    function login() {
+      const user = document.getElementById('usuario').value;
+      const pass = document.getElementById('senha').value;
+
+      if (user === 'admin' && pass === 'admin') {
+        window.location.href = 'dashboard.html';
+        return false;
+      } else {
+        alert('Usuário ou senha incorretos!');
+        return false;
+      }
+    }
+  </script>
 </body>
 </html>
