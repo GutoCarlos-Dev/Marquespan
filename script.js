@@ -28,7 +28,10 @@ document.getElementById('formUsuario').addEventListener('submit', async function
   }
 });
 
-// Evento de busca de usuários
+// Evento de busca com botão
+document.getElementById('botaoBusca').addEventListener('click', mostrarUsuarios);
+
+// Busca automática ao digitar (opcional)
 document.getElementById('busca').addEventListener('input', mostrarUsuarios);
 
 // Função para buscar e exibir usuários

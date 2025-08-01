@@ -17,10 +17,11 @@
     </form>
 
     <h3>Buscar Usuário</h3>
-    <input type="text" id="busca" placeholder="Buscar por nome ou código">
+<div style="display: flex; gap: 10px;">
+  <input type="text" id="busca" placeholder="Buscar por nome ou código">
+  <button id="botaoBusca">Buscar</button>
+</div>
 
-    <ul id="resultados"></ul>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
