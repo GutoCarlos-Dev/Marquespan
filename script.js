@@ -1,7 +1,7 @@
 // Usa o cliente Supabase já criado no HTML
 const supabase = window.supabase;
 
-// CADASTRAR USUÁRIO
+// CADASTRAR USUÁRIo
 if (document.getElementById('formUsuario')) {
   document.getElementById('formUsuario').addEventListener('submit', async function (e) {
     e.preventDefault();
