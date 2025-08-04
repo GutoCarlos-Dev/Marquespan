@@ -1,19 +1,24 @@
-// Usa o cliente Supabase já criado no HTML
 const supabase = window.supabase;
 
-// Aguarda o carregamento do DOM antes de rodar os eventos
-document.addEventListener('DOMContentLoaded', () => {
+// CADASTRAR USUÁRIO
+const formUsuario = document.getElementById('formUsuario');
+if (formUsuario) {
+  formUsuario.addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-  // CADASTRAR USUÁRIO
-  const formUsuario = document.getElementById('formUsuario');
-  if (formUsuario) {
-    formUsuario.addEventListener('submit', async function (e) {
-      e.preventDefault();
+    const codigo = document.getElementById('codigo').value.trim();
+    const nome = document.getElementById('nome').value.trim();
+    const funcao = document.getElementById('funcao').value.trim();
+    const senha = document.getElementById('senha').value.trim();
 
-      const codigo = document.getElementById('codigo').value;
-      const nome = document.getElementById('nome').value;
-      const funcao = document.getElementById('funcao').value;
-      const senha = document.getElementById('senha').value;
+    if (!codigo || !nome || !funcao || !senha) {
+      alert('⚠️ Preencha todos os campos!');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('usuarios')
+      .insert([{ codigo, nome, funcao, senha }]);
 
       const { error } = await supabase
         .from('usuarios')
@@ -32,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // BUSCAR USUÁRIOS
-async function mostrarUsuarios() {
+window.mostrarUsuarios = async function () {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*');
@@ -45,7 +50,7 @@ async function mostrarUsuarios() {
     return;
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
     return;
   }
@@ -56,14 +61,17 @@ async function mostrarUsuarios() {
       <td>${usuario.codigo}</td>
       <td>${usuario.nome}</td>
       <td>${usuario.funcao}</td>
-      <td><button onclick="preencherFormulario('${usuario.codigo}')">✏️ Editar</button></td>
+      <td>
+        <button onclick="preencherFormulario('${usuario.codigo}')">✏️ Editar</button>
+        <button onclick="excluirUsuario('${usuario.codigo}')">🗑️ Excluir</button>
+      </td>
     `;
     corpoTabela.appendChild(linha);
   });
-}
+};
 
 // EDITAR USUÁRIO
-async function preencherFormulario(codigo) {
+window.preencherFormulario = async function (codigo) {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*')
@@ -82,14 +90,14 @@ async function preencherFormulario(codigo) {
 
   document.getElementById('btnAtualizar').style.display = 'inline-block';
   document.getElementById('btnSalvar').style.display = 'none';
-}
+};
 
 // ATUALIZAR USUÁRIO
-async function atualizarUsuario() {
-  const codigo = document.getElementById('codigo').value;
-  const nome = document.getElementById('nome').value;
-  const funcao = document.getElementById('funcao').value;
-  const senha = document.getElementById('senha').value;
+window.atualizarUsuario = async function () {
+  const codigo = document.getElementById('codigo').value.trim();
+  const nome = document.getElementById('nome').value.trim();
+  const funcao = document.getElementById('funcao').value.trim();
+  const senha = document.getElementById('senha').value.trim();
 
   const { error } = await supabase
     .from('usuarios')
@@ -106,4 +114,21 @@ async function atualizarUsuario() {
     document.getElementById('btnAtualizar').style.display = 'none';
     document.getElementById('btnSalvar').style.display = 'inline-block';
   }
-}
+};
+
+// EXCLUIR USUÁRIO
+window.excluirUsuario = async function (codigo) {
+  if (!confirm('❗ Tem certeza que deseja excluir este usuário?')) return;
+
+  const { error } = await supabase
+    .from('usuarios')
+    .delete()
+    .eq('codigo', codigo);
+
+  if (error) {
+    alert('❌ Erro ao excluir: ' + error.message);
+  } else {
+    alert('🗑️ Usuário excluído com sucesso!');
+    mostrarUsuarios();
+  }
+};

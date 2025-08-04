@@ -12,7 +12,7 @@
     <!-- Botões iniciais -->
     <div id="inicio" class="botoes-iniciais">
       <button onclick="mostrarSecao('cadastro')">➕ Adicionar Usuário</button>
-      <button onclick="mostrarSecao('busca')">🔍 Buscar Usuário</button>
+      <button onclick="mostrarSecao('busca'); mostrarUsuarios()">🔍 Buscar Usuário</button>
     </div>
 
     <!-- Formulário de Cadastro -->
@@ -73,11 +73,10 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
     );
 
-    // Disponibiliza o supabase para outros scripts
-    window.supabase = supabase;
+    window.supabase = supabase; // Disponibiliza para o script.js
   </script>
 
-  <!-- Carrega script.js depois do HTML estar pronto -->
+  <!-- Carrega script.js depois -->
   <script src="script.js" defer></script>
 </body>
 </html>
