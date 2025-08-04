@@ -4,36 +4,52 @@
   <meta charset="UTF-8">
   <title>Gestão de Usuários - Marquespan</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .secao { display: none; margin-top: 20px; }
+    .botoes-iniciais button { margin-right: 10px; padding: 10px 20px; font-weight: bold; }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h2>Cadastro de Usuários</h2>
-    <form id="formUsuario">
-      <input type="text" id="codigo" placeholder="Código" required>
-      <input type="text" id="nome" placeholder="Nome" required>
-      <input type="text" id="funcao" placeholder="Função" required>
-      <input type="password" id="senha" placeholder="Senha" required>
-      <button type="submit" id="btnSalvar">Cadastrar</button>
-      <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">Atualizar</button>
-    </form>
+    <h2>Gestão de Usuários</h2>
 
-    <h2>Buscar Usuários</h2>
-    <button onclick="mostrarUsuarios()">🔍 Buscar</button>
+    <div class="botoes-iniciais">
+      <button onclick="mostrarSecao('cadastro')">➕ Adicionar Usuário</button>
+      <button onclick="mostrarSecao('busca')">🔍 Buscar Usuário</button>
+    </div>
 
-    <table id="tabelaUsuarios" border="1" cellpadding="8" style="margin-top: 10px; border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Nome</th>
-          <th>Função</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="corpoTabelaUsuarios"></tbody>
-    </table>
+    <!-- Formulário de Cadastro -->
+    <div id="cadastro" class="secao">
+      <h3>Cadastro de Usuários</h3>
+      <form id="formUsuario">
+        <input type="text" id="codigo" placeholder="Código" required>
+        <input type="text" id="nome" placeholder="Nome" required>
+        <input type="text" id="funcao" placeholder="Função" required>
+        <input type="password" id="senha" placeholder="Senha" required>
+        <button type="submit" id="btnSalvar">Cadastrar</button>
+        <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">Atualizar</button>
+      </form>
+    </div>
+
+    <!-- Tabela de Busca -->
+    <div id="busca" class="secao">
+      <h3>Buscar Usuários</h3>
+      <button onclick="mostrarUsuarios()">🔍 Buscar</button>
+      <table id="tabelaUsuarios" border="1" cellpadding="8" style="margin-top: 10px; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Função</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaUsuarios"></tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Supabase SDK + Script principal -->
+  <!-- Supabase SDK + Script -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -45,6 +61,13 @@
     window.supabase = supabase;
 
     import './script.js';
+  </script>
+
+  <script>
+    function mostrarSecao(id) {
+      document.querySelectorAll('.secao').forEach(sec => sec.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
   </script>
 </body>
 </html>
