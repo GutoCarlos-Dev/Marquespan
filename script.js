@@ -100,5 +100,3 @@ async function atualizarUsuario() {
     document.getElementById('btnSalvar').style.display = 'inline-block';
   }
 }
-
-
