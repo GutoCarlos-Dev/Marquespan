@@ -1,5 +1,9 @@
 const supabase = window.supabase;
 
+if (!supabase) {
+  console.error('❌ Supabase não foi inicializado corretamente.');
+}
+
 // CADASTRAR USUÁRIO
 const formUsuario = document.getElementById('formUsuario');
 if (formUsuario) {
@@ -16,23 +20,25 @@ if (formUsuario) {
       return;
     }
 
-    const { error } = await supabase
+    console.log('🔄 Enviando dados para o Supabase:', { codigo, nome, funcao, senha });
+
+    const { data, error } = await supabase
       .from('usuarios')
       .insert([{ codigo, nome, funcao, senha }]);
 
-      const { error } = await supabase
-        .from('usuarios')
-        .insert([{ codigo, nome, funcao, senha }]);
+    console.log('📥 Resposta Supabase:', { data, error });
 
-      if (error) {
-        alert('❌ Erro ao cadastrar: ' + error.message);
-      } else {
-        alert('✅ Usuário cadastrado com sucesso!');
-        this.reset();
-        mostrarUsuarios();
-      }
-    });
-  }
+    if (error) {
+      alert('❌ Erro ao cadastrar: ' + error.message);
+    } else {
+      alert('✅ Usuário cadastrado com sucesso!');
+      this.reset();
+      mostrarUsuarios();
+      document.getElementById('btnAtualizar').style.display = 'none';
+      document.getElementById('btnSalvar').style.display = 'inline-block';
+    }
+  });
+}
 
 });
 
