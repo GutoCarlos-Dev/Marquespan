@@ -48,13 +48,11 @@
         <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário" oninput="mostrarUsuarios()">
       </div>
 
-      <!-- Botões principais -->
       <div class="botoes-form">
         <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
         <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
       </div>
 
-      <!-- Tabela de resultados -->
       <table id="tabelaUsuarios" class="tabela-usuarios">
         <thead>
           <tr>
@@ -89,6 +87,7 @@
     window.supabase = supabase;
   </script>
 
-  <!-- Script principal -->
+  <!-- Carrega script.js depois do HTML estar pronto -->
   <script src="script.js" defer></script>
-</body
+</body>
+</html>
