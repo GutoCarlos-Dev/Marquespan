@@ -59,7 +59,22 @@ window.mostrarUsuarios = async function () {
     return;
   }
 
-  usersData.forEach(usuario => {
+  // Verifica se há termo de busca
+  const termoBusca = document.getElementById('termoBusca').value.trim().toLowerCase();
+
+  const usuariosFiltrados = termoBusca
+    ? usersData.filter(usuario =>
+        usuario.nome.toLowerCase().includes(termoBusca) ||
+        usuario.codigo.toLowerCase().includes(termoBusca)
+      )
+    : usersData;
+
+  if (usuariosFiltrados.length === 0) {
+    corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário corresponde à busca.</td></tr>';
+    return;
+  }
+
+  usuariosFiltrados.forEach(usuario => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td>${usuario.codigo}</td>
