@@ -1,10 +1,9 @@
-// Inicializa o cliente Supabase
 const supabase = window.supabase.createClient(
   'https://hlzcycvlcuhgnnjkmslt.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz...'
 );
 
-// Verifica se os elementos existem antes de adicionar eventos
+// CADASTRAR USUÁRIO
 if (document.getElementById('formUsuario')) {
   document.getElementById('formUsuario').addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -28,66 +27,82 @@ if (document.getElementById('formUsuario')) {
   });
 }
 
-if (document.getElementById('botaoBusca')) {
-  document.getElementById('botaoBusca').addEventListener('click', mostrarUsuarios);
-}
-
-if (document.getElementById('busca')) {
-  document.getElementById('busca').addEventListener('input', mostrarUsuarios);
-}
-
-// Função para buscar e exibir usuários
+// BUSCAR USUÁRIOS
 async function mostrarUsuarios() {
-  const termo = document.getElementById('busca')?.value.toLowerCase() || '';
-  const lista = document.getElementById('resultados');
-  if (!lista) return;
-
-  lista.innerHTML = '';
-
   const { data, error } = await supabase
     .from('usuarios')
-    .select('*')
-    .ilike('nome', `%${termo}%`);
+    .select('*');
+
+  const resultado = document.getElementById('resultadoBusca');
+  resultado.innerHTML = '';
 
   if (error) {
-    console.error('Erro ao buscar usuários:', error.message);
+    alert('❌ Erro ao buscar usuários: ' + error.message);
     return;
   }
 
   if (data.length === 0) {
-    lista.innerHTML = '<li>Nenhum usuário encontrado.</li>';
+    resultado.innerHTML = '<p>Nenhum usuário encontrado.</p>';
     return;
   }
 
-  data.forEach(u => {
-    const item = document.createElement('li');
-    item.innerHTML = `
-      ${u.codigo} - ${u.nome} (${u.funcao})
-      <button onclick="editarUsuario('${u.id}')">Editar</button>
-      <button onclick="excluirUsuario('${u.id}')">Excluir</button>
+  data.forEach(usuario => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <p><strong>Código:</strong> ${usuario.codigo}</p>
+      <p><strong>Nome:</strong> ${usuario.nome}</p>
+      <p><strong>Função:</strong> ${usuario.funcao}</p>
+      <button onclick="preencherFormulario(${usuario.codigo})">✏️ Editar</button>
+      <hr>
     `;
-    lista.appendChild(item);
+    resultado.appendChild(div);
   });
 }
 
-// Função de exclusão de usuário
-async function excluirUsuario(id) {
-  if (confirm('Tem certeza que deseja excluir este usuário?')) {
-    const { error } = await supabase
-      .from('usuarios')
-      .delete()
-      .eq('id', id);
+// EDITAR USUÁRIO
+async function preencherFormulario(codigo) {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('codigo', codigo)
+    .single();
 
-    if (error) {
-      alert('❌ Erro ao excluir: ' + error.message);
-    } else {
-      alert('✅ Usuário excluído com sucesso!');
-      mostrarUsuarios();
-    }
+  if (error) {
+    alert('❌ Erro ao buscar usuário: ' + error.message);
+    return;
   }
+
+  document.getElementById('codigo').value = data.codigo;
+  document.getElementById('nome').value = data.nome;
+  document.getElementById('funcao').value = data.funcao;
+  document.getElementById('senha').value = data.senha;
+
+  // Mostrar botão Atualizar, esconder botão Salvar
+  document.getElementById('btnAtualizar').style.display = 'inline-block';
+  document.getElementById('btnSalvar').style.display = 'none';
 }
 
-// Função de edição (ainda não implementada)
-function editarUsuario(id) {
-  alert('Função de edição ainda não implementada. ID: ' + id);
+// ATUALIZAR USUÁRIO
+async function atualizarUsuario() {
+  const codigo = document.getElementById('codigo').value;
+  const nome = document.getElementById('nome').value;
+  const funcao = document.getElementById('funcao').value;
+  const senha = document.getElementById('senha').value;
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .update({ nome, funcao, senha })
+    .eq('codigo', codigo);
+
+  if (error) {
+    alert('❌ Erro ao atualizar: ' + error.message);
+  } else {
+    alert('✅ Usuário atualizado com sucesso!');
+    document.getElementById('formUsuario').reset();
+    mostrarUsuarios();
+
+    // Esconder botão Atualizar, mostrar botão Salvar
+    document.getElementById('btnAtualizar').style.display = 'none';
+    document.getElementById('btnSalvar').style.display = 'inline-block';
+  }
 }
