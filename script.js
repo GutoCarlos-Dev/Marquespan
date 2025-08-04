@@ -1,6 +1,6 @@
 const supabase = window.supabase;
 
-// CADASTRAR USUÁRIO
+// CADASTRAR USUÁRIo
 if (document.getElementById('formUsuario')) {
   document.getElementById('formUsuario').addEventListener('submit', async function (e) {
     e.preventDefault();
