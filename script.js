@@ -40,7 +40,7 @@ if (formUsuario) {
   });
 }
 
-// BUSCAR USUÁRIOS
+// BUSCAR USUÁRIOS COM FILTRO
 window.mostrarUsuarios = async function () {
   const { data: usersData, error: usersError } = await supabase
     .from('usuarios')
@@ -60,7 +60,8 @@ window.mostrarUsuarios = async function () {
   }
 
   // Verifica se há termo de busca
-  const termoBusca = document.getElementById('termoBusca').value.trim().toLowerCase();
+  const campoBusca = document.getElementById('termoBusca');
+  const termoBusca = campoBusca ? campoBusca.value.trim().toLowerCase() : '';
 
   const usuariosFiltrados = termoBusca
     ? usersData.filter(usuario =>

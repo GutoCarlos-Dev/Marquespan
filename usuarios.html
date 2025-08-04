@@ -16,60 +16,61 @@
     </div>
 
     <!-- Formulário de Cadastro -->
-<div id="cadastro" class="secao" style="display: none;">
-  <h3>📋 Cadastro de Usuários</h3>
-  <form id="formUsuario" class="formulario">
-    <label for="codigo">Código:</label>
-    <input type="text" id="codigo" placeholder="Código" required>
+    <div id="cadastro" class="secao" style="display: none;">
+      <h3>📋 Cadastro de Usuários</h3>
+      <form id="formUsuario" class="formulario">
+        <label for="codigo">Código:</label>
+        <input type="text" id="codigo" placeholder="Código" required>
 
-    <label for="nome">Nome:</label>
-    <input type="text" id="nome" placeholder="Nome" required>
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" placeholder="Nome" required>
 
-    <label for="funcao">Função:</label>
-    <input type="text" id="funcao" placeholder="Função" required>
+        <label for="funcao">Função:</label>
+        <input type="text" id="funcao" placeholder="Função" required>
 
-    <label for="senha">Senha:</label>
-    <input type="password" id="senha" placeholder="Senha" required>
+        <label for="senha">Senha:</label>
+        <input type="password" id="senha" placeholder="Senha" required>
 
-    <div class="botoes-form">
-      <button type="submit" id="btnSalvar">✅ Cadastrar</button>
-      <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">🔄 Atualizar</button>
-      <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
-    </div>
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvar">✅ Cadastrar</button>
+          <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">🔄 Atualizar</button>
+          <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
+        </div>
       </form>
     </div>
 
-<!-- Tabela de Busca -->
-<div id="busca" class="secao" style="display: none;">
-  <h3>🔍 Buscar Usuários</h3>
+    <!-- Tabela de Busca -->
+    <div id="busca" class="secao" style="display: none;">
+      <h3>🔍 Buscar Usuários</h3>
 
-  <!-- Campo de busca -->
-  <div class="campo-busca">
-    <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
-    <button onclick="buscarUsuario()">🔍 Buscar</button>
+      <!-- Campo de busca -->
+      <div class="campo-busca">
+        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
+        <button onclick="mostrarUsuarios()">🔍 Buscar</button>
+      </div>
+
+      <!-- Botões principais -->
+      <div class="botoes-form">
+        <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
+        <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
+      </div>
+
+      <!-- Tabela de resultados -->
+      <table id="tabelaUsuarios" class="tabela-usuarios">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Função</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaUsuarios"></tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Botões principais -->
-  <div class="botoes-form">
-    <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
-    <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
-  </div>
-
-  <!-- Tabela de resultados -->
-  <table id="tabelaUsuarios" class="tabela-usuarios">
-    <thead>
-      <tr>
-        <th>Código</th>
-        <th>Nome</th>
-        <th>Função</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody id="corpoTabelaUsuarios"></tbody>
-  </table>
-</div>
-
-<script>
+  <script>
     function mostrarSecao(id) {
       document.getElementById('inicio').style.display = 'none';
       document.querySelectorAll('.secao').forEach(sec => sec.style.display = 'none');
@@ -86,10 +87,10 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
     );
 
-    window.supabase = supabase; // Disponibiliza para o script.js
+    window.supabase = supabase;
   </script>
 
-  <!-- Carrega script.js depois -->
+  <!-- Script principal -->
   <script src="script.js" defer></script>
 </body>
 </html>
