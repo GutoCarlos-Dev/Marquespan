@@ -17,65 +17,18 @@
     </form>
 
     <h3>Buscar Usuário</h3>
-<div style="display: flex; gap: 10px;">
-  <input type="text" id="busca" placeholder="Buscar por nome ou código">
-  <button id="botaoBusca">Buscar</button>
-</div>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" id="busca" placeholder="Buscar por nome ou código">
+      <button id="botaoBusca">Buscar</button>
+    </div>
 
+    <ul id="resultados"></ul>
+  </div>
 
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const usuarios = [];
 
-    document.getElementById('formUsuario').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const novoUsuario = {
-        codigo: document.getElementById('codigo').value,
-        nome: document.getElementById('nome').value,
-        funcao: document.getElementById('funcao').value,
-        senha: document.getElementById('senha').value
-      };
-      usuarios.push(novoUsuario);
-      alert('Usuário cadastrado com sucesso!');
-      this.reset();
-      mostrarUsuarios();
-    });
-
-    document.getElementById('busca').addEventListener('input', mostrarUsuarios);
-
-    function mostrarUsuarios() {
-      const termo = document.getElementById('busca').value.toLowerCase();
-      const lista = document.getElementById('resultados');
-      lista.innerHTML = '';
-
-      usuarios
-        .filter(u => u.nome.toLowerCase().includes(termo) || u.codigo.toLowerCase().includes(termo))
-        .forEach((u, index) => {
-          const item = document.createElement('li');
-          item.innerHTML = `
-            ${u.codigo} - ${u.nome} (${u.funcao})
-            <button onclick="editarUsuario(${index})">Editar</button>
-            <button onclick="excluirUsuario(${index})">Excluir</button>
-          `;
-          lista.appendChild(item);
-        });
-    }
-
-    function editarUsuario(index) {
-      const u = usuarios[index];
-      document.getElementById('codigo').value = u.codigo;
-      document.getElementById('nome').value = u.nome;
-      document.getElementById('funcao').value = u.funcao;
-      document.getElementById('senha').value = u.senha;
-      usuarios.splice(index, 1);
-    }
-
-    function excluirUsuario(index) {
-      if (confirm('Tem certeza que deseja excluir este usuário?')) {
-        usuarios.splice(index, 1);
-        mostrarUsuarios();
-      }
-    }
-  </script>
+  <!-- Script externo -->
+  <script src="script.js"></script>
 </body>
 </html>
