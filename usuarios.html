@@ -1,25 +1,15 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Gestão de Usuários - Marquespan</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .secao { display: none; margin-top: 20px; }
-    .botoes-iniciais button { margin-right: 10px; padding: 10px 20px; font-weight: bold; }
-  </style>
-</head>
 <body>
   <div class="container">
     <h2>Gestão de Usuários</h2>
 
-    <div class="botoes-iniciais">
+    <!-- Botões iniciais -->
+    <div id="inicio">
       <button onclick="mostrarSecao('cadastro')">➕ Adicionar Usuário</button>
       <button onclick="mostrarSecao('busca')">🔍 Buscar Usuário</button>
     </div>
 
     <!-- Formulário de Cadastro -->
-    <div id="cadastro" class="secao">
+    <div id="cadastro" class="secao" style="display: none;">
       <h3>Cadastro de Usuários</h3>
       <form id="formUsuario">
         <input type="text" id="codigo" placeholder="Código" required>
@@ -32,7 +22,7 @@
     </div>
 
     <!-- Tabela de Busca -->
-    <div id="busca" class="secao">
+    <div id="busca" class="secao" style="display: none;">
       <h3>Buscar Usuários</h3>
       <button onclick="mostrarUsuarios()">🔍 Buscar</button>
       <table id="tabelaUsuarios" border="1" cellpadding="8" style="margin-top: 10px; border-collapse: collapse;">
@@ -49,25 +39,11 @@
     </div>
   </div>
 
-  <!-- Supabase SDK + Script -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    const supabase = createClient(
-      'https://hlzcycvlcuhgnnjkmslt.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
-    );
-
-    window.supabase = supabase;
-
-    import './script.js';
-  </script>
-
   <script>
     function mostrarSecao(id) {
+      document.getElementById('inicio').style.display = 'none';
       document.querySelectorAll('.secao').forEach(sec => sec.style.display = 'none');
       document.getElementById(id).style.display = 'block';
     }
   </script>
 </body>
-</html>
