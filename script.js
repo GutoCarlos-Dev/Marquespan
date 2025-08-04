@@ -22,14 +22,14 @@ if (formUsuario) {
 
     console.log('🔄 Enviando dados para o Supabase:', { codigo, nome, funcao, senha });
 
-    const { data, error } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from('usuarios')
       .insert([{ codigo, nome, funcao, senha }]);
 
-    console.log('📥 Resposta Supabase:', { data, error });
+    console.log('📥 Resposta Supabase:', { insertData, insertError });
 
-    if (error) {
-      alert('❌ Erro ao cadastrar: ' + error.message);
+    if (insertError) {
+      alert('❌ Erro ao cadastrar: ' + insertError.message);
     } else {
       alert('✅ Usuário cadastrado com sucesso!');
       this.reset();
@@ -40,28 +40,26 @@ if (formUsuario) {
   });
 }
 
-});
-
 // BUSCAR USUÁRIOS
 window.mostrarUsuarios = async function () {
-  const { data, error } = await supabase
+  const { data: usersData, error: usersError } = await supabase
     .from('usuarios')
     .select('*');
 
   const corpoTabela = document.getElementById('corpoTabelaUsuarios');
   corpoTabela.innerHTML = '';
 
-  if (error) {
-    alert('❌ Erro ao buscar usuários: ' + error.message);
+  if (usersError) {
+    alert('❌ Erro ao buscar usuários: ' + usersError.message);
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!usersData || usersData.length === 0) {
     corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
     return;
   }
 
-  data.forEach(usuario => {
+  usersData.forEach(usuario => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td>${usuario.codigo}</td>
@@ -78,21 +76,21 @@ window.mostrarUsuarios = async function () {
 
 // EDITAR USUÁRIO
 window.preencherFormulario = async function (codigo) {
-  const { data, error } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('usuarios')
     .select('*')
     .eq('codigo', codigo)
     .single();
 
-  if (error) {
-    alert('❌ Erro ao buscar usuário: ' + error.message);
+  if (userError) {
+    alert('❌ Erro ao buscar usuário: ' + userError.message);
     return;
   }
 
-  document.getElementById('codigo').value = data.codigo;
-  document.getElementById('nome').value = data.nome;
-  document.getElementById('funcao').value = data.funcao;
-  document.getElementById('senha').value = data.senha;
+  document.getElementById('codigo').value = userData.codigo;
+  document.getElementById('nome').value = userData.nome;
+  document.getElementById('funcao').value = userData.funcao;
+  document.getElementById('senha').value = userData.senha;
 
   document.getElementById('btnAtualizar').style.display = 'inline-block';
   document.getElementById('btnSalvar').style.display = 'none';
@@ -105,13 +103,13 @@ window.atualizarUsuario = async function () {
   const funcao = document.getElementById('funcao').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
-  const { error } = await supabase
+  const { error: updateError } = await supabase
     .from('usuarios')
     .update({ nome, funcao, senha })
     .eq('codigo', codigo);
 
-  if (error) {
-    alert('❌ Erro ao atualizar: ' + error.message);
+  if (updateError) {
+    alert('❌ Erro ao atualizar: ' + updateError.message);
   } else {
     alert('✅ Usuário atualizado com sucesso!');
     document.getElementById('formUsuario').reset();
@@ -126,13 +124,13 @@ window.atualizarUsuario = async function () {
 window.excluirUsuario = async function (codigo) {
   if (!confirm('❗ Tem certeza que deseja excluir este usuário?')) return;
 
-  const { error } = await supabase
+  const { error: deleteError } = await supabase
     .from('usuarios')
     .delete()
     .eq('codigo', codigo);
 
-  if (error) {
-    alert('❌ Erro ao excluir: ' + error.message);
+  if (deleteError) {
+    alert('❌ Erro ao excluir: ' + deleteError.message);
   } else {
     alert('🗑️ Usuário excluído com sucesso!');
     mostrarUsuarios();
