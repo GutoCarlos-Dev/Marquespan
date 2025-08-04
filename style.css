@@ -125,3 +125,9 @@ table button {
 table button:hover {
   opacity: 0.9;
 }
+
+.botoes-form {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+}
