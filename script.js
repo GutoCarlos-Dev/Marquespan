@@ -76,14 +76,14 @@ window.mostrarUsuarios = async function () {
 
 // EDITAR USUÁRIO
 window.preencherFormulario = async function (codigo) {
-  const { data: userData, error: userError } = await supabase
+  const { data: userData, error: userFetchError } = await supabase
     .from('usuarios')
     .select('*')
     .eq('codigo', codigo)
     .single();
 
-  if (userError) {
-    alert('❌ Erro ao buscar usuário: ' + userError.message);
+  if (userFetchError) {
+    alert('❌ Erro ao buscar usuário: ' + userFetchError.message);
     return;
   }
 
