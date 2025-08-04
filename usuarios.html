@@ -43,10 +43,9 @@
     <div id="busca" class="secao" style="display: none;">
       <h3>🔍 Buscar Usuários</h3>
 
-      <!-- Campo de busca -->
+      <!-- Campo de busca com busca dinâmica -->
       <div class="campo-busca">
-        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
-        <button onclick="mostrarUsuarios()">🔍 Buscar</button>
+        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário" oninput="mostrarUsuarios()">
       </div>
 
       <!-- Botões principais -->
@@ -92,5 +91,4 @@
 
   <!-- Script principal -->
   <script src="script.js" defer></script>
-</body>
-</html>
+</body
