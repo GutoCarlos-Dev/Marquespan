@@ -43,11 +43,19 @@
 <div id="busca" class="secao" style="display: none;">
   <h3>🔍 Buscar Usuários</h3>
 
+  <!-- Campo de busca -->
+  <div class="campo-busca">
+    <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
+    <button onclick="buscarUsuario()">🔍 Buscar</button>
+  </div>
+
+  <!-- Botões principais -->
   <div class="botoes-form">
     <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
     <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
   </div>
 
+  <!-- Tabela de resultados -->
   <table id="tabelaUsuarios" class="tabela-usuarios">
     <thead>
       <tr>
@@ -61,8 +69,7 @@
   </table>
 </div>
 
-
-  <script>
+<script>
     function mostrarSecao(id) {
       document.getElementById('inicio').style.display = 'none';
       document.querySelectorAll('.secao').forEach(sec => sec.style.display = 'none');
