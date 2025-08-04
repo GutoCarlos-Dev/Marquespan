@@ -13,16 +13,24 @@
       <input type="text" id="nome" placeholder="Nome" required>
       <input type="text" id="funcao" placeholder="Função" required>
       <input type="password" id="senha" placeholder="Senha" required>
-      <button type="submit">Cadastrar</button>
+      <button type="submit" id="btnSalvar">Cadastrar</button>
+      <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">Atualizar</button>
     </form>
 
-    <h3>Buscar Usuário</h3>
-    <div style="display: flex; gap: 10px;">
-      <input type="text" id="busca" placeholder="Buscar por nome ou código">
-      <button id="botaoBusca">Buscar</button>
-    </div>
+    <h2>Buscar Usuários</h2>
+    <button onclick="mostrarUsuarios()">🔍 Buscar</button>
 
-    <ul id="resultados"></ul>
+    <table id="tabelaUsuarios" border="1" cellpadding="8" style="margin-top: 10px; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nome</th>
+          <th>Função</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabelaUsuarios"></tbody>
+    </table>
   </div>
 
   <!-- Supabase SDK -->

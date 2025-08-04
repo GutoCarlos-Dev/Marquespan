@@ -1,6 +1,6 @@
 const supabase = window.supabase.createClient(
   'https://hlzcycvlcuhgnnjkmslt.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz...'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
 );
 
 // CADASTRAR USUÁRIO
@@ -27,14 +27,14 @@ if (document.getElementById('formUsuario')) {
   });
 }
 
-// BUSCAR USUÁRIOS
+// BUSCAR USUÁRIOS E EXIBIR EM TABELA
 async function mostrarUsuarios() {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*');
 
-  const resultado = document.getElementById('resultadoBusca');
-  resultado.innerHTML = '';
+  const corpoTabela = document.getElementById('corpoTabelaUsuarios');
+  corpoTabela.innerHTML = '';
 
   if (error) {
     alert('❌ Erro ao buscar usuários: ' + error.message);
@@ -42,20 +42,19 @@ async function mostrarUsuarios() {
   }
 
   if (data.length === 0) {
-    resultado.innerHTML = '<p>Nenhum usuário encontrado.</p>';
+    corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
     return;
   }
 
   data.forEach(usuario => {
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <p><strong>Código:</strong> ${usuario.codigo}</p>
-      <p><strong>Nome:</strong> ${usuario.nome}</p>
-      <p><strong>Função:</strong> ${usuario.funcao}</p>
-      <button onclick="preencherFormulario(${usuario.codigo})">✏️ Editar</button>
-      <hr>
+    const linha = document.createElement('tr');
+    linha.innerHTML = `
+      <td>${usuario.codigo}</td>
+      <td>${usuario.nome}</td>
+      <td>${usuario.funcao}</td>
+      <td><button onclick="preencherFormulario('${usuario.codigo}')">✏️ Editar</button></td>
     `;
-    resultado.appendChild(div);
+    corpoTabela.appendChild(linha);
   });
 }
 
@@ -77,7 +76,6 @@ async function preencherFormulario(codigo) {
   document.getElementById('funcao').value = data.funcao;
   document.getElementById('senha').value = data.senha;
 
-  // Mostrar botão Atualizar, esconder botão Salvar
   document.getElementById('btnAtualizar').style.display = 'inline-block';
   document.getElementById('btnSalvar').style.display = 'none';
 }
@@ -101,7 +99,6 @@ async function atualizarUsuario() {
     document.getElementById('formUsuario').reset();
     mostrarUsuarios();
 
-    // Esconder botão Atualizar, mostrar botão Salvar
     document.getElementById('btnAtualizar').style.display = 'none';
     document.getElementById('btnSalvar').style.display = 'inline-block';
   }
