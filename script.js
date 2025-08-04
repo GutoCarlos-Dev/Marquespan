@@ -1,28 +1,25 @@
 const supabase = window.supabase;
 
-// CADASTRAR USUÁRIO
-if (document.getElementById('formUsuario')) {
-  document.getElementById('formUsuario').addEventListener('submit', async function (e) {
-    e.preventDefault();
+document.getElementById('formUsuario').addEventListener('submit', async function (e) {
+  e.preventDefault();
 
-    const codigo = document.getElementById('codigo').value;
-    const nome = document.getElementById('nome').value;
-    const funcao = document.getElementById('funcao').value;
-    const senha = document.getElementById('senha').value;
+  const codigo = document.getElementById('codigo').value;
+  const nome = document.getElementById('nome').value;
+  const funcao = document.getElementById('funcao').value;
+  const senha = document.getElementById('senha').value;
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .insert([{ codigo, nome, funcao, senha }]);
+  const { data, error } = await supabase
+    .from('usuarios')
+    .insert([{ codigo, nome, funcao, senha }]);
 
-    if (error) {
-      alert('❌ Erro ao cadastrar: ' + error.message);
-    } else {
-      alert('✅ Usuário cadastrado com sucesso!');
-      this.reset();
-      mostrarUsuarios();
-    }
-  });
-}
+  if (error) {
+    alert('❌ Erro ao cadastrar: ' + error.message);
+  } else {
+    alert('✅ Usuário cadastrado com sucesso!');
+    this.reset();
+    mostrarUsuarios(); // se quiser atualizar a tabela após cadastro
+  }
+});
 
 // BUSCAR USUÁRIOS E EXIBIR EM TABELA
 async function mostrarUsuarios() {
