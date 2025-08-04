@@ -39,24 +39,28 @@
       </form>
     </div>
 
-    <!-- Tabela de Busca -->
-    <div id="busca" class="secao" style="display: none;">
-      <h3>🔍 Buscar Usuários</h3>
-      <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
-      <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
-      <table id="tabelaUsuarios" class="tabela-usuarios">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Função</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaUsuarios"></tbody>
-      </table>
-    </div>
+<!-- Tabela de Busca -->
+<div id="busca" class="secao" style="display: none;">
+  <h3>🔍 Buscar Usuários</h3>
+
+  <div class="botoes-form">
+    <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
+    <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
   </div>
+
+  <table id="tabelaUsuarios" class="tabela-usuarios">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nome</th>
+        <th>Função</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="corpoTabelaUsuarios"></tbody>
+  </table>
+</div>
+
 
   <script>
     function mostrarSecao(id) {
