@@ -1,29 +1,35 @@
 // Usa o cliente Supabase já criado no HTML
 const supabase = window.supabase;
 
-// CADASTRAR USUÁRIo
-if (document.getElementById('formUsuario')) {
-  document.getElementById('formUsuario').addEventListener('submit', async function (e) {
-    e.preventDefault();
+// Aguarda o carregamento do DOM antes de rodar os eventos
+document.addEventListener('DOMContentLoaded', () => {
 
-    const codigo = document.getElementById('codigo').value;
-    const nome = document.getElementById('nome').value;
-    const funcao = document.getElementById('funcao').value;
-    const senha = document.getElementById('senha').value;
+  // CADASTRAR USUÁRIO
+  const formUsuario = document.getElementById('formUsuario');
+  if (formUsuario) {
+    formUsuario.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .insert([{ codigo, nome, funcao, senha }]);
+      const codigo = document.getElementById('codigo').value;
+      const nome = document.getElementById('nome').value;
+      const funcao = document.getElementById('funcao').value;
+      const senha = document.getElementById('senha').value;
 
-    if (error) {
-      alert('❌ Erro ao cadastrar: ' + error.message);
-    } else {
-      alert('✅ Usuário cadastrado com sucesso!');
-      this.reset();
-      mostrarUsuarios();
-    }
-  });
-}
+      const { error } = await supabase
+        .from('usuarios')
+        .insert([{ codigo, nome, funcao, senha }]);
+
+      if (error) {
+        alert('❌ Erro ao cadastrar: ' + error.message);
+      } else {
+        alert('✅ Usuário cadastrado com sucesso!');
+        this.reset();
+        mostrarUsuarios();
+      }
+    });
+  }
+
+});
 
 // BUSCAR USUÁRIOS
 async function mostrarUsuarios() {
@@ -85,7 +91,7 @@ async function atualizarUsuario() {
   const funcao = document.getElementById('funcao').value;
   const senha = document.getElementById('senha').value;
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('usuarios')
     .update({ nome, funcao, senha })
     .eq('codigo', codigo);
