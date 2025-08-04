@@ -1,31 +1,41 @@
 <body>
   <div class="container">
-    <h2>Gestão de Usuários</h2>
+    <h2>👥 Gestão de Usuários</h2>
 
     <!-- Botões iniciais -->
-    <div id="inicio">
+    <div id="inicio" class="botoes-iniciais">
       <button onclick="mostrarSecao('cadastro')">➕ Adicionar Usuário</button>
       <button onclick="mostrarSecao('busca')">🔍 Buscar Usuário</button>
     </div>
 
     <!-- Formulário de Cadastro -->
     <div id="cadastro" class="secao" style="display: none;">
-      <h3>Cadastro de Usuários</h3>
-      <form id="formUsuario">
+      <h3>📋 Cadastro de Usuários</h3>
+      <form id="formUsuario" class="formulario">
+        <label for="codigo">Código:</label>
         <input type="text" id="codigo" placeholder="Código" required>
+
+        <label for="nome">Nome:</label>
         <input type="text" id="nome" placeholder="Nome" required>
+
+        <label for="funcao">Função:</label>
         <input type="text" id="funcao" placeholder="Função" required>
+
+        <label for="senha">Senha:</label>
         <input type="password" id="senha" placeholder="Senha" required>
-        <button type="submit" id="btnSalvar">Cadastrar</button>
-        <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">Atualizar</button>
+
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvar">✅ Cadastrar</button>
+          <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" style="display: none;">🔄 Atualizar</button>
+        </div>
       </form>
     </div>
 
     <!-- Tabela de Busca -->
     <div id="busca" class="secao" style="display: none;">
-      <h3>Buscar Usuários</h3>
-      <button onclick="mostrarUsuarios()">🔍 Buscar</button>
-      <table id="tabelaUsuarios" border="1" cellpadding="8" style="margin-top: 10px; border-collapse: collapse;">
+      <h3>🔍 Buscar Usuários</h3>
+      <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
+      <table id="tabelaUsuarios" class="tabela-usuarios">
         <thead>
           <tr>
             <th>Código</th>
@@ -46,16 +56,17 @@
       document.getElementById(id).style.display = 'block';
     }
   </script>
+
   <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  const supabase = createClient(
-    'https://hlzcycvlcuhgnnjkmslt.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
-  );
+    const supabase = createClient(
+      'https://hlzcycvlcuhgnnjkmslt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'
+    );
 
-  window.supabase = supabase;
+    window.supabase = supabase;
 
-  import './script.js';
-</script>
+    import './script.js';
+  </script>
 </body>
