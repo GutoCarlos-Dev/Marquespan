@@ -3,27 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <title>Dashboard - Marquespan</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+
+    body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f5fff5;
       color: #333;
+      display: flex;
+      min-height: 100vh;
     }
 
-    .header {
+    .sidebar {
+      width: 220px;
       background-color: #2e7d32;
       color: white;
       padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+      font-size: 1.5em;
       text-align: center;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      font-size: 1em;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .sidebar a:hover {
+      background-color: #1b5e20;
+    }
+
+    .sidebar i {
+      margin-right: 10px;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 30px;
+    }
+
+    .header {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+      color: #2e7d32;
     }
 
     .dashboard-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 20px;
-      padding: 30px;
     }
 
     .card {
@@ -53,39 +98,49 @@
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Dashboard Administrativo - Marquespan</h1>
+  <div class="sidebar">
+    <h2>Marquespan</h2>
+    <a href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
+    <a href="#"><i class="fas fa-truck"></i> Veículos</a>
+    <a href="#"><i class="fas fa-gas-pump"></i> Abastecimentos</a>
+    <a href="#"><i class="fas fa-tools"></i> Manutenções</a>
+    <a href="#"><i class="fas fa-file-invoice-dollar"></i> Custos</a>
+    <a href="#"><i class="fas fa-sign-out-alt"></i> Sair</a>
   </div>
 
-  <div class="dashboard-container">
-    <div class="card">
-      <h3>Litros Abastecidos</h3>
-      <p>92.052,40 L</p>
-    </div>
-    <div class="card">
-      <h3>Custo Total</h3>
-      <p>R$ 513.488,66</p>
-    </div>
-    <div class="card">
-      <h3>Veículos Utilizados</h3>
-      <p>603</p>
-    </div>
-    <div class="card">
-      <h3>Manutenções</h3>
-      <p>38 | R$ 12.865,87</p>
-    </div>
-    <div class="card">
-      <h3>Multas</h3>
-      <p>R$ 0,00</p>
-    </div>
-    <div class="card">
-      <h3>Pedágios</h3>
-      <p>R$ 0,00</p>
-    </div>
-  </div>
+  <div class="main-content">
+    <div class="header">Dashboard Administrativo</div>
 
-  <div class="footer">
-    &copy; 2025 Marquespan. Todos os direitos reservados.
+    <div class="dashboard-container">
+      <div class="card">
+        <h3>Litros Abastecidos</h3>
+        <p>92.052,40 L</p>
+      </div>
+      <div class="card">
+        <h3>Custo Total</h3>
+        <p>R$ 513.488,66</p>
+      </div>
+      <div class="card">
+        <h3>Veículos Utilizados</h3>
+        <p>603</p>
+      </div>
+      <div class="card">
+        <h3>Manutenções</h3>
+        <p>38 | R$ 12.865,87</p>
+      </div>
+      <div class="card">
+        <h3>Multas</h3>
+        <p>R$ 0,00</p>
+      </div>
+      <div class="card">
+        <h3>Pedágios</h3>
+        <p>R$ 0,00</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; 2025 Marquespan. Todos os direitos reservados.
+    </div>
   </div>
 </body>
 </html>
