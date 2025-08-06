@@ -16,38 +16,17 @@
     </form>
   </div>
 
+  <!-- Importando a biblioteca Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script>
-  const supabase = supabase.createClient(
-    'https://hlzcycvlcuhgnnjkmslt.supabase.co', // 🔁 Substitua pelo seu URL do Supabase
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'                         // 🔁 Substitua pela sua chave pública
-  );
 
-  async function login() {
-    const nome = document.getElementById('usuario').value.trim();  // nome como login
-    const senha = document.getElementById('senha').value.trim();
+  <!-- Inicializando o cliente Supabase -->
+  <script>
+    const supabaseUrl = 'https://hlzcycvlcuhgnnjkmslt.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'; // 🔐 Substitua pela chave completa
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  </script>
 
-    if (!nome || !senha) {
-      alert('⚠️ Preencha todos os campos!');
-      return false;
-    }
-
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('nome', nome)
-      .eq('senha', senha)
-      .single();
-
-    if (data) {
-      alert(`👋 Olá, ${data.nome}! Acesso liberado.`);
-      window.location.href = 'dashboard.html';
-    } else {
-      alert('❌ Nome ou senha incorretos!');
-    }
-
-    return false;
-  }
-</script>
+  <!-- Seu script principal -->
+  <script src="script.js"></script>
 </body>
 </html>

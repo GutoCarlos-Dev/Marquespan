@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const supabase = window.supabase;
-
-  if (!supabase) {
+  // Valida se a instância Supabase está disponível
+  if (typeof supabase === 'undefined') {
     console.error('❌ Supabase não foi inicializado corretamente.');
     return;
   }
@@ -22,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('usuarios')
         .insert([{ codigo, nome, funcao, senha }]);
 
@@ -38,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // BUSCAR USUÁRIOS COM FILTRO
+  // EXIBIR USUÁRIOS COM FILTRO
   window.mostrarUsuarios = async function () {
     const { data, error } = await supabase
       .from('usuarios')
@@ -58,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const termoBusca = document.getElementById('termoBusca')?.value.trim().toLowerCase() || '';
-
     const usuariosFiltrados = termoBusca
       ? data.filter(usuario =>
           usuario.nome.toLowerCase().includes(termoBusca) ||
@@ -147,4 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mostrarUsuarios();
     }
   };
+
+  // Chama a função inicial ao carregar
+  mostrarUsuarios();
 });
