@@ -35,7 +35,7 @@
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('codigo', usuario)
+        .eq('usuario', usuario)
         .eq('senha', senha)
         .single();
 
