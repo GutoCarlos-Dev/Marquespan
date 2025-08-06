@@ -4,9 +4,88 @@
   <meta charset="UTF-8">
   <title>Dashboard - Marquespan</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5fff5;
+      color: #333;
+    }
+
+    .header {
+      background-color: #2e7d32;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 30px;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .card h3 {
+      margin-bottom: 10px;
+      color: #2e7d32;
+    }
+
+    .card p {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9em;
+      color: #777;
+    }
+  </style>
 </head>
 <body>
-  <h1>Bem-vindo à Dashboard!</h1>
-  <p>Você está logado como <strong>admin</strong>.</p>
+  <div class="header">
+    <h1>Dashboard Administrativo - Marquespan</h1>
+  </div>
+
+  <div class="dashboard-container">
+    <div class="card">
+      <h3>Litros Abastecidos</h3>
+      <p>92.052,40 L</p>
+    </div>
+    <div class="card">
+      <h3>Custo Total</h3>
+      <p>R$ 513.488,66</p>
+    </div>
+    <div class="card">
+      <h3>Veículos Utilizados</h3>
+      <p>603</p>
+    </div>
+    <div class="card">
+      <h3>Manutenções</h3>
+      <p>38 | R$ 12.865,87</p>
+    </div>
+    <div class="card">
+      <h3>Multas</h3>
+      <p>R$ 0,00</p>
+    </div>
+    <div class="card">
+      <h3>Pedágios</h3>
+      <p>R$ 0,00</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </div>
 </body>
 </html>
