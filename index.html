@@ -8,7 +8,6 @@
 <body class="login-body">
   <div class="login-container">
     <img src="logo.png" alt="Logo Marquespan" class="login-logo">
-
     <h2>Área Administrativa</h2>
 
     <form id="formLogin" class="login-form">
@@ -20,41 +19,22 @@
     <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> para acessar</p>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-   <script>
-  //  const supabase = supabase.createClient(
-  //    'https://hlzcycvlcuhgnnjkmslt.supabase.co',
-  //    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY' // substitua pela sua chave pública real
-  //  );
-
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
       const formLogin = document.getElementById('formLogin');
 
-      formLogin.addEventListener('submit', async function (e) {
+      formLogin.addEventListener('submit', function (e) {
         e.preventDefault();
 
         const usuario = document.getElementById('usuario').value.trim();
         const senha = document.getElementById('senha').value.trim();
 
-        if (!usuario || !senha) {
-          alert('⚠️ Preencha usuário e senha!');
-          return;
-        }
-
-       // const { data, error } = await supabase
-       //   .from('usuarios')
-       //   .select('*')
-       //   .eq('usuario', usuario)
-       //   .eq('senha', senha)
-       //   .single();
-
-        if (error || !data) {
+        if (usuario === 'admin' && senha === 'admin') {
+          alert('✅ Bem-vindo, admin!');
+          window.location.href = 'dashboard.html';
+        } else {
           alert('❌ Usuário ou senha inválidos.');
-          return;
         }
-
-        alert('✅ Bem-vindo, ' + data.nome + '!');
-        window.location.href = 'dashboard.html';
       });
     });
   </script>
