@@ -1,34 +1,33 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Login - Marquespan</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="container">
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
-    <h2>Login</h2>
-    <form onsubmit="return login()">
-      <input type="text" id="usuario" placeholder="Usuário" required>
-      <input type="password" id="senha" placeholder="Senha" required>
-      <button type="submit">Entrar</button>
-    </form>
-  </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  const supabase = supabase.createClient(
+    'https://hlzcycvlcuhgnnjkmslt.supabase.co', // 🔁 Substitua pelo seu URL do Supabase
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY'                         // 🔁 Substitua pela sua chave pública
+  );
 
-  <script>
-    function login() {
-      const user = document.getElementById('usuario').value;
-      const pass = document.getElementById('senha').value;
+  async function login() {
+    const nome = document.getElementById('usuario').value.trim();  // nome como login
+    const senha = document.getElementById('senha').value.trim();
 
-      if (user === 'admin' && pass === 'admin') {
-        window.location.href = 'dashboard.html';
-        return false;
-      } else {
-        alert('Usuário ou senha incorretos!');
-        return false;
-      }
+    if (!nome || !senha) {
+      alert('⚠️ Preencha todos os campos!');
+      return false;
     }
-  </script>
-</body>
-</html>
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('nome', nome)
+      .eq('senha', senha)
+      .single();
+
+    if (data) {
+      alert(`👋 Olá, ${data.nome}! Acesso liberado.`);
+      window.location.href = 'dashboard.html';
+    } else {
+      alert('❌ Nome ou senha incorretos!');
+    }
+
+    return false;
+  }
+</script>
