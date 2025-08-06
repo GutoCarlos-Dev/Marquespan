@@ -32,8 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exibir usuários com filtro
   async function mostrarUsuarios() {
-    const { data, error } = await supabase.from('usuarios').select('senha');
+    const { data, error } = await supabase.from('usuarios').select('*');
     const corpoTabela = document.getElementById('corpoTabelaUsuarios');
+
+    if (!corpoTabela) {
+      console.warn('⚠️ Elemento "corpoTabelaUsuarios" não encontrado no DOM.');
+      return;
+    }
+
     corpoTabela.innerHTML = '';
 
     if (error) {
@@ -43,7 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const termoBusca = document.getElementById('termoBusca')?.value.trim().toLowerCase() || '';
     const filtrados = termoBusca
-      ? data.filter(u => u.nome.toLowerCase().includes(termoBusca) || u.codigo.toLowerCase().includes(termoBusca))
+      ? data.filter(u =>
+          u.nome?.toLowerCase().includes(termoBusca) ||
+          u.codigo?.toLowerCase().includes(termoBusca)
+        )
       : data;
 
     if (!filtrados.length) {
