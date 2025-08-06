@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exibir usuários com filtro
   async function mostrarUsuarios() {
-    const { data, error } = await supabase.from('usuarios').select('*');
+    const { data, error } = await supabase.from('usuarios').select('senha');
     const corpoTabela = document.getElementById('corpoTabelaUsuarios');
     corpoTabela.innerHTML = '';
 
