@@ -41,12 +41,12 @@
           return;
         }
 
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('usuario', usuario)
-          .eq('senha', senha)
-          .single();
+       // const { data, error } = await supabase
+       //   .from('usuarios')
+       //   .select('*')
+       //   .eq('usuario', usuario)
+       //   .eq('senha', senha)
+       //   .single();
 
         if (error || !data) {
           alert('❌ Usuário ou senha inválidos.');
