@@ -1,4 +1,22 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Marquespan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <h2>Login</h2>
+    <form onsubmit="return login()">
+      <input type="text" id="usuario" placeholder="Usuário" required>
+      <input type="password" id="senha" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   const supabase = supabase.createClient(
     'https://hlzcycvlcuhgnnjkmslt.supabase.co', // 🔁 Substitua pelo seu URL do Supabase
@@ -31,3 +49,5 @@
     return false;
   }
 </script>
+</body>
+</html>
