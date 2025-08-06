@@ -3,51 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>Login - Marquespan</title>
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
-    <h2>Login</h2>
-    <form onsubmit="return login()">
-      <input type="text" id="usuario" placeholder="Usuário" required>
-      <input type="password" id="senha" placeholder="Senha" required>
-      <button type="submit">Entrar</button>
-    </form>
-  </div>
+  <h2>Login</h2>
+  <form id="formLogin">
+    <label for="usuario">Usuário:</label>
+    <input type="text" id="usuario" name="usuario" required><br><br>
 
-  <!-- Supabase Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const supabaseUrl = "https://hlzcycvlcuhgnnjkmslt.supabase.co";
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    
-    async function login() {
-      const usuario = document.getElementById('usuario').value.trim();
-      const senha = document.getElementById('senha').value.trim();
+    <label for="senha">Senha:</label>
+    <input type="password" id="senha" name="senha" required><br><br>
 
-      if (!usuario || !senha) {
-        alert('⚠️ Preencha todos os campos!');
-        return false;
-      }
+    <button type="submit">Entrar</button>
+  </form>
 
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('usuario', usuario)
-        .eq('senha', senha)
-        .single();
-
-      if (error || !data) {
-        alert('❌ Usuário ou senha inválidos.');
-        return false;
-      }
-
-      alert('✅ Login realizado com sucesso!');
-      location.href = '/Marquespan/dashboard.html';
-      return false;
-    }
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
