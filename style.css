@@ -1,133 +1,52 @@
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #e8f5e9;
-  margin: 0;
-  padding: 0;
+body.login-body {
+  background-color: #f0fff0;
+  font-family: Arial, sans-serif;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
+  align-items: center;
+  height: 100vh;
 }
 
-.container {
+.login-container {
   background-color: #ffffff;
-  padding: 40px;
-  margin-top: 50px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 600px;
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  padding: 30px;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-h2, h3 {
-  text-align: center;
-  color: #2e7d32;
+.login-logo {
+  width: 100px;
   margin-bottom: 20px;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-input {
-  padding: 12px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-button {
-  padding: 12px;
-  font-size: 16px;
-  background-color: #2e7d32;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-button:hover {
-  background-color: #1b5e20;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-  margin-top: 20px;
-}
-
-li {
-  background-color: #f9f9f9;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-li button {
-  margin-left: 10px;
-  background-color: #f1c40f;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-li button:last-child {
-  background-color: #e74c3c;
-}
-
-li button:hover {
-  opacity: 0.9;
-}
-
-/* Seções ocultáveis */
-.secao {
-  margin-top: 30px;
-}
-
-/* Tabela de usuários */
-table {
+.login-form input {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-th, td {
-  border: 1px solid #ccc;
   padding: 10px;
-  text-align: center;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }
 
-th {
-  background-color: #a5d6a7;
-  color: #2e7d32;
-}
-
-/* Botões de ação na tabela */
-table button {
-  padding: 6px 10px;
-  font-size: 14px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  background-color: #f1c40f;
+.login-form button {
+  width: 100%;
+  padding: 10px;
+  background-color: #4CAF50;
   color: white;
+  border: none;
+  border-radius: 5px;
   font-weight: bold;
+  cursor: pointer;
 }
 
-table button:hover {
-  opacity: 0.9;
+.login-form button:hover {
+  background-color: #45a049;
 }
 
-.botoes-form {
-  margin-bottom: 15px;
-  display: flex;
-  gap: 10px;
+.login-info {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #555;
 }
