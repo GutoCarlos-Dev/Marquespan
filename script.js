@@ -1,11 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Valida se a instância Supabase está disponível
-  if (typeof supabase === 'undefined') {
-    console.error('❌ Supabase não foi inicializado corretamente.');
-    return;
-  }
-
-  // CADASTRAR USUÁRIO
+  // Formulário de cadastro de usuário
   const formUsuario = document.getElementById('formUsuario');
   if (formUsuario) {
     formUsuario.addEventListener('submit', async function (e) {
@@ -31,18 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✅ Usuário cadastrado com sucesso!');
         this.reset();
         mostrarUsuarios();
-        document.getElementById('btnAtualizar').style.display = 'none';
-        document.getElementById('btnSalvar').style.display = 'inline-block';
+        alternarBotoes(true);
       }
     });
   }
 
-  // EXIBIR USUÁRIOS COM FILTRO
-  window.mostrarUsuarios = async function () {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*');
-
+  // Exibir usuários com filtro
+  async function mostrarUsuarios() {
+    const { data, error } = await supabase.from('usuarios').select('*');
     const corpoTabela = document.getElementById('corpoTabelaUsuarios');
     corpoTabela.innerHTML = '';
 
@@ -51,25 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!data || data.length === 0) {
+    const termoBusca = document.getElementById('termoBusca')?.value.trim().toLowerCase() || '';
+    const filtrados = termoBusca
+      ? data.filter(u => u.nome.toLowerCase().includes(termoBusca) || u.codigo.toLowerCase().includes(termoBusca))
+      : data;
+
+    if (!filtrados.length) {
       corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
       return;
     }
 
-    const termoBusca = document.getElementById('termoBusca')?.value.trim().toLowerCase() || '';
-    const usuariosFiltrados = termoBusca
-      ? data.filter(usuario =>
-          usuario.nome.toLowerCase().includes(termoBusca) ||
-          usuario.codigo.toLowerCase().includes(termoBusca)
-        )
-      : data;
-
-    if (usuariosFiltrados.length === 0) {
-      corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário corresponde à busca.</td></tr>';
-      return;
-    }
-
-    usuariosFiltrados.forEach(usuario => {
+    filtrados.forEach(usuario => {
       const linha = document.createElement('tr');
       linha.innerHTML = `
         <td>${usuario.codigo}</td>
@@ -82,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       corpoTabela.appendChild(linha);
     });
-  };
+  }
 
-  // EDITAR USUÁRIO
-  window.preencherFormulario = async function (codigo) {
+  // Preencher formulário para edição
+  window.preencherFormulario = async (codigo) => {
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
@@ -102,12 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('funcao').value = data.funcao;
     document.getElementById('senha').value = data.senha;
 
-    document.getElementById('btnAtualizar').style.display = 'inline-block';
-    document.getElementById('btnSalvar').style.display = 'none';
+    alternarBotoes(false);
   };
 
-  // ATUALIZAR USUÁRIO
-  window.atualizarUsuario = async function () {
+  // Atualizar usuário
+  window.atualizarUsuario = async () => {
     const codigo = document.getElementById('codigo').value.trim();
     const nome = document.getElementById('nome').value.trim();
     const funcao = document.getElementById('funcao').value.trim();
@@ -124,13 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Usuário atualizado com sucesso!');
       document.getElementById('formUsuario').reset();
       mostrarUsuarios();
-      document.getElementById('btnAtualizar').style.display = 'none';
-      document.getElementById('btnSalvar').style.display = 'inline-block';
+      alternarBotoes(true);
     }
   };
 
-  // EXCLUIR USUÁRIO
-  window.excluirUsuario = async function (codigo) {
+  // Excluir usuário
+  window.excluirUsuario = async (codigo) => {
     if (!confirm('❗ Tem certeza que deseja excluir este usuário?')) return;
 
     const { error } = await supabase
@@ -146,6 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Chama a função inicial ao carregar
+  // Alterna exibição dos botões Salvar/Atualizar
+  function alternarBotoes(modoSalvar) {
+    document.getElementById('btnSalvar').style.display = modoSalvar ? 'inline-block' : 'none';
+    document.getElementById('btnAtualizar').style.display = modoSalvar ? 'none' : 'inline-block';
+  }
+
+  // Inicializa a exibição de usuários
   mostrarUsuarios();
 });
