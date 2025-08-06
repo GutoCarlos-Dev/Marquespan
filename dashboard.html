@@ -27,11 +27,31 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      transition: width 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      width: 60px;
     }
 
     .sidebar img {
       width: 120px;
       margin-bottom: 30px;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar.collapsed img {
+      opacity: 0;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5em;
+      cursor: pointer;
+      margin-bottom: 20px;
+      align-self: flex-start;
     }
 
     .sidebar a {
@@ -41,10 +61,14 @@
       font-size: 1em;
       display: flex;
       align-items: center;
-      transition: background 0.3s;
+      transition: background 0.3s, opacity 0.3s;
       padding: 10px;
       border-radius: 5px;
       width: 100%;
+    }
+
+    .sidebar.collapsed a span {
+      display: none;
     }
 
     .sidebar a:hover {
@@ -99,14 +123,17 @@
   </style>
 </head>
 <body>
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
     <img src="logo.png" alt="Logo Marquespan">
-    <a href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="#"><i class="fas fa-truck"></i> Veículos</a>
-    <a href="#"><i class="fas fa-gas-pump"></i> Abastecimentos</a>
-    <a href="#"><i class="fas fa-tools"></i> Manutenções</a>
-    <a href="#"><i class="fas fa-file-invoice-dollar"></i> Custos</a>
-    <a href="#"><i class="fas fa-sign-out-alt"></i> Sair</a>
+    <a href="#"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+    <a href="#"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+    <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <a href="#"><i class="fas fa-tools"></i> <span>Manutenções</span></a>
+    <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+    <a href="#"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
   </div>
 
   <div class="main-content">
@@ -143,5 +170,11 @@
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </div>
   </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+  </script>
 </body>
 </html>
