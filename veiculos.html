@@ -26,61 +26,59 @@
 
   <div class="main-content">
     <section class="veiculos-header">
-  <!-- Campo de busca acima dos botões -->
-  <div class="card busca-veiculo-card">
-    <h3><i class="fas fa-search"></i> Buscar Veículo</h3>
-    <div class="busca-input-group">
-      <input type="text" id="buscarPlaca" placeholder="Digite a placa">
-      <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
-    </div>
-    <div id="resultadoBusca"></div>
-  </div>
+      <div class="acoes-veiculos">
+        <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
+        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+      </div>
+    </section>
 
-  <!-- Botões de ação -->
-  <div class="acoes-veiculos">
-    <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
-    <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
-    <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+    <section class="form-section" id="formNovoVeiculo">
+  <div>
+    <h2 class="section-title">Novo Veículo</h2>
+    <form id="formVeiculo" class="form-grid">
+      <select id="filial">
+        <option value="">FILIAL</option>
+        <option value="SP">SP</option>
+        <option value="MG">MG</option>
+        <option value="MS">MS</option>
+        <option value="PR">PR</option>
+      </select>
+      <input type="text" id="placa" placeholder="Placa" required>
+      <input type="text" id="marca" placeholder="Marca">
+      <input type="text" id="modelo" placeholder="Modelo">
+      <input type="text" id="chassi" placeholder="Chassi">
+      <input type="text" id="renavan" placeholder="Renavan">
+      <input type="text" id="anofab" placeholder="Ano Fab." maxlength="4" pattern="\\d{4}" inputmode="numeric">
+      <input type="text" id="anomod" placeholder="Ano Mod." maxlength="4" pattern="\\d{4}" inputmode="numeric">
+      <select id="tipo">
+        <option value="">Tipo</option>
+        <option value="TRUCK">TRUCK</option>
+        <option value="BITRUCK">BITRUCK</option>
+        <option value="BITREM">BITREM</option>
+        <option value="CARRETA">CARRETA</option>
+        <option value="CAVALO">CAVALO</option>
+        <option value="VUC">VUC</option>
+      </select>
+      <select id="situacao">
+        <option value="" required>Situação</option>
+        <option value="ATIVO">ATIVO</option>
+        <option value="BLOQUEADO">BLOQUEADO</option>
+        <option value="CANCELADO">CANCELADO</option>
+      </select>
+      <button type="button" id="btnLimpar"><i class="fas fa-eraser"></i> Limpar Formulário</button>
+      <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
+      <button type="button" id="btnCancelar"><i class="fas fa-times"></i> Cancelar</button>
+    </form>
   </div>
 </section>
 
-    <section class="form-section" id="formNovoVeiculo" style="display: none;">
-      <div>
-        <h2 class="section-title">Novo Veículo</h2>
-        <form id="formVeiculo" class="form-grid">
-          <select id="filial">
-            <option value="">FILIAL</option>
-            <option value="SP">SP</option>
-            <option value="MG">MG</option>
-            <option value="MS">MS</option>
-            <option value="PR">PR</option>
-          </select>
-          <input type="text" id="placa" placeholder="Placa" required>
-          <input type="text" id="marca" placeholder="Marca">
-          <input type="text" id="modelo" placeholder="Modelo">
-          <input type="text" id="chassi" placeholder="Chassi">
-          <input type="text" id="renavan" placeholder="Renavan">
-          <input type="text" id="anofab" placeholder="Ano Fab." maxlength="4" pattern="\\d{4}" inputmode="numeric">
-          <input type="text" id="anomod" placeholder="Ano Mod." maxlength="4" pattern="\\d{4}" inputmode="numeric">
-          <select id="tipo">
-            <option value="">Tipo</option>
-            <option value="TRUCK">TRUCK</option>
-            <option value="BITRUCK">BITRUCK</option>
-            <option value="BITREM">BITREM</option>
-            <option value="CARRETA">CARRETA</option>
-            <option value="CAVALO">CAVALO</option>
-            <option value="VUC">VUC</option>
-          </select>
-          <select id="situacao">
-            <option value="" required>Situação</option>
-            <option value="ATIVO">ATIVO</option>
-            <option value="BLOQUEADO">BLOQUEADO</option>
-            <option value="CANCELADO">CANCELADO</option>
-          </select>
-          <button type="button" id="btnLimpar"><i class="fas fa-eraser"></i> Limpar Formulário</button>
-          <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
-          <button type="button" id="btnCancelar"><i class="fas fa-times"></i> Cancelar</button>
-        </form>
+    <section class="dashboard-container">
+      <div class="card">
+        <h3>Buscar Veículo</h3>
+        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+        <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
+        <div id="resultadoBusca"></div>
       </div>
     </section>
 
@@ -88,90 +86,95 @@
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
-
   <script>
-    function limitarAno(idCampo) {
-      const campo = document.getElementById(idCampo);
-      campo.addEventListener('input', () => {
-        campo.value = campo.value.replace(/\\D/g, '').slice(0, 4);
-      });
+  function limitarAno(idCampo) {
+    const campo = document.getElementById(idCampo);
+    campo.addEventListener('input', () => {
+      campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
+    });
+  }
+
+  limitarAno('anofab');
+  limitarAno('anomod');
+</script>
+
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const nomeUsuario = localStorage.getItem('usuarioLogado');
+    const divUsuario = document.getElementById('usuario-logado');
+    if (nomeUsuario) {
+      divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
     }
 
-    limitarAno('anofab');
-    limitarAno('anomod');
+    const btnAddVeiculo = document.getElementById('btnAddVeiculo');
+    const btnCancelar = document.getElementById('btnCancelar');
+    const btnLimpar = document.getElementById('btnLimpar');
+    const formSection = document.getElementById('formNovoVeiculo');
+    const formVeiculo = document.getElementById('formVeiculo');
 
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const nomeUsuario = localStorage.getItem('usuarioLogado');
-      const divUsuario = document.getElementById('usuario-logado');
-      if (nomeUsuario) {
-        divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
-      }
-
-      const btnAddVeiculo = document.getElementById('btnAddVeiculo');
-      const btnCancelar = document.getElementById('btnCancelar');
-      const btnLimpar = document.getElementById('btnLimpar');
-      const formSection = document.getElementById('formNovoVeiculo');
-      const formVeiculo = document.getElementById('formVeiculo');
-
-      btnAddVeiculo.addEventListener('click', () => {
-        formSection.style.display = 'block';
-        formSection.scrollIntoView({ behavior: 'smooth' });
-      });
-
-      btnCancelar.addEventListener('click', () => {
-        formSection.style.display = 'none';
-        formVeiculo.reset();
-      });
-
-      btnLimpar.addEventListener('click', () => {
-        formVeiculo.reset();
-      });
-
-      formVeiculo.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const placa = document.getElementById('placa').value.trim();
-        const marca = document.getElementById('marca').value.trim();
-        const modelo = document.getElementById('modelo').value.trim();
-
-        const { data, error } = await supabase
-          .from('veiculos')
-          .insert([{ placa, marca, modelo }]);
-
-        if (error) {
-          alert('Erro ao salvar veículo.');
-        } else {
-          alert('Veículo salvo com sucesso!');
-          e.target.reset();
-          formSection.style.display = 'none';
-        }
-      });
+    // Mostrar formulário
+    btnAddVeiculo.addEventListener('click', () => {
+      formSection.style.display = 'block';
+      formSection.scrollIntoView({ behavior: 'smooth' });
     });
 
-    async function buscarVeiculo() {
-      const placa = document.getElementById('buscarPlaca').value.trim();
-      const resultado = document.getElementById('resultadoBusca');
+    // Cancelar formulário
+    btnCancelar.addEventListener('click', () => {
+      formSection.style.display = 'none';
+      formVeiculo.reset();
+    });
+
+    // Limpar formulário
+    btnLimpar.addEventListener('click', () => {
+      formVeiculo.reset();
+    });
+
+    // Submissão do formulário
+    formVeiculo.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const placa = document.getElementById('placa').value.trim();
+      const marca = document.getElementById('marca').value.trim();
+      const modelo = document.getElementById('modelo').value.trim();
 
       const { data, error } = await supabase
         .from('veiculos')
-        .select('*')
-        .eq('placa', placa)
-        .single();
+        .insert([{ placa, marca, modelo }]);
 
-      if (error || !data) {
-        resultado.innerHTML = '<p>Veículo não encontrado.</p>';
+      if (error) {
+        alert('Erro ao salvar veículo.');
       } else {
-        resultado.innerHTML = `
-          <p><strong>Placa:</strong> ${data.placa}</p>
-          <p><strong>Frota:</strong> ${data.frota}</p>
-          <p><strong>Marca:</strong> ${data.marca}</p>
-          <p><strong>Modelo:</strong> ${data.modelo}</p>
-        `;
+        alert('Veículo salvo com sucesso!');
+        e.target.reset();
+        formSection.style.display = 'none';
       }
+    });
+  });
+
+  async function buscarVeiculo() {
+    const placa = document.getElementById('buscarPlaca').value.trim();
+    const resultado = document.getElementById('resultadoBusca');
+
+    const { data, error } = await supabase
+      .from('veiculos')
+      .select('*')
+      .eq('placa', placa)
+      .single();
+
+    if (error || !data) {
+      resultado.innerHTML = '<p>Veículo não encontrado.</p>';
+    } else {
+      resultado.innerHTML = `
+        <p><strong>Placa:</strong> ${data.placa}</p>
+        <p><strong>Frota:</strong> ${data.frota}</p>
+        <p><strong>Marca:</strong> ${data.marca}</p>
+        <p><strong>Modelo:</strong> ${data.modelo}</p>
+      `;
     }
-  </script>
+  }
+</script>
 </body>
 </html>
