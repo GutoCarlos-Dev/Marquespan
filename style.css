@@ -102,6 +102,12 @@ nav a:hover {
   gap: 20px;
 }
 
+.buscar-veiculos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
 .card {
   background-color: #fff;
   border-left: 6px solid #4CAF50;
