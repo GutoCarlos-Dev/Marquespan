@@ -131,11 +131,11 @@
         const btnLimpar = document.getElementById('btnLimpar');
         const formVeiculo = document.getElementById('formVeiculo');
 
-if (btnLimpar && formVeiculo) {
-  btnLimpar.addEventListener('click', () => {
-    formVeiculo.reset();
-  });
-}
+        if (btnLimpar && formVeiculo) {
+            btnLimpar.addEventListener('click', () => {
+            formVeiculo.reset();
+     });
+    }
         const { data, error } = await supabase
           .from('veiculos')
           .insert([{ placa, marca, modelo }]);
