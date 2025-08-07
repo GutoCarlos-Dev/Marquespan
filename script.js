@@ -7,6 +7,8 @@ const supabase = supabase.createClient(
 document.addEventListener('DOMContentLoaded', () => {
   const formLogin = document.getElementById('formLogin');
 
+  if (!formLogin) return; // evita erro se não estiver na página de login
+
   formLogin.addEventListener('submit', async function (e) {
     e.preventDefault();
 
@@ -18,22 +20,27 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('usuario', usuario)
-      .eq('senha', senha)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('usuario', usuario)
+        .eq('senha', senha)
+        .single();
 
-    if (error || !data) {
-      alert('❌ Usuário ou senha inválidos.');
-      return;
+      if (error || !data) {
+        alert('❌ Usuário ou senha inválidos.');
+        return;
+      }
+
+      // Salva o nome ou usuário logado no localStorage
+      localStorage.setItem('usuarioLogado', data.nome || data.usuario);
+
+      alert(`✅ Bem-vindo, ${data.nome || data.usuario}!`);
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      console.error('Erro ao conectar com Supabase:', err);
+      alert('⚠️ Erro de conexão. Tente novamente mais tarde.');
     }
-
-    // Salva o nome do usuário logado no localStorage
-    localStorage.setItem('usuarioLogado', data.usuario); // ou data.nome se quiser mostrar o nome completo
-
-    alert('✅ Login realizado com sucesso!');
-    window.location.href = 'dashboard.html';
   });
 });
