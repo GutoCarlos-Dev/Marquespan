@@ -49,8 +49,8 @@
         <input type="text" id="modelo" placeholder="Modelo">
         <input type="text" id="chassi" placeholder="Chassi">
         <input type="text" id="renavan" placeholder="Renavan">
-        <input type="text" id="anofab" placeholder="Ano Fab.">
-        <input type="text" id="anomod" placeholder="Ano Mod.">
+        <input type="text" id="anofab" placeholder="Ano Fab." maxlength="4" pattern="\\d{4}" inputmode="numeric">
+        <input type="text" id="anomod" placeholder="Ano Mod." maxlength="4" pattern="\\d{4}" inputmode="numeric">
         <select id="tipo">
             <option value="">Tipo</option>
             <option value="TRUCK">TRUCK</option>
