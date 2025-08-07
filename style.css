@@ -104,8 +104,10 @@ nav a:hover {
 
 .buscar-veiculos {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
+  max-width: 400px; /* ou outro valor menor, como 300px */
+  margin-left: 0; /* cola a esquerda da tela */
 }
 
 .card {
