@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Salva o nome do usuário logado no localStorage
+    localStorage.setItem('usuarioLogado', data.usuario); // ou data.nome se quiser mostrar o nome completo
+
     alert('✅ Login realizado com sucesso!');
     window.location.href = 'dashboard.html';
   });
