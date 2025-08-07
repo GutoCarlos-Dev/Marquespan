@@ -27,24 +27,46 @@
   <div class="main-content">
     <header class="header">Cadastro de Veículos</header>
 
-    <section class="form-section">
-  <h2 class="section-title">Cadastro de Veículos</h2>
-  <form id="formVeiculo" class="form-grid">
-    <input type="text" id="placa" placeholder="Placa" required>
-    <input type="text" id="frota" placeholder="Frota">
-    <input type="text" id="marca" placeholder="Marca">
-    <input type="text" id="modelo" placeholder="Modelo">
-    <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
-  </form>
-</section>
+    <section class="veiculos-header">
+      <div class="filtros-veiculos">
+        <input type="text" placeholder="Placa">
+        <input type="text" placeholder="Frota">
+        <input type="text" placeholder="Grupo">
+        <input type="text" placeholder="Filial">
+        <input type="text" placeholder="Tipo Média">
+        <input type="text" placeholder="Agregado">
+        <input type="text" placeholder="Marca">
+        <input type="text" placeholder="Modelo">
+        <input type="text" placeholder="Tipo">
+        <input type="text" placeholder="QR Code">
+      </div>
 
-<section class="dashboard-container">
-  <div class="card">
-    <h3>Buscar Veículo</h3>
-    <input type="text" id="buscarPlaca" placeholder="Digite a placa">
-    <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
-    <div id="resultadoBusca"></div>
-  </div>
+      <div class="acoes-veiculos">
+        <button><i class="fas fa-plus"></i> +Veículo</button>
+        <button><i class="fas fa-eraser"></i> Limpar Filtros</button>
+        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2 class="section-title">Cadastro de Veículos</h2>
+      <form id="formVeiculo" class="form-grid">
+        <input type="text" id="placa" placeholder="Placa" required>
+        <input type="text" id="frota" placeholder="Rota">
+        <input type="text" id="marca" placeholder="Marca">
+        <input type="text" id="modelo" placeholder="Modelo">
+        <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
+      </form>
+    </section>
+
+    <section class="dashboard-container">
+      <div class="card">
+        <h3>Buscar Veículo</h3>
+        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+        <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
+        <div id="resultadoBusca"></div>
+      </div>
     </section>
 
     <footer class="footer">
