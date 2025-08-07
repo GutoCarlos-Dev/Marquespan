@@ -42,6 +42,7 @@
 
     if (usuarioEncontrado) {
       alert(`✅ Bem-vindo, ${usuario}!`);
+      localStorage.setItem('usuarioLogado', usuario);
       window.location.href = 'dashboard.html';
     } else {
       alert('❌ Usuário ou senha inválidos.');
