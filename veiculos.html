@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Veículos - Marquespan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+      <a href="#"><i class="fas fa-tools"></i> <span>Manutenções</span></a>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="header">Cadastro de Veículos</header>
+
+    <section class="form-section">
+      <form id="formVeiculo" class="form-grid">
+        <input type="text" id="placa" placeholder="Placa" required>
+        <input type="text" id="frota" placeholder="Frota">
+        <input type="text" id="marca" placeholder="Marca">
+        <input type="text" id="modelo" placeholder="Modelo">
+        <button type="submit">Salvar Veículo</button>
+      </form>
+    </section>
+
+    <section class="dashboard-container">
+      <div class="card">
+        <h3>Buscar Veículo</h3>
+        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+        <button onclick="buscarVeiculo()">Buscar</button>
+        <div id="resultadoBusca"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      &copy; 2025 Marquespan. Todos os direitos reservados.
+    </footer>
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const nomeUsuario = localStorage.getItem('usuarioLogado');
+      const divUsuario = document.getElementById('usuario-logado');
+      if (nomeUsuario) {
+        divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
+      }
+
+      document.getElementById('formVeiculo').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const placa = document.getElementById('placa').value.trim();
+        const frota = document.getElementById('frota').value.trim();
+        const marca = document.getElementById('marca').value.trim();
+        const modelo = document.getElementById('modelo').value.trim();
+
+        const { data, error } = await supabase
+          .from('veiculos')
+          .insert([{ placa, frota, marca, modelo }]);
+
+        if (error) {
+          alert('Erro ao salvar veículo.');
+        } else {
+          alert('Veículo salvo com sucesso!');
+          e.target.reset();
+        }
+      });
+    });
+
+    async function buscarVeiculo() {
+      const placa = document.getElementById('buscarPlaca').value.trim();
+      const resultado = document.getElementById('resultadoBusca');
+
+      const { data, error } = await supabase
+        .from('veiculos')
+        .select('*')
+        .eq('placa', placa)
+        .single();
+
+      if (error || !data) {
+        resultado.innerHTML = '<p>Veículo não encontrado.</p>';
+      } else {
+        resultado.innerHTML = `
+          <p><strong>Placa:</strong> ${data.placa}</p>
+          <p><strong>Frota:</strong> ${data.frota}</p>
+          <p><strong>Marca:</strong> ${data.marca}</p>
+          <p><strong>Modelo:</strong> ${data.modelo}</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
