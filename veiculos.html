@@ -26,21 +26,23 @@
 
   <div class="main-content">
     <section class="veiculos-header">
-      <!-- Campo de busca acima dos botões -->
-      <div class="buscar-veiculo">
-        <h3>Buscar Veículo</h3>
-        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
-        <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
-        <div id="resultadoBusca"></div>
-      </div>
+  <!-- Campo de busca acima dos botões -->
+  <div class="card busca-veiculo-card">
+    <h3><i class="fas fa-search"></i> Buscar Veículo</h3>
+    <div class="busca-input-group">
+      <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+      <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
+    </div>
+    <div id="resultadoBusca"></div>
+  </div>
 
-      <!-- Botões de ação -->
-      <div class="acoes-veiculos">
-        <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
-        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
-        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-      </div>
-    </section>
+  <!-- Botões de ação -->
+  <div class="acoes-veiculos">
+    <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
+    <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+    <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+  </div>
+</section>
 
     <section class="form-section" id="formNovoVeiculo" style="display: none;">
       <div>
