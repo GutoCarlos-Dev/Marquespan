@@ -176,6 +176,14 @@
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('collapsed');
     }
+   document.addEventListener('DOMContentLoaded', () => {
+  const nomeUsuario = localStorage.getItem('usuarioLogado');
+  const divUsuario = document.getElementById('usuario-logado');
+
+  if (nomeUsuario) {
+    divUsuario.textContent = `👤 Usuário logado: ${nomeUsuario}`;
+  }
+}); 
   </script>
 </body>
 </html>
