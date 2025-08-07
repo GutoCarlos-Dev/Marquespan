@@ -28,7 +28,6 @@
     <section class="veiculos-header">
       <div class="acoes-veiculos">
         <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
-        <button><i class="fas fa-eraser"></i> Limpar Formulário</button>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
@@ -66,6 +65,7 @@
             <option value="BLOQUEADO">BLOQUEADO</option>
             <option value="CANCELADO">CANCELADO</option>
         </select>
+        <button type="button" id="btnLimpar"><i class="fas fa-eraser"></i> Limpar Formulário</button>
         <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
         <button type="button" id="btnCancelar"><i class="fas fa-times"></i> Cancelar</button>
       </form>
@@ -128,7 +128,14 @@
         const placa = document.getElementById('placa').value.trim();
         const marca = document.getElementById('marca').value.trim();
         const modelo = document.getElementById('modelo').value.trim();
+        const btnLimpar = document.getElementById('btnLimpar');
+        const formVeiculo = document.getElementById('formVeiculo');
 
+if (btnLimpar && formVeiculo) {
+  btnLimpar.addEventListener('click', () => {
+    formVeiculo.reset();
+  });
+}
         const { data, error } = await supabase
           .from('veiculos')
           .insert([{ placa, marca, modelo }]);
