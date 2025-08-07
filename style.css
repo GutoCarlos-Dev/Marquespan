@@ -291,11 +291,10 @@ input, select, textarea {
 }
 
 .acoes-veiculos {
-  flex: 1 1 30%;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: flex-start; /* Alinha à esquerda */
 }
 
 .acoes-veiculos button {
