@@ -5,12 +5,11 @@ const supabase = supabase.createClient(
 );
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Login
   const formLogin = document.getElementById('formLogin');
-
   if (formLogin) {
     formLogin.addEventListener('submit', async function (e) {
       e.preventDefault();
-
       const usuario = document.getElementById('usuario').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
@@ -42,7 +41,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Lógica para mostrar/ocultar formulário de veículo
+  // Exibe nome do usuário
+  const nomeUsuario = localStorage.getItem('usuarioLogado');
+  const divUsuario = document.getElementById('usuario-logado');
+  if (nomeUsuario && divUsuario) {
+    divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
+  }
+
+  // Lógica de exibição do formulário de veículo
   const btnAddVeiculo = document.getElementById('btnAddVeiculo');
   const btnCancelar = document.getElementById('btnCancelar');
   const formSection = document.getElementById('formNovoVeiculo');
@@ -68,18 +74,23 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
 
       const placa = document.getElementById('placa').value.trim();
-      const frota = document.getElementById('frota')?.value?.trim() || '';
       const marca = document.getElementById('marca').value.trim();
       const modelo = document.getElementById('modelo').value.trim();
+      const tipo = document.getElementById('tipo').value.trim();
+      const situacao = document.getElementById('situacao').value.trim();
+      const chassi = document.getElementById('chassi').value.trim();
+      const renavan = document.getElementById('renavan').value.trim();
+      const anofab = document.getElementById('anofab').value.trim();
+      const anomod = document.getElementById('anomod').value.trim();
 
       const { data, error } = await supabase
         .from('veiculos')
-        .insert([{ placa, frota, marca, modelo }]);
+        .insert([{ placa, marca, modelo, tipo, situacao, chassi, renavan, anofab, anomod }]);
 
       if (error) {
         alert('Erro ao salvar veículo.');
       } else {
-        alert('Veículo salvo com sucesso!');
+        alert('✅ Veículo salvo com sucesso!');
         e.target.reset();
         formSection.style.display = 'none';
       }
