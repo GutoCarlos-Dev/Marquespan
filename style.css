@@ -1,4 +1,4 @@
-/* 🌐 RESET E BASE */
+/* 🌐 Reset e estilo base */
 * {
   margin: 0;
   padding: 0;
@@ -11,14 +11,14 @@ body {
   color: #333;
 }
 
-/* 🟩 SIDEBAR */
+/* 🟩 Sidebar lateral */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   width: 220px;
   height: 100vh;
-  background-color: #2e7d32;
+  background-color: #2e7d32; /* Verde Marquespan */
   color: #fff;
   padding: 20px;
   transition: width 0.3s ease;
@@ -64,7 +64,7 @@ nav a:hover {
   padding-left: 10px;
 }
 
-/* 👤 USUÁRIO LOGADO */
+/* 👤 Nome do usuário */
 .usuario-logado {
   font-size: 14px;
   font-weight: bold;
@@ -78,7 +78,7 @@ nav a:hover {
   transform: translateY(-10px);
 }
 
-/* 🧱 CONTEÚDO PRINCIPAL */
+/* 🧱 Conteúdo principal */
 .main-content {
   margin-left: 220px;
   padding: 30px;
@@ -95,7 +95,7 @@ nav a:hover {
   margin-bottom: 30px;
 }
 
-/* 📊 DASHBOARD */
+/* 📊 Cards do dashboard */
 .dashboard-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -125,7 +125,7 @@ nav a:hover {
   color: #555;
 }
 
-/* 🦶 RODAPÉ */
+/* 🦶 Rodapé */
 .footer {
   margin-top: 40px;
   text-align: center;
@@ -133,7 +133,7 @@ nav a:hover {
   color: #888;
 }
 
-/* ✨ ANIMAÇÕES */
+/* ✨ Animação de entrada */
 @keyframes fadeInDown {
   to {
     opacity: 1;
@@ -141,7 +141,7 @@ nav a:hover {
   }
 }
 
-/* 🔐 LOGIN */
+/* 🔐 Tela de login */
 body.login-body {
   background-color: #f0fff0;
   display: flex;
@@ -198,7 +198,8 @@ body.login-body {
   color: #555;
 }
 
-/* 🚚 FORMULÁRIO DE VEÍCULOS */
+/* 🚚 Formulário de veículos */
+
 input, select, textarea {
   text-transform: uppercase;
 }
@@ -206,7 +207,7 @@ input, select, textarea {
 .form-section {
   margin-bottom: 40px;
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-start; /* Alinha à esquerda */
 }
 
 .form-grid {
@@ -217,8 +218,9 @@ input, select, textarea {
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  max-width: 600px;
-  margin-left: 0;
+  max-width: 600px;     /* Mantém o tamanho */
+  margin: 0;            /* Remove centralização */
+  margin-left: 0;       /* Alinha à esquerda */
 }
 
 .section-title {
@@ -255,33 +257,7 @@ input, select, textarea {
   margin-right: 6px;
 }
 
-/* 🔍 BUSCA DE VEÍCULOS */
-.buscar-veiculo {
-  max-width: 400px;
-  margin-bottom: 20px;
-}
-
-.buscar-veiculo input {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.buscar-veiculo button {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.buscar-veiculo button:hover {
-  background-color: #0056b3;
-}
-
+/* 🔍 Resultado da busca */
 #resultadoBusca {
   margin-top: 15px;
   font-size: 14px;
@@ -291,7 +267,15 @@ input, select, textarea {
   margin: 5px 0;
 }
 
-/* 🧭 FILTROS E AÇÕES */
+#buscarVeiculo {
+  width: 100%;
+  max-width: 400px; /* menor que 600px */
+  margin-bottom: 20px; /* espaço entre o campo e o form */
+  display: block;
+}
+
+
+/* 🔎 Filtros e ações */
 .veiculos-header {
   display: flex;
   flex-wrap: wrap;
@@ -318,7 +302,7 @@ input, select, textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-start;
+  justify-content: flex-start; /* Alinha à esquerda */
 }
 
 .acoes-veiculos button {
