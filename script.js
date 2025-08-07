@@ -68,8 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Submissão do formulário de veículo
+  // Força campos da tela de veículos a usar maiúsculas
   if (formVeiculo) {
+    const camposVeiculo = formVeiculo.querySelectorAll('input[type="text"], textarea');
+    camposVeiculo.forEach(campo => {
+      campo.addEventListener('input', function () {
+        this.value = this.value.toUpperCase();
+      });
+    });
+
+    // Submissão do formulário de veículo
     formVeiculo.addEventListener('submit', async (e) => {
       e.preventDefault();
 

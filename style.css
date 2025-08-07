@@ -199,6 +199,11 @@ body.login-body {
 }
 
 /* 🚚 Formulário de veículos */
+
+input, select, textarea {
+  text-transform: uppercase;
+}
+
 .form-section {
   margin-bottom: 40px;
   display: flex;
