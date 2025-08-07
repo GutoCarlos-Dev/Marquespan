@@ -205,6 +205,13 @@ body.login-body {
   justify-content: center;
 }
 
+.form-grid select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
 .section-title {
   font-size: 20px;
   font-weight: 600;
