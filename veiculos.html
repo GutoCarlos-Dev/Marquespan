@@ -37,7 +37,14 @@
     <section class="form-section" id="formNovoVeiculo" style="display: none;">
       <h2 class="section-title">Novo Veículo</h2>
       <form id="formVeiculo" class="form-grid">
-        <input type="text" id="placa" placeholder="Placa" required>
+        <select id="filial">
+            <option value="">FILIAL</option>
+            <option value="SP">SP</option>
+            <option value="MG">MG</option>
+            <option value="MS">MS</option>
+            <option value="PR">PR</option>
+        </select>
+        <input type="text" id="filial" placeholder="Filial" required>
         <input type="text" id="marca" placeholder="Marca">
         <input type="text" id="modelo" placeholder="Modelo">
         <input type="text" id="chassi" placeholder="Chassi">
