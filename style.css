@@ -1,21 +1,26 @@
-/* Estilo geral */
-body {
+/* 🌐 Reset e estilo base */
+* {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f6f8;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* Estilo da sidebar */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+}
+
+/* 🟩 Sidebar lateral */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   width: 220px;
   height: 100vh;
-  background-color: #2e7d32;
+  background-color: #2e7d32; /* Verde Marquespan */
   color: #fff;
   padding: 20px;
-  box-sizing: border-box;
   transition: width 0.3s ease;
   overflow-x: hidden;
 }
@@ -24,7 +29,7 @@ body {
   width: 60px;
 }
 
-.sidebar .toggle-btn {
+.toggle-btn {
   background: none;
   border: none;
   color: #fff;
@@ -33,14 +38,13 @@ body {
   margin-bottom: 20px;
 }
 
-.sidebar .logo {
-  width: 100%;
+.logo {
+  display: block;
   max-width: 120px;
   margin: 10px auto;
-  display: block;
 }
 
-.sidebar nav a {
+nav a {
   display: flex;
   align-items: center;
   color: #fff;
@@ -50,17 +54,17 @@ body {
   transition: background 0.2s;
 }
 
-.sidebar nav a i {
+nav a i {
   margin-right: 10px;
 }
 
-.sidebar nav a:hover {
+nav a:hover {
   background-color: #388e3c;
   border-radius: 5px;
   padding-left: 10px;
 }
 
-/* Nome do usuário */
+/* 👤 Nome do usuário */
 .usuario-logado {
   font-size: 14px;
   font-weight: bold;
@@ -69,13 +73,12 @@ body {
   border-radius: 5px;
   margin-bottom: 15px;
   text-align: center;
-  color: #fff;
+  animation: fadeInDown 0.8s ease-out forwards;
   opacity: 0;
   transform: translateY(-10px);
-  animation: fadeInDown 0.8s ease-out forwards;
 }
 
-/* Conteúdo principal */
+/* 🧱 Conteúdo principal */
 .main-content {
   margin-left: 220px;
   padding: 30px;
@@ -90,10 +93,9 @@ body {
   font-size: 24px;
   font-weight: bold;
   margin-bottom: 30px;
-  color: #333;
 }
 
-/* Cards do dashboard */
+/* 📊 Cards do dashboard */
 .dashboard-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -101,7 +103,7 @@ body {
 }
 
 .card {
-  background-color: #ffffff;
+  background-color: #fff;
   border-left: 6px solid #4CAF50;
   padding: 20px;
   border-radius: 8px;
@@ -114,9 +116,8 @@ body {
 }
 
 .card h3 {
-  margin: 0 0 10px;
   font-size: 18px;
-  color: #333;
+  margin-bottom: 10px;
 }
 
 .card p {
@@ -124,7 +125,7 @@ body {
   color: #555;
 }
 
-/* Rodapé */
+/* 🦶 Rodapé */
 .footer {
   margin-top: 40px;
   text-align: center;
@@ -132,7 +133,7 @@ body {
   color: #888;
 }
 
-/* Animação */
+/* ✨ Animação de entrada */
 @keyframes fadeInDown {
   to {
     opacity: 1;
@@ -140,7 +141,7 @@ body {
   }
 }
 
-/* Estilo da tela de login */
+/* 🔐 Tela de login */
 body.login-body {
   background-color: #f0fff0;
   display: flex;
@@ -150,7 +151,7 @@ body.login-body {
 }
 
 .login-container {
-  background-color: #ffffff;
+  background-color: #fff;
   border: 2px solid #4CAF50;
   border-radius: 10px;
   padding: 30px;
@@ -164,15 +165,17 @@ body.login-body {
   margin-bottom: 20px;
 }
 
-.login-form input {
+.login-form input,
+.card input {
   width: 100%;
   padding: 10px;
-  margin: 10px 0;
+  margin-bottom: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
 
-.login-form button {
+.login-form button,
+.card button {
   width: 100%;
   padding: 10px;
   background-color: #4CAF50;
@@ -181,9 +184,11 @@ body.login-body {
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
+  transition: background 0.3s;
 }
 
-.login-form button:hover {
+.login-form button:hover,
+.card button:hover {
   background-color: #45a049;
 }
 
@@ -193,9 +198,18 @@ body.login-body {
   color: #555;
 }
 
-/* Seção de formulário de veículos */
+/* 🚚 Formulário de veículos */
 .form-section {
   margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #c8e6c9;
+  padding-bottom: 5px;
 }
 
 .form-grid {
@@ -212,7 +226,6 @@ body.login-body {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  font-size: 14px;
 }
 
 .form-grid button {
@@ -223,65 +236,27 @@ body.login-body {
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.3s;
 }
 
 .form-grid button:hover {
   background-color: #45a049;
 }
 
-/* Resultado da busca */
+.form-grid button i {
+  margin-right: 6px;
+}
+
+/* 🔍 Resultado da busca */
 #resultadoBusca {
   margin-top: 15px;
   font-size: 14px;
-  color: #333;
 }
 
 #resultadoBusca p {
   margin: 5px 0;
 }
 
-/* Estilos adicionais para veículos */
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #2e7d32;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #c8e6c9;
-  padding-bottom: 5px;
-}
-
-.form-grid button i,
-.card button i {
-  margin-right: 6px;
-}
-
-.card input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 14px;
-  margin-bottom: 10px;
-  width: 100%;
-}
-
-.card button {
-  padding: 10px 20px;
-  background-color: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.card button:hover {
-  background-color: #1976d2;
-}
-
-/* Filtros e ações da tela de veículos */
+/* 🔎 Filtros e ações */
 .veiculos-header {
   display: flex;
   flex-wrap: wrap;
@@ -310,7 +285,6 @@ body.login-body {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
-  align-items: flex-start;
 }
 
 .acoes-veiculos button {
@@ -322,9 +296,9 @@ body.login-body {
   font-weight: bold;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.3s;
   display: flex;
   align-items: center;
+  transition: background 0.3s;
 }
 
 .acoes-veiculos button i {
