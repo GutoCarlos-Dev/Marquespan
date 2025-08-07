@@ -210,23 +210,6 @@ input, select, textarea {
   justify-content: flex-start; /* Alinha à esquerda */
 }
 
-.form-grid select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 14px;
-}
-
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #2e7d32;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #c8e6c9;
-  padding-bottom: 5px;
-  text-align: center;
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -238,6 +221,16 @@ input, select, textarea {
   max-width: 600px;     /* Mantém o tamanho */
   margin: 0;            /* Remove centralização */
   margin-left: 0;       /* Alinha à esquerda */
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #c8e6c9;
+  padding-bottom: 5px;
+  text-align: center;
 }
 
 .form-grid input {
