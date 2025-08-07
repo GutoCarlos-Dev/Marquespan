@@ -50,3 +50,9 @@ body.login-body {
   font-size: 0.9em;
   color: #555;
 }
+
+.usuario-logado {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #333;
+}
