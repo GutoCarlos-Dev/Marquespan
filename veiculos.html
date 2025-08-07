@@ -40,13 +40,18 @@
         <input type="text" id="placa" placeholder="Placa" required>
         <input type="text" id="marca" placeholder="Marca">
         <input type="text" id="modelo" placeholder="Modelo">
-        <input type="text" id="tipo" placeholder="Tipo">
         <input type="text" id="chassi" placeholder="Chassi">
         <input type="text" id="renavan" placeholder="Renavan">
         <input type="text" id="anofab" placeholder="Ano Fab.">
         <input type="text" id="anomod" placeholder="Ano Mod.">
+        <select id="tipo">
+            <option value="">Tipo</option>
+            <option value="TRUCK">TRUCK</option>
+            <option value="BITREM">BITREM</option>
+            <option value="CARRETA">CARRETA</option>
+        </select>
         <select id="situacao">
-            <option value="">Selecione a situação</option>
+            <option value="" required>Situação</option>
             <option value="ATIVO">ATIVO</option>
             <option value="BLOQUEADO">BLOQUEADO</option>
             <option value="CANCELADO">CANCELADO</option>
