@@ -28,22 +28,23 @@
     <header class="header">Cadastro de Veículos</header>
 
     <section class="form-section">
-      <form id="formVeiculo" class="form-grid">
-        <input type="text" id="placa" placeholder="Placa" required>
-        <input type="text" id="frota" placeholder="Frota">
-        <input type="text" id="marca" placeholder="Marca">
-        <input type="text" id="modelo" placeholder="Modelo">
-        <button type="submit">Salvar Veículo</button>
-      </form>
-    </section>
+  <h2 class="section-title">Cadastro de Veículos</h2>
+  <form id="formVeiculo" class="form-grid">
+    <input type="text" id="placa" placeholder="Placa" required>
+    <input type="text" id="frota" placeholder="Frota">
+    <input type="text" id="marca" placeholder="Marca">
+    <input type="text" id="modelo" placeholder="Modelo">
+    <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
+  </form>
+</section>
 
-    <section class="dashboard-container">
-      <div class="card">
-        <h3>Buscar Veículo</h3>
-        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
-        <button onclick="buscarVeiculo()">Buscar</button>
-        <div id="resultadoBusca"></div>
-      </div>
+<section class="dashboard-container">
+  <div class="card">
+    <h3>Buscar Veículo</h3>
+    <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+    <button onclick="buscarVeiculo()"><i class="fas fa-search"></i> Buscar</button>
+    <div id="resultadoBusca"></div>
+  </div>
     </section>
 
     <footer class="footer">

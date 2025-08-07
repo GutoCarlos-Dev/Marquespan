@@ -240,3 +240,43 @@ body.login-body {
 #resultadoBusca p {
   margin: 5px 0;
 }
+
+/* Estilos adicionais para veículos */
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #c8e6c9;
+  padding-bottom: 5px;
+}
+
+.form-grid button i,
+.card button i {
+  margin-right: 6px;
+}
+
+.card input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.card button {
+  padding: 10px 20px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.card button:hover {
+  background-color: #1976d2;
+}
