@@ -84,6 +84,17 @@
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
+  <script>
+    function limitarAno(idCampo) {
+        const campo = document.getElementById(idCampo);
+        campo.addEventListener('input', () => {
+        campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
+        });
+    }
+
+    limitarAno('anofab');
+    limitarAno('anomod');
+  </script>
 
   <script>
     function toggleSidebar() {
