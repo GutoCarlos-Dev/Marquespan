@@ -21,22 +21,34 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const formLogin = document.getElementById('formLogin');
+  const formLogin = document.getElementById('formLogin');
 
-      formLogin.addEventListener('submit', function (e) {
-        e.preventDefault();
+  // Lista de usuários válidos
+  const usuariosValidos = [
+    { usuario: 'admin', senha: 'admin' },
+    { usuario: 'bryan', senha: 'bryan123' },
+    { usuario: 'murilo', senha: 'murilo123' },
+    { usuario: 'guto', senha: 'gutocarlos' },
+    { usuario: 'jones', senha: 'jones123' }
+  ];
 
-        const usuario = document.getElementById('usuario').value.trim();
-        const senha = document.getElementById('senha').value.trim();
+  formLogin.addEventListener('submit', function (e) {
+    e.preventDefault();
 
-        if (usuario === 'admin' && senha === 'admin') {
-          alert('✅ Bem-vindo, admin!');
-          window.location.href = 'dashboard.html';
-        } else {
-          alert('❌ Usuário ou senha inválidos.');
-        }
-      });
-    });
+    const usuario = document.getElementById('usuario').value.trim();
+    const senha = document.getElementById('senha').value.trim();
+
+    const usuarioEncontrado = usuariosValidos.find(u => u.usuario === usuario && u.senha === senha);
+
+    if (usuarioEncontrado) {
+      alert(`✅ Bem-vindo, ${usuario}!`);
+      window.location.href = 'dashboard.html';
+    } else {
+      alert('❌ Usuário ou senha inválidos.');
+    }
+  });
+});
+
   </script>
 </body>
 </html>
