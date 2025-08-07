@@ -25,18 +25,16 @@
   </div>
 
   <div class="main-content">
-   
     <section class="veiculos-header">
-      
       <div class="acoes-veiculos">
-        <button><i class="fas fa-plus"></i> Add Veículo</button>
+        <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
         <button><i class="fas fa-eraser"></i> Limpar Filtros</button>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
     </section>
 
-    <section class="form-section">
+    <section class="form-section" id="formNovoVeiculo" style="display: none;">
       <h2 class="section-title">Novo Veículo</h2>
       <form id="formVeiculo" class="form-grid">
         <input type="text" id="placa" placeholder="Placa" required>
@@ -79,22 +77,37 @@
         divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
       }
 
-      document.getElementById('formVeiculo').addEventListener('submit', async (e) => {
+      const btnAddVeiculo = document.getElementById('btnAddVeiculo');
+      const btnCancelar = document.getElementById('btnCancelar');
+      const formSection = document.getElementById('formNovoVeiculo');
+      const formVeiculo = document.getElementById('formVeiculo');
+
+      btnAddVeiculo.addEventListener('click', () => {
+        formSection.style.display = 'block';
+        formSection.scrollIntoView({ behavior: 'smooth' });
+      });
+
+      btnCancelar.addEventListener('click', () => {
+        formSection.style.display = 'none';
+        formVeiculo.reset();
+      });
+
+      formVeiculo.addEventListener('submit', async (e) => {
         e.preventDefault();
         const placa = document.getElementById('placa').value.trim();
-        const frota = document.getElementById('frota').value.trim();
         const marca = document.getElementById('marca').value.trim();
         const modelo = document.getElementById('modelo').value.trim();
 
         const { data, error } = await supabase
           .from('veiculos')
-          .insert([{ placa, frota, marca, modelo }]);
+          .insert([{ placa, marca, modelo }]);
 
         if (error) {
           alert('Erro ao salvar veículo.');
         } else {
           alert('Veículo salvo com sucesso!');
           e.target.reset();
+          formSection.style.display = 'none';
         }
       });
     });
