@@ -53,7 +53,7 @@
         <select id="tipo">
             <option value="">Tipo</option>
             <option value="TRUCK">TRUCK</option>
-            <option value="TRUCK">BITRUCK</option>
+            <option value="BITRUCK">BITRUCK</option>
             <option value="BITREM">BITREM</option>
             <option value="CARRETA">CARRETA</option>
             <option value="CAVALO">CAVALO</option>
@@ -85,92 +85,94 @@
     </footer>
   </div>
   <script>
-    function limitarAno(idCampo) {
-        const campo = document.getElementById(idCampo);
-        campo.addEventListener('input', () => {
-        campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
-        });
+  function limitarAno(idCampo) {
+    const campo = document.getElementById(idCampo);
+    campo.addEventListener('input', () => {
+      campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
+    });
+  }
+
+  limitarAno('anofab');
+  limitarAno('anomod');
+</script>
+
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const nomeUsuario = localStorage.getItem('usuarioLogado');
+    const divUsuario = document.getElementById('usuario-logado');
+    if (nomeUsuario) {
+      divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
     }
 
-    limitarAno('anofab');
-    limitarAno('anomod');
-  </script>
+    const btnAddVeiculo = document.getElementById('btnAddVeiculo');
+    const btnCancelar = document.getElementById('btnCancelar');
+    const btnLimpar = document.getElementById('btnLimpar');
+    const formSection = document.getElementById('formNovoVeiculo');
+    const formVeiculo = document.getElementById('formVeiculo');
 
-  <script>
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const nomeUsuario = localStorage.getItem('usuarioLogado');
-      const divUsuario = document.getElementById('usuario-logado');
-      if (nomeUsuario) {
-        divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
-      }
-
-      const btnAddVeiculo = document.getElementById('btnAddVeiculo');
-      const btnCancelar = document.getElementById('btnCancelar');
-      const formSection = document.getElementById('formNovoVeiculo');
-      const formVeiculo = document.getElementById('formVeiculo');
-
-      btnAddVeiculo.addEventListener('click', () => {
-        formSection.style.display = 'block';
-        formSection.scrollIntoView({ behavior: 'smooth' });
-      });
-
-      btnCancelar.addEventListener('click', () => {
-        formSection.style.display = 'none';
-        formVeiculo.reset();
-      });
-
-      formVeiculo.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const placa = document.getElementById('placa').value.trim();
-        const marca = document.getElementById('marca').value.trim();
-        const modelo = document.getElementById('modelo').value.trim();
-        const btnLimpar = document.getElementById('btnLimpar');
-        const formVeiculo = document.getElementById('formVeiculo');
-
-        if (btnLimpar && formVeiculo) {
-            btnLimpar.addEventListener('click', () => {
-            formVeiculo.reset();
-     });
-    }
-        const { data, error } = await supabase
-          .from('veiculos')
-          .insert([{ placa, marca, modelo }]);
-
-        if (error) {
-          alert('Erro ao salvar veículo.');
-        } else {
-          alert('Veículo salvo com sucesso!');
-          e.target.reset();
-          formSection.style.display = 'none';
-        }
-      });
+    // Mostrar formulário
+    btnAddVeiculo.addEventListener('click', () => {
+      formSection.style.display = 'block';
+      formSection.scrollIntoView({ behavior: 'smooth' });
     });
 
-    async function buscarVeiculo() {
-      const placa = document.getElementById('buscarPlaca').value.trim();
-      const resultado = document.getElementById('resultadoBusca');
+    // Cancelar formulário
+    btnCancelar.addEventListener('click', () => {
+      formSection.style.display = 'none';
+      formVeiculo.reset();
+    });
+
+    // Limpar formulário
+    btnLimpar.addEventListener('click', () => {
+      formVeiculo.reset();
+    });
+
+    // Submissão do formulário
+    formVeiculo.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const placa = document.getElementById('placa').value.trim();
+      const marca = document.getElementById('marca').value.trim();
+      const modelo = document.getElementById('modelo').value.trim();
 
       const { data, error } = await supabase
         .from('veiculos')
-        .select('*')
-        .eq('placa', placa)
-        .single();
+        .insert([{ placa, marca, modelo }]);
 
-      if (error || !data) {
-        resultado.innerHTML = '<p>Veículo não encontrado.</p>';
+      if (error) {
+        alert('Erro ao salvar veículo.');
       } else {
-        resultado.innerHTML = `
-          <p><strong>Placa:</strong> ${data.placa}</p>
-          <p><strong>Frota:</strong> ${data.frota}</p>
-          <p><strong>Marca:</strong> ${data.marca}</p>
-          <p><strong>Modelo:</strong> ${data.modelo}</p>
-        `;
+        alert('Veículo salvo com sucesso!');
+        e.target.reset();
+        formSection.style.display = 'none';
       }
+    });
+  });
+
+  async function buscarVeiculo() {
+    const placa = document.getElementById('buscarPlaca').value.trim();
+    const resultado = document.getElementById('resultadoBusca');
+
+    const { data, error } = await supabase
+      .from('veiculos')
+      .select('*')
+      .eq('placa', placa)
+      .single();
+
+    if (error || !data) {
+      resultado.innerHTML = '<p>Veículo não encontrado.</p>';
+    } else {
+      resultado.innerHTML = `
+        <p><strong>Placa:</strong> ${data.placa}</p>
+        <p><strong>Frota:</strong> ${data.frota}</p>
+        <p><strong>Marca:</strong> ${data.marca}</p>
+        <p><strong>Modelo:</strong> ${data.modelo}</p>
+      `;
     }
-  </script>
+  }
+</script>
 </body>
 </html>
