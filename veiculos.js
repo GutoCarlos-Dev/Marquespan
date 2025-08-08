@@ -4,7 +4,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('limparFormulario');
+  const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
   const form = document.querySelector('formVeiculo');
 
@@ -20,12 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-//  btnClear?.addEventListener('click', (e) => {
-//    e.preventDefault();
-//    form.querySelectorAll('input').forEach(input => input.value = '');
-//    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-//    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-//  });
+  btnClear?.addEventListener('click', (e) => {
+    e.preventDefault();
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  });
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 🧽 Função de limpeza
-  function limparFormulario(formVeiculo) {
-    form.querySelectorAll('input').forEach(input => input.value = '');
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-  }
+//  function limparFormulario(formVeiculo) {
+//    form.querySelectorAll('input').forEach(input => input.value = '');
+//    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+//    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+//  }
 });
