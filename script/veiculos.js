@@ -4,7 +4,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('btnClear'); // Certifique-se que o botão tem esse ID
+  const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
 
@@ -20,17 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-   btnClear?.addEventListener('click', (e) => {
-      e.preventDefault();
-      limparFormulario(form);
-    });
+  btnClear?.addEventListener('click', (e) => {
+    e.preventDefault();
+    limparFormulario(form);
+  });
 
-// 🧽 Função de limpeza
-function limparFormulario(form) {
-  form.querySelectorAll('input').forEach(input => input.value = '');
-  form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-  form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-}
+  // 🧽 Função de limpeza
+  function limparFormulario(form) {
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  }
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
@@ -48,6 +48,12 @@ function limparFormulario(form) {
       anofab: getValorUpper('anofab'),
       anomod: getValorUpper('anomod')
     };
+
+    // ✅ Validação de campos obrigatórios
+    if (!veiculo.filial || !veiculo.placa || !veiculo.tipo || !veiculo.situacao) {
+      alert('⚠️ Preencha todos os campos obrigatórios: Filial, Placa, Tipo e Situação.');
+      return;
+    }
 
     const { data, error } = await supabase.from('veiculos').insert([veiculo]);
 
