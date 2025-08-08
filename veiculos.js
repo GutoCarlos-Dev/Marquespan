@@ -25,9 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Limpa o formulário ao clicar em "Limpar"
   btnClear?.addEventListener('click', (e) => {
-  e.preventDefault(); // Garante que não haja envio
+  e.preventDefault();
+
   if (form) {
     form.reset();
+
+    // Garante que selects voltem ao primeiro item
+    form.querySelectorAll('select').forEach(select => {
+      select.selectedIndex = 0;
+    });
+
+    // Se estiver usando inputs com máscaras ou plugins, pode ser necessário limpar manualmente
+    form.querySelectorAll('input[type="text"]').forEach(input => {
+      input.value = '';
+    });
+  }
+});
 
     // Se quiser limpar selects manualmente:
     form.querySelectorAll('select').forEach(select => {
