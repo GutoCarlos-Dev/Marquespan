@@ -5,10 +5,10 @@ const supabase = supabase.createClient(
 );
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Login
+  // LOGIN
   const formLogin = document.getElementById('formLogin');
   if (formLogin) {
-    formLogin.addEventListener('submit', async function (e) {
+    formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
       const usuario = document.getElementById('usuario').value.trim();
       const senha = document.getElementById('senha').value.trim();
@@ -41,67 +41,76 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Exibe nome do usuário
+  // EXIBE NOME DO USUÁRIO
   const nomeUsuario = localStorage.getItem('usuarioLogado');
   const divUsuario = document.getElementById('usuario-logado');
   if (nomeUsuario && divUsuario) {
     divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
   }
 
-  // Lógica de exibição do formulário de veículo
+  // FORMULÁRIO DE VEÍCULO
   const btnAddVeiculo = document.getElementById('btnAddVeiculo');
   const btnCancelar = document.getElementById('btnCancelar');
+  const btnLimpar = document.getElementById('btnLimpar');
   const formSection = document.getElementById('formNovoVeiculo');
   const formVeiculo = document.getElementById('formVeiculo');
 
-  if (btnAddVeiculo && formSection) {
-    btnAddVeiculo.addEventListener('click', () => {
-      formSection.style.display = 'block';
-      formSection.scrollIntoView({ behavior: 'smooth' });
-    });
+  // Oculta o formulário ao carregar
+  if (formSection) {
+    formSection.classList.add('hidden');
   }
 
-  if (btnCancelar && formSection) {
-    btnCancelar.addEventListener('click', () => {
-      formSection.style.display = 'none';
+  // Exibe o formulário ao clicar em "Add Veículo"
+  btnAddVeiculo?.addEventListener('click', () => {
+    formSection.classList.remove('hidden');
+    formSection.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Cancela e oculta o formulário
+  btnCancelar?.addEventListener('click', () => {
+    formSection.classList.add('hidden');
+    formVeiculo.reset();
+  });
+
+  // Limpa o formulário
+  btnLimpar?.addEventListener('click', () => {
+    formVeiculo.reset();
+  });
+
+  // Força campos de texto a usar maiúsculas
+  const camposTexto = formVeiculo?.querySelectorAll('input[type="text"], textarea');
+  camposTexto?.forEach(campo => {
+    campo.addEventListener('input', () => {
+      campo.value = campo.value.toUpperCase();
+    });
+  });
+
+  // Submissão do formulário
+  formVeiculo?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const veiculo = {
+      placa: document.getElementById('placa').value.trim(),
+      marca: document.getElementById('marca').value.trim(),
+      modelo: document.getElementById('modelo').value.trim(),
+      tipo: document.getElementById('tipo').value.trim(),
+      situacao: document.getElementById('situacao').value.trim(),
+      chassi: document.getElementById('chassi').value.trim(),
+      renavan: document.getElementById('renavan').value.trim(),
+      anofab: document.getElementById('anofab').value.trim(),
+      anomod: document.getElementById('anomod').value.trim()
+    };
+
+    const { data, error } = await supabase
+      .from('veiculos')
+      .insert([veiculo]);
+
+    if (error) {
+      alert('Erro ao salvar veículo.');
+    } else {
+      alert('✅ Veículo salvo com sucesso!');
       formVeiculo.reset();
-    });
-  }
-
-  // Força campos da tela de veículos a usar maiúsculas
-  if (formVeiculo) {
-    const camposVeiculo = formVeiculo.querySelectorAll('input[type="text"], textarea');
-    camposVeiculo.forEach(campo => {
-      campo.addEventListener('input', function () {
-        this.value = this.value.toUpperCase();
-      });
-    });
-
-    // Submissão do formulário de veículo
-    formVeiculo.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const placa = document.getElementById('placa').value.trim();
-      const marca = document.getElementById('marca').value.trim();
-      const modelo = document.getElementById('modelo').value.trim();
-      const tipo = document.getElementById('tipo').value.trim();
-      const situacao = document.getElementById('situacao').value.trim();
-      const chassi = document.getElementById('chassi').value.trim();
-      const renavan = document.getElementById('renavan').value.trim();
-      const anofab = document.getElementById('anofab').value.trim();
-      const anomod = document.getElementById('anomod').value.trim();
-
-      const { data, error } = await supabase
-        .from('veiculos')
-        .insert([{ placa, marca, modelo, tipo, situacao, chassi, renavan, anofab, anomod }]);
-
-      if (error) {
-        alert('Erro ao salvar veículo.');
-      } else {
-        alert('✅ Veículo salvo com sucesso!');
-        e.target.reset();
-        formSection.style.display = 'none';
-      }
-    });
-  }
+      formSection.classList.add('hidden');
+    }
+  });
 });

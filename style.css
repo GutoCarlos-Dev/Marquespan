@@ -334,3 +334,7 @@ input, select, textarea {
 .acoes-veiculos button:hover {
   background-color: #388e3c;
 }
+
+.hidden {
+  display: none;
+}
