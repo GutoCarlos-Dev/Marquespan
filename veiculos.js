@@ -21,11 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🧼 Limpar formulário
   btnClear?.addEventListener('click', (e) => {
-    e.preventDefault();
-    console.log('Botão LIMPAR clicado');
-    limparFormulario(form);
-    form.scrollIntoView({ behavior: 'smooth' });
-  });
+  e.preventDefault();
+  console.log('Botão LIMPAR clicado');
+  limparFormulario(form);
+});
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
