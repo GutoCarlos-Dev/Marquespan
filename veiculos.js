@@ -4,7 +4,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('btnClear');
+  const btnClear = document.getElementById('btnClear'); // Certifique-se que o botão tem esse ID
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
 
@@ -20,11 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-  btnClear?.addEventListener('click', (e) => {
+btnClear?.addEventListener('click', (e) => {
   e.preventDefault();
   console.log('Botão LIMPAR clicado');
   limparFormulario(form);
 });
+
+// 🧽 Função de limpeza
+function limparFormulario(form) {
+  form.querySelectorAll('input').forEach(input => input.value = '');
+  form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+  form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+}
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
@@ -66,12 +73,5 @@ document.addEventListener('DOMContentLoaded', () => {
   function getValorUpper(id) {
     const el = document.getElementById(id);
     return el?.value.trim().toUpperCase() || '';
-  }
-
-  // 🧽 Função de limpeza
-  function limparFormulario(formVeiculo) {
-    form.querySelectorAll('input').forEach(input => input.value = '');
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
   }
 });
