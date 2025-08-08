@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear'); // Certifique-se que o botão tem esse ID
   const modal = document.getElementById('modalVeiculo');
-  const form = document.getElementById('formVeiculo');
+  const formVeiculo = document.getElementById('formVeiculo');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🧽 Função de limpeza
 function limparFormulario(formVeiculo) {
-  form.querySelectorAll('input').forEach(input => input.value = '');
-  form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-  form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  formVeiculo.querySelectorAll('input').forEach(input => input.value = '');
+  formVeiculo.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+  formVeiculo.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
 }
 
   // 💾 Submeter dados
