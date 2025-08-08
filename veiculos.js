@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-   btnClear?.addEventListener('click', () => {
-      modal.style.display = 'none';
+   btnClear?.addEventListener('click', (e) => {
+      e.preventDefault();
       limparFormulario(form);
     });
 
