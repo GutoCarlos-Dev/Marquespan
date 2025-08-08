@@ -21,11 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🧼 Limpar formulário
   btnClear?.addEventListener('click', (e) => {
-    e.preventDefault();
-    form.querySelectorAll('input').forEach(input => input.value = '');
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-  });
+  e.preventDefault();
+  console.log('Botão LIMPAR clicado');
+  limparFormulario(form);
+});
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
@@ -70,9 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 🧽 Função de limpeza
-//  function limparFormulario(formVeiculo) {
-//    form.querySelectorAll('input').forEach(input => input.value = '');
-//    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-//    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-//  }
+  function limparFormulario(formVeiculo) {
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  }
 });
