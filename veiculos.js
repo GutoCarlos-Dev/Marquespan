@@ -5,49 +5,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
-  const formSection = document.getElementById('formNovoVeiculo');
+  const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
 
-  // Oculta o formulário ao carregar
-  formSection.classList.add('hidden');
-
-  // Exibe o formulário ao clicar em "Adicionar"
+  // Exibe o modal ao clicar em "Adicionar"
   btnAdd?.addEventListener('click', () => {
-    formSection.classList.remove('hidden');
-    formSection.scrollIntoView({ behavior: 'smooth' });
+    modal.style.display = 'block';
   });
 
   // Oculta e limpa o formulário ao clicar em "Cancelar"
   btnCancel?.addEventListener('click', () => {
-    formSection.classList.add('hidden');
-    form?.reset();
+    modal.style.display = 'none';
+    limparFormulario(form);
   });
 
   // Limpa o formulário ao clicar em "Limpar"
   btnClear?.addEventListener('click', (e) => {
-  e.preventDefault();
-
-// Limpa todos os inputs
-  form.querySelectorAll('input').forEach(input => {
-    input.value = '';
+    e.preventDefault();
+    limparFormulario(form);
+    form.scrollIntoView({ behavior: 'smooth' });
   });
-
-  // Reseta todos os selects
-  form.querySelectorAll('select').forEach(select => {
-    select.selectedIndex = 0;
-  });
-
-  // Se tiver textareas, limpa também
-  form.querySelectorAll('textarea').forEach(textarea => {
-    textarea.value = '';
-  });
-});
 
   // Envia os dados do formulário
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const veiculo = {
+      filial: document.getElementById('filial').value.trim(),
       placa: document.getElementById('placa').value.trim(),
       marca: document.getElementById('marca').value.trim(),
       modelo: document.getElementById('modelo').value.trim(),
@@ -65,8 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Erro ao salvar veículo.');
     } else {
       alert('✅ Veículo salvo com sucesso!');
-      form.reset();
-      formSection.classList.add('hidden');
+      limparFormulario(form);
+      modal.style.display = 'none';
     }
   });
 
@@ -77,4 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
       campo.value = campo.value.toUpperCase();
     });
   });
+
+  // Função de limpeza reutilizável
+  function limparFormulario(form) {
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  }
 });
