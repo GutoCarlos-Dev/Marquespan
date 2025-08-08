@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
 </head>
 <body>
+  <!-- 🟩 Sidebar -->
   <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()">
       <i class="fas fa-bars"></i>
@@ -25,6 +25,7 @@
     </nav>
   </div>
 
+  <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
     <section class="veiculos-header">
       <div class="acoes-veiculos">
@@ -34,28 +35,28 @@
       </div>
     </section>
 
-    <!-- Modal do formulário -->
+    <!-- 🧾 Modal de cadastro -->
     <div id="modalVeiculo" class="modal">
       <div class="modal-content">
         <span class="close" id="btnFecharModal">&times;</span>
         <h2 class="section-title">Novo Veículo</h2>
         <form id="formVeiculo" class="form-grid">
-          <select id="filial">
+          <select id="filial" required>
             <option value="">FILIAL</option>
             <option value="SP">SP</option>
             <option value="MG">MG</option>
             <option value="MS">MS</option>
             <option value="PR">PR</option>
           </select>
-          <input type="text" id="placa" placeholder="Placa" required>
-          <input type="text" id="marca" placeholder="Marca">
-          <input type="text" id="modelo" placeholder="Modelo">
-          <input type="text" id="chassi" placeholder="Chassi">
-          <input type="text" id="renavan" placeholder="Renavan">
-          <input type="text" id="anofab" placeholder="Ano Fab." maxlength="4" inputmode="numeric">
-          <input type="text" id="anomod" placeholder="Ano Mod." maxlength="4" inputmode="numeric">
-          <select id="tipo">
-            <option value="">Tipo</option>
+          <input type="text" id="placa" placeholder="PLACA" required>
+          <input type="text" id="marca" placeholder="MARCA">
+          <input type="text" id="modelo" placeholder="MODELO">
+          <input type="text" id="chassi" placeholder="CHASSI">
+          <input type="text" id="renavan" placeholder="RENAVAN">
+          <input type="text" id="anofab" placeholder="ANO FAB." maxlength="4" inputmode="numeric">
+          <input type="text" id="anomod" placeholder="ANO MOD." maxlength="4" inputmode="numeric">
+          <select id="tipo" required>
+            <option value="">TIPO</option>
             <option value="TRUCK">TRUCK</option>
             <option value="BITRUCK">BITRUCK</option>
             <option value="BITREM">BITREM</option>
@@ -63,33 +64,36 @@
             <option value="CAVALO">CAVALO</option>
             <option value="VUC">VUC</option>
           </select>
-          <select id="situacao">
-            <option value="">Situação</option>
+          <select id="situacao" required>
+            <option value="">SITUAÇÃO</option>
             <option value="ATIVO">ATIVO</option>
             <option value="BLOQUEADO">BLOQUEADO</option>
             <option value="CANCELADO">CANCELADO</option>
           </select>
-          <button type="button" id="btnClear"><i class="fas fa-eraser"></i> Limpar Formulário</button>
-          <button type="submit"><i class="fas fa-save"></i> Salvar Veículo</button>
-          <button type="button" id="btnCancelar"><i class="fas fa-times"></i> Cancelar</button>
+          <button type="button" id="btnClear"><i class="fas fa-eraser"></i> LIMPAR FORMULÁRIO</button>
+          <button type="submit"><i class="fas fa-save"></i> SALVAR VEÍCULO</button>
+          <button type="button" id="btnCancelar"><i class="fas fa-times"></i> CANCELAR</button>
         </form>
       </div>
     </div>
 
+    <!-- 🔍 Busca de veículos -->
     <section class="buscar-veiculos">
       <div class="card">
         <h3>Buscar Veículo</h3>
-        <input type="text" id="buscarPlaca" placeholder="Digite a placa">
+        <input type="text" id="buscarPlaca" placeholder="DIGITE A PLACA">
         <button id="btnBuscarVeiculo"><i class="fas fa-search"></i> Buscar</button>
         <div id="resultadoBusca"></div>
       </div>
     </section>
 
+    <!-- 🦶 Rodapé -->
     <footer class="footer">
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
 
+  <!-- 🧠 Scripts -->
   <script>
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('collapsed');
@@ -105,7 +109,6 @@
     limitarAno('anofab');
     limitarAno('anomod');
 
-    // Modal controle
     document.addEventListener('DOMContentLoaded', () => {
       const btnAdd = document.getElementById('btnAddVeiculo');
       const modal = document.getElementById('modalVeiculo');
