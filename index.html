@@ -41,7 +41,7 @@
         const senha = document.getElementById('senha').value.trim();
 
         if (usuario === 'admin' && senha === 'admin') {
-          alert('✅ Acesso autorizado!');
+          alert('✅ Acesso autorizado! Olá',usuario);
           localStorage.setItem('usuarioLogado', usuario);
           window.location.href = 'dashboard.html';
         } else {
