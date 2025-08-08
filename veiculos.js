@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
-  const form = document.getElementById('formVeiculo');
+  const form = document.querySelector('form');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
@@ -21,10 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🧼 Limpar formulário
   btnClear?.addEventListener('click', (e) => {
-  e.preventDefault();
-  console.log('Botão LIMPAR clicado');
-  limparFormulario(form);
-});
+    e.preventDefault();
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  });
 
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
