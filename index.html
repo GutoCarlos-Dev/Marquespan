@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Login - Marquespan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-body">
@@ -11,45 +12,20 @@
     <h2>Área Administrativa</h2>
 
     <form id="formLogin" class="login-form">
-      <input type="text" id="usuario" placeholder="Usuário" required>
-      <input type="password" id="senha" placeholder="Senha" required>
+      <label for="usuario" class="sr-only">Usuário</label>
+      <input type="text" id="usuario" placeholder="Usuário" required autocomplete="username">
+
+      <label for="senha" class="sr-only">Senha</label>
+      <input type="password" id="senha" placeholder="Senha" required autocomplete="current-password">
+
       <button type="submit">Entrar</button>
     </form>
 
     <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> para acessar</p>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-  const formLogin = document.getElementById('formLogin');
-
-  // Lista de usuários válidos
-  const usuariosValidos = [
-    { usuario: 'admin', senha: 'admin' },
-    { usuario: 'bryan', senha: 'bryan123' },
-    { usuario: 'murilo', senha: 'murilo123' },
-    { usuario: 'guto', senha: '123456' },
-    { usuario: 'jones', senha: 'jones123' }
-  ];
-
-  formLogin.addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    const usuario = document.getElementById('usuario').value.trim();
-    const senha = document.getElementById('senha').value.trim();
-
-    const usuarioEncontrado = usuariosValidos.find(u => u.usuario === usuario && u.senha === senha);
-
-    if (usuarioEncontrado) {
-      alert(`✅ Bem-vindo, ${usuario}!`);
-      localStorage.setItem('usuarioLogado', usuario);
-      window.location.href = 'dashboard.html';
-    } else {
-      alert('❌ Usuário ou senha inválidos.');
-    }
-  });
-});
-
-  </script>
+  <!-- Scripts externos -->
+  <script type="module" src="script/supabase.js"></script>
+  <script type="module" src="script/auth.js"></script>
 </body>
 </html>
