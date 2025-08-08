@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🧼 Limpar formulário
    btnClear?.addEventListener('click', (e) => {
       e.preventDefault();
-      console.log('Botão LIMPAR clicado');
       limparFormulario(form);
     });
 
