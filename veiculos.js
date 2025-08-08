@@ -20,11 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-btnClear?.addEventListener('click', (e) => {
-  e.preventDefault();
-  console.log('Botão LIMPAR clicado');
-  limparFormulario(form);
-});
+   btnClear?.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Botão LIMPAR clicado');
+      limparFormulario(form);
+    });
 
 // 🧽 Função de limpeza
 function limparFormulario(form) {
