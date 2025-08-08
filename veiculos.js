@@ -25,9 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Limpa o formulário ao clicar em "Limpar"
   btnClear?.addEventListener('click', (e) => {
-    e.preventDefault(); // Evita comportamento padrão se estiver dentro de <form>
-    form?.reset();
-  });
+  e.preventDefault(); // Garante que não haja envio
+  if (form) {
+    form.reset();
+
+    // Se quiser limpar selects manualmente:
+    form.querySelectorAll('select').forEach(select => {
+      select.selectedIndex = 0;
+    });
+  }
+});
 
   // Envia os dados do formulário
   form?.addEventListener('submit', async (e) => {
