@@ -4,7 +4,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('btnClear');
+  const btnClear = document.getElementById('limparFormulario');
   const modal = document.getElementById('modalVeiculo');
   const form = document.querySelector('formVeiculo');
 
@@ -20,15 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 🧼 Limpar formulário
-  btnClear?.addEventListener('click', (e) => {
-    e.preventDefault();
-    formVeiculo.querySelectorAll('input').forEach(input => input.value = '');
-    formVeiculo.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    formVeiculo.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-  });
+//  btnClear?.addEventListener('click', (e) => {
+//    e.preventDefault();
+//    form.querySelectorAll('input').forEach(input => input.value = '');
+//    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+//    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+//  });
 
   // 💾 Submeter dados
-  formVeiculo?.addEventListener('submit', async (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const veiculo = {
@@ -71,8 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🧽 Função de limpeza
   function limparFormulario(formVeiculo) {
-    formVeiculo.querySelectorAll('input').forEach(input => input.value = '');
-    formVeiculo.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    formVeiculo.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
   }
 });
