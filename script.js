@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Exibe o formulário ao clicar em "Add Veículo"
-  btnAddVeiculo?.addEventListener('click', () => {
+    btnAddVeiculo?.addEventListener('click', () => {
     formSection.classList.remove('hidden');
     formSection.scrollIntoView({ behavior: 'smooth' });
   });
