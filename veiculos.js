@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
-  const form = document.querySelector('formVeiculo');
+  const form = document.getElementById('formVeiculo');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
