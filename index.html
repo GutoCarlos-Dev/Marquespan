@@ -24,8 +24,25 @@
     <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> para acessar</p>
   </div>
 
-  <!-- Scripts externos -->
-  <script type="module" src="script/supabase.js"></script>
-  <script type="module" src="script/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const formLogin = document.getElementById('formLogin');
+
+      formLogin.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const usuario = document.getElementById('usuario').value.trim();
+        const senha = document.getElementById('senha').value.trim();
+
+        if (usuario === 'admin' && senha === 'admin') {
+          alert('✅ Acesso autorizado!');
+          localStorage.setItem('usuarioLogado', usuario);
+          window.location.href = 'dashboard.html';
+        } else {
+          alert('❌ Usuário ou senha inválidos.');
+        }
+      });
+    });
+  </script>
 </body>
 </html>
