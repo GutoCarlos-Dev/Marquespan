@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
   <style>
-  input[type="text"],
-  input[type="password"] {
-    text-transform: none;
-  }
-</style>
+    input[type="text"],
+    input[type="password"] {
+      text-transform: none;
+    }
+  </style>
 </head>
 <body class="login-body">
   <div class="login-container">
@@ -26,13 +26,19 @@
 
       <button type="submit">Entrar</button>
     </form>
-    <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> para acessar</p>
-    
+    <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> ou outros usuários cadastrados</p>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const formLogin = document.getElementById('formLogin');
+
+      const usuarios = [
+        { nome: 'admin', senha: 'admin' },
+        { nome: 'guto', senha: '123456' },
+        { nome: 'jones', senha: '123456' },
+        { nome: 'acacio', senha: '123456' }
+      ];
 
       formLogin.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -40,13 +46,15 @@
         const usuario = document.getElementById('usuario').value.trim();
         const senha = document.getElementById('senha').value.trim();
 
-        if (usuario === 'admin' && senha === 'admin') {
-        alert(`✅ Acesso autorizado! Olá, ${usuario}`);
-        localStorage.setItem('usuarioLogado', usuario);
-        window.location.href = 'dashboard.html';
-      } else {
-        alert('❌ Usuário ou senha inválidos.');
-      }
+        const usuarioValido = usuarios.find(u => u.nome === usuario && u.senha === senha);
+
+        if (usuarioValido) {
+          alert(`✅ Acesso autorizado! Olá, ${usuarioValido.nome}`);
+          localStorage.setItem('usuarioLogado', usuarioValido.nome);
+          window.location.href = 'dashboard.html';
+        } else {
+          alert('❌ Usuário ou senha inválidos.');
+        }
       });
     });
   </script>

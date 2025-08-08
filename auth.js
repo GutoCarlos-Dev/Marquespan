@@ -43,3 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
   }
 });
+
+const usuarios = [
+  { nome: 'admin', senha: 'admin' },
+  { nome: 'guto', senha: '123456' },
+  { nome: 'jones', senha: '123456' },
+  { nome: 'acacio', senha: '123456' }
+];
