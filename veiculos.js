@@ -8,22 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const formSection = document.getElementById('formNovoVeiculo');
   const form = document.getElementById('formVeiculo');
 
+  // Oculta o formulário ao carregar
   formSection.classList.add('hidden');
 
+  // Exibe o formulário ao clicar em "Adicionar"
   btnAdd?.addEventListener('click', () => {
     formSection.classList.remove('hidden');
     formSection.scrollIntoView({ behavior: 'smooth' });
   });
 
+  // Oculta e limpa o formulário ao clicar em "Cancelar"
   btnCancel?.addEventListener('click', () => {
     formSection.classList.add('hidden');
-    form.reset();
+    form?.reset();
   });
 
-  btnClear?.addEventListener('click', () => {
-    form.reset();
+  // Limpa o formulário ao clicar em "Limpar"
+  btnClear?.addEventListener('click', (e) => {
+    e.preventDefault(); // Evita comportamento padrão se estiver dentro de <form>
+    form?.reset();
   });
 
+  // Envia os dados do formulário
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -50,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Converte texto para maiúsculas automaticamente
   const camposTexto = form?.querySelectorAll('input[type="text"], textarea');
   camposTexto?.forEach(campo => {
     campo.addEventListener('input', () => {
