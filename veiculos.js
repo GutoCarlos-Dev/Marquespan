@@ -22,11 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🧼 Limpar formulário
    btnClear?.addEventListener('click', (e) => {
       e.preventDefault();
-      limparFormulario(form);
+      limparFormulario(formVeiculo);
     });
 
 // 🧽 Função de limpeza
-function limparFormulario(form) {
+function limparFormulario(formVeiculo) {
   form.querySelectorAll('input').forEach(input => input.value = '');
   form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
   form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
