@@ -4,7 +4,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('btnLimpar');
+  const btnClear = document.getElementById('btnClear');
   const formSection = document.getElementById('formNovoVeiculo');
   const form = document.getElementById('formVeiculo');
 
