@@ -27,26 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
   btnClear?.addEventListener('click', (e) => {
   e.preventDefault();
 
-  if (form) {
-    form.reset();
+// Limpa todos os inputs
+  form.querySelectorAll('input').forEach(input => {
+    input.value = '';
+  });
 
-    // Garante que selects voltem ao primeiro item
-    form.querySelectorAll('select').forEach(select => {
-      select.selectedIndex = 0;
-    });
+  // Reseta todos os selects
+  form.querySelectorAll('select').forEach(select => {
+    select.selectedIndex = 0;
+  });
 
-    // Se estiver usando inputs com máscaras ou plugins, pode ser necessário limpar manualmente
-    form.querySelectorAll('input[type="text"]').forEach(input => {
-      input.value = '';
-    });
-  }
-});
-
-    // Se quiser limpar selects manualmente:
-    form.querySelectorAll('select').forEach(select => {
-      select.selectedIndex = 0;
-    });
-  }
+  // Se tiver textareas, limpa também
+  form.querySelectorAll('textarea').forEach(textarea => {
+    textarea.value = '';
+  });
 });
 
   // Envia os dados do formulário
