@@ -28,8 +28,7 @@
         </div>
       </div>
       
-      
-        <!-- 🔹 Bloco 1: Identificação do Veículo -->
+      <!-- 🔹 Bloco 1: Identificação do Veículo -->
       <div class="form-bloco">
         <h3>Identificação do Veículo</h3>
         <div class="form-grid">
@@ -42,8 +41,14 @@
           <label>Modelo</label>
           <input type="text" name="modelo" />
 
-          <label>Tipo</label>
-          <input type="text" name="tipo" />
+        <label>Tipo</label>
+          <select name="tipo">
+            <option value="">Selecione</option>
+            <option value="vulc">VUC T</option>
+            <option value="vulc">VUC</option>
+            <option value="cavalo">CAVALO</option>
+            <option value="truck">TRUCK</option>
+            <option value="bitruck">BITRUCK</option>
 
           <label>Ano Fabricação</label>
           <input type="number" name="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
