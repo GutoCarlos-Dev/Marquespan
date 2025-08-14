@@ -96,12 +96,17 @@ nav a:hover {
 }
 
 /* 📊 Cards do dashboard */
-.dashboard-container,
+.dashboard-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
 .buscar-veiculos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
-  max-width: 1000px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -166,7 +171,6 @@ body.login-body {
 .login-logo {
   width: 100px;
   margin-bottom: 20px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 .login-form input,
@@ -335,43 +339,42 @@ body.login-body {
   display: none;
 }
 
-/* 📋 Tabela de veículos */
-.vehicle-table {
+/* === Modal Veículo === */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
   width: 100%;
-  border-collapse: collapse;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6);
+}
+
+.modal-content {
   background-color: #fff;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  margin: 5% auto;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 0 10px #000;
+  animation: fadeInModal 0.3s ease-out;
 }
 
-.vehicle-table th,
-.vehicle-table td {
-  padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-  font-size: 14px;
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.vehicle-table th {
-  background-color: #f1f8e9;
-  color: #2e7d32;
-  font-weight: 600;
-}
-
-.vehicle-table tbody tr:hover {
-  background-color: #f9fbe7;
-}
-
-.vehicle-table td .btn {
-  padding: 6px 10px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.vehicle-table td .btn:hover {
-  background-color: #388e3c;
+.close {
+  float: right;
+  font-size: 28
 }
