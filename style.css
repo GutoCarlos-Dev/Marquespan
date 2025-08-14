@@ -470,7 +470,19 @@ body.login-body {
 
 .modal-veiculo.show {
   display: flex;
-  animation: fadeIn 0.3s ease-in-out;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f9f9f9;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  max-width: 800px;
+  width: 100%;
 }
 
 @keyframes fadeIn {
