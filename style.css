@@ -545,8 +545,78 @@ input, select {
   color: #333;
 }
 
+/* 🔧 Container centralizado */
 .form-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* 🧱 Blocos de formulário */
+.form-bloco {
+  margin-bottom: 30px;
+}
+
+.form-bloco h3 {
+  font-size: 18px;
+  color: #2e7d32;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #c8e6c9;
+  padding-bottom: 5px;
+}
+
+/* 🧩 Grid de campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ✏️ Campos */
+input, select {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 🖱️ Botões padrão Marquespan */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.modal-actions button[type="submit"] {
+  background-color: #1976d2;
+  color: white;
+}
+
+.modal-actions button[type="submit"]:hover {
+  background-color: #1565c0;
+}
+
+.modal-actions button[type="button"] {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.modal-actions button[type="button"]:hover {
+  background-color: #bdbdbd;
 }
