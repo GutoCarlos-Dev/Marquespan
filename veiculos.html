@@ -41,36 +41,34 @@
       </div>
     </div>
 
-    <div class="table-section">
-      <table class="vehicle-table">
-        <thead>
-          <tr>
-            <th>Placa</th>
-            <th>Frota</th>
-            <th>Grupo</th>
-            <th>Filial</th>
-            <th>Marca</th>
-            <th>Modelo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaVeiculos">
-          <!-- Dados dinâmicos aqui -->
-          <tr>
-            <td>ABC1234</td>
-            <td>Frota 01</td>
-            <td>Grupo A</td>
-            <td>Filial SP</td>
-            <td>Volkswagen</td>
-            <td>Delivery</td>
-            <td>
-              <button class="btn"><i class="fas fa-edit"></i></button>
-              <button class="btn"><i class="fas fa-trash-alt"></i></button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <section class="grid-veiculos">
+      <h2 class="section-title">Veículos Cadastrados</h2>
+
+      <div class="grid-header">
+        <div>Placa</div>
+        <div>Frota</div>
+        <div>Grupo</div>
+        <div>Filial</div>
+        <div>Marca</div>
+        <div>Modelo</div>
+        <div>Ações</div>
+      </div>
+
+      <div class="grid-row">
+        <div>ABC1234</div>
+        <div>Frota 01</div>
+        <div>Grupo A</div>
+        <div>Filial SP</div>
+        <div>Volkswagen</div>
+        <div>Delivery</div>
+        <div class="grid-actions">
+          <button class="btn"><i class="fas fa-edit"></i></button>
+          <button class="btn"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </div>
+
+      <!-- Adicione mais .grid-row conforme necessário -->
+    </section>
 
     <footer class="footer">
       © 2025 Marquespan. Todos os direitos reservados.
