@@ -41,7 +41,15 @@
           <label>Modelo</label>
           <input type="text" name="modelo" />
 
-        <label>Tipo</label>
+          <label>Ano Fabricação</label>
+          <input type="number" name="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
+          <label>Ano Modelo</label>
+          <input type="number" name="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
+
+          <label>QTD de Tanques</label>
+          <input type="number" name="qtdtanque" min="1" max="2" step="1" required/>
+          
+          <label>Tipo</label>
           <select name="tipo">
             <option value="">Selecione</option>
             <option value="vulc">VUC T</option>
@@ -49,15 +57,7 @@
             <option value="cavalo">CAVALO</option>
             <option value="truck">TRUCK</option>
             <option value="bitruck">BITRUCK</option>
-
-          <label>Ano Fabricação</label>
-          <input type="number" name="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
-          <label>Ano Modelo</label>
-          <input type="number" name="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
-
-          <label>Grupo</label>
-          <input type="text" name="grupo" />
-          
+          </select>            
           <label>Situação *</label>
           <select name="situacao" required>
             <option value="">Selecione</option>
