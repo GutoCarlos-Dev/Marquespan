@@ -18,3 +18,11 @@ export function exibirUsuarioLogado() {
 document.addEventListener('DOMContentLoaded', () => {
   exibirUsuarioLogado();
 });
+
+function abrirModal() {
+  document.getElementById("modalVeiculo").style.display = "flex";
+}
+
+function fecharModal() {
+  document.getElementById("modalVeiculo").style.display = "none";
+}
