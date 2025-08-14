@@ -45,22 +45,17 @@
         <label>Ano</label>
         <input type="number" name="ano" />
 
-        <label>Tipo Média *</label>
-        
-        <select name="tipoMedia" required>
-          <option value="">Selecione</option>
-          <option value="km/l">Km/L</option>
-          <option value="l/100km">L/100km</option>
-        </select>
-
-        <label>Volume Tanque Comb.</label>
-        <input type="number" name="volumeTanque" />
-
         <label>Grupo</label>
         <input type="text" name="grupo" />
 
         <label>Filial *</label>
-        <input type="text" name="filial" required />
+        <select name="Filial" required>
+          <option value="">Selecione</option>
+          <option value="SP">SP</option>
+          <option value="MG">MG</option>
+          <option value="MS">MS</option>
+          <option value="PR">PR</option>
+        </select>
 
         <label>Agregado</label>
         <input type="text" name="agregado" />
@@ -68,30 +63,6 @@
         <label>RT10</label>
         <input type="text" name="rt10" />
       </div>
-
-      <fieldset class="desempenho">
-        <legend>Gestão de Desempenho</legend>
-
-        <label>Média Combustível (Meta / Min / Max)</label>
-        <div class="media-group">
-          <input type="number" name="mediaCombMeta" placeholder="Meta" />
-          <input type="number" name="mediaCombMin" placeholder="Min" />
-          <input type="number" name="mediaCombMax" placeholder="Max" />
-        </div>
-
-        <label>Média Arla (Meta / Min / Max)</label>
-        <div class="media-group">
-          <input type="number" name="mediaArlaMeta" placeholder="Meta" />
-          <input type="number" name="mediaArlaMin" placeholder="Min" />
-          <input type="number" name="mediaArlaMax" placeholder="Max" />
-        </div>
-
-        <label>
-          <input type="checkbox" name="arlaAutorizada" />
-          Arla Autorizada
-        </label>
-      </fieldset>
-
       <div class="modal-actions">
         <button type="submit"><i class="fas fa-save"></i> Salvar</button>
         <button type="button" onclick="fecharModal()"><i class="fas fa-times"></i> Cancelar</button>
