@@ -9,60 +9,52 @@
 <body>
 <script src="cadastro-veiculo.js"></script>
 <div class="modal-veiculo show">
+  <div class="modal-veiculo show">
   <div class="modal-content">
-    <h2>Cadastro de Veículos</h2>
-
     <form id="formVeiculo">
-      <div class="form-grid">
-        <label>Placa *</label>
-        <input type="text" name="placa" required />
 
-        <label>Frota</label>
-        <input type="text" name="frota" />
+      <!-- 🔹 Bloco 1: Identificação do Veículo -->
+      <div class="form-bloco">
+        <h3>Identificação do Veículo</h3>
+        <div class="form-grid">
+          <label>Placa *</label>
+          <input type="text" name="placa" required />
 
-        <label>Marca</label>
-        <input type="text" name="marca" />
+          <label>Frota</label>
+          <input type="text" name="frota" />
 
-        <label>Modelo</label>
-        <input type="text" name="modelo" />
+          <label>Ano</label>
+          <input type="number" name="ano" />
 
-        <label>Tipo</label>
-        <input type="text" name="tipo" />
-
-        <label>Situação *</label>
-        <select name="situacao" required>
-          <option value="">Selecione</option>
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
-        </select>
-
-        <label>Chassi</label>
-        <input type="text" name="chassi" />
-
-        <label>Renavam</label>
-        <input type="text" name="renavam" />
-
-        <label>Ano</label>
-        <input type="number" name="ano" />
-
-        <label>Grupo</label>
-        <input type="text" name="grupo" />
-
-        <label>Filial *</label>
-        <select name="Filial" required>
-          <option value="">Selecione</option>
-          <option value="SP">SP</option>
-          <option value="MG">MG</option>
-          <option value="MS">MS</option>
-          <option value="PR">PR</option>
-        </select>
-        <label>Agregado</label>
-        <input type="text" name="agregado" />
+          <label>Grupo</label>
+          <input type="text" name="grupo" />
+        </div>
       </div>
+
+      <!-- 🔹 Bloco 2: Localização -->
+      <div class="form-bloco">
+        <h3>Localização</h3>
+        <div class="form-grid">
+          <label>Filial *</label>
+          <select name="Filial" required>
+            <option value="">Selecione</option>
+            <option value="SP">SP</option>
+            <option value="MG">MG</option>
+            <option value="MS">MS</option>
+            <option value="PR">PR</option>
+          </select>
+
+          <label>Agregado</label>
+          <input type="text" name="agregado" />
+        </div>
+      </div>
+
+      <!-- 🔹 Botões -->
       <div class="modal-actions">
         <button type="submit"><i class="fas fa-save"></i> Salvar</button>
         <button type="button" onclick="fecharModal()"><i class="fas fa-times"></i> Cancelar</button>
       </div>
+
     </form>
   </div>
 </div>

@@ -6,30 +6,47 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const dados = {
-      tipo: form.tipo.value,
-      modelo: form.modelo.value,
-      marca: form.marca.value,
-      frota: form.frota.value,
-      placa: form.placa.value,
-      situacao: form.situacao.value
+    // 🔍 Validação básica
+    const placa = form.placa.value.trim();
+    const filial = form.Filial.value;
+
+    if (!placa || !filial) {
+      alert("Por favor, preencha os campos obrigatórios: Placa e Filial.");
+      return;
+    }
+
+    // ✅ Coleta dos dados
+    const veiculo = {
+      placa,
+      frota: form.frota.value.trim(),
+      ano: form.ano.value,
+      grupo: form.grupo.value.trim(),
+      filial,
+      agregado: form.agregado.value.trim(),
     };
 
     try {
-      const { error } = await supabase.from("veiculos").insert([dados]);
+      // 🔄 Envio para Supabase ou outro backend
+      const { data, error } = await supabase
+        .from("veiculos")
+        .insert([veiculo]);
 
       if (error) {
-        console.error("Erro ao cadastrar veículo:", error.message);
-        alert("Erro ao cadastrar veículo. Verifique os dados e tente novamente.");
-        return;
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar o veículo. Tente novamente.");
+      } else {
+        alert("Veículo cadastrado com sucesso!");
+        form.reset();
+        fecharModal();
       }
-
-      alert("Veículo cadastrado com sucesso!");
-      window.close(); // Fecha a janela após o cadastro
-
     } catch (err) {
       console.error("Erro inesperado:", err);
-      alert("Ocorreu um erro inesperado. Tente novamente mais tarde.");
+      alert("Erro inesperado. Verifique sua conexão.");
     }
   });
 });
+
+// 🔙 Função para fechar o modal
+function fecharModal() {
+  document.querySelector(".modal-veiculo").classList.remove("show");
+}
