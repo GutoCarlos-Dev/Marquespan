@@ -604,12 +604,12 @@ input, select {
 }
 
 .modal-actions button[type="submit"] {
-  background-color: #1976d2;
+  background-color: #4CAF50;
   color: white;
 }
 
 .modal-actions button[type="submit"]:hover {
-  background-color: #1565c0;
+  background-color: #f10303;
 }
 
 .modal-actions button[type="button"] {
