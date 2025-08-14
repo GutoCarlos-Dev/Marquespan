@@ -25,8 +25,6 @@
             <option value="MS">MS</option>
             <option value="PR">PR</option>
           </select>
-          <label>Agregado</label>
-          <input type="text" name="agregado" />
         </div>
       </div>
       
@@ -38,14 +36,30 @@
           <label>Placa *</label>
           <input type="text" name="placa" required />
 
-          <label>Frota</label>
-          <input type="text" name="frota" />
+          <label>Marca</label>
+          <input type="text" name="marca" />
+          
+          <label>Modelo</label>
+          <input type="text" name="modelo" />
 
-          <label>Ano</label>
-          <input type="number" name="ano" />
+          <label>Tipo</label>
+          <input type="text" name="tipo" />
+
+          <label>Ano Fabribicação</label>
+          <input type="date" name="anofab" />
+
+          <label>Ano Modelo</label>
+          <input type="date" name="anomod" />
 
           <label>Grupo</label>
           <input type="text" name="grupo" />
+          
+          <label>Situação *</label>
+          <select name="situacao" required>
+            <option value="">Selecione</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
         </div>
       </div>
 
