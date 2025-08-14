@@ -544,3 +544,9 @@ input, select {
   background-color: #ccc;
   color: #333;
 }
+
+.form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
