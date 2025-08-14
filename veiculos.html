@@ -1,143 +1,58 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Veículos - Marquespan</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão de Veículos - Marquespan</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🟩 Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <button class="toggle-btn" onclick="toggleSidebar()">
-      <i class="fas fa-bars"></i>
-    </button>
-    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
+  <aside class="sidebar">
+    <div class="logo">🚚 Marquespan</div>
     <nav>
-      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
-      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
-      <a href="#"><i class="fas fa-tools"></i> <span>Manutenções</span></a>
-      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
-      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="veiculos.html" class="active"><i class="fas fa-car"></i> Veículos</a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="#"><i class="fas fa-sign-out-alt"></i> Sair</a>
     </nav>
-  </div>
+  </aside>
 
-  <!-- 🧱 Conteúdo principal -->
-  <div class="main-content">
-    <section class="veiculos-header">
-      <div class="acoes-veiculos">
-        <button id="btnAddVeiculo"><i class="fas fa-plus"></i> Add Veículo</button>
-        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
-        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+  <main class="content">
+    <header class="page-header">
+      <h1>Gestão de Veículos</h1>
+      <div class="actions">
+        <button class="btn primary"><i class="fas fa-plus"></i> Adicionar Veículo</button>
+        <button class="btn"><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button class="btn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
+    </header>
+
+    <section class="search-section">
+      <input type="text" id="placaBusca" placeholder="Digite a placa..." />
+      <button class="btn search"><i class="fas fa-search"></i> Buscar</button>
     </section>
 
-    <!-- 🧾 Modal de cadastro -->
-    <div id="modalVeiculo" class="modal">
-      <div class="modal-content">
-        <span class="close" id="btnFecharModal">&times;</span>
-        <h2 class="section-title">Novo Veículo</h2>
-        <form id="formVeiculo" class="form-grid">
-          <select id="filial" required>
-            <option value="">FILIAL</option>
-            <option value="SP">SP</option>
-            <option value="MG">MG</option>
-            <option value="MS">MS</option>
-            <option value="PR">PR</option>
-          </select>
-          <input type="text" id="placa" placeholder="PLACA" required>
-          <input type="text" id="marca" placeholder="MARCA">
-          <input type="text" id="modelo" placeholder="MODELO">
-          <input type="text" id="chassi" placeholder="CHASSI">
-          <input type="text" id="renavan" placeholder="RENAVAN">
-          <input type="text" id="anofab" placeholder="ANO FAB." maxlength="4" inputmode="numeric">
-          <input type="text" id="anomod" placeholder="ANO MOD." maxlength="4" inputmode="numeric">
-          <select id="tipo" required>
-            <option value="">TIPO</option>
-            <option value="TRUCK">TRUCK</option>
-            <option value="BITRUCK">BITRUCK</option>
-            <option value="BITREM">BITREM</option>
-            <option value="CARRETA">CARRETA</option>
-            <option value="CAVALO">CAVALO</option>
-            <option value="VUC">VUC</option>
-          </select>
-          <select id="situacao" required>
-            <option value="">SITUAÇÃO</option>
-            <option value="ATIVO">ATIVO</option>
-            <option value="BLOQUEADO">BLOQUEADO</option>
-            <option value="CANCELADO">CANCELADO</option>
-          </select>
-          <button type="button" id="btnClear"><i class="fas fa-eraser"></i> LIMPAR CAMPOS</button>
-          <button type="submit"><i class="fas fa-save"></i> SALVAR VEÍCULO</button>
-          <button type="button" id="btnCancelar"><i class="fas fa-times"></i> CANCELAR</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- 🔍 Busca de veículos -->
-    <section class="buscar-veiculos">
-      <div class="card">
-        <h3>Buscar Veículo</h3>
-        <input type="text" id="buscarPlaca" placeholder="DIGITE A PLACA">
-        <button id="btnBuscarVeiculo"><i class="fas fa-search"></i> Buscar</button>
-        <div id="resultadoBusca"></div>
-      </div>
+    <section class="table-section">
+      <table class="vehicle-table">
+        <thead>
+          <tr>
+            <th>Placa</th>
+            <th>Modelo</th>
+            <th>Filial</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaVeiculos">
+          <!-- Dados dinâmicos aqui -->
+        </tbody>
+      </table>
     </section>
 
-    <!-- 🦶 Rodapé -->
     <footer class="footer">
-      &copy; 2025 Marquespan. Todos os direitos reservados.
+      © 2025 Marquespan. Todos os direitos reservados.
     </footer>
-  </div>
-
-  <!-- 🧠 Scripts -->
-  <script>
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    }
-
-    function limitarAno(idCampo) {
-      const campo = document.getElementById(idCampo);
-      campo.addEventListener('input', () => {
-        campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
-      });
-    }
-
-    limitarAno('anofab');
-    limitarAno('anomod');
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const btnAdd = document.getElementById('btnAddVeiculo');
-      const modal = document.getElementById('modalVeiculo');
-      const btnFechar = document.getElementById('btnFecharModal');
-      const btnCancelar = document.getElementById('btnCancelar');
-
-      btnAdd.addEventListener('click', () => {
-        modal.style.display = 'block';
-      });
-
-      btnFechar.addEventListener('click', () => {
-        modal.style.display = 'none';
-      });
-
-      btnCancelar.addEventListener('click', () => {
-        modal.style.display = 'none';
-      });
-
-      window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          modal.style.display = 'none';
-        }
-      });
-    });
-  </script>
-
-  <!-- ✅ Scripts como módulos -->
-  <script type="module" src="script/supabase.js"></script>
-  <script type="module" src="script/auth.js"></script>
-  <script type="module" src="script/veiculos.js"></script>
+  </main>
 </body>
 </html>
