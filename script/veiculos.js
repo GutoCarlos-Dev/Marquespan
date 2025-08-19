@@ -1,4 +1,4 @@
-import { supabase } from '..script/supabase.js';
+import { supabase } from '/script/supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
