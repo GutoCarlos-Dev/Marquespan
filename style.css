@@ -620,3 +620,7 @@ input, select {
 .modal-actions button[type="button"]:hover {
   background-color: #bdbdbd;
 }
+
+.sucesso {
+  border: 2px solid green;
+}

@@ -58,6 +58,8 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         alert("Veículo cadastrado com sucesso!");
         form.reset();
+        form.classList.add("sucesso");
+        setTimeout(() => form.classList.remove("sucesso"), 2000);
         fecharModal();
       }
     } catch (err) {
