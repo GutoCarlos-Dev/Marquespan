@@ -293,16 +293,15 @@ body.login-body {
 }
 
 .filtros-veiculos {
-  flex: 1 1 65%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  display: flex;
+  justify-content: flex-start; /* Alinha à esquerda */
+  gap: 10px; /* Espaço entre os campos */
+  margin-bottom: 20px;
 }
 
 .filtros-veiculos input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  width: 120px; /* Tamanho menor */
+  padding: 6px 8px;
   font-size: 14px;
 }
 
