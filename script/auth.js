@@ -1,5 +1,5 @@
 // script/auth.js
-import { supabase } from './supabase.js';
+import { supabase } from '../script/supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const formLogin = document.getElementById('formLogin');
