@@ -151,20 +151,18 @@ window.buscarVeiculos = async function () {
 
   // Captura os valores dos filtros
   const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
-  const frota = document.querySelector('input[placeholder="Frota"]').value.trim().toUpperCase();
-  const marca = document.querySelector('input[placeholder="Marca"]').value.trim().toUpperCase();
-  const modelo = document.querySelector('input[placeholder="Modelo"]').value.trim().toUpperCase();
-  const grupo = document.querySelector('input[placeholder="Grupo"]').value.trim().toUpperCase();
   const filial = document.querySelector('input[placeholder="Filial"]').value.trim().toUpperCase();
+
+// ⚠️ Verifica se todos os filtros estão vazios
+  if (!placa && !filial) {
+    const confirmar = confirm("⚠️ Nenhum filtro foi preenchido.\nDeseja realmente buscar todos os veículos no banco de dados?\nIsso pode gerar lentidão no sistema!");
+    if (!confirmar) return;
+  }
 
   let query = supabase.from('veiculos').select('*');
 
   // Aplica filtros dinamicamente
   if (placa) query = query.ilike('placa', `%${placa}%`);
-  if (frota) query = query.ilike('frota', `%${frota}%`);
-  if (marca) query = query.ilike('marca', `%${marca}%`);
-  if (modelo) query = query.ilike('modelo', `%${modelo}%`);
-  if (grupo) query = query.ilike('grupo', `%${grupo}%`);
   if (filial) query = query.ilike('filial', `%${filial}%`);
 
   const { data, error } = await query;
