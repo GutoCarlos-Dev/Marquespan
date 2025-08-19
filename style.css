@@ -292,17 +292,12 @@ body.login-body {
   margin-bottom: 30px;
 }
 
-.filtros-veiculos {
-  display: flex;
-  justify-content: flex-start; /* Alinha à esquerda */
-  gap: 10px; /* Espaço entre os campos */
-  margin-bottom: 20px;
+.filtros-veiculos input[name="placa"] {
+  width: 100px;
 }
 
-.filtros-veiculos input {
-  width: 120px; /* Tamanho menor */
-  padding: 6px 8px;
-  font-size: 14px;
+.filtros-veiculos select[name="filial"] {
+  width: 140px;
 }
 
 .acoes-veiculos {
