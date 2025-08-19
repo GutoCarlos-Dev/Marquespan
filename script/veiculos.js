@@ -8,8 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('formVeiculo');
   const gridBody = document.getElementById('grid-veiculos-body');
 
-  // 🟢 Abrir modal
+  let veiculoEditandoId = null;
+
+  // 🟢 Abrir modal para novo veículo
   btnAdd?.addEventListener('click', () => {
+    veiculoEditandoId = null;
+    limparFormulario(form);
     modal.style.display = 'block';
   });
 
@@ -25,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     limparFormulario(form);
   });
 
-  // 💾 Submeter dados
+  // 💾 Submeter dados (novo ou edição)
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -48,7 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const { data, error } = await supabase.from('veiculos').insert([veiculo]);
+    let resultado;
+    if (veiculoEditandoId) {
+      resultado = await supabase
+        .from('veiculos')
+        .update(veiculo)
+        .eq('id', veiculoEditandoId);
+    } else {
+      resultado = await supabase
+        .from('veiculos')
+        .insert([veiculo]);
+    }
+
+    const { error } = resultado;
 
     if (error) {
       alert('❌ Erro ao salvar veículo.');
@@ -56,7 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Veículo salvo com sucesso!');
       limparFormulario(form);
       modal.style.display = 'none';
-      carregarVeiculos(); // 🔁 Atualiza a lista após cadastro
+      veiculoEditandoId = null;
+      carregarVeiculos();
     }
   });
 
@@ -74,9 +91,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function limparFormulario(form) {
+    veiculoEditandoId = null;
     form.querySelectorAll('input').forEach(input => input.value = '');
     form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
     form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  }
+
+  function preencherFormulario(veiculo) {
+    document.getElementById('filial').value = veiculo.filial || '';
+    document.getElementById('placa').value = veiculo.placa || '';
+    document.getElementById('marca').value = veiculo.marca || '';
+    document.getElementById('modelo').value = veiculo.modelo || '';
+    document.getElementById('tipo').value = veiculo.tipo || '';
+    document.getElementById('situacao').value = veiculo.situacao || '';
+    document.getElementById('chassi').value = veiculo.chassi || '';
+    document.getElementById('renavan').value = veiculo.renavan || '';
+    document.getElementById('anofab').value = veiculo.anofab || '';
+    document.getElementById('anomod').value = veiculo.anomod || '';
+    document.getElementById('qtdtanque').value = veiculo.qtdtanque || '';
   }
 
   // 📦 Carregar veículos do banco
@@ -105,18 +137,34 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>${veiculo.placa}</div>
         <div>${veiculo.marca || '-'}</div>
         <div>${veiculo.modelo || '-'}</div>
-        <div>${veiculo.renavan || '-'}</div>
-        <div>${veiculo.chassi || '-'}</div>
-        <div>${veiculo.anofab || '-'}</div>
-        <div>${veiculo.anomod || '-'}</div>
-        <div>${veiculo.qtdtanque || '-'}</div>
-        <div>${veiculo.tipo || '-'}</div>
-        <div>${veiculo.situacao}</div>
+        <div>
+          <button onclick="editarVeiculo('${veiculo.id}')">
+            <i class="fas fa-edit"></i> Editar
+          </button>
+        </div>
       `;
 
       gridBody.appendChild(row);
     });
   }
+
+  // ✏️ Editar veículo
+  window.editarVeiculo = async function (id) {
+    const { data, error } = await supabase
+      .from('veiculos')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      alert('❌ Veículo não encontrado.');
+      return;
+    }
+
+    veiculoEditandoId = id;
+    preencherFormulario(data);
+    modal.style.display = 'block';
+  };
 
   // 🚀 Inicializa a listagem ao carregar a página
   carregarVeiculos();
@@ -126,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.buscarVeiculos = async function () {
   if (!gridBody) return;
 
-  // Captura os valores dos filtros
   const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
   const frota = document.querySelector('input[placeholder="Frota"]').value.trim().toUpperCase();
   const marca = document.querySelector('input[placeholder="Marca"]').value.trim().toUpperCase();
@@ -136,7 +183,6 @@ window.buscarVeiculos = async function () {
 
   let query = supabase.from('veiculos').select('*');
 
-  // Aplica filtros dinamicamente
   if (placa) query = query.ilike('placa', `%${placa}%`);
   if (frota) query = query.ilike('frota', `%${frota}%`);
   if (marca) query = query.ilike('marca', `%${marca}%`);
@@ -168,13 +214,11 @@ window.buscarVeiculos = async function () {
       <div>${veiculo.placa}</div>
       <div>${veiculo.marca || '-'}</div>
       <div>${veiculo.modelo || '-'}</div>
-      <div>${veiculo.renavan || '-'}</div>
-      <div>${veiculo.chassi || '-'}</div>
-      <div>${veiculo.anofab || '-'}</div>
-      <div>${veiculo.anomod || '-'}</div>
-      <div>${veiculo.qtdtanque || '-'}</div>
-      <div>${veiculo.tipo || '-'}</div>
-      <div>${veiculo.situacao}</div>
+      <div>
+        <button onclick="editarVeiculo('${veiculo.id}')">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+      </div>
     `;
 
     gridBody.appendChild(row);
