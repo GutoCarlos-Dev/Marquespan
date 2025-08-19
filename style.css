@@ -294,10 +294,12 @@ body.login-body {
 
 .filtros-veiculos input[name="placa"] {
   width: 100px;
+  background-color: #2e7d32;
 }
 
 .filtros-veiculos select[name="filial"] {
   width: 140px;
+  background-color: #2e7d32;
 }
 
 .acoes-veiculos {
