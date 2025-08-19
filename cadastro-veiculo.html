@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-<script src="cadastro-veiculo.js"></script>
 <div class="modal-veiculo show">
   <div class="modal-content">
     <div class="form-container">
@@ -18,7 +17,7 @@
         <h3>Localização</h3>
         <div class="form-grid">
           <label>Filial *</label>
-          <select name="Filial" required>
+          <select name="filial" required>
             <option value="">Selecione</option>
             <option value="SP">SP</option>
             <option value="MG">MG</option>
@@ -40,6 +39,12 @@
           
           <label>Modelo</label>
           <input type="text" name="modelo" />
+
+          <label>Renavan</label>
+          <input type="text" name="renavan" />
+          
+          <label>Chassi</label>
+          <input type="text" name="chassi" />
 
           <label>Ano Fabricação</label>
           <input type="number" name="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
@@ -79,4 +84,5 @@
   </div>
 </div>
 </body>
+<script src="cadastro-veiculo.js"></script>
 </html>
