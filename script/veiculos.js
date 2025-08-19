@@ -121,3 +121,62 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🚀 Inicializa a listagem ao carregar a página
   carregarVeiculos();
 });
+
+// 🔍 Buscar veículos com filtros
+window.buscarVeiculos = async function () {
+  if (!gridBody) return;
+
+  // Captura os valores dos filtros
+  const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
+  const frota = document.querySelector('input[placeholder="Frota"]').value.trim().toUpperCase();
+  const marca = document.querySelector('input[placeholder="Marca"]').value.trim().toUpperCase();
+  const modelo = document.querySelector('input[placeholder="Modelo"]').value.trim().toUpperCase();
+  const grupo = document.querySelector('input[placeholder="Grupo"]').value.trim().toUpperCase();
+  const filial = document.querySelector('input[placeholder="Filial"]').value.trim().toUpperCase();
+
+  let query = supabase.from('veiculos').select('*');
+
+  // Aplica filtros dinamicamente
+  if (placa) query = query.ilike('placa', `%${placa}%`);
+  if (frota) query = query.ilike('frota', `%${frota}%`);
+  if (marca) query = query.ilike('marca', `%${marca}%`);
+  if (modelo) query = query.ilike('modelo', `%${modelo}%`);
+  if (grupo) query = query.ilike('grupo', `%${grupo}%`);
+  if (filial) query = query.ilike('filial', `%${filial}%`);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar veículos:', error);
+    gridBody.innerHTML = '<div class="grid-row">Erro ao buscar dados.</div>';
+    return;
+  }
+
+  gridBody.innerHTML = '';
+
+  if (data.length === 0) {
+    gridBody.innerHTML = '<div class="grid-row">Nenhum veículo encontrado.</div>';
+    return;
+  }
+
+  data.forEach(veiculo => {
+    const row = document.createElement('div');
+    row.classList.add('grid-row');
+
+    row.innerHTML = `
+      <div>${veiculo.filial}</div>
+      <div>${veiculo.placa}</div>
+      <div>${veiculo.marca || '-'}</div>
+      <div>${veiculo.modelo || '-'}</div>
+      <div>${veiculo.renavan || '-'}</div>
+      <div>${veiculo.chassi || '-'}</div>
+      <div>${veiculo.anofab || '-'}</div>
+      <div>${veiculo.anomod || '-'}</div>
+      <div>${veiculo.qtdtanque || '-'}</div>
+      <div>${veiculo.tipo || '-'}</div>
+      <div>${veiculo.situacao}</div>
+    `;
+
+    gridBody.appendChild(row);
+  });
+};
