@@ -7,83 +7,80 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-<!-- 🔧 Modal de Cadastro de Veículo -->
-<div id="modalVeiculo" class="modal-veiculo" style="display: none;">
-  <div class="modal-content">
-    <div class="form-container">
-      <form id="formVeiculo">
-        <!-- 🔹 Bloco 1: Localização -->
-        <div class="form-bloco">
-          <h3>Localização</h3>
-          <div class="form-grid">
-            <label for="filial">Filial *</label>
-            <select id="filial" required>
-              <option value="">Selecione</option>
-              <option value="SP">SP</option>
-              <option value="MG">MG</option>
-              <option value="MS">MS</option>
-              <option value="PR">PR</option>
-            </select>
+  <div class="modal-veiculo show">
+    <div class="modal-content">
+      <div class="form-container">
+        <form id="formVeiculo">
+          <!-- 🔹 Bloco 1: Localização -->
+          <div class="form-bloco">
+            <h3>Localização</h3>
+            <div class="form-grid">
+              <label>Filial *</label>
+              <select name="filial" required>
+                <option value="">Selecione</option>
+                <option value="SP">SP</option>
+                <option value="MG">MG</option>
+                <option value="MS">MS</option>
+                <option value="PR">PR</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <!-- 🔹 Bloco 2: Identificação do Veículo -->
-        <div class="form-bloco">
-          <h3>Identificação do Veículo</h3>
-          <div class="form-grid">
-            <label for="placa">Placa *</label>
-            <input type="text" id="placa" placeholder="AAA-0000" required />
+          <!-- 🔹 Bloco 2: Identificação do Veículo -->
+          <div class="form-bloco">
+            <h3>Identificação do Veículo</h3>
+            <div class="form-grid">
+              <label>Placa *</label>
+              <input type="text" name="placa" placeholder="AAA-0000" required />
 
-            <label for="marca">Marca</label>
-            <input type="text" id="marca" />
+              <label>Marca</label>
+              <input type="text" name="marca" />
 
-            <label for="modelo">Modelo</label>
-            <input type="text" id="modelo" />
+              <label>Modelo</label>
+              <input type="text" name="modelo" />
 
-            <label for="renavan">Renavan</label>
-            <input type="text" id="renavan" />
+              <label>Renavan</label>
+              <input type="text" name="renavan" />
 
-            <label for="chassi">Chassi</label>
-            <input type="text" id="chassi" />
+              <label>Chassi</label>
+              <input type="text" name="chassi" />
 
-            <label for="anofab">Ano Fabricação</label>
-            <input type="number" id="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              <label>Ano Fabricação</label>
+              <input type="number" name="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              <label>Ano Modelo</label>
+              <input type="number" name="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
 
-            <label for="anomod">Ano Modelo</label>
-            <input type="number" id="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              <label>QTD de Tanques</label>
+              <input type="number" name="qtdtanque" min="1" max="2" step="1" required />
 
-            <label for="qtdtanque">QTD de Tanques</label>
-            <input type="number" id="qtdtanque" min="1" max="2" step="1" required />
+              <label>Tipo</label>
+              <select name="tipo">
+                <option value="">Selecione</option>
+                <option value="vuc-t">VUC T</option>
+                <option value="vuc">VUC</option>
+                <option value="cavalo">CAVALO</option>
+                <option value="truck">TRUCK</option>
+                <option value="bitruck">BITRUCK</option>
+              </select>
 
-            <label for="tipo">Tipo</label>
-            <select id="tipo">
-              <option value="">Selecione</option>
-              <option value="vuc-t">VUC T</option>
-              <option value="vuc">VUC</option>
-              <option value="cavalo">CAVALO</option>
-              <option value="truck">TRUCK</option>
-              <option value="bitruck">BITRUCK</option>
-            </select>
-
-            <label for="situacao">Situação *</label>
-            <select id="situacao" required>
-              <option value="">Selecione</option>
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-            </select>
+              <label>Situação *</label>
+              <select name="situacao" required>
+                <option value="">Selecione</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <!-- 🔹 Botões -->
-        <div class="modal-actions">
-          <button type="submit"><i class="fas fa-save"></i> Salvar</button>
-          <button type="button" id="btnCancelar"><i class="fas fa-times"></i> Cancelar</button>
-          <button type="button" id="btnClear"><i class="fas fa-eraser"></i> Limpar</button>
-        </div>
-      </form>
+          <!-- 🔹 Botões -->
+          <div class="modal-actions">
+            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- ✅ Importando como módulo -->
   <script type="module" src="./script/cadastro-veiculos.js"></script>
