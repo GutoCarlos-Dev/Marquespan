@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.reset();
         form.classList.add("sucesso");
         setTimeout(() => form.classList.remove("sucesso"), 2000);
-        fecharModal();
+        window.close();
       }
     } catch (err) {
       console.error("Erro inesperado:", err);
