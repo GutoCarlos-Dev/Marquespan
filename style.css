@@ -300,6 +300,8 @@ body.login-body {
 }
 
 .filtros-veiculos select[name="filial"] {
+  display: flex;
+  gap: 12px; /* ou 15px, se quiser mais espaço */
   width: 140px;
   background-color: #f1f8e9;
 }
