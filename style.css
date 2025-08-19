@@ -294,12 +294,20 @@ body.login-body {
 
 .filtros-veiculos input[name="placa"] {
   width: 100px;
-  background-color: #2e7d32;
+  background-color: #f1f8e9;
 }
 
 .filtros-veiculos select[name="filial"] {
   width: 140px;
-  background-color: #2e7d32;
+  background-color: #f1f8e9;
+}
+.gestao-veiculos {
+  margin: 10px 0 10px 10px; /* margem esquerda de 30px */
+  max-width: 300px;         /* ou menos, se quiser mais compacto */
+  background-color: #f1f8e9;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgb(255, 255, 255);
+  padding: 20px;
 }
 
 .acoes-veiculos {
@@ -373,15 +381,6 @@ body.login-body {
 .close {
   float: right;
   font-size: 28
-}
-
-.gestao-veiculos {
-  margin: 10px 0 10px 10px; /* margem esquerda de 30px */
-  max-width: 300px;         /* ou menos, se quiser mais compacto */
-  background-color: #f1f8e9;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgb(255, 255, 255);
-  padding: 20px;
 }
 
 .grid-veiculos {
