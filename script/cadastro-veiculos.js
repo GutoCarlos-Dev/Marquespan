@@ -17,16 +17,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ✅ Coleta dos dados
     const veiculo = {
-      filial,
       placa,
+      filial,
       marca: form.marca.value.trim(),
       modelo: form.modelo.value.trim(),
       tipo: form.tipo.value.trim(),
       situacao: form.situacao.value.trim(),
-      chassi: form.chassi.value.trim(),
-      renavan: form.renavan.value.trim(),
+      chassi: form.chassi?.value.trim() || null,
+      renavan: form.renavan?.value.trim() || null,
       anofab: parseInt(form.anofab.value),
-      anomod: parseInt(form.anomod.value)
+      anomod: parseInt(form.anomod.value),
+      qtdtanque: form.qtdtanque ? parseInt(form.qtdtanque.value) : null
     };
 
     try {
