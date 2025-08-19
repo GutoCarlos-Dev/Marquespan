@@ -1,4 +1,4 @@
-import { supabase } from '/script/supabase.js';
+import { supabase } from './supabase.js';
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("formVeiculo");
