@@ -1,4 +1,3 @@
-// script/veiculos.js
 import { supabase } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
+  const gridBody = document.getElementById('grid-veiculos-body');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
@@ -25,13 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     limparFormulario(form);
   });
 
-  // 🧽 Função de limpeza
-  function limparFormulario(form) {
-    form.querySelectorAll('input').forEach(input => input.value = '');
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-  }
-
   // 💾 Submeter dados
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -46,10 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
       chassi: getValorUpper('chassi'),
       renavan: getValorUpper('renavan'),
       anofab: getValorUpper('anofab'),
-      anomod: getValorUpper('anomod')
+      anomod: getValorUpper('anomod'),
+      qtdtanque: getValorUpper('qtdtanque')
     };
 
-    // ✅ Validação de campos obrigatórios
     if (!veiculo.filial || !veiculo.placa || !veiculo.tipo || !veiculo.situacao) {
       alert('⚠️ Preencha todos os campos obrigatórios: Filial, Placa, Tipo e Situação.');
       return;
@@ -63,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Veículo salvo com sucesso!');
       limparFormulario(form);
       modal.style.display = 'none';
+      carregarVeiculos(); // 🔁 Atualiza a lista após cadastro
     }
   });
 
@@ -74,9 +68,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 🔁 Função para obter valor em maiúsculas
   function getValorUpper(id) {
     const el = document.getElementById(id);
     return el?.value.trim().toUpperCase() || '';
   }
+
+  function limparFormulario(form) {
+    form.querySelectorAll('input').forEach(input => input.value = '');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  }
+
+  // 📦 Carregar veículos do banco
+  async function carregarVeiculos() {
+    if (!gridBody) return;
+
+    const { data, error } = await supabase
+      .from('veiculos')
+      .select('*')
+      .order('placa', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao carregar veículos:', error);
+      gridBody.innerHTML = '<div class="grid-row">Erro ao carregar dados.</div>';
+      return;
+    }
+
+    gridBody.innerHTML = '';
+
+    data.forEach(veiculo => {
+      const row = document.createElement('div');
+      row.classList.add('grid-row');
+
+      row.innerHTML = `
+        <div>${veiculo.filial}</div>
+        <div>${veiculo.placa}</div>
+        <div>${veiculo.marca || '-'}</div>
+        <div>${veiculo.modelo || '-'}</div>
+        <div>${veiculo.renavan || '-'}</div>
+        <div>${veiculo.chassi || '-'}</div>
+        <div>${veiculo.anofab || '-'}</div>
+        <div>${veiculo.anomod || '-'}</div>
+        <div>${veiculo.qtdtanque || '-'}</div>
+        <div>${veiculo.tipo || '-'}</div>
+        <div>${veiculo.situacao}</div>
+      `;
+
+      gridBody.appendChild(row);
+    });
+  }
+
+  // 🚀 Inicializa a listagem ao carregar a página
+  carregarVeiculos();
 });
