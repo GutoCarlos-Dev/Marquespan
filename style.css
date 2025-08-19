@@ -374,7 +374,8 @@ body.login-body {
 }
 
 .gestao-veiculos {
-  margin-top: 30px;
+  margin: 30px 0 30px 30px; /* margem esquerda de 30px */
+  max-width: 900px;         /* ou menos, se quiser mais compacto */
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
