@@ -192,3 +192,17 @@ window.editarVeiculo = async function (id) {
     `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
   );
 };
+
+// 🆕 Abrir tela de cadastro de novo veículo
+window.abrirCadastroVeiculo = function () {
+  const largura = 900;
+  const altura = 700;
+  const esquerda = (window.screen.width - largura) / 2;
+  const topo = (window.screen.height - altura) / 2;
+
+  window.open(
+    'cadastro-veiculo.html',
+    'CadastroVeiculo',
+    `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
+  );
+};
