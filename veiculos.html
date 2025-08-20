@@ -5,48 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Veículos - Marquespan</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="veiculos.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <header>
-    <h1>Dashboard Veículos</h1>
+  <!-- 🧭 Barra lateral -->
+  <aside class="sidebar">
+    <button class="toggle-btn"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo" />
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
     <nav>
-      <span>👤 Olá, Usuário</span>
-      <a href="usuarios.html">Usuários</a>
-      <a href="index.html">Sair</a>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="veiculos.html" class="active"><i class="fas fa-car"></i> Veículos</a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
     </nav>
-  </header>
+  </aside>
 
-  <main>
-    <section class="filtros">
-      <input type="text" id="placaBusca" placeholder="Placa" />
-      <button onclick="buscarVeiculos()">Buscar</button>
-      <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
-      <button onclick="exportarXLS()">Exportar XLS</button>
-      <button onclick="exportarPDF()">Exportar PDF</button>
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-search"></i> Pesquisar Veículos</h1>
+      <div class="filtros-veiculos">
+        <input type="text" placeholder="Placa" />
+        <button type="button" onclick="buscarVeiculos()">
+          <i class="fas fa-search"></i> Buscar
+        </button>
+      </div>
     </section>
 
-    <section class="tabela">
-      <h2>Veículos Cadastrados</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>FILIAL</th>
-            <th>PLACA</th>
-            <th>MARCA</th>
-            <th>MODELO</th>
-            <th>AÇÕES</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaVeiculos">
-          <!-- Dados serão inseridos via JavaScript -->
-        </tbody>
-      </table>
+    <div class="veiculos-header">
+      <div class="acoes-veiculos">
+        <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
+        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+      </div>
+    </div>
+
+    <section class="grid-veiculos">
+      <h2 class="section-title">Veículos Cadastrados</h2>
+      <div class="grid-header">
+        <div>FILIAL</div>
+        <div>PLACA</div>
+        <div>MARCA</div>
+        <div>MODELO</div>
+        <div>RENAVAN</div>
+        <div>CHASSI</div>
+        <div>ANO FAB</div>
+        <div>ANO MOD</div>
+        <div>TANQUE</div>
+        <div>TIPO</div>
+        <div>SITUAÇÃO</div>
+        <div>AÇÕES</div>
+      </div>
+      <div id="grid-veiculos-body"></div>
     </section>
   </main>
 
-  <footer>
-    <p>© 2025 Marquespan. Todos os direitos reservados.</p>
+  <!-- 🧾 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
   </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/veiculos.js" defer></script>
+  <script type="module" src="./script/cadastro-veiculos.js" defer></script>
+  <script>
+    // 🔓 Função global para abrir tela de cadastro
+    function abrirCadastroVeiculo() {
+      const largura = 900;
+      const altura = 700;
+      const esquerda = (window.screen.width - largura) / 2;
+      const topo = (window.screen.height - altura) / 2;
+
+      window.open(
+        'cadastro-veiculo.html',
+        'CadastroVeiculo',
+        `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
+      );
+    }
+  </script>
 </body>
 </html>
