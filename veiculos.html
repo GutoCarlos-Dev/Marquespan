@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🧭 Sidebar de navegação -->
+  <!-- 🧭 Sidebar -->
   <aside class="sidebar">
     <button class="toggle-btn"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo" />
@@ -35,7 +35,7 @@
 
     <div class="veiculos-header">
       <div class="acoes-veiculos">
-        <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
+        <button id="btnAddVeiculo">+ Veículo</button>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
@@ -43,7 +43,6 @@
 
     <section class="grid-veiculos">
       <h2 class="section-title">Veículos Cadastrados</h2>
-
       <div class="grid-header">
         <div>FILIAL</div>
         <div>PLACA</div>
@@ -58,9 +57,29 @@
         <div>SITUAÇÃO</div>
         <div>AÇÕES</div>
       </div>
-
       <div id="grid-veiculos-body"></div>
     </section>
+
+    <!-- Modal de cadastro -->
+    <div id="modalVeiculo" class="modal" style="display:none;">
+      <form id="formVeiculo">
+        <!-- Campos do formulário -->
+        <input id="filial" type="text" placeholder="Filial" required />
+        <input id="placa" type="text" placeholder="Placa" required />
+        <input id="marca" type="text" placeholder="Marca" />
+        <input id="modelo" type="text" placeholder="Modelo" />
+        <input id="tipo" type="text" placeholder="Tipo" required />
+        <input id="situacao" type="text" placeholder="Situação" required />
+        <input id="chassi" type="text" placeholder="Chassi" />
+        <input id="renavan" type="text" placeholder="Renavan" />
+        <input id="anofab" type="text" placeholder="Ano Fabricação" />
+        <input id="anomod" type="text" placeholder="Ano Modelo" />
+        <input id="qtdtanque" type="text" placeholder="Qtd Tanque" />
+        <button type="submit">Salvar</button>
+        <button type="button" id="btnCancelar">Cancelar</button>
+        <button type="button" id="btnClear">Limpar</button>
+      </form>
+    </div>
   </main>
 
   <!-- 🧾 Rodapé -->
@@ -70,20 +89,5 @@
 
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/veiculos.js" defer></script>
-  <script type="module" src="./script/cadastro-veiculos.js"></script>
-  <script>
-    function abrirCadastroVeiculo() {
-      const largura = 900;
-      const altura = 700;
-      const esquerda = (window.screen.width - largura) / 2;
-      const topo = (window.screen.height - altura) / 2;
-
-      window.open(
-        'cadastro-veiculo.html',
-        'CadastroVeiculo',
-        `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
-      );
-    }
-  </script>
 </body>
 </html>
