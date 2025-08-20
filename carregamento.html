@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carregamento - Marquespan</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <!-- 🧭 Barra lateral -->
+  <aside class="sidebar">
+    <button class="toggle-btn"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo" />
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="veiculos.html"><i class="fas fa-car"></i> Veículos</a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </aside>
+
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-truck-loading"></i> Carregamento Frota Pesada</h1>
+      <div class="filtros-veiculos">
+        <input type="text" placeholder="Placa" />
+        <button type="button"><i class="fas fa-play"></i> Iniciar Carregamento</button>
+      </div>
+    </section>
+
+    <div class="veiculos-header">
+      <div class="acoes-veiculos">
+        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+      </div>
+    </div>
+
+    <section class="grid-veiculos">
+      <h2 class="section-title">Veículos Disponíveis</h2>
+      <div class="grid-header">
+        <div>FILIAL</div>
+        <div>PLACA</div>
+        <div>MARCA</div>
+        <div>MODELO</div>
+        <div>TIPO</div>
+        <div>SITUAÇÃO</div>
+        <div>AÇÕES</div>
+      </div>
+      <div id="grid-veiculos-body"></div>
+    </section>
+  </main>
+
+  <!-- 🧾 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/veiculos.js" defer></script>
+</body>
+</html>
