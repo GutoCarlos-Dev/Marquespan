@@ -294,14 +294,14 @@ body.login-body {
 
 .filtros-veiculos input[name="placa"] {
   display: flex;
-  gap: 12px; /* ou 15px, se quiser mais espaço */
+  gap: 20px; /* ou 15px, se quiser mais espaço */
   width: 100px;
   background-color: #f1f8e9;
 }
 
 .filtros-veiculos select[name="filial"] {
   display: flex;
-  gap: 12px; /* ou 15px, se quiser mais espaço */
+  gap: 20px; /* ou 15px, se quiser mais espaço */
   width: 140px;
   background-color: #f1f8e9;
 }
