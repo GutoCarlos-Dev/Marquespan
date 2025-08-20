@@ -1,12 +1,15 @@
 import { supabase } from './script/supabase.js';
 
+let gridBody; // 🔓 Torna acessível fora do DOMContentLoaded
+
 document.addEventListener('DOMContentLoaded', () => {
+  // 🔗 Elementos da interface
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
-  const gridBody = document.getElementById('grid-veiculos-body');
+  gridBody = document.getElementById('grid-veiculos-body');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
@@ -48,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const { data, error } = await supabase.from('veiculos').insert([veiculo]);
+    const { error } = await supabase.from('veiculos').insert([veiculo]);
 
     if (error) {
       alert('❌ Erro ao salvar veículo.');
@@ -56,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Veículo salvo com sucesso!');
       limparFormulario(form);
       modal.style.display = 'none';
-      carregarVeiculos(); // 🔁 Atualiza a lista após cadastro
+      carregarVeiculos();
     }
   });
 
@@ -68,19 +71,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  function getValorUpper(id) {
-    const el = document.getElementById(id);
-    return el?.value.trim().toUpperCase() || '';
-  }
+  // 🚀 Inicializa a listagem
+  carregarVeiculos();
+});
 
-  function limparFormulario(form) {
-    form.querySelectorAll('input').forEach(input => input.value = '');
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
-  }
+// 🔧 Utilitários
+function getValorUpper(id) {
+  const el = document.getElementById(id);
+  return el?.value.trim().toUpperCase() || '';
+}
 
-  // 📦 Carregar veículos do banco
-  async function carregarVeiculos() {
+function limparFormulario(form) {
+  form.querySelectorAll('input').forEach(input => input.value = '');
+  form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+  form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+}
+
+// 📦 Carregar todos os veículos
+async function carregarVeiculos() {
   if (!gridBody) return;
 
   const { data, error } = await supabase
@@ -94,9 +102,48 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  renderizarVeiculos(data);
+}
+
+// 🔍 Buscar veículos com filtros
+window.buscarVeiculos = async function () {
+  if (!gridBody) return;
+
+  const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
+  const filial = document.querySelector('input[placeholder="Filial"]').value.trim().toUpperCase();
+
+  let query = supabase.from('veiculos').select('*');
+
+  if (placa) query = query.ilike('placa', `%${placa}%`);
+  if (filial) query = query.ilike('filial', `%${filial}%`);
+
+  // Se nenhum filtro, confirma busca total
+  if (!placa && !filial) {
+    const confirmar = confirm("⚠️ Nenhum filtro foi preenchido.\nDeseja buscar todos os veículos?");
+    if (!confirmar) return;
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar veículos:', error);
+    gridBody.innerHTML = '<div class="grid-row">Erro ao buscar dados.</div>';
+    return;
+  }
+
+  if (data.length === 0) {
+    gridBody.innerHTML = '<div class="grid-row">Nenhum veículo encontrado.</div>';
+    return;
+  }
+
+  renderizarVeiculos(data);
+};
+
+// 🧱 Renderiza os veículos na grid
+function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
 
-  data.forEach(veiculo => {
+  lista.forEach(veiculo => {
     const row = document.createElement('div');
     row.classList.add('grid-row');
 
@@ -105,6 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
       <div>${veiculo.placa}</div>
       <div>${veiculo.marca || '-'}</div>
       <div>${veiculo.modelo || '-'}</div>
+      <div>${veiculo.renavan || '-'}</div>
+      <div>${veiculo.chassi || '-'}</div>
+      <div>${veiculo.anofab || '-'}</div>
+      <div>${veiculo.anomod || '-'}</div>
+      <div>${veiculo.qtdtanque || '-'}</div>
+      <div>${veiculo.tipo || '-'}</div>
+      <div>${veiculo.situacao || '-'}</div>
       <div>
         <button onclick="editarVeiculo('${veiculo.id}')">
           <i class="fas fa-edit"></i> Editar
@@ -116,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 }
 
+// ✏️ Editar veículo
 window.editarVeiculo = async function (id) {
   const { data, error } = await supabase
     .from('veiculos')
@@ -140,64 +195,4 @@ window.editarVeiculo = async function (id) {
     'EditarVeiculo',
     `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
   );
-};
-  // 🚀 Inicializa a listagem ao carregar a página
-  carregarVeiculos();
-});
-
-// 🔍 Buscar veículos com filtros
-window.buscarVeiculos = async function () {
-  if (!gridBody) return;
-
-  // Captura os valores dos filtros
-  const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
-  const filial = document.querySelector('input[placeholder="Filial"]').value.trim().toUpperCase();
-
-// ⚠️ Verifica se todos os filtros estão vazios
-  if (!placa && !filial) {
-    const confirmar = confirm("⚠️ Nenhum filtro foi preenchido.\nDeseja realmente buscar todos os veículos no banco de dados?\nIsso pode gerar lentidão no sistema!");
-    if (!confirmar) return;
-  }
-
-  let query = supabase.from('veiculos').select('*');
-
-  // Aplica filtros dinamicamente
-  if (placa) query = query.ilike('placa', `%${placa}%`);
-  if (filial) query = query.ilike('filial', `%${filial}%`);
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao buscar veículos:', error);
-    gridBody.innerHTML = '<div class="grid-row">Erro ao buscar dados.</div>';
-    return;
-  }
-
-  gridBody.innerHTML = '';
-
-  if (data.length === 0) {
-    gridBody.innerHTML = '<div class="grid-row">Nenhum veículo encontrado.</div>';
-    return;
-  }
-
-  data.forEach(veiculo => {
-    const row = document.createElement('div');
-    row.classList.add('grid-row');
-
-    row.innerHTML = `
-      <div>${veiculo.filial}</div>
-      <div>${veiculo.placa}</div>
-      <div>${veiculo.marca || '-'}</div>
-      <div>${veiculo.modelo || '-'}</div>
-      <div>${veiculo.renavan || '-'}</div>
-      <div>${veiculo.chassi || '-'}</div>
-      <div>${veiculo.anofab || '-'}</div>
-      <div>${veiculo.anomod || '-'}</div>
-      <div>${veiculo.qtdtanque || '-'}</div>
-      <div>${veiculo.tipo || '-'}</div>
-      <div>${veiculo.situacao}</div>
-    `;
-
-    gridBody.appendChild(row);
-  });
 };
