@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
+  <!-- 🧭 Sidebar de navegação -->
   <aside class="sidebar">
     <button class="toggle-btn"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo" />
@@ -20,31 +21,21 @@
     </nav>
   </aside>
 
+  <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
     <section class="gestao-veiculos">
-    <h1 class="header"><i class="fas fa-search"></i> Pesquisar Veículos</h1>
+      <h1 class="header"><i class="fas fa-search"></i> Pesquisar Veículos</h1>
       <div class="filtros-veiculos">
         <input type="text" placeholder="Placa" />
-        <button type="button" onclick="buscarVeiculos()"><i class="fas fa-search"></i> Buscar </button>
+        <button type="button" onclick="buscarVeiculos()">
+          <i class="fas fa-search"></i> Buscar
+        </button>
       </div>
     </section>
+
     <div class="veiculos-header">
       <div class="acoes-veiculos">
         <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
-<script>
-function abrirCadastroVeiculo() {
-  const largura = 900;
-  const altura = 700;
-  const esquerda = (window.screen.width - largura) / 2;
-  const topo = (window.screen.height - altura) / 2;
-
-  window.open(
-    'cadastro-veiculo.html',
-    'CadastroVeiculo',
-    `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
-  );
-}
-</script>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
@@ -58,20 +49,41 @@ function abrirCadastroVeiculo() {
         <div>PLACA</div>
         <div>MARCA</div>
         <div>MODELO</div>
-        <div>AÇOES</div>
+        <div>RENAVAN</div>
+        <div>CHASSI</div>
+        <div>ANO FAB</div>
+        <div>ANO MOD</div>
+        <div>TANQUE</div>
+        <div>TIPO</div>
+        <div>SITUAÇÃO</div>
+        <div>AÇÕES</div>
       </div>
 
       <div id="grid-veiculos-body"></div>
-
-      <!-- Adicione mais .grid-row conforme necessário -->
     </section>
-
-    
   </main>
-    <footer class="footer">
-      © 2025 Marquespan. Todos os direitos reservados.
-    </footer>
+
+  <!-- 🧾 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/veiculos.js" defer></script>
+  <script type="module" src="./script/cadastro-veiculos.js"></script>
+  <script>
+    function abrirCadastroVeiculo() {
+      const largura = 900;
+      const altura = 700;
+      const esquerda = (window.screen.width - largura) / 2;
+      const topo = (window.screen.height - altura) / 2;
+
+      window.open(
+        'cadastro-veiculo.html',
+        'CadastroVeiculo',
+        `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
+      );
+    }
+  </script>
 </body>
-<script type="module" src="./script/veiculos.js" defer></script>
-<script type="module" src="./script/cadastro-veiculos.js"></script>
 </html>

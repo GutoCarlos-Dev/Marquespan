@@ -1,9 +1,8 @@
 import { supabase } from './script/supabase.js';
 
-let gridBody; // 🔓 Torna acessível fora do DOMContentLoaded
+let gridBody;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 🔗 Elementos da interface
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
@@ -105,20 +104,17 @@ async function carregarVeiculos() {
   renderizarVeiculos(data);
 }
 
-// 🔍 Buscar veículos com filtros
+// 🔍 Buscar veículos por placa
 window.buscarVeiculos = async function () {
   if (!gridBody) return;
 
-  const placa = document.querySelector('input[placeholder="Placa"]').value.trim().toUpperCase();
-  const filial = document.querySelector('input[placeholder="Filial"]').value.trim().toUpperCase();
+  const placa = document.querySelector('input[placeholder="Placa"]')?.value.trim().toUpperCase();
 
   let query = supabase.from('veiculos').select('*');
 
-  if (placa) query = query.ilike('placa', `%${placa}%`);
-  if (filial) query = query.ilike('filial', `%${filial}%`);
-
-  // Se nenhum filtro, confirma busca total
-  if (!placa && !filial) {
+  if (placa) {
+    query = query.ilike('placa', `%${placa}%`);
+  } else {
     const confirmar = confirm("⚠️ Nenhum filtro foi preenchido.\nDeseja buscar todos os veículos?");
     if (!confirmar) return;
   }
