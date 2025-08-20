@@ -296,14 +296,14 @@ body.login-body {
   display: flex;
   gap: 20px; /* ou 15px, se quiser mais espaço */
   width: 100px;
-  background-color: #f1f8e9;
+  background-color: #f80606;
 }
 
 .filtros-veiculos select[name="filial"] {
   display: flex;
   gap: 20px; /* ou 15px, se quiser mais espaço */
   width: 140px;
-  background-color: #f1f8e9;
+  background-color: #f80606;
 }
 .gestao-veiculos {
   margin: 10px 0 10px 10px; /* margem esquerda de 30px */
