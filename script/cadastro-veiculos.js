@@ -2,10 +2,11 @@ import { supabase } from './supabase.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("formVeiculo");
+  const btnExcluir = document.getElementById("btnExcluir");
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
-  // 🔍 Busca os dados reais do veículo no Supabase se estiver em modo de edição
+  // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
     const { data: veiculo, error } = await supabase
       .from("veiculos")
@@ -19,15 +20,40 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    // Preenche os campos com os dados reais
     Object.keys(veiculo).forEach((campo) => {
       const input = document.getElementById(campo);
       if (input && veiculo[campo] !== null) {
         input.value = veiculo[campo];
       }
     });
+
+    // 🗑️ Ativa botão de exclusão
+    if (btnExcluir) {
+      btnExcluir.style.display = "inline-block";
+      btnExcluir.addEventListener("click", async () => {
+        const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
+        if (!confirmar) return;
+
+        const { error: erroExclusao } = await supabase
+          .from("veiculos")
+          .delete()
+          .eq("id", id);
+
+        if (erroExclusao) {
+          console.error("Erro ao excluir:", erroExclusao);
+          alert("Erro ao excluir o veículo.");
+        } else {
+          alert("Veículo excluído com sucesso!");
+          window.close();
+        }
+      });
+    }
+  } else {
+    // Oculta botão de exclusão em novo cadastro
+    if (btnExcluir) btnExcluir.style.display = "none";
   }
 
+  // 💾 Submeter dados
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
