@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .eq("id", id)
       .single();
 
-    if (error) {
+    if (error || !veiculo) {
       console.error("Erro ao buscar veículo:", error);
       alert("Erro ao carregar dados do veículo.");
       return;
@@ -83,11 +83,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       let resultado;
 
       if (id) {
-        // 🔄 Atualização
+        console.log("Tentando atualizar veículo com ID:", id);
+
         const { data, error } = await supabase
           .from("veiculos")
           .update(veiculo)
           .eq("id", id);
+
+        if (error) {
+          console.error("Erro ao atualizar:", error);
+          alert("Erro ao atualizar o veículo.");
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.warn("Nenhum registro foi atualizado. Verifique o ID.");
+          alert("Veículo não encontrado ou dados não foram modificados.");
+          return;
+        }
 
         resultado = { data, error };
       } else {
