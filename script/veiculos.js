@@ -1,4 +1,4 @@
-import { supabase } from './script/supabase.js';
+import { supabase } from "https://gutocarlos-dev.github.io/Marquespan/script/supabase.js";
 
 let gridBody;
 
