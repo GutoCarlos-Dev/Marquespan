@@ -6,13 +6,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
+  console.log("Página carregada. ID na URL:", id);
+
   // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
+    console.log("Modo edição ativado. Buscando veículo no Supabase...");
+
     const { data: veiculo, error } = await supabase
       .from("veiculos")
       .select("*")
       .eq("id", id)
       .single();
+
+    console.log("Resposta da busca:", { veiculo, error });
 
     if (error || !veiculo) {
       console.error("Erro ao buscar veículo:", error);
@@ -34,6 +40,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
         if (!confirmar) return;
 
+        console.log("Solicitando exclusão do veículo ID:", id);
+
         const { error: erroExclusao } = await supabase
           .from("veiculos")
           .delete()
@@ -43,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           console.error("Erro ao excluir:", erroExclusao);
           alert("Erro ao excluir o veículo.");
         } else {
+          console.log("Veículo excluído com sucesso.");
           alert("Veículo excluído com sucesso!");
           window.close();
         }
@@ -56,6 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 💾 Submeter dados
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    console.log("Formulário enviado.");
 
     const placa = form.placa.value.trim();
     const filial = form.filial.value.trim();
@@ -79,6 +89,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       qtdtanque: form.qtdtanque ? parseInt(form.qtdtanque.value) : null
     };
 
+    console.log("Dados do veículo a salvar:", veiculo);
+
     try {
       let resultado;
 
@@ -89,6 +101,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           .from("veiculos")
           .update(veiculo)
           .eq("id", id);
+
+        console.log("Resposta da atualização:", { data, error });
 
         if (error) {
           console.error("Erro ao atualizar:", error);
@@ -104,11 +118,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         resultado = { data, error };
       } else {
-        // 🆕 Inserção com verificação de placa duplicada
+        console.log("Modo cadastro. Verificando placa duplicada...");
+
         const { data: existente, error: erroBusca } = await supabase
           .from("veiculos")
           .select("id")
           .eq("placa", veiculo.placa);
+
+        console.log("Resultado da verificação de placa:", { existente, erroBusca });
 
         if (erroBusca) {
           console.error("Erro ao verificar placa:", erroBusca);
@@ -117,9 +134,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (existente.length > 0) {
+          console.warn("Placa já existente:", veiculo.placa);
           alert("Já existe um veículo com essa placa.");
           return;
         }
+
+        console.log("Inserindo novo veículo...");
 
         const { data, error } = await supabase
           .from("veiculos")
@@ -132,6 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Erro ao salvar:", resultado.error);
         alert("Erro ao salvar o veículo. Tente novamente.");
       } else {
+        console.log("Operação concluída com sucesso:", resultado.data);
         alert(id ? "Veículo atualizado com sucesso!" : "Veículo cadastrado com sucesso!");
         form.reset();
         form.classList.add("sucesso");
