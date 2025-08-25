@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
+  const btnBuscar = document.getElementById('btn-buscar'); // ✅ novo
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
   gridBody = document.getElementById('grid-veiculos-body');
@@ -25,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
   btnClear?.addEventListener('click', (e) => {
     e.preventDefault();
     limparFormulario(form);
+  });
+
+    // 🔍 Buscar veículos
+  btnBuscar?.addEventListener('click', () => {
+    window.buscarVeiculos();
   });
 
   // 💾 Submeter dados
