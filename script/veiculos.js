@@ -154,7 +154,6 @@ function renderizarVeiculos(lista) {
       <div>${veiculo.placa}</div>
       <div>${veiculo.modelo || '-'}</div>
       <div>${veiculo.renavan || '-'}</div>
-      <div>${veiculo.chassi || '-'}</div>
       <div>${veiculo.tipo || '-'}</div>
       <div>${veiculo.situacao || '-'}</div>
       <div>
