@@ -18,12 +18,12 @@
 
 /* ✏️ Botão Editar */
 .btn-acao.editar {
-  background-color: #3498db;
+  background-color: #2e7d32;
   color: white;
 }
 
 .btn-acao.editar:hover {
-  background-color: #2980b9;
+  background-color: #388e3c;
 }
 
 /* 🗑️ Botão Excluir */
