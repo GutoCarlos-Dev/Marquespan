@@ -5,18 +5,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
-  // Preenche os campos se estiver em modo de edição
+  // 🔍 Busca os dados reais do veículo no Supabase se estiver em modo de edição
   if (id) {
-    const campos = [
-      'filial', 'placa', 'marca', 'modelo', 'tipo', 'situacao',
-      'chassi', 'renavan', 'anofab', 'anomod', 'qtdtanque'
-    ];
+    const { data: veiculo, error } = await supabase
+      .from("veiculos")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    campos.forEach(campo => {
-      const valor = params.get(campo);
-      if (valor !== null) {
-        const input = document.getElementById(campo);
-        if (input) input.value = valor;
+    if (error) {
+      console.error("Erro ao buscar veículo:", error);
+      alert("Erro ao carregar dados do veículo.");
+      return;
+    }
+
+    // Preenche os campos com os dados reais
+    Object.keys(veiculo).forEach((campo) => {
+      const input = document.getElementById(campo);
+      if (input && veiculo[campo] !== null) {
+        input.value = veiculo[campo];
       }
     });
   }
@@ -48,6 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
       let resultado;
+
       if (id) {
         // 🔄 Atualização
         const { data, error } = await supabase
@@ -57,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         resultado = { data, error };
       } else {
-        // 🆕 Inserção
+        // 🆕 Inserção com verificação de placa duplicada
         const { data: existente, error: erroBusca } = await supabase
           .from("veiculos")
           .select("id")
