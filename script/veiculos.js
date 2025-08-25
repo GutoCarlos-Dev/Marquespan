@@ -152,13 +152,9 @@ function renderizarVeiculos(lista) {
     row.innerHTML = `
       <div>${veiculo.filial}</div>
       <div>${veiculo.placa}</div>
-      <div>${veiculo.marca || '-'}</div>
       <div>${veiculo.modelo || '-'}</div>
       <div>${veiculo.renavan || '-'}</div>
       <div>${veiculo.chassi || '-'}</div>
-      <div>${veiculo.anofab || '-'}</div>
-      <div>${veiculo.anomod || '-'}</div>
-      <div>${veiculo.qtdtanque || '-'}</div>
       <div>${veiculo.tipo || '-'}</div>
       <div>${veiculo.situacao || '-'}</div>
       <div>
