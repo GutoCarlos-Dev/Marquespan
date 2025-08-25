@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Carregamento - Marquespan</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css" />
+
+  <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
@@ -49,12 +53,21 @@
     </section>
   </main>
 
-  <!-- 🧾 Rodapé -->
+  <!-- 🦶 Rodapé -->
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/veiculos.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+    });
+  </script>
 </body>
 </html>

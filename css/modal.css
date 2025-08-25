@@ -50,3 +50,10 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.usuario-logado-modal {
+  margin-top: 20px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #555;
+}
