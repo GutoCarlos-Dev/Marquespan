@@ -35,7 +35,6 @@
 
     <section id="inicio" class="botoes-iniciais">
       <button onclick="mostrarSecao('cadastro')">➕ Adicionar Usuário</button>
-      <button onclick="mostrarSecao('busca'); mostrarUsuarios()">🔍 Buscar Usuário</button>
     </section>
 
     <section id="cadastro" class="secao hidden">
@@ -64,11 +63,11 @@
     <section id="busca" class="secao hidden">
       <h3>🔍 Buscar Usuários</h3>
       <div class="campo-busca">
-        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário" oninput="mostrarUsuarios()">
+        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
       </div>
 
       <div class="botoes-form">
-        <button onclick="mostrarUsuarios()">🔄 Atualizar Lista</button>
+        <button id="btnAtualizarLista">🔄 Atualizar Lista</button>
         <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
       </div>
 
@@ -101,6 +100,11 @@
       document.getElementById('inicio').style.display = 'none';
       document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
+
+      // ✅ Carrega lista ao abrir a aba de busca
+      if (id === 'busca') {
+        import('./script/usuarios.js').then(mod => mod.mostrarUsuarios());
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -113,8 +117,10 @@
   </script>
 
   <!-- 🔌 Supabase e lógica de usuários -->
-  <script type="module" src="script/supabase.js"></script>
-  <script type="module" src="script/auth.js"></script>
-  <script type="module" src="script/usuarios.js"></script>
+  <script type="module">
+    import { mostrarUsuarios } from './script/usuarios.js';
+    document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
+    document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
+  </script>
 </body>
 </html>
