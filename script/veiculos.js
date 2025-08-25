@@ -2,14 +2,15 @@ import { supabase } from "https://gutocarlos-dev.github.io/Marquespan/script/sup
 
 let gridBody;
 
+// 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
+  gridBody = document.getElementById('grid-veiculos-body');
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
   const btnBuscar = document.getElementById('btn-buscar');
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
-  gridBody = document.getElementById('grid-veiculos-body');
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🔍 Buscar veículos
   btnBuscar?.addEventListener('click', () => {
-    window.buscarVeiculos();
+    buscarVeiculos();
   });
 
   // 💾 Submeter dados
@@ -76,9 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 🚀 Inicializa a listagem
+  // 🚚 Carrega veículos ao iniciar
   carregarVeiculos();
 });
+
 
 // 🔧 Utilitários
 function getValorUpper(id) {
@@ -91,6 +93,7 @@ function limparFormulario(form) {
   form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
   form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
 }
+
 
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
@@ -107,12 +110,12 @@ async function carregarVeiculos() {
     return;
   }
 
-  gridBody.innerHTML = '';
   renderizarVeiculos(data);
 }
 
-// 🔍 Buscar veículos por placa (com confirmação)
-window.buscarVeiculos = async function () {
+
+// 🔍 Buscar veículos por placa
+async function buscarVeiculos() {
   if (!gridBody) return;
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
@@ -139,8 +142,10 @@ window.buscarVeiculos = async function () {
   }
 
   renderizarVeiculos(data);
-};
+}
 
+
+// 🧱 Renderiza os veículos na grid
 function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
 
@@ -169,6 +174,7 @@ function renderizarVeiculos(lista) {
   });
 }
 
+
 // ✏️ Editar veículo
 window.editarVeiculo = async function (id) {
   const { data, error } = await supabase
@@ -187,20 +193,7 @@ window.editarVeiculo = async function (id) {
   const esquerda = (window.screen.width - largura) / 2;
   const topo = (window.screen.height - altura) / 2;
 
-  const params = new URLSearchParams({
-  id: data.id,
-  filial: data.filial,
-  placa: data.placa,
-  marca: data.marca,
-  modelo: data.modelo,
-  tipo: data.tipo,
-  situacao: data.situacao,
-  chassi: data.chassi,
-  renavan: data.renavan,
-  anofab: data.anofab,
-  anomod: data.anomod,
-  qtdtanque: data.qtdtanque
-}).toString();
+  const params = new URLSearchParams(data).toString();
 
   window.open(
     `cadastro-veiculo.html?${params}`,
@@ -208,6 +201,27 @@ window.editarVeiculo = async function (id) {
     `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
   );
 };
+
+
+// 🗑️ Excluir veículo
+window.excluirVeiculo = async function (id) {
+  const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
+  if (!confirmar) return;
+
+  const { error } = await supabase
+    .from('veiculos')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Erro ao excluir veículo:", error);
+    alert("❌ Erro ao excluir. Tente novamente.");
+  } else {
+    alert("✅ Veículo excluído com sucesso!");
+    carregarVeiculos();
+  }
+};
+
 
 // 🆕 Abrir tela de cadastro de novo veículo
 window.abrirCadastroVeiculo = function () {
