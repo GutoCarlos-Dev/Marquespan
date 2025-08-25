@@ -5,11 +5,14 @@
   <title>Gestão de Usuários - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Estilo e ícones -->
-  <link rel="stylesheet" href="style.css">
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css">
+
+  <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <!-- 🟩 Sidebar -->
   <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()">
       <i class="fas fa-bars"></i>
@@ -26,6 +29,7 @@
     </nav>
   </div>
 
+  <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
     <header class="header">👥 Gestão de Usuários</header>
 
@@ -81,12 +85,13 @@
       </table>
     </section>
 
+    <!-- 🦶 Rodapé -->
     <footer class="footer">
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
 
-  <!-- Scripts -->
+  <!-- 🚀 Scripts -->
   <script>
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('collapsed');
@@ -107,7 +112,7 @@
     });
   </script>
 
-  <!-- Supabase e lógica de usuários -->
+  <!-- 🔌 Supabase e lógica de usuários -->
   <script type="module" src="script/supabase.js"></script>
   <script type="module" src="script/auth.js"></script>
   <script type="module" src="script/usuarios.js"></script>
