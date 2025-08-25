@@ -97,12 +97,15 @@
   </script>
 
   <script type="module">
-    import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
+  import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
+
+  document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
     document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
     window.editarUsuario = editarUsuario;
     window.atualizarUsuario = atualizarUsuario;
     mostrarUsuarios(); // carrega lista ao abrir
-  </script>
+  });
+</script>
 </body>
 </html>
