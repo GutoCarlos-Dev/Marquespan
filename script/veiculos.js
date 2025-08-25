@@ -185,7 +185,20 @@ window.editarVeiculo = async function (id) {
   const esquerda = (window.screen.width - largura) / 2;
   const topo = (window.screen.height - altura) / 2;
 
-  const params = new URLSearchParams(data).toString();
+  const params = new URLSearchParams({
+  id: data.id,
+  filial: data.filial,
+  placa: data.placa,
+  marca: data.marca,
+  modelo: data.modelo,
+  tipo: data.tipo,
+  situacao: data.situacao,
+  chassi: data.chassi,
+  renavan: data.renavan,
+  anofab: data.anofab,
+  anomod: data.anomod,
+  qtdtanque: data.qtdtanque
+}).toString();
 
   window.open(
     `cadastro-veiculo.html?${params}`,
