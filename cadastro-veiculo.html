@@ -82,25 +82,7 @@
       </div>
     </div>
   </div>
-  
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const params = new URLSearchParams(window.location.search);
-    const campos = [
-      'id', 'filial', 'placa', 'marca', 'modelo',
-      'tipo', 'situacao', 'chassi', 'renavan',
-      'anofab', 'anomod', 'qtdtanque'
-    ];
 
-    campos.forEach(campo => {
-      const valor = params.get(campo);
-      if (valor !== null) {
-        const input = document.getElementById(campo);
-        if (input) input.value = valor;
-      }
-    });
-  });
-</script>
   <!-- ✅ Importando como módulo -->
   <script type="module" src="./script/cadastro-veiculos.js" defer></script>
 </body>
