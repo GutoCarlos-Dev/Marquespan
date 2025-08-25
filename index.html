@@ -43,14 +43,15 @@
       const codigo = document.getElementById('usuario').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
-      const { data, error } = await supabase
+      // ✅ Requisição segura com cabeçalho correto
+      const { data, error, status } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('id, codigo, nome, funcao') // selecione apenas os campos necessários
         .eq('codigo', codigo)
         .eq('senha', senha)
         .single();
 
-      if (error || !data) {
+      if (error || !data || status === 406) {
         alert('❌ Usuário ou senha inválidos.');
         return;
       }
