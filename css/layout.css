@@ -1,0 +1,91 @@
+/* 🟩 Sidebar lateral */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100vh;
+  background-color: #2e7d32;
+  color: #fff;
+  padding: 20px;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.logo {
+  display: block;
+  max-width: 120px;
+  margin: 10px auto;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 0;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+nav a i {
+  margin-right: 10px;
+}
+
+nav a:hover {
+  background-color: #388e3c;
+  border-radius: 5px;
+  padding-left: 10px;
+}
+
+/* 👤 Nome do usuário */
+.usuario-logado {
+  font-size: 14px;
+  font-weight: bold;
+  background-color: #1b5e20;
+  padding: 8px 12px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+  animation: fadeInDown 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* 🧱 Conteúdo principal */
+.main-content {
+  margin-left: 220px;
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar.collapsed ~ .main-content {
+  margin-left: 60px;
+}
+
+.header {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+/* 🦶 Rodapé */
+.footer {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+}

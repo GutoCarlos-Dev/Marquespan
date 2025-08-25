@@ -1,0 +1,138 @@
+/* 🚚 Formulário de veículos */
+.form-section {
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  max-width: 800px;
+  margin-left: 0;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #c8e6c9;
+  padding-bottom: 5px;
+  text-align: center;
+}
+
+/* 🔠 Letras maiúsculas nos campos do formulário */
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  text-transform: uppercase;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* 🟢 Botões do formulário */
+.form-grid button {
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.form-grid button:hover {
+  background-color: #45a049;
+}
+
+.form-grid button i {
+  margin-right: 6px;
+}
+
+/* 🔹 Blocos de formulário */
+.form-bloco {
+  margin-bottom: 30px;
+}
+
+.form-bloco h3 {
+  font-size: 18px;
+  color: #2e7d32;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #c8e6c9;
+  padding-bottom: 5px;
+}
+
+/* 🔹 Grid de campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ✏️ Campos */
+input, select {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 🔧 Container centralizado */
+.form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 🖱️ Botões padrão Marquespan */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.modal-actions button[type="submit"] {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.modal-actions button[type="submit"]:hover {
+  background-color: #f10303;
+}
+
+.modal-actions button[type="button"] {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.modal-actions button[type="button"]:hover {
+  background-color: #bdbdbd;
+}
+
+.sucesso {
+  border: 2px solid green;
+}

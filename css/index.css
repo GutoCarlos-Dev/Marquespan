@@ -1,0 +1,29 @@
+/* 🌐 Reset e base */
+@import url("base.css");
+
+/* ✨ Animações */
+@import url("animations.css");
+
+/* 🟩 Layout geral */
+@import url("layout.css");
+
+/* 📊 Dashboard */
+@import url("dashboard.css");
+
+/* 🚚 Formulários */
+@import url("form.css");
+
+/* 🧩 Grid de veículos */
+@import url("grid.css");
+
+/* 🔧 Botões */
+@import url("buttons.css");
+
+/* 🔎 Filtros e busca */
+@import url("filters.css");
+
+/* 🧾 Modais */
+@import url("modal.css");
+
+/* 🔐 Tela de login */
+@import url("login.css");

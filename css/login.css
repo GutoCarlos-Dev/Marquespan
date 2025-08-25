@@ -1,0 +1,57 @@
+/* 🔐 Tela de login */
+body.login-body {
+  background-color: #f0fff0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.login-container {
+  background-color: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  padding: 30px;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.login-logo {
+  width: 100px;
+  margin-bottom: 20px;
+}
+
+.login-form input,
+.card input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.login-form button,
+.card button {
+  width: 100%;
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 10px;
+}
+
+.login-form button:hover,
+.card button:hover {
+  background-color: #45a049;
+}
+
+.login-info {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #555;
+}
