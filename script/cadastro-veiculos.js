@@ -92,8 +92,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("Dados do veículo a salvar:", veiculo);
 
     try {
-      let resultado;
-
       if (id) {
         console.log("Tentando atualizar veículo com ID:", id);
 
@@ -110,7 +108,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        // ✅ Não bloqueia se data estiver vazio
         alert("Veículo atualizado com sucesso!");
         form.reset();
         window.close();
