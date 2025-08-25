@@ -8,10 +8,11 @@
   <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- Estilo personalizado -->
-  <link rel="stylesheet" href="style.css">
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
+  <!-- 🟩 Sidebar -->
   <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()">
       <i class="fas fa-bars"></i>
@@ -31,6 +32,7 @@
     </nav>
   </div>
 
+  <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
     <header class="header">📊 Dashboard Administrativo</header>
 
@@ -60,10 +62,14 @@
         <p>R$ 0,00</p>
       </div>
     </section>
-
   </div>
 
-  <!-- Scripts externos -->
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
   <script>
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('collapsed');
@@ -77,8 +83,5 @@
       }
     });
   </script>
-    <footer class="footer">
-      &copy; 2025 Marquespan. Todos os direitos reservados.
-    </footer>
 </body>
 </html>
