@@ -46,3 +46,18 @@
 .grid-actions .btn:hover {
   background-color: #388e3c;
 }
+
+/* 🧩 Contêiner com rolagem horizontal */
+.grid-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* 🧩 Grid de veículos com largura mínima */
+.grid-veiculos {
+  min-width: 900px; /* ou mais, dependendo da quantidade de colunas */
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 20px;
+}
