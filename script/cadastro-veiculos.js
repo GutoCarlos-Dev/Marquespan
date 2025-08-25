@@ -110,13 +110,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        if (!data || data.length === 0) {
-          console.warn("Nenhum registro foi atualizado. Verifique o ID.");
-          alert("Veículo não encontrado ou dados não foram modificados.");
-          return;
-        }
-
-        resultado = { data, error };
+        // ✅ Não bloqueia se data estiver vazio
+        alert("Veículo atualizado com sucesso!");
+        form.reset();
+        window.close();
       } else {
         console.log("Modo cadastro. Verificando placa duplicada...");
 
@@ -145,18 +142,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           .from("veiculos")
           .insert([veiculo]);
 
-        resultado = { data, error };
-      }
+        if (error) {
+          console.error("Erro ao salvar:", error);
+          alert("Erro ao salvar o veículo. Tente novamente.");
+          return;
+        }
 
-      if (resultado.error) {
-        console.error("Erro ao salvar:", resultado.error);
-        alert("Erro ao salvar o veículo. Tente novamente.");
-      } else {
-        console.log("Operação concluída com sucesso:", resultado.data);
-        alert(id ? "Veículo atualizado com sucesso!" : "Veículo cadastrado com sucesso!");
+        alert("Veículo cadastrado com sucesso!");
         form.reset();
-        form.classList.add("sucesso");
-        setTimeout(() => form.classList.remove("sucesso"), 2000);
         window.close();
       }
     } catch (err) {
