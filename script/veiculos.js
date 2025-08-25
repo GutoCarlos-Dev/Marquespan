@@ -154,21 +154,21 @@ function renderizarVeiculos(lista) {
     row.classList.add('grid-row');
 
     row.innerHTML = `
-      <div>${veiculo.filial}</div>
-      <div>${veiculo.placa}</div>
-      <div>${veiculo.modelo || '-'}</div>
-      <div>${veiculo.renavan || '-'}</div>
-      <div>${veiculo.tipo || '-'}</div>
-      <div>${veiculo.situacao || '-'}</div>
-      <div class="acoes">
-        <button onclick="editarVeiculo('${veiculo.id}')">
-          <i class="fas fa-edit"></i> Editar
-        </button>
-        <button onclick="excluirVeiculo('${veiculo.id}')" class="btn-excluir">
-          <i class="fas fa-trash-alt"></i> Excluir
-        </button>
-      </div>
-    `;
+  <div>${veiculo.filial}</div>
+  <div>${veiculo.placa}</div>
+  <div>${veiculo.modelo || '-'}</div>
+  <div>${veiculo.renavan || '-'}</div>
+  <div>${veiculo.tipo || '-'}</div>
+  <div>${veiculo.situacao || '-'}</div>
+  <div class="acoes">
+    <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')">
+      <i class="fas fa-pen"></i> Editar
+    </button>
+    <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')">
+      <i class="fas fa-trash"></i> Excluir
+    </button>
+  </div>
+`;
 
     gridBody.appendChild(row);
   });
