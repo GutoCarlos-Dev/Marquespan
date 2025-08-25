@@ -4,15 +4,21 @@
   <meta charset="UTF-8">
   <title>Gestão de Usuários - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css">
+
+  <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <!-- 🟩 Sidebar -->
   <div class="sidebar" id="sidebar">
-    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <button class="toggle-btn" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
     <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
     <nav>
       <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
       <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
@@ -32,22 +38,25 @@
       <form id="formUsuario" class="formulario">
         <label for="codigo">Código:</label>
         <input type="text" id="codigo" placeholder="Código" required>
+
         <label for="nome">Nome:</label>
         <input type="text" id="nome" placeholder="Nome" required>
+
         <label for="funcao">Função:</label>
         <input type="text" id="funcao" placeholder="Função" required>
+
         <label for="senha">Senha:</label>
         <input type="password" id="senha" placeholder="Senha" required>
 
         <div class="botoes-form">
           <button type="submit" id="btnSalvar">✅ Cadastrar</button>
           <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" class="hidden">🔄 Atualizar</button>
-          <button type="button" onclick="mostrarSecao('busca')">⬅️ Voltar</button>
+          <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
         </div>
       </form>
     </section>
 
-    <section id="busca" class="secao">
+    <section id="busca" class="secao hidden">
       <h3>🔍 Buscar Usuários</h3>
       <div class="campo-busca">
         <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
@@ -55,7 +64,7 @@
 
       <div class="botoes-form">
         <button id="btnAtualizarLista">🔄 Atualizar Lista</button>
-        <button type="button" onclick="mostrarSecao('cadastro')">➕ Novo Usuário</button>
+        <button type="button" onclick="mostrarSecao('inicio')">⬅️ Voltar</button>
       </div>
 
       <table id="tabelaUsuarios" class="tabela-usuarios">
@@ -71,6 +80,7 @@
       </table>
     </section>
 
+    <!-- 🦶 Rodapé -->
     <footer class="footer">
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
@@ -83,8 +93,14 @@
     }
 
     function mostrarSecao(id) {
+      document.getElementById('inicio').style.display = 'none';
       document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
+
+      // ✅ Carrega lista ao abrir a aba de busca
+      if (id === 'busca') {
+        import('./script/usuarios.js').then(mod => mod.mostrarUsuarios());
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -96,13 +112,11 @@
     });
   </script>
 
+  <!-- 🔌 Supabase e lógica de usuários -->
   <script type="module">
-    import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
+    import { mostrarUsuarios } from './script/usuarios.js';
     document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
     document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
-    window.editarUsuario = editarUsuario;
-    window.atualizarUsuario = atualizarUsuario;
-    mostrarUsuarios(); // carrega lista ao abrir
   </script>
 </body>
 </html>
