@@ -97,15 +97,18 @@
   </script>
 
   <script type="module">
-  import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
-
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
-    document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
-    window.editarUsuario = editarUsuario;
-    window.atualizarUsuario = atualizarUsuario;
-    mostrarUsuarios(); // carrega lista ao abrir
-  });
-</script>
+     import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
+   
+     // Conecta os botões diretamente
+     document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
+     document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
+   
+     // Torna funções acessíveis globalmente
+     window.editarUsuario = editarUsuario;
+     window.atualizarUsuario = atualizarUsuario;
+   
+     // Carrega a lista ao abrir
+     mostrarUsuarios();
+  </script>
 </body>
 </html>
