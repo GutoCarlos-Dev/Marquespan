@@ -5,10 +5,10 @@
   <title>Login - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- ✅ Novo CSS modularizado -->
+  <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css">
 
-  <!-- 🔧 Estilo específico para login (pode ir para login.css) -->
+  <!-- 🔧 Estilo específico para login -->
   <style>
     input[type="text"],
     input[type="password"] {
@@ -30,36 +30,35 @@
 
       <button type="submit">Entrar</button>
     </form>
-    <p class="login-info">Use <strong>admin</strong> / <strong>admin</strong> ou outros usuários cadastrados</p>
+    <p class="login-info">Informe seu código e senha cadastrados</p>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const formLogin = document.getElementById('formLogin');
+  <!-- ✅ Supabase e autenticação -->
+  <script type="module">
+    import { supabase } from './script/supabase.js';
 
-      const usuarios = [
-        { nome: 'admin', senha: 'admin' },
-        { nome: 'guto', senha: '123456' },
-        { nome: 'jones', senha: '123456' },
-        { nome: 'acacio', senha: '123456' }
-      ];
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-      formLogin.addEventListener('submit', (e) => {
-        e.preventDefault();
+      const codigo = document.getElementById('usuario').value.trim();
+      const senha = document.getElementById('senha').value.trim();
 
-        const usuario = document.getElementById('usuario').value.trim();
-        const senha = document.getElementById('senha').value.trim();
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('codigo', codigo)
+        .eq('senha', senha)
+        .single();
 
-        const usuarioValido = usuarios.find(u => u.nome === usuario && u.senha === senha);
+      if (error || !data) {
+        alert('❌ Usuário ou senha inválidos.');
+        return;
+      }
 
-        if (usuarioValido) {
-          alert(`✅ Acesso autorizado! Olá, ${usuarioValido.nome}`);
-          localStorage.setItem('usuarioLogado', usuarioValido.nome);
-          window.location.href = 'dashboard.html';
-        } else {
-          alert('❌ Usuário ou senha inválidos.');
-        }
-      });
+      // ✅ Salva dados completos do usuário logado
+      localStorage.setItem('usuarioLogado', JSON.stringify(data));
+      alert(`✅ Acesso autorizado! Olá, ${data.nome}`);
+      window.location.href = 'dashboard.html';
     });
   </script>
 </body>
