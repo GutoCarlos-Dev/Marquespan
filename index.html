@@ -43,23 +43,27 @@
       const codigo = document.getElementById('usuario').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
-      // ✅ Requisição segura com cabeçalho correto
-      const { data, error, status } = await supabase
-        .from('usuarios')
-        .select('id, codigo, nome, funcao') // selecione apenas os campos necessários
-        .eq('codigo', codigo)
-        .eq('senha', senha)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('id, codigo, nome, funcao')
+          .eq('codigo', codigo)
+          .eq('senha', senha)
+          .single();
 
-      if (error || !data || status === 406) {
-        alert('❌ Usuário ou senha inválidos.');
-        return;
+        if (error || !data) {
+          alert('❌ Usuário ou senha inválidos.');
+          return;
+        }
+
+        // ✅ Salva dados completos do usuário logado
+        localStorage.setItem('usuarioLogado', JSON.stringify(data));
+        alert(`✅ Acesso autorizado! Olá, ${data.nome}`);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.error('Erro ao conectar com Supabase:', err);
+        alert('⚠️ Erro de conexão. Tente novamente mais tarde.');
       }
-
-      // ✅ Salva dados completos do usuário logado
-      localStorage.setItem('usuarioLogado', JSON.stringify(data));
-      alert(`✅ Acesso autorizado! Olá, ${data.nome}`);
-      window.location.href = 'dashboard.html';
     });
   </script>
 </body>
