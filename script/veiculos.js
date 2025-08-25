@@ -141,7 +141,6 @@ window.buscarVeiculos = async function () {
   renderizarVeiculos(data);
 };
 
-// 🧱 Renderiza os veículos na grid
 function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
 
@@ -156,9 +155,12 @@ function renderizarVeiculos(lista) {
       <div>${veiculo.renavan || '-'}</div>
       <div>${veiculo.tipo || '-'}</div>
       <div>${veiculo.situacao || '-'}</div>
-      <div>
+      <div class="acoes">
         <button onclick="editarVeiculo('${veiculo.id}')">
           <i class="fas fa-edit"></i> Editar
+        </button>
+        <button onclick="excluirVeiculo('${veiculo.id}')" class="btn-excluir">
+          <i class="fas fa-trash-alt"></i> Excluir
         </button>
       </div>
     `;
