@@ -26,13 +26,13 @@
     <section class="gestao-veiculos">
       <h1 class="header"><i class="fas fa-search"></i> Pesquisar Veículos</h1>
       <div class="filtros-veiculos">
-        <input type="text" placeholder="Placa" />
+        <input type="text" id="campo-placa" placeholder="Placa" />
       </div>
     </section>
 
     <div class="veiculos-header">
       <div class="acoes-veiculos">
-        <button type="button" onclick="buscarVeiculos()"><i class="fas fa-search"></i> Buscar</button>
+        <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
         <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
@@ -55,7 +55,7 @@
         <div>SITUAÇÃO</div>
         <div>AÇÕES</div>
       </div>
-      <div id="grid-veiculos-body"></div>
+      <div id="grid-veiculos-body" class="grid-body"></div>
     </section>
   </main>
 

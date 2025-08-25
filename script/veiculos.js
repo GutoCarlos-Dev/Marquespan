@@ -101,6 +101,7 @@ async function carregarVeiculos() {
     return;
   }
 
+  gridBody.innerHTML = '';
   renderizarVeiculos(data);
 }
 
@@ -108,7 +109,7 @@ async function carregarVeiculos() {
 window.buscarVeiculos = async function () {
   if (!gridBody) return;
 
-  const placa = document.querySelector('input[placeholder="Placa"]')?.value.trim().toUpperCase();
+  const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
 
   let query = supabase.from('veiculos').select('*');
 
