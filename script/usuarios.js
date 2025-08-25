@@ -88,6 +88,6 @@ export async function atualizarUsuario() {
   document.getElementById('btnSalvar').classList.remove('hidden');
   document.getElementById('btnAtualizar').classList.add('hidden');
   document.getElementById('formUsuario').dataset.usuarioId = '';
-  mostrarSecao('busca');
+  window.mostrarSecao('busca'); // ✅ agora funciona dentro do módulo
   mostrarUsuarios();
 }
