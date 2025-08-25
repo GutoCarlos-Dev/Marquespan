@@ -27,3 +27,6 @@
 
 /* 🔐 Tela de login */
 @import url("login.css");
+
+/* 👥 Gestão de usuários */
+@import url("usuarios.css");
