@@ -86,6 +86,8 @@
       document.getElementById(id).classList.remove('hidden');
     }
 
+    window.mostrarSecao = mostrarSecao;
+
     document.addEventListener('DOMContentLoaded', () => {
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
       const divUsuario = document.getElementById('usuario-logado');
@@ -96,18 +98,15 @@
   </script>
 
   <script type="module">
-     import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
-   
-     // Conecta os botões diretamente
-     document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
-     document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
-   
-     // Torna funções acessíveis globalmente
-     window.editarUsuario = editarUsuario;
-     window.atualizarUsuario = atualizarUsuario;
-   
-     // Carrega a lista ao abrir
-     mostrarUsuarios();
+    import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
+
+    window.onload = () => {
+      document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
+      document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
+      window.editarUsuario = editarUsuario;
+      window.atualizarUsuario = atualizarUsuario;
+      mostrarUsuarios();
+    };
   </script>
 </body>
 </html>

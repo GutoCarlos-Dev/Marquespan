@@ -61,9 +61,7 @@ export async function editarUsuario(id) {
 
   document.getElementById('btnSalvar').classList.add('hidden');
   document.getElementById('btnAtualizar').classList.remove('hidden');
-  document.getElementById('inicio')?.style.display = 'none';
-  document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
-  document.getElementById('cadastro').classList.remove('hidden');
+  window.mostrarSecao('cadastro');
 }
 
 export async function atualizarUsuario() {
@@ -88,6 +86,6 @@ export async function atualizarUsuario() {
   document.getElementById('btnSalvar').classList.remove('hidden');
   document.getElementById('btnAtualizar').classList.add('hidden');
   document.getElementById('formUsuario').dataset.usuarioId = '';
-  window.mostrarSecao('busca'); // ✅ agora funciona dentro do módulo
+  window.mostrarSecao('busca');
   mostrarUsuarios();
 }
