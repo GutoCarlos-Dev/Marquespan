@@ -160,6 +160,8 @@ function renderizarVeiculos(lista) {
   <div>${veiculo.renavan || '-'}</div>
   <div>${veiculo.tipo || '-'}</div>
   <div>${veiculo.situacao || '-'}</div>
+  <div>${veiculo.qrcode || '-'}</div>
+
   <div class="acoes">
     <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')">
       <i class="fas fa-pen"></i> Editar

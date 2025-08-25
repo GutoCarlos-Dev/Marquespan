@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       anofab: parseInt(form.anofab.value),
       anomod: parseInt(form.anomod.value),
       qtdtanque: form.qtdtanque ? parseInt(form.qtdtanque.value) : null,
-      qrcode: form.qrcode.value.trim(),
+      qrcode: form.qrcode?.value.trim() || null,
     };
 
     console.log("Dados do veículo a salvar:", veiculo);
