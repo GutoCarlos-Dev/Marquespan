@@ -28,12 +28,12 @@
 
 /* 🗑️ Botão Excluir */
 .btn-acao.excluir {
-  background-color: #e74c3c;
+  background-color: #e07064;
   color: white;
 }
 
 .btn-acao.excluir:hover {
-  background-color: #c0392b;
+  background-color: #e07064;
 }
 
 /* 🟢 Botões da seção de ações de veículos */
