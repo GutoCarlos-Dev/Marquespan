@@ -76,10 +76,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const nomeUsuario = localStorage.getItem('usuarioLogado');
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
       const divUsuario = document.getElementById('usuario-logado');
-      if (nomeUsuario) {
-        divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
     });
   </script>
