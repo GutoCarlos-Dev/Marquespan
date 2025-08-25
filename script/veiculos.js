@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdd = document.getElementById('btnAddVeiculo');
   const btnCancel = document.getElementById('btnCancelar');
   const btnClear = document.getElementById('btnClear');
-  const btnBuscar = document.getElementById('btn-buscar'); // ✅ novo
+  const btnBuscar = document.getElementById('btn-buscar');
   const modal = document.getElementById('modalVeiculo');
   const form = document.getElementById('formVeiculo');
   gridBody = document.getElementById('grid-veiculos-body');
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     limparFormulario(form);
   });
 
-    // 🔍 Buscar veículos
+  // 🔍 Buscar veículos
   btnBuscar?.addEventListener('click', () => {
     window.buscarVeiculos();
   });
@@ -111,12 +111,11 @@ async function carregarVeiculos() {
   renderizarVeiculos(data);
 }
 
-// 🔍 Buscar veículos por placa
+// 🔍 Buscar veículos por placa (com confirmação)
 window.buscarVeiculos = async function () {
   if (!gridBody) return;
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
-
   let query = supabase.from('veiculos').select('*');
 
   if (placa) {
