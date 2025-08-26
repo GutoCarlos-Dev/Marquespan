@@ -141,10 +141,22 @@ button:hover {
   }
 }
 
+.form-duplo {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.form-bloco {
+  flex: 1;
+  min-width: 350px;
+}
+
 #descricao {
   width: 772px;
   height: 169px;
-  resize: none; /* impede redimensionamento manual */
+  resize: none;
   padding: 10px;
   font-size: 14px;
   border-radius: 6px;
@@ -152,3 +164,4 @@ button:hover {
   background-color: #fff;
   box-sizing: border-box;
 }
+
