@@ -8,31 +8,27 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <aside class="sidebar">
+  <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo">
     <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
     <nav>
-      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
-      <a href="veiculos.html"><i class="fas fa-car"></i> Veículos</a>
-      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
-      <a href="index.html"><i class="fas fa-sign-out-alt"></i> Sair</a>
-    </nav>
-  </aside>
-
-  <main class="main-content">
-    <section class="gestao-veiculos">
-      <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
-    </section>
-
-    <fieldset id="painelManutencao">
-      <legend>Cadastro de Manutenção</legend>
-
-      <div class="painel-navegacao">
-        <button class="painel-btn active" data-painel="cadastroInterno">📋 Cadastro</button>
-        <button class="painel-btn" data-painel="itensInterno">🧰 Itens</button>
-        <button class="painel-btn" data-painel="uploadInterno">📎 Upload</button>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
       </div>
+    </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
 
       <div id="cadastroInterno" class="painel-conteudo fade-in">
         <form id="formManutencao">
