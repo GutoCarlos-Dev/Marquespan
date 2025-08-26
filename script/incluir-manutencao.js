@@ -1,5 +1,5 @@
 // 📦 Importação do Supabase
-import { supabase } from './script/supabase.js';
+import { supabase } from './supabase.js';
 
 // 🔀 Alternância de painéis internos com animação e acessibilidade
 function mostrarPainelInterno(id) {
