@@ -1,26 +1,17 @@
-// 📦 Importações
 import { supabase } from './script/supabase.js';
 
-// 1️⃣ Alternância de abas principais (se ainda usadas)
-export function mostrarAba(id) {
-  document.querySelectorAll('.aba-conteudo').forEach(sec => sec.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-
-  document.querySelectorAll('.aba-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`.aba-btn[data-aba="${id}"]`).classList.add('active');
-}
-
-// 2️⃣ Alternância de painéis internos (Cadastro, Itens, Upload)
-export function mostrarPainelInterno(id) {
+// Alternância de painéis internos
+function mostrarPainelInterno(id) {
   document.querySelectorAll('.painel-conteudo').forEach(div => div.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 
   document.querySelectorAll('.painel-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`.painel-btn[data-painel="${id}"]`).classList.add('active');
+  const btnAtivo = document.querySelector(`.painel-btn[data-painel="${id}"]`);
+  if (btnAtivo) btnAtivo.classList.add('active');
 }
 
-// 3️⃣ Preencher campo de usuário logado
-export function preencherUsuarioLogado() {
+// Preencher campo de usuário logado
+function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   if (usuario && usuario.nome) {
     document.getElementById('usuarioLogado').value = usuario.nome;
@@ -28,8 +19,8 @@ export function preencherUsuarioLogado() {
   }
 }
 
-// 4️⃣ Buscar placas de veículos no Supabase
-export async function carregarPlacas() {
+// Buscar placas de veículos
+async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
   const select = document.getElementById('veiculo');
   if (data) {
@@ -42,8 +33,8 @@ export async function carregarPlacas() {
   }
 }
 
-// 5️⃣ Adicionar item à manutenção
-export function adicionarItem() {
+// Adicionar item
+function adicionarItem() {
   const desc = document.getElementById('itemDescricao').value;
   const valor = parseFloat(document.getElementById('itemValor').value);
   if (!desc || isNaN(valor)) return;
@@ -58,7 +49,7 @@ export function adicionarItem() {
   atualizarTotal();
 }
 
-export function atualizarTotal() {
+function atualizarTotal() {
   let total = 0;
   document.querySelectorAll('#tabelaItens tr').forEach(row => {
     const valor = parseFloat(row.children[1].textContent.replace('R$', '').trim());
@@ -67,8 +58,8 @@ export function atualizarTotal() {
   document.getElementById('totalItens').textContent = total.toFixed(2);
 }
 
-// 6️⃣ Upload de arquivos PDF
-export function adicionarArquivo() {
+// Upload de arquivos
+function adicionarArquivo() {
   const input = document.getElementById('arquivoPDF');
   if (!input.files.length) return;
 
@@ -82,26 +73,23 @@ export function adicionarArquivo() {
   input.value = '';
 }
 
-// 7️⃣ Inicialização da página
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarPlacas();
-  mostrarPainelInterno('cadastroInterno'); // inicia com Cadastro ativo
+  mostrarPainelInterno('cadastroInterno');
 
-  // Alternância de painéis internos
   document.querySelectorAll('.painel-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       mostrarPainelInterno(btn.dataset.painel);
     });
   });
 
-  // Adicionar item
   document.getElementById('formItem').addEventListener('submit', e => {
     e.preventDefault();
     adicionarItem();
   });
 
-  // Remover item
   document.getElementById('tabelaItens').addEventListener('click', e => {
     if (e.target.classList.contains('btn-remover-item')) {
       e.target.closest('tr').remove();
@@ -109,13 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Adicionar arquivo
   document.getElementById('formUpload').addEventListener('submit', e => {
     e.preventDefault();
     adicionarArquivo();
   });
 
-  // Remover arquivo
   document.getElementById('tabelaArquivos').addEventListener('click', e => {
     if (e.target.classList.contains('btn-remover-arquivo')) {
       e.target.closest('tr').remove();
