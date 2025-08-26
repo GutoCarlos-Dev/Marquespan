@@ -234,3 +234,25 @@ button:hover {
     flex-direction: column;
   }
 }
+
+/* alinha laber e campo de texto*/
+.form-linha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-linha label {
+  min-width: 100px;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-linha select {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}

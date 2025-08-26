@@ -60,13 +60,14 @@
             <fieldset class="form-bloco">
               <legend>Proprietário</legend>
               <input type="text" id="usuarioLogado" disabled>
-              <label for="filial">Filial</label><select name="filial" id="filial" required>
+              <div class="form-linha">
+                <label for="filial">Filial</label>
+                <select name="filial" id="filial" required>
                 <option value="">Selecione</option>
                 <option value="SP">SP</option>
-                <option value="MG">MG</option>
-                <option value="MS">MS</option>
-                <option value="PR">PR</option>
-              </select>
+                <option value="RJ">MG</option>
+                </select>
+              </div>
               <input type="text" id="titulo" placeholder="Título da Manutenção">
               <input type="text" id="tipo" placeholder="Tipo de Manutenção">
               <select name="status" id="status" required>
