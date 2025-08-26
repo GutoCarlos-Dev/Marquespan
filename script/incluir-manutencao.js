@@ -1,7 +1,7 @@
 // 📦 Importações
 import { supabase } from './script/supabase.js';
 
-// 1️⃣ Alternância de abas
+// 1️⃣ Alternância de abas principais (se ainda usadas)
 export function mostrarAba(id) {
   document.querySelectorAll('.aba-conteudo').forEach(sec => sec.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
@@ -10,7 +10,16 @@ export function mostrarAba(id) {
   document.querySelector(`.aba-btn[data-aba="${id}"]`).classList.add('active');
 }
 
-// 2️⃣ Preencher campo de usuário logado
+// 2️⃣ Alternância de painéis internos (Cadastro, Itens, Upload)
+export function mostrarPainelInterno(id) {
+  document.querySelectorAll('.painel-conteudo').forEach(div => div.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+
+  document.querySelectorAll('.painel-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.painel-btn[data-painel="${id}"]`).classList.add('active');
+}
+
+// 3️⃣ Preencher campo de usuário logado
 export function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   if (usuario && usuario.nome) {
@@ -19,7 +28,7 @@ export function preencherUsuarioLogado() {
   }
 }
 
-// 3️⃣ Buscar placas de veículos no Supabase
+// 4️⃣ Buscar placas de veículos no Supabase
 export async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
   const select = document.getElementById('veiculo');
@@ -33,7 +42,7 @@ export async function carregarPlacas() {
   }
 }
 
-// 4️⃣ Adicionar item à manutenção
+// 5️⃣ Adicionar item à manutenção
 export function adicionarItem() {
   const desc = document.getElementById('itemDescricao').value;
   const valor = parseFloat(document.getElementById('itemValor').value);
@@ -58,7 +67,7 @@ export function atualizarTotal() {
   document.getElementById('totalItens').textContent = total.toFixed(2);
 }
 
-// 5️⃣ Upload de arquivos PDF
+// 6️⃣ Upload de arquivos PDF
 export function adicionarArquivo() {
   const input = document.getElementById('arquivoPDF');
   if (!input.files.length) return;
@@ -73,16 +82,16 @@ export function adicionarArquivo() {
   input.value = '';
 }
 
-// 6️⃣ Inicialização da página
+// 7️⃣ Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarPlacas();
-  mostrarAba('cadastro');
+  mostrarPainelInterno('cadastroInterno'); // inicia com Cadastro ativo
 
-  // Alternância de abas via data-aba
-  document.querySelectorAll('.aba-btn').forEach(btn => {
+  // Alternância de painéis internos
+  document.querySelectorAll('.painel-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      mostrarAba(btn.dataset.aba);
+      mostrarPainelInterno(btn.dataset.painel);
     });
   });
 
