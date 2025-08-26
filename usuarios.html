@@ -41,7 +41,7 @@
 
         <div class="botoes-form">
           <button type="submit" id="btnSalvar">✅ Cadastrar</button>
-          <button type="button" id="btnAtualizar" onclick="atualizarUsuario()" class="hidden">🔄 Salvar</button>
+          <button type="submit" id="btnAtualizar" class="hidden">🔄 Salvar</button>
           <button type="button" onclick="mostrarSecao('busca')">⬅️ Voltar</button>
         </div>
       </form>
@@ -104,6 +104,14 @@
       document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
       document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
       document.getElementById('formUsuario').addEventListener('submit', cadastrarUsuario); // ✅ conecta o formulário
+      document.getElementById('formUsuario').addEventListener('submit', (e) => {
+        const id = document.getElementById('formUsuario').dataset.usuarioId;
+        if (id) {
+    atualizarUsuario(e);
+  } else {
+    cadastrarUsuario(e);
+  }
+  });
       window.editarUsuario = editarUsuario;
       window.atualizarUsuario = atualizarUsuario;
       window.excluirUsuario = excluirUsuario; // ✅ agora disponível globalmente

@@ -94,7 +94,8 @@ export async function editarUsuario(id) {
   window.mostrarSecao('cadastro');
 }
 
-export async function atualizarUsuario() {
+export async function atualizarUsuario(event) {
+  event.preventDefault();
   const id = document.getElementById('formUsuario').dataset.usuarioId;
   const codigo = document.getElementById('codigo').value.trim();
   const nome = document.getElementById('nome').value.trim();
