@@ -1,4 +1,4 @@
-/* 🛠️ Abas de navegação */
+/* 🛠️ Abas de navegação principal */
 .aba-navegacao {
   display: flex;
   gap: 10px;
@@ -21,13 +21,45 @@
   background-color: #388E3C;
 }
 
-/* 📋 Conteúdo das abas */
+/* 📋 Conteúdo das abas principais */
 .aba-conteudo {
   display: block;
   margin-bottom: 40px;
 }
 
 .aba-conteudo.hidden {
+  display: none;
+}
+
+/* 🧭 Navegação interna do painel */
+.painel-navegacao {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.painel-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.painel-btn.active {
+  background-color: #388E3C;
+}
+
+/* 📋 Conteúdo interno do painel */
+.painel-conteudo {
+  display: block;
+}
+
+.painel-conteudo.hidden {
   display: none;
 }
 
@@ -107,7 +139,7 @@ table td button:hover {
   vertical-align: middle;
 }
 
-/* 🧵 Botões padrão (herdado) */
+/* 🧵 Botões padrão */
 button {
   background-color: #4CAF50;
   color: white;
@@ -123,9 +155,36 @@ button:hover {
   background-color: #45a049;
 }
 
+/* 🧱 Layout em colunas para Cadastro */
+.form-duplo {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.form-bloco {
+  flex: 1;
+  min-width: 350px;
+}
+
+/* 📝 Campo de descrição fixo */
+#descricao {
+  width: 772px;
+  height: 169px;
+  resize: none;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
 /* 📱 Responsivo */
 @media (max-width: 768px) {
-  .aba-navegacao {
+  .aba-navegacao,
+  .painel-navegacao {
     flex-direction: column;
   }
 
@@ -139,29 +198,13 @@ button:hover {
   table td {
     font-size: 13px;
   }
-}
 
-.form-duplo {
-  display: flex;
-  gap: 40px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
+  #descricao {
+    width: 100%;
+    height: auto;
+  }
 
-.form-bloco {
-  flex: 1;
-  min-width: 350px;
+  .form-duplo {
+    flex-direction: column;
+  }
 }
-
-#descricao {
-  width: 772px;
-  height: 169px;
-  resize: none;
-  padding: 10px;
-  font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  box-sizing: border-box;
-}
-
