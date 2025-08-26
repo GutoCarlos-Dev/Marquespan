@@ -238,9 +238,9 @@ button:hover {
 /* alinha laber e campo de texto*/
 .form-linha {
   display: flex;
-  align-items: left;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .form-linha label {
