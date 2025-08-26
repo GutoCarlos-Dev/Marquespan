@@ -23,10 +23,13 @@ function mostrarPainelInterno(id) {
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   if (usuario && usuario.nome) {
-    document.getElementById('usuarioLogado').value = usuario.nome;
-    document.getElementById('usuario-logado').textContent = `👤 Olá, ${usuario.nome}`;
+    const campo = document.getElementById('usuarioLogado');
+    const label = document.getElementById('usuario-logado');
+    if (campo) campo.value = usuario.nome;
+    if (label) label.textContent = `👤 Olá, ${usuario.nome}`;
   }
 }
+
 
 // 🚚 Buscar placas de veículos no Supabase
 async function carregarPlacas() {
