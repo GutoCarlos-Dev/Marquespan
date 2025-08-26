@@ -140,3 +140,15 @@ button:hover {
     font-size: 13px;
   }
 }
+
+#descricao {
+  width: 772px;
+  height: 169px;
+  resize: none; /* impede redimensionamento manual */
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  box-sizing: border-box;
+}
