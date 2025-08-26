@@ -41,7 +41,7 @@
 /* 🧭 Menu lateral fixo */
 .sidebar {
   width: 250px;
-  background-color: #4CAF50;
+  background-color: #2a722d;
   color: #fff;
   position: fixed;
   height: 100vh;
@@ -83,7 +83,7 @@ nav a {
   color: #fff;
   text-decoration: none;
   font-size: 14px;
-  border-bottom: 1px solid #31ca4a;
+  border-bottom: 1px solid #2a722d;
   transition: background-color 0.3s;
 }
 
@@ -92,7 +92,7 @@ nav a i {
 }
 
 nav a:hover {
-  background-color: #31ca4a;
+  background-color: #b3f3bd;
 }
 
 /* 🔧 Submenu de Manutenções */
@@ -122,7 +122,7 @@ nav a:hover {
 .submenu {
   display: none;
   flex-direction: column;
-  background-color: #31ca4a;
+  background-color: #68f37c;
 }
 
 .submenu a {
@@ -130,11 +130,11 @@ nav a:hover {
   color: #fff;
   text-decoration: none;
   font-size: 14px;
-  border-bottom: 1px solid #31ca4a;
+  border-bottom: 1px solid #68f37c;
 }
 
 .submenu a:hover {
-  background-color: #31ca4a;
+  background-color: #b3f3bd;
 }
 
 .menu-group.active .submenu {
