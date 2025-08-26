@@ -98,19 +98,13 @@
   </script>
 
   <script type="module">
-    import {
-      mostrarUsuarios,
-      editarUsuario,
-      atualizarUsuario,
-      excluirUsuario
-    } from './script/usuarios.js';
+    import { mostrarUsuarios, editarUsuario, atualizarUsuario } from './script/usuarios.js';
 
     window.onload = () => {
       document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
       document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
       window.editarUsuario = editarUsuario;
       window.atualizarUsuario = atualizarUsuario;
-      window.excluirUsuario = excluirUsuario;
       mostrarUsuarios();
     };
   </script>
