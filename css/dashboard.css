@@ -83,7 +83,7 @@ nav a {
   color: #fff;
   text-decoration: none;
   font-size: 14px;
-  border-bottom: 1px solid #34495e;
+  border-bottom: 1px solid #31ca4a;
   transition: background-color 0.3s;
 }
 
@@ -92,7 +92,7 @@ nav a i {
 }
 
 nav a:hover {
-  background-color: #34495e;
+  background-color: #31ca4a;
 }
 
 /* 🔧 Submenu de Manutenções */
@@ -122,7 +122,7 @@ nav a:hover {
 .submenu {
   display: none;
   flex-direction: column;
-  background-color: #34495e;
+  background-color: #31ca4a;
 }
 
 .submenu a {
@@ -130,11 +130,11 @@ nav a:hover {
   color: #fff;
   text-decoration: none;
   font-size: 14px;
-  border-bottom: 1px solid #2c3e50;
+  border-bottom: 1px solid #31ca4a;
 }
 
 .submenu a:hover {
-  background-color: #3d566e;
+  background-color: #31ca4a;
 }
 
 .menu-group.active .submenu {
