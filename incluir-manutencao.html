@@ -36,14 +36,23 @@
     <section class="gestao-veiculos">
       <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
     </section>
-<div class="painel-navegacao">
-  <button class="painel-btn active" data-painel="cadastroInterno">📋 Cadastro</button>
-  <button class="painel-btn" data-painel="itensInterno">🧰 Itens</button>
-  <button class="painel-btn" data-painel="uploadInterno">📎 Upload</button>
-</div>
+
     <!-- 🔀 Navegação interna -->
+    <div class="painel-navegacao" role="tablist">
+      <button class="painel-btn active" data-painel="cadastroInterno" aria-selected="true">
+        <i class="fas fa-clipboard-list"></i> Cadastro
+      </button>
+      <button class="painel-btn" data-painel="itensInterno" aria-selected="false">
+        <i class="fas fa-tools"></i> Itens
+      </button>
+      <button class="painel-btn" data-painel="uploadInterno" aria-selected="false">
+        <i class="fas fa-upload"></i> Upload
+      </button>
+    </div>
+
     <fieldset id="painelManutencao">
       <legend>Cadastro de Manutenção</legend>
+
       <!-- 📋 Painel Cadastro -->
       <div id="cadastroInterno" class="painel-conteudo fade-in">
         <form id="formManutencao">

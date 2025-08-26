@@ -1,4 +1,4 @@
-/* 🛠️ Abas de navegação principal */
+/* 🌐 Navegação principal (se usada em outras telas) */
 .aba-navegacao {
   display: flex;
   gap: 10px;
@@ -21,49 +21,75 @@
   background-color: #388E3C;
 }
 
-/* 📋 Conteúdo das abas principais */
-.aba-conteudo {
-  display: block;
-  margin-bottom: 40px;
-}
-
-.aba-conteudo.hidden {
-  display: none;
-}
-
-/* 🧭 Navegação interna do painel */
+/* 🧭 Navegação interna (Cadastro, Itens, Upload) */
 .painel-navegacao {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .painel-btn {
-  background-color: #4CAF50;
-  color: white;
+  background: none;
   border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 12px 20px;
   font-size: 14px;
-  transition: background-color 0.3s;
+  color: #444;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.painel-btn i {
+  margin-right: 8px;
+  transition: transform 0.3s ease;
 }
 
 .painel-btn.active {
-  background-color: #388E3C;
+  color: #4CAF50;
+  font-weight: bold;
 }
 
-/* 📋 Conteúdo interno do painel */
+.painel-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #4CAF50;
+  border-radius: 2px;
+}
+
+.painel-btn.active i {
+  transform: rotate(-5deg);
+}
+
+.painel-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #81C784;
+}
+
+/* 📋 Conteúdo interno das guias */
 .painel-conteudo {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  display: none;
+}
+
+.painel-conteudo.fade-in {
   display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .painel-conteudo.hidden {
   display: none;
 }
 
-/* 🧾 Estrutura de formulários */
+/* 🧾 Formulários */
 form#formManutencao,
 form#formItem,
 form#formUpload {
@@ -89,7 +115,33 @@ legend {
   font-size: 16px;
 }
 
-/* 🧰 Grid de itens */
+/* 🧱 Layout em colunas para Cadastro */
+.form-duplo {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.form-bloco {
+  flex: 1;
+  min-width: 350px;
+}
+
+/* 📝 Campo de descrição fixo */
+#descricao {
+  width: 772px;
+  height: 169px;
+  resize: none;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+/* 🧰 Tabela de itens */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -155,32 +207,6 @@ button:hover {
   background-color: #45a049;
 }
 
-/* 🧱 Layout em colunas para Cadastro */
-.form-duplo {
-  display: flex;
-  gap: 40px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.form-bloco {
-  flex: 1;
-  min-width: 350px;
-}
-
-/* 📝 Campo de descrição fixo */
-#descricao {
-  width: 772px;
-  height: 169px;
-  resize: none;
-  padding: 10px;
-  font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  box-sizing: border-box;
-}
-
 /* 📱 Responsivo */
 @media (max-width: 768px) {
   .aba-navegacao,
@@ -207,33 +233,4 @@ button:hover {
   .form-duplo {
     flex-direction: column;
   }
-}
-
-/* ✨ Transição suave */
-.fade-in {
-  animation: fadeIn 0.4s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 🔘 Botão ativo elegante */
-.painel-btn.active {
-  background-color: #388E3C;
-  box-shadow: 0 0 0 2px #2e7d32 inset;
-  font-weight: bold;
-}
-
-/* 🔘 Foco visual */
-.painel-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #81C784;
 }

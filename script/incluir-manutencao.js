@@ -1,7 +1,7 @@
 // 📦 Importação do Supabase
 import { supabase } from './script/supabase.js';
 
-// 🔀 Alternância de painéis internos com animação
+// 🔀 Alternância de painéis internos com animação e acessibilidade
 function mostrarPainelInterno(id) {
   document.querySelectorAll('.painel-conteudo').forEach(div => {
     div.classList.add('hidden');
@@ -11,12 +11,19 @@ function mostrarPainelInterno(id) {
   const painel = document.getElementById(id);
   if (painel) {
     painel.classList.remove('hidden');
-    painel.classList.add('fade-in');
+    requestAnimationFrame(() => painel.classList.add('fade-in'));
   }
 
-  document.querySelectorAll('.painel-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.painel-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.setAttribute('aria-selected', 'false');
+  });
+
   const btnAtivo = document.querySelector(`.painel-btn[data-painel="${id}"]`);
-  if (btnAtivo) btnAtivo.classList.add('active');
+  if (btnAtivo) {
+    btnAtivo.classList.add('active');
+    btnAtivo.setAttribute('aria-selected', 'true');
+  }
 }
 
 // 👤 Preencher campo de usuário logado
@@ -30,12 +37,11 @@ function preencherUsuarioLogado() {
   }
 }
 
-
 // 🚚 Buscar placas de veículos no Supabase
 async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
   const select = document.getElementById('veiculo');
-  if (data) {
+  if (data && select) {
     data.forEach(v => {
       const opt = document.createElement('option');
       opt.value = v.placa;
@@ -47,7 +53,7 @@ async function carregarPlacas() {
 
 // 🧰 Adicionar item à manutenção
 function adicionarItem() {
-  const desc = document.getElementById('itemDescricao').value;
+  const desc = document.getElementById('itemDescricao').value.trim();
   const valor = parseFloat(document.getElementById('itemValor').value);
   if (!desc || isNaN(valor)) return;
 
@@ -65,7 +71,7 @@ function atualizarTotal() {
   let total = 0;
   document.querySelectorAll('#tabelaItens tr').forEach(row => {
     const valor = parseFloat(row.children[1].textContent.replace('R$', '').trim());
-    total += valor;
+    if (!isNaN(valor)) total += valor;
   });
   document.getElementById('totalItens').textContent = total.toFixed(2);
 }
