@@ -86,6 +86,26 @@ export async function atualizarUsuario() {
   document.getElementById('btnSalvar').classList.remove('hidden');
   document.getElementById('btnAtualizar').classList.add('hidden');
   document.getElementById('formUsuario').dataset.usuarioId = '';
-  window.mostrarSecao('busca'); // ✅ Executa a função corretamente
+  window.mostrarSecao('busca');
+  mostrarUsuarios();
+}
+
+export async function excluirUsuario(id) {
+  const confirmar = confirm('Tem certeza que deseja excluir este usuário?');
+
+  if (!confirmar) return;
+
+  const { error } = await supabase
+    .from('usuarios')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert('❌ Erro ao excluir usuário.');
+    console.error(error);
+    return;
+  }
+
+  alert('✅ Usuário excluído com sucesso!');
   mostrarUsuarios();
 }
