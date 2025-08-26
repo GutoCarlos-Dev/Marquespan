@@ -59,7 +59,7 @@
           <div class="form-duplo">
             <fieldset class="form-bloco">
               <legend>Proprietário</legend>
-              <input type="text" id="usuarioLogado">
+              <input type="text" id="usuarioLogado" disabled>
               <select name="filial" id="filial" required>
                 <option value="">Selecione</option>
                 <option value="SP">SP</option>
@@ -80,7 +80,9 @@
             <fieldset class="form-bloco">
               <legend>Dados da Manutenção</legend>
               <input type="date" id="data">
-              <select id="veiculo"></select>
+              <select id="veiculo">
+                <option value="">Selecione</option>
+              </select>
               <input type="text" id="km" placeholder="Hodômetro/KM">
               <input type="text" id="motorista" placeholder="Motorista">
             </fieldset>
