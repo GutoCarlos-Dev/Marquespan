@@ -61,6 +61,15 @@
               <legend>Proprietário</legend>
               <input type="text" id="usuarioLogado" disabled>
               <div class="form-linha">
+              <label for="status">Status:</label>
+                  <select name="status" id="status" required>
+                  <option value=""></option>
+                  <option value="finalizado">FINALIZADO</option>
+                  <option value="manutencao">MANUTENÇAO</option>
+                  <option value="aberto">ABERTO</option>
+                  </select>
+              </div>
+              <div class="form-linha">
                 <label for="filial">Filial:</label>
                 <select name="filial" id="filial" required>
                 <option value=""></option>
@@ -72,15 +81,6 @@
               </div>
               <input type="text" id="titulo" placeholder="Título da Manutenção">
               <input type="text" id="tipo" placeholder="Tipo de Manutenção">
-              <div class="form-linha">
-              <label for="status">Status:</label>
-                  <select name="status" id="status" required>
-                  <option value=""></option>
-                  <option value="finalizado">FINALIZADO</option>
-                  <option value="manutencao">MANUTENÇAO</option>
-                  <option value="aberto">ABERTO</option>
-                  </select>
-               </div>
             </fieldset>
 
             <fieldset class="form-bloco">
