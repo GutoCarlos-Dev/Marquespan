@@ -27,40 +27,96 @@
 
   <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
-    <section class="gestao-veiculos">
-      <h1 class="header"><i class="fas fa-search"></i> Incluir Manutenção</h1>
-      <div class="filtros-veiculos">
-        <input type="text" id="campo-placa" placeholder="Placa" />
-      </div>
-    </section>
+  <section class="gestao-veiculos">
+    <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
+  </section>
 
-    <div class="veiculos-header">
-      <div class="acoes-veiculos">
-        <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
-        <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
-        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
-        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-      </div>
-    </div>
+  <!-- 🔀 Abas -->
+  <div class="aba-navegacao">
+    <button onclick="mostrarAba('cadastro')" class="aba-btn active">📋 Cadastro</button>
+    <button onclick="mostrarAba('itens')" class="aba-btn">🧰 Itens</button>
+    <button onclick="mostrarAba('upload')" class="aba-btn">📎 Upload</button>
+  </div>
 
-    <!-- ✅ Grid com rolagem horizontal -->
-    <div class="grid-wrapper">
-      <section class="grid-veiculos">
-        <h2 class="section-title">Veículos Cadastrados</h2>
-        <div class="grid-header">
-          <div>FILIAL</div>
-          <div>PLACA</div>
-          <div>MODELO</div>
-          <div>RENAVAN</div>
-          <div>TIPO</div>
-          <div>SITUAÇÃO</div>
-          <div>QRCODE</div>
-          <div>AÇÕES</div>
-        </div>
-        <div id="grid-veiculos-body" class="grid-body"></div>
-      </section>
-    </div>
-  </main>
+  <!-- 📋 Aba Cadastro -->
+  <section id="cadastro" class="aba-conteudo">
+    <form id="formManutencao">
+      <fieldset>
+        <legend>Proprietário</legend>
+        <input type="text" id="usuarioLogado" disabled>
+        <input type="text" id="filial" placeholder="Filial">
+        <input type="text" id="titulo" placeholder="Título da Manutenção">
+        <input type="text" id="tipo" placeholder="Tipo de Manutenção">
+        <input type="text" id="status" placeholder="Status">
+      </fieldset>
+
+      <fieldset>
+        <legend>Dados da Manutenção</legend>
+        <input type="date" id="data">
+        <select id="veiculo"></select>
+        <input type="text" id="km" placeholder="Hodômetro/KM">
+        <input type="text" id="motorista" placeholder="Motorista">
+      </fieldset>
+
+      <fieldset>
+        <legend>Dados Fiscais</legend>
+        <input type="text" id="fornecedor" placeholder="Fornecedor">
+        <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
+        <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
+      </fieldset>
+
+      <fieldset>
+        <legend>Outras Informações</legend>
+        <input type="text" id="numeroOS" placeholder="Número da OS">
+        <textarea id="descricao" placeholder="Descrição"></textarea>
+      </fieldset>
+
+      <button type="submit">✅ Salvar Manutenção</button>
+    </form>
+  </section>
+
+  <!-- 🧰 Aba Itens -->
+  <section id="itens" class="aba-conteudo hidden">
+    <h3>Itens da Manutenção</h3>
+    <form id="formItem">
+      <input type="text" id="itemDescricao" placeholder="Peça ou Serviço">
+      <input type="number" id="itemValor" placeholder="Valor (R$)">
+      <button type="button" onclick="adicionarItem()">➕ Adicionar Item</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Valor (R$)</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaItens"></tbody>
+    </table>
+
+    <div><strong>Total:</strong> R$ <span id="totalItens">0.00</span></div>
+  </section>
+
+  <!-- 📎 Aba Upload -->
+  <section id="upload" class="aba-conteudo hidden">
+    <h3>Upload de Arquivos (PDF)</h3>
+    <form id="formUpload">
+      <input type="file" id="arquivoPDF" accept="application/pdf">
+      <button type="button" onclick="adicionarArquivo()">📎 Adicionar Arquivo</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Arquivo</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaArquivos"></tbody>
+    </table>
+  </section>
+</main>
 
   <!-- 🦶 Rodapé -->
   <footer class="footer">

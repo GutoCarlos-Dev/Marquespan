@@ -30,3 +30,6 @@
 
 /* 👥 Gestão de usuários */
 @import url("usuarios.css");
+
+/* 🛠️ Tela de manutenção */
+@import url("manutencao.css");
