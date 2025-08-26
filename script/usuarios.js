@@ -41,6 +41,36 @@ export async function mostrarUsuarios() {
   });
 }
 
+export async function cadastrarUsuario(event) {
+  event.preventDefault(); // evita recarregar a página
+
+  const codigo = document.getElementById('codigo').value.trim();
+  const nome = document.getElementById('nome').value.trim();
+  const funcao = document.getElementById('funcao').value.trim();
+  const senha = document.getElementById('senha').value.trim();
+
+  if (!codigo || !nome || !funcao || !senha) {
+    alert('⚠️ Preencha todos os campos.');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('usuarios')
+    .insert([{ codigo, nome, funcao, senha }]);
+
+  if (error) {
+    alert('❌ Erro ao cadastrar usuário.');
+    console.error(error);
+    return;
+  }
+
+  alert('✅ Usuário cadastrado com sucesso!');
+  document.getElementById('formUsuario').reset();
+  window.mostrarSecao('busca');
+  mostrarUsuarios();
+}
+
+
 export async function editarUsuario(id) {
   const { data, error } = await supabase
     .from('usuarios')

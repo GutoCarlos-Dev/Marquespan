@@ -98,11 +98,12 @@
   </script>
 
   <script type="module">
-    import { mostrarUsuarios, editarUsuario, atualizarUsuario, excluirUsuario } from './script/usuarios.js';
+    import { mostrarUsuarios, editarUsuario, atualizarUsuario, excluirUsuario, cadastrarUsuario } from './script/usuarios.js';
 
     window.onload = () => {
       document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
       document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
+      document.getElementById('formUsuario').addEventListener('submit', cadastrarUsuario); // ✅ conecta o formulário
       window.editarUsuario = editarUsuario;
       window.atualizarUsuario = atualizarUsuario;
       window.excluirUsuario = excluirUsuario; // ✅ agora disponível globalmente
