@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
+  <!-- 🧭 Barra lateral -->
   <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo">
@@ -16,20 +17,37 @@
       <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
       <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
       <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
-    <div class="menu-group">
-      <button class="menu-toggle">
-        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
-      </button>
-      <div class="submenu">
+      <div class="menu-group">
+        <button class="menu-toggle">
+          <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
           <a href="incluir-manutencao.html">Incluir Manutenção</a>
           <a href="buscar-manutencao.html">Buscar Manutenção</a>
+        </div>
       </div>
-    </div>
       <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
       <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
     </nav>
   </div>
 
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
+    </section>
+
+    <!-- 🔀 Navegação interna -->
+    <fieldset id="painelManutencao">
+      <legend>Cadastro de Manutenção</legend>
+
+      <div class="painel-navegacao">
+        <button class="painel-btn active" data-painel="cadastroInterno">📋 Cadastro</button>
+        <button class="painel-btn" data-painel="itensInterno">🧰 Itens</button>
+        <button class="painel-btn" data-painel="uploadInterno">📎 Upload</button>
+      </div>
+
+      <!-- 📋 Painel Cadastro -->
       <div id="cadastroInterno" class="painel-conteudo fade-in">
         <form id="formManutencao">
           <div class="form-duplo">
@@ -68,6 +86,7 @@
         </form>
       </div>
 
+      <!-- 🧰 Painel Itens -->
       <div id="itensInterno" class="painel-conteudo hidden">
         <h3>Itens da Manutenção</h3>
         <form id="formItem">
@@ -86,6 +105,7 @@
         <div><strong>Total:</strong> R$ <span id="totalItens">0.00</span></div>
       </div>
 
+      <!-- 📎 Painel Upload -->
       <div id="uploadInterno" class="painel-conteudo hidden">
         <h3>Upload de Arquivos (PDF)</h3>
         <form id="formUpload">
@@ -103,10 +123,12 @@
     </fieldset>
   </main>
 
+  <!-- 🦶 Rodapé -->
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
+  <!-- 🚀 Scripts -->
   <script type="module" src="./script/incluir-manutencao.js" defer></script>
 </body>
 </html>
