@@ -69,7 +69,11 @@
               </select>
               <input type="text" id="titulo" placeholder="Título da Manutenção">
               <input type="text" id="tipo" placeholder="Tipo de Manutenção">
-              <input type="text" id="status" placeholder="Status">
+              <select name="status" id="status" required>
+                <option value="finalizado">FINALIZADO</option>
+                <option value="manutencao">MANUTENÇAO</option>
+                <option value="aberto">ABERTO</option>
+              </select>
             </fieldset>
 
             <fieldset class="form-bloco">
