@@ -38,8 +38,9 @@
 
     <!-- 📋 Aba Cadastro -->
     <section id="cadastro" class="aba-conteudo">
-      <form id="formManutencao">
-        <fieldset>
+    <form id="formManutencao">
+      <div class="form-duplo">
+        <fieldset class="form-bloco">
           <legend>Proprietário</legend>
           <input type="text" id="usuarioLogado" disabled>
           <input type="text" id="filial" placeholder="Filial">
@@ -47,30 +48,31 @@
           <input type="text" id="tipo" placeholder="Tipo de Manutenção">
           <input type="text" id="status" placeholder="Status">
         </fieldset>
-
-        <fieldset>
+    
+        <fieldset class="form-bloco">
           <legend>Dados da Manutenção</legend>
           <input type="date" id="data">
           <select id="veiculo"></select>
           <input type="text" id="km" placeholder="Hodômetro/KM">
           <input type="text" id="motorista" placeholder="Motorista">
         </fieldset>
-
-        <fieldset>
-          <legend>Dados Fiscais</legend>
-          <input type="text" id="fornecedor" placeholder="Fornecedor">
-          <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
-          <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
-        </fieldset>
-
-        <fieldset>
-          <legend>Outras Informações</legend>
-          <input type="text" id="numeroOS" placeholder="Número da OS">
-          <textarea id="descricao" placeholder="Descrição"></textarea>
-        </fieldset>
-
-        <button type="submit">✅ Salvar Manutenção</button>
-      </form>
+      </div>
+    
+      <fieldset>
+        <legend>Dados Fiscais</legend>
+        <input type="text" id="fornecedor" placeholder="Fornecedor">
+        <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
+        <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
+      </fieldset>
+    
+      <fieldset>
+        <legend>Outras Informações</legend>
+        <input type="text" id="numeroOS" placeholder="Número da OS">
+        <textarea id="descricao" placeholder="Descrição"></textarea>
+      </fieldset>
+    
+      <button type="submit">✅ Salvar Manutenção</button>
+    </form>
     </section>
 
     <!-- 🧰 Aba Itens -->
