@@ -3,6 +3,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
+  padding: 20px;
 }
 
 .buscar-veiculos {
@@ -13,6 +14,7 @@
   margin: 0 auto;
 }
 
+/* 🧩 Card visual */
 .card {
   background-color: #fff;
   border-left: 6px solid #4CAF50;
@@ -36,61 +38,106 @@
   color: #555;
 }
 
-/* 🧭 Menu lateral com submenu */
-.menu {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* 🧭 Menu lateral fixo */
+.sidebar {
+  width: 250px;
+  background-color: #2c3e50;
+  color: #fff;
+  position: fixed;
+  height: 100vh;
+  padding-top: 20px;
+  z-index: 100;
 }
 
-.menu li {
-  position: relative;
+.sidebar .logo {
+  width: 120px;
+  margin: 0 auto 20px;
+  display: block;
 }
 
-.menu li a {
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  margin-left: 20px;
+  cursor: pointer;
+}
+
+.usuario-logado {
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+/* 🧭 Menu principal */
+nav {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+}
+
+nav a {
+  display: flex;
   align-items: center;
   padding: 12px 20px;
   color: #fff;
   text-decoration: none;
-  background-color: #2c3e50;
+  font-size: 14px;
   border-bottom: 1px solid #34495e;
   transition: background-color 0.3s;
 }
 
-.menu li a:hover {
+nav a i {
+  margin-right: 10px;
+}
+
+nav a:hover {
   background-color: #34495e;
 }
 
-.menu-item > a i.fa-caret-down {
-  margin-left: auto;
-  font-size: 12px;
+/* 🔧 Submenu de Manutenções */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.menu-toggle i {
+  margin-right: 10px;
 }
 
 .submenu {
   display: none;
-  position: absolute;
-  left: 100%;
-  top: 0;
+  flex-direction: column;
   background-color: #34495e;
-  min-width: 200px;
-  z-index: 1000;
 }
 
-.submenu li a {
-  padding: 10px 20px;
+.submenu a {
+  padding: 10px 30px;
   color: #fff;
-  background-color: #34495e;
+  text-decoration: none;
+  font-size: 14px;
   border-bottom: 1px solid #2c3e50;
 }
 
-.submenu li a:hover {
+.submenu a:hover {
   background-color: #3d566e;
 }
 
-.menu-item:hover .submenu {
-  display: block;
+.menu-group.active .submenu {
+  display: flex;
 }
 
 /* 🧵 Botões padrão */
@@ -107,4 +154,22 @@ button {
 
 button:hover {
   background-color: #45a049;
+}
+
+/* 📱 Responsivo */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .submenu {
+    position: static;
+  }
 }
