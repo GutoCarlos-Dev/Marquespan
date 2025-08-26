@@ -4,13 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Incluir Manutenção</title>
-
-  <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🧭 Barra lateral -->
   <aside class="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo">
@@ -23,13 +20,11 @@
     </nav>
   </aside>
 
-  <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
     <section class="gestao-veiculos">
       <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
     </section>
 
-    <!-- 🔀 Navegação interna -->
     <fieldset id="painelManutencao">
       <legend>Cadastro de Manutenção</legend>
 
@@ -39,8 +34,7 @@
         <button class="painel-btn" data-painel="uploadInterno">📎 Upload</button>
       </div>
 
-      <!-- 📋 Painel Cadastro -->
-      <div id="cadastroInterno" class="painel-conteudo">
+      <div id="cadastroInterno" class="painel-conteudo fade-in">
         <form id="formManutencao">
           <div class="form-duplo">
             <fieldset class="form-bloco">
@@ -55,7 +49,7 @@
             <fieldset class="form-bloco">
               <legend>Dados da Manutenção</legend>
               <input type="date" id="data">
-              <select id="veiculo">Veiculo</select>
+              <select id="veiculo"></select>
               <input type="text" id="km" placeholder="Hodômetro/KM">
               <input type="text" id="motorista" placeholder="Motorista">
             </fieldset>
@@ -78,7 +72,6 @@
         </form>
       </div>
 
-      <!-- 🧰 Painel Itens -->
       <div id="itensInterno" class="painel-conteudo hidden">
         <h3>Itens da Manutenção</h3>
         <form id="formItem">
@@ -89,11 +82,7 @@
 
         <table>
           <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Valor (R$)</th>
-              <th>Ações</th>
-            </tr>
+            <tr><th>Descrição</th><th>Valor (R$)</th><th>Ações</th></tr>
           </thead>
           <tbody id="tabelaItens"></tbody>
         </table>
@@ -101,7 +90,6 @@
         <div><strong>Total:</strong> R$ <span id="totalItens">0.00</span></div>
       </div>
 
-      <!-- 📎 Painel Upload -->
       <div id="uploadInterno" class="painel-conteudo hidden">
         <h3>Upload de Arquivos (PDF)</h3>
         <form id="formUpload">
@@ -111,10 +99,7 @@
 
         <table>
           <thead>
-            <tr>
-              <th>Arquivo</th>
-              <th>Ações</th>
-            </tr>
+            <tr><th>Arquivo</th><th>Ações</th></tr>
           </thead>
           <tbody id="tabelaArquivos"></tbody>
         </table>
@@ -122,12 +107,10 @@
     </fieldset>
   </main>
 
-  <!-- 🦶 Rodapé -->
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
-  <!-- 🚀 Scripts -->
   <script type="module" src="./script/incluir-manutencao.js" defer></script>
 </body>
 </html>
