@@ -1,187 +1,93 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Incluir Manutenção</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/dashboard.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veículos - Marquespan</title>
+
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css" />
+
+  <!-- Ícones Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🟩 Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
+  <!-- 🧭 Barra lateral -->
+  <aside class="sidebar">
+    <button class="toggle-btn" title="Abrir menu"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo" />
     <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
     <nav>
-      <ul class="menu">
-        <li><a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a></li>
-        <li><a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a></li>
-        <li><a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a></li>
-        <li class="menu-item">
-          <a href="#"><i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i></a>
-          <ul class="submenu">
-            <li><a href="incluir-manutencao.html">➕ Incluir Manutenção</a></li>
-            <li><a href="buscar-manutencao.html">🔍 Buscar Manutenção</a></li>
-          </ul>
-        </li>
-        <li><a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a></li>
-        <li><a href="carregamento.html"><i class="fas fa-truck"></i> <span>Carregamento</span></a></li>
-        <li><a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a></li>
-        <li><a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
-      </ul>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="veiculos.html" class="active"><i class="fas fa-car"></i> Veículos</a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
     </nav>
-  </div>
+  </aside>
 
-  <!-- 🧱 Conteúdo principal -->
-  <div class="main-content">
-    <header class="header">➕ Incluir Manutenção</header>
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-search"></i> Pesquisar Veículos</h1>
+      <div class="filtros-veiculos">
+        <input type="text" id="campo-placa" placeholder="Placa" />
+      </div>
+    </section>
 
-    <!-- 🔀 Abas -->
-    <div class="tabs">
-      <button onclick="mostrarAba('cadastro')">📋 Cadastro</button>
-      <button onclick="mostrarAba('itens')">🧰 Itens</button>
-      <button onclick="mostrarAba('upload')">📎 Upload</button>
+    <div class="veiculos-header">
+      <div class="acoes-veiculos">
+        <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
+        <button onclick="abrirCadastroVeiculo()">+ Veículo</button>
+        <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
+        <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+      </div>
     </div>
 
-    <!-- 📋 Aba Cadastro -->
-    <section id="cadastro" class="aba">
-      <form id="formManutencao">
-        <h3>Formulário do Proprietário</h3>
-        <input type="text" id="usuarioLogado" disabled>
-        <input type="text" id="filial" placeholder="Filial">
-        <input type="text" id="titulo" placeholder="Título da Manutenção">
-        <input type="text" id="tipo" placeholder="Tipo de Manutenção">
-        <input type="text" id="status" placeholder="Status">
+    <!-- ✅ Grid com rolagem horizontal -->
+    <div class="grid-wrapper">
+      <section class="grid-veiculos">
+        <h2 class="section-title">Veículos Cadastrados</h2>
+        <div class="grid-header">
+          <div>FILIAL</div>
+          <div>PLACA</div>
+          <div>MODELO</div>
+          <div>RENAVAN</div>
+          <div>TIPO</div>
+          <div>SITUAÇÃO</div>
+          <div>QRCODE</div>
+          <div>AÇÕES</div>
+        </div>
+        <div id="grid-veiculos-body" class="grid-body"></div>
+      </section>
+    </div>
+  </main>
 
-        <h3>Dados da Manutenção</h3>
-        <input type="date" id="data">
-        <select id="veiculo"></select> <!-- Placas via Supabase -->
-        <input type="text" id="km" placeholder="Hodômetro/KM">
-        <input type="text" id="motorista" placeholder="Motorista">
-
-        <h3>Dados Fiscais</h3>
-        <input type="text" id="fornecedor" placeholder="Fornecedor">
-        <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
-        <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
-
-        <h3>Outras Informações</h3>
-        <input type="text" id="numeroOS" placeholder="Número da OS">
-        <textarea id="descricao" placeholder="Descrição"></textarea>
-
-        <button type="submit">✅ Salvar Manutenção</button>
-      </form>
-    </section>
-
-    <!-- 🧰 Aba Itens -->
-    <section id="itens" class="aba hidden">
-      <h3>Itens da Manutenção</h3>
-      <form id="formItem">
-        <input type="text" id="itemDescricao" placeholder="Peça ou Serviço">
-        <input type="number" id="itemValor" placeholder="Valor (R$)">
-        <button type="button" onclick="adicionarItem()">➕ Adicionar Item</button>
-      </form>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <th>Valor (R$)</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaItens"></tbody>
-      </table>
-
-      <div><strong>Total:</strong> R$ <span id="totalItens">0.00</span></div>
-    </section>
-
-    <!-- 📎 Aba Upload -->
-    <section id="upload" class="aba hidden">
-      <h3>Upload de Arquivos (PDF)</h3>
-      <form id="formUpload">
-        <input type="file" id="arquivoPDF" accept="application/pdf">
-        <button type="button" onclick="adicionarArquivo()">📎 Adicionar Arquivo</button>
-      </form>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Arquivo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaArquivos"></tbody>
-      </table>
-    </section>
-  </div>
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
 
   <!-- 🚀 Scripts -->
+  <script type="module" src="./script/veiculos.js" defer></script>
   <script>
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
+    function abrirCadastroVeiculo() {
+      const largura = 900;
+      const altura = 700;
+      const esquerda = (window.screen.width - largura) / 2;
+      const topo = (window.screen.height - altura) / 2;
+
+      window.open(
+        'cadastro-veiculo.html',
+        'CadastroVeiculo',
+        `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
+      );
     }
 
-    function mostrarAba(id) {
-      document.querySelectorAll('.aba').forEach(sec => sec.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
-    }
-
-    function adicionarItem() {
-      const desc = document.getElementById('itemDescricao').value;
-      const valor = parseFloat(document.getElementById('itemValor').value);
-      if (!desc || isNaN(valor)) return;
-
-      const linha = document.createElement('tr');
-      linha.innerHTML = `
-        <td>${desc}</td>
-        <td>R$ ${valor.toFixed(2)}</td>
-        <td><button onclick="this.parentElement.parentElement.remove(); atualizarTotal()">🗑️</button></td>
-      `;
-      document.getElementById('tabelaItens').appendChild(linha);
-      atualizarTotal();
-    }
-
-    function atualizarTotal() {
-      let total = 0;
-      document.querySelectorAll('#tabelaItens tr').forEach(row => {
-        const valor = parseFloat(row.children[1].textContent.replace('R$', '').trim());
-        total += valor;
-      });
-      document.getElementById('totalItens').textContent = total.toFixed(2);
-    }
-
-    function adicionarArquivo() {
-      const input = document.getElementById('arquivoPDF');
-      if (!input.files.length) return;
-
-      const file = input.files[0];
-      const linha = document.createElement('tr');
-      linha.innerHTML = `
-        <td>${file.name}</td>
-        <td><button onclick="this.parentElement.parentElement.remove()">🗑️</button></td>
-      `;
-      document.getElementById('tabelaArquivos').appendChild(linha);
-      input.value = '';
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
       if (usuario && usuario.nome) {
-        document.getElementById('usuarioLogado').value = usuario.nome;
-      }
-
-      // 🔄 Buscar placas de veículos no Supabase
-      const { supabase } = await import('./script/supabase.js');
-      const { data, error } = await supabase.from('veiculos').select('placa');
-      const select = document.getElementById('veiculo');
-      if (data) {
-        data.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v.placa;
-          opt.textContent = v.placa;
-          select.appendChild(opt);
-        });
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
     });
   </script>
