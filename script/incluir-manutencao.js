@@ -113,13 +113,37 @@ async function carregarFiliais() {
   }
 }
 
+ // carregar Titulos de Manutenção
+
+async function carregarTitulosManutencao() {
+  const { data, error } = await supabase.from('titulomanutencao').select('manutencao');
+  const lista = document.getElementById('listaTitulos');
+
+  if (error) {
+    console.error('Erro ao carregar títulos:', error);
+    return;
+  }
+
+  if (data && lista) {
+    lista.innerHTML = ''; // limpa sugestões antigas
+    data.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.titulo;
+      lista.appendChild(opt);
+    });
+  }
+}
+
+
+
 
 
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarPlacas();
-  carregarFiliais(); // ✅ nova função para preencher o campo Filial
+  carregarFiliais(); // ✅ função para preencher o campo Filial
+  carregarTitulosManutencao(); // ✅ função para preencher o campo Titulo de Manutenção
   mostrarPainelInterno('cadastroInterno');
 
   // 🧭 Alternância de abas internas

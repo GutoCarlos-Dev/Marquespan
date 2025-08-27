@@ -79,8 +79,14 @@
                 <!-- opções serão inseridas dinamicamente puxando do banco de dados -->
                 </select>
               </div>
-              <input type="text" id="titulo" placeholder="Título da Manutenção">
-              <input type="text" id="tipo" placeholder="Tipo de Manutenção">
+              <div class="form-linha">
+                <label for="titulo">Título da Manutenção:</label>
+                <input type="text" id="titulo" list="listaTitulos" placeholder="Digite ou selecione">
+                <datalist id="listaTitulos">
+                <!-- opções serão inseridas via JS -->
+                </datalist>
+              </div>
+              
             </fieldset>
 
             <fieldset class="form-bloco">
