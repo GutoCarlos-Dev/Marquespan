@@ -156,8 +156,12 @@
           </div>
           
           <div class="form-linha">
-              <label for="itemDescricao">Peças/Serviços:</label>
-          <input type="text" id="itemDescricao">
+            <label for="itemDescricao">Peças/Serviços:</label>
+            <input type="text" id="itemDescricao" list="listaPecasServicos" placeholder="Digite ou selecione">
+            <datalist id="listaPecasServicos"></datalist>
+            <button type="button" class="btn-icone" onclick="abrirModalPecaServico()">
+            <i class="fas fa-plus-circle"></i>
+            </button>
           </div>
 
           <div class="form-linha">
@@ -225,6 +229,24 @@
     <div class="modal-acoes">
       <button onclick="salvarFornecedor()">Salvar</button>
       <button onclick="fecharModalFornecedor()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Peças e Serviços -->
+<div class="modal" id="modalPecaServico">
+  <div class="modal-conteudo">
+    <h3>Cadastrar Peça/Serviço</h3>
+    <input type="text" id="novaDescricao" placeholder="Descrição">
+    <select id="novoTipo">
+      <option value="">Selecione o tipo</option>
+      <option value="PECAS">PEÇA</option>
+      <option value="SERVICOS">SERVIÇOS</option>
+      <option value="MANUTENCAO">MANUTENÇAO</option>
+    </select>
+    <div class="modal-acoes">
+      <button onclick="salvarPecaServico()">Salvar</button>
+      <button onclick="fecharModalPecaServico()">Fechar</button>
     </div>
   </div>
 </div>

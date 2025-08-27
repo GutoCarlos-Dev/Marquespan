@@ -156,6 +156,29 @@ function atualizarTotal() {
   document.getElementById('totalItens').textContent = total.toFixed(2);
 }
 
+// Carregar pecas e servico
+async function carregarPecasServicos() {
+  const { data, error } = await supabase.from('pecaeservico').select('descricao');
+  const lista = document.getElementById('listaPecasServicos');
+
+  if (error) {
+    console.error('Erro ao carregar peças/serviços:', error);
+    return;
+  }
+
+  if (data && lista) {
+    lista.innerHTML = '';
+    data.forEach(item => {
+      if (item.descricao) {
+        const opt = document.createElement('option');
+        opt.value = item.descricao;
+        lista.appendChild(opt);
+      }
+    });
+  }
+}
+
+
 // 📎 Upload de arquivos PDF
 function adicionarArquivo() {
   const input = document.getElementById('arquivoPDF');
@@ -233,6 +256,42 @@ async function salvarFornecedor() {
   fecharModalFornecedor();
 }
 
+// 🗂️ Modal de PECAS E SERVICO
+
+function abrirModalPecaServico() {
+  document.getElementById('modalPecaServico').style.display = 'flex';
+}
+
+function fecharModalPecaServico() {
+  document.getElementById('modalPecaServico').style.display = 'none';
+}
+
+async function salvarPecaServico() {
+  const descricao = document.getElementById('novaDescricao').value.trim();
+  const tipo = document.getElementById('novoTipo').value;
+
+  if (!descricao || !tipo) return;
+
+  const { error } = await supabase.from('pecaeservico').insert([{ descricao, tipo }]);
+
+  if (error) {
+    console.error('Erro ao salvar peça/serviço:', error);
+    return;
+  }
+
+  const lista = document.getElementById('listaPecasServicos');
+  const opt = document.createElement('option');
+  opt.value = descricao;
+  lista.appendChild(opt);
+
+  document.getElementById('itemDescricao').value = descricao;
+  document.getElementById('novaDescricao').value = '';
+  document.getElementById('novoTipo').value = '';
+  fecharModalPecaServico();
+}
+
+
+
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
@@ -240,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarFiliais();
   carregarTitulosManutencao();
   carregarFornecedores(); // ✅ isso é essencial
+  carregarPecasServicos();
   mostrarPainelInterno('cadastroInterno');
 
   document.querySelectorAll('.painel-btn').forEach(btn => {
@@ -281,4 +341,7 @@ window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
 window.salvarFornecedor = salvarFornecedor;
 
+window.abrirModalPecaServico = abrirModalPecaServico;
+window.fecharModalPecaServico = fecharModalPecaServico;
+window.salvarPecaServico = salvarPecaServico;
 
