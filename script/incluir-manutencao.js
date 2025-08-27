@@ -208,7 +208,7 @@ async function salvarFornecedor() {
   const obs = document.getElementById('obsFornecedor').value.trim();
   if (!nome) return;
 
-  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obs }]);
+  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor: obs }]);
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
     return;
@@ -272,4 +272,5 @@ window.salvarTitulo = salvarTitulo;
 window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
 window.salvarFornecedor = salvarFornecedor;
+
 
