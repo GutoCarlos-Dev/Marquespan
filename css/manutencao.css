@@ -89,6 +89,53 @@
   display: none;
 }
 
+/* 🔧 Submenu de Manutenções */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.menu-toggle i {
+  margin-right: 10px;
+}
+
+.submenu {
+  display: none;
+  flex-direction: column;
+  background-color: #2a722d;
+}
+
+.submenu a {
+  padding: 10px 30px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid #2a722d;
+}
+
+.submenu a:hover {
+  background-color: #45a049;
+}
+
+.menu-group.active .submenu {
+  display: flex;
+}
+
+
 /* 🧾 Formulários */
 form#formManutencao,
 form#formItem,
