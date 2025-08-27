@@ -263,8 +263,8 @@ legend {
 /* Fild Set itens */
 .fieldset-itens {
   width: 100%;
-  max-width: 600px; /* aumenta a largura máxima */
-  padding: 20px;     /* aumenta o espaçamento interno */
+  max-width: 450px; /* aumenta a largura máxima */
+  padding: 30px;     /* aumenta o espaçamento interno */
   margin: 0 auto;    /* centraliza horizontalmente */
   border: 1px solid #ccc;
   border-radius: 8px;
