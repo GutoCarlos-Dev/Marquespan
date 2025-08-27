@@ -191,6 +191,7 @@ async function salvarTitulo() {
 
   document.getElementById('titulo').value = titulo;
   document.getElementById('novoTitulo').value = '';
+  alert('✅ Titulo de Manutenção, cadastrado com sucesso!');
   fecharModalTitulo();
 }
 
@@ -205,10 +206,10 @@ function fecharModalFornecedor() {
 
 async function salvarFornecedor() {
   const nome = document.getElementById('novoFornecedor').value.trim();
-  const obs = document.getElementById('obsFornecedor').value.trim();
+  const obsFornecedor = document.getElementById('obsFornecedor').value.trim();
   if (!nome) return;
 
-  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor: obs }]);
+  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor }]);
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
     return;
@@ -222,6 +223,7 @@ async function salvarFornecedor() {
   document.getElementById('fornecedor').value = nome;
   document.getElementById('novoFornecedor').value = '';
   document.getElementById('obsFornecedor').value = '';
+  alert('✅ Fornecedor, cadastrado com sucesso!');
   fecharModalFornecedor();
 }
 
