@@ -266,7 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // 🌐 Expor funções para uso no HTML
 window.abrirModalTitulo = abrirModalTitulo;
 window.fecharModalTitulo = fecharModalTitulo;
-window.salvarTitulo = salvar
+window.salvarTitulo = salvarTitulo;
+
 window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
 window.salvarFornecedor = salvarFornecedor;
+
