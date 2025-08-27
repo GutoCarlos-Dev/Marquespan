@@ -278,11 +278,20 @@ legend {
   padding: 0 6px;
 }
 
-.fieldset-itens input,
-.fieldset-itens button {
+.fieldset-itens input {
   background: none;
   border: none;
   color: #000000;
+  font-size: 20px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+
+.fieldset-itens button {
+  background: none;
+  border: none;
+  color: #4CAF50;
   font-size: 20px;
   cursor: pointer;
   margin-left: 8px;
