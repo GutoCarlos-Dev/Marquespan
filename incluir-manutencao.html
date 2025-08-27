@@ -148,20 +148,19 @@
         <form id="formItem" class="form-itens">
         <fieldset class="fieldset-itens">
           <legend>Descrição</legend>
-          <input type="number" id="itemqtd">
+          <input type="number" id="itemQuantidade" placeholder="Qtd" min="0" value="0">
           <input type="text" id="itemDescricao" placeholder="Peça ou Serviço">
           <input type="number" id="itemValor" placeholder="Valor (R$)" step="0.01" min="0">
         <button type="submit" id="btnAdicionarItem">➕</button>
         </fieldset>
         </form>
-
-
       <table class="tabela-itens">
         <thead>
           <tr>
-          <th>Quantidade</th>
+          <th>Qtd</th>
           <th>Descrição</th>
-          <th>Valor (R$)</th>
+          <th>Valor Unitário (R$)</th>
+          <th>Valor Total (R$)</th>
           <th>Ações</th>
           </tr>
         </thead>

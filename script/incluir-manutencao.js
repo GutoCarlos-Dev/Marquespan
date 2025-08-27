@@ -127,14 +127,20 @@ async function carregarFornecedores() {
 
 // 🧰 Adicionar item à manutenção
 function adicionarItem() {
+  const qtd = parseInt(document.getElementById('itemQuantidade').value);
   const desc = document.getElementById('itemDescricao').value.trim();
-  const valor = parseFloat(document.getElementById('itemValor').value);
-  if (!desc || isNaN(valor)) return;
+  const valorUnitario = parseFloat(document.getElementById('itemValor').value);
+
+  if (!desc || isNaN(valorUnitario) || isNaN(qtd) || qtd <= 0) return;
+
+  const valorTotal = qtd * valorUnitario;
 
   const linha = document.createElement('tr');
   linha.innerHTML = `
+    <td>${qtd}</td>
     <td>${desc}</td>
-    <td>R$ ${valor.toFixed(2)}</td>
+    <td>R$ ${valorUnitario.toFixed(2)}</td>
+    <td>R$ ${valorTotal.toFixed(2)}</td>
     <td><button class="btn-remover-item">🗑️</button></td>
   `;
   document.getElementById('tabelaItens').appendChild(linha);
@@ -144,7 +150,7 @@ function adicionarItem() {
 function atualizarTotal() {
   let total = 0;
   document.querySelectorAll('#tabelaItens tr').forEach(row => {
-    const valor = parseFloat(row.children[1].textContent.replace('R$', '').trim());
+    const valor = parseFloat(row.children[3].textContent.replace('R$', '').trim());
     if (!isNaN(valor)) total += valor;
   });
   document.getElementById('totalItens').textContent = total.toFixed(2);
