@@ -47,6 +47,8 @@
       <button class="painel-btn" data-painel="uploadInterno" aria-selected="false">
         <i class="fas fa-upload"></i> Upload
       </button>
+
+      <button type="submit">✅ Salvar Manutenção</button>
     </div>
 
 
@@ -75,7 +77,7 @@
               <div class="form-linha">
                 <label for="filial">Filial:</label>
                 <select name="filial" id="filial" required>
-                <!-- opções serão inseridas dinamicamente puxando do banco de dados -->
+                <!-- opções serão inseridas dinamicamente -->
                 </select>
               </div>
               <div class="form-linha">
@@ -101,7 +103,7 @@
                   <!-- opções serão inseridas via JS -->
                 </datalist>
               </div>
-              <input type="text" id="km" placeholder="Hodômetro/KM">
+              <input type="text" id="km" name="km" placeholder="Hodômetro/KM">
               <input type="text" id="motorista" placeholder="Motorista">
             </fieldset>
           </div>
@@ -169,7 +171,6 @@
         </table>
       </div>
 
-    <button type="submit">✅ Salvar Manutenção</button>
     </fieldset>
 
 <!-- Modal Titulo de Manutenção -->

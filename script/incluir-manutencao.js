@@ -37,7 +37,7 @@ function preencherUsuarioLogado() {
   }
 }
 
-// 🚚 Buscar placas de veículos no Supabase
+// 🚚 Buscar placas de veículos
 async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
   const lista = document.getElementById('listaPlacas');
@@ -48,7 +48,7 @@ async function carregarPlacas() {
   }
 
   if (data && lista) {
-    lista.innerHTML = ''; // limpa sugestões antigas
+    lista.innerHTML = '';
     data.forEach(v => {
       if (v.placa) {
         const opt = document.createElement('option');
@@ -59,6 +59,70 @@ async function carregarPlacas() {
   }
 }
 
+// 🧾 Buscar filiais
+async function carregarFiliais() {
+  const { data, error } = await supabase.from('filial').select('uf');
+  const select = document.getElementById('filial');
+
+  if (error) {
+    console.error('Erro ao carregar filiais:', error);
+    return;
+  }
+
+  if (data && select) {
+    select.innerHTML = '<option value="">Selecione</option>';
+    data.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.uf;
+      opt.textContent = f.uf;
+      select.appendChild(opt);
+    });
+  }
+}
+
+// 📋 Buscar títulos de manutenção
+async function carregarTitulosManutencao() {
+  const { data, error } = await supabase.from('titulomanutencao').select('manutencao');
+  const lista = document.getElementById('listaTitulos');
+
+  if (error) {
+    console.error('Erro ao carregar títulos:', error);
+    return;
+  }
+
+  if (data && lista) {
+    lista.innerHTML = '';
+    data.forEach(item => {
+      if (item.manutencao) {
+        const opt = document.createElement('option');
+        opt.value = item.manutencao;
+        lista.appendChild(opt);
+      }
+    });
+  }
+}
+
+// 🧾 Buscar fornecedores
+async function carregarFornecedores() {
+  const { data, error } = await supabase.from('fornecedor').select('fornecedor');
+  const lista = document.getElementById('listaFornecedores');
+
+  if (error) {
+    console.error('Erro ao carregar fornecedores:', error);
+    return;
+  }
+
+  if (data && lista) {
+    lista.innerHTML = '';
+    data.forEach(f => {
+      if (f.fornecedor) {
+        const opt = document.createElement('option');
+        opt.value = f.fornecedor;
+        lista.appendChild(opt);
+      }
+    });
+  }
+}
 
 // 🧰 Adicionar item à manutenção
 function adicionarItem() {
@@ -100,102 +164,7 @@ function adicionarArquivo() {
   input.value = '';
 }
 
- // carregar UF do Banco de dados
-
-async function carregarFiliais() {
-  const { data, error } = await supabase.from('filial').select('uf');
-  const select = document.getElementById('filial');
-
-  if (error) {
-    console.error('Erro ao carregar filiais:', error);
-    return;
-  }
-
-  if (data && select) {
-    select.innerHTML = '<option value="">Selecione</option>'; // limpa opções antigas
-    data.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.uf;
-      opt.textContent = f.uf;
-      select.appendChild(opt);
-    });
-  }
-}
-
-// 📋 Carregar títulos de manutenção do Supabase
-async function carregarTitulosManutencao() {
-  const { data, error } = await supabase
-    .from('titulomanutencao')
-    .select('manutencao');
-
-  const lista = document.getElementById('listaTitulos');
-
-  if (error) {
-    console.error('Erro ao carregar títulos de manutenção:', error);
-    return;
-  }
-
-  if (data && lista) {
-    lista.innerHTML = ''; // limpa sugestões antigas
-
-    data.forEach(item => {
-      if (item.manutencao) {
-        const opt = document.createElement('option');
-        opt.value = item.manutencao;
-        lista.appendChild(opt);
-      }
-    });
-  }
-}
-
-
-// 🚀 Inicialização da página
-document.addEventListener('DOMContentLoaded', () => {
-  preencherUsuarioLogado();
-  carregarPlacas();
-  carregarFiliais(); // ✅ função para preencher o campo Filial
-  carregarTitulosManutencao(); // ✅ função para preencher o campo Titulo de Manutenção
-  carregarFornecedores(); // ✅ função para preencher o campo Fornecedor
-  mostrarPainelInterno('cadastroInterno');
-
-  // 🧭 Alternância de abas internas
-  document.querySelectorAll('.painel-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      mostrarPainelInterno(btn.dataset.painel);
-    });
-  });
-
-  // ➕ Adicionar item
-  document.getElementById('formItem').addEventListener('submit', e => {
-    e.preventDefault();
-    adicionarItem();
-  });
-
-  // 🗑️ Remover item
-  document.getElementById('tabelaItens').addEventListener('click', e => {
-    if (e.target.classList.contains('btn-remover-item')) {
-      e.target.closest('tr').remove();
-      atualizarTotal();
-    }
-  });
-
-  // 📎 Adicionar arquivo
-  document.getElementById('formUpload').addEventListener('submit', e => {
-    e.preventDefault();
-    adicionarArquivo();
-  });
-
-  // 🗑️ Remover arquivo
-  document.getElementById('tabelaArquivos').addEventListener('click', e => {
-    if (e.target.classList.contains('btn-remover-arquivo')) {
-      e.target.closest('tr').remove();
-    }
-  });
-});
-
-
-// comando da tela de cadastro de titulos de manutenção
-
+// 🗂️ Modal de Título de Manutenção
 function abrirModalTitulo() {
   document.getElementById('modalTitulo').style.display = 'flex';
 }
@@ -208,15 +177,23 @@ async function salvarTitulo() {
   const titulo = document.getElementById('novoTitulo').value.trim();
   if (!titulo) return;
 
-  // Salvar no Supabase
   const { error } = await supabase.from('titulomanutencao').insert([{ manutencao: titulo }]);
-
   if (error) {
     console.error('Erro ao salvar título:', error);
     return;
   }
 
-  // comando da tela de cadastro de fornecedor
+  const lista = document.getElementById('listaTitulos');
+  const opt = document.createElement('option');
+  opt.value = titulo;
+  lista.appendChild(opt);
+
+  document.getElementById('titulo').value = titulo;
+  document.getElementById('novoTitulo').value = '';
+  fecharModalTitulo();
+}
+
+// 🗂️ Modal de Fornecedor
 function abrirModalFornecedor() {
   document.getElementById('modalFornecedor').style.display = 'flex';
 }
@@ -231,7 +208,6 @@ async function salvarFornecedor() {
   if (!nome) return;
 
   const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obs }]);
-
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
     return;
@@ -248,23 +224,49 @@ async function salvarFornecedor() {
   fecharModalFornecedor();
 }
 
-  // Atualizar datalist
-  const lista = document.getElementById('listaTitulos');
-  const opt = document.createElement('option');
-  opt.value = titulo;
-  lista.appendChild(opt);
+// 🚀 Inicialização da página
+document.addEventListener('DOMContentLoaded', () => {
+  preencherUsuarioLogado();
+  carregarPlacas();
+  carregarFiliais();
+  carregarTitulosManutencao();
+  carregarFornecedores();
+  mostrarPainelInterno('cadastroInterno');
 
-  // Preencher o campo com o novo valor
-  document.getElementById('titulo').value = titulo;
-  document.getElementById('novoTitulo').value = '';
-  fecharModalTitulo();
-}
+  document.querySelectorAll('.painel-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mostrarPainelInterno(btn.dataset.painel);
+    });
+  });
 
+  document.getElementById('formItem').addEventListener('submit', e => {
+    e.preventDefault();
+    adicionarItem();
+  });
+
+  document.getElementById('tabelaItens').addEventListener('click', e => {
+    if (e.target.classList.contains('btn-remover-item')) {
+      e.target.closest('tr').remove();
+      atualizarTotal();
+    }
+  });
+
+  document.getElementById('formUpload').addEventListener('submit', e => {
+    e.preventDefault();
+    adicionarArquivo();
+  });
+
+  document.getElementById('tabelaArquivos').addEventListener('click', e => {
+    if (e.target.classList.contains('btn-remover-arquivo')) {
+      e.target.closest('tr').remove();
+    }
+  });
+});
 
 // 🌐 Expor funções para uso no HTML
 window.abrirModalTitulo = abrirModalTitulo;
 window.fecharModalTitulo = fecharModalTitulo;
-window.salvarTitulo = salvarTitulo;
+window.salvarTitulo = salvar
 
 window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
