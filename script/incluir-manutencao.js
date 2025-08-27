@@ -128,13 +128,11 @@ async function carregarTitulosManutencao() {
     lista.innerHTML = ''; // limpa sugestões antigas
     data.forEach(item => {
       const opt = document.createElement('option');
-      opt.value = item.titulo;
+      opt.value = item.manutencao;
       lista.appendChild(opt);
     });
   }
 }
-
-
 
 
 
