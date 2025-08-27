@@ -108,7 +108,16 @@
 
           <fieldset>
             <legend>Dados Fiscais</legend>
-            <input type="text" id="fornecedor" placeholder="Fornecedor">
+            <div class="form-linha">
+              <label for="fornecedor">Fornecedor:</label>
+              <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Digite ou selecione">
+              <datalist id="listaFornecedores">
+                <!-- opções serão inseridas via JS -->
+              </datalist>
+              <button type="button" class="btn-icone" onclick="abrirModalFornecedor()">
+                <i class="fas fa-plus-circle"></i>
+              </button>
+            </div>
             <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
             <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
           </fieldset>
@@ -171,6 +180,19 @@
     <div class="modal-acoes">
       <button onclick="salvarTitulo()">Salvar</button>
       <button onclick="fecharModalTitulo()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fornecedor -->
+<div class="modal" id="modalFornecedor">
+  <div class="modal-conteudo">
+    <h3>Cadastrar Novo Fornecedor</h3>
+    <input type="text" id="novoFornecedor" placeholder="Nome do Fornecedor">
+    <textarea id="obsFornecedor" placeholder="Observações"></textarea>
+    <div class="modal-acoes">
+      <button onclick="salvarFornecedor()">Salvar</button>
+      <button onclick="fecharModalFornecedor()">Fechar</button>
     </div>
   </div>
 </div>

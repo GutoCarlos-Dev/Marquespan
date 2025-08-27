@@ -155,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarPlacas();
   carregarFiliais(); // ✅ função para preencher o campo Filial
   carregarTitulosManutencao(); // ✅ função para preencher o campo Titulo de Manutenção
+  carregarFornecedores(); // ✅ função para preencher o campo Fornecedor
   mostrarPainelInterno('cadastroInterno');
 
   // 🧭 Alternância de abas internas
@@ -215,6 +216,38 @@ async function salvarTitulo() {
     return;
   }
 
+  // comando da tela de cadastro de fornecedor
+function abrirModalFornecedor() {
+  document.getElementById('modalFornecedor').style.display = 'flex';
+}
+
+function fecharModalFornecedor() {
+  document.getElementById('modalFornecedor').style.display = 'none';
+}
+
+async function salvarFornecedor() {
+  const nome = document.getElementById('novoFornecedor').value.trim();
+  const obs = document.getElementById('obsFornecedor').value.trim();
+  if (!nome) return;
+
+  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obs }]);
+
+  if (error) {
+    console.error('Erro ao salvar fornecedor:', error);
+    return;
+  }
+
+  const lista = document.getElementById('listaFornecedores');
+  const opt = document.createElement('option');
+  opt.value = nome;
+  lista.appendChild(opt);
+
+  document.getElementById('fornecedor').value = nome;
+  document.getElementById('novoFornecedor').value = '';
+  document.getElementById('obsFornecedor').value = '';
+  fecharModalFornecedor();
+}
+
   // Atualizar datalist
   const lista = document.getElementById('listaTitulos');
   const opt = document.createElement('option');
@@ -232,3 +265,7 @@ async function salvarTitulo() {
 window.abrirModalTitulo = abrirModalTitulo;
 window.fecharModalTitulo = fecharModalTitulo;
 window.salvarTitulo = salvarTitulo;
+
+window.abrirModalFornecedor = abrirModalFornecedor;
+window.fecharModalFornecedor = fecharModalFornecedor;
+window.salvarFornecedor = salvarFornecedor;
