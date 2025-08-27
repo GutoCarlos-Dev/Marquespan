@@ -145,16 +145,14 @@ function adicionarItem() {
   `;
   document.getElementById('tabelaItens').appendChild(linha);
   atualizarTotal();
+
+  // 🧹 Limpar campos após adicionar
+  document.getElementById('itemQuantidade').value = '';
+  document.getElementById('itemDescricao').value = '';
+  document.getElementById('itemValor').value = '';
 }
 
-function atualizarTotal() {
-  let total = 0;
-  document.querySelectorAll('#tabelaItens tr').forEach(row => {
-    const valor = parseFloat(row.children[3].textContent.replace('R$', '').trim());
-    if (!isNaN(valor)) total += valor;
-  });
-  document.getElementById('totalItens').textContent = total.toFixed(2);
-}
+
 
 // Carregar pecas e servico
 async function carregarPecasServicos() {
