@@ -93,7 +93,7 @@ function adicionarArquivo() {
 
  // carregar UF do Banco de dados
 
- async function carregarFiliais() {
+async function carregarFiliais() {
   const { data, error } = await supabase.from('filial').select('uf');
   const select = document.getElementById('filial');
 
@@ -103,6 +103,7 @@ function adicionarArquivo() {
   }
 
   if (data && select) {
+    select.innerHTML = '<option value="">Selecione</option>'; // limpa opções antigas
     data.forEach(f => {
       const opt = document.createElement('option');
       opt.value = f.uf;
@@ -111,6 +112,7 @@ function adicionarArquivo() {
     });
   }
 }
+
 
 
 // 🚀 Inicialização da página
