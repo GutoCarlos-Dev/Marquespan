@@ -84,6 +84,9 @@
                 <input type="text" id="titulo" list="listaTitulos" placeholder="Digite ou selecione">
                 <datalist id="listaTitulos">
                 <!-- opções serão inseridas via JS -->
+                <button type="button" class="btn-icone" onclick="abrirModalTitulo()">
+                <i class="fas fa-plus-circle"></i>
+                </button>
                 </datalist>
               </div>
               
@@ -156,6 +159,20 @@
 
     <button type="submit">✅ Salvar Manutenção</button>
     </fieldset>
+
+<!-- Modal Titulo de Manutenção -->
+ <div class="modal" id="modalTitulo">
+  <div class="modal-conteudo">
+    <h3>Cadastrar Novo Título</h3>
+    <input type="text" id="novoTitulo" placeholder="Título da Manutenção">
+    <div class="modal-acoes">
+      <button onclick="salvarTitulo()">Salvar</button>
+      <button onclick="fecharModalTitulo()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+
   </main>
 
   <!-- 🦶 Rodapé -->

@@ -185,3 +185,37 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+
+// comando da tela de cadastro de titulos de manutenção
+
+function abrirModalTitulo() {
+  document.getElementById('modalTitulo').style.display = 'flex';
+}
+
+function fecharModalTitulo() {
+  document.getElementById('modalTitulo').style.display = 'none';
+}
+
+async function salvarTitulo() {
+  const titulo = document.getElementById('novoTitulo').value.trim();
+  if (!titulo) return;
+
+  // Salvar no Supabase
+  const { error } = await supabase.from('titulomanutencao').insert([{ manutencao: titulo }]);
+
+  if (error) {
+    console.error('Erro ao salvar título:', error);
+    return;
+  }
+
+  // Atualizar datalist
+  const lista = document.getElementById('listaTitulos');
+  const opt = document.createElement('option');
+  opt.value = titulo;
+  lista.appendChild(opt);
+
+  // Preencher o campo com o novo valor
+  document.getElementById('titulo').value = titulo;
+  document.getElementById('novoTitulo').value = '';
+  fecharModalTitulo();
+}
