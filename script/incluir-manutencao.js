@@ -140,8 +140,6 @@ async function carregarTitulosManutencao() {
 }
 
 
-
-
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
@@ -219,3 +217,9 @@ async function salvarTitulo() {
   document.getElementById('novoTitulo').value = '';
   fecharModalTitulo();
 }
+
+
+// 🌐 Expor funções para uso no HTML
+window.abrirModalTitulo = abrirModalTitulo;
+window.fecharModalTitulo = fecharModalTitulo;
+window.salvarTitulo = salvarTitulo;
