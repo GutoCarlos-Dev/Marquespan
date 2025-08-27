@@ -91,10 +91,33 @@ function adicionarArquivo() {
   input.value = '';
 }
 
+ // carregar UF do Banco de dados
+
+ async function carregarFiliais() {
+  const { data, error } = await supabase.from('filial').select('uf');
+  const select = document.getElementById('filial');
+
+  if (error) {
+    console.error('Erro ao carregar filiais:', error);
+    return;
+  }
+
+  if (data && select) {
+    data.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.uf;
+      opt.textContent = f.uf;
+      select.appendChild(opt);
+    });
+  }
+}
+
+
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarPlacas();
+  carregarFiliais(); // ✅ nova função para preencher o campo Filial
   mostrarPainelInterno('cadastroInterno');
 
   // 🧭 Alternância de abas internas
@@ -131,3 +154,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
