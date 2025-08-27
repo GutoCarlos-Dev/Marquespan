@@ -267,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.abrirModalTitulo = abrirModalTitulo;
 window.fecharModalTitulo = fecharModalTitulo;
 window.salvarTitulo = salvar
-
 window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
 window.salvarFornecedor = salvarFornecedor;
