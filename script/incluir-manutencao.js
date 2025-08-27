@@ -40,16 +40,25 @@ function preencherUsuarioLogado() {
 // 🚚 Buscar placas de veículos no Supabase
 async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
-  const select = document.getElementById('veiculo');
-  if (data && select) {
+  const lista = document.getElementById('listaPlacas');
+
+  if (error) {
+    console.error('Erro ao carregar placas:', error);
+    return;
+  }
+
+  if (data && lista) {
+    lista.innerHTML = ''; // limpa sugestões antigas
     data.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v.placa;
-      opt.textContent = v.placa;
-      select.appendChild(opt);
+      if (v.placa) {
+        const opt = document.createElement('option');
+        opt.value = v.placa;
+        lista.appendChild(opt);
+      }
     });
   }
 }
+
 
 // 🧰 Adicionar item à manutenção
 function adicionarItem() {
