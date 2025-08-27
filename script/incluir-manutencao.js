@@ -124,6 +124,7 @@ async function carregarFornecedores() {
   }
 }
 
+
 // 🧰 Adicionar item à manutenção
 function adicionarItem() {
   const desc = document.getElementById('itemDescricao').value.trim();
@@ -230,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarPlacas();
   carregarFiliais();
   carregarTitulosManutencao();
-  carregarFornecedores();
+  carregarFornecedores(); // ✅ isso é essencial
   mostrarPainelInterno('cadastroInterno');
 
   document.querySelectorAll('.painel-btn').forEach(btn => {
