@@ -113,26 +113,32 @@ async function carregarFiliais() {
   }
 }
 
- // carregar Titulos de Manutenção
-
+// 📋 Carregar títulos de manutenção do Supabase
 async function carregarTitulosManutencao() {
-  const { data, error } = await supabase.from('titulomanutencao').select('manutencao');
+  const { data, error } = await supabase
+    .from('titulomanutencao')
+    .select('manutencao');
+
   const lista = document.getElementById('listaTitulos');
 
   if (error) {
-    console.error('Erro ao carregar títulos:', error);
+    console.error('Erro ao carregar títulos de manutenção:', error);
     return;
   }
 
   if (data && lista) {
     lista.innerHTML = ''; // limpa sugestões antigas
+
     data.forEach(item => {
-      const opt = document.createElement('option');
-      opt.value = item.manutencao;
-      lista.appendChild(opt);
+      if (item.manutencao) {
+        const opt = document.createElement('option');
+        opt.value = item.manutencao;
+        lista.appendChild(opt);
+      }
     });
   }
 }
+
 
 
 
