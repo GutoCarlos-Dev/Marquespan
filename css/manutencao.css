@@ -260,6 +260,34 @@ legend {
   margin-top: 5px;
 }
 
+/* Fild Set itens */
+.fieldset-itens {
+  max-width: 500px;
+  padding: 10px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fdfdfd;
+}
+
+.fieldset-itens legend {
+  font-size: 14px;
+  color: #4CAF50;
+  padding: 0 6px;
+}
+
+.fieldset-itens input,
+.fieldset-itens button {
+  margin-top: 8px;
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+
+
 /* 📎 Upload de arquivos */
 #formUpload input[type="file"] {
   margin-bottom: 10px;
