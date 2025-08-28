@@ -199,6 +199,7 @@ legend {
 .form-itens input[type="text"],
 .form-itens input[type="number"] {
   padding: 6px 10px;
+  align-items: center;
   font-size: 14px;
   width: 180px;
   border: 1px solid #ccc;
