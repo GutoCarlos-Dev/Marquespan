@@ -1,4 +1,4 @@
-/* 🌐 Navegação principal (se usada em outras telas) */
+/* 🌐 Navegação principal */
 .aba-navegacao {
   display: flex;
   gap: 10px;
@@ -71,12 +71,12 @@
   box-shadow: 0 0 0 2px #81C784;
 }
 
-/* 📋 Conteúdo interno das guias */
+/* 📋 Painéis internos */
 .painel-conteudo {
+  display: none;
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.4s ease, transform 0.4s ease;
-  display: none;
 }
 
 .painel-conteudo.fade-in {
@@ -89,7 +89,7 @@
   display: none;
 }
 
-/* 🔧 Submenu de Manutenções */
+/* 🔧 Submenu lateral */
 .menu-group {
   display: flex;
   flex-direction: column;
@@ -100,12 +100,11 @@
   border: none;
   color: #fff;
   padding: 12px 20px;
-  text-align: left;
   font-size: 14px;
   cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
 }
 
@@ -135,11 +134,8 @@
   display: flex;
 }
 
-
 /* 🧾 Formulários */
-form#formManutencao,
-form#formItem,
-form#formUpload {
+form {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -162,7 +158,6 @@ legend {
   font-size: 16px;
 }
 
-/* 🧱 Layout em colunas para Cadastro */
 .form-duplo {
   display: flex;
   gap: 40px;
@@ -175,9 +170,31 @@ legend {
   min-width: 350px;
 }
 
-/* 📝 Campo de descrição fixo */
+.form-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-linha label {
+  min-width: 100px;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-linha input,
+.form-linha select {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* 📝 Campo de descrição */
 #descricao {
-  width: 772px;
+  width: 100%;
   height: 169px;
   resize: none;
   padding: 10px;
@@ -188,7 +205,7 @@ legend {
   box-sizing: border-box;
 }
 
-/* 🧰 Formulário de itens */
+/* 🧰 Itens */
 .form-itens {
   display: flex;
   gap: 10px;
@@ -196,10 +213,8 @@ legend {
   margin-bottom: 10px;
 }
 
-.form-itens input[type="text"],
-.form-itens input[type="number"] {
+.form-itens input {
   padding: 6px 10px;
-  align-items: center;
   font-size: 14px;
   width: 180px;
   border: 1px solid #ccc;
@@ -220,28 +235,40 @@ legend {
   background-color: #45a049;
 }
 
-/* 🧰 Tabela de itens */
-.tabela-itens {
+/* 🧰 Tabelas */
+.tabela-itens,
+.tabela-resultados {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
 
 .tabela-itens th,
-.tabela-itens td {
+.tabela-itens td,
+.tabela-resultados th,
+.tabela-resultados td {
   border: 1px solid #ddd;
   padding: 8px;
-  text-align: left;
   font-size: 14px;
+  text-align: left;
 }
 
-.tabela-itens th {
+.tabela-itens th,
+.tabela-resultados th {
   background-color: #f5f5f5;
   font-weight: bold;
 }
 
 .tabela-itens td button {
   background-color: #e53935;
+}
+
+.tabela-resultados td button {
+  background-color: #2196F3;
+}
+
+.tabela-itens td button,
+.tabela-resultados td button {
   color: white;
   border: none;
   padding: 6px 10px;
@@ -254,53 +281,19 @@ legend {
   background-color: #c62828;
 }
 
-/* 💰 Total */
-.total-itens {
+.tabela-resultados td button:hover {
+  background-color: #1976D2;
+}
+
+/* 💰 Totais */
+.total-itens,
+.resumo-valores {
   font-size: 16px;
   text-align: right;
-  margin-top: 5px;
+  margin-top: 10px;
 }
 
-/* Fild Set itens */
-.fieldset-itens {
-  width: 100%;
-  max-width: 450px; /* aumenta a largura máxima */
-  padding: 30px;     /* aumenta o espaçamento interno */
-  margin: 0 auto;    /* centraliza horizontalmente */
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fdfdfd;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* opcional: leve sombra */
-}
-
-.fieldset-itens legend {
-  font-size: 14px;
-  color: #4CAF50;
-  padding: 0 6px;
-}
-
-.fieldset-itens input {
-  background: none;
-  border: none;
-  color: #000000;
-  font-size: 20px;
-  cursor: pointer;
-  margin-left: 8px;
-}
-
-
-.fieldset-itens button {
-  background: none;
-  border: none;
-  color: #4CAF50;
-  font-size: 20px;
-  cursor: pointer;
-  margin-left: 8px;
-}
-
-
-
-/* 📎 Upload de arquivos */
+/* 📎 Upload */
 #formUpload input[type="file"] {
   margin-bottom: 10px;
 }
@@ -325,61 +318,16 @@ button:hover {
   background-color: #45a049;
 }
 
-/* 📱 Responsivo */
-@media (max-width: 768px) {
-  .aba-navegacao,
-  .painel-navegacao {
-    flex-direction: column;
-  }
-
-  form#formManutencao,
-  form#formItem,
-  form#formUpload {
-    padding: 0 10px;
-  }
-
-  table th,
-  table td {
-    font-size: 13px;
-  }
-
-  #descricao {
-    width: 100%;
-    height: auto;
-  }
-
-  .form-duplo {
-    flex-direction: column;
-  }
+.btn-icone {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  font-size: 20px;
+  cursor: pointer;
+  margin-left: 8px;
 }
 
-/* alinha laber e campo de texto*/
-.form-linha {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  text-align: justify;
-}
-
-.form-linha label {
-  min-width: 100px;
-  font-weight: bold;
-  color: #333;
-  text-align: justify;
-}
-
-.form-linha select {
-  flex: 1;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  text-align: justify;
-}
-
-/* Modal Titulo de Manutenção*/
-
+/* 🧲 Modal */
 .modal {
   position: fixed;
   top: 0;
@@ -407,11 +355,66 @@ button:hover {
   margin-top: 15px;
 }
 
-.btn-icone {
-  background: none;
-  border: none;
-  color: #4CAF50;
-  font-size: 20px;
-  cursor: pointer;
-  margin-left: 8px;
+/* 📱 Responsivo */
+@media (max-width: 768px) {
+  .aba-navegacao,
+  .painel-navegacao,
+  .form-duplo {
+    flex-direction: column;
+  }
+
+  form {
+    padding: 0 10px;
+  }
+
+  table th,
+  table td {
+    font-size: 13px;
+  }
+
+  #descricao {
+    width: 100%;
+    height: auto;
+  }
+
+  .form-duplo {
+    flex-direction: column;
+  }
+}
+
+/* 📊 Resumo de manutenção */
+.resumo-manutencao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.resumo-valores {
+  font-size: 16px;
+  color: #333;
+  margin-top: 10px;
+}
+
+#btnExportarPDF,
+#btnExportarXLS {
+  background-color: #2196F3;
+  margin-right: 10px;
+}
+
+#btnExportarPDF:hover,
+#btnExportarXLS:hover {
+  background-color: #1976D2;
+}
+
+/* 🧾 Campo de ID da manutenção */
+#idManutencao {
+  width: 80px;
+  padding: 6px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f0f0f0;
+  color: #333;
 }

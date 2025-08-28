@@ -1,7 +1,21 @@
-// 📦 Importação do Supabase
 import { supabase } from './supabase.js';
 
-// 🔧 Carregamento de filtros dinâmicos
+function preencherUsuarioLogado() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  if (usuario?.nome) {
+    document.getElementById('usuario-logado').textContent = `👤 Olá, ${usuario.nome}`;
+  }
+}
+
+function ativarSubmenu() {
+  document.querySelectorAll('.menu-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const group = toggle.closest('.menu-group');
+      group.classList.toggle('active');
+    });
+  });
+}
+
 async function carregarFiltros() {
   const [placas, titulos, filiais, fornecedores] = await Promise.all([
     supabase.from('veiculos').select('placa'),
@@ -18,30 +32,22 @@ async function carregarFiltros() {
 
 function preencherDatalist(id, data, campo) {
   const lista = document.getElementById(id);
-  if (!lista || !data) return;
   lista.innerHTML = '';
-  data.forEach(item => {
+  data?.forEach(item => {
     if (item[campo]) {
-      const opt = document.createElement('option');
-      opt.value = item[campo];
-      lista.appendChild(opt);
+      lista.appendChild(new Option(item[campo]));
     }
   });
 }
 
 function preencherSelect(id, data, campo) {
   const select = document.getElementById(id);
-  if (!select || !data) return;
   select.innerHTML = '<option value="">Todos</option>';
-  data.forEach(item => {
-    const opt = document.createElement('option');
-    opt.value = item[campo];
-    opt.textContent = item[campo];
-    select.appendChild(opt);
+  data?.forEach(item => {
+    select.appendChild(new Option(item[campo], item[campo]));
   });
 }
 
-// 🔍 Buscar manutenção
 async function buscarManutencao() {
   const filtros = {
     dataInicial: document.getElementById('dataInicial').value,
@@ -120,7 +126,10 @@ window.abrirManutencao = function(id) {
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
+  preencherUsuarioLogado();
+  ativarSubmenu();
   carregarFiltros();
+
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
