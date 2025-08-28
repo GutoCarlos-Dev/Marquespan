@@ -153,6 +153,18 @@ function adicionarItem() {
 }
 
 
+// atualizar total
+
+function atualizarTotal() {
+  let total = 0;
+  document.querySelectorAll('#tabelaItens tr').forEach(row => {
+    const valor = row.cells[3]?.textContent?.replace('R$', '').trim();
+    if (valor) total += parseFloat(valor);
+  });
+  document.getElementById('totalItens').textContent = total.toFixed(2);
+}
+
+
 
 // Carregar pecas e servico
 async function carregarPecasServicos() {
@@ -329,6 +341,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
+
+
+
 
 // 🌐 Expor funções para uso no HTML
 window.abrirModalTitulo = abrirModalTitulo;
