@@ -1,7 +1,7 @@
 // 📦 Importação do Supabase
 import { supabase } from './supabase.js';
 
-// 🔀 Alternância de painéis internos com animação e acessibilidade
+// 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
   document.querySelectorAll('.painel-conteudo').forEach(div => {
     div.classList.add('hidden');
@@ -29,112 +29,61 @@ function mostrarPainelInterno(id) {
 // 👤 Preencher campo de usuário logado
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-  if (usuario && usuario.nome) {
-    const campo = document.getElementById('usuarioLogado');
-    const label = document.getElementById('usuario-logado');
-    if (campo) campo.value = usuario.nome;
-    if (label) label.textContent = `👤 Olá, ${usuario.nome}`;
+  if (usuario?.nome) {
+    document.getElementById('usuarioLogado').value = usuario.nome;
+    document.getElementById('usuario-logado').textContent = `👤 Olá, ${usuario.nome}`;
   }
 }
 
-// 🚚 Buscar placas de veículos
+// 🔧 Carregamento de dados dinâmicos
 async function carregarPlacas() {
   const { data, error } = await supabase.from('veiculos').select('placa');
   const lista = document.getElementById('listaPlacas');
-
-  if (error) {
-    console.error('Erro ao carregar placas:', error);
-    return;
-  }
-
-  if (data && lista) {
-    lista.innerHTML = '';
-    data.forEach(v => {
-      if (v.placa) {
-        const opt = document.createElement('option');
-        opt.value = v.placa;
-        lista.appendChild(opt);
-      }
-    });
-  }
+  if (error) return console.error('Erro ao carregar placas:', error);
+  lista.innerHTML = '';
+  data?.forEach(v => v.placa && lista.appendChild(new Option(v.placa)));
 }
 
-// 🧾 Buscar filiais
 async function carregarFiliais() {
   const { data, error } = await supabase.from('filial').select('uf');
   const select = document.getElementById('filial');
-
-  if (error) {
-    console.error('Erro ao carregar filiais:', error);
-    return;
-  }
-
-  if (data && select) {
-    select.innerHTML = '<option value="">Selecione</option>';
-    data.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.uf;
-      opt.textContent = f.uf;
-      select.appendChild(opt);
-    });
-  }
+  if (error) return console.error('Erro ao carregar filiais:', error);
+  select.innerHTML = '<option value="">Selecione</option>';
+  data?.forEach(f => select.appendChild(new Option(f.uf, f.uf)));
 }
 
-// 📋 Buscar títulos de manutenção
 async function carregarTitulosManutencao() {
   const { data, error } = await supabase.from('titulomanutencao').select('manutencao');
   const lista = document.getElementById('listaTitulos');
-
-  if (error) {
-    console.error('Erro ao carregar títulos:', error);
-    return;
-  }
-
-  if (data && lista) {
-    lista.innerHTML = '';
-    data.forEach(item => {
-      if (item.manutencao) {
-        const opt = document.createElement('option');
-        opt.value = item.manutencao;
-        lista.appendChild(opt);
-      }
-    });
-  }
+  if (error) return console.error('Erro ao carregar títulos:', error);
+  lista.innerHTML = '';
+  data?.forEach(item => item.manutencao && lista.appendChild(new Option(item.manutencao)));
 }
 
-// 🧾 Buscar fornecedores
 async function carregarFornecedores() {
   const { data, error } = await supabase.from('fornecedor').select('fornecedor');
   const lista = document.getElementById('listaFornecedores');
-
-  if (error) {
-    console.error('Erro ao carregar fornecedores:', error);
-    return;
-  }
-
-  if (data && lista) {
-    lista.innerHTML = '';
-    data.forEach(f => {
-      if (f.fornecedor) {
-        const opt = document.createElement('option');
-        opt.value = f.fornecedor;
-        lista.appendChild(opt);
-      }
-    });
-  }
+  if (error) return console.error('Erro ao carregar fornecedores:', error);
+  lista.innerHTML = '';
+  data?.forEach(f => f.fornecedor && lista.appendChild(new Option(f.fornecedor)));
 }
 
+async function carregarPecasServicos() {
+  const { data, error } = await supabase.from('pecaeservico').select('descricao');
+  const lista = document.getElementById('listaPecasServicos');
+  if (error) return console.error('Erro ao carregar peças/serviços:', error);
+  lista.innerHTML = '';
+  data?.forEach(item => item.descricao && lista.appendChild(new Option(item.descricao)));
+}
 
-// 🧰 Adicionar item à manutenção
+// 🧰 Adicionar item à tabela
 function adicionarItem() {
   const qtd = parseInt(document.getElementById('itemQuantidade').value);
   const desc = document.getElementById('itemDescricao').value.trim();
   const valorUnitario = parseFloat(document.getElementById('itemValor').value);
-
   if (!desc || isNaN(valorUnitario) || isNaN(qtd) || qtd <= 0) return;
 
   const valorTotal = qtd * valorUnitario;
-
   const linha = document.createElement('tr');
   linha.innerHTML = `
     <td>${qtd}</td>
@@ -146,14 +95,10 @@ function adicionarItem() {
   document.getElementById('tabelaItens').appendChild(linha);
   atualizarTotal();
 
-  // 🧹 Limpar campos após adicionar
   document.getElementById('itemQuantidade').value = '';
   document.getElementById('itemDescricao').value = '';
   document.getElementById('itemValor').value = '';
 }
-
-
-// atualizar total
 
 function atualizarTotal() {
   let total = 0;
@@ -164,32 +109,7 @@ function atualizarTotal() {
   document.getElementById('totalItens').textContent = total.toFixed(2);
 }
 
-
-
-// Carregar pecas e servico
-async function carregarPecasServicos() {
-  const { data, error } = await supabase.from('pecaeservico').select('descricao');
-  const lista = document.getElementById('listaPecasServicos');
-
-  if (error) {
-    console.error('Erro ao carregar peças/serviços:', error);
-    return;
-  }
-
-  if (data && lista) {
-    lista.innerHTML = '';
-    data.forEach(item => {
-      if (item.descricao) {
-        const opt = document.createElement('option');
-        opt.value = item.descricao;
-        lista.appendChild(opt);
-      }
-    });
-  }
-}
-
-
-// 📎 Upload de arquivos PDF
+// 📎 Adicionar arquivo à tabela
 function adicionarArquivo() {
   const input = document.getElementById('arquivoPDF');
   if (!input.files.length) return;
@@ -204,14 +124,82 @@ function adicionarArquivo() {
   input.value = '';
 }
 
-// 🗂️ Modal de Título de Manutenção
-function abrirModalTitulo() {
-  document.getElementById('modalTitulo').style.display = 'flex';
+// 💾 Salvar manutenção principal
+async function salvarManutencao() {
+  const dados = {
+    usuario: document.getElementById('usuarioLogado').value,
+    status: document.getElementById('status').value,
+    filial: document.getElementById('filial').value,
+    titulo: document.getElementById('titulo').value,
+    data: document.getElementById('data').value,
+    veiculo: document.getElementById('veiculo').value,
+    km: document.getElementById('km').value,
+    motorista: document.getElementById('motorista').value,
+    fornecedor: document.getElementById('fornecedor').value,
+    notaFiscal: document.getElementById('notaFiscal').value,
+    notaServico: document.getElementById('notaServico').value,
+    numeroOS: document.getElementById('numeroOS').value,
+    descricao: document.getElementById('descricao').value
+  };
+
+  if (!dados.status || !dados.veiculo || !dados.data) {
+    alert('⚠️ Preencha os campos obrigatórios.');
+    return;
+  }
+
+  const { data, error } = await supabase.from('manutencao').insert([dados]).select();
+  if (error) {
+    console.error('Erro ao salvar manutenção:', error);
+    alert('❌ Erro ao salvar manutenção.');
+    return;
+  }
+
+  const idManutencao = data[0].id;
+  document.getElementById('idManutencao').value = idManutencao;
+
+  await salvarItensManutencao(idManutencao);
+  await salvarArquivosManutencao(idManutencao);
+
+  alert(`✅ Manutenção salva com sucesso! ID: ${idManutencao}`);
 }
 
-function fecharModalTitulo() {
-  document.getElementById('modalTitulo').style.display = 'none';
+// 💾 Salvar itens vinculados
+async function salvarItensManutencao(idManutencao) {
+  const linhas = document.querySelectorAll('#tabelaItens tr');
+  const itens = [];
+
+  linhas.forEach(row => {
+    const qtd = parseInt(row.cells[0].textContent);
+    const desc = row.cells[1].textContent;
+    const valor = parseFloat(row.cells[2].textContent.replace('R$', '').trim());
+    itens.push({ id_manutencao: idManutencao, descricao: desc, quantidade: qtd, valor });
+  });
+
+  if (itens.length) {
+    const { error } = await supabase.from('manutencao_itens').insert(itens);
+    if (error) alert('❌ Erro ao salvar itens da manutenção.');
+  }
 }
+
+// 💾 Salvar arquivos vinculados
+async function salvarArquivosManutencao(idManutencao) {
+  const linhas = document.querySelectorAll('#tabelaArquivos tr');
+  const arquivos = [];
+
+  linhas.forEach(row => {
+    const nome = row.cells[0].textContent;
+    arquivos.push({ id_manutencao: idManutencao, nome_arquivo: nome });
+  });
+
+  if (arquivos.length) {
+    const { error } = await supabase.from('manutencao_arquivos').insert(arquivos);
+    if (error) alert('❌ Erro ao salvar arquivos.');
+  }
+}
+
+// 🗂️ Modais
+function abrirModalTitulo() { document.getElementById('modalTitulo').style.display = 'flex'; }
+function fecharModalTitulo() { document.getElementById('modalTitulo').style.display = 'none'; }
 
 async function salvarTitulo() {
   const titulo = document.getElementById('novoTitulo').value.trim();
@@ -220,17 +208,15 @@ async function salvarTitulo() {
   const { error } = await supabase.from('titulomanutencao').insert([{ manutencao: titulo }]);
   if (error) {
     console.error('Erro ao salvar título:', error);
+    alert('❌ Erro ao salvar título.');
     return;
   }
 
   const lista = document.getElementById('listaTitulos');
-  const opt = document.createElement('option');
-  opt.value = titulo;
-  lista.appendChild(opt);
-
+  lista.appendChild(new Option(titulo));
   document.getElementById('titulo').value = titulo;
   document.getElementById('novoTitulo').value = '';
-  alert('✅ Titulo de Manutenção, cadastrado com sucesso!');
+  alert('✅ Título cadastrado com sucesso!');
   fecharModalTitulo();
 }
 
@@ -251,23 +237,20 @@ async function salvarFornecedor() {
   const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor }]);
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
+    alert('❌ Erro ao salvar fornecedor.');
     return;
   }
 
   const lista = document.getElementById('listaFornecedores');
-  const opt = document.createElement('option');
-  opt.value = nome;
-  lista.appendChild(opt);
-
+  lista.appendChild(new Option(nome));
   document.getElementById('fornecedor').value = nome;
   document.getElementById('novoFornecedor').value = '';
   document.getElementById('obsFornecedor').value = '';
-  alert('✅ Fornecedor, cadastrado com sucesso!');
+  alert('✅ Fornecedor cadastrado com sucesso!');
   fecharModalFornecedor();
 }
 
-// 🗂️ Modal de PECAS E SERVICO
-
+// 🗂️ Modal de Peça/Serviço
 function abrirModalPecaServico() {
   document.getElementById('modalPecaServico').style.display = 'flex';
 }
@@ -279,28 +262,23 @@ function fecharModalPecaServico() {
 async function salvarPecaServico() {
   const descricao = document.getElementById('novaDescricao').value.trim();
   const tipo = document.getElementById('novoTipo').value;
-
   if (!descricao || !tipo) return;
 
   const { error } = await supabase.from('pecaeservico').insert([{ descricao, tipo }]);
-
   if (error) {
     console.error('Erro ao salvar peça/serviço:', error);
+    alert('❌ Erro ao salvar peça/serviço.');
     return;
   }
 
   const lista = document.getElementById('listaPecasServicos');
-  const opt = document.createElement('option');
-  opt.value = descricao;
-  lista.appendChild(opt);
-
+  lista.appendChild(new Option(descricao));
   document.getElementById('itemDescricao').value = descricao;
   document.getElementById('novaDescricao').value = '';
   document.getElementById('novoTipo').value = '';
+  alert('✅ Peça/Serviço cadastrado com sucesso!');
   fecharModalPecaServico();
 }
-
-
 
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
@@ -308,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarPlacas();
   carregarFiliais();
   carregarTitulosManutencao();
-  carregarFornecedores(); // ✅ isso é essencial
+  carregarFornecedores();
   carregarPecasServicos();
   mostrarPainelInterno('cadastroInterno');
 
@@ -340,12 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
       e.target.closest('tr').remove();
     }
   });
+
+  document.getElementById('btnSalvarManutencao').addEventListener('click', () => {
+    salvarManutencao();
+  });
 });
-
-
-
-
-
 
 // 🌐 Expor funções para uso no HTML
 window.abrirModalTitulo = abrirModalTitulo;
@@ -359,4 +336,3 @@ window.salvarFornecedor = salvarFornecedor;
 window.abrirModalPecaServico = abrirModalPecaServico;
 window.fecharModalPecaServico = fecharModalPecaServico;
 window.salvarPecaServico = salvarPecaServico;
-

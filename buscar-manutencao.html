@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buscar Manutenção</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+      <div class="menu-group">
+        <button class="menu-toggle">
+          <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+        </div>
+      </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-search"></i> Buscar Manutenção</h1>
+    </section>
+
+    <!-- 🔍 Filtros -->
+    <fieldset>
+      <legend>Filtros de Busca</legend>
+      <div class="form-duplo">
+        <fieldset class="form-bloco">
+          <div class="form-linha">
+            <label for="dataInicial">Data Inicial:</label>
+            <input type="date" id="dataInicial">
+          </div>
+          <div class="form-linha">
+            <label for="titulo">Título:</label>
+            <input type="text" id="titulo" list="listaTitulos">
+            <datalist id="listaTitulos"></datalist>
+          </div>
+          <div class="form-linha">
+            <label for="nfse">NFS-e:</label>
+            <input type="text" id="nfse">
+          </div>
+          <div class="form-linha">
+            <label for="os">OS:</label>
+            <input type="text" id="os">
+          </div>
+        </fieldset>
+
+        <fieldset class="form-bloco">
+          <div class="form-linha">
+            <label for="dataFinal">Data Final:</label>
+            <input type="date" id="dataFinal">
+          </div>
+          <div class="form-linha">
+            <label for="veiculo">Veículo:</label>
+            <input type="text" id="veiculo" list="listaPlacas">
+            <datalist id="listaPlacas"></datalist>
+          </div>
+          <div class="form-linha">
+            <label for="filial">Filial:</label>
+            <select id="filial"></select>
+          </div>
+          <div class="form-linha">
+            <label for="tipoManutencao">Tipo:</label>
+            <select id="tipoManutencao">
+              <option value="">Todos</option>
+              <option value="CORRETIVA">CORRETIVA</option>
+              <option value="PREVENTIVA">PREVENTIVA</option>
+            </select>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="form-linha">
+        <label for="fornecedor">Fornecedor:</label>
+        <input type="text" id="fornecedor" list="listaFornecedores">
+        <datalist id="listaFornecedores"></datalist>
+      </div>
+
+      <button type="button" id="btnBuscarManutencao">🔍 Buscar</button>
+    </fieldset>
+
+    <!-- 📊 Resumo -->
+    <div class="resumo-manutencao">
+      <button id="btnExportarPDF">📄 Exportar PDF</button>
+      <button id="btnExportarXLS">📊 Exportar XLS</button>
+      <div class="resumo-valores">
+        <strong>Realizadas:</strong> <span id="totalRegistros">0</span> |
+        <strong>Valor Total:</strong> R$ <span id="valorTotal">0.00</span>
+      </div>
+    </div>
+
+    <!-- 📋 Tabela de resultados -->
+    <table class="tabela-resultados">
+      <thead>
+        <tr>
+          <th>Abrir</th>
+          <th>Título</th>
+          <th>Placa</th>
+          <th>Descrição</th>
+          <th>OS</th>
+          <th>Data</th>
+          <th>Valor (R$)</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaResultados">
+        <!-- Linhas serão inseridas via JS -->
+      </tbody>
+    </table>
+  </main>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/buscar-manutencao.js" defer></script>
+</body>
+</html>
