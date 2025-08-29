@@ -8,20 +8,6 @@ function preencherUsuarioLogado() {
 }
 
 
-  document.querySelectorAll('.menu-toggle').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.parentElement.classList.toggle('active');
-  });
-});
-
-
-document.querySelectorAll('.menu-toggle').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.parentElement.classList.toggle('active');
-  });
-});
-
-
 
 async function carregarFiltros() {
   const [placas, titulos, filiais, fornecedores] = await Promise.all([
@@ -145,5 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btnExportarXLS').addEventListener('click', () => {
     alert('📊 Exportar XLS ainda não implementado.');
+  });
+});
+
+
+  document.querySelectorAll('.menu-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
   });
 });
