@@ -13,7 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('formVeiculo');
 
 
-  
+      document.querySelectorAll('.menu-toggle').forEach(btn => {
+   btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
+  });
+});
+
 
   // 🟢 Abrir modal
   btnAdd?.addEventListener('click', () => {
