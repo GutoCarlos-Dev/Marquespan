@@ -7,8 +7,6 @@ function preencherUsuarioLogado() {
   }
 }
 
-
-
 async function carregarFiltros() {
   const [placas, titulos, filiais, fornecedores] = await Promise.all([
     supabase.from('veiculos').select('placa'),
@@ -133,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('📊 Exportar XLS ainda não implementado.');
   });
 });
-
 
   document.querySelectorAll('.menu-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
