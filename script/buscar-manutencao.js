@@ -54,6 +54,7 @@ async function buscarManutencao() {
 
   let query = supabase.from('manutencao').select('*');
 
+  // Aplicar filtros encadeando corretamente
   if (filtros.dataInicial) query = query.gte('data', filtros.dataInicial);
   if (filtros.dataFinal) query = query.lte('data', filtros.dataFinal);
   if (filtros.titulo) query = query.ilike('titulo', `%${filtros.titulo}%`);
@@ -64,14 +65,25 @@ async function buscarManutencao() {
   if (filtros.tipo) query = query.eq('tipoManutencao', filtros.tipo);
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
 
+  // Executar a query
   const { data, error } = await query;
 
   if (error) {
-    console.error('Erro ao buscar manutenções:', error);
-    alert('❌ Erro ao buscar manutenções.');
+    console.error('❌ Erro ao buscar manutenções:', error);
+    alert('Erro ao buscar manutenções. Verifique os filtros ou tente novamente.');
     return;
   }
 
+  // Verificar se há dados
+  if (!data || data.length === 0) {
+    alert('Nenhuma manutenção encontrada com os filtros aplicados.');
+    document.getElementById('tabelaResultados').innerHTML = '';
+    document.getElementById('totalRegistros').textContent = '0';
+    document.getElementById('valorTotal').textContent = '0,00';
+    return;
+  }
+
+  // Preencher a tabela com os dados
   preencherTabela(data);
 }
 
