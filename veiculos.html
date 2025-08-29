@@ -12,18 +12,28 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🧭 Barra lateral -->
-  <aside class="sidebar">
-    <button class="toggle-btn" title="Abrir menu"><i class="fas fa-bars"></i></button>
-    <img src="logo.png" alt="Logo Marquespan" class="logo" />
+  <!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
     <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
     <nav>
-      <a href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
-      <a href="veiculos.html" class="active"><i class="fas fa-car"></i> Veículos</a>
-      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+      </div>
+    </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
       <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
     </nav>
-  </aside>
+  </div>
 
   <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
