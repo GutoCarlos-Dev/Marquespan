@@ -324,6 +324,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
+  });
+});
+
+
+
+
 // 🌐 Expor funções para uso no HTML
 window.abrirModalTitulo = abrirModalTitulo;
 window.fecharModalTitulo = fecharModalTitulo;

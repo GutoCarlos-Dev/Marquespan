@@ -16,6 +16,14 @@ function ativarSubmenu() {
   });
 }
 
+document.querySelectorAll('.menu-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
+  });
+});
+
+
+
 async function carregarFiltros() {
   const [placas, titulos, filiais, fornecedores] = await Promise.all([
     supabase.from('veiculos').select('placa'),
