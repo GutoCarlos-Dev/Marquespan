@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - Marquespan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Ícones Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+  <!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+      </div>
+    </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <div class="main-content">
+    <header class="header">📊 Dashboard Administrativo</header>
+
+    <section class="dashboard-container">
+      <div class="card">
+        <h3>Litros Abastecidos</h3>
+        <p>92.052,40 L</p>
+      </div>
+      <div class="card">
+        <h3>Custo Total</h3>
+        <p>R$ 513.488,66</p>
+      </div>
+      <div class="card">
+        <h3>Veículos Utilizados</h3>
+        <p>603</p>
+      </div>
+      <div class="card">
+        <h3>Manutenções</h3>
+        <p>38 | R$ 12.865,87</p>
+      </div>
+      <div class="card">
+        <h3>Multas</h3>
+        <p>R$ 0,00</p>
+      </div>
+      <div class="card">
+        <h3>Pedágios</h3>
+        <p>R$ 0,00</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.@developed by Gultembergue Carlos
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+    });
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
+  });
+});
+  </script>
+</body>
+</html>
