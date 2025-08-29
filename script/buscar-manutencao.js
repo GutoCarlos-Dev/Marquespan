@@ -7,14 +7,13 @@ function preencherUsuarioLogado() {
   }
 }
 
-function ativarSubmenu() {
-  document.querySelectorAll('.menu-toggle').forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      const group = toggle.closest('.menu-group');
-      group.classList.toggle('active');
-    });
+
+  document.querySelectorAll('.menu-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.classList.toggle('active');
   });
-}
+});
+
 
 document.querySelectorAll('.menu-toggle').forEach(btn => {
   btn.addEventListener('click', () => {
