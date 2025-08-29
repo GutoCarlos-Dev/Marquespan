@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* 🧱 Blocos principais */
 .secao {
   background-color: #fff;
@@ -82,3 +83,89 @@ input[type="password"] {
 .tabela-usuarios tbody tr:hover {
   background-color: #f9fbe7;
 }
+=======
+/* 🧱 Blocos principais */
+.secao {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* 🧩 Títulos */
+.secao h3 {
+  font-size: 18px;
+  color: #2e7d32;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #c8e6c9;
+  padding-bottom: 5px;
+}
+
+/* ✏️ Campos */
+input[type="text"],
+input[type="password"] {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+/* 🖱️ Botões */
+.botoes-form button {
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background 0.3s ease;
+}
+
+.botoes-form button[type="submit"],
+.botoes-form button#btnSalvar {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.botoes-form button#btnAtualizar {
+  background-color: #3498db;
+  color: white;
+}
+
+.botoes-form button:hover {
+  opacity: 0.9;
+}
+
+.botoes-form button[type="button"] {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+/* 🧩 Grid de usuários */
+.tabela-usuarios {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.tabela-usuarios th,
+.tabela-usuarios td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.tabela-usuarios th {
+  background-color: #f1f8e9;
+  color: #2e7d32;
+}
+
+.tabela-usuarios tbody tr:hover {
+  background-color: #f9fbe7;
+}
+>>>>>>> 10558e27b8270be434cb5b3e3a21a0e039cc7ab9

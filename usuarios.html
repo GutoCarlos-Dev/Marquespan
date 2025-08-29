@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -136,3 +137,143 @@
   </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestão de Usuários - Marquespan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+      </div>
+    </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <div class="main-content">
+    <header class="header">👥 Gestão de Usuários</header>
+
+    <section id="cadastro" class="secao hidden">
+      <h3>📋 Cadastro de Usuários</h3>
+      <form id="formUsuario" class="formulario">
+        <label for="codigo">Código:</label>
+        <input type="text" id="codigo" placeholder="Código" required>
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" placeholder="Nome" required>
+        <label for="funcao">Função:</label>
+        <input type="text" id="funcao" placeholder="Função" required>
+        <label for="senha">Senha:</label>
+        <input type="password" id="senha" placeholder="Senha" required>
+
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvar">✅ Cadastrar</button>
+          <button type="submit" id="btnAtualizar" class="hidden">🔄 Salvar</button>
+          <button type="button" onclick="mostrarSecao('busca')">⬅️ Voltar</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="busca" class="secao">
+      <h3>🔍 Buscar Usuários</h3>
+      <div class="campo-busca">
+        <input type="text" id="termoBusca" placeholder="Digite o nome ou código do usuário">
+      </div>
+
+      <div class="botoes-form">
+        <button id="btnAtualizarLista">🔄 Atualizar Lista</button>
+      </div>
+
+      <table id="tabelaUsuarios" class="tabela-usuarios">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Função</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaUsuarios"></tbody>
+      </table>
+    </section>
+
+    <footer class="footer">
+      &copy; 2025 Marquespan. Todos os direitos reservados.
+    </footer>
+  </div>
+
+  <!-- 🚀 Scripts -->
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    function mostrarSecao(id) {
+      document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    window.mostrarSecao = mostrarSecao;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+    });
+
+        document.querySelectorAll('.menu-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('active');
+  });
+});
+
+  </script>
+
+  <script type="module">
+    import { mostrarUsuarios, editarUsuario, atualizarUsuario, excluirUsuario, cadastrarUsuario } from './script/usuarios.js';
+
+    window.onload = () => {
+      document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
+      document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
+      document.getElementById('formUsuario').addEventListener('submit', cadastrarUsuario); // ✅ conecta o formulário
+      document.getElementById('formUsuario').addEventListener('submit', (e) => {
+        const id = document.getElementById('formUsuario').dataset.usuarioId;
+        if (id) {
+    atualizarUsuario(e);
+  } else {
+    cadastrarUsuario(e);
+  }
+  });
+      window.editarUsuario = editarUsuario;
+      window.atualizarUsuario = atualizarUsuario;
+      window.excluirUsuario = excluirUsuario; // ✅ agora disponível globalmente
+      mostrarUsuarios();
+    };
+  </script>
+</body>
+</html>
+>>>>>>> 10558e27b8270be434cb5b3e3a21a0e039cc7ab9

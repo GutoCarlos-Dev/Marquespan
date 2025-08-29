@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -263,3 +264,270 @@
   
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incluir Manutenção</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <!-- 🟩 Sidebar -->
+  <!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+      <div class="menu-group">
+        <button class="menu-toggle">
+          <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+        </div>
+      </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <section class="gestao-veiculos">
+      <h1 class="header"><i class="fas fa-tools"></i> Incluir Manutenção</h1>
+    </section>
+
+    <!-- 🔀 Navegação interna -->
+    <div class="painel-navegacao" role="tablist">
+      <button class="painel-btn active" data-painel="cadastroInterno" aria-selected="true">
+        <i class="fas fa-clipboard-list"></i> Cadastro
+      </button>
+      <button class="painel-btn" data-painel="itensInterno" aria-selected="false">
+        <i class="fas fa-tools"></i> Itens
+      </button>
+      <button class="painel-btn" data-painel="uploadInterno" aria-selected="false">
+        <i class="fas fa-upload"></i> Upload
+      </button>
+
+      <button type="button" id="btnSalvarManutencao">✅ Salvar Manutenção</button>
+      <div style="display: inline-block; margin-left: 20px;">
+        <label for="idManutencao">ID:</label>
+        <input type="text" id="idManutencao" disabled style="width: 80px;">
+      </div>
+    </div>
+
+    <fieldset id="painelManutencao">
+      <legend>Cadastro de Manutenção</legend>
+
+      <!-- 📋 Painel Cadastro -->
+      <div id="cadastroInterno" class="painel-conteudo fade-in">
+        <form id="formManutencao">
+          <div class="form-duplo">
+            <fieldset class="form-bloco">
+              <legend>Proprietário</legend>
+              <div class="form-linha">
+                <label for="usuarioLogado">Responsável:</label>
+                <input type="text" id="usuarioLogado" disabled>
+              </div>
+              <div class="form-linha">
+                <label for="status">Status:</label>
+                <select id="status" required>
+                  <option value=""></option>
+                  <option value="finalizado">FINALIZADO</option>
+                  <option value="manutencao">MANUTENÇÃO</option>
+                  <option value="aberto">ABERTO</option>
+                </select>
+              </div>
+              <div class="form-linha">
+                <label for="filial">Filial:</label>
+                <select id="filial" required></select>
+              </div>
+              <div class="form-linha">
+                <label for="titulo">Título da Manutenção:</label>
+                <input type="text" id="titulo" list="listaTitulos" placeholder="Digite ou selecione">
+                <datalist id="listaTitulos"></datalist>
+                <button type="button" class="btn-icone" onclick="abrirModalTitulo()">
+                  <i class="fas fa-plus-circle"></i>
+                </button>
+              </div>
+              <div class="form-linha">
+                <label for="tipoManutencao">Tipo de Manutenção:</label>
+                <select id="tipoManutencao">
+                  <option value="">Selecione</option>
+                  <option value="CORRETIVA">CORRETIVA</option>
+                  <option value="PREVENTIVA">PREVENTIVA</option>
+                </select>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-bloco">
+              <legend>Dados da Manutenção</legend>
+              <input type="date" id="data">
+              <div class="form-linha">
+                <label for="veiculo">Placa:</label>
+                <input type="text" id="veiculo" list="listaPlacas" placeholder="Digite ou selecione">
+                <datalist id="listaPlacas"></datalist>
+              </div>
+              <input type="text" id="km" placeholder="Hodômetro/KM">
+              <input type="text" id="motorista" placeholder="Motorista">
+            </fieldset>
+          </div>
+
+          <fieldset>
+            <legend>Dados Fiscais</legend>
+            <div class="form-linha">
+              <label for="fornecedor">Fornecedor:</label>
+              <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Digite ou selecione">
+              <datalist id="listaFornecedores"></datalist>
+              <button type="button" class="btn-icone" onclick="abrirModalFornecedor()">
+                <i class="fas fa-plus-circle"></i>
+              </button>
+            </div>
+            <div class="form-linha">
+              <label for="notaFiscal">NF-E:</label>
+              <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
+            </div>
+            <div class="form-linha">
+              <label for="notaServico">NFS-E:</label>
+              <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Outras Informações</legend>
+            <input type="text" id="numeroOS" placeholder="Número da OS">
+            <textarea id="descricao" placeholder="Descrição"></textarea>
+          </fieldset>
+        </form>
+      </div>
+
+      <!-- 🧰 Painel Itens -->
+      <div id="itensInterno" class="painel-conteudo hidden">
+        <h3 style="text-align: center;">Itens da Manutenção</h3>
+        <form id="formItem" class="form-itens">
+          <fieldset class="fieldset-itens">
+            <legend>Descrição</legend>
+            <div class="form-linha">
+              <label for="itemQuantidade">Qtd:</label>
+              <input type="number" id="itemQuantidade" min="0" value="0">
+            </div>
+            <div class="form-linha">
+              <label for="itemDescricao">Peças/Serviços:</label>
+              <input type="text" id="itemDescricao" list="listaPecasServicos">
+              <datalist id="listaPecasServicos"></datalist>
+              <button type="button" class="btn-icone" onclick="abrirModalPecaServico()">
+                <i class="fas fa-plus-circle"></i>
+              </button>
+            </div>
+            <div class="form-linha">
+              <label for="itemValor">Valor:</label>
+              <input type="number" id="itemValor" step="0.01" min="0">
+              <button type="submit" id="btnAdicionarItem">➕</button>
+          </fieldset>
+        </form>
+
+        <table class="tabela-itens">
+          <thead>
+            <tr>
+              <th>Qtd</th>
+              <th>Descrição</th>
+              <th>Valor Unitário (R$)</th>
+              <th>Valor Total (R$)</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaItens"></tbody>
+        </table>
+
+        <div class="total-itens">
+          <strong>Total:</strong> R$ <span id="totalItens">0.00</span>
+        </div>
+      </div>
+
+      <!-- 📎 Painel Upload -->
+      <div id="uploadInterno" class="painel-conteudo hidden">
+        <h3>Upload de Arquivos (PDF)</h3>
+        <form id="formUpload">
+          <input type="file" id="arquivoPDF" accept="application/pdf">
+          <button type="submit" id="btnAdicionarArquivo">📎 Adicionar Arquivo</button>
+        </form>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaArquivos"></tbody>
+        </table>
+      </div>
+    </fieldset>
+
+    <!-- 🔲 Modal Título de Manutenção -->
+    <div class="modal" id="modalTitulo">
+      <div class="modal-conteudo">
+        <h3>Cadastrar Novo Título</h3>
+        <input type="text" id="novoTitulo" placeholder="Título da Manutenção">
+        <div class="modal-acoes">
+          <button onclick="salvarTitulo()">Salvar</button>
+          <button onclick="fecharModalTitulo()">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔲 Modal Fornecedor -->
+    <div class="modal" id="modalFornecedor">
+      <div class="modal-conteudo">
+        <h3>Cadastrar Novo Fornecedor</h3>
+        <input type="text" id="novoFornecedor" placeholder="Nome do Fornecedor">
+        <textarea id="obsFornecedor" placeholder="Observações" style="height: 58px; width: 259px; resize: none;"></textarea>
+        <div class="modal-acoes">
+          <button onclick="salvarFornecedor()">Salvar</button>
+          <button onclick="fecharModalFornecedor()">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔲 Modal Peças/Serviços -->
+    <div class="modal" id="modalPecaServico">
+      <div class="modal-conteudo">
+        <h3>Cadastrar Peça/Serviço</h3>
+        <input type="text" id="novaDescricao" placeholder="Descrição">
+        <select id="novoTipo">
+          <option value="">Selecione o tipo</option>
+          <option value="PECAS">PEÇA</option>
+          <option value="SERVICOS">SERVIÇO</option>
+          <option value="MANUTENCAO">MANUTENÇÃO</option>
+        </select>
+        <div class="modal-acoes">
+          <button onclick="salvarPecaServico()">Salvar</button>
+          <button onclick="fecharModalPecaServico()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/incluir-manutencao.js" defer></script>
+
+
+
+
+  
+</body>
+</html>
+>>>>>>> 10558e27b8270be434cb5b3e3a21a0e039cc7ab9

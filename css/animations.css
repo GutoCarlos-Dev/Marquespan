@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* ✨ Animação de entrada */
 @keyframes fadeInDown {
   to {
@@ -5,3 +6,12 @@
     transform: translateY(0);
   }
 }
+=======
+/* ✨ Animação de entrada */
+@keyframes fadeInDown {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+>>>>>>> 10558e27b8270be434cb5b3e3a21a0e039cc7ab9

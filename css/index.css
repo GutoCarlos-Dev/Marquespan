@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* 🌐 Reset e base */
 @import url("base.css");
 
@@ -32,4 +33,40 @@
 @import url("usuarios.css");
 
 /* 🛠️ Tela de manutenção */
+=======
+/* 🌐 Reset e base */
+@import url("base.css");
+
+/* ✨ Animações */
+@import url("animations.css");
+
+/* 🟩 Layout geral */
+@import url("layout.css");
+
+/* 📊 Dashboard */
+@import url("dashboard.css");
+
+/* 🚚 Formulários */
+@import url("form.css");
+
+/* 🧩 Grid de veículos */
+@import url("grid.css");
+
+/* 🔧 Botões */
+@import url("buttons.css");
+
+/* 🔎 Filtros e busca */
+@import url("filters.css");
+
+/* 🧾 Modais */
+@import url("modal.css");
+
+/* 🔐 Tela de login */
+@import url("login.css");
+
+/* 👥 Gestão de usuários */
+@import url("usuarios.css");
+
+/* 🛠️ Tela de manutenção */
+>>>>>>> 10558e27b8270be434cb5b3e3a21a0e039cc7ab9
 @import url("manutencao.css");
