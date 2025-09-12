@@ -40,25 +40,37 @@
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const codigo = document.getElementById('usuario').value.trim();
+      // O login agora será por e-mail, conforme o sistema de autenticação do Supabase
+      const email = document.getElementById('usuario').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
       try {
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('id, codigo, nome, funcao')
-          .eq('codigo', codigo)
-          .eq('senha', senha)
-          .single();
+        // 1. Tenta fazer o login com o sistema de autenticação do Supabase
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: senha,
+        });
 
-        if (error || !data) {
+        if (authError) {
           alert('❌ Usuário ou senha inválidos.');
           return;
         }
 
-        // ✅ Salva dados completos do usuário logado
-        localStorage.setItem('usuarioLogado', JSON.stringify(data));
-        alert(`✅ Acesso autorizado! Olá, ${data.nome}`);
+        // 2. Se o login for bem-sucedido, busca os dados adicionais do usuário na sua tabela 'usuarios'
+        // Usamos o e-mail como elo de ligação. Certifique-se de que sua tabela 'usuarios' tenha uma coluna 'email'.
+        const { data: userData, error: userError } = await supabase
+          .from('usuarios')
+          .select('id, codigo, nome, funcao')
+          .eq('email', email) // Assumindo que você tem uma coluna 'email' na tabela 'usuarios'
+          .single();
+
+        if (userError || !userData) {
+          alert('⚠️ Login bem-sucedido, mas não foi possível carregar os dados do perfil.');
+          return;
+        }
+
+        localStorage.setItem('usuarioLogado', JSON.stringify(userData));
+        alert(`✅ Acesso autorizado! Olá, ${userData.nome}`);
         window.location.href = 'dashboard.html';
       } catch (err) {
         console.error('Erro ao conectar com Supabase:', err);

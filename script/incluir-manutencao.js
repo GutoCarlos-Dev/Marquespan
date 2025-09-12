@@ -1,7 +1,10 @@
 // 📦 Importação do Supabase
 import { supabase } from './supabase.js';
 
-// 🔀 Alternância de painéis internos
+// 📂 Array para armazenar os arquivos selecionados para upload
+let arquivosParaUpload = [];
+
+//  Alternância de painéis internos
 function mostrarPainelInterno(id) {
   document.querySelectorAll('.painel-conteudo').forEach(div => {
     div.classList.add('hidden');
@@ -127,13 +130,20 @@ function adicionarArquivo() {
   if (!input.files.length) return;
 
   const file = input.files[0];
+  
+  // Adiciona o arquivo ao nosso array de controle
+  arquivosParaUpload.push(file);
+  const fileIndex = arquivosParaUpload.length - 1;
+
   const linha = document.createElement('tr');
+  // Adicionamos um data-index para saber qual arquivo remover do array
+  linha.dataset.index = fileIndex;
   linha.innerHTML = `
     <td>${file.name}</td>
     <td><button class="btn-remover-arquivo">🗑️</button></td>
   `;
   document.getElementById('tabelaArquivos').appendChild(linha);
-  input.value = '';
+  input.value = ''; // Limpa o input para poder adicionar outro arquivo
 }
 
 // 💾 Salvar manutenção principal
@@ -220,23 +230,40 @@ async function salvarItensManutencao(idManutencao) {
 
 // 💾 Salvar arquivos vinculados
 async function salvarArquivosManutencao(idManutencao) { // Adicionado async
-  const linhas = document.querySelectorAll('#tabelaArquivos tr');
-  const arquivos = [];
+  if (arquivosParaUpload.length === 0) {
+    return true; // Nenhum arquivo para enviar, sucesso.
+  }
 
-  linhas.forEach(row => {
-    const nome = row.cells[0].textContent;
-    // ✅ Garantindo que a coluna correta 'id_manutencao' seja usada também para arquivos.
-    arquivos.push({ 
-      id_manutencao: idManutencao, 
-      nome_arquivo: nome 
+  const arquivosParaSalvarNoDB = [];
+
+  for (const file of arquivosParaUpload) {
+    // Cria um caminho único para o arquivo para evitar conflitos de nome
+    const filePath = `public/${idManutencao}/${Date.now()}-${file.name}`;
+
+    // Faz o upload do arquivo para o Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('manutencao_arquivos') // Nome do bucket
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Erro no upload do arquivo:', uploadError);
+      alert(`❌ Erro ao fazer upload do arquivo "${file.name}".`);
+      return false; // 🔴 Indica falha
+    }
+
+    // Adiciona o caminho do arquivo para ser salvo no banco de dados
+    arquivosParaSalvarNoDB.push({
+      id_manutencao: idManutencao,
+      nome_arquivo: filePath // Salvamos o caminho completo do arquivo
     });
-  });
+  }
 
-  if (arquivos.length) {
-    const { error } = await supabase.from('manutencao_arquivos').insert(arquivos); // Adicionado await
-    if (error) {
-      console.error('Erro ao salvar arquivos:', error);
-      alert(`❌ Erro ao salvar arquivos. Causa: ${error.message}`);
+  // Insere todos os registros de arquivos no banco de dados de uma vez
+  if (arquivosParaSalvarNoDB.length > 0) {
+    const { error: dbError } = await supabase.from('manutencao_arquivos').insert(arquivosParaSalvarNoDB);
+    if (dbError) {
+      console.error('Erro ao salvar arquivos no banco de dados:', dbError);
+      alert(`❌ Erro ao salvar referência dos arquivos no banco. Causa: ${dbError.message}`);
       return false; // 🔴 Indica falha
     }
   }
@@ -361,7 +388,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('tabelaArquivos').addEventListener('click', e => {
     if (e.target.classList.contains('btn-remover-arquivo')) {
-      e.target.closest('tr').remove();
+      const linha = e.target.closest('tr');
+      const indexParaRemover = parseInt(linha.dataset.index, 10);
+      
+      // Remove o arquivo do array usando o índice
+      arquivosParaUpload.splice(indexParaRemover, 1);
+      linha.remove();
     }
   });
 
