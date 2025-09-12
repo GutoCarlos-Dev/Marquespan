@@ -63,6 +63,7 @@
         });
 
         if (authError) {
+          console.error('Erro de autenticação:', authError);
           alert('❌ Usuário ou senha inválidos.');
           return;
         }
