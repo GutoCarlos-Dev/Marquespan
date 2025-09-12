@@ -29,6 +29,7 @@
       <input type="password" id="senha" placeholder="Senha" required autocomplete="current-password">
 
       <button type="submit">Entrar</button>
+      <button type="button" id="btnLogout" style="background-color: #f44336; margin-top: 10px;">Limpar Sessão (Logout)</button>
     </form>
     <p class="login-info">Informe seu código e senha cadastrado ou Contate o Administrador, Gultembergue Carlos</p>
   </div>
@@ -46,7 +47,14 @@
 
     // ETAPA DE LIMPEZA: Força o logout para limpar qualquer sessão inválida ou antiga.
     // Isso garante que estamos começando do zero a cada tentativa de login.
-    await supabase.auth.signOut();
+    document.getElementById('btnLogout').addEventListener('click', async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        alert('Erro ao limpar sessão: ' + error.message);
+      } else {
+        alert('Sessão limpa com sucesso! Tente logar novamente.');
+      }
+    });
 
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
