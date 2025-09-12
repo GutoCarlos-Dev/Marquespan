@@ -34,8 +34,12 @@
   </div>
 
   <!-- ✅ Supabase e autenticação -->
-  <script type="module">
-    import { supabase } from './script/supabase.js';
+  <script type="module" id="auth-script">
+    // Adicionamos um parâmetro de versão para forçar o navegador a recarregar o script.
+    // Isso resolve problemas de cache.
+    const version = new Date().getTime();
+    const supabaseModule = await import(`./script/supabase.js?v=${version}`);
+    const { supabase } = supabaseModule;
 
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
