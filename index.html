@@ -41,6 +41,9 @@
     const supabaseModule = await import(`./script/supabase.js?v=${version}`);
     const { supabase } = supabaseModule;
 
+    // DIAGNÓSTICO: Confirma que o script correto está sendo executado.
+    console.log('✅ Script de login v2.0 carregado. Se você vê esta mensagem, o cache foi limpo.');
+
     // ETAPA DE LIMPEZA: Força o logout para limpar qualquer sessão inválida ou antiga.
     // Isso garante que estamos começando do zero a cada tentativa de login.
     await supabase.auth.signOut();
