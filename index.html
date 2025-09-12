@@ -22,8 +22,8 @@
     <h2>Frota Pesada</h2><br>
     
     <form id="formLogin" class="login-form">
-      <!-- label for="email" class="sr-only">E-mail</label -->
-      <input type="email" id="email" placeholder="E-mail" required autocomplete="email">
+      <!-- ✅ Alterado para "Usuário" (código) -->
+      <input type="text" id="codigo" placeholder="Usuário" required autocomplete="username">
 
       <!--label for="senha" class="sr-only">Senha</label -->
       <input type="password" id="senha" placeholder="Senha" required autocomplete="current-password">
@@ -51,29 +51,36 @@
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // ✅ Corrigido para pegar o valor do campo de e-mail
-      const email = document.getElementById('email').value.trim();
+      // ✅ Pega o código e a senha do formulário
+      const codigo = document.getElementById('codigo').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
       try {
-        // 1. Tenta fazer o login com o sistema de autenticação do Supabase
+        // 1. Busca o e-mail correspondente ao código informado usando a função segura que criamos
+        const { data: email, error: rpcError } = await supabase.rpc('get_email_by_codigo', { user_codigo: codigo });
+
+        if (rpcError || !email) {
+          console.error('Erro ao buscar e-mail pelo código:', rpcError);
+          alert('❌ Usuário não encontrado.');
+          return;
+        }
+
+        // 2. Com o e-mail em mãos, tenta fazer o login no sistema de autenticação do Supabase
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: email,
+          email: email, // Usa o e-mail que encontramos
           password: senha,
         });
 
         if (authError) {
-          console.error('Erro de autenticação:', authError);
-          alert('❌ Usuário ou senha inválidos.');
+          alert('❌ Senha inválida.');
           return;
         }
 
-        // 2. Se o login for bem-sucedido, busca os dados adicionais do usuário na sua tabela 'usuarios'
-        // Usamos o código (que é o e-mail) como elo de ligação.
+        // 3. Se o login for bem-sucedido, busca os dados do perfil para salvar localmente
         const { data: userData, error: userError } = await supabase
           .from('usuarios')
           .select('id, codigo, nome, funcao')
-          .eq('codigo', email) // Usando 'codigo' como o campo de identificação, já que o erro indica que 'codigo' é usado para o e-mail
+          .eq('codigo', codigo)
           .single();
 
         if (userError || !userData) {
