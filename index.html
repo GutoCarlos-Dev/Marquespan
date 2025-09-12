@@ -41,6 +41,10 @@
     const supabaseModule = await import(`./script/supabase.js?v=${version}`);
     const { supabase } = supabaseModule;
 
+    // ETAPA DE LIMPEZA: Força o logout para limpar qualquer sessão inválida ou antiga.
+    // Isso garante que estamos começando do zero a cada tentativa de login.
+    await supabase.auth.signOut();
+
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
 
