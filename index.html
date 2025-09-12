@@ -68,11 +68,11 @@
         }
 
         // 2. Se o login for bem-sucedido, busca os dados adicionais do usuário na sua tabela 'usuarios'
-        // Usamos o e-mail como elo de ligação. Certifique-se de que sua tabela 'usuarios' tenha uma coluna 'email'.
+        // Usamos o código (que é o e-mail) como elo de ligação.
         const { data: userData, error: userError } = await supabase
           .from('usuarios')
           .select('id, codigo, nome, funcao')
-          .eq('email', email) // Assumindo que você tem uma coluna 'email' na tabela 'usuarios'
+          .eq('codigo', email) // Usando 'codigo' como o campo de identificação, já que o erro indica que 'codigo' é usado para o e-mail
           .single();
 
         if (userError || !userData) {
