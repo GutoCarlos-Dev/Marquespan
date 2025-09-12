@@ -176,16 +176,13 @@ async function salvarManutencao() {
 
   // ✨ Salva itens e verifica o resultado
   const sucessoItens = await salvarItensManutencao(idManutencao);
-  if (!sucessoItens) {
-    // A mensagem de erro já foi exibida dentro da função
-    return; 
-  }
+  // 🔴 CORREÇÃO: Garante que a execução pare se o salvamento de itens falhar.
+  if (sucessoItens === false) return;
 
   // ✨ Salva arquivos e verifica o resultado
   const sucessoArquivos = await salvarArquivosManutencao(idManutencao);
-  if (!sucessoArquivos) {
-    return;
-  }
+  // 🔴 CORREÇÃO: Garante que a execução pare se o salvamento de arquivos falhar.
+  if (sucessoArquivos === false) return;
   
   alert(`✅ Manutenção salva com sucesso! ID: ${idManutencao}`);
 }
