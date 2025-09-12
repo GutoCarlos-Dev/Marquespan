@@ -224,7 +224,11 @@ async function salvarArquivosManutencao(idManutencao) { // Adicionado async
 
   linhas.forEach(row => {
     const nome = row.cells[0].textContent;
-    arquivos.push({ id_manutencao: idManutencao, nome_arquivo: nome });
+    // ✅ Garantindo que a coluna correta 'id_manutencao' seja usada também para arquivos.
+    arquivos.push({ 
+      id_manutencao: idManutencao, 
+      nome_arquivo: nome 
+    });
   });
 
   if (arquivos.length) {
