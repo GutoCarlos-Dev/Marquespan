@@ -207,6 +207,10 @@ async function salvarItensManutencao(idManutencao) {
   });
 
   if (itens.length) {
+    // 🕵️‍♂️ DIAGNÓSTICO: Mostra no console os dados que serão enviados.
+    // Pressione F12 no navegador para ver o console.
+    console.log('Enviando os seguintes itens para o Supabase:', JSON.stringify(itens, null, 2));
+
     const { error } = await supabase.from('manutencao_itens').insert(itens);
     if (error) {
       console.error('Erro ao salvar itens da manutenção:', error);
