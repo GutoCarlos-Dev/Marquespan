@@ -22,10 +22,10 @@
     <h2>Frota Pesada</h2><br>
     
     <form id="formLogin" class="login-form">
-      <!-- label for="usuario" class="sr-only">Usuário</label -->
-      <input type="text" id="usuario" placeholder="Usuário" required autocomplete="username">
+      <!-- label for="email" class="sr-only">E-mail</label -->
+      <input type="email" id="email" placeholder="E-mail" required autocomplete="email">
 
-      <!--label for="senha" class="sr-only">Senha</label-->
+      <!--label for="senha" class="sr-only">Senha</label -->
       <input type="password" id="senha" placeholder="Senha" required autocomplete="current-password">
 
       <button type="submit">Entrar</button>
@@ -40,8 +40,8 @@
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // O login agora será por e-mail, conforme o sistema de autenticação do Supabase
-      const email = document.getElementById('usuario').value.trim();
+      // ✅ Corrigido para pegar o valor do campo de e-mail
+      const email = document.getElementById('email').value.trim();
       const senha = document.getElementById('senha').value.trim();
 
       try {
