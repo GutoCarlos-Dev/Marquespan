@@ -1,57 +1,57 @@
-/* 🔐 Tela de login */
-body.login-body {
-  background-color: #f0fff0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+/* Estilo profissional para tela inicial */
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f0f1f0 0%, #017707 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
 }
-
-.login-container {
-  background-color: #fff;
-  border: 2px solid #4CAF50;
-  border-radius: 10px;
-  padding: 30px;
-  width: 300px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+#login-container {
+    background: white;
+    color: #333;
+    padding: 2rem 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    width: 320px;
+    text-align: center;
 }
-
-.login-logo {
-  width: 100px;
-  margin-bottom: 20px;
+#login-container img {
+    max-width: 180px;
+    margin-bottom: 1rem;
 }
-
-.login-form input,
-.card input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+#login-container h2 {
+    margin-bottom: 1.5rem;
+    font-weight: 600;
 }
-
-.login-form button,
-.card button {
-  width: 100%;
-  padding: 10px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s;
-  margin-top: 10px;
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
-
-.login-form button:hover,
-.card button:hover {
-  background-color: #45a049;
+label {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
 }
-
-.login-info {
-  margin-top: 15px;
-  font-size: 0.9em;
-  color: #555;
+input[type="text"], input[type="password"] {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+button:hover {
+    background-color: #3e7441;
 }
