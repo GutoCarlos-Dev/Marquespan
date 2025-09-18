@@ -25,10 +25,7 @@
 /* 🧾 Modais */
 @import url("modal.css");
 
-/* 🔐 Tela de login */
-@import url("login.css");
-
-/* 👥 Gestão de usuários */
+/*  Gestão de usuários */
 @import url("usuarios.css");
 
 /* 🛠️ Tela de manutenção */
