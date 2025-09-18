@@ -1,70 +1,85 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Bem Vindo(a) - Marquespan</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- ✅ CSS modularizado -->
-  <link rel="stylesheet" href="css/index.css">
-
-  <!-- 🔧 Estilo específico para login -->
-  <style>
-    input[type="text"],
-    input[type="password"] {
-      text-transform: none;
-    }
-  </style>
-</head>
-<body class="login-body">
-  <div class="login-container">
-    <img src="logo.png" alt="Logo Marquespan" class="login-logo">
-    <h2>Frota Pesada Mesmo</h2><br>
-    
-    <form id="formLogin" class="login-form">
-      <!-- label for="usuario" class="sr-only">Usuário</label -->
-      <input type="text" id="usuario" placeholder="Usuário" required autocomplete="username">
-
-      <!--label for="senha" class="sr-only">Senha</label-->
-      <input type="password" id="senha" placeholder="Senha" required autocomplete="current-password">
-
-      <button type="submit">Entrar</button>
-    </form>
-    <p class="login-info">Informe seu código e senha cadastrado ou Contate o Administrador, Gultembergue Carlos</p>
-  </div>
-
-  <!-- ✅ Supabase e autenticação -->
-  <script type="module">
-    import { supabase } from './script/supabase.js';
-
-    document.getElementById('formLogin').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const codigo = document.getElementById('usuario').value.trim();
-      const senha = document.getElementById('senha').value.trim();
-
-      try {
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('id, codigo, nome, funcao')
-          .eq('codigo', codigo)
-          .eq('senha', senha)
-          .single();
-
-        if (error || !data) {
-          alert('❌ Usuário ou senha inválidos.');
-          return;
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Solicitação de Peças</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+        /* Estilo profissional para tela inicial */
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
         }
-
-        // ✅ Salva dados completos do usuário logado
-        localStorage.setItem('usuarioLogado', JSON.stringify(data));
-        alert(`✅ Acesso autorizado! Olá, ${data.nome}`);
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        console.error('Erro ao conectar com Supabase:', err);
-        alert('⚠️ Erro de conexão. Tente novamente mais tarde.');
-      }
-    });
-  </script>
+        #login-container {
+            background: white;
+            color: #333;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            width: 320px;
+            text-align: center;
+        }
+        #login-container img {
+            max-width: 180px;
+            margin-bottom: 1rem;
+        }
+        #login-container h2 {
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        label {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        input[type="text"], input[type="password"] {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #388E3C;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <img src="logo.png" alt="Marquespan Logo" />
+        <h2>Login</h2>
+        <form id="login-form">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" required />
+            <label for="password">Senha</label>
+            <input type="password" id="password" required />
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+    <!-- SupaBase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
