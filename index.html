@@ -34,76 +34,7 @@
     <p class="login-info">Informe seu código e senha cadastrado ou Contate o Administrador, Gultembergue Carlos</p>
   </div>
 
-  <!-- ✅ Supabase e autenticação -->
-  <script type="module" id="auth-script">
-    // Adicionamos um parâmetro de versão para forçar o navegador a recarregar o script.
-    // Isso resolve problemas de cache.
-    const version = new Date().getTime();
-    const supabaseModule = await import(`./script/supabase.js?v=${version}`);
-    const { supabase } = supabaseModule;
-
-    // DIAGNÓSTICO: Confirma que o script correto está sendo executado.
-    console.log('✅ Script de login v2.0 carregado. Se você vê esta mensagem, o cache foi limpo.');
-
-    // ETAPA DE LIMPEZA: Força o logout para limpar qualquer sessão inválida ou antiga.
-    // Isso garante que estamos começando do zero a cada tentativa de login.
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        alert('Erro ao limpar sessão: ' + error.message);
-      } else {
-        alert('Sessão limpa com sucesso! Tente logar novamente.');
-      }
-    });
-
-    document.getElementById('formLogin').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      // ✅ Pega o código e a senha do formulário
-      const codigo = document.getElementById('codigo').value.trim();
-      const senha = document.getElementById('senha').value.trim();
-
-      try {
-        // 1. Busca o e-mail correspondente ao código informado usando a função segura que criamos
-        const { data: email, error: rpcError } = await supabase.rpc('get_email_by_codigo', { user_codigo: codigo });
-
-        if (rpcError || !email) {
-          console.error('Erro ao buscar e-mail pelo código:', rpcError);
-          alert('❌ Usuário não encontrado.');
-          return;
-        }
-
-        // 2. Com o e-mail em mãos, tenta fazer o login no sistema de autenticação do Supabase
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: email, // Usa o e-mail que encontramos
-          password: senha,
-        });
-
-        if (authError) {
-          alert('❌ Senha inválida.');
-          return;
-        }
-
-        // 3. Se o login for bem-sucedido, busca os dados do perfil para salvar localmente
-        const { data: userData, error: userError } = await supabase
-          .from('usuarios')
-          .select('id, codigo, nome, funcao')
-          .eq('codigo', codigo)
-          .single();
-
-        if (userError || !userData) {
-          alert('⚠️ Login bem-sucedido, mas não foi possível carregar os dados do perfil.');
-          return;
-        }
-
-        localStorage.setItem('usuarioLogado', JSON.stringify(userData));
-        alert(`✅ Acesso autorizado! Olá, ${userData.nome}`);
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        console.error('Erro ao conectar com Supabase:', err);
-        alert('⚠️ Erro de conexão. Tente novamente mais tarde.');
-      }
-    });
-  </script>
+  <!-- ✅ Scripts de autenticação modularizados -->
+  <script type="module" src="./script/login.js" defer></script>
 </body>
 </html>
