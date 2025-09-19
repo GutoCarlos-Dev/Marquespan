@@ -25,7 +25,7 @@ export async function carregarItens() {
   data.forEach(item => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td>${item.id}</td>
+      <td>${item.codigo}</td>
       <td>${item.nome}</td>
       <td>${item.tipo}</td>
       <td>
@@ -41,10 +41,11 @@ export async function salvarItem(event) {
   event.preventDefault();
 
   const id = document.getElementById('formItem').dataset.itemId;
+  const codigo = document.getElementById('codigoItem').value.trim();
   const nome = document.getElementById('nomeItem').value.trim();
   const tipo = document.getElementById('tipoItem').value;
 
-  if (!nome || !tipo) {
+  if (!codigo || !nome || !tipo) {
     alert('⚠️ Preencha todos os campos.');
     return;
   }
@@ -54,13 +55,13 @@ export async function salvarItem(event) {
     // Update
     result = await supabase
       .from('itens')
-      .update({ nome, tipo })
+      .update({ codigo, nome, tipo })
       .eq('id', id);
   } else {
     // Insert
     result = await supabase
       .from('itens')
-      .insert([{ nome, tipo }]);
+      .insert([{ codigo, nome, tipo }]);
   }
 
   if (result.error) {
@@ -87,6 +88,7 @@ export async function editarItem(id) {
     return;
   }
 
+  document.getElementById('codigoItem').value = data.codigo;
   document.getElementById('nomeItem').value = data.nome;
   document.getElementById('tipoItem').value = data.tipo;
   document.getElementById('formItem').dataset.itemId = data.id;
