@@ -1,13 +1,13 @@
 import { supabase } from './supabase.js';
 
 export async function mostrarUsuarios() {
-  const termo = document.getElementById('termoBusca')?.value.trim().toLowerCase();
+  const termo = document.getElementById('termoBusca').value.trim().toLowerCase();
   const corpoTabela = document.getElementById('corpoTabelaUsuarios');
   corpoTabela.innerHTML = '';
 
   let { data, error } = await supabase
     .from('usuarios')
-    .select('id, codigo, nome, nivel');
+    .select('id, codigo, nome, funcao');
 
   if (error) {
     corpoTabela.innerHTML = '<tr><td colspan="4">Erro ao carregar usuários.</td></tr>';
@@ -31,7 +31,7 @@ export async function mostrarUsuarios() {
     linha.innerHTML = `
       <td>${usuario.codigo}</td>
       <td>${usuario.nome}</td>
-      <td>${usuario.nivel || ''}</td>
+      <td>${usuario.funcao}</td>
       <td>
         <button onclick="editarUsuario('${usuario.id}')">✏️</button>
         <button onclick="excluirUsuario('${usuario.id}')">🗑️</button>
@@ -44,37 +44,19 @@ export async function mostrarUsuarios() {
 export async function cadastrarUsuario(event) {
   event.preventDefault(); // evita recarregar a página
 
+  const codigo = document.getElementById('codigo').value.trim();
   const nome = document.getElementById('nome').value.trim();
-  const nivel = document.getElementById('nivel').value;
+  const funcao = document.getElementById('funcao').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
-  if (!nome || !nivel || !senha) {
+  if (!codigo || !nome || !funcao || !senha) {
     alert('⚠️ Preencha todos os campos.');
     return;
   }
 
-  // Geração automática do código
-  const { data: maxCodigoData, error: maxCodigoError } = await supabase
-    .from('usuarios')
-    .select('codigo')
-    .order('id', { ascending: false }) // Pega o último inserido para ter uma base
-    .limit(1);
-
-  if (maxCodigoError) {
-    alert('❌ Erro ao gerar código do usuário.');
-    console.error(maxCodigoError);
-    return;
-  }
-
-  let novoCodigo = 1;
-  if (maxCodigoData && maxCodigoData.length > 0 && maxCodigoData[0].codigo) {
-    novoCodigo = parseInt(maxCodigoData[0].codigo, 10) + 1;
-  }
-  const codigo = novoCodigo.toString();
-
   const { error } = await supabase
     .from('usuarios')
-    .insert([{ codigo, nome, nivel, senha }]);
+    .insert([{ codigo, nome, funcao, senha }]);
 
   if (error) {
     alert('❌ Erro ao cadastrar usuário.');
@@ -103,7 +85,7 @@ export async function editarUsuario(id) {
 
   document.getElementById('codigo').value = data.codigo;
   document.getElementById('nome').value = data.nome;
-  document.getElementById('nivel').value = data.nivel;
+  document.getElementById('funcao').value = data.funcao;
   document.getElementById('senha').value = data.senha;
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
 
@@ -117,12 +99,12 @@ export async function atualizarUsuario(event) {
   const id = document.getElementById('formUsuario').dataset.usuarioId;
   const codigo = document.getElementById('codigo').value.trim();
   const nome = document.getElementById('nome').value.trim();
-  const nivel = document.getElementById('nivel').value;
+  const funcao = document.getElementById('funcao').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
   const { error } = await supabase
     .from('usuarios')
-    .update({ codigo, nome, nivel, senha })
+    .update({ codigo, nome, funcao, senha })
     .eq('id', id);
 
   if (error) {

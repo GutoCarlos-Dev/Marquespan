@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Gestão de Usuários</title>
+  <title>Gestão de Usuários - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -40,16 +40,11 @@
       <h3>📋 Cadastro de Usuários</h3>
       <form id="formUsuario" class="formulario">
         <label for="codigo">Código:</label>
-        <input type="text" id="codigo" placeholder="Gerado automaticamente" disabled>
+        <input type="text" id="codigo" placeholder="Código" required>
         <label for="nome">Nome:</label>
         <input type="text" id="nome" placeholder="Nome" required>
-        <label for="nivel">Nível:</label>
-        <select id="nivel" required>
-            <option value="">Selecione um nível</option>
-            <option value="Administrador">Administrador</option>
-            <option value="Matriz">Matriz</option>
-            <option value="Operador">Operador</option>
-        </select>
+        <label for="funcao">Função:</label>
+        <input type="text" id="funcao" placeholder="Função" required>
         <label for="senha">Senha:</label>
         <input type="password" id="senha" placeholder="Senha" required>
 
@@ -76,7 +71,7 @@
           <tr>
             <th>Código</th>
             <th>Nome</th>
-            <th>Nível</th>
+            <th>Função</th>
             <th>Ações</th>
           </tr>
         </thead>
