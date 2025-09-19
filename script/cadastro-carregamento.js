@@ -137,7 +137,15 @@ export async function incluirItem() {
   if (error) {
     console.error('Erro ao obter o próximo código:', error);
   } else if (data && data.length > 0) {
-    nextCodigo = (parseInt(data[0].codigo, 10) + 1).toString();
+    // Verificar se o código já existe no banco para evitar duplicidade
+    let maxCodigo = 0;
+    for (const item of data) {
+      const codigoInt = parseInt(item.codigo, 10);
+      if (!isNaN(codigoInt) && codigoInt > maxCodigo) {
+        maxCodigo = codigoInt;
+      }
+    }
+    nextCodigo = (maxCodigo + 1).toString();
   }
 
   // Preencher o código e habilitar os campos
