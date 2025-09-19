@@ -64,8 +64,8 @@ export async function cadastrarUsuario(event) {
     .insert([{ nome, nomecompleto, email, nivel, senha }]);
 
   if (error) {
-    alert('❌ Erro ao cadastrar usuário.');
     console.error(error);
+    alert('❌ Erro ao cadastrar usuário.');
     return;
   }
 
