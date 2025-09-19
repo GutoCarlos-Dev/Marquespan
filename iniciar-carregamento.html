@@ -60,8 +60,13 @@
           <datalist id="placasVeiculosList"></datalist>
           <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
         </div>
-        <label for="supervisor">Motorista:</label>
-        <input type="text" id="motorista" placeholder="Nome do Motorista">
+        <div class="form-group-com-botao">
+          <label for="motoristaSelect">Motorista:</label>
+          <select id="motoristaSelect" required>
+            <option value="" disabled selected>Carregando motoristas...</option>
+          </select>
+          <button type="button" id="btnAbrirModalMotorista" class="btn-adicionar-pequeno" title="Adicionar Novo Motorista">➕</button>
+        </div>
         <label for="conferente">Conferente:</label>
         <input type="text" id="conferente" placeholder="Usuário logado" required disabled>
         <label for="supervisor">Supervisor:</label>
@@ -187,6 +192,23 @@
         <input type="number" id="quantidadeItemModal" min="1" value="1" required>
         <div class="botoes-form">
           <button type="submit">➕ Adicionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Cadastro Motorista -->
+  <div id="modalMotorista" class="modal">
+    <div class="modal-conteudo">
+      <span class="fechar-modal" id="fecharModalMotorista">&times;</span>
+      <h3>🚚 Cadastrar Novo Motorista</h3>
+      <form id="formNovoMotorista" class="formulario">
+        <label for="nomeMotoristaModal">Nome:</label>
+        <input type="text" id="nomeMotoristaModal" placeholder="Nome do Motorista" required>
+        <label for="nomeCompletoMotoristaModal">Nome Completo:</label>
+        <input type="text" id="nomeCompletoMotoristaModal" placeholder="Nome Completo do Motorista">
+        <div class="botoes-form">
+          <button type="submit">✅ Salvar Motorista</button>
         </div>
       </form>
     </div>

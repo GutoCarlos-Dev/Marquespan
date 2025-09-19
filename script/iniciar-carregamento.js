@@ -115,6 +115,46 @@ async function carregarItensNoModal() {
         selectItem.appendChild(option);
     });
 }
+
+/**
+ * Carrega os motoristas do banco de dados e os popula em um elemento <select>.
+ */
+async function carregarMotoristasNoSelect() {
+    const selectMotorista = document.getElementById('motoristaSelect');
+    if (!selectMotorista) return;
+
+    selectMotorista.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+
+    const { data: motoristas, error } = await supabase
+        .from('motoristas')
+        .select('id, nome')
+        .order('nome', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar motoristas:', error);
+        selectMotorista.innerHTML = '<option value="">Erro ao carregar</option>';
+        return;
+    }
+
+    selectMotorista.innerHTML = '<option value="" disabled selected>Selecione o motorista</option>';
+    motoristas.forEach(motorista => {
+        const option = document.createElement('option');
+        option.value = motorista.id;
+        option.textContent = motorista.nome;
+        selectMotorista.appendChild(option);
+    });
+}
+
+/**
+ * Obtém o nome de um motorista pelo ID.
+ * @param {string} id O ID do motorista.
+ * @returns {Promise<string|null>} O nome do motorista ou null.
+ */
+async function getMotoristaNomeById(id) {
+    const { data, error } = await supabase.from('motoristas').select('nome').eq('id', id).single();
+    return error ? null : data.nome;
+}
+
 /**
  * Salva um novo cliente a partir do modal.
  */
@@ -187,6 +227,41 @@ async function salvarNovoVeiculo(event) {
     // Recarrega a lista de veículos e preenche o campo com a nova placa
     await carregarVeiculosNoDatalist();
     document.getElementById('placa').value = placa;
+}
+
+/**
+ * Salva um novo motorista a partir do modal.
+ */
+async function salvarNovoMotorista(event) {
+    event.preventDefault();
+
+    const nome = document.getElementById('nomeMotoristaModal').value.trim();
+    const nome_completo = document.getElementById('nomeCompletoMotoristaModal').value.trim();
+
+    if (!nome) {
+        alert('⚠️ O campo "Nome" é obrigatório.');
+        return;
+    }
+
+    const { data, error } = await supabase
+        .from('motoristas')
+        .insert([{ nome, nome_completo }])
+        .select('id')
+        .single();
+
+    if (error) {
+        alert('❌ Erro ao salvar motorista.');
+        console.error(error);
+        return;
+    }
+
+    alert('✅ Motorista salvo com sucesso!');
+    document.getElementById('formNovoMotorista').reset();
+    document.getElementById('modalMotorista').style.display = 'none';
+
+    // Recarrega a lista de motoristas e seleciona o novo
+    await carregarMotoristasNoSelect();
+    document.getElementById('motoristaSelect').value = data.id;
 }
 
 /**
@@ -329,11 +404,14 @@ async function salvarCarregamentoCompleto() {
     const semana = document.getElementById('semana').value.trim();
     const data = document.getElementById('dataCarregamento').value;
     const placa = document.getElementById('placa').value.trim();
+    const motoristaId = document.getElementById('motoristaSelect').value;
     const conferente = document.getElementById('conferente').value.trim();
     const supervisor = document.getElementById('supervisor').value.trim();
 
-    if (!semana || !data || !placa || !conferente) {
-        alert('⚠️ Preencha todos os campos do cabeçalho do carregamento.');
+    const motoristaNome = await getMotoristaNomeById(motoristaId);
+
+    if (!semana || !data || !placa || !motoristaId || !conferente) {
+        alert('⚠️ Preencha todos os campos obrigatórios do cabeçalho (Semana, Data, Placa, Motorista, Conferente).');
         return;
     }
     if (carregamentoState.requisicoes.length === 0) {
@@ -344,7 +422,7 @@ async function salvarCarregamentoCompleto() {
     // 2. Insere o cabeçalho do carregamento
     const { data: carregamentoData, error: carregamentoError } = await supabase
         .from('carregamentos')
-        .insert([{ semana, data, placa, conferente_nome: conferente, supervisor_nome: supervisor }])
+        .insert([{ semana, data, placa, motorista_nome: motoristaNome, conferente_nome: conferente, supervisor_nome: supervisor }])
         .select('id')
         .single();
 
@@ -391,6 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarClientesNoSelect();
     carregarVeiculosNoDatalist();
     carregarItensNoModal();
+    carregarMotoristasNoSelect();
 
     // Preenche campos automáticos
     document.getElementById('dataCarregamento').valueAsDate = new Date();
@@ -423,6 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAbrirAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'block'; }
     btnFecharAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'none'; }
 
+    // Lógica para o Modal de Motorista
+    const modalMotorista = document.getElementById('modalMotorista');
+    const btnAbrirMotorista = document.getElementById('btnAbrirModalMotorista');
+    const btnFecharMotorista = document.getElementById('fecharModalMotorista');
+
+    btnAbrirMotorista.onclick = () => { modalMotorista.style.display = 'block'; }
+    btnFecharMotorista.onclick = () => { modalMotorista.style.display = 'none'; }
+
     // Lógica para fechar modais clicando fora
     window.addEventListener('click', (event) => {
         if (event.target == modalCliente) {
@@ -434,11 +521,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target == modalAdicionarItem) {
             modalAdicionarItem.style.display = 'none';
         }
+        if (event.target == modalMotorista) {
+            modalMotorista.style.display = 'none';
+        }
     });
 
     // Event Listeners dos formulários e botões principais
     document.getElementById('formNovoCliente').addEventListener('submit', salvarNovoCliente);
     document.getElementById('formNovoVeiculo').addEventListener('submit', salvarNovoVeiculo);
+    document.getElementById('formNovoMotorista').addEventListener('submit', salvarNovoMotorista);
     document.getElementById('formAdicionarItem').addEventListener('submit', handleAdicionarItemNaRequisicao);
     document.getElementById('btnIncluirRequisicao').addEventListener('click', handleIncluirRequisicao);
     document.getElementById('btnSalvarCarregamento').addEventListener('click', salvarCarregamentoCompleto);
