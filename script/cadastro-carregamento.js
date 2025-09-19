@@ -1,5 +1,32 @@
 import { supabase } from './supabase.js';
 
+// === FUNÇÕES AUXILIARES ===
+
+/**
+ * Busca o último código da tabela de itens e retorna o próximo número.
+ * @returns {Promise<string>} O próximo código como string.
+ */
+async function obterProximoCodigoItem() {
+  const { data, error } = await supabase
+    .from('itens')
+    .select('codigo')
+    .order('codigo', { ascending: false, nullsFirst: false }) // Ordena como texto
+    .limit(1)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
+    console.error('Erro ao obter o próximo código:', error);
+    return null;
+  }
+
+  if (!data || !data.codigo) {
+    return '1'; // Se não houver itens, começa com 1
+  }
+
+  const codigoInt = parseInt(data.codigo, 10);
+  return !isNaN(codigoInt) ? (codigoInt + 1).toString() : '1';
+}
+
 // === ITENS ===
 
 export async function carregarItens() {
@@ -51,24 +78,13 @@ export async function salvarItem(event) {
 
   let codigo = document.getElementById('codigoItem').value.trim();
 
-  if (!codigo) {
-    // Buscar o último código cadastrado e incrementar 1
-    const { data, error } = await supabase
-      .from('itens')
-      .select('codigo')
-      .order('codigo::int', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error) {
+  if (id === '' && !codigo) { // Apenas gera código para novos itens
+    codigo = await obterProximoCodigoItem();
+    if (codigo === null) {
       alert('❌ Erro ao obter o próximo código.');
-      console.error(error);
       return;
     }
-
-    codigo = (parseInt(data.codigo, 10) + 1).toString();
   }
-
   let result;
   if (id) {
     // Update
@@ -125,36 +141,22 @@ export async function editarItem(id) {
 }
 
 export async function incluirItem() {
-  // Buscar o último código cadastrado e incrementar 1
-  const { data, error } = await supabase
-    .from('itens')
-    .select('codigo')
-    .order('codigo::int', { ascending: false })
-    .limit(1);
-
-  let nextCodigo = '1'; // Se não houver nenhum, começa com 1
-
-  if (error) {
-    console.error('Erro ao obter o próximo código:', error);
-  } else if (data && data.length > 0) {
-    // data é um array com um único item devido ao limit(1)
-    const codigoInt = parseInt(data[0].codigo, 10);
-    if (!isNaN(codigoInt)) {
-      nextCodigo = (codigoInt + 1).toString();
-    }
+  const nextCodigo = await obterProximoCodigoItem();
+  if (nextCodigo === null) {
+    alert('❌ Erro ao obter o próximo código para o item.');
+    return;
   }
+
+  // Limpar e preparar o formulário para um novo item
+  document.getElementById('formItem').reset();
+  document.getElementById('formItem').dataset.itemId = '';
 
   // Preencher o código e habilitar os campos
   document.getElementById('codigoItem').value = nextCodigo;
-  document.getElementById('codigoItem').disabled = false; // Código sempre desabilitado
+  document.getElementById('codigoItem').disabled = true; // Código gerado não deve ser editado
   document.getElementById('nomeItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
-
-  // Limpar outros campos
-  document.getElementById('nomeItem').value = '';
-  document.getElementById('tipoItem').value = '';
-  document.getElementById('formItem').dataset.itemId = '';
 }
 
 export async function excluirItem(id) {
