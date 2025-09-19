@@ -10,7 +10,7 @@ async function obterProximoCodigoItem() {
   const { data, error } = await supabase
     .from('itens')
     .select('codigo')
-    .order('codigo', { ascending: false, nullsFirst: false }) // Ordena como texto
+    .order('codigo', { ascending: false, nullsFirst: false, foreignTable: undefined }) // Ordena como número
     .limit(1)
     .single();
 
