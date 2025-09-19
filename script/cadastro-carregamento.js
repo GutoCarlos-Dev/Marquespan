@@ -56,7 +56,7 @@ export async function salvarItem(event) {
     const { data, error } = await supabase
       .from('itens')
       .select('codigo')
-      .order('codigo', { ascending: false })
+      .order('codigo::int', { ascending: false })
       .limit(1)
       .single();
 
@@ -129,7 +129,7 @@ export async function incluirItem() {
   const { data, error } = await supabase
     .from('itens')
     .select('codigo')
-    .order('codigo', { ascending: false })
+    .order('codigo::int', { ascending: false })
     .limit(1);
 
   let nextCodigo = '1'; // Se não houver nenhum, começa com 1
