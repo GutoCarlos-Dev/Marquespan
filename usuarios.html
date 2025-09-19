@@ -129,7 +129,6 @@
     window.onload = () => {
       document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
       document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
-      document.getElementById('formUsuario').addEventListener('submit', cadastrarUsuario); // ✅ conecta o formulário
       document.getElementById('formUsuario').addEventListener('submit', (e) => {
         const id = document.getElementById('formUsuario').dataset.usuarioId;
         if (id) {
