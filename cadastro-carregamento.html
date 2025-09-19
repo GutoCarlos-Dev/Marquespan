@@ -130,8 +130,18 @@
   </script>
 
   <script type="module">
-    // Placeholder for item and client management
-    // Implement with Supabase later
+    import { carregarItens, salvarItem, editarItem, excluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente } from './script/cadastro-carregamento.js';
+
+    window.onload = () => {
+      document.getElementById('formItem').addEventListener('submit', salvarItem);
+      document.getElementById('formCliente').addEventListener('submit', salvarCliente);
+      window.editarItem = editarItem;
+      window.excluirItem = excluirItem;
+      window.editarCliente = editarCliente;
+      window.excluirCliente = excluirCliente;
+      carregarItens();
+      carregarClientes();
+    };
   </script>
 </body>
 </html>
