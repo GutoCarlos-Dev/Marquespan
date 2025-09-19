@@ -49,34 +49,63 @@
 
     <section class="secao">
       <h3>📋 Detalhes do Carregamento</h3>
-      <form id="formCarregamento" class="formulario">
+      <form id="formCabecalhoCarregamento" class="formulario">
+        <label for="semana">Semana:</label>
+        <input type="text" id="semana" placeholder="Número da Semana" required>
+        <label for="dataCarregamento">Data:</label>
+        <input type="date" id="dataCarregamento" required>
         <div class="form-group-com-botao">
           <label for="placa">Placa do Veículo:</label>
           <input type="text" id="placa" placeholder="Digite ou selecione a placa" list="placasVeiculosList" required>
           <datalist id="placasVeiculosList"></datalist>
           <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
         </div>
+        <label for="conferente">Conferente:</label>
+        <input type="text" id="conferente" placeholder="Usuário logado" required disabled>
+        <label for="supervisor">Supervisor:</label>
+        <input type="text" id="supervisor" placeholder="Nome do Supervisor">
+      </form>
+    </section>
+
+    <section class="secao">
+      <h3>📝 Dados das Requisições</h3>
+      <div id="formRequisicao" class="formulario">
         <div class="form-group-com-botao">
-          <label for="clienteSelect">Cliente:</label>
-          <select id="clienteSelect" required>
+          <label for="clienteSelectRequisicao">Cliente:</label>
+          <select id="clienteSelectRequisicao">
             <option value="" disabled selected>Carregando clientes...</option>
-            <!-- Opções carregadas dinamicamente pelo script -->
           </select>
           <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
         </div>
-        <label for="requisicao">Requisição:</label>
-        <input type="text" id="requisicao" placeholder="Número da Requisição" required>
-        <div class="botoes-form">
-          <button type="button" id="btnAdicionarItem">➕ Adicionar Item</button>
-          <button type="submit" id="btnIniciarCarregamento">🚚 Iniciar Carregamento</button>
-        </div>
-      </form>
+        <label for="motivoRequisicao">Motivo:</label>
+        <select id="motivoRequisicao">
+          <option value="Aumento">Aumento</option>
+          <option value="Troca">Troca</option>
+          <option value="Retirada Parcial">Retirada Parcial</option>
+          <option value="Retirada Total">Retirada Total</option>
+          <option value="Aumento+Troca">Aumento+Troca</option>
+          <option value="Cliente Novo">Cliente Novo</option>
+        </select>
 
-      <h3>📦 Itens do Carregamento</h3>
-      <div id="listaItens"></div>
+        <h4>Itens da Requisição</h4>
+        <div class="table-container-small">
+          <table id="tabelaItensRequisicaoAtual"></table>
+        </div>
+        <div class="botoes-form">
+          <button type="button" id="btnAbrirModalAdicionarItem">➕ Adicionar Item à Requisição</button>
+          <button type="button" id="btnIncluirRequisicao">➕ Incluir Requisição ao Carregamento</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao">
+      <h3>📦 Itens Carregados (Total)</h3>
+      <div class="table-container">
+        <table id="tabelaItensCarregados"></table>
+      </div>
 
       <div class="botoes-form">
-        <button type="button" onclick="window.location.href='buscar-carregamento.html'">📋 Ver Carregamentos</button>
+        <button type="button" id="btnSalvarCarregamento">🚚 Salvar Carregamento Completo</button>
       </div>
     </section>
 
@@ -129,6 +158,25 @@
         </select>
         <div class="botoes-form">
           <button type="submit">✅ Salvar Veículo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Adicionar Item à Requisição -->
+  <div id="modalAdicionarItem" class="modal">
+    <div class="modal-conteudo">
+      <span class="fechar-modal" id="fecharModalAdicionarItem">&times;</span>
+      <h3>📦 Adicionar Item</h3>
+      <form id="formAdicionarItem" class="formulario">
+        <label for="itemSelectModal">Item:</label>
+        <select id="itemSelectModal" required>
+          <option value="" disabled selected>Carregando itens...</option>
+        </select>
+        <label for="quantidadeItemModal">Quantidade:</label>
+        <input type="number" id="quantidadeItemModal" min="1" value="1" required>
+        <div class="botoes-form">
+          <button type="submit">➕ Adicionar</button>
         </div>
       </form>
     </div>

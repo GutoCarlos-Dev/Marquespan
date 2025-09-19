@@ -108,3 +108,28 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+/* Estilos para a tabela de itens da requisição atual */
+.table-container-small {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.table-container-small table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container-small th,
+.table-container-small td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table-container-small th {
+  background-color: #f8f8f8;
+}

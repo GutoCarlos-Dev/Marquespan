@@ -1,10 +1,23 @@
 import { supabase } from './supabase.js';
 
+// === ESTADO DA APLICAÇÃO ===
+let carregamentoState = {
+    cabecalho: {},
+    requisicoes: [],
+};
+
+let requisicaoAtual = {
+    cliente_id: null,
+    cliente_nome: '',
+    motivo: '',
+    itens: [],
+};
+
 /**
  * Carrega os clientes do banco de dados e os popula em um elemento <select>.
  */
 async function carregarClientesNoSelect() {
-    const selectCliente = document.getElementById('clienteSelect');
+    const selectCliente = document.getElementById('clienteSelectRequisicao');
     if (!selectCliente) return;
 
     // Limpa as opções existentes (exceto a primeira "Carregando...")
@@ -39,7 +52,7 @@ async function carregarClientesNoSelect() {
         // Adiciona uma opção padrão para selecionar
         const defaultOption = document.createElement('option');
         defaultOption.textContent = 'Selecione o cliente';
-        defaultOption.value = '';
+        defaultOption.value = null;
         selectCliente.insertBefore(defaultOption, selectCliente.firstChild);
         clientes.forEach(cliente => {
             const option = document.createElement('option');
@@ -75,6 +88,34 @@ async function carregarVeiculosNoDatalist() {
 }
 
 /**
+ * Carrega os itens cadastrados e os popula no modal de adicionar item.
+ */
+async function carregarItensNoModal() {
+    const selectItem = document.getElementById('itemSelectModal');
+    if (!selectItem) return;
+
+    selectItem.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+
+    const { data: itens, error } = await supabase
+        .from('itens')
+        .select('id, codigo, nome')
+        .order('nome', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar itens:', error);
+        selectItem.innerHTML = '<option value="">Erro ao carregar</option>';
+        return;
+    }
+
+    selectItem.innerHTML = '<option value="" disabled selected>Selecione um item</option>';
+    itens.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = `${item.codigo} - ${item.nome}`;
+        selectItem.appendChild(option);
+    });
+}
+/**
  * Salva um novo cliente a partir do modal.
  */
 async function salvarNovoCliente(event) {
@@ -108,7 +149,7 @@ async function salvarNovoCliente(event) {
 
     // Recarrega a lista de clientes e seleciona o novo cliente
     await carregarClientesNoSelect();
-    document.getElementById('clienteSelect').value = data.id;
+    document.getElementById('clienteSelectRequisicao').value = data.id;
 }
 
 /**
@@ -148,10 +189,201 @@ async function salvarNovoVeiculo(event) {
     document.getElementById('placa').value = placa;
 }
 
+/**
+ * Adiciona um item à requisição que está sendo montada.
+ */
+function handleAdicionarItemNaRequisicao(event) {
+    event.preventDefault();
+    const select = document.getElementById('itemSelectModal');
+    const itemId = select.value;
+    const quantidade = document.getElementById('quantidadeItemModal').value;
+
+    if (!itemId || !quantidade || quantidade < 1) {
+        alert('⚠️ Selecione um item e informe uma quantidade válida.');
+        return;
+    }
+
+    const itemNome = select.options[select.selectedIndex].text;
+
+    // Verifica se o item já foi adicionado
+    const itemExistente = requisicaoAtual.itens.find(i => i.item_id === itemId);
+    if (itemExistente) {
+        itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(quantidade);
+    } else {
+        requisicaoAtual.itens.push({
+            item_id: itemId,
+            item_nome: itemNome,
+            quantidade: parseInt(quantidade),
+        });
+    }
+
+    renderizarItensRequisicaoAtual();
+    document.getElementById('modalAdicionarItem').style.display = 'none';
+    document.getElementById('formAdicionarItem').reset();
+}
+
+/**
+ * Renderiza a tabela de itens da requisição em andamento.
+ */
+function renderizarItensRequisicaoAtual() {
+    const tabela = document.getElementById('tabelaItensRequisicaoAtual');
+    tabela.innerHTML = `<thead><tr><th>Item</th><th>Qtd</th><th>Ação</th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    requisicaoAtual.itens.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.item_nome}</td>
+            <td>${item.quantidade}</td>
+            <td><button type="button" class="btn-remover-item" data-index="${index}">🗑️</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    tabela.appendChild(tbody);
+
+    // Adiciona event listener para os botões de remover
+    document.querySelectorAll('.btn-remover-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const indexToRemove = e.target.closest('button').dataset.index;
+            requisicaoAtual.itens.splice(indexToRemove, 1);
+            renderizarItensRequisicaoAtual();
+        });
+    });
+}
+
+/**
+ * Adiciona a requisição montada ao carregamento principal.
+ */
+function handleIncluirRequisicao() {
+    const clienteSelect = document.getElementById('clienteSelectRequisicao');
+    requisicaoAtual.cliente_id = clienteSelect.value;
+    requisicaoAtual.cliente_nome = clienteSelect.options[clienteSelect.selectedIndex].text;
+    requisicaoAtual.motivo = document.getElementById('motivoRequisicao').value;
+
+    if (!requisicaoAtual.cliente_id) {
+        alert('⚠️ Selecione um cliente para a requisição.');
+        return;
+    }
+    if (requisicaoAtual.itens.length === 0) {
+        alert('⚠️ Adicione pelo menos um item à requisição.');
+        return;
+    }
+
+    carregamentoState.requisicoes.push({ ...requisicaoAtual });
+    renderizarTabelaResumo();
+
+    // Limpa para a próxima requisição
+    requisicaoAtual = { cliente_id: null, cliente_nome: '', motivo: '', itens: [] };
+    document.getElementById('clienteSelectRequisicao').value = null;
+    renderizarItensRequisicaoAtual();
+    alert('✅ Requisição incluída no carregamento!');
+}
+
+/**
+ * Renderiza a tabela de resumo com todos os itens de todas as requisições.
+ */
+function renderizarTabelaResumo() {
+    const tabela = document.getElementById('tabelaItensCarregados');
+    tabela.innerHTML = '<thead><tr><th>Item</th><th>Quantidade Total</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+
+    const itensAgrupados = {};
+
+    carregamentoState.requisicoes.forEach(req => {
+        req.itens.forEach(item => {
+            if (itensAgrupados[item.item_nome]) {
+                itensAgrupados[item.item_nome] += item.quantidade;
+            } else {
+                itensAgrupados[item.item_nome] = item.quantidade;
+            }
+        });
+    });
+
+    for (const nomeItem in itensAgrupados) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${nomeItem}</td><td>${itensAgrupados[nomeItem]}</td>`;
+        tbody.appendChild(tr);
+    }
+    tabela.appendChild(tbody);
+}
+
+/**
+ * Salva o carregamento completo no banco de dados.
+ */
+async function salvarCarregamentoCompleto() {
+    // 1. Validações
+    const semana = document.getElementById('semana').value.trim();
+    const data = document.getElementById('dataCarregamento').value;
+    const placa = document.getElementById('placa').value.trim();
+    const conferente = document.getElementById('conferente').value.trim();
+    const supervisor = document.getElementById('supervisor').value.trim();
+
+    if (!semana || !data || !placa || !conferente) {
+        alert('⚠️ Preencha todos os campos do cabeçalho do carregamento.');
+        return;
+    }
+    if (carregamentoState.requisicoes.length === 0) {
+        alert('⚠️ Adicione pelo menos uma requisição ao carregamento.');
+        return;
+    }
+
+    // 2. Insere o cabeçalho do carregamento
+    const { data: carregamentoData, error: carregamentoError } = await supabase
+        .from('carregamentos')
+        .insert([{ semana, data, placa, conferente_nome: conferente, supervisor_nome: supervisor }])
+        .select('id')
+        .single();
+
+    if (carregamentoError) {
+        alert('❌ Erro ao salvar o cabeçalho do carregamento.');
+        console.error(carregamentoError);
+        return;
+    }
+
+    const carregamentoId = carregamentoData.id;
+
+    // 3. Insere as requisições e seus itens
+    for (const req of carregamentoState.requisicoes) {
+        const { data: requisicaoData, error: requisicaoError } = await supabase
+            .from('requisicoes')
+            .insert([{ carregamento_id: carregamentoId, cliente_id: req.cliente_id, motivo: req.motivo }])
+            .select('id')
+            .single();
+
+        if (requisicaoError) {
+            console.error('Erro ao salvar requisição:', requisicaoError);
+            continue; // Pula para a próxima requisição
+        }
+
+        const requisicaoId = requisicaoData.id;
+        const itensParaInserir = req.itens.map(item => ({
+            requisicao_id: requisicaoId,
+            item_id: item.item_id,
+            quantidade: item.quantidade,
+        }));
+
+        const { error: itensError } = await supabase.from('requisicao_itens').insert(itensParaInserir);
+        if (itensError) {
+            console.error('Erro ao salvar itens da requisição:', itensError);
+        }
+    }
+
+    alert('✅ Carregamento salvo com sucesso!');
+    window.location.reload(); // Recarrega a página para um novo carregamento
+}
+
 // Executa quando o DOM está totalmente carregado
 document.addEventListener('DOMContentLoaded', () => {
     carregarClientesNoSelect();
     carregarVeiculosNoDatalist();
+    carregarItensNoModal();
+
+    // Preenche campos automáticos
+    document.getElementById('dataCarregamento').valueAsDate = new Date();
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    if (usuario && usuario.nome) {
+        document.getElementById('conferente').value = usuario.nome;
+    }
 
     // Lógica para o Modal de Clientes
     const modalCliente = document.getElementById('modalCliente');
@@ -169,6 +401,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAbrirVeiculo.onclick = () => { modalVeiculo.style.display = 'block'; }
     btnFecharVeiculo.onclick = () => { modalVeiculo.style.display = 'none'; }
 
+    // Lógica para o Modal de Adicionar Item
+    const modalAdicionarItem = document.getElementById('modalAdicionarItem');
+    const btnAbrirAdicionarItem = document.getElementById('btnAbrirModalAdicionarItem');
+    const btnFecharAdicionarItem = document.getElementById('fecharModalAdicionarItem');
+
+    btnAbrirAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'block'; }
+    btnFecharAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'none'; }
+
     // Lógica para fechar modais clicando fora
     window.addEventListener('click', (event) => {
         if (event.target == modalCliente) {
@@ -177,8 +417,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target == modalVeiculo) {
             modalVeiculo.style.display = 'none';
         }
+        if (event.target == modalAdicionarItem) {
+            modalAdicionarItem.style.display = 'none';
+        }
     });
 
+    // Event Listeners dos formulários e botões principais
     document.getElementById('formNovoCliente').addEventListener('submit', salvarNovoCliente);
     document.getElementById('formNovoVeiculo').addEventListener('submit', salvarNovoVeiculo);
+    document.getElementById('formAdicionarItem').addEventListener('submit', handleAdicionarItemNaRequisicao);
+    document.getElementById('btnIncluirRequisicao').addEventListener('click', handleIncluirRequisicao);
+    document.getElementById('btnSalvarCarregamento').addEventListener('click', salvarCarregamentoCompleto);
+
+    // Renderiza tabelas vazias inicialmente
+    renderizarItensRequisicaoAtual();
+    renderizarTabelaResumo();
 });
