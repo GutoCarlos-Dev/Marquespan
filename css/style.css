@@ -39,3 +39,30 @@
 .table-container tbody tr:last-child td {
   border-bottom: none;
 }
+
+/* Estilos para o formulário de iniciar carregamento */
+.form-group-com-botao {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Espaço entre o select e o botão */
+  margin-bottom: 15px; /* Espaçamento padrão do formulário */
+}
+
+.form-group-com-botao select {
+  flex-grow: 1; /* Faz o select ocupar o espaço disponível */
+}
+
+.btn-adicionar-pequeno {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  font-size: 1rem;
+  background-color: #28a745; /* Verde */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}

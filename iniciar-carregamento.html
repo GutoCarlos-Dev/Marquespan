@@ -5,6 +5,7 @@
   <title>Iniciar Carregamento - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -49,11 +50,14 @@
     <section class="secao">
       <h3>📋 Detalhes do Carregamento</h3>
       <form id="formCarregamento" class="formulario">
-        <label for="clienteSelect">Cliente:</label>
-        <select id="clienteSelect" required>
-          <option value="" disabled selected>Selecione o cliente</option>
-          <!-- Options loaded dynamically -->
-        </select>
+        <div class="form-group-com-botao">
+          <label for="clienteSelect">Cliente:</label>
+          <select id="clienteSelect" required>
+            <option value="" disabled selected>Carregando clientes...</option>
+            <!-- Opções carregadas dinamicamente pelo script -->
+          </select>
+          <a href="cadastro-carregamento.html#clientes" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</a>
+        </div>
         <label for="placa">Placa do Veículo:</label>
         <input type="text" id="placa" placeholder="Placa" list="placasVeiculosList" required>
         <label for="requisicao">Requisição:</label>
@@ -98,9 +102,6 @@
     });
   </script>
 
-  <script type="module">
-    // Placeholder for loading management
-    // Implement with Supabase later
-  </script>
+  <script type="module" src="./script/iniciar-carregamento.js"></script>
 </body>
 </html>

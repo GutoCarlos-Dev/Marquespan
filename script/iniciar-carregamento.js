@@ -1,70 +1,42 @@
 import { supabase } from './supabase.js';
 
-export async function carregarPlacasVeiculos() {
-  const inputPlaca = document.getElementById('placa');
-  const dataListId = 'placasVeiculosList';
+/**
+ * Carrega os clientes do banco de dados e os popula em um elemento <select>.
+ */
+async function carregarClientesNoSelect() {
+    const selectCliente = document.getElementById('clienteSelect');
+    if (!selectCliente) return;
 
-  // Criar datalist se não existir
-  let dataList = document.getElementById(dataListId);
-  if (!dataList) {
-    dataList = document.createElement('datalist');
-    dataList.id = dataListId;
-    document.body.appendChild(dataList);
-  }
+    const { data: clientes, error } = await supabase
+        .from('clientes')
+        .select('id, codigo, nome')
+        .order('nome', { ascending: true });
 
-  // Associar datalist ao input
-  inputPlaca.setAttribute('list', dataListId);
+    if (error) {
+        console.error('Erro ao carregar clientes:', error);
+        const option = document.createElement('option');
+        option.textContent = 'Erro ao carregar clientes';
+        option.disabled = true;
+        selectCliente.appendChild(option);
+        return;
+    }
 
-  // Buscar placas no banco
-  const { data, error } = await supabase
-    .from('veiculos')
-    .select('placa')
-    .order('placa', { ascending: true });
-
-  if (error) {
-    console.error('Erro ao carregar placas:', error);
-    return;
-  }
-
-  // Limpar datalist
-  dataList.innerHTML = '';
-
-  // Popular datalist com opções
-  data.forEach(veiculo => {
-    const option = document.createElement('option');
-    option.value = veiculo.placa;
-    dataList.appendChild(option);
-  });
+    if (clientes.length === 0) {
+        const option = document.createElement('option');
+        option.textContent = 'Nenhum cliente cadastrado';
+        option.disabled = true;
+        selectCliente.appendChild(option);
+    } else {
+        clientes.forEach(cliente => {
+            const option = document.createElement('option');
+            option.value = cliente.id; // Usar o ID como valor
+            option.textContent = `${cliente.codigo} - ${cliente.nome}`; // Exibir código e nome
+            selectCliente.appendChild(option);
+        });
+    }
 }
 
-export async function carregarClientes() {
-  const selectCliente = document.getElementById('clienteSelect');
-
-  // Limpar opções existentes, exceto a primeira
-  selectCliente.innerHTML = '<option value="" disabled selected>Selecione o cliente</option>';
-
-  // Buscar clientes no banco
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('id, nome')
-    .order('nome', { ascending: true });
-
-  if (error) {
-    console.error('Erro ao carregar clientes:', error);
-    return;
-  }
-
-  // Popular select com opções
-  data.forEach(cliente => {
-    const option = document.createElement('option');
-    option.value = cliente.id;
-    option.textContent = cliente.nome;
-    selectCliente.appendChild(option);
-  });
-}
-
-// Inicializar ao carregar a página
+// Executa quando o DOM está totalmente carregado
 document.addEventListener('DOMContentLoaded', () => {
-  carregarPlacasVeiculos();
-  carregarClientes();
+    carregarClientesNoSelect();
 });
