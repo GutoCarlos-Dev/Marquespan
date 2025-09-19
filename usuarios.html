@@ -43,8 +43,13 @@
         <input type="text" id="codigo" placeholder="Código" required>
         <label for="nome">Nome:</label>
         <input type="text" id="nome" placeholder="Nome" required>
-        <label for="funcao">Função:</label>
-        <input type="text" id="funcao" placeholder="Função" required>
+        <label for="funcao">Nível:</label>
+        <select id="funcao" required>
+          <option value="" disabled selected>Selecione o nível</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Matriz">Matriz</option>
+          <option value="Operador">Operador</option>
+        </select>
         <label for="senha">Senha:</label>
         <input type="password" id="senha" placeholder="Senha" required>
 
@@ -71,7 +76,7 @@
           <tr>
             <th>Código</th>
             <th>Nome</th>
-            <th>Função</th>
+            <th>Nível</th>
             <th>Ações</th>
           </tr>
         </thead>
