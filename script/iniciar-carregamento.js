@@ -51,6 +51,30 @@ async function carregarClientesNoSelect() {
 }
 
 /**
+ * Carrega as placas dos veículos e as popula em um elemento <datalist>.
+ */
+async function carregarVeiculosNoDatalist() {
+    const datalist = document.getElementById('placasVeiculosList');
+    if (!datalist) return;
+
+    datalist.innerHTML = ''; // Limpa opções antigas
+
+    const { data: veiculos, error } = await supabase
+        .from('veiculos')
+        .select('placa')
+        .order('placa', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar veículos:', error);
+        return;
+    }
+
+    veiculos.forEach(veiculo => {
+        datalist.innerHTML += `<option value="${veiculo.placa}"></option>`;
+    });
+}
+
+/**
  * Salva um novo cliente a partir do modal.
  */
 async function salvarNovoCliente(event) {
@@ -87,27 +111,74 @@ async function salvarNovoCliente(event) {
     document.getElementById('clienteSelect').value = data.id;
 }
 
+/**
+ * Salva um novo veículo a partir do modal.
+ */
+async function salvarNovoVeiculo(event) {
+    event.preventDefault();
+
+    const filial = document.getElementById('filialVeiculoModal').value.trim();
+    const placa = document.getElementById('placaVeiculoModal').value.trim().toUpperCase();
+    const modelo = document.getElementById('modeloVeiculoModal').value.trim();
+    const renavan = document.getElementById('renavanVeiculoModal').value.trim();
+    const tipo = document.getElementById('tipoVeiculoModal').value.trim();
+    const situacao = document.getElementById('situacaoVeiculoModal').value;
+
+    if (!filial || !placa || !modelo || !renavan || !tipo) {
+        alert('⚠️ Preencha todos os campos.');
+        return;
+    }
+
+    const { error } = await supabase
+        .from('veiculos')
+        .insert([{ filial, placa, modelo, renavan, tipo, situacao }]);
+
+    if (error) {
+        alert('❌ Erro ao salvar veículo. Verifique se a placa já existe.');
+        console.error(error);
+        return;
+    }
+
+    alert('✅ Veículo salvo com sucesso!');
+    document.getElementById('formNovoVeiculo').reset();
+    document.getElementById('modalVeiculo').style.display = 'none';
+
+    // Recarrega a lista de veículos e preenche o campo com a nova placa
+    await carregarVeiculosNoDatalist();
+    document.getElementById('placa').value = placa;
+}
+
 // Executa quando o DOM está totalmente carregado
 document.addEventListener('DOMContentLoaded', () => {
     carregarClientesNoSelect();
+    carregarVeiculosNoDatalist();
 
-    const modal = document.getElementById('modalCliente');
-    const btnAbrir = document.getElementById('btnAbrirModalCliente');
-    const btnFechar = document.getElementById('fecharModalCliente');
+    // Lógica para o Modal de Clientes
+    const modalCliente = document.getElementById('modalCliente');
+    const btnAbrirCliente = document.getElementById('btnAbrirModalCliente');
+    const btnFecharCliente = document.getElementById('fecharModalCliente');
 
-    btnAbrir.onclick = () => {
-        modal.style.display = 'block';
-    }
+    btnAbrirCliente.onclick = () => { modalCliente.style.display = 'block'; }
+    btnFecharCliente.onclick = () => { modalCliente.style.display = 'none'; }
 
-    btnFechar.onclick = () => {
-        modal.style.display = 'none';
-    }
+    // Lógica para o Modal de Veículos
+    const modalVeiculo = document.getElementById('modalVeiculo');
+    const btnAbrirVeiculo = document.getElementById('btnAbrirModalVeiculo');
+    const btnFecharVeiculo = document.getElementById('fecharModalVeiculo');
 
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
+    btnAbrirVeiculo.onclick = () => { modalVeiculo.style.display = 'block'; }
+    btnFecharVeiculo.onclick = () => { modalVeiculo.style.display = 'none'; }
+
+    // Lógica para fechar modais clicando fora
+    window.addEventListener('click', (event) => {
+        if (event.target == modalCliente) {
+            modalCliente.style.display = 'none';
         }
-    }
+        if (event.target == modalVeiculo) {
+            modalVeiculo.style.display = 'none';
+        }
+    });
 
     document.getElementById('formNovoCliente').addEventListener('submit', salvarNovoCliente);
+    document.getElementById('formNovoVeiculo').addEventListener('submit', salvarNovoVeiculo);
 });

@@ -58,8 +58,12 @@
           </select>
           <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
         </div>
-        <label for="placa">Placa do Veículo:</label>
-        <input type="text" id="placa" placeholder="Placa" list="placasVeiculosList" required>
+        <div class="form-group-com-botao">
+          <label for="placa">Placa do Veículo:</label>
+          <input type="text" id="placa" placeholder="Digite ou selecione a placa" list="placasVeiculosList" required>
+          <datalist id="placasVeiculosList"></datalist>
+          <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
+        </div>
         <label for="requisicao">Requisição:</label>
         <input type="text" id="requisicao" placeholder="Número da Requisição" required>
         <div class="botoes-form">
@@ -102,6 +106,33 @@
     </div>
   </div>
 
+  <!-- Modal Cadastro Veículo -->
+  <div id="modalVeiculo" class="modal">
+    <div class="modal-conteudo">
+      <span class="fechar-modal" id="fecharModalVeiculo">&times;</span>
+      <h3>🚚 Cadastrar Novo Veículo</h3>
+      <form id="formNovoVeiculo" class="formulario">
+        <label for="filialVeiculoModal">Filial:</label>
+        <input type="text" id="filialVeiculoModal" placeholder="Filial do Veículo" required>
+        <label for="placaVeiculoModal">Placa:</label>
+        <input type="text" id="placaVeiculoModal" placeholder="Placa do Veículo" required>
+        <label for="modeloVeiculoModal">Modelo:</label>
+        <input type="text" id="modeloVeiculoModal" placeholder="Modelo do Veículo" required>
+        <label for="renavanVeiculoModal">Renavan:</label>
+        <input type="text" id="renavanVeiculoModal" placeholder="Renavan" required>
+        <label for="tipoVeiculoModal">Tipo:</label>
+        <input type="text" id="tipoVeiculoModal" placeholder="Ex: Caminhão, Carro" required>
+        <label for="situacaoVeiculoModal">Situação:</label>
+        <select id="situacaoVeiculoModal" required>
+          <option value="Ativo">Ativo</option>
+          <option value="Inativo">Inativo</option>
+        </select>
+        <div class="botoes-form">
+          <button type="submit">✅ Salvar Veículo</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- 🚀 Scripts -->
   <script>
