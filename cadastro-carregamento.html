@@ -5,6 +5,7 @@
   <title>Cadastro Carregamento - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="style.css"> <!-- Adicione esta linha para vincular o seu novo arquivo CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -67,17 +68,19 @@
           <button type="submit" id="btnSalvarItem" disabled>✅ Salvar Item</button>
         </div>
       </form>
-      <table id="tabelaItens" class="tabela-usuarios">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Tipo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaItens"></tbody>
-      </table>
+      <div class="table-container">
+        <table id="tabelaItens" class="tabela-usuarios">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>Tipo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaItens"></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="clientes" class="secao">
@@ -95,18 +98,20 @@
           <button type="submit" id="btnSalvarCliente">✅ Salvar Cliente</button>
         </div>
       </form>
-      <table id="tabelaClientes" class="tabela-usuarios">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Cidade</th>
-            <th>Estado</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaClientes"></tbody>
-      </table>
+      <div class="table-container">
+        <table id="tabelaClientes" class="tabela-usuarios">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>Cidade</th>
+              <th>Estado</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaClientes"></tbody>
+        </table>
+      </div>
     </section>
 
     <footer class="footer">

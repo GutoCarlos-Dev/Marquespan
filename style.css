@@ -1,18 +1,20 @@
-/* Estilos para a tabela de itens com barra de rolagem */
-.itens-table-container {
+/* Estilos para containers de tabela com barra de rolagem */
+.table-container {
   max-height: 400px; /* Altura máxima antes de aparecer a barra de rolagem */
   overflow-y: auto; /* Adiciona a barra de rolagem vertical quando o conteúdo excede a altura */
   border: 1px solid #e0e0e0; /* Borda opcional para o container */
   border-radius: 5px; /* Cantos arredondados opcionais */
-  margin-top: 15px; /* Espaçamento superior opcional */
+  /* Para diminuir e centralizar a tabela */
+  max-width: 90%; /* Define a largura máxima do container (ajuste conforme necessário) */
+  margin: 25px auto; /* Centraliza horizontalmente e adiciona espaçamento */
 }
 
-.itens-table-container table {
+.table-container table {
   width: 100%;
   border-collapse: collapse; /* Garante que as bordas das células se unam */
 }
 
-.itens-table-container thead {
+.table-container thead {
   position: sticky; /* Faz o cabeçalho fixar no topo ao rolar */
   top: 0;
   background-color: #f2f2f2; /* Cor de fundo para o cabeçalho fixo */
@@ -20,20 +22,20 @@
   box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Sombra sutil para o cabeçalho */
 }
 
-.itens-table-container th,
-.itens-table-container td {
+.table-container th,
+.table-container td {
   padding: 10px 15px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
 }
 
-.itens-table-container th {
+.table-container th {
   background-color: #f2f2f2; /* Cor de fundo para os cabeçalhos */
   font-weight: bold;
   color: #333;
 }
 
 /* Opcional: Estilo para a última linha da tabela para remover a borda inferior */
-.itens-table-container tbody tr:last-child td {
+.table-container tbody tr:last-child td {
   border-bottom: none;
 }
