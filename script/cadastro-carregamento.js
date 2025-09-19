@@ -23,7 +23,7 @@ async function obterProximoCodigoItem() {
     return '1'; // Se não houver itens, começa com 1
   }
 
-  const codigoInt = parseInt(data.codigo, 10);
+  const codigoInt = parseInt(data.codigo, '');
   return !isNaN(codigoInt) ? (codigoInt + 1).toString() : '1';
 }
 
