@@ -196,23 +196,32 @@ function handleAdicionarItemNaRequisicao(event) {
     event.preventDefault();
     const select = document.getElementById('itemSelectModal');
     const itemId = select.value;
+    const modelo = document.getElementById('modeloItemModal').value.trim();
+    const tipo = document.getElementById('tipoItemModal').value;
     const quantidade = document.getElementById('quantidadeItemModal').value;
 
-    if (!itemId || !quantidade || quantidade < 1) {
-        alert('⚠️ Selecione um item e informe uma quantidade válida.');
+    if (!itemId || !modelo || !tipo || !quantidade || quantidade < 1) {
+        alert('⚠️ Preencha todos os campos do item e informe uma quantidade válida.');
         return;
     }
 
     const itemNome = select.options[select.selectedIndex].text;
 
-    // Verifica se o item já foi adicionado
-    const itemExistente = requisicaoAtual.itens.find(i => i.item_id === itemId);
+    // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
+    const itemExistente = requisicaoAtual.itens.find(i =>
+        i.item_id === itemId &&
+        i.modelo.toLowerCase() === modelo.toLowerCase() &&
+        i.tipo === tipo
+    );
+
     if (itemExistente) {
         itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(quantidade);
     } else {
         requisicaoAtual.itens.push({
             item_id: itemId,
             item_nome: itemNome,
+            modelo: modelo,
+            tipo: tipo,
             quantidade: parseInt(quantidade),
         });
     }
@@ -227,15 +236,17 @@ function handleAdicionarItemNaRequisicao(event) {
  */
 function renderizarItensRequisicaoAtual() {
     const tabela = document.getElementById('tabelaItensRequisicaoAtual');
-    tabela.innerHTML = `<thead><tr><th>Item</th><th>Qtd</th><th>Ação</th></tr></thead>`;
+    tabela.innerHTML = `<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Qtd</th><th>Ação</th></tr></thead>`;
     const tbody = document.createElement('tbody');
 
     requisicaoAtual.itens.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${item.item_nome}</td>
+            <td>${item.modelo}</td>
+            <td>${item.tipo}</td>
             <td>${item.quantidade}</td>
-            <td><button type="button" class="btn-remover-item" data-index="${index}">🗑️</button></td>
+            <td><button type="button" class="btn-remover-item" data-index="${index}" title="Remover item">🗑️</button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -284,24 +295,27 @@ function handleIncluirRequisicao() {
  */
 function renderizarTabelaResumo() {
     const tabela = document.getElementById('tabelaItensCarregados');
-    tabela.innerHTML = '<thead><tr><th>Item</th><th>Quantidade Total</th></tr></thead>';
+    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
 
     carregamentoState.requisicoes.forEach(req => {
         req.itens.forEach(item => {
-            if (itensAgrupados[item.item_nome]) {
-                itensAgrupados[item.item_nome] += item.quantidade;
+            // Cria uma chave única para agrupar itens idênticos
+            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            if (itensAgrupados[chave]) {
+                itensAgrupados[chave].quantidade += item.quantidade;
             } else {
-                itensAgrupados[item.item_nome] = item.quantidade;
+                itensAgrupados[chave] = { ...item }; // Copia o item
             }
         });
     });
 
-    for (const nomeItem in itensAgrupados) {
+    for (const chave in itensAgrupados) {
+        const item = itensAgrupados[chave];
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${nomeItem}</td><td>${itensAgrupados[nomeItem]}</td>`;
+        tr.innerHTML = `<td>${item.item_nome}</td><td>${item.modelo}</td><td>${item.tipo}</td><td>${item.quantidade}</td>`;
         tbody.appendChild(tr);
     }
     tabela.appendChild(tbody);
