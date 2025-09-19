@@ -118,7 +118,7 @@ export async function editarItem(id) {
   document.getElementById('formItem').dataset.itemId = data.id;
 
   // Habilitar campos para edição
-  document.getElementById('codigoItem').disabled = true; // Código sempre desabilitado
+  document.getElementById('codigoItem').disabled = false; // Código sempre desabilitado
   document.getElementById('nomeItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
