@@ -1,0 +1,176 @@
+/* 📊 Cards do dashboard */
+.dashboard-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.buscar-veiculos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* 🧩 Card visual */
+.card {
+  background-color: #fff;
+  border-left: 6px solid #4CAF50;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.card p {
+  font-size: 16px;
+  color: #555;
+}
+
+/* 🧭 Menu lateral fixo */
+.sidebar {
+  width: 250px;
+  background-color: #2a722d;
+  color: #fff;
+  position: fixed;
+  height: 100vh;
+  padding-top: 20px;
+  z-index: 100;
+}
+
+.sidebar .logo {
+  width: 120px;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  margin-left: 20px;
+  cursor: pointer;
+}
+
+.usuario-logado {
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+/* 🧭 Menu principal */
+nav {
+  display: flex;
+  flex-direction: column;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid #2a722d;
+  transition: background-color 0.3s;
+}
+
+nav a i {
+  margin-right: 10px;
+}
+
+nav a:hover {
+  background-color: #2a722d;
+}
+
+/* 🔧 Submenu de Manutenções */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.menu-toggle i {
+  margin-right: 10px;
+}
+
+.submenu {
+  display: none;
+  flex-direction: column;
+  background-color: #2a722d;
+}
+
+.submenu a {
+  padding: 10px 30px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid #2a722d;
+}
+
+.submenu a:hover {
+  background-color: #45a049;
+}
+
+.menu-group.active .submenu {
+  display: flex;
+}
+
+/* 🧵 Botões padrão */
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+/* 📱 Responsivo */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .submenu {
+    position: static;
+  }
+}

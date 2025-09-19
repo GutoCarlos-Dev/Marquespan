@@ -1,0 +1,82 @@
+/* 🧩 Contêiner com rolagem horizontal */
+.grid-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* 🧩 Grid de veículos */
+.grid-veiculos {
+  margin-top: 30px;
+  min-width: 1000px; /* ajustado para acomodar 8 colunas */
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+/* 🧩 Cabeçalho e linhas da grid */
+.grid-header,
+.grid-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr); /* atualizado para 8 colunas */
+  align-items: center;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* 🧩 Estilo do cabeçalho */
+.grid-header {
+  font-weight: bold;
+  background-color: #f1f8e9;
+  color: #2e7d32;
+}
+
+/* 🧩 Estilo das células */
+.grid-header > div,
+.grid-row > div {
+  padding: 8px 12px;
+  word-break: break-word;
+}
+
+/* 🧩 Hover nas linhas */
+.grid-row:hover {
+  background-color: #f9fbe7;
+}
+
+/* 🧩 Ações da grid */
+.grid-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 🧩 Botões dentro da grid */
+.grid-actions .btn-acao {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.grid-actions .btn-acao.editar {
+  background-color: #3498db;
+  color: white;
+}
+
+.grid-actions .btn-acao.editar:hover {
+  background-color: #2980b9;
+}
+
+.grid-actions .btn-acao.excluir {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.grid-actions .btn-acao.excluir:hover {
+  background-color: #c0392b;
+}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frota Pesada - Marquespan</title>
+    <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+    <div id="login-container">
+        <img src="logo.png" alt="Marquespan Logo" />
+        <h2>Frota Pesada</h2>
+        <form id="login-form">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" required autocomplete="username" />
+            <label for="password">Senha</label>
+            <input type="password" id="password" required autocomplete="current-password" />
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+    <!-- SupaBase Client -->
+    <!-- Corrigido: Carrega o script de autenticação correto -->
+    <script type="module" src="script/auth.js"></script>
+</body>
+</html>

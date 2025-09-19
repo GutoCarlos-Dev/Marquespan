@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Veículos</title>
+
+  <!-- ✅ CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css">
+
+  <!-- Ícones Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="modal-veiculo show">
+    <div class="modal-content">
+      <div class="form-container">
+        <form id="formVeiculo">
+          <!-- 🔹 Bloco 1: Localização -->
+          <div class="form-bloco">
+            <h3>Localização</h3>
+            <div class="form-grid">
+              <label>Filial *</label>
+              <select name="filial" id="filial" required>
+                <option value="">Selecione</option>
+                <option value="SP">SP</option>
+                <option value="MG">MG</option>
+                <option value="MS">MS</option>
+                <option value="PR">PR</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 🔹 Bloco 2: Identificação do Veículo -->
+          <div class="form-bloco">
+            <h3>Identificação do Veículo</h3>
+            <div class="form-grid">
+              <label>Placa *</label>
+              <input type="text" name="placa" id="placa" placeholder="AAA-0000" required />
+
+              <label>Marca</label>
+              <input type="text" name="marca" id="marca" />
+
+              <label>Modelo</label>
+              <input type="text" name="modelo" id="modelo" />
+
+              <label>Renavan</label>
+              <input type="text" name="renavan" id="renavan" />
+
+              <label>Chassi</label>
+              <input type="text" name="chassi" id="chassi" />
+
+              <label>Ano Fabricação</label>
+              <input type="number" name="anofab" id="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              <label>Ano Modelo</label>
+              <input type="number" name="anomod" id="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
+
+              <label>QTD de Tanques</label>
+              <input type="number" name="qtdtanque" id="qtdtanque" min="1" max="2" step="1" required />
+
+              <label>Tipo</label>
+              <select name="tipo" id="tipo">
+                <option value="">Selecione</option>
+                <option value="vuc-t">VUC T</option>
+                <option value="vuc">VUC</option>
+                <option value="cavalo">CAVALO</option>
+                <option value="truck">TRUCK</option>
+                <option value="bitruck">BITRUCK</option>
+              </select>
+
+              <label>Situação *</label>
+              <select name="situacao" id="situacao" required>
+                <option value="">Selecione</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+              
+              <label>QR Code</label>
+              <input type="text" name="qrcode" id="qrcode" placeholder="Código QR" />
+            </div>
+          </div>
+
+          <!-- 🔹 Botões -->
+          <div class="modal-actions">
+            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnExcluir" class="btn-excluir">Excluir</button>
+            <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
+          </div>
+        </form>
+
+        <!-- ✅ Exibição do usuário logado -->
+        <div class="usuario-logado-modal" id="usuario-logado-modal">
+          <small>👤 Usuário logado: <span id="nome-usuario"></span></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Scripts -->
+  <script type="module" src="./script/cadastro-veiculos.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const nomeSpan = document.getElementById('nome-usuario');
+      if (usuario && usuario.nome) {
+        nomeSpan.textContent = usuario.nome;
+      }
+    });
+  </script>
+</body>
+</html>
