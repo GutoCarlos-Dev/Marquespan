@@ -49,7 +49,7 @@
         <select id="nivel" required>
           <option value="" disabled selected>Selecione o nível</option>
           <option value="Administrador">Administrador</option>
-          <option value="Operador">Carregamento</option>
+          <option value="Carregamento">Carregamento</option>
           <option value="Matriz">Matriz</option>
           <option value="Operador">Operador</option>
         </select>
@@ -132,11 +132,11 @@
       document.getElementById('formUsuario').addEventListener('submit', (e) => {
         const id = document.getElementById('formUsuario').dataset.usuarioId;
         if (id) {
-    atualizarUsuario(e);
-  } else {
-    cadastrarUsuario(e);
-  }
-  });
+          atualizarUsuario(e);
+        } else {
+          cadastrarUsuario(e);
+        }
+      });
       window.editarUsuario = editarUsuario;
       window.atualizarUsuario = atualizarUsuario;
       window.excluirUsuario = excluirUsuario; // ✅ agora disponível globalmente
