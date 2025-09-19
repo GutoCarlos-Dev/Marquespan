@@ -115,6 +115,31 @@
       </div>
     </section>
 
+    <section id="motoristas" class="secao">
+      <h3>🚚 Motoristas</h3>
+      <form id="formMotorista" class="formulario">
+        <label for="nomeMotorista">Nome:</label>
+        <input type="text" id="nomeMotorista" placeholder="Nome do Motorista" required>
+        <label for="nomeCompletoMotorista">Nome Completo:</label>
+        <input type="text" id="nomeCompletoMotorista" placeholder="Nome Completo do Motorista">
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvarMotorista">✅ Salvar Motorista</button>
+        </div>
+      </form>
+      <div class="table-container">
+        <table id="tabelaMotoristas" class="tabela-usuarios">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Nome Completo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaMotoristas"></tbody>
+        </table>
+      </div>
+    </section>
+
     <footer class="footer">
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
@@ -142,7 +167,7 @@
   </script>
 
   <script type="module">
-    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente } from './script/cadastro-carregamento.js';
+    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js';
 
     window.onload = () => {
       document.getElementById('formItem').addEventListener('submit', salvarItem);
@@ -152,8 +177,13 @@
       window.excluirItem = excluirItem;
       window.editarCliente = editarCliente;
       window.excluirCliente = excluirCliente;
+      document.getElementById('formMotorista').addEventListener('submit', salvarMotorista);
+      window.editarMotorista = editarMotorista;
+      window.excluirMotorista = excluirMotorista;
+
       carregarItens();
       carregarClientes();
+      carregarMotoristas();
     };
   </script>
 </body>

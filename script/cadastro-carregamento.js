@@ -289,3 +289,117 @@ export async function excluirCliente(id) {
   alert('✅ Cliente excluído com sucesso!');
   carregarClientes();
 }
+
+// === MOTORISTAS ===
+
+export async function carregarMotoristas() {
+  const corpoTabela = document.getElementById('corpoTabelaMotoristas');
+  corpoTabela.innerHTML = '';
+
+  const { data, error } = await supabase
+    .from('motoristas')
+    .select('*')
+    .order('nome', { ascending: true });
+
+  if (error) {
+    corpoTabela.innerHTML = '<tr><td colspan="3">Erro ao carregar motoristas.</td></tr>';
+    console.error(error);
+    return;
+  }
+
+  if (data.length === 0) {
+    corpoTabela.innerHTML = '<tr><td colspan="3">Nenhum motorista encontrado.</td></tr>';
+    return;
+  }
+
+  data.forEach(motorista => {
+    const linha = document.createElement('tr');
+    linha.innerHTML = `
+      <td>${motorista.nome}</td>
+      <td>${motorista.nome_completo || ''}</td>
+      <td>
+        <button onclick="editarMotorista('${motorista.id}')">✏️</button>
+        <button onclick="excluirMotorista('${motorista.id}')">🗑️</button>
+      </td>
+    `;
+    corpoTabela.appendChild(linha);
+  });
+}
+
+export async function salvarMotorista(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('formMotorista').dataset.motoristaId;
+  const nome = document.getElementById('nomeMotorista').value.trim();
+  const nome_completo = document.getElementById('nomeCompletoMotorista').value.trim();
+
+  if (!nome) {
+    alert('⚠️ O campo "Nome" é obrigatório.');
+    return;
+  }
+
+  let result;
+  if (id) {
+    // Update
+    result = await supabase
+      .from('motoristas')
+      .update({ nome, nome_completo })
+      .eq('id', id);
+  } else {
+    // Insert
+    result = await supabase
+      .from('motoristas')
+      .insert([{ nome, nome_completo }]);
+  }
+
+  if (result.error) {
+    alert('❌ Erro ao salvar motorista.');
+    console.error(result.error);
+    return;
+  }
+
+  alert('✅ Motorista salvo com sucesso!');
+  document.getElementById('formMotorista').reset();
+  document.getElementById('formMotorista').dataset.motoristaId = '';
+  carregarMotoristas();
+}
+
+export async function editarMotorista(id) {
+  const { data, error } = await supabase
+    .from('motoristas')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    alert('❌ Erro ao carregar dados do motorista.');
+    return;
+  }
+
+  document.getElementById('nomeMotorista').value = data.nome;
+  document.getElementById('nomeCompletoMotorista').value = data.nome_completo;
+  document.getElementById('formMotorista').dataset.motoristaId = data.id;
+
+  // Foca no formulário para facilitar a edição
+  document.getElementById('nomeMotorista').focus();
+}
+
+export async function excluirMotorista(id) {
+  const confirmar = confirm('Tem certeza que deseja excluir este motorista?');
+
+  if (!confirmar) return;
+
+  const { error } = await supabase
+    .from('motoristas')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert('❌ Erro ao excluir motorista.');
+    console.error(error);
+    return;
+  }
+
+  alert('✅ Motorista excluído com sucesso!');
+  carregarMotoristas();
+}
