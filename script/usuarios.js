@@ -7,31 +7,35 @@ export async function mostrarUsuarios() {
 
   let { data, error } = await supabase
     .from('usuarios')
-    .select('id, codigo, nome, funcao');
+    .select('id, nome, nomecompleto, email, nivel');
 
   if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="4">Erro ao carregar usuários.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="6">Erro ao carregar usuários.</td></tr>';
     return;
   }
 
   if (termo) {
     data = data.filter(u =>
-      u.codigo.toLowerCase().includes(termo) ||
-      u.nome.toLowerCase().includes(termo)
+      u.id.toString().toLowerCase().includes(termo) ||
+      u.nome.toLowerCase().includes(termo) ||
+      u.nomecompleto.toLowerCase().includes(termo) ||
+      u.email.toLowerCase().includes(termo)
     );
   }
 
   if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum usuário encontrado.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="6">Nenhum usuário encontrado.</td></tr>';
     return;
   }
 
   data.forEach(usuario => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td>${usuario.codigo}</td>
+      <td>${usuario.id}</td>
       <td>${usuario.nome}</td>
-      <td>${usuario.funcao}</td>
+      <td>${usuario.nomecompleto}</td>
+      <td>${usuario.email}</td>
+      <td>${usuario.nivel}</td>
       <td>
         <button onclick="editarUsuario('${usuario.id}')">✏️</button>
         <button onclick="excluirUsuario('${usuario.id}')">🗑️</button>
@@ -44,19 +48,20 @@ export async function mostrarUsuarios() {
 export async function cadastrarUsuario(event) {
   event.preventDefault(); // evita recarregar a página
 
-  const codigo = document.getElementById('codigo').value.trim();
   const nome = document.getElementById('nome').value.trim();
-  const funcao = document.getElementById('funcao').value.trim();
+  const nomecompleto = document.getElementById('nomecompleto').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const nivel = document.getElementById('nivel').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
-  if (!codigo || !nome || !funcao || !senha) {
+  if (!nome || !nomecompleto || !email || !nivel || !senha) {
     alert('⚠️ Preencha todos os campos.');
     return;
   }
 
   const { error } = await supabase
     .from('usuarios')
-    .insert([{ codigo, nome, funcao, senha }]);
+    .insert([{ nome, nomecompleto, email, nivel, senha }]);
 
   if (error) {
     alert('❌ Erro ao cadastrar usuário.');
@@ -83,9 +88,10 @@ export async function editarUsuario(id) {
     return;
   }
 
-  document.getElementById('codigo').value = data.codigo;
   document.getElementById('nome').value = data.nome;
-  document.getElementById('funcao').value = data.funcao;
+  document.getElementById('nomecompleto').value = data.nomecompleto;
+  document.getElementById('email').value = data.email;
+  document.getElementById('nivel').value = data.nivel;
   document.getElementById('senha').value = data.senha;
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
 
@@ -97,14 +103,15 @@ export async function editarUsuario(id) {
 export async function atualizarUsuario(event) {
   event.preventDefault();
   const id = document.getElementById('formUsuario').dataset.usuarioId;
-  const codigo = document.getElementById('codigo').value.trim();
   const nome = document.getElementById('nome').value.trim();
-  const funcao = document.getElementById('funcao').value.trim();
+  const nomecompleto = document.getElementById('nomecompleto').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const nivel = document.getElementById('nivel').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
   const { error } = await supabase
     .from('usuarios')
-    .update({ codigo, nome, funcao, senha })
+    .update({ nome, nomecompleto, email, nivel, senha })
     .eq('id', id);
 
   if (error) {
