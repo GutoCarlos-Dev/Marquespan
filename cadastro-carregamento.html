@@ -48,19 +48,22 @@
 
     <section id="itens" class="secao">
       <h3>📦 Itens</h3>
+      <div class="botoes-form">
+        <button type="button" id="btnIncluirItem">➕ Incluir Item</button>
+      </div>
       <form id="formItem" class="formulario">
         <label for="codigoItem">Código:</label>
-        <input type="text" id="codigoItem" placeholder="Código do Item" required>
+        <input type="text" id="codigoItem" placeholder="Código do Item" required disabled>
         <label for="nomeItem">Nome:</label>
-        <input type="text" id="nomeItem" placeholder="Nome do Item" required>
+        <input type="text" id="nomeItem" placeholder="Nome do Item" required disabled>
         <label for="tipoItem">Tipo:</label>
-        <select id="tipoItem" required>
+        <select id="tipoItem" required disabled>
           <option value="" disabled selected>Selecione o tipo</option>
           <option value="Novo">Novo</option>
           <option value="Usado">Usado</option>
         </select>
         <div class="botoes-form">
-          <button type="submit" id="btnSalvarItem">✅ Salvar Item</button>
+          <button type="submit" id="btnSalvarItem" disabled>✅ Salvar Item</button>
         </div>
       </form>
       <table id="tabelaItens" class="tabela-usuarios">
@@ -132,11 +135,12 @@
   </script>
 
   <script type="module">
-    import { carregarItens, salvarItem, editarItem, excluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente } from './script/cadastro-carregamento.js';
+    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente } from './script/cadastro-carregamento.js';
 
     window.onload = () => {
       document.getElementById('formItem').addEventListener('submit', salvarItem);
       document.getElementById('formCliente').addEventListener('submit', salvarCliente);
+      document.getElementById('btnIncluirItem').addEventListener('click', incluirItem);
       window.editarItem = editarItem;
       window.excluirItem = excluirItem;
       window.editarCliente = editarCliente;

@@ -41,13 +41,32 @@ export async function salvarItem(event) {
   event.preventDefault();
 
   const id = document.getElementById('formItem').dataset.itemId;
-  const codigo = document.getElementById('codigoItem').value.trim();
   const nome = document.getElementById('nomeItem').value.trim();
   const tipo = document.getElementById('tipoItem').value;
 
-  if (!codigo || !nome || !tipo) {
+  if (!nome || !tipo) {
     alert('⚠️ Preencha todos os campos.');
     return;
+  }
+
+  let codigo = document.getElementById('codigoItem').value.trim();
+
+  if (!codigo) {
+    // Buscar o último código cadastrado e incrementar 1
+    const { data, error } = await supabase
+      .from('itens')
+      .select('codigo')
+      .order('codigo', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      alert('❌ Erro ao obter o próximo código.');
+      console.error(error);
+      return;
+    }
+
+    codigo = (parseInt(data.codigo, 10) + 1).toString();
   }
 
   let result;
@@ -55,7 +74,7 @@ export async function salvarItem(event) {
     // Update
     result = await supabase
       .from('itens')
-      .update({ codigo, nome, tipo })
+      .update({ nome, tipo })
       .eq('id', id);
   } else {
     // Insert
@@ -73,6 +92,11 @@ export async function salvarItem(event) {
   alert('✅ Item salvo com sucesso!');
   document.getElementById('formItem').reset();
   document.getElementById('formItem').dataset.itemId = '';
+  // Desabilitar campos após salvar
+  document.getElementById('codigoItem').disabled = true;
+  document.getElementById('nomeItem').disabled = true;
+  document.getElementById('tipoItem').disabled = true;
+  document.getElementById('btnSalvarItem').disabled = true;
   carregarItens();
 }
 
@@ -92,6 +116,41 @@ export async function editarItem(id) {
   document.getElementById('nomeItem').value = data.nome;
   document.getElementById('tipoItem').value = data.tipo;
   document.getElementById('formItem').dataset.itemId = data.id;
+
+  // Habilitar campos para edição
+  document.getElementById('codigoItem').disabled = true; // Código sempre desabilitado
+  document.getElementById('nomeItem').disabled = false;
+  document.getElementById('tipoItem').disabled = false;
+  document.getElementById('btnSalvarItem').disabled = false;
+}
+
+export async function incluirItem() {
+  // Buscar o último código cadastrado e incrementar 1
+  const { data, error } = await supabase
+    .from('itens')
+    .select('codigo')
+    .order('codigo', { ascending: false })
+    .limit(1);
+
+  let nextCodigo = '1'; // Se não houver nenhum, começa com 1
+
+  if (error) {
+    console.error('Erro ao obter o próximo código:', error);
+  } else if (data && data.length > 0) {
+    nextCodigo = (parseInt(data[0].codigo, 10) + 1).toString();
+  }
+
+  // Preencher o código e habilitar os campos
+  document.getElementById('codigoItem').value = nextCodigo;
+  document.getElementById('codigoItem').disabled = true; // Código sempre desabilitado
+  document.getElementById('nomeItem').disabled = false;
+  document.getElementById('tipoItem').disabled = false;
+  document.getElementById('btnSalvarItem').disabled = false;
+
+  // Limpar outros campos
+  document.getElementById('nomeItem').value = '';
+  document.getElementById('tipoItem').value = '';
+  document.getElementById('formItem').dataset.itemId = '';
 }
 
 export async function excluirItem(id) {
