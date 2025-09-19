@@ -56,7 +56,7 @@
             <option value="" disabled selected>Carregando clientes...</option>
             <!-- Opções carregadas dinamicamente pelo script -->
           </select>
-          <a href="cadastro-carregamento.html#clientes" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</a>
+          <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
         </div>
         <label for="placa">Placa do Veículo:</label>
         <input type="text" id="placa" placeholder="Placa" list="placasVeiculosList" required>
@@ -80,6 +80,28 @@
       &copy; 2025 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
+
+  <!-- Modal Cadastro Cliente -->
+  <div id="modalCliente" class="modal">
+    <div class="modal-conteudo">
+      <span class="fechar-modal" id="fecharModalCliente">&times;</span>
+      <h3>👥 Cadastrar Novo Cliente</h3>
+      <form id="formNovoCliente" class="formulario">
+        <label for="codClienteModal">Código:</label>
+        <input type="text" id="codClienteModal" placeholder="Código do Cliente" required>
+        <label for="nomeClienteModal">Nome:</label>
+        <input type="text" id="nomeClienteModal" placeholder="Nome do Cliente" required>
+        <label for="cidadeClienteModal">Cidade:</label>
+        <input type="text" id="cidadeClienteModal" placeholder="Cidade" required>
+        <label for="estadoClienteModal">Estado:</label>
+        <input type="text" id="estadoClienteModal" placeholder="Estado" required>
+        <div class="botoes-form">
+          <button type="submit">✅ Salvar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 
   <!-- 🚀 Scripts -->
   <script>
