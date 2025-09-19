@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro Carregamento - Marquespan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<!-- 🟩 Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo">
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+      </div>
+    </div>
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-truck-loading"></i> <span>Carregamento</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+          <a href="cadastro-carregamento.html">Cadastro</a>
+          <a href="iniciar-carregamento.html">Iniciar Carregamento</a>
+          <a href="buscar-carregamento.html">Buscar Carregamento</a>
+      </div>
+    </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <div class="main-content">
+    <header class="header">📦 Cadastro Carregamento</header>
+
+    <section id="itens" class="secao">
+      <h3>📦 Itens</h3>
+      <form id="formItem" class="formulario">
+        <label for="nomeItem">Nome:</label>
+        <input type="text" id="nomeItem" placeholder="Nome do Item" required>
+        <label for="tipoItem">Tipo:</label>
+        <select id="tipoItem" required>
+          <option value="" disabled selected>Selecione o tipo</option>
+          <option value="Novo">Novo</option>
+          <option value="Usado">Usado</option>
+        </select>
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvarItem">✅ Salvar Item</button>
+        </div>
+      </form>
+      <table id="tabelaItens" class="tabela-usuarios">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaItens"></tbody>
+      </table>
+    </section>
+
+    <section id="clientes" class="secao">
+      <h3>👥 Clientes</h3>
+      <form id="formCliente" class="formulario">
+        <label for="codCliente">Código:</label>
+        <input type="text" id="codCliente" placeholder="Código do Cliente" required>
+        <label for="nomeCliente">Nome:</label>
+        <input type="text" id="nomeCliente" placeholder="Nome do Cliente" required>
+        <label for="cidadeCliente">Cidade:</label>
+        <input type="text" id="cidadeCliente" placeholder="Cidade" required>
+        <label for="estadoCliente">Estado:</label>
+        <input type="text" id="estadoCliente" placeholder="Estado" required>
+        <div class="botoes-form">
+          <button type="submit" id="btnSalvarCliente">✅ Salvar Cliente</button>
+        </div>
+      </form>
+      <table id="tabelaClientes" class="tabela-usuarios">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Cidade</th>
+            <th>Estado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaClientes"></tbody>
+      </table>
+    </section>
+
+    <footer class="footer">
+      &copy; 2025 Marquespan. Todos os direitos reservados.
+    </footer>
+  </div>
+
+  <!-- 🚀 Scripts -->
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+    });
+
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('active');
+      });
+    });
+  </script>
+
+  <script type="module">
+    // Placeholder for item and client management
+    // Implement with Supabase later
+  </script>
+</body>
+</html>
