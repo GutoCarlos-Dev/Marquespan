@@ -152,7 +152,7 @@ export async function incluirItem() {
   document.getElementById('formItem').dataset.itemId = '';
 
   // Preencher o código e habilitar os campos
-  //document.getElementById('codigoItem').value = nextCodigo;
+  document.getElementById('codigoItem').value = nextCodigo;
   document.getElementById('codigoItem').disabled = true; // Código gerado não deve ser editado
   document.getElementById('nomeItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
