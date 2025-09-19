@@ -141,18 +141,12 @@ export async function editarItem(id) {
 }
 
 export async function incluirItem() {
-  const nextCodigo = await obterProximoCodigoItem();
-  if (nextCodigo === null) {
-    alert('❌ Erro ao obter o próximo código para o item.');
-    return;
-  }
-
   // Limpar e preparar o formulário para um novo item
   document.getElementById('formItem').reset();
   document.getElementById('formItem').dataset.itemId = '';
 
-  // Preencher o código e habilitar os campos
-  document.getElementById('codigoItem').value = nextCodigo;
+  // Deixar o campo código em branco e habilitar para edição
+  document.getElementById('codigoItem').value = '';
   document.getElementById('codigoItem').disabled = false; // Código editável conforme pedido
   document.getElementById('nomeItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
