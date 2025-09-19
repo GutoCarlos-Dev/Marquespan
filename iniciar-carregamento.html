@@ -51,18 +51,18 @@
       <h3>📋 Detalhes do Carregamento</h3>
       <form id="formCarregamento" class="formulario">
         <div class="form-group-com-botao">
+          <label for="placa">Placa do Veículo:</label>
+          <input type="text" id="placa" placeholder="Digite ou selecione a placa" list="placasVeiculosList" required>
+          <datalist id="placasVeiculosList"></datalist>
+          <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
+        </div>
+        <div class="form-group-com-botao">
           <label for="clienteSelect">Cliente:</label>
           <select id="clienteSelect" required>
             <option value="" disabled selected>Carregando clientes...</option>
             <!-- Opções carregadas dinamicamente pelo script -->
           </select>
           <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
-        </div>
-        <div class="form-group-com-botao">
-          <label for="placa">Placa do Veículo:</label>
-          <input type="text" id="placa" placeholder="Digite ou selecione a placa" list="placasVeiculosList" required>
-          <datalist id="placasVeiculosList"></datalist>
-          <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
         </div>
         <label for="requisicao">Requisição:</label>
         <input type="text" id="requisicao" placeholder="Número da Requisição" required>
