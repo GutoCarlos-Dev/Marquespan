@@ -732,54 +732,107 @@ function renderizarTabelaResumo() {
     const tabela = document.getElementById('tabelaResumo');
     if (!tabela) return; // Se não existe a tabela, sai da função
 
-    tabela.innerHTML = '<thead><tr><th>Tipo de Operação</th><th>Total de Itens</th><th>Clientes</th></tr></thead>';
+    // Cabeçalho da tabela com todas as colunas solicitadas
+    tabela.innerHTML = `
+        <thead>
+            <tr>
+                <th colspan="8" style="text-align: center; background-color: #f0f0f0; font-weight: bold;">📊 RESUMO GERAL DO CARREGAMENTO</th>
+            </tr>
+            <tr>
+                <th>Total de Itens</th>
+                <th>Clientes Novos</th>
+                <th>Aumento</th>
+                <th>Troca</th>
+                <th>Retirada Parcial</th>
+                <th>Retirada Empréstimo</th>
+                <th>Retirada Total</th>
+                <th>Total de Clientes</th>
+            </tr>
+        </thead>
+    `;
     const tbody = document.createElement('tbody');
 
-    // Resumo dos itens de carregamento (para entrega)
-    const totalItensCarregamento = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
+    // === CÁLCULO DAS MÉTRICAS ===
+
+    // 1. Total de itens (soma de todos os itens de todas as requisições)
+    const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
+        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
+    }, 0) + carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
         return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
     }, 0);
 
-    const clientesCarregamento = [...new Set(carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome))];
+    // 2. Total de clientes únicos
+    const todosClientes = [
+        ...carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome),
+        ...carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome)
+    ];
+    const totalClientes = [...new Set(todosClientes)].length;
 
-    // Resumo dos itens de troca/retirada
-    const totalItensTrocaRetirada = carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
-        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
-    }, 0);
+    // 3. Contagem por tipo de motivo
+    const contagemMotivos = {
+        'Cliente Novo': 0,
+        'Aumento': 0,
+        'Aumento+Troca': 0,
+        'Troca': 0,
+        'Retirada Parcial': 0,
+        'Retirada de Empréstimo': 0,
+        'Retirada Total': 0
+    };
 
-    const clientesTrocaRetirada = [...new Set(carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome))];
+    // Conta os motivos de carregamento
+    carregamentoState.requisicoesCarregamento.forEach(req => {
+        if (contagemMotivos.hasOwnProperty(req.motivo)) {
+            contagemMotivos[req.motivo]++;
+        }
+    });
 
-    // Adiciona linha para carregamento (se houver itens)
-    if (totalItensCarregamento > 0) {
-        const trCarregamento = document.createElement('tr');
-        trCarregamento.innerHTML = `
-            <td><strong>Carregamento (Entrega)</strong></td>
-            <td>${totalItensCarregamento}</td>
-            <td>${clientesCarregamento.join(', ')}</td>
-        `;
-        tbody.appendChild(trCarregamento);
-    }
+    // Conta os motivos de troca/retirada
+    carregamentoState.requisicoesTrocaRetirada.forEach(req => {
+        if (contagemMotivos.hasOwnProperty(req.motivo)) {
+            contagemMotivos[req.motivo]++;
+        }
+    });
 
-    // Adiciona linha para troca/retirada (se houver itens)
-    if (totalItensTrocaRetirada > 0) {
-        const trTrocaRetirada = document.createElement('tr');
-        trTrocaRetirada.innerHTML = `
-            <td><strong>Troca/Retirada</strong></td>
-            <td>${totalItensTrocaRetirada}</td>
-            <td>${clientesTrocaRetirada.join(', ')}</td>
-        `;
-        tbody.appendChild(trTrocaRetirada);
-    }
+    // 4. Clientes novos (contar quantas requisições são de "Cliente Novo")
+    const clientesNovos = carregamentoState.requisicoesCarregamento.filter(req => req.motivo === 'Cliente Novo').length +
+                         carregamentoState.requisicoesTrocaRetirada.filter(req => req.motivo === 'Cliente Novo').length;
 
-    // Se não há itens em nenhum grupo, mostra mensagem
-    if (totalItensCarregamento === 0 && totalItensTrocaRetirada === 0) {
+    // === RENDERIZAÇÃO DA TABELA ===
+
+    // Se não há dados, mostra mensagem
+    if (totalItens === 0) {
         const trVazio = document.createElement('tr');
         trVazio.innerHTML = `
-            <td colspan="3" style="text-align: center; color: #666;">
+            <td colspan="8" style="text-align: center; color: #666;">
                 Nenhum item adicionado ao carregamento ainda.
             </td>
         `;
         tbody.appendChild(trVazio);
+    } else {
+        // Cria linha com os dados calculados
+        const trDados = document.createElement('tr');
+        trDados.innerHTML = `
+            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalItens}</td>
+            <td style="font-weight: bold; text-align: center; background-color: #fff3cd;">${clientesNovos}</td>
+            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Aumento']}</td>
+            <td style="text-align: center; background-color: #d4edda;">${contagemMotivos['Troca']}</td>
+            <td style="text-align: center; background-color: #f8d7da;">${contagemMotivos['Retirada Parcial']}</td>
+            <td style="text-align: center; background-color: #fff3cd;">${contagemMotivos['Retirada de Empréstimo']}</td>
+            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Retirada Total']}</td>
+            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalClientes}</td>
+        `;
+        tbody.appendChild(trDados);
+
+        // Adiciona linha com detalhes dos itens por tipo
+        const trDetalhes = document.createElement('tr');
+        trDetalhes.innerHTML = `
+            <td colspan="8" style="font-size: 12px; color: #666; padding: 5px;">
+                <strong>Detalhes:</strong> ${contagemMotivos['Aumento+Troca']} Aumento+Troca |
+                Total Carregamento: ${carregamentoState.requisicoesCarregamento.length} |
+                Total Troca/Retirada: ${carregamentoState.requisicoesTrocaRetirada.length}
+            </td>
+        `;
+        tbody.appendChild(trDetalhes);
     }
 
     tabela.appendChild(tbody);
