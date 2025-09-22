@@ -1,9 +1,14 @@
 import { supabase } from './supabase.js';
 
+// === CONSTANTES PARA CONTROLE DE MOTIVOS ===
+const MOTIVOS_QUE_ADICIONAM = ['Aumento', 'Aumento+Troca', 'Cliente Novo'];
+const MOTIVOS_QUE_NAO_ADICIONAM = ['Troca', 'Retirada Parcial', 'Retirada Total', 'Retirada de Empréstimo'];
+
 // === ESTADO DA APLICAÇÃO ===
 let carregamentoState = {
     cabecalho: {},
-    requisicoes: [],
+    requisicoesCarregamento: [], // Motivos que ADICIONAM itens (para entrega)
+    requisicoesTrocaRetirada: [], // Motivos que NÃO ADICIONAM itens (troca/retirada)
 };
 
 let requisicaoAtual = {
@@ -449,8 +454,15 @@ function handleIncluirRequisicao() {
         return;
     }
 
-    carregamentoState.requisicoes.push({ ...requisicaoAtual });
-    renderizarTabelaResumo();
+    // Separa as requisições nos grupos corretos
+    if (MOTIVOS_QUE_ADICIONAM.includes(requisicaoAtual.motivo)) {
+        carregamentoState.requisicoesCarregamento.push({ ...requisicaoAtual });
+    } else if (MOTIVOS_QUE_NAO_ADICIONAM.includes(requisicaoAtual.motivo)) {
+        carregamentoState.requisicoesTrocaRetirada.push({ ...requisicaoAtual });
+    }
+
+    renderizarTabelaCarregamento();
+    renderizarTabelaTrocaRetirada();
 
     // Limpa para a próxima requisição
     requisicaoAtual = { cliente_id: null, cliente_nome: '', motivo: '', itens: [] };
@@ -462,23 +474,27 @@ function handleIncluirRequisicao() {
 }
 
 /**
- * Renderiza a tabela de resumo com todos os itens de todas as requisições.
+ * Renderiza a tabela de itens para carregamento (motivos que ADICIONAM itens).
  */
-function renderizarTabelaResumo() {
+function renderizarTabelaCarregamento() {
     const tabela = document.getElementById('tabelaItensCarregados');
-    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th></tr></thead>';
+    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th><th>Motivo</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
 
-    carregamentoState.requisicoes.forEach(req => {
+    carregamentoState.requisicoesCarregamento.forEach(req => {
         req.itens.forEach(item => {
             // Cria uma chave única para agrupar itens idênticos
             const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
             if (itensAgrupados[chave]) {
                 itensAgrupados[chave].quantidade += item.quantidade;
+                itensAgrupados[chave].motivos.push(req.motivo);
             } else {
-                itensAgrupados[chave] = { ...item }; // Copia o item
+                itensAgrupados[chave] = {
+                    ...item,
+                    motivos: [req.motivo]
+                };
             }
         });
     });
@@ -486,7 +502,54 @@ function renderizarTabelaResumo() {
     for (const chave in itensAgrupados) {
         const item = itensAgrupados[chave];
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${item.item_nome}</td><td>${item.modelo}</td><td>${item.tipo}</td><td>${item.quantidade}</td>`;
+        tr.innerHTML = `
+            <td>${item.item_nome}</td>
+            <td>${item.modelo}</td>
+            <td>${item.tipo}</td>
+            <td>${item.quantidade}</td>
+            <td>${item.motivos.join(', ')}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    tabela.appendChild(tbody);
+}
+
+/**
+ * Renderiza a tabela de itens de troca e retirada (motivos que NÃO ADICIONAM itens).
+ */
+function renderizarTabelaTrocaRetirada() {
+    const tabela = document.getElementById('tabelaItensTrocaRetirada');
+    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th><th>Motivo</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+
+    const itensAgrupados = {};
+
+    carregamentoState.requisicoesTrocaRetirada.forEach(req => {
+        req.itens.forEach(item => {
+            // Cria uma chave única para agrupar itens idênticos
+            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            if (itensAgrupados[chave]) {
+                itensAgrupados[chave].quantidade += item.quantidade;
+                itensAgrupados[chave].motivos.push(req.motivo);
+            } else {
+                itensAgrupados[chave] = {
+                    ...item,
+                    motivos: [req.motivo]
+                };
+            }
+        });
+    });
+
+    for (const chave in itensAgrupados) {
+        const item = itensAgrupados[chave];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.item_nome}</td>
+            <td>${item.modelo}</td>
+            <td>${item.tipo}</td>
+            <td>${item.quantidade}</td>
+            <td>${item.motivos.join(', ')}</td>
+        `;
         tbody.appendChild(tr);
     }
     tabela.appendChild(tbody);
@@ -510,7 +573,7 @@ async function salvarCarregamentoCompleto() {
         alert('⚠️ Preencha todos os campos obrigatórios do cabeçalho (Semana, Data, Placa, Motorista, Conferente).');
         return;
     }
-    if (carregamentoState.requisicoes.length === 0) {
+    if (carregamentoState.requisicoesCarregamento.length === 0 && carregamentoState.requisicoesTrocaRetirada.length === 0) {
         alert('⚠️ Adicione pelo menos uma requisição ao carregamento.');
         return;
     }
@@ -531,7 +594,8 @@ async function salvarCarregamentoCompleto() {
     const carregamentoId = carregamentoData.id;
 
     // 3. Insere as requisições e seus itens
-    for (const req of carregamentoState.requisicoes) {
+    // Primeiro insere as requisições de carregamento (motivos que ADICIONAM itens)
+    for (const req of carregamentoState.requisicoesCarregamento) {
         const { data: requisicaoData, error: requisicaoError } = await supabase
             .from('requisicoes')
             .insert([{ carregamento_id: carregamentoId, cliente_id: req.cliente_id, motivo: req.motivo }])
@@ -539,7 +603,7 @@ async function salvarCarregamentoCompleto() {
             .single();
 
         if (requisicaoError) {
-            console.error('Erro ao salvar requisição:', requisicaoError);
+            console.error('Erro ao salvar requisição de carregamento:', requisicaoError);
             continue; // Pula para a próxima requisição
         }
 
@@ -552,7 +616,33 @@ async function salvarCarregamentoCompleto() {
 
         const { error: itensError } = await supabase.from('requisicao_itens').insert(itensParaInserir);
         if (itensError) {
-            console.error('Erro ao salvar itens da requisição:', itensError);
+            console.error('Erro ao salvar itens da requisição de carregamento:', itensError);
+        }
+    }
+
+    // Depois insere as requisições de troca/retirada (motivos que NÃO ADICIONAM itens)
+    for (const req of carregamentoState.requisicoesTrocaRetirada) {
+        const { data: requisicaoData, error: requisicaoError } = await supabase
+            .from('requisicoes')
+            .insert([{ carregamento_id: carregamentoId, cliente_id: req.cliente_id, motivo: req.motivo }])
+            .select('id')
+            .single();
+
+        if (requisicaoError) {
+            console.error('Erro ao salvar requisição de troca/retirada:', requisicaoError);
+            continue; // Pula para a próxima requisição
+        }
+
+        const requisicaoId = requisicaoData.id;
+        const itensParaInserir = req.itens.map(item => ({
+            requisicao_id: requisicaoId,
+            item_id: item.item_id,
+            quantidade: item.quantidade,
+        }));
+
+        const { error: itensError } = await supabase.from('requisicao_itens').insert(itensParaInserir);
+        if (itensError) {
+            console.error('Erro ao salvar itens da requisição de troca/retirada:', itensError);
         }
     }
 
@@ -634,3 +724,63 @@ document.addEventListener('DOMContentLoaded', () => {
     renderizarItensRequisicaoAtual();
     renderizarTabelaResumo();
 });
+
+/**
+ * Renderiza a tabela de resumo geral do carregamento.
+ */
+function renderizarTabelaResumo() {
+    const tabela = document.getElementById('tabelaResumo');
+    if (!tabela) return; // Se não existe a tabela, sai da função
+
+    tabela.innerHTML = '<thead><tr><th>Tipo de Operação</th><th>Total de Itens</th><th>Clientes</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+
+    // Resumo dos itens de carregamento (para entrega)
+    const totalItensCarregamento = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
+        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
+    }, 0);
+
+    const clientesCarregamento = [...new Set(carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome))];
+
+    // Resumo dos itens de troca/retirada
+    const totalItensTrocaRetirada = carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
+        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
+    }, 0);
+
+    const clientesTrocaRetirada = [...new Set(carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome))];
+
+    // Adiciona linha para carregamento (se houver itens)
+    if (totalItensCarregamento > 0) {
+        const trCarregamento = document.createElement('tr');
+        trCarregamento.innerHTML = `
+            <td><strong>Carregamento (Entrega)</strong></td>
+            <td>${totalItensCarregamento}</td>
+            <td>${clientesCarregamento.join(', ')}</td>
+        `;
+        tbody.appendChild(trCarregamento);
+    }
+
+    // Adiciona linha para troca/retirada (se houver itens)
+    if (totalItensTrocaRetirada > 0) {
+        const trTrocaRetirada = document.createElement('tr');
+        trTrocaRetirada.innerHTML = `
+            <td><strong>Troca/Retirada</strong></td>
+            <td>${totalItensTrocaRetirada}</td>
+            <td>${clientesTrocaRetirada.join(', ')}</td>
+        `;
+        tbody.appendChild(trTrocaRetirada);
+    }
+
+    // Se não há itens em nenhum grupo, mostra mensagem
+    if (totalItensCarregamento === 0 && totalItensTrocaRetirada === 0) {
+        const trVazio = document.createElement('tr');
+        trVazio.innerHTML = `
+            <td colspan="3" style="text-align: center; color: #666;">
+                Nenhum item adicionado ao carregamento ainda.
+            </td>
+        `;
+        tbody.appendChild(trVazio);
+    }
+
+    tabela.appendChild(tbody);
+}
