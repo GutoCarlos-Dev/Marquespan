@@ -214,7 +214,7 @@ function renderizarTabelaItensModal(termoBusca = '') {
         tr.innerHTML = `
             <td>
                 <input type="number" class="input-quantidade" data-item-id="${item.id}"
-                       min="1" value="1" style="width: 60px; text-align: center;">
+                       min="0" value="0" style="width: 60px; text-align: center;">
             </td>
             <td>
                 <span class="nome-item">${item.codigo} - ${item.nome}</span>
@@ -285,6 +285,16 @@ function toggleSelecaoItem(itemId) {
  */
 function adicionarItensSelecionadosARequisicao() {
     if (itensSelecionados.length === 0) {
+        alert(" Selecione pelo menos um item para adicionar.");
+        return;
+    }
+
+    // Filtra itens com quantidade 0
+    const itensValidos = itensSelecionados.filter(item => parseInt(item.quantidade) > 0);
+    if (itensValidos.length === 0) {
+        alert(" Selecione pelo menos um item com quantidade maior que 0.");
+        return;
+    }
         alert('⚠️ Selecione pelo menos um item para adicionar.');
         return;
     }
@@ -323,7 +333,7 @@ function adicionarItensSelecionadosARequisicao() {
     document.getElementById('modalAdicionarItem').style.display = 'none';
 
     alert(`✅ ${itensSelecionados.length} item(ns) adicionado(s) com sucesso!`);
-}
+   
 
 /**
  * Limpa a seleção visual dos itens na tabela.
@@ -337,7 +347,7 @@ function limparSelecaoVisual() {
 
     // Reseta os campos de entrada
     document.querySelectorAll('.input-quantidade').forEach(input => {
-        input.value = '1';
+        input.value = "0";
     });
 
     document.querySelectorAll('.input-modelo').forEach(input => {
