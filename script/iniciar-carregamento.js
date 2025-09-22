@@ -283,8 +283,10 @@ function adicionarItensSelecionadosARequisicao() {
     // Coleta todos os itens com quantidade > 0
     const itensParaAdicionar = [];
     document.querySelectorAll('.input-quantidade').forEach(input => {
-        const quantidade = parseInt(input.value);
-        if (quantidade > 0) {
+        const valorInput = input.value.trim();
+        const quantidade = parseInt(valorInput);
+
+        if (!isNaN(quantidade) && quantidade > 0) {
             const itemId = input.dataset.itemId;
             const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
 
@@ -506,8 +508,6 @@ async function salvarNovoVeiculo(event) {
         qrcode: null
     };
 
-    console.log('Tentando inserir veículo:', veiculoData);
-
     const { data, error } = await supabase
         .from('veiculos')
         .insert([veiculoData])
@@ -519,7 +519,6 @@ async function salvarNovoVeiculo(event) {
         return;
     }
 
-    console.log('Veículo salvo com sucesso:', data);
     alert('✅ Veículo salvo com sucesso!');
 
     // Fechar modal e resetar formulário
