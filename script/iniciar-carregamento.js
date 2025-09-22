@@ -161,6 +161,190 @@ async function carregarItensNoModal() {
     await carregarItensNoDatalist();
 }
 
+// === NOVAS VARIÁVEIS PARA O MODAL DE ITENS ===
+let todosItens = []; // Armazena todos os itens carregados
+let itensSelecionados = []; // Armazena os itens selecionados para adicionar
+
+/**
+ * Carrega todos os itens cadastrados para o modal de seleção.
+ */
+async function carregarTodosItensParaModal() {
+    const { data: itens, error } = await supabase
+        .from('itens')
+        .select('id, codigo, nome, tipo')
+        .order('nome', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar itens para modal:', error);
+        return;
+    }
+
+    todosItens = itens || [];
+    renderizarTabelaItensModal();
+}
+
+/**
+ * Renderiza a tabela de itens no modal com busca em tempo real.
+ */
+function renderizarTabelaItensModal(termoBusca = '') {
+    const corpoTabela = document.getElementById('corpoTabelaItensModal');
+    if (!corpoTabela) return;
+
+    // Filtra os itens baseado no termo de busca
+    const itensFiltrados = todosItens.filter(item =>
+        item.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        item.codigo.toLowerCase().includes(termoBusca.toLowerCase())
+    );
+
+    corpoTabela.innerHTML = '';
+
+    if (itensFiltrados.length === 0) {
+        corpoTabela.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: #666; padding: 20px;">
+                    ${termoBusca ? 'Nenhum item encontrado para: ' + termoBusca : 'Nenhum item cadastrado'}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    itensFiltrados.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <input type="number" class="input-quantidade" data-item-id="${item.id}"
+                       min="1" value="1" style="width: 60px; text-align: center;">
+            </td>
+            <td>
+                <span class="nome-item">${item.codigo} - ${item.nome}</span>
+                <input type="hidden" class="item-id" value="${item.id}">
+                <input type="hidden" class="item-tipo" value="${item.tipo}">
+            </td>
+            <td>
+                <input type="text" class="input-modelo" data-item-id="${item.id}"
+                       placeholder="Ex: VERTICAL" style="width: 130px;">
+            </td>
+            <td>
+                <button type="button" class="btn-selecionar-item" data-item-id="${item.id}"
+                        title="Selecionar item">✓</button>
+            </td>
+        `;
+        corpoTabela.appendChild(tr);
+    });
+
+    // Adiciona event listeners para os botões de seleção
+    document.querySelectorAll('.btn-selecionar-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const itemId = e.target.dataset.itemId;
+            toggleSelecaoItem(itemId);
+        });
+    });
+}
+
+/**
+ * Alterna a seleção de um item na tabela.
+ */
+function toggleSelecaoItem(itemId) {
+    const btn = document.querySelector(`.btn-selecionar-item[data-item-id="${itemId}"]`);
+    const isSelected = btn.classList.contains('selecionado');
+
+    if (isSelected) {
+        // Remove da seleção
+        btn.classList.remove('selecionado');
+        btn.innerHTML = '✓';
+        btn.title = 'Selecionar item';
+
+        // Remove dos itens selecionados
+        itensSelecionados = itensSelecionados.filter(item => item.item_id !== itemId);
+    } else {
+        // Adiciona à seleção
+        btn.classList.add('selecionado');
+        btn.innerHTML = '✓';
+        btn.title = 'Item selecionado';
+
+        // Adiciona aos itens selecionados
+        const item = todosItens.find(i => i.id === itemId);
+        if (item) {
+            const quantidade = document.querySelector(`.input-quantidade[data-item-id="${itemId}"]`).value;
+            const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
+
+            itensSelecionados.push({
+                item_id: itemId,
+                item_nome: `${item.codigo} - ${item.nome}`,
+                tipo: item.tipo,
+                quantidade: parseInt(quantidade),
+                modelo: modelo || ''
+            });
+        }
+    }
+}
+
+/**
+ * Adiciona os itens selecionados à requisição atual.
+ */
+function adicionarItensSelecionadosARequisicao() {
+    if (itensSelecionados.length === 0) {
+        alert('⚠️ Selecione pelo menos um item para adicionar.');
+        return;
+    }
+
+    // Adiciona cada item selecionado à requisição atual
+    itensSelecionados.forEach(itemSelecionado => {
+        // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
+        const itemExistente = requisicaoAtual.itens.find(i =>
+            i.item_id === itemSelecionado.item_id &&
+            i.modelo.toLowerCase() === itemSelecionado.modelo.toLowerCase() &&
+            i.tipo === itemSelecionado.tipo
+        );
+
+        if (itemExistente) {
+            itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(itemSelecionado.quantidade);
+        } else {
+            requisicaoAtual.itens.push({
+                item_id: itemSelecionado.item_id,
+                item_nome: itemSelecionado.item_nome,
+                modelo: itemSelecionado.modelo,
+                tipo: itemSelecionado.tipo,
+                quantidade: parseInt(itemSelecionado.quantidade),
+            });
+        }
+    });
+
+    // Atualiza as tabelas
+    renderizarItensRequisicaoAtual();
+    renderizarTabelaResumo();
+
+    // Limpa a seleção
+    itensSelecionados = [];
+    limparSelecaoVisual();
+
+    // Fecha o modal
+    document.getElementById('modalAdicionarItem').style.display = 'none';
+
+    alert(`✅ ${itensSelecionados.length} item(ns) adicionado(s) com sucesso!`);
+}
+
+/**
+ * Limpa a seleção visual dos itens na tabela.
+ */
+function limparSelecaoVisual() {
+    document.querySelectorAll('.btn-selecionar-item').forEach(btn => {
+        btn.classList.remove('selecionado');
+        btn.innerHTML = '✓';
+        btn.title = 'Selecionar item';
+    });
+
+    // Reseta os campos de entrada
+    document.querySelectorAll('.input-quantidade').forEach(input => {
+        input.value = '1';
+    });
+
+    document.querySelectorAll('.input-modelo').forEach(input => {
+        input.value = '';
+    });
+}
+
 /**
  * Carrega os motoristas do banco de dados e os popula em um elemento <select>.
  */
@@ -714,9 +898,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalAdicionarItem = document.getElementById('modalAdicionarItem');
     const btnAbrirAdicionarItem = document.getElementById('btnAbrirModalAdicionarItem');
     const btnFecharAdicionarItem = document.getElementById('fecharModalAdicionarItem');
+    const btnAdicionarItensSelecionados = document.getElementById('btnAdicionarItensSelecionados');
+    const btnLimparSelecao = document.getElementById('btnLimparSelecao');
+    const buscaItens = document.getElementById('buscaItens');
 
-    btnAbrirAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'block'; }
-    btnFecharAdicionarItem.onclick = () => { modalAdicionarItem.style.display = 'none'; }
+    btnAbrirAdicionarItem.onclick = async () => {
+        modalAdicionarItem.style.display = 'block';
+        await carregarTodosItensParaModal();
+    }
+
+    btnFecharAdicionarItem.onclick = () => {
+        modalAdicionarItem.style.display = 'none';
+        limparSelecaoVisual();
+        itensSelecionados = [];
+    }
+
+    // Event listener para adicionar itens selecionados
+    if (btnAdicionarItensSelecionados) {
+        btnAdicionarItensSelecionados.addEventListener('click', adicionarItensSelecionadosARequisicao);
+    }
+
+    // Event listener para limpar seleção
+    if (btnLimparSelecao) {
+        btnLimparSelecao.addEventListener('click', () => {
+            itensSelecionados = [];
+            limparSelecaoVisual();
+        });
+    }
+
+    // Event listener para busca em tempo real
+    if (buscaItens) {
+        buscaItens.addEventListener('input', (e) => {
+            const termoBusca = e.target.value.trim();
+            renderizarTabelaItensModal(termoBusca);
+        });
+    }
 
     // Lógica para o Modal de Motorista
     const modalMotorista = document.getElementById('modalMotorista');

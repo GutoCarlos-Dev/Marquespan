@@ -211,21 +211,36 @@
 
   <!-- Modal Adicionar Item à Requisição -->
   <div id="modalAdicionarItem" class="modal">
-    <div class="modal-conteudo">
+    <div class="modal-conteudo modal-grande">
       <span class="fechar-modal" id="fecharModalAdicionarItem">&times;</span>
-      <h3>📦 Adicionar Item</h3>
-      <form id="formAdicionarItem" class="formulario">
-        <label for="itemInput">Item:</label>
-        <input type="text" id="itemInput" placeholder="Digite o nome ou código do item" list="itensList" required>
-        <datalist id="itensList"></datalist>
-        <label for="modeloItemModal">Modelo:</label>
-        <input type="text" id="modeloItemModal" placeholder="Ex: VERTICAL, HORIZONTAL, ETC" >
-        <label for="quantidadeItemModal">Quantidade:</label>
-        <input type="number" id="quantidadeItemModal" min="1" value="1" required>
-        <div class="botoes-form">
-          <button type="submit">➕ Adicionar</button>
-        </div>
-      </form>
+      <h3>📦 Selecionar Itens para Adicionar</h3>
+
+      <!-- Campo de busca -->
+      <div class="campo-busca">
+        <input type="text" id="buscaItens" placeholder="🔍 Buscar itens..." class="input-busca">
+      </div>
+
+      <!-- Tabela de itens -->
+      <div class="table-container-modal">
+        <table id="tabelaItensModal" class="tabela-modal">
+          <thead>
+            <tr>
+              <th style="width: 80px;">QTD</th>
+              <th>Nome</th>
+              <th style="width: 150px;">Modelo</th>
+              <th style="width: 60px;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaItensModal">
+            <!-- Itens serão carregados dinamicamente -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="botoes-form">
+        <button type="button" id="btnAdicionarItensSelecionados">➕ Adicionar Itens Selecionados</button>
+        <button type="button" id="btnLimparSelecao">🗑️ Limpar Seleção</button>
+      </div>
     </div>
   </div>
 
@@ -270,3 +285,7 @@
   <script type="module" src="./script/iniciar-carregamento.js"></script>
 </body>
 </html>
+^ < l i n k  
+ r e l = s t y l e s h e e t  
+ h r e f = c s s / m o d a l - a d i c i o n a r - i t e m . c s s ^ >  
+ 

@@ -1,0 +1,163 @@
+/* Estilos para o Modal de Adicionar Item */
+.modal-adicionar-item {
+  max-width: 90%;
+  width: 1200px;
+  margin: 5% auto;
+}
+
+.modal-adicionar-item .modal-conteudo {
+  padding: 0;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.modal-adicionar-item .modal-header {
+  background-color: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-adicionar-item .modal-body {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-adicionar-item .modal-footer {
+  background-color: #f8f9fa;
+  padding: 15px 20px;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Estilos para a tabela de itens no modal */
+.tabela-itens-modal {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.tabela-itens-modal th,
+.tabela-itens-modal td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tabela-itens-modal th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+  color: #333;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.tabela-itens-modal input[type="number"] {
+  width: 60px;
+  text-align: center;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.tabela-itens-modal input[type="text"] {
+  width: 130px;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+/* Estilos para botões de seleção de itens */
+.btn-selecionar-item {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn-selecionar-item:hover {
+  background-color: #0056b3;
+  transform: scale(1.1);
+}
+
+.btn-selecionar-item.selecionado {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-selecionar-item.selecionado:hover {
+  background-color: #218838;
+}
+
+/* Estilos para o campo de busca */
+#buscaItens {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+#buscaItens:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+/* Estilos para botões do modal */
+.btn-modal {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-modal-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-modal-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-modal-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-modal-secondary:hover {
+  background-color: #545b62;
+}
+
+.btn-modal-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-modal-success:hover {
+  background-color: #218838;
+}
+
+/* Animação para o modal */
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
