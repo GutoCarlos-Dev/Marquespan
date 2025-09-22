@@ -313,7 +313,8 @@ function adicionarItensSelecionadosARequisicao() {
             const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
             console.log(`Modelo para item ${itemId}: ${modelo}`);
 
-            const item = todosItens.find(i => i.id === itemId);
+            // Correção: O ID do dataset é uma string, e o ID do item é um número. Convertemos para o mesmo tipo.
+            const item = todosItens.find(i => i.id === parseInt(itemId, 10));
             console.log('Item encontrado:', item);
 
             if (item) {
