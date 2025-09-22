@@ -14,16 +14,13 @@ let requisicaoAtual = {
 };
 
 /**
- * Carrega os clientes do banco de dados e os popula em um elemento <select>.
+ * Carrega os clientes do banco de dados e os popula em um elemento <datalist>.
  */
-async function carregarClientesNoSelect() {
-    const selectCliente = document.getElementById('clienteSelectRequisicao');
-    if (!selectCliente) return;
+async function carregarClientesNoDatalist() {
+    const datalist = document.getElementById('clientesList');
+    if (!datalist) return;
 
-    // Limpa as opções existentes (exceto a primeira "Carregando...")
-    while (selectCliente.options.length > 1) {
-        selectCliente.remove(1);
-    }
+    datalist.innerHTML = ''; // Limpa opções antigas
 
     const { data: clientes, error } = await supabase
         .from('clientes')
@@ -32,35 +29,34 @@ async function carregarClientesNoSelect() {
 
     if (error) {
         console.error('Erro ao carregar clientes:', error);
-        const option = document.createElement('option');
-        option.textContent = 'Erro ao carregar clientes';
-        option.disabled = true;
-        selectCliente.appendChild(option);
         return;
     }
-    // Remove a opção "Carregando..."
-    if (selectCliente.options[0] && selectCliente.options[0].disabled) {
-        selectCliente.remove(0);
-    }
 
-    if (clientes.length === 0) {
+    clientes.forEach(cliente => {
+        // Adiciona opções com código e nome para facilitar a busca
         const option = document.createElement('option');
-        option.textContent = 'Nenhum cliente cadastrado';
-        option.disabled = true;
-        selectCliente.appendChild(option);
-    } else {
-        // Adiciona uma opção padrão para selecionar
-        const defaultOption = document.createElement('option');
-        defaultOption.textContent = 'Selecione o cliente';
-        defaultOption.value = null;
-        selectCliente.insertBefore(defaultOption, selectCliente.firstChild);
-        clientes.forEach(cliente => {
-            const option = document.createElement('option');
-            option.value = cliente.id; // Usar o ID como valor
-            option.textContent = `${cliente.codigo} - ${cliente.nome}`; // Exibir código e nome
-            selectCliente.appendChild(option);
-        });
+        option.value = `${cliente.codigo} - ${cliente.nome}`;
+        option.setAttribute('data-id', cliente.id); // Armazena o ID do cliente
+        datalist.appendChild(option);
+    });
+}
+
+/**
+ * Obtém o ID do cliente selecionado a partir do texto digitado.
+ * @param {string} textoDigitado O texto digitado no campo cliente
+ * @returns {string|null} O ID do cliente ou null se não encontrado
+ */
+function obterIdClientePorTexto(textoDigitado) {
+    const datalist = document.getElementById('clientesList');
+    if (!datalist) return null;
+
+    const options = datalist.querySelectorAll('option');
+    for (let option of options) {
+        if (option.value === textoDigitado) {
+            return option.getAttribute('data-id');
+        }
     }
+    return null;
 }
 
 /**
@@ -187,9 +183,12 @@ async function salvarNovoCliente(event) {
     document.getElementById('formNovoCliente').reset();
     document.getElementById('modalCliente').style.display = 'none';
 
-    // Recarrega a lista de clientes e seleciona o novo cliente
-    await carregarClientesNoSelect();
-    document.getElementById('clienteSelectRequisicao').value = data.id;
+    // Recarrega a lista de clientes e preenche o campo com o novo cliente
+    await carregarClientesNoDatalist();
+    const clienteInput = document.getElementById('clienteInput');
+    if (clienteInput) {
+        clienteInput.value = `${data.codigo} - ${data.nome}`;
+    }
 }
 
 /**
@@ -389,13 +388,21 @@ function renderizarItensRequisicaoAtual() {
  * Adiciona a requisição montada ao carregamento principal.
  */
 function handleIncluirRequisicao() {
-    const clienteSelect = document.getElementById('clienteSelectRequisicao');
-    requisicaoAtual.cliente_id = clienteSelect.value;
-    requisicaoAtual.cliente_nome = clienteSelect.options[clienteSelect.selectedIndex].text;
+    const clienteInput = document.getElementById('clienteInput');
+    const textoCliente = clienteInput ? clienteInput.value.trim() : '';
+
+    if (!textoCliente) {
+        alert('⚠️ Selecione um cliente para a requisição.');
+        return;
+    }
+
+    // Obtém o ID do cliente a partir do texto digitado
+    requisicaoAtual.cliente_id = obterIdClientePorTexto(textoCliente);
+    requisicaoAtual.cliente_nome = textoCliente;
     requisicaoAtual.motivo = document.getElementById('motivoRequisicao').value;
 
     if (!requisicaoAtual.cliente_id) {
-        alert('⚠️ Selecione um cliente para a requisição.');
+        alert('⚠️ Cliente não encontrado. Verifique se o cliente está cadastrado.');
         return;
     }
     if (requisicaoAtual.itens.length === 0) {
@@ -408,7 +415,9 @@ function handleIncluirRequisicao() {
 
     // Limpa para a próxima requisição
     requisicaoAtual = { cliente_id: null, cliente_nome: '', motivo: '', itens: [] };
-    document.getElementById('clienteSelectRequisicao').value = null;
+    if (clienteInput) {
+        clienteInput.value = '';
+    }
     renderizarItensRequisicaoAtual();
     alert('✅ Requisição incluída no carregamento!');
 }
@@ -514,7 +523,7 @@ async function salvarCarregamentoCompleto() {
 
 // Executa quando o DOM está totalmente carregado
 document.addEventListener('DOMContentLoaded', () => {
-    carregarClientesNoSelect();
+    carregarClientesNoDatalist();
     carregarVeiculosNoDatalist();
     carregarItensNoModal();
     carregarMotoristasNoSelect();

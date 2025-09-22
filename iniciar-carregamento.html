@@ -78,10 +78,9 @@
       <h3>📝 Dados das Requisições</h3>
       <div id="formRequisicao" class="formulario">
         <div class="form-group-com-botao">
-          <label for="clienteSelectRequisicao">Cliente:</label>
-          <select id="clienteSelectRequisicao">
-            <option value="" disabled selected>Carregando clientes...</option>
-          </select>
+          <label for="clienteInput">Cliente:</label>
+          <input type="text" id="clienteInput" placeholder="Digite o nome ou código do cliente" list="clientesList" required>
+          <datalist id="clientesList"></datalist>
           <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
         </div>
         <label for="motivoRequisicao">Motivo:</label>
