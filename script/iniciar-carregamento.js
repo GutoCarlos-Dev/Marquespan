@@ -285,22 +285,19 @@ function toggleSelecaoItem(itemId) {
  */
 function adicionarItensSelecionadosARequisicao() {
     if (itensSelecionados.length === 0) {
-        alert(" Selecione pelo menos um item para adicionar.");
+        alert("⚠️ Selecione pelo menos um item para adicionar.");
         return;
     }
 
     // Filtra itens com quantidade 0
     const itensValidos = itensSelecionados.filter(item => parseInt(item.quantidade) > 0);
     if (itensValidos.length === 0) {
-        alert(" Selecione pelo menos um item com quantidade maior que 0.");
-        return;
-    }
-        alert('⚠️ Selecione pelo menos um item para adicionar.');
+        alert("⚠️ Selecione pelo menos um item com quantidade maior que 0.");
         return;
     }
 
     // Adiciona cada item selecionado à requisição atual
-    itensSelecionados.forEach(itemSelecionado => {
+    itensValidos.forEach(itemSelecionado => {
         // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
         const itemExistente = requisicaoAtual.itens.find(i =>
             i.item_id === itemSelecionado.item_id &&
@@ -332,8 +329,8 @@ function adicionarItensSelecionadosARequisicao() {
     // Fecha o modal
     document.getElementById('modalAdicionarItem').style.display = 'none';
 
-    alert(`✅ ${itensSelecionados.length} item(ns) adicionado(s) com sucesso!`);
-   
+    alert(`✅ ${itensValidos.length} item(ns) adicionado(s) com sucesso!`);
+}
 
 /**
  * Limpa a seleção visual dos itens na tabela.
@@ -1012,9 +1009,9 @@ function renderizarTabelaResumo() {
 
     // 1. Total de itens (soma de todos os itens de todas as requisições)
     const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
-        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
+        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
     }, 0) + carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
-        return total + req.itens.reduce((sum, item) => sum + item.quantidade, 0);
+        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
     }, 0);
 
     // 2. Total de clientes únicos
