@@ -784,6 +784,345 @@ function renderizarTabelaCarregamento() {
 }
 
 /**
+ * Gera um PDF com todos os dados do carregamento atual.
+ */
+async function gerarPDF() {
+    try {
+        // Verifica se há dados para gerar o PDF
+        if (carregamentoState.requisicoesCarregamento.length === 0 &&
+            carregamentoState.requisicoesTrocaRetirada.length === 0) {
+            alert('⚠️ Adicione pelo menos uma requisição ao carregamento antes de gerar o PDF.');
+            return;
+        }
+
+        // Coleta os dados do cabeçalho
+        const semana = document.getElementById('semana').value;
+        const dataCarregamento = document.getElementById('dataCarregamento').value;
+        const placa = document.getElementById('placa').value;
+        const motoristaId = document.getElementById('motoristaSelect').value;
+        const conferente = document.getElementById('conferente').value;
+        const supervisor = document.getElementById('supervisor').value;
+
+        const motoristaNome = await getMotoristaNomeById(motoristaId);
+
+        // Formata a data
+        const dataFormatada = new Date(dataCarregamento).toLocaleDateString('pt-BR');
+
+        // Cria o conteúdo HTML do PDF
+        const conteudoPDF = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório de Carregamento - Marquespan</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                        font-size: 12px;
+                    }
+                    .header {
+                        text-align: center;
+                        border-bottom: 2px solid #333;
+                        padding-bottom: 10px;
+                        margin-bottom: 20px;
+                    }
+                    .header h1 {
+                        margin: 0;
+                        font-size: 18px;
+                        color: #333;
+                    }
+                    .header .subtitle {
+                        font-size: 14px;
+                        color: #666;
+                        margin: 5px 0;
+                    }
+                    .info-section {
+                        margin-bottom: 20px;
+                    }
+                    .info-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 10px;
+                        margin-bottom: 15px;
+                    }
+                    .info-item {
+                        margin-bottom: 5px;
+                    }
+                    .info-label {
+                        font-weight: bold;
+                        display: inline-block;
+                        width: 120px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 20px;
+                    }
+                    th, td {
+                        border: 1px solid #333;
+                        padding: 6px;
+                        text-align: left;
+                        font-size: 11px;
+                    }
+                    th {
+                        background-color: #f0f0f0;
+                        font-weight: bold;
+                    }
+                    .section-title {
+                        background-color: #e0e0e0;
+                        font-weight: bold;
+                        text-align: center;
+                        padding: 8px;
+                        margin-top: 15px;
+                    }
+                    .summary-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 10px;
+                        margin-top: 15px;
+                    }
+                    .summary-item {
+                        text-align: center;
+                        padding: 8px;
+                        background-color: #f9f9f9;
+                        border: 1px solid #ddd;
+                    }
+                    .summary-label {
+                        font-weight: bold;
+                        font-size: 10px;
+                    }
+                    .summary-value {
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: #333;
+                    }
+                    .total-row {
+                        background-color: #e8f4fd !important;
+                        font-weight: bold;
+                    }
+                    .page-break {
+                        page-break-before: always;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🏢 MARQUESPAN</h1>
+                    <div class="subtitle">Relatório de Carregamento</div>
+                    <div class="subtitle">Semana ${semana} - ${dataFormatada}</div>
+                </div>
+
+                <div class="info-section">
+                    <h3 style="margin-top: 0;">📋 Informações do Carregamento</h3>
+                    <div class="info-grid">
+                        <div class="info-item"><span class="info-label">Placa:</span> ${placa}</div>
+                        <div class="info-item"><span class="info-label">Motorista:</span> ${motoristaNome}</div>
+                        <div class="info-item"><span class="info-label">Conferente:</span> ${conferente}</div>
+                        <div class="info-item"><span class="info-label">Supervisor:</span> ${supervisor || 'N/A'}</div>
+                    </div>
+                </div>
+
+                ${carregamentoState.requisicoesCarregamento.length > 0 ? `
+                <div class="info-section">
+                    <h3 class="section-title">📦 ITENS PARA ENTREGA</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Equipamento</th>
+                                <th>Modelo</th>
+                                <th>Tipo</th>
+                                <th>Qtd</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${gerarLinhasTabela(carregamentoState.requisicoesCarregamento)}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+
+                ${carregamentoState.requisicoesTrocaRetirada.length > 0 ? `
+                <div class="info-section">
+                    <h3 class="section-title">🔄 ITENS DE TROCA E RETIRADA</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Equipamento</th>
+                                <th>Modelo</th>
+                                <th>Tipo</th>
+                                <th>Qtd</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${gerarLinhasTabela(carregamentoState.requisicoesTrocaRetirada)}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+
+                <div class="info-section">
+                    <h3 class="section-title">📊 RESUMO GERAL</h3>
+                    ${gerarResumoPDF()}
+                </div>
+
+                <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #666;">
+                    <p>Relatório gerado em ${new Date().toLocaleString('pt-BR')}</p>
+                    <p>Sistema de Gerenciamento de Carregamentos - Marquespan</p>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Configurações do PDF
+        const opcoes = {
+            margin: 1,
+            filename: `carregamento_semana_${semana}_${dataFormatada.replace(/\//g, '-')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Gera o PDF
+        await html2pdf().set(opcoes).from(conteudoPDF).save();
+
+        alert('✅ PDF gerado com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('❌ Erro ao gerar PDF. Tente novamente.');
+    }
+}
+
+/**
+ * Gera as linhas da tabela para o PDF
+ */
+function gerarLinhasTabela(requisicoes) {
+    const itensAgrupados = {};
+
+    // Agrupa itens idênticos
+    requisicoes.forEach(req => {
+        req.itens.forEach(item => {
+            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            if (itensAgrupados[chave]) {
+                itensAgrupados[chave].quantidade += item.quantidade;
+                itensAgrupados[chave].motivos.push(req.motivo);
+            } else {
+                itensAgrupados[chave] = {
+                    ...item,
+                    motivos: [req.motivo]
+                };
+            }
+        });
+    });
+
+    return Object.values(itensAgrupados).map(item => `
+        <tr>
+            <td>${item.item_nome.split(' - ')[0]}</td>
+            <td>${item.item_nome.split(' - ')[1] || ''}</td>
+            <td>${item.modelo}</td>
+            <td>${item.tipo}</td>
+            <td style="text-align: center;">${item.quantidade}</td>
+            <td>${item.motivos.join(', ')}</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Gera o resumo formatado para o PDF
+ */
+function gerarResumoPDF() {
+    // Cálculos das métricas
+    const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
+        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
+    }, 0) + carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
+        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
+    }, 0);
+
+    const todosClientes = [
+        ...carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome),
+        ...carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome)
+    ];
+    const totalClientes = [...new Set(todosClientes)].length;
+
+    const contagemMotivos = {
+        'Cliente Novo': 0,
+        'Aumento': 0,
+        'Aumento+Troca': 0,
+        'Troca': 0,
+        'Retirada Parcial': 0,
+        'Retirada de Empréstimo': 0,
+        'Retirada Total': 0
+    };
+
+    carregamentoState.requisicoesCarregamento.forEach(req => {
+        if (contagemMotivos.hasOwnProperty(req.motivo)) {
+            contagemMotivos[req.motivo]++;
+        }
+    });
+
+    carregamentoState.requisicoesTrocaRetirada.forEach(req => {
+        if (contagemMotivos.hasOwnProperty(req.motivo)) {
+            contagemMotivos[req.motivo]++;
+        }
+    });
+
+    const clientesNovos = carregamentoState.requisicoesCarregamento.filter(req => req.motivo === 'Cliente Novo').length +
+                         carregamentoState.requisicoesTrocaRetirada.filter(req => req.motivo === 'Cliente Novo').length;
+
+    return `
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-label">Total de Itens</div>
+                <div class="summary-value">${totalItens}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total de Clientes</div>
+                <div class="summary-value">${totalClientes}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Clientes Novos</div>
+                <div class="summary-value">${clientesNovos}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Aumentos</div>
+                <div class="summary-value">${contagemMotivos['Aumento']}</div>
+            </div>
+        </div>
+
+        <table style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>Trocas</th>
+                    <th>Ret. Parcial</th>
+                    <th>Ret. Empréstimo</th>
+                    <th>Ret. Total</th>
+                    <th>Aum+Troca</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align: center;">${contagemMotivos['Troca']}</td>
+                    <td style="text-align: center;">${contagemMotivos['Retirada Parcial']}</td>
+                    <td style="text-align: center;">${contagemMotivos['Retirada de Empréstimo']}</td>
+                    <td style="text-align: center;">${contagemMotivos['Retirada Total']}</td>
+                    <td style="text-align: center;">${contagemMotivos['Aumento+Troca']}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 10px; font-size: 10px; color: #666;">
+            <strong>Detalhes:</strong> Total Carregamento: ${carregamentoState.requisicoesCarregamento.length} |
+            Total Troca/Retirada: ${carregamentoState.requisicoesTrocaRetirada.length}
+        </div>
+    `;
+}
+
+/**
  * Renderiza a tabela de itens de troca e retirada (motivos que NÃO ADICIONAM itens).
  */
 function renderizarTabelaTrocaRetirada() {
@@ -1019,6 +1358,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('formNovoMotorista').addEventListener('submit', salvarNovoMotorista);
     document.getElementById('btnIncluirRequisicao').addEventListener('click', handleIncluirRequisicao);
     document.getElementById('btnSalvarCarregamento').addEventListener('click', salvarCarregamentoCompleto);
+    document.getElementById('btnGerarPDF').addEventListener('click', gerarPDF);
 
     // Renderiza tabelas vazias inicialmente
     renderizarItensRequisicaoAtual();
