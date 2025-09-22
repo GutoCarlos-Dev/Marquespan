@@ -281,39 +281,53 @@ function toggleSelecaoItem(itemId) {
 }
 
 /**
- * Adiciona os itens selecionados à requisição atual.
+ * Adiciona os itens com quantidade > 0 à requisição atual.
  */
 function adicionarItensSelecionadosARequisicao() {
-    if (itensSelecionados.length === 0) {
-        alert("⚠️ Selecione pelo menos um item para adicionar.");
+    // Coleta todos os itens com quantidade > 0
+    const itensParaAdicionar = [];
+    document.querySelectorAll('.input-quantidade').forEach(input => {
+        const quantidade = parseInt(input.value);
+        if (quantidade > 0) {
+            const itemId = input.dataset.itemId;
+            const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
+
+            const item = todosItens.find(i => i.id === itemId);
+            if (item) {
+                itensParaAdicionar.push({
+                    item_id: itemId,
+                    item_nome: `${item.codigo} - ${item.nome}`,
+                    tipo: item.tipo,
+                    quantidade: quantidade,
+                    modelo: modelo || ''
+                });
+            }
+        }
+    });
+
+    if (itensParaAdicionar.length === 0) {
+        alert("⚠️ Defina a quantidade para pelo menos um item.");
         return;
     }
 
-    // Filtra itens com quantidade 0
-    const itensValidos = itensSelecionados.filter(item => parseInt(item.quantidade) > 0);
-    if (itensValidos.length === 0) {
-        alert("⚠️ Selecione pelo menos um item com quantidade maior que 0.");
-        return;
-    }
-
-    // Adiciona cada item selecionado à requisição atual
-    itensValidos.forEach(itemSelecionado => {
+    // Adiciona cada item à requisição atual
+    itensParaAdicionar.forEach(itemParaAdicionar => {
         // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
         const itemExistente = requisicaoAtual.itens.find(i =>
-            i.item_id === itemSelecionado.item_id &&
-            i.modelo.toLowerCase() === itemSelecionado.modelo.toLowerCase() &&
-            i.tipo === itemSelecionado.tipo
+            i.item_id === itemParaAdicionar.item_id &&
+            i.modelo.toLowerCase() === itemParaAdicionar.modelo.toLowerCase() &&
+            i.tipo === itemParaAdicionar.tipo
         );
 
         if (itemExistente) {
-            itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(itemSelecionado.quantidade);
+            itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(itemParaAdicionar.quantidade);
         } else {
             requisicaoAtual.itens.push({
-                item_id: itemSelecionado.item_id,
-                item_nome: itemSelecionado.item_nome,
-                modelo: itemSelecionado.modelo,
-                tipo: itemSelecionado.tipo,
-                quantidade: parseInt(itemSelecionado.quantidade),
+                item_id: itemParaAdicionar.item_id,
+                item_nome: itemParaAdicionar.item_nome,
+                modelo: itemParaAdicionar.modelo,
+                tipo: itemParaAdicionar.tipo,
+                quantidade: parseInt(itemParaAdicionar.quantidade),
             });
         }
     });
@@ -322,14 +336,19 @@ function adicionarItensSelecionadosARequisicao() {
     renderizarItensRequisicaoAtual();
     renderizarTabelaResumo();
 
-    // Limpa a seleção
-    itensSelecionados = [];
-    limparSelecaoVisual();
+    // Reseta os campos de entrada
+    document.querySelectorAll('.input-quantidade').forEach(input => {
+        input.value = "0";
+    });
+
+    document.querySelectorAll('.input-modelo').forEach(input => {
+        input.value = '';
+    });
 
     // Fecha o modal
     document.getElementById('modalAdicionarItem').style.display = 'none';
 
-    alert(`✅ ${itensValidos.length} item(ns) adicionado(s) com sucesso!`);
+    alert(`✅ ${itensParaAdicionar.length} item(ns) adicionado(s) com sucesso!`);
 }
 
 /**
