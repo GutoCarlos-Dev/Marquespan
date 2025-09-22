@@ -229,6 +229,13 @@ function renderizarTabelaItensModal(termoBusca = '') {
         corpoTabela.appendChild(tr);
     });
 
+    console.log('=== DEBUG: renderizarTabelaItensModal ===');
+    console.log('Itens filtrados:', itensFiltrados.length);
+    console.log('Inputs de quantidade criados:', document.querySelectorAll('.input-quantidade').length);
+    console.log('Inputs de modelo criados:', document.querySelectorAll('.input-modelo').length);
+    console.log('Itens sendo renderizados:', itensFiltrados.map(item => `${item.codigo} - ${item.nome}`));
+    console.log('Elementos HTML criados na tabela:', document.querySelectorAll('#corpoTabelaItensModal tr').length);
+
     // Adiciona event listeners para os botões de seleção
     document.querySelectorAll('.btn-selecionar-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -280,17 +287,35 @@ function toggleSelecaoItem(itemId) {
  * Adiciona os itens com quantidade > 0 à requisição atual.
  */
 function adicionarItensSelecionadosARequisicao() {
+    console.log('=== DEBUG: adicionarItensSelecionadosARequisicao ===');
+    console.log('Todos os itens carregados:', todosItens.length);
+    console.log('Estado atual da requisição:', requisicaoAtual);
+    console.log('Itens selecionados:', itensSelecionados);
+
     // Coleta todos os itens com quantidade > 0
     const itensParaAdicionar = [];
-    document.querySelectorAll('.input-quantidade').forEach(input => {
+    const inputsQuantidade = document.querySelectorAll('.input-quantidade');
+    console.log('Inputs de quantidade encontrados:', inputsQuantidade.length);
+    console.log('Valores dos inputs de quantidade:', Array.from(inputsQuantidade).map(input => ({
+        itemId: input.dataset.itemId,
+        valor: input.value,
+        quantidade: parseInt(input.value)
+    })));
+
+    inputsQuantidade.forEach(input => {
         const valorInput = input.value.trim();
         const quantidade = parseInt(valorInput);
+        const itemId = input.dataset.itemId;
+
+        console.log(`Input - ItemId: ${itemId}, Valor: ${valorInput}, Quantidade: ${quantidade}`);
 
         if (!isNaN(quantidade) && quantidade > 0) {
-            const itemId = input.dataset.itemId;
             const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
+            console.log(`Modelo para item ${itemId}: ${modelo}`);
 
             const item = todosItens.find(i => i.id === itemId);
+            console.log('Item encontrado:', item);
+
             if (item) {
                 itensParaAdicionar.push({
                     item_id: itemId,
@@ -299,9 +324,13 @@ function adicionarItensSelecionadosARequisicao() {
                     quantidade: quantidade,
                     modelo: modelo || ''
                 });
+                console.log('Item adicionado à lista:', item);
             }
         }
     });
+
+    console.log('Itens para adicionar:', itensParaAdicionar);
+    console.log('Total de itens para adicionar:', itensParaAdicionar.length);
 
     if (itensParaAdicionar.length === 0) {
         alert("⚠️ Defina a quantidade para pelo menos um item.");
@@ -319,6 +348,7 @@ function adicionarItensSelecionadosARequisicao() {
 
         if (itemExistente) {
             itemExistente.quantidade = parseInt(itemExistente.quantidade) + parseInt(itemParaAdicionar.quantidade);
+            console.log('Item existente atualizado:', itemExistente);
         } else {
             requisicaoAtual.itens.push({
                 item_id: itemParaAdicionar.item_id,
@@ -327,8 +357,11 @@ function adicionarItensSelecionadosARequisicao() {
                 tipo: itemParaAdicionar.tipo,
                 quantidade: parseInt(itemParaAdicionar.quantidade),
             });
+            console.log('Novo item adicionado:', itemParaAdicionar);
         }
     });
+
+    console.log('Estado da requisição atual após adição:', requisicaoAtual);
 
     // Atualiza as tabelas
     renderizarItensRequisicaoAtual();
