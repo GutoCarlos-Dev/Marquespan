@@ -205,26 +205,74 @@ async function salvarNovoVeiculo(event) {
     const tipo = document.getElementById('tipoVeiculoModal').value.trim();
     const situacao = document.getElementById('situacaoVeiculoModal').value;
 
+    // Validação dos campos obrigatórios
     if (!filial || !placa || !modelo || !renavan || !tipo) {
-        alert('⚠️ Preencha todos os campos.');
+        alert('⚠️ Preencha todos os campos obrigatórios.');
         return;
     }
 
-    const { error } = await supabase
+    // Validação do formato da placa (formato brasileiro)
+    const placaRegex = /^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9]{1}[A-Z]{1}[0-9]{2}$/;
+    if (!placaRegex.test(placa)) {
+        alert('⚠️ Formato da placa inválido. Use o formato ABC1234 ou ABC1D23.');
+        return;
+    }
+
+    // Verificar se a placa já existe
+    const { data: veiculoExistente, error: erroVerificacao } = await supabase
         .from('veiculos')
-        .insert([{ filial, placa, modelo, renavan, tipo, situacao }]);
+        .select('id')
+        .eq('placa', placa)
+        .single();
+
+    if (erroVerificacao && erroVerificacao.code !== 'PGRST116') {
+        console.error('Erro ao verificar placa:', erroVerificacao);
+        alert('❌ Erro ao verificar se a placa já existe.');
+        return;
+    }
+
+    if (veiculoExistente) {
+        alert('❌ Já existe um veículo cadastrado com esta placa.');
+        return;
+    }
+
+    // Preparar dados do veículo com todos os campos necessários
+    const veiculoData = {
+        filial,
+        placa,
+        modelo,
+        renavan,
+        tipo,
+        situacao,
+        marca: '', // Campo adicional que pode ser necessário
+        chassi: null,
+        anofab: null,
+        anomod: null,
+        qtdtanque: null,
+        qrcode: null
+    };
+
+    console.log('Tentando inserir veículo:', veiculoData);
+
+    const { data, error } = await supabase
+        .from('veiculos')
+        .insert([veiculoData])
+        .select();
 
     if (error) {
-        alert('❌ Erro ao salvar veículo. Verifique se a placa já existe.');
-        console.error(error);
+        console.error('Erro detalhado do Supabase:', error);
+        alert(`❌ Erro ao salvar veículo: ${error.message || 'Erro desconhecido'}. Verifique os dados e tente novamente.`);
         return;
     }
 
+    console.log('Veículo salvo com sucesso:', data);
     alert('✅ Veículo salvo com sucesso!');
+
+    // Fechar modal e resetar formulário
     document.getElementById('formNovoVeiculo').reset();
     document.getElementById('modalVeiculo').style.display = 'none';
 
-    // Recarrega a lista de veículos e preenche o campo com a nova placa
+    // Recarregar a lista de veículos e preencher o campo com a nova placa
     await carregarVeiculosNoDatalist();
     document.getElementById('placa').value = placa;
 }
