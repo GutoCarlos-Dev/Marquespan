@@ -83,6 +83,26 @@ function obterIdItemPorTexto(textoDigitado) {
 }
 
 /**
+ * Obtém os dados completos de um item pelo ID.
+ * @param {string} itemId O ID do item
+ * @returns {Promise<Object|null>} Os dados do item ou null se não encontrado
+ */
+async function obterDadosItemPorId(itemId) {
+    const { data, error } = await supabase
+        .from('itens')
+        .select('id, codigo, nome, tipo')
+        .eq('id', itemId)
+        .single();
+
+    if (error) {
+        console.error('Erro ao buscar dados do item:', error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
  * Carrega as placas dos veículos e as popula em um elemento <datalist>.
  */
 async function carregarVeiculosNoDatalist() {
@@ -343,7 +363,7 @@ async function salvarNovoMotorista(event) {
 /**
  * Adiciona um item à requisição que está sendo montada.
  */
-function handleAdicionarItemNaRequisicao(event) {
+async function handleAdicionarItemNaRequisicao(event) {
     event.preventDefault();
     const itemInput = document.getElementById('itemInput');
     const textoItem = itemInput ? itemInput.value.trim() : '';
@@ -356,17 +376,25 @@ function handleAdicionarItemNaRequisicao(event) {
     // Obtém o ID do item a partir do texto digitado
     const itemId = obterIdItemPorTexto(textoItem);
     const modelo = document.getElementById('modeloItemModal').value.trim();
-    const tipo = document.getElementById('tipoItemModal').value;
     const quantidade = document.getElementById('quantidadeItemModal').value;
 
     if (!itemId) {
         alert('⚠️ Item não encontrado. Verifique se o item está cadastrado.');
         return;
     }
-    if (!tipo || !quantidade || quantidade < 1) {
-        alert('⚠️ Preencha o tipo, quantidade e selecione um item válido.');
+    if (!quantidade || quantidade < 1) {
+        alert('⚠️ Preencha a quantidade e selecione um item válido.');
         return;
     }
+
+    // Busca os dados completos do item no banco de dados para obter o tipo
+    const dadosItem = await obterDadosItemPorId(itemId);
+    if (!dadosItem) {
+        alert('⚠️ Erro ao obter dados do item. Tente novamente.');
+        return;
+    }
+
+    const tipo = dadosItem.tipo; // Usa o tipo que vem do cadastro do item
 
     // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
     const itemExistente = requisicaoAtual.itens.find(i =>
