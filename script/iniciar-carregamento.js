@@ -358,8 +358,8 @@ function handleAdicionarItemNaRequisicao(event) {
         alert('⚠️ Item não encontrado. Verifique se o item está cadastrado.');
         return;
     }
-    if (!modelo || !tipo || !quantidade || quantidade < 1) {
-        alert('⚠️ Preencha todos os campos do item e informe uma quantidade válida.');
+    if (!tipo || !quantidade || quantidade < 1) {
+        alert('⚠️ Preencha o tipo, quantidade e selecione um item válido.');
         return;
     }
 
