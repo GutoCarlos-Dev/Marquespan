@@ -1017,7 +1017,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('formNovoCliente').addEventListener('submit', salvarNovoCliente);
     document.getElementById('formNovoVeiculo').addEventListener('submit', salvarNovoVeiculo);
     document.getElementById('formNovoMotorista').addEventListener('submit', salvarNovoMotorista);
-    document.getElementById('formAdicionarItem').addEventListener('submit', handleAdicionarItemNaRequisicao);
     document.getElementById('btnIncluirRequisicao').addEventListener('click', handleIncluirRequisicao);
     document.getElementById('btnSalvarCarregamento').addEventListener('click', salvarCarregamentoCompleto);
 
