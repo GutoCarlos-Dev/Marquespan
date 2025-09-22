@@ -388,6 +388,7 @@ function handleAdicionarItemNaRequisicao(event) {
     }
 
     renderizarItensRequisicaoAtual();
+    renderizarTabelaResumo(); // Atualiza o resumo quando um item é adicionado
     document.getElementById('modalAdicionarItem').style.display = 'none';
     document.getElementById('formAdicionarItem').reset();
 
@@ -463,6 +464,7 @@ function handleIncluirRequisicao() {
 
     renderizarTabelaCarregamento();
     renderizarTabelaTrocaRetirada();
+    renderizarTabelaResumo(); // Atualiza o resumo quando uma requisição é incluída
 
     // Limpa para a próxima requisição
     requisicaoAtual = { cliente_id: null, cliente_nome: '', motivo: '', itens: [] };
