@@ -201,7 +201,7 @@ function renderizarTabelaItensModal(termoBusca = '') {
     if (itensFiltrados.length === 0) {
         corpoTabela.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; color: #666; padding: 20px;">
+                <td colspan="3" style="text-align: center; color: #666; padding: 20px;">
                     ${termoBusca ? 'Nenhum item encontrado para: ' + termoBusca : 'Nenhum item cadastrado'}
                 </td>
             </tr>
@@ -224,10 +224,6 @@ function renderizarTabelaItensModal(termoBusca = '') {
             <td>
                 <input type="text" class="input-modelo" data-item-id="${item.id}"
                        placeholder="Ex: VERTICAL" style="width: 130px;">
-            </td>
-            <td>
-                <button type="button" class="btn-selecionar-item" data-item-id="${item.id}"
-                        title="Selecionar item">✓</button>
             </td>
         `;
         corpoTabela.appendChild(tr);
