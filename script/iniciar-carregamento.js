@@ -214,7 +214,7 @@ function renderizarTabelaItensModal(termoBusca = '') {
         tr.innerHTML = `
             <td>
                 <input type="number" class="input-quantidade" data-item-id="${item.id}"
-                       min="0" value="0" style="width: 60px; text-align: center;">
+                       min="0" value="0">
             </td>
             <td>
                 <span class="nome-item">${item.codigo} - ${item.nome}</span>
@@ -223,7 +223,7 @@ function renderizarTabelaItensModal(termoBusca = '') {
             </td>
             <td>
                 <input type="text" class="input-modelo" data-item-id="${item.id}"
-                       placeholder="Ex: VERTICAL" style="width: 130px;">
+                       placeholder="Ex: VERTICAL">
             </td>
         `;
         corpoTabela.appendChild(tr);

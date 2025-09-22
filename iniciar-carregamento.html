@@ -210,8 +210,8 @@
   </div>
 
   <!-- Modal Adicionar Item à Requisição -->
-  <div id="modalAdicionarItem" class="modal">
-    <div class="modal-conteudo modal-grande">
+  <div id="modalAdicionarItem" class="modal modal-adicionar-item">
+    <div class="modal-conteudo">
       <span class="fechar-modal" id="fecharModalAdicionarItem">&times;</span>
       <h3>📦 Selecionar Itens para Adicionar</h3>
 
@@ -221,12 +221,12 @@
       </div>
 
       <!-- Tabela de itens -->
-      <div class="table-container-modal">
-        <table id="tabelaItensModal" class="tabela-modal">
+      <div class="modal-body">
+        <table id="tabelaItensModal" class="tabela-itens-modal">
           <thead>
             <tr>
               <th style="width: 80px;">QTD</th>
-              <th>Nome</th>
+              <th>Item</th>
               <th style="width: 150px;">Modelo</th>
             </tr>
           </thead>
@@ -236,7 +236,7 @@
         </table>
       </div>
 
-      <div class="botoes-form">
+      <div class="modal-footer">
         <button type="button" id="btnAdicionarItensSelecionados">➕ Adicionar Itens</button>
       </div>
     </div>
