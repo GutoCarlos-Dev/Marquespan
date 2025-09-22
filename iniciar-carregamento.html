@@ -176,10 +176,9 @@
       <span class="fechar-modal" id="fecharModalAdicionarItem">&times;</span>
       <h3>📦 Adicionar Item</h3>
       <form id="formAdicionarItem" class="formulario">
-        <label for="itemSelectModal">Item:</label>
-        <select id="itemSelectModal" required>
-          <option value="" disabled selected>Carregando itens...</option>
-        </select>
+        <label for="itemInput">Item:</label>
+        <input type="text" id="itemInput" placeholder="Digite o nome ou código do item" list="itensList" required>
+        <datalist id="itensList"></datalist>
         <label for="modeloItemModal">Modelo:</label>
         <input type="text" id="modeloItemModal" placeholder="Ex: VERTICAL, HORIZONTAL, ETC" >
         <label for="tipoItemModal">Tipo:</label>

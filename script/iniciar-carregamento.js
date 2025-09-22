@@ -60,6 +60,24 @@ function obterIdClientePorTexto(textoDigitado) {
 }
 
 /**
+ * Obtém o ID do item selecionado a partir do texto digitado.
+ * @param {string} textoDigitado O texto digitado no campo item
+ * @returns {string|null} O ID do item ou null se não encontrado
+ */
+function obterIdItemPorTexto(textoDigitado) {
+    const datalist = document.getElementById('itensList');
+    if (!datalist) return null;
+
+    const options = datalist.querySelectorAll('option');
+    for (let option of options) {
+        if (option.value === textoDigitado) {
+            return option.getAttribute('data-id');
+        }
+    }
+    return null;
+}
+
+/**
  * Carrega as placas dos veículos e as popula em um elemento <datalist>.
  */
 async function carregarVeiculosNoDatalist() {
@@ -84,13 +102,13 @@ async function carregarVeiculosNoDatalist() {
 }
 
 /**
- * Carrega os itens cadastrados e os popula no modal de adicionar item.
+ * Carrega os itens cadastrados e os popula em um elemento <datalist>.
  */
-async function carregarItensNoModal() {
-    const selectItem = document.getElementById('itemSelectModal');
-    if (!selectItem) return;
+async function carregarItensNoDatalist() {
+    const datalist = document.getElementById('itensList');
+    if (!datalist) return;
 
-    selectItem.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+    datalist.innerHTML = ''; // Limpa opções antigas
 
     const { data: itens, error } = await supabase
         .from('itens')
@@ -99,17 +117,23 @@ async function carregarItensNoModal() {
 
     if (error) {
         console.error('Erro ao carregar itens:', error);
-        selectItem.innerHTML = '<option value="">Erro ao carregar</option>';
         return;
     }
 
-    selectItem.innerHTML = '<option value="" disabled selected>Selecione um item</option>';
     itens.forEach(item => {
+        // Adiciona opções com código e nome para facilitar a busca
         const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = `${item.codigo} - ${item.nome}`;
-        selectItem.appendChild(option);
+        option.value = `${item.codigo} - ${item.nome}`;
+        option.setAttribute('data-id', item.id); // Armazena o ID do item
+        datalist.appendChild(option);
     });
+}
+
+/**
+ * Carrega os itens cadastrados e os popula no modal de adicionar item (compatibilidade).
+ */
+async function carregarItensNoModal() {
+    await carregarItensNoDatalist();
 }
 
 /**
@@ -316,18 +340,28 @@ async function salvarNovoMotorista(event) {
  */
 function handleAdicionarItemNaRequisicao(event) {
     event.preventDefault();
-    const select = document.getElementById('itemSelectModal');
-    const itemId = select.value;
+    const itemInput = document.getElementById('itemInput');
+    const textoItem = itemInput ? itemInput.value.trim() : '';
+
+    if (!textoItem) {
+        alert('⚠️ Selecione um item para adicionar à requisição.');
+        return;
+    }
+
+    // Obtém o ID do item a partir do texto digitado
+    const itemId = obterIdItemPorTexto(textoItem);
     const modelo = document.getElementById('modeloItemModal').value.trim();
     const tipo = document.getElementById('tipoItemModal').value;
     const quantidade = document.getElementById('quantidadeItemModal').value;
 
-    if (!itemId || !modelo || !tipo || !quantidade || quantidade < 1) {
+    if (!itemId) {
+        alert('⚠️ Item não encontrado. Verifique se o item está cadastrado.');
+        return;
+    }
+    if (!modelo || !tipo || !quantidade || quantidade < 1) {
         alert('⚠️ Preencha todos os campos do item e informe uma quantidade válida.');
         return;
     }
-
-    const itemNome = select.options[select.selectedIndex].text;
 
     // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
     const itemExistente = requisicaoAtual.itens.find(i =>
@@ -341,7 +375,7 @@ function handleAdicionarItemNaRequisicao(event) {
     } else {
         requisicaoAtual.itens.push({
             item_id: itemId,
-            item_nome: itemNome,
+            item_nome: textoItem,
             modelo: modelo,
             tipo: tipo,
             quantidade: parseInt(quantidade),
@@ -351,6 +385,11 @@ function handleAdicionarItemNaRequisicao(event) {
     renderizarItensRequisicaoAtual();
     document.getElementById('modalAdicionarItem').style.display = 'none';
     document.getElementById('formAdicionarItem').reset();
+
+    // Limpa o campo de input
+    if (itemInput) {
+        itemInput.value = '';
+    }
 }
 
 /**
