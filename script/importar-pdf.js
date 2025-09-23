@@ -11,7 +11,6 @@ class PDFImporter {
             data: '',
             motivo: '',
             requerente: '',
-            atendidoPor: '',
             items: []
         };
 
@@ -124,7 +123,6 @@ class PDFImporter {
             data: '',
             motivo: '',
             requerente: '',
-            atendidoPor: '',
             atencao: '',
             observacao: '',
             items: []
@@ -137,7 +135,6 @@ class PDFImporter {
             data: /DATA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
             motivo: /Motivo[s]?[:]?\s*([A-Za-z0-9\s\+\-\(\)]{1,50})/i, // Limita a 50 caracteres e apenas caracteres relevantes
             requerente: /REQUERENTE[:]?\s*([^\n\r]+)/i,
-            atendidoPor: /ATENDIDO POR[:]?\s*([^\n\r]+)/i,
             atencao: /ATEN[ÇC][AÃ]O[:]?\s*([^\n\r]+)/i,
             observacao: /OBSERVA[ÇC][AÃ]O[:]?\s*([\s\S]*?)(?=CLIENTE|$)/i
         };
@@ -347,7 +344,6 @@ class PDFImporter {
         this.populateEditableField('dataValue', this.extractedData.data || 'Não identificado');
         this.populateEditableField('motivoValue', this.extractedData.motivo || 'Não identificado');
         this.populateEditableField('requerenteValue', this.extractedData.requerente || 'Não identificado');
-        this.populateEditableField('atendidoValue', this.extractedData.atendidoPor || 'Não identificado');
 
         // Exibe informações adicionais se disponíveis
         console.log('Dados extraídos:', this.extractedData);
@@ -464,8 +460,7 @@ class PDFImporter {
             'cidadeValue': 'cidade',
             'dataValue': 'data',
             'motivoValue': 'motivo',
-            'requerenteValue': 'requerente',
-            'atendidoValue': 'atendidoPor'
+            'requerenteValue': 'requerente'
         };
 
         const dataKey = fieldMapping[fieldId];
@@ -659,7 +654,6 @@ class PDFImporter {
             data: '',
             motivo: '',
             requerente: '',
-            atendidoPor: '',
             atencao: '',
             observacao: '',
             items: []
