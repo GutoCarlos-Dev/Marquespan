@@ -132,8 +132,8 @@ class PDFImporter {
 
         // Padrões de busca para cada campo
         const patterns = {
-            cliente: /CLIENTE:\s*([^\n\r]+)/i,
-            cidade: /CIDADE:\s*([^\n\r]+)/i,
+            cliente: /CLIENTE:\s*([\s\S]*?)(?=CIDADE:)/i, // Tudo até encontrar CIDADE:
+            cidade: /CIDADE:\s*([^\)]*?)(?=\s*-)/i, // Tudo até encontrar ) - Estado
             data: /DATA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
             motivo: /Motivo[s]?[:]?\s*([A-Za-z0-9\s\+\-\(\)]{1,50})/i, // Limita a 50 caracteres e apenas caracteres relevantes
             requerente: /REQUERENTE[:]?\s*([^\n\r]+)/i,
