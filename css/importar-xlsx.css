@@ -1,4 +1,30 @@
-/* === IMPORTAR XLSX - ESTILOS === */
+/* === IMPORTAR XLSX - DESIGN PROFISSIONAL === */
+
+:root {
+    --primary-green: #4CAF50;
+    --secondary-green: #45a049;
+    --light-green: #f0fff0;
+    --border-green: #4CAF50;
+    --shadow-green: rgba(76, 175, 80, 0.3);
+    --text-dark: #2d3748;
+    --text-light: #4a5568;
+    --border-light: #e2e8f0;
+    --white: #ffffff;
+    --gray-50: #f7fafc;
+    --gray-100: #edf2f7;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--text-dark);
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    min-height: 100vh;
+}
 
 /* Layout principal */
 .importar-xlsx-container {
@@ -7,43 +33,66 @@
     padding: 20px;
 }
 
+/* Header Principal */
 .importar-xlsx-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 30px;
-    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+    color: var(--white);
+    padding: 40px 30px;
+    border-radius: 16px;
+    margin-bottom: 40px;
     text-align: center;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 32px var(--shadow-green);
+    position: relative;
+    overflow: hidden;
+}
+
+.importar-xlsx-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
 }
 
 .importar-xlsx-header h2 {
-    margin: 0 0 20px 0;
+    margin: 0 0 15px 0;
     font-size: 2.5em;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    font-weight: 700;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 1;
 }
 
 .importar-xlsx-header .subtitle {
+    margin: 0;
     font-size: 1.2em;
-    opacity: 0.9;
-    margin-bottom: 20px;
+    opacity: 0.95;
+    font-weight: 300;
+    position: relative;
+    z-index: 1;
 }
 
-/* Formulário do cabeçalho */
+/* Formulário Compacto e Centralizado */
 .importar-xlsx-form {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
+    background: var(--white);
+    padding: 35px;
+    border-radius: 16px;
+    margin-bottom: 35px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 0;
 }
 
 .form-group {
@@ -52,178 +101,300 @@
 }
 
 .form-group label {
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #333;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 8px;
     font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-group input,
 .form-group select {
-    padding: 12px;
-    border: 2px solid #e1e5e9;
-    border-radius: 6px;
+    padding: 14px 18px;
+    border: 2px solid var(--border-light);
+    border-radius: 10px;
     font-size: 1em;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    background: var(--gray-50);
+    font-weight: 500;
 }
 
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-green);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+    transform: translateY(-1px);
 }
 
-/* Seção de upload */
+.form-group input:disabled {
+    background: var(--gray-100);
+    color: var(--text-light);
+    cursor: not-allowed;
+    border-color: #cbd5e0;
+}
+
+/* Seção de Upload */
 .upload-section {
-    background: white;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
+    background: var(--white);
+    padding: 35px;
+    border-radius: 16px;
+    margin-bottom: 35px;
     text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .upload-section h3 {
-    color: #333;
-    margin-bottom: 20px;
-    font-size: 1.5em;
+    color: var(--text-dark);
+    margin-bottom: 25px;
+    font-size: 1.4em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .file-input-container {
-    margin: 20px 0;
+    margin-top: 20px;
 }
 
 .file-input-container input[type="file"] {
-    padding: 15px;
-    border: 2px dashed #667eea;
-    border-radius: 8px;
-    background: #f8f9ff;
+    width: 100%;
+    padding: 25px;
+    border: 2px dashed var(--primary-green);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--light-green) 0%, rgba(240, 255, 240, 0.5) 100%);
     cursor: pointer;
     transition: all 0.3s ease;
-    width: 100%;
-    max-width: 400px;
+    font-size: 1em;
+    font-weight: 500;
+    color: var(--text-dark);
 }
 
 .file-input-container input[type="file"]:hover {
-    border-color: #5a67d8;
-    background: #eef2ff;
+    border-color: var(--secondary-green);
+    background: linear-gradient(135deg, rgba(240, 255, 240, 0.8) 0%, var(--light-green) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.2);
 }
 
-/* Botão de atualizar */
+/* Botão Atualizar */
 .update-button-container {
     text-align: center;
-    margin: 30px 0;
+    margin: 40px 0;
 }
 
 .btn-atualizar {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-    color: white;
-    padding: 15px 30px;
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+    color: var(--white);
     border: none;
-    border-radius: 8px;
+    padding: 18px 50px;
+    border-radius: 12px;
     font-size: 1.1em;
-    font-weight: bold;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+    box-shadow: 0 6px 24px var(--shadow-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-atualizar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-atualizar:hover::before {
+    left: 100%;
 }
 
 .btn-atualizar:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px var(--shadow-green);
+    background: linear-gradient(135deg, var(--secondary-green) 0%, var(--primary-green) 100%);
 }
 
-/* Tabelas */
+.btn-atualizar:active {
+    transform: translateY(-1px);
+}
+
+/* Tabelas de Dados */
 .tables-section {
-    margin: 30px 0;
+    background: var(--white);
+    padding: 30px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light);
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.motivo-box {
+.tables-section h4 {
+    color: var(--text-dark);
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    font-weight: 600;
     text-align: center;
-    margin: 20px 0 10px 0;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
-    border: 2px solid #38b2ac;
-    border-radius: 8px;
-    font-weight: bold;
-    color: #234e52;
-    box-shadow: 0 2px 8px rgba(56, 178, 172, 0.2);
+    position: relative;
+}
+
+.tables-section h4::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-green), var(--secondary-green));
+    border-radius: 2px;
 }
 
 .data-table {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
-    margin-bottom: 40px;
+    overflow-x: auto;
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .data-table table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.9em;
+    min-width: 600px;
 }
 
 .data-table th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px;
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+    color: var(--white);
+    padding: 18px 16px;
     text-align: center;
-    font-weight: bold;
+    font-weight: 600;
     border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85em;
 }
 
 .data-table td {
-    padding: 12px;
+    padding: 16px 14px;
+    border: 1px solid var(--border-light);
     text-align: center;
-    border-bottom: 1px solid #e2e8f0;
-    transition: background-color 0.3s ease;
+    background: var(--white);
+    font-weight: 500;
 }
 
 .data-table td[contenteditable="true"] {
-    background: #fffaf0;
-    border: 2px solid #f6e05e;
+    background: linear-gradient(135deg, var(--light-green) 0%, rgba(240, 255, 240, 0.5) 100%);
+    border: 2px solid var(--primary-green);
     cursor: text;
+    transition: all 0.2s ease;
 }
 
-.data-table td[contenteditable="true"]:hover {
-    background: #fefcbf;
+.data-table td[contenteditable="true"]:focus {
+    background: var(--white);
+    outline: 2px solid var(--primary-green);
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
 }
 
 .data-table tr:hover td {
-    background: #f7fafc;
+    background: var(--gray-50);
 }
 
-/* Seção de resumo */
+.data-table tr:hover td[contenteditable="true"] {
+    background: rgba(240, 255, 240, 0.8);
+}
+
+/* Box de Motivo */
+.motivo-box {
+    background: linear-gradient(135deg, var(--light-green) 0%, rgba(240, 255, 240, 0.8) 100%);
+    color: #2d5a2d;
+    padding: 15px 25px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border-left: 5px solid var(--primary-green);
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+}
+
+/* Seção de Resumo */
 .resumo-section {
-    margin: 40px 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .resumo-card {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    border-left: 5px solid #48bb78;
+    background: var(--white);
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light);
+    border-top: 5px solid var(--primary-green);
+    position: relative;
+    overflow: hidden;
+}
+
+.resumo-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary-green), var(--secondary-green));
 }
 
 .resumo-card h3 {
-    color: #2d3748;
-    margin: 0 0 15px 0;
+    color: var(--text-dark);
+    margin: 0 0 25px 0;
     font-size: 1.3em;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .resumo-card p {
-    margin: 8px 0;
+    margin: 15px 0;
     font-size: 1.1em;
-    color: #4a5568;
+    color: var(--text-light);
+    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
 }
 
 .resumo-card .total {
-    font-weight: bold;
-    color: #2b6cb0;
-    font-size: 1.2em;
+    color: var(--primary-green);
+    font-weight: 700;
+    font-size: 1.3em;
+    text-shadow: 0 1px 2px rgba(76, 175, 80, 0.1);
 }
 
 /* Responsividade */
@@ -234,19 +405,69 @@
 
     .form-grid {
         grid-template-columns: 1fr;
-        gap: 15px;
+        gap: 20px;
+    }
+
+    .importar-xlsx-header {
+        padding: 25px 20px;
+        margin-bottom: 25px;
     }
 
     .importar-xlsx-header h2 {
         font-size: 2em;
     }
 
-    .data-table {
-        overflow-x: auto;
+    .importar-xlsx-header .subtitle {
+        font-size: 1.1em;
+    }
+
+    .importar-xlsx-form,
+    .upload-section {
+        padding: 25px 20px;
+        margin-bottom: 25px;
+    }
+
+    .resumo-section {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .btn-atualizar {
+        padding: 15px 35px;
+        font-size: 1em;
+    }
+
+    .tables-section {
+        padding: 20px;
     }
 
     .data-table table {
-        min-width: 600px;
+        font-size: 0.8em;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 12px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .importar-xlsx-header h2 {
+        font-size: 1.8em;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 12px 16px;
+    }
+
+    .file-input-container input[type="file"] {
+        padding: 20px;
+    }
+
+    .btn-atualizar {
+        padding: 12px 25px;
+        font-size: 0.9em;
     }
 }
 
@@ -285,7 +506,7 @@
     width: 20px;
     height: 20px;
     margin: -10px 0 0 -10px;
-    border: 2px solid #667eea;
+    border: 2px solid var(--primary-green);
     border-radius: 50%;
     border-top-color: transparent;
     animation: spin 1s linear infinite;
