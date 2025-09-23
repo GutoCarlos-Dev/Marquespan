@@ -198,8 +198,8 @@ class PDFImporter {
             qtd: /^(QTD|Qtd|Qtde|Quantidade)$/i,
             equipamento: /^(EQUI|Equip|Equipamento|BQUI)$/i,
             modelo: /^(MOD|Mod|Modelo|MOD\.?)$/i,
-            novo: /^(N|NOVO|Novo|New)$/i,
-            usado: /^(U|USADO|Usado|Used)$/i
+            novo: /^(N|NOVO|Novo|New|N=NOVO)$/i,
+            usado: /^(U|USADO|Usado|Used|U=USADO)$/i
         };
 
         // Encontra a linha de cabeçalho
@@ -488,14 +488,120 @@ class PDFImporter {
         this.extractedData.items.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${item.quantidade || 1}</td>
-                <td>${item.equipamento || ''}</td>
-                <td>${item.modelo || ''}</td>
-                <td>${item.n || ''}</td>
-                <td>${item.u || ''}</td>
+                <td data-field="quantidade" data-item-index="${index}">${item.quantidade || 1}</td>
+                <td data-field="equipamento" data-item-index="${index}">${item.equipamento || ''}</td>
+                <td data-field="modelo" data-item-index="${index}">${item.modelo || ''}</td>
+                <td data-field="n" data-item-index="${index}">${item.n || ''}</td>
+                <td data-field="u" data-item-index="${index}">${item.u || ''}</td>
             `;
+
+            // Adiciona event listeners para edição nas células
+            const cells = row.querySelectorAll('td');
+            cells.forEach(cell => {
+                cell.style.cursor = 'pointer';
+                cell.title = 'Clique duas vezes para editar';
+                cell.addEventListener('dblclick', this.handleTableCellDoubleClick.bind(this));
+            });
+
             tableBody.appendChild(row);
         });
+    }
+
+    handleTableCellDoubleClick(event) {
+        const cell = event.target;
+        const field = cell.dataset.field;
+        const itemIndex = parseInt(cell.dataset.itemIndex);
+        const currentValue = cell.textContent;
+
+        // Cria input para edição
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        input.className = 'editable-cell-input';
+        input.style.cssText = `
+            width: 100%;
+            padding: 4px 8px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+        `;
+
+        // Substitui o texto pelo input
+        cell.textContent = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+
+        // Armazena referência para a célula original
+        input.dataset.field = field;
+        input.dataset.itemIndex = itemIndex;
+        input.dataset.originalValue = currentValue;
+
+        // Adiciona event listeners para o input
+        input.addEventListener('blur', this.handleTableCellBlur.bind(this));
+        input.addEventListener('keydown', this.handleTableCellKeyDown.bind(this));
+    }
+
+    handleTableCellBlur(event) {
+        const input = event.target;
+        this.saveTableCellEdit(input);
+    }
+
+    handleTableCellKeyDown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveTableCellEdit(event.target);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            this.cancelTableCellEdit(event.target);
+        }
+    }
+
+    saveTableCellEdit(input) {
+        const field = input.dataset.field;
+        const itemIndex = parseInt(input.dataset.itemIndex);
+        const newValue = input.value.trim();
+        const cell = input.parentElement;
+
+        // Remove o input
+        input.remove();
+
+        // Atualiza o valor na célula
+        cell.textContent = newValue;
+
+        // Atualiza os dados extraídos
+        this.updateItemData(itemIndex, field, newValue);
+
+        // Reaplica o estilo editável
+        cell.style.cursor = 'pointer';
+        cell.title = 'Clique duas vezes para editar';
+        cell.addEventListener('dblclick', this.handleTableCellDoubleClick.bind(this));
+    }
+
+    cancelTableCellEdit(input) {
+        const field = input.dataset.field;
+        const itemIndex = parseInt(input.dataset.itemIndex);
+        const originalValue = input.dataset.originalValue;
+        const cell = input.parentElement;
+
+        // Remove o input
+        input.remove();
+
+        // Restaura o valor original
+        cell.textContent = originalValue;
+
+        // Reaplica o estilo editável
+        cell.style.cursor = 'pointer';
+        cell.title = 'Clique duas vezes para editar';
+        cell.addEventListener('dblclick', this.handleTableCellDoubleClick.bind(this));
+    }
+
+    updateItemData(itemIndex, field, value) {
+        if (this.extractedData.items[itemIndex]) {
+            this.extractedData.items[itemIndex][field] = value;
+        }
     }
 
     async importData() {
