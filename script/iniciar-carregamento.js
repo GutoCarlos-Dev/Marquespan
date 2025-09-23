@@ -795,6 +795,11 @@ async function gerarPDF() {
             return;
         }
 
+        console.log('=== DEBUG: gerarPDF ===');
+        console.log('Dados do carregamento:', carregamentoState);
+        console.log('Requisições de carregamento:', carregamentoState.requisicoesCarregamento.length);
+        console.log('Requisições de troca/retirada:', carregamentoState.requisicoesTrocaRetirada.length);
+
         // Coleta os dados do cabeçalho
         const semana = document.getElementById('semana').value;
         const dataCarregamento = document.getElementById('dataCarregamento').value;
@@ -803,12 +808,21 @@ async function gerarPDF() {
         const conferente = document.getElementById('conferente').value;
         const supervisor = document.getElementById('supervisor').value;
 
+        console.log('Dados do cabeçalho:', { semana, dataCarregamento, placa, motoristaId, conferente, supervisor });
+
         const motoristaNome = await getMotoristaNomeById(motoristaId);
 
         // Formata a data
         const dataFormatada = new Date(dataCarregamento).toLocaleDateString('pt-BR');
 
-        // Cria o conteúdo HTML do PDF
+        // Gera as linhas das tabelas para debug
+        const linhasCarregamento = gerarLinhasTabela(carregamentoState.requisicoesCarregamento);
+        const linhasTrocaRetirada = gerarLinhasTabela(carregamentoState.requisicoesTrocaRetirada);
+        
+        console.log('Linhas de carregamento geradas:', linhasCarregamento);
+        console.log('Linhas de troca/retirada geradas:', linhasTrocaRetirada);
+
+        // Cria o conteúdo HTML do PDF com melhor formatação
         const conteudoPDF = `
             <!DOCTYPE html>
             <html>
@@ -820,6 +834,7 @@ async function gerarPDF() {
                         font-family: Arial, sans-serif;
                         margin: 20px;
                         font-size: 12px;
+                        line-height: 1.4;
                     }
                     .header {
                         text-align: center;
@@ -829,8 +844,9 @@ async function gerarPDF() {
                     }
                     .header h1 {
                         margin: 0;
-                        font-size: 18px;
+                        font-size: 20px;
                         color: #333;
+                        font-weight: bold;
                     }
                     .header .subtitle {
                         font-size: 14px;
@@ -858,12 +874,13 @@ async function gerarPDF() {
                         width: 100%;
                         border-collapse: collapse;
                         margin-bottom: 20px;
+                        font-size: 11px;
                     }
                     th, td {
                         border: 1px solid #333;
-                        padding: 6px;
+                        padding: 8px;
                         text-align: left;
-                        font-size: 11px;
+                        vertical-align: top;
                     }
                     th {
                         background-color: #f0f0f0;
@@ -873,8 +890,9 @@ async function gerarPDF() {
                         background-color: #e0e0e0;
                         font-weight: bold;
                         text-align: center;
-                        padding: 8px;
+                        padding: 10px;
                         margin-top: 15px;
+                        font-size: 14px;
                     }
                     .summary-grid {
                         display: grid;
@@ -884,7 +902,7 @@ async function gerarPDF() {
                     }
                     .summary-item {
                         text-align: center;
-                        padding: 8px;
+                        padding: 10px;
                         background-color: #f9f9f9;
                         border: 1px solid #ddd;
                     }
@@ -893,7 +911,7 @@ async function gerarPDF() {
                         font-size: 10px;
                     }
                     .summary-value {
-                        font-size: 14px;
+                        font-size: 16px;
                         font-weight: bold;
                         color: #333;
                     }
@@ -903,6 +921,12 @@ async function gerarPDF() {
                     }
                     .page-break {
                         page-break-before: always;
+                    }
+                    .no-data {
+                        text-align: center;
+                        color: #666;
+                        font-style: italic;
+                        padding: 20px;
                     }
                 </style>
             </head>
@@ -914,11 +938,11 @@ async function gerarPDF() {
                 </div>
 
                 <div class="info-section">
-                    <h3 style="margin-top: 0;">📋 Informações do Carregamento</h3>
+                    <h3 style="margin-top: 0; font-size: 14px;">📋 Informações do Carregamento</h3>
                     <div class="info-grid">
-                        <div class="info-item"><span class="info-label">Placa:</span> ${placa}</div>
-                        <div class="info-item"><span class="info-label">Motorista:</span> ${motoristaNome}</div>
-                        <div class="info-item"><span class="info-label">Conferente:</span> ${conferente}</div>
+                        <div class="info-item"><span class="info-label">Placa:</span> ${placa || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">Motorista:</span> ${motoristaNome || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">Conferente:</span> ${conferente || 'N/A'}</div>
                         <div class="info-item"><span class="info-label">Supervisor:</span> ${supervisor || 'N/A'}</div>
                     </div>
                 </div>
@@ -938,7 +962,7 @@ async function gerarPDF() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${gerarLinhasTabela(carregamentoState.requisicoesCarregamento)}
+                            ${linhasCarregamento || '<tr><td colspan="6" class="no-data">Nenhum item encontrado</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -959,7 +983,7 @@ async function gerarPDF() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${gerarLinhasTabela(carregamentoState.requisicoesTrocaRetirada)}
+                            ${linhasTrocaRetirada || '<tr><td colspan="6" class="no-data">Nenhum item encontrado</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -978,13 +1002,25 @@ async function gerarPDF() {
             </html>
         `;
 
-        // Configurações do PDF
+        console.log('HTML do PDF gerado:', conteudoPDF);
+
+        // Configurações do PDF melhoradas
         const opcoes = {
-            margin: 1,
+            margin: [1, 1, 1, 1], // Margens: topo, direita, baixo, esquerda
             filename: `carregamento_semana_${semana}_${dataFormatada.replace(/\//g, '-')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+            },
+            jsPDF: { 
+                unit: 'cm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true
+            }
         };
 
         // Gera o PDF
