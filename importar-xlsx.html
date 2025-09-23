@@ -1,239 +1,160 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Importação de Requisições</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
-  h2 { text-align: center; }
-  .header { max-width: 900px; margin: 0 auto 20px auto; text-align: center; }
-  .header label { margin: 5px 10px; display: inline-block; }
-  input[type="text"], input[type="date"] {
-    padding: 6px; border: 1px solid #ccc; border-radius: 4px;
-  }
-  #tables { max-width: 1000px; margin: 0 auto; }
-  .motivo-box {
-    text-align: center; margin: 20px 0 10px 0;
-    padding: 8px 12px; background: #e9f3ff;
-    border: 1px solid #bcd; border-radius: 6px; font-weight: bold;
-  }
-  table {
-    border-collapse: collapse; width: 100%; background: white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-radius: 6px;
-    overflow: hidden; margin-bottom: 40px;
-  }
-  th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-  th { background: #4CAF50; color: white; font-weight: bold; }
-  td[contenteditable="true"] { background: #fff8e1; outline: none; }
-  h4 { text-align: center; margin-top: 30px; }
-  .resumo {
-    background: #fff; padding: 20px; border: 2px solid #4CAF50;
-    border-radius: 8px; max-width: 900px; margin: 20px auto;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-  .resumo h3 { text-align: center; margin-top: 0; }
-  .resumo p { font-size: 18px; margin: 8px 0; text-align: center; }
-  .update-btn {
-    display: block; margin: 20px auto; padding: 10px 20px;
-    background: #4CAF50; color: white; border: none; border-radius: 6px;
-    font-size: 16px; cursor: pointer;
-  }
-  .update-btn:hover { background: #45a049; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar XLSX - Marquespan</title>
+
+    <!-- CSS do projeto -->
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/importar-xlsx.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Biblioteca XLSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- 🟩 Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <img src="logo.png" alt="Logo Marquespan" class="logo">
+        <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+            <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+            <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+            <div class="menu-group">
+                <button class="menu-toggle">
+                    <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="submenu">
+                    <a href="incluir-manutencao.html">Incluir Manutenção</a>
+                    <a href="buscar-manutencao.html">Buscar Manutenção</a>
+                </div>
+            </div>
+            <div class="menu-group">
+                <button class="menu-toggle">
+                    <i class="fas fa-truck-loading"></i> <span>Carregamento</span> <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="submenu">
+                    <a href="cadastro-carregamento.html">Cadastro</a>
+                    <a href="iniciar-carregamento.html">Iniciar Carregamento</a>
+                    <a href="importar-xlsx.html">Importar XLSX</a>
+                    <a href="buscar-carregamento.html">Buscar Carregamento</a>
+                </div>
+            </div>
+            <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+            <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+            <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+        </nav>
+    </div>
 
-<h2>📦 Importar Requisições de Equipamentos</h2>
+    <!-- 🧱 Conteúdo principal -->
+    <div class="main-content">
+        <header class="header">📦 Importar Requisições XLSX</header>
 
-<div class="header">
-  <label>SEMANA: <input type="text" id="semana"></label>
-  <label>DATA: <input type="date" id="data"></label><br>
-  <label>PLACA: <input type="text" id="placa"></label>
-  <label>MOTORISTA: <input type="text" id="motorista"></label><br>
-  <label>CONFERENTE: <input type="text" id="conferente" value="USUÁRIO LOGADO"></label>
-  <label>SUPERVISOR:
-    <select id="supervisor">
-      <option value="">Selecione...</option>
-      <option>ALEXANDRE</option>
-      <option>IAMARINO</option>
-      <option>CLAUDINEI</option>
-      <option>CLEITON</option>
-      <option>EDUARDO</option>
-      <option>JADILSON</option>
-      <option>JONATHAN</option>
-      <option>LEANDRO</option>
-      <option>MARCOS</option>
-      <option>MAURO</option>
-      <option>RAFAEL</option>
-      <option>RUI</option>
-      <option>SERGIO</option>
-      <option>WUILISMAR</option>
-      <option>WASHINGTON</option>
-    </select>
-</label>
+        <!-- Cabeçalho do carregamento -->
+        <div class="importar-xlsx-header">
+            <h2>📤 Importar Requisições de Equipamentos</h2>
+            <p class="subtitle">Faça upload dos arquivos XLSX para processar as requisições</p>
+        </div>
 
-</div>
+        <!-- Formulário de dados do carregamento -->
+        <div class="importar-xlsx-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="semana">Semana:</label>
+                    <input type="text" id="semana" placeholder="Número da Semana">
+                </div>
+                <div class="form-group">
+                    <label for="data">Data:</label>
+                    <input type="date" id="data">
+                </div>
+                <div class="form-group">
+                    <label for="placa">Placa:</label>
+                    <input type="text" id="placa" placeholder="Placa do Veículo">
+                </div>
+                <div class="form-group">
+                    <label for="motorista">Motorista:</label>
+                    <input type="text" id="motorista" placeholder="Nome do Motorista">
+                </div>
+                <div class="form-group">
+                    <label for="conferente">Conferente:</label>
+                    <input type="text" id="conferente" placeholder="Usuário logado" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="supervisor">Supervisor:</label>
+                    <select id="supervisor">
+                        <option value="">Selecione...</option>
+                        <option>ALEXANDRE</option>
+                        <option>IAMARINO</option>
+                        <option>CLAUDINEI</option>
+                        <option>CLEITON</option>
+                        <option>EDUARDO</option>
+                        <option>JADILSON</option>
+                        <option>JONATHAN</option>
+                        <option>LEANDRO</option>
+                        <option>MARCOS</option>
+                        <option>MAURO</option>
+                        <option>RAFAEL</option>
+                        <option>RUI</option>
+                        <option>SERGIO</option>
+                        <option>WUILISMAR</option>
+                        <option>WASHINGTON</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
-<h3 style="text-align:center;">📤 Importar Arquivos (.xlsx)</h3>
-<div style="text-align:center;">
-  <input type="file" id="fileUpload" multiple accept=".xlsx">
-</div>
+        <!-- Seção de upload -->
+        <div class="upload-section">
+            <h3>📁 Selecionar Arquivos XLSX</h3>
+            <div class="file-input-container">
+                <input type="file" id="fileUpload" multiple accept=".xlsx">
+            </div>
+        </div>
 
-<button class="update-btn" id="btnAtualizar">🔄 Atualizar Totais</button>
+        <!-- Botão atualizar -->
+        <div class="update-button-container">
+            <button class="btn-atualizar" id="btnAtualizar">
+                <i class="fas fa-sync-alt"></i> Atualizar Totais
+            </button>
+        </div>
 
-<div id="tables"></div>
-<div id="resumo"></div>
+        <!-- Tabelas de dados -->
+        <div id="tables"></div>
 
-<script>
-document.getElementById("supervisor").value
+        <!-- Resumo -->
+        <div id="resumo"></div>
 
-const tablesContainer = document.getElementById("tables");
-const resumoDiv = document.getElementById("resumo");
-const btnAtualizar = document.getElementById("btnAtualizar");
+        <footer class="footer">
+            &copy; 2025 Marquespan. Todos os direitos reservados.
+        </footer>
+    </div>
 
+    <!-- 🚀 Scripts -->
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
 
-let grids = []; // Armazena todos os dados carregados (para recalcular depois)
-
-function recalcularTotais() {
-    let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
-    let totalEquip_Retorno = 0, totalNovos_Retorno = 0, totalUsados_Retorno = 0;
-
-    grids.forEach(grid => {
-        grid.rows.forEach(r => {
-            const qtd = parseFloat(r[0]) || 0;
-            const nMark = r[3].toString().trim().toUpperCase();
-            const uMark = r[4].toString().trim().toUpperCase();
-            const addQtd = qtd > 0 ? qtd : 1;
-
-            if (grid.type === "carregamento") {
-                totalEquip_Carreg += qtd;
-                if (nMark === "X") totalNovos_Carreg += addQtd;
-                if (uMark === "X") totalUsados_Carreg += addQtd;
-            } else if (grid.type === "retorno") {
-                totalEquip_Retorno += qtd;
-                if (nMark === "X") totalNovos_Retorno += addQtd;
-                if (uMark === "X") totalUsados_Retorno += addQtd;
+        document.addEventListener('DOMContentLoaded', () => {
+            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const divUsuario = document.getElementById('usuario-logado');
+            if (usuario && usuario.nome) {
+                divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
             }
         });
-    });
 
-    resumoDiv.innerHTML = `
-      <div class="resumo">
-        <h3>🚚 Carregamento (NOVO/TROCA/AMT)</h3>
-        <p><b>Total de Equipamentos:</b> ${totalEquip_Carreg}</p>
-        <p><b>Novos (N):</b> ${totalNovos_Carreg}</p>
-        <p><b>Usados (U):</b> ${totalUsados_Carreg}</p>
-      </div>
-      <div class="resumo">
-        <h3>🔄 Retorno (RP/RT)</h3>
-        <p><b>Total de Equipamentos:</b> ${totalEquip_Retorno}</p>
-        <p><b>Novos (N):</b> ${totalNovos_Retorno}</p>
-        <p><b>Usados (U):</b> ${totalUsados_Retorno}</p>
-      </div>
-    `;
-}
-
-btnAtualizar.addEventListener("click", recalcularTotais);
-
-document.getElementById("fileUpload").addEventListener("change", function(e) {
-    const files = e.target.files;
-    tablesContainer.innerHTML = "";
-    resumoDiv.innerHTML = "";
-    grids = [];
-
-    for (const file of files) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-
-            const name = file.name.toUpperCase();
-            const isCarregamento = name.includes("(NOVO)") || name.includes("(TROCA)") || name.includes("(AMT)");
-            const isRetorno = name.includes("(RP)") || name.includes("(RT)");
-            const isNovo = name.includes("(NOVO)");
-
-            const cfg = isNovo
-              ? { sheet: "REQUERIMENTO", motivoCell: "K9", startRow: 13, endRow: 23, startCol: 2, endCol: 6,
-                  headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: true }
-              : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 5,
-                  headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: false };
-
-            if (!workbook.SheetNames.includes(cfg.sheet)) {
-                tablesContainer.innerHTML += `<p style="color:red;text-align:center;">
-                  ❌ O arquivo <b>${file.name}</b> não possui a aba "${cfg.sheet}".
-                </p>`;
-                return;
-            }
-
-            const sheet = workbook.Sheets[cfg.sheet];
-            const motivoCell = sheet[cfg.motivoCell];
-            const motivo = motivoCell ? motivoCell.v : "Não informado";
-
-            const rows = [];
-            for (let r = cfg.startRow; r <= cfg.endRow; r++) {
-                const linha = [];
-                for (let c = cfg.startCol; c <= cfg.endCol; c++) {
-                    const cellAddress = XLSX.utils.encode_cell({r: r-1, c: c});
-                    const cell = sheet[cellAddress];
-                    linha.push(cell ? cell.v : "");
-                }
-
-                const qtd = parseFloat(linha[0]) || 0;
-                if (cfg.filterQtd && qtd <= 0) continue;
-                if (linha.some(v => v !== "")) rows.push(linha);
-            }
-
-            // Armazena para futuros cálculos
-            grids.push({
-                type: isCarregamento ? "carregamento" : (isRetorno ? "retorno" : "outro"),
-                rows: rows
+        document.querySelectorAll('.menu-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.parentElement.classList.toggle('active');
             });
+        });
+    </script>
 
-            // Cria tabela HTML
-            let html = `<h4>Arquivo: ${file.name}</h4>`;
-            html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
-            html += `<table data-index="${grids.length - 1}"><thead><tr>`;
-            cfg.headers.forEach(h => html += `<th>${h}</th>`);
-            html += "</tr></thead><tbody>";
-
-            rows.forEach((row, i) => {
-                html += `<tr data-row="${i}">`;
-                row.forEach((cell, j) => {
-                    if (j === 3 || j === 4) {
-                        html += `<td contenteditable="true">${cell}</td>`;
-                    } else {
-                        html += `<td>${cell}</td>`;
-                    }
-                });
-                html += "</tr>";
-            });
-            html += "</tbody></table>";
-
-            tablesContainer.innerHTML += html;
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
-
-// Escuta alterações nas células editáveis
-tablesContainer.addEventListener("input", function(e) {
-    const td = e.target.closest("td[contenteditable]");
-    if (!td) return;
-
-    const tr = td.parentElement;
-    const table = td.closest("table");
-    const gridIndex = parseInt(table.dataset.index);
-    const rowIndex = parseInt(tr.dataset.row);
-    const cellIndex = [...tr.children].indexOf(td);
-
-    grids[gridIndex].rows[rowIndex][cellIndex] = td.innerText.trim().toUpperCase();
-
-    // Atualiza automaticamente ao digitar:
-    recalcularTotais();
-});
-</script>
+    <script type="module" src="./script/importar-xlsx.js"></script>
 
 </body>
 </html>
