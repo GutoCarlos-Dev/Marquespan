@@ -24,8 +24,7 @@ class PDFImporter {
         const btnImportData = document.getElementById('btnImportData');
         const btnClear = document.getElementById('btnClear');
 
-        // Upload area events
-        uploadArea.addEventListener('click', () => fileInput.click());
+        // Upload area events (apenas drag and drop)
         uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
         uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
         uploadArea.addEventListener('drop', this.handleDrop.bind(this));
