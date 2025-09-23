@@ -125,6 +125,8 @@ class PDFImporter {
             motivo: '',
             requerente: '',
             atendidoPor: '',
+            atencao: '',
+            observacao: '',
             items: []
         };
 
@@ -133,9 +135,11 @@ class PDFImporter {
             cliente: /CLIENTE:\s*([^\n\r]+)/i,
             cidade: /CIDADE:\s*([^\n\r]+)/i,
             data: /DATA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
-            motivo: /Motivo:\s*([^\n\r]+)/i,
-            requerente: /REQUERENTE:\s*([^\n\r]+)/i,
-            atendidoPor: /ATENDIDO POR:\s*([^\n\r]+)/i
+            motivo: /Motivo[s]?[:]?\s*([^\n\r]+)/i, // Aceita variações como "Motlvo"
+            requerente: /REQUERENTE[:]?\s*([^\n\r]+)/i,
+            atendidoPor: /ATENDIDO POR[:]?\s*([^\n\r]+)/i,
+            atencao: /ATEN[ÇC][AÃ]O[:]?\s*([^\n\r]+)/i,
+            observacao: /OBSERVA[ÇC][AÃ]O[:]?\s*([\s\S]*?)(?=CLIENTE|$)/i
         };
 
         // Extrai dados básicos
@@ -145,6 +149,20 @@ class PDFImporter {
                 data[key] = match[1].trim();
             }
         });
+
+        // Lógica especial para o campo MOTIVO
+        if (!data.motivo && data.observacao) {
+            // Se motivo não foi encontrado, procura na observação
+            const motivoInObs = data.observacao.match(/Motivo[s]?[:]?\s*([^\n\r]+)/i);
+            if (motivoInObs) {
+                data.motivo = motivoInObs[1].trim();
+            }
+        }
+
+        // Se ainda não encontrou motivo, define padrão
+        if (!data.motivo) {
+            data.motivo = 'Cliente Novo'; // Valor padrão
+        }
 
         // Extrai itens da tabela
         data.items = this.extractItemsFromText(textItems);
@@ -178,43 +196,112 @@ class PDFImporter {
 
         console.log('Linhas ordenadas:', lines);
 
-        // Identifica linhas que podem ser itens da tabela
-        const potentialItems = lines.filter(line =>
-            /^\d+$/.test(line.text) || // Apenas números (quantidade)
-            /^[A-Z\s]+$/.test(line.text) || // Apenas letras maiúsculas (equipamentos)
-            /^[A-Z0-9\s\-]+$/.test(line.text) // Letras, números e hífens (modelos)
-        );
+        // Identifica cabeçalhos da tabela
+        const headerPatterns = {
+            qtd: /^(QTD|Qtd|Qtde|Quantidade)$/i,
+            equipamento: /^(EQUI|Equip|Equipamento|BQUI)$/i,
+            modelo: /^(MOD|Mod|Modelo|MOD\.?)$/i,
+            novo: /^(N|NOVO|Novo|New)$/i,
+            usado: /^(U|USADO|Usado|Used)$/i
+        };
+
+        // Encontra a linha de cabeçalho
+        let headerLine = null;
+        let headerPositions = {};
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let isHeader = false;
+
+            // Verifica se esta linha contém cabeçalhos
+            Object.keys(headerPatterns).forEach(key => {
+                if (headerPatterns[key].test(line.text)) {
+                    isHeader = true;
+                    headerPositions[key] = line.x;
+                }
+            });
+
+            if (isHeader) {
+                headerLine = i;
+                break;
+            }
+        }
+
+        console.log('Posições dos cabeçalhos:', headerPositions);
+
+        // Identifica linhas que podem ser itens da tabela (após o cabeçalho)
+        const potentialItems = lines.filter((line, index) => {
+            if (index <= headerLine) return false; // Ignora linhas antes do cabeçalho
+
+            // Aceita números (quantidade)
+            if (/^\d+$/.test(line.text)) return true;
+
+            // Aceita textos que podem ser equipamentos
+            if (/^[A-Z\s]{3,}$/.test(line.text)) return true;
+
+            // Aceita textos que podem ser modelos
+            if (/^[A-Z0-9\s\-]{3,}$/.test(line.text)) return true;
+
+            // Aceita N ou U (novo/usado)
+            if (/^(N|U)$/i.test(line.text)) return true;
+
+            return false;
+        });
 
         console.log('Itens potenciais:', potentialItems);
 
-        // Tenta agrupar em itens completos
+        // Tenta agrupar em itens completos baseado nas posições dos cabeçalhos
         let currentItem = null;
+        const processedItems = [];
+
         potentialItems.forEach(line => {
-            if (/^\d+$/.test(line.text)) {
-                // Se é um número, pode ser quantidade
-                if (currentItem) {
-                    currentItem.quantidade = parseInt(line.text);
-                } else {
-                    currentItem = { quantidade: parseInt(line.text) };
+            // Determina a qual coluna este item pertence baseado na posição X
+            let column = null;
+            let minDistance = Infinity;
+
+            Object.keys(headerPositions).forEach(key => {
+                const distance = Math.abs(line.x - headerPositions[key]);
+                if (distance < minDistance && distance < 100) { // 100px de tolerância
+                    minDistance = distance;
+                    column = key;
                 }
-            } else if (currentItem && !currentItem.equipamento) {
-                currentItem.equipamento = line.text;
-            } else if (currentItem && !currentItem.modelo) {
-                currentItem.modelo = line.text;
+            });
+
+            if (/^\d+$/.test(line.text)) {
+                // Se é um número, inicia novo item
+                if (currentItem) {
+                    processedItems.push(currentItem);
+                }
+                currentItem = { quantidade: parseInt(line.text), equipamento: '', modelo: '', n: '', u: '' };
+            } else if (currentItem) {
+                // Adiciona à coluna apropriada
+                if (column) {
+                    currentItem[column] = line.text;
+                } else if (!currentItem.equipamento) {
+                    currentItem.equipamento = line.text;
+                } else if (!currentItem.modelo) {
+                    currentItem.modelo = line.text;
+                }
             }
         });
 
+        // Adiciona o último item
+        if (currentItem) {
+            processedItems.push(currentItem);
+        }
+
         // Filtra e formata os itens
-        const validItems = potentialItems
-            .filter(item => item.text.length > 2) // Remove textos muito curtos
-            .filter(item => !/^(QTD|EQUI|MOD\.?|N|U)$/i.test(item.text)) // Remove cabeçalhos da tabela
+        const validItems = processedItems
+            .filter(item => item.equipamento || item.modelo) // Deve ter pelo menos equipamento ou modelo
             .map(item => ({
-                quantidade: 1,
-                equipamento: item.text,
-                modelo: '',
-                n: '',
-                u: ''
+                quantidade: item.quantidade || 1,
+                equipamento: item.equipamento || '',
+                modelo: item.modelo || '',
+                n: item.n || '',
+                u: item.u || ''
             }));
+
+        console.log('Itens extraídos:', validItems);
 
         return validItems.slice(0, 10); // Limita a 10 itens para evitar duplicatas
     }
@@ -233,6 +320,9 @@ class PDFImporter {
         document.getElementById('motivoValue').textContent = this.extractedData.motivo || 'Não identificado';
         document.getElementById('requerenteValue').textContent = this.extractedData.requerente || 'Não identificado';
         document.getElementById('atendidoValue').textContent = this.extractedData.atendidoPor || 'Não identificado';
+
+        // Exibe informações adicionais se disponíveis
+        console.log('Dados extraídos:', this.extractedData);
 
         // Preenche a tabela de itens
         this.displayItemsTable();
@@ -376,6 +466,8 @@ class PDFImporter {
             motivo: '',
             requerente: '',
             atendidoPor: '',
+            atencao: '',
+            observacao: '',
             items: []
         };
 
