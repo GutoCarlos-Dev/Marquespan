@@ -342,12 +342,12 @@ class PDFImporter {
         previewContainer.style.display = 'block';
 
         // Preenche os dados extraídos
-        document.getElementById('clienteValue').textContent = this.extractedData.cliente || 'Não identificado';
-        document.getElementById('cidadeValue').textContent = this.extractedData.cidade || 'Não identificado';
-        document.getElementById('dataValue').textContent = this.extractedData.data || 'Não identificado';
-        document.getElementById('motivoValue').textContent = this.extractedData.motivo || 'Não identificado';
-        document.getElementById('requerenteValue').textContent = this.extractedData.requerente || 'Não identificado';
-        document.getElementById('atendidoValue').textContent = this.extractedData.atendidoPor || 'Não identificado';
+        this.populateEditableField('clienteValue', this.extractedData.cliente || 'Não identificado');
+        this.populateEditableField('cidadeValue', this.extractedData.cidade || 'Não identificado');
+        this.populateEditableField('dataValue', this.extractedData.data || 'Não identificado');
+        this.populateEditableField('motivoValue', this.extractedData.motivo || 'Não identificado');
+        this.populateEditableField('requerenteValue', this.extractedData.requerente || 'Não identificado');
+        this.populateEditableField('atendidoValue', this.extractedData.atendidoPor || 'Não identificado');
 
         // Exibe informações adicionais se disponíveis
         console.log('Dados extraídos:', this.extractedData);
@@ -357,6 +357,121 @@ class PDFImporter {
 
         // Exibe a seção de dados extraídos
         extractedData.style.display = 'block';
+    }
+
+    populateEditableField(fieldId, value) {
+        const field = document.getElementById(fieldId);
+        field.textContent = value;
+        field.style.cursor = 'pointer';
+        field.title = 'Clique duas vezes para editar';
+
+        // Remove event listeners anteriores para evitar duplicatas
+        field.removeEventListener('dblclick', this.handleFieldDoubleClick.bind(this));
+        field.removeEventListener('blur', this.handleFieldBlur.bind(this));
+        field.removeEventListener('keydown', this.handleFieldKeyDown.bind(this));
+
+        // Adiciona event listeners para edição
+        field.addEventListener('dblclick', this.handleFieldDoubleClick.bind(this));
+    }
+
+    handleFieldDoubleClick(event) {
+        const field = event.target;
+        const fieldId = field.id;
+        const currentValue = field.textContent;
+
+        // Cria input para edição
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        input.className = 'editable-field-input';
+        input.style.cssText = `
+            width: 100%;
+            padding: 4px 8px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+        `;
+
+        // Substitui o texto pelo input
+        field.textContent = '';
+        field.appendChild(input);
+        input.focus();
+        input.select();
+
+        // Armazena referência para o campo original
+        input.dataset.fieldId = fieldId;
+        input.dataset.originalValue = currentValue;
+
+        // Adiciona event listeners para o input
+        input.addEventListener('blur', this.handleFieldBlur.bind(this));
+        input.addEventListener('keydown', this.handleFieldKeyDown.bind(this));
+    }
+
+    handleFieldBlur(event) {
+        const input = event.target;
+        this.saveFieldEdit(input);
+    }
+
+    handleFieldKeyDown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveFieldEdit(event.target);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            this.cancelFieldEdit(event.target);
+        }
+    }
+
+    saveFieldEdit(input) {
+        const fieldId = input.dataset.fieldId;
+        const newValue = input.value.trim();
+        const field = input.parentElement;
+
+        // Remove o input
+        input.remove();
+
+        // Atualiza o valor no campo
+        field.textContent = newValue || 'Não identificado';
+
+        // Atualiza os dados extraídos
+        this.updateExtractedData(fieldId, newValue);
+
+        // Reaplica o estilo editável
+        this.populateEditableField(fieldId, newValue || 'Não identificado');
+    }
+
+    cancelFieldEdit(input) {
+        const fieldId = input.dataset.fieldId;
+        const originalValue = input.dataset.originalValue;
+        const field = input.parentElement;
+
+        // Remove o input
+        input.remove();
+
+        // Restaura o valor original
+        field.textContent = originalValue;
+
+        // Reaplica o estilo editável
+        this.populateEditableField(fieldId, originalValue);
+    }
+
+    updateExtractedData(fieldId, value) {
+        // Mapeia o ID do campo para a propriedade dos dados extraídos
+        const fieldMapping = {
+            'clienteValue': 'cliente',
+            'cidadeValue': 'cidade',
+            'dataValue': 'data',
+            'motivoValue': 'motivo',
+            'requerenteValue': 'requerente',
+            'atendidoValue': 'atendidoPor'
+        };
+
+        const dataKey = fieldMapping[fieldId];
+        if (dataKey) {
+            this.extractedData[dataKey] = value === 'Não identificado' ? '' : value;
+        }
     }
 
     displayItemsTable() {
