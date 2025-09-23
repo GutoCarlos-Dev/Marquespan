@@ -243,7 +243,7 @@ class PDFImporter {
             if (/^[A-Z0-9\s\-]{3,}$/.test(line.text)) return true;
 
             // Aceita N ou U (novo/usado)
-            if (/^(N|U)$/i.test(line.text)) return true;
+            if (/^(N|U|X)$/i.test(line.text)) return true;
 
             return false;
         });
@@ -288,6 +288,34 @@ class PDFImporter {
         // Adiciona o último item
         if (currentItem) {
             processedItems.push(currentItem);
+        }
+
+        // Verifica se há dados em formato de linha única (como no exemplo)
+        if (processedItems.length === 0) {
+            // Tenta extrair dados de linhas que contenham múltiplos valores separados
+            const fullText = lines.map(line => line.text).join(' ');
+
+            // Procura por padrões como: QTD|BQUI|MOD.|N|U| seguido de dados
+            const tablePattern = /(?:QTD|BQUI|MOD\.?|N|U\|?\s*)+(\d+)\s*\|\s*([^|]+?)\s*\|?\s*([^|]*?)\s*\|?\s*([NUX]?)\s*\|?\s*([NUX]?)/gi;
+
+            let match;
+            while ((match = tablePattern.exec(fullText)) !== null) {
+                const quantidade = parseInt(match[1]);
+                const equipamento = match[2].trim();
+                const modelo = match[3].trim();
+                const n = match[4] || '';
+                const u = match[5] || '';
+
+                if (equipamento || modelo) {
+                    processedItems.push({
+                        quantidade: quantidade,
+                        equipamento: equipamento,
+                        modelo: modelo,
+                        n: n,
+                        u: u
+                    });
+                }
+            }
         }
 
         // Filtra e formata os itens
