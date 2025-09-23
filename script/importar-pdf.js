@@ -439,22 +439,73 @@ class PDFImporter {
     }
 
     determineMotivo() {
-        // Lógica para determinar o motivo baseado nos dados extraídos
+        // Motivos pré-definidos conforme especificado
+        const MOTIVOS_PREDEFINIDOS = [
+            'AUMENTO',
+            'AUMENTO+RETIRADA',
+            'AUMENTO+TROCA',
+            'RETIRADA PARCIAL',
+            'RETIRADA TOTAL',
+            'TROCA',
+            'CLIENTE NOVO'
+        ];
+
+        // Se temos um motivo extraído do PDF, tenta fazer match com os pré-definidos
         if (this.extractedData.motivo) {
-            const motivoLower = this.extractedData.motivo.toLowerCase();
-            if (motivoLower.includes('novo') || motivoLower.includes('cliente novo')) {
-                return 'Cliente Novo';
-            } else if (motivoLower.includes('aumento')) {
-                return 'Aumento';
-            } else if (motivoLower.includes('troca')) {
-                return 'Troca';
-            } else if (motivoLower.includes('retirada')) {
-                return 'Retirada Parcial';
+            const motivoExtraido = this.extractedData.motivo.toUpperCase().trim();
+
+            // Verifica se o motivo extraído corresponde exatamente a algum pré-definido
+            const matchExato = MOTIVOS_PREDEFINIDOS.find(motivo =>
+                motivoExtraido === motivo ||
+                motivoExtraido.includes(motivo) ||
+                motivo.includes(motivoExtraido)
+            );
+
+            if (matchExato) {
+                return matchExato;
+            }
+
+            // Lógica de mapeamento baseada no conteúdo
+            if (motivoExtraido.includes('NOVO') || motivoExtraido.includes('CLIENTE NOVO')) {
+                return 'CLIENTE NOVO';
+            } else if (motivoExtraido.includes('AUMENTO') && motivoExtraido.includes('RETIRADA')) {
+                return 'AUMENTO+RETIRADA';
+            } else if (motivoExtraido.includes('AUMENTO') && motivoExtraido.includes('TROCA')) {
+                return 'AUMENTO+TROCA';
+            } else if (motivoExtraido.includes('RETIRADA') && motivoExtraido.includes('TOTAL')) {
+                return 'RETIRADA TOTAL';
+            } else if (motivoExtraido.includes('RETIRADA') && motivoExtraido.includes('PARCIAL')) {
+                return 'RETIRADA PARCIAL';
+            } else if (motivoExtraido.includes('AUMENTO')) {
+                return 'AUMENTO';
+            } else if (motivoExtraido.includes('TROCA')) {
+                return 'TROCA';
             }
         }
 
-        // Motivo padrão
-        return 'Aumento';
+        // Se não conseguiu determinar, verifica se há informações na observação
+        if (this.extractedData.observacao) {
+            const observacao = this.extractedData.observacao.toUpperCase();
+
+            if (observacao.includes('NOVO') || observacao.includes('CLIENTE NOVO')) {
+                return 'CLIENTE NOVO';
+            } else if (observacao.includes('AUMENTO') && observacao.includes('RETIRADA')) {
+                return 'AUMENTO+RETIRADA';
+            } else if (observacao.includes('AUMENTO') && observacao.includes('TROCA')) {
+                return 'AUMENTO+TROCA';
+            } else if (observacao.includes('RETIRADA') && observacao.includes('TOTAL')) {
+                return 'RETIRADA TOTAL';
+            } else if (observacao.includes('RETIRADA') && observacao.includes('PARCIAL')) {
+                return 'RETIRADA PARCIAL';
+            } else if (observacao.includes('AUMENTO')) {
+                return 'AUMENTO';
+            } else if (observacao.includes('TROCA')) {
+                return 'TROCA';
+            }
+        }
+
+        // Motivo padrão se não conseguir determinar
+        return 'AUMENTO';
     }
 
     clearAll() {
