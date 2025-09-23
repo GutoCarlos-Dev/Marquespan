@@ -797,8 +797,6 @@ async function gerarPDF() {
 
         console.log('=== DEBUG: gerarPDF ===');
         console.log('Dados do carregamento:', carregamentoState);
-        console.log('Requisições de carregamento:', carregamentoState.requisicoesCarregamento.length);
-        console.log('Requisições de troca/retirada:', carregamentoState.requisicoesTrocaRetirada.length);
 
         // Coleta os dados do cabeçalho
         const semana = document.getElementById('semana').value;
@@ -815,14 +813,7 @@ async function gerarPDF() {
         // Formata a data
         const dataFormatada = new Date(dataCarregamento).toLocaleDateString('pt-BR');
 
-        // Gera as linhas das tabelas para debug
-        const linhasCarregamento = gerarLinhasTabela(carregamentoState.requisicoesCarregamento);
-        const linhasTrocaRetirada = gerarLinhasTabela(carregamentoState.requisicoesTrocaRetirada);
-        
-        console.log('Linhas de carregamento geradas:', linhasCarregamento);
-        console.log('Linhas de troca/retirada geradas:', linhasTrocaRetirada);
-
-        // Cria o conteúdo HTML do PDF com melhor formatação
+        // Cria o conteúdo HTML do PDF seguindo o layout especificado
         const conteudoPDF = `
             <!DOCTYPE html>
             <html>
@@ -837,14 +828,23 @@ async function gerarPDF() {
                         line-height: 1.4;
                     }
                     .header {
-                        text-align: center;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
                         border-bottom: 2px solid #333;
                         padding-bottom: 10px;
                         margin-bottom: 20px;
                     }
+                    .header-left {
+                        flex: 1;
+                    }
+                    .header-right {
+                        flex: 1;
+                        text-align: right;
+                    }
                     .header h1 {
                         margin: 0;
-                        font-size: 20px;
+                        font-size: 24px;
                         color: #333;
                         font-weight: bold;
                     }
@@ -859,7 +859,7 @@ async function gerarPDF() {
                     .info-grid {
                         display: grid;
                         grid-template-columns: 1fr 1fr;
-                        gap: 10px;
+                        gap: 20px;
                         margin-bottom: 15px;
                     }
                     .info-item {
@@ -868,130 +868,84 @@ async function gerarPDF() {
                     .info-label {
                         font-weight: bold;
                         display: inline-block;
-                        width: 120px;
+                        width: 80px;
                     }
                     table {
                         width: 100%;
                         border-collapse: collapse;
                         margin-bottom: 20px;
-                        font-size: 11px;
+                        font-size: 12px;
                     }
                     th, td {
                         border: 1px solid #333;
                         padding: 8px;
-                        text-align: left;
-                        vertical-align: top;
+                        text-align: center;
+                        vertical-align: middle;
                     }
                     th {
                         background-color: #f0f0f0;
                         font-weight: bold;
                     }
-                    .section-title {
-                        background-color: #e0e0e0;
-                        font-weight: bold;
-                        text-align: center;
-                        padding: 10px;
-                        margin-top: 15px;
-                        font-size: 14px;
-                    }
-                    .summary-grid {
-                        display: grid;
-                        grid-template-columns: repeat(4, 1fr);
-                        gap: 10px;
-                        margin-top: 15px;
-                    }
-                    .summary-item {
-                        text-align: center;
-                        padding: 10px;
-                        background-color: #f9f9f9;
-                        border: 1px solid #ddd;
-                    }
-                    .summary-label {
-                        font-weight: bold;
-                        font-size: 10px;
-                    }
-                    .summary-value {
-                        font-size: 16px;
-                        font-weight: bold;
-                        color: #333;
-                    }
                     .total-row {
                         background-color: #e8f4fd !important;
                         font-weight: bold;
                     }
-                    .page-break {
-                        page-break-before: always;
-                    }
-                    .no-data {
-                        text-align: center;
+                    .logo-placeholder {
+                        width: 100px;
+                        height: 60px;
+                        background-color: #f9f9f9;
+                        border: 2px dashed #ccc;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 10px;
                         color: #666;
-                        font-style: italic;
-                        padding: 20px;
+                        text-align: center;
                     }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <h1>🏢 MARQUESPAN</h1>
-                    <div class="subtitle">Relatório de Carregamento</div>
-                    <div class="subtitle">Semana ${semana} - ${dataFormatada}</div>
-                </div>
-
-                <div class="info-section">
-                    <h3 style="margin-top: 0; font-size: 14px;">📋 Informações do Carregamento</h3>
-                    <div class="info-grid">
-                        <div class="info-item"><span class="info-label">Placa:</span> ${placa || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">Motorista:</span> ${motoristaNome || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">Conferente:</span> ${conferente || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">Supervisor:</span> ${supervisor || 'N/A'}</div>
+                    <div class="header-left">
+                        <h1>🏢 MARQUESPAN</h1>
+                        <div class="subtitle">Relatório de Carregamento</div>
+                        <div class="subtitle">Semana ${semana} - ${dataFormatada}</div>
+                    </div>
+                    <div class="header-right">
+                        <div class="logo-placeholder">
+                            LOGO DA<br>EMPRESA
+                        </div>
                     </div>
                 </div>
 
-                ${carregamentoState.requisicoesCarregamento.length > 0 ? `
                 <div class="info-section">
-                    <h3 class="section-title">📦 ITENS PARA ENTREGA</h3>
+                    <div class="info-grid">
+                        <div class="info-item"><span class="info-label">SEMANA:</span> ${semana || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">DATA:</span> ${dataFormatada || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">PLACA:</span> ${placa || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">MOTORISTA:</span> ${motoristaNome || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">CONFERENTE:</span> ${conferente || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">SUPERVISOR:</span> ${supervisor || 'N/A'}</div>
+                    </div>
+                </div>
+
+                <div class="info-section">
                     <table>
                         <thead>
                             <tr>
-                                <th>Código</th>
-                                <th>Equipamento</th>
-                                <th>Modelo</th>
-                                <th>Tipo</th>
-                                <th>Qtd</th>
-                                <th>Motivo</th>
+                                <th>Itens</th>
+                                <th>Clientes Novos</th>
+                                <th>Aumento</th>
+                                <th>Troca</th>
+                                <th>Retirada Parcial</th>
+                                <th>Retirada Empréstimo</th>
+                                <th>Retirada Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${linhasCarregamento || '<tr><td colspan="6" class="no-data">Nenhum item encontrado</td></tr>'}
+                            ${gerarLinhaResumoPDF()}
                         </tbody>
                     </table>
-                </div>
-                ` : ''}
-
-                ${carregamentoState.requisicoesTrocaRetirada.length > 0 ? `
-                <div class="info-section">
-                    <h3 class="section-title">🔄 ITENS DE TROCA E RETIRADA</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Equipamento</th>
-                                <th>Modelo</th>
-                                <th>Tipo</th>
-                                <th>Qtd</th>
-                                <th>Motivo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${linhasTrocaRetirada || '<tr><td colspan="6" class="no-data">Nenhum item encontrado</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-                ` : ''}
-
-                <div class="info-section">
-                    <h3 class="section-title">📊 RESUMO GERAL</h3>
-                    ${gerarResumoPDF()}
                 </div>
 
                 <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #666;">
@@ -1009,15 +963,15 @@ async function gerarPDF() {
             margin: [1, 1, 1, 1], // Margens: topo, direita, baixo, esquerda
             filename: `carregamento_semana_${semana}_${dataFormatada.replace(/\//g, '-')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2, 
+            html2canvas: {
+                scale: 2,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff'
             },
-            jsPDF: { 
-                unit: 'cm', 
-                format: 'a4', 
+            jsPDF: {
+                unit: 'cm',
+                format: 'a4',
                 orientation: 'portrait',
                 compress: true
             }
@@ -1069,9 +1023,9 @@ function gerarLinhasTabela(requisicoes) {
 }
 
 /**
- * Gera o resumo formatado para o PDF
+ * Gera a linha de resumo para a tabela principal do PDF
  */
-function gerarResumoPDF() {
+function gerarLinhaResumoPDF() {
     // Cálculos das métricas
     const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
         return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
@@ -1111,52 +1065,19 @@ function gerarResumoPDF() {
                          carregamentoState.requisicoesTrocaRetirada.filter(req => req.motivo === 'Cliente Novo').length;
 
     return `
-        <div class="summary-grid">
-            <div class="summary-item">
-                <div class="summary-label">Total de Itens</div>
-                <div class="summary-value">${totalItens}</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Total de Clientes</div>
-                <div class="summary-value">${totalClientes}</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Clientes Novos</div>
-                <div class="summary-value">${clientesNovos}</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Aumentos</div>
-                <div class="summary-value">${contagemMotivos['Aumento']}</div>
-            </div>
-        </div>
-
-        <table style="margin-top: 15px;">
-            <thead>
-                <tr>
-                    <th>Trocas</th>
-                    <th>Ret. Parcial</th>
-                    <th>Ret. Empréstimo</th>
-                    <th>Ret. Total</th>
-                    <th>Aum+Troca</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="text-align: center;">${contagemMotivos['Troca']}</td>
-                    <td style="text-align: center;">${contagemMotivos['Retirada Parcial']}</td>
-                    <td style="text-align: center;">${contagemMotivos['Retirada de Empréstimo']}</td>
-                    <td style="text-align: center;">${contagemMotivos['Retirada Total']}</td>
-                    <td style="text-align: center;">${contagemMotivos['Aumento+Troca']}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div style="margin-top: 10px; font-size: 10px; color: #666;">
-            <strong>Detalhes:</strong> Total Carregamento: ${carregamentoState.requisicoesCarregamento.length} |
-            Total Troca/Retirada: ${carregamentoState.requisicoesTrocaRetirada.length}
-        </div>
+        <tr>
+            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalItens}</td>
+            <td style="font-weight: bold; text-align: center; background-color: #fff3cd;">${clientesNovos}</td>
+            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Aumento']}</td>
+            <td style="text-align: center; background-color: #d4edda;">${contagemMotivos['Troca']}</td>
+            <td style="text-align: center; background-color: #f8d7da;">${contagemMotivos['Retirada Parcial']}</td>
+            <td style="text-align: center; background-color: #fff3cd;">${contagemMotivos['Retirada de Empréstimo']}</td>
+            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Retirada Total']}</td>
+        </tr>
     `;
 }
+
+
 
 /**
  * Renderiza a tabela de itens de troca e retirada (motivos que NÃO ADICIONAM itens).
