@@ -1215,12 +1215,125 @@ async function salvarCarregamentoCompleto() {
     window.location.reload(); // Recarrega a página para um novo carregamento
 }
 
+// Verifica se há dados importados do PDF
+function checkForImportedData() {
+    const importedData = localStorage.getItem('pdfImportedData');
+    if (importedData) {
+        try {
+            const data = JSON.parse(importedData);
+
+            // Preenche os campos do cabeçalho se os dados estiverem disponíveis
+            if (data.cliente) {
+                // Busca o cliente no banco de dados para obter o ID
+                buscarClientePorNome(data.cliente);
+            }
+
+            if (data.cidade) {
+                // Pode ser usado para validar ou exibir informações adicionais
+                console.log('Cidade identificada:', data.cidade);
+            }
+
+            if (data.data) {
+                // Converte a data do formato DD/MM/YYYY para YYYY-MM-DD
+                const dateParts = data.data.split('/');
+                if (dateParts.length === 3) {
+                    const formattedDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                    document.getElementById('dataCarregamento').value = formattedDate;
+                }
+            }
+
+            if (data.motivo) {
+                document.getElementById('motivoRequisicao').value = data.motivo;
+            }
+
+            if (data.requerente) {
+                // Pode ser usado para preencher um campo de observação
+                console.log('Requerente identificado:', data.requerente);
+            }
+
+            if (data.atendidoPor) {
+                // Pode ser usado para preencher um campo de observação
+                console.log('Atendido por:', data.atendidoPor);
+            }
+
+            // Preenche os itens se houver
+            if (data.items && data.items.length > 0) {
+                preencherItensImportados(data.items);
+            }
+
+            // Remove os dados do localStorage após usar
+            localStorage.removeItem('pdfImportedData');
+
+            alert(`✅ Dados importados com sucesso!\nCliente: ${data.cliente || 'N/A'}\nItens: ${data.items.length}`);
+
+        } catch (error) {
+            console.error('Erro ao processar dados importados:', error);
+        }
+    }
+}
+
+// Busca cliente por nome aproximado
+async function buscarClientePorNome(nomeCliente) {
+    try {
+        const { data: clientes, error } = await supabase
+            .from('clientes')
+            .select('id, codigo, nome, cidade')
+            .ilike('nome', `%${nomeCliente}%`)
+            .limit(5);
+
+        if (error) {
+            console.error('Erro ao buscar cliente:', error);
+            return;
+        }
+
+        if (clientes && clientes.length > 0) {
+            // Se encontrou clientes, preenche o campo com o primeiro resultado
+            const cliente = clientes[0];
+            const clienteInput = document.getElementById('clienteInput');
+            if (clienteInput) {
+                clienteInput.value = `${cliente.codigo} - ${cliente.nome}`;
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao buscar cliente:', error);
+    }
+}
+
+// Preenche os itens importados na requisição atual
+function preencherItensImportados(items) {
+    console.log('Preenchendo itens importados:', items);
+
+    items.forEach(item => {
+        if (item.equipamento && item.quantidade) {
+            // Adiciona o item à requisição atual
+            const novoItem = {
+                item_id: null, // Será preenchido quando buscar no banco
+                item_nome: item.equipamento,
+                modelo: item.modelo || '',
+                tipo: 'EQUIPAMENTO', // Tipo padrão
+                quantidade: item.quantidade || 1
+            };
+
+            requisicaoAtual.itens.push(novoItem);
+        }
+    });
+
+    // Atualiza a tabela de itens
+    renderizarItensRequisicaoAtual();
+    renderizarTabelaResumo();
+
+    console.log('Itens adicionados à requisição:', requisicaoAtual.itens);
+}
+
 // Executa quando o DOM está totalmente carregado
 document.addEventListener('DOMContentLoaded', () => {
     carregarClientesNoDatalist();
     carregarVeiculosNoDatalist();
     carregarItensNoModal();
     carregarMotoristasNoSelect();
+
+    // Verifica se há dados importados do PDF
+    checkForImportedData();
 
     // Preenche campos automáticos
     document.getElementById('dataCarregamento').valueAsDate = new Date();
