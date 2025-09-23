@@ -213,18 +213,21 @@ class PDFImporter {
                 quantidade: 1,
                 equipamento: item.text,
                 modelo: '',
-                n: 'X',
+                n: '',
                 u: ''
             }));
 
-        return validItems.slice(0, 20); // Limita a 20 itens
+        return validItems.slice(0, 10); // Limita a 10 itens para evitar duplicatas
     }
 
     displayResults() {
         const previewContainer = document.getElementById('previewContainer');
         const extractedData = document.getElementById('extractedData');
 
-        // Atualiza os valores extraídos
+        // Exibe o preview
+        previewContainer.style.display = 'block';
+
+        // Preenche os dados extraídos
         document.getElementById('clienteValue').textContent = this.extractedData.cliente || 'Não identificado';
         document.getElementById('cidadeValue').textContent = this.extractedData.cidade || 'Não identificado';
         document.getElementById('dataValue').textContent = this.extractedData.data || 'Não identificado';
@@ -232,56 +235,141 @@ class PDFImporter {
         document.getElementById('requerenteValue').textContent = this.extractedData.requerente || 'Não identificado';
         document.getElementById('atendidoValue').textContent = this.extractedData.atendidoPor || 'Não identificado';
 
-        // Atualiza a tabela de itens
-        this.updateItemsTable();
+        // Preenche a tabela de itens
+        this.displayItemsTable();
 
-        // Exibe os containers
-        previewContainer.style.display = 'block';
+        // Exibe a seção de dados extraídos
         extractedData.style.display = 'block';
     }
 
-    updateItemsTable() {
+    displayItemsTable() {
         const tableBody = document.getElementById('itemsTableBody');
 
         if (this.extractedData.items.length === 0) {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="5" style="text-align: center; color: #666;">
-                        Nenhum item foi identificado no PDF
+                        Nenhum item encontrado no PDF
                     </td>
                 </tr>
             `;
             return;
         }
 
-        tableBody.innerHTML = this.extractedData.items.map(item => `
-            <tr>
+        tableBody.innerHTML = '';
+
+        this.extractedData.items.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
                 <td>${item.quantidade || 1}</td>
-                <td>${item.equipamento || item.text || ''}</td>
+                <td>${item.equipamento || ''}</td>
                 <td>${item.modelo || ''}</td>
-                <td>${item.n || 'X'}</td>
+                <td>${item.n || ''}</td>
                 <td>${item.u || ''}</td>
-            </tr>
-        `).join('');
+            `;
+            tableBody.appendChild(row);
+        });
     }
 
-    importData() {
-        if (!this.extractedData || Object.values(this.extractedData).every(val =>
-            val === '' || (Array.isArray(val) && val.length === 0))) {
-            alert('⚠️ Nenhum dado foi extraído do PDF para importar.');
+    async importData() {
+        if (!this.extractedData.cliente) {
+            alert('⚠️ Não foi possível extrair o nome do cliente. Verifique se o PDF contém essas informações.');
             return;
         }
 
-        // Salva os dados extraídos no localStorage para uso em outras páginas
-        localStorage.setItem('pdfImportedData', JSON.stringify(this.extractedData));
+        try {
+            this.showLoading(true);
 
-        // Redireciona para a página de carregamento com os dados importados
-        window.location.href = `iniciar-carregamento.html?imported=true`;
+            // Busca o cliente no banco de dados
+            const { data: clientes, error: clienteError } = await supabase
+                .from('clientes')
+                .select('id, nome, codigo')
+                .or(`nome.ilike.%${this.extractedData.cliente}%, codigo.ilike.%${this.extractedData.cliente}%`);
+
+            if (clienteError) {
+                throw clienteError;
+            }
+
+            let clienteId = null;
+            let clienteNome = this.extractedData.cliente;
+
+            if (clientes && clientes.length > 0) {
+                clienteId = clientes[0].id;
+                clienteNome = `${clientes[0].codigo} - ${clientes[0].nome}`;
+            } else {
+                // Cria novo cliente se não encontrado
+                const { data: novoCliente, error: novoClienteError } = await supabase
+                    .from('clientes')
+                    .insert([{
+                        nome: this.extractedData.cliente,
+                        codigo: this.extractedData.cliente.substring(0, 10).toUpperCase(),
+                        cidade: this.extractedData.cidade || 'Não informado',
+                        estado: 'Não informado'
+                    }])
+                    .select()
+                    .single();
+
+                if (novoClienteError) {
+                    throw novoClienteError;
+                }
+
+                clienteId = novoCliente.id;
+                clienteNome = `${novoCliente.codigo} - ${novoCliente.nome}`;
+            }
+
+            // Determina o motivo baseado nos dados extraídos
+            const motivo = this.determineMotivo();
+
+            // Cria a requisição
+            const novaRequisicao = {
+                cliente_id: clienteId,
+                cliente_nome: clienteNome,
+                motivo: motivo,
+                itens: this.extractedData.items.map(item => ({
+                    item_nome: item.equipamento || 'Item não identificado',
+                    modelo: item.modelo || '',
+                    tipo: 'Equipamento', // Tipo padrão
+                    quantidade: item.quantidade || 1
+                }))
+            };
+
+            // Armazena no localStorage para ser usado na página de carregamento
+            localStorage.setItem('importedRequest', JSON.stringify(novaRequisicao));
+
+            alert('✅ Dados importados com sucesso! Você será redirecionado para a página de carregamento.');
+
+            // Redireciona para a página de carregamento
+            window.location.href = 'iniciar-carregamento.html';
+
+        } catch (error) {
+            console.error('Erro ao importar dados:', error);
+            alert('❌ Erro ao importar os dados. Tente novamente.');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    determineMotivo() {
+        // Lógica para determinar o motivo baseado nos dados extraídos
+        if (this.extractedData.motivo) {
+            const motivoLower = this.extractedData.motivo.toLowerCase();
+            if (motivoLower.includes('novo') || motivoLower.includes('cliente novo')) {
+                return 'Cliente Novo';
+            } else if (motivoLower.includes('aumento')) {
+                return 'Aumento';
+            } else if (motivoLower.includes('troca')) {
+                return 'Troca';
+            } else if (motivoLower.includes('retirada')) {
+                return 'Retirada Parcial';
+            }
+        }
+
+        // Motivo padrão
+        return 'Aumento';
     }
 
     clearAll() {
         this.file = null;
-        this.pdfData = null;
         this.extractedData = {
             cliente: '',
             cidade: '',
@@ -292,18 +380,28 @@ class PDFImporter {
             items: []
         };
 
-        // Limpa os campos da interface
-        document.getElementById('fileInput').value = '';
+        // Limpa a interface
         document.getElementById('previewContainer').style.display = 'none';
         document.getElementById('extractedData').style.display = 'none';
+        document.getElementById('fileInput').value = '';
 
-        // Remove dados do localStorage
-        localStorage.removeItem('pdfImportedData');
+        // Limpa a tabela de itens
+        document.getElementById('itemsTableBody').innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: #666;">
+                    Nenhum item extraído ainda
+                </td>
+            </tr>
+        `;
     }
 
     showLoading(show) {
         const loading = document.getElementById('loading');
-        loading.style.display = show ? 'flex' : 'none';
+        if (show) {
+            loading.style.display = 'flex';
+        } else {
+            loading.style.display = 'none';
+        }
     }
 }
 
