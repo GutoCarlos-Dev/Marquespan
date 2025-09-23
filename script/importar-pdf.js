@@ -14,6 +14,28 @@ class PDFImporter {
             items: []
         };
 
+        // Lista de equipamentos disponíveis
+        this.equipmentList = [
+            'ARMÁRIO',
+            'ARMÁRIO 60X40',
+            'ARMÁRIO INOX',
+            'ARMÁRIO 10 ESTEIRAS',
+            'ARMÁRIO 16 ESTEIRAS',
+            'CÂMARA FRIA',
+            'CLIMA DE 20',
+            'CLIMA DE 40',
+            'ESQUELETO',
+            'ESTEIRAS',
+            'FORMA LISA',
+            'FORNO DE 5 A GÁS',
+            'FORNO DE 5 ELÉTRICA',
+            'FORNO DE 8 A GÁS',
+            'FORNO DE 8 ELÉTRICO',
+            'FREEZER',
+            'FREZZER VERTICAL',
+            'MOINHO'
+        ];
+
         this.initializeEventListeners();
     }
 
@@ -487,20 +509,30 @@ class PDFImporter {
 
         this.extractedData.items.forEach((item, index) => {
             const row = document.createElement('tr');
+
+            // Cria select para equipamentos
+            const equipmentSelect = this.createEquipmentSelect(item.equipamento || '', index);
+
             row.innerHTML = `
                 <td data-field="quantidade" data-item-index="${index}">${item.quantidade || 1}</td>
-                <td data-field="equipamento" data-item-index="${index}">${item.equipamento || ''}</td>
+                <td data-field="equipamento" data-item-index="${index}"></td>
                 <td data-field="modelo" data-item-index="${index}">${item.modelo || ''}</td>
                 <td data-field="n" data-item-index="${index}">${item.n || ''}</td>
                 <td data-field="u" data-item-index="${index}">${item.u || ''}</td>
             `;
 
-            // Adiciona event listeners para edição nas células
+            // Insere o select na célula de equipamento
+            const equipmentCell = row.querySelector('td[data-field="equipamento"]');
+            equipmentCell.appendChild(equipmentSelect);
+
+            // Adiciona event listeners para edição nas outras células
             const cells = row.querySelectorAll('td');
             cells.forEach(cell => {
-                cell.style.cursor = 'pointer';
-                cell.title = 'Clique duas vezes para editar';
-                cell.addEventListener('dblclick', this.handleTableCellDoubleClick.bind(this));
+                if (cell.dataset.field !== 'equipamento') {
+                    cell.style.cursor = 'pointer';
+                    cell.title = 'Clique duas vezes para editar';
+                    cell.addEventListener('dblclick', this.handleTableCellDoubleClick.bind(this));
+                }
             });
 
             tableBody.appendChild(row);
@@ -602,6 +634,59 @@ class PDFImporter {
         if (this.extractedData.items[itemIndex]) {
             this.extractedData.items[itemIndex][field] = value;
         }
+    }
+
+    createEquipmentSelect(selectedValue, itemIndex) {
+        const select = document.createElement('select');
+        select.className = 'equipment-select';
+        select.dataset.itemIndex = itemIndex;
+        select.dataset.field = 'equipamento';
+
+        // Adiciona event listener para quando o usuário selecionar uma opção
+        select.addEventListener('change', this.handleEquipmentSelectChange.bind(this));
+
+        // Cria a opção padrão (vazia)
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Selecione um equipamento';
+        if (!selectedValue) {
+            defaultOption.selected = true;
+        }
+        select.appendChild(defaultOption);
+
+        // Adiciona todas as opções de equipamentos
+        this.equipmentList.forEach(equipment => {
+            const option = document.createElement('option');
+            option.value = equipment;
+            option.textContent = equipment;
+            if (selectedValue === equipment) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        // Aplica estilos
+        select.style.cssText = `
+            width: 100%;
+            padding: 4px 8px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+        `;
+
+        return select;
+    }
+
+    handleEquipmentSelectChange(event) {
+        const select = event.target;
+        const itemIndex = parseInt(select.dataset.itemIndex);
+        const selectedValue = select.value;
+
+        // Atualiza os dados extraídos
+        this.updateItemData(itemIndex, 'equipamento', selectedValue);
     }
 
     async importData() {
