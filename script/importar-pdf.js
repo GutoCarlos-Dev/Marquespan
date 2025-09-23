@@ -135,7 +135,7 @@ class PDFImporter {
             cliente: /CLIENTE:\s*([^\n\r]+)/i,
             cidade: /CIDADE:\s*([^\n\r]+)/i,
             data: /DATA[:\s]+(\d{2}\/\d{2}\/\d{4})/i,
-            motivo: /Motivo[s]?[:]?\s*([^\n\r]+)/i, // Aceita variações como "Motlvo"
+            motivo: /Motivo[s]?[:]?\s*([A-Za-z0-9\s\+\-\(\)]{1,50})/i, // Limita a 50 caracteres e apenas caracteres relevantes
             requerente: /REQUERENTE[:]?\s*([^\n\r]+)/i,
             atendidoPor: /ATENDIDO POR[:]?\s*([^\n\r]+)/i,
             atencao: /ATEN[ÇC][AÃ]O[:]?\s*([^\n\r]+)/i,
