@@ -53,17 +53,19 @@ function recalcularTotais() {
     });
 
     resumoDiv.innerHTML = `
-      <div class="resumo">
-        <h3>🚚 Carregamento (NOVO/TROCA/AMT)</h3>
-        <p><b>Total de Equipamentos:</b> ${totalEquip_Carreg}</p>
-        <p><b>Novos (N):</b> ${totalNovos_Carreg}</p>
-        <p><b>Usados (U):</b> ${totalUsados_Carreg}</p>
-      </div>
-      <div class="resumo">
-        <h3>🔄 Retorno (RP/RT)</h3>
-        <p><b>Total de Equipamentos:</b> ${totalEquip_Retorno}</p>
-        <p><b>Novos (N):</b> ${totalNovos_Retorno}</p>
-        <p><b>Usados (U):</b> ${totalUsados_Retorno}</p>
+      <div class="resumo-section">
+        <div class="resumo-card">
+          <h3>🚚 Carregamento (NOVO/TROCA/AMT)</h3>
+          <p><b>Total de Equipamentos:</b> <span class="total">${totalEquip_Carreg}</span></p>
+          <p><b>Novos (N):</b> <span class="total">${totalNovos_Carreg}</span></p>
+          <p><b>Usados (U):</b> <span class="total">${totalUsados_Carreg}</span></p>
+        </div>
+        <div class="resumo-card">
+          <h3>🔄 Retorno (RP/RT)</h3>
+          <p><b>Total de Equipamentos:</b> <span class="total">${totalEquip_Retorno}</span></p>
+          <p><b>Novos (N):</b> <span class="total">${totalNovos_Retorno}</span></p>
+          <p><b>Usados (U):</b> <span class="total">${totalUsados_Retorno}</span></p>
+        </div>
       </div>
     `;
 }
@@ -127,7 +129,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             // Cria tabela HTML
             let html = `<h4>Arquivo: ${file.name}</h4>`;
             html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
-            html += `<table data-index="${grids.length - 1}"><thead><tr>`;
+            html += `<div class="data-table"><table data-index="${grids.length - 1}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${h}</th>`);
             html += "</tr></thead><tbody>";
 
@@ -142,7 +144,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 });
                 html += "</tr>";
             });
-            html += "</tbody></table>";
+            html += "</tbody></table></div>";
 
             tablesContainer.innerHTML += html;
         };
