@@ -233,93 +233,227 @@ body {
     transform: translateY(-1px);
 }
 
-/* Tabelas de Dados */
+/* Tabelas de Dados - Design Profissional */
 .tables-section {
     background: var(--white);
-    padding: 30px;
-    border-radius: 16px;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    border-radius: 20px;
+    margin-bottom: 40px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
     border: 1px solid var(--border-light);
-    max-width: 1000px;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.tables-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-green), var(--secondary-green), var(--primary-green));
 }
 
 .tables-section h4 {
     color: var(--text-dark);
-    margin-bottom: 20px;
-    font-size: 1.4em;
-    font-weight: 600;
+    margin-bottom: 30px;
+    font-size: 1.6em;
+    font-weight: 700;
     text-align: center;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.tables-section h4::before {
+    content: '📊';
+    font-size: 1.2em;
 }
 
 .tables-section h4::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 60px;
-    height: 3px;
+    width: 80px;
+    height: 4px;
     background: linear-gradient(90deg, var(--primary-green), var(--secondary-green));
     border-radius: 2px;
 }
 
 .data-table {
     overflow-x: auto;
-    margin-top: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    margin-top: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-light);
+    background: var(--white);
+}
+
+.data-table::-webkit-scrollbar {
+    height: 8px;
+}
+
+.data-table::-webkit-scrollbar-track {
+    background: var(--gray-50);
+    border-radius: 4px;
+}
+
+.data-table::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--primary-green), var(--secondary-green));
+    border-radius: 4px;
+}
+
+.data-table::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, var(--secondary-green), var(--primary-green));
 }
 
 .data-table table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9em;
-    min-width: 600px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.95em;
+    min-width: 700px;
 }
 
 .data-table th {
     background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
     color: var(--white);
-    padding: 18px 16px;
+    padding: 20px 18px;
     text-align: center;
-    font-weight: 600;
+    font-weight: 700;
     border: none;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     font-size: 0.85em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.data-table th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.data-table th:last-child {
+    border-top-right-radius: 12px;
 }
 
 .data-table td {
-    padding: 16px 14px;
-    border: 1px solid var(--border-light);
+    padding: 18px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    border-right: 1px solid #f0f0f0;
     text-align: center;
     background: var(--white);
     font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.data-table td:last-child {
+    border-right: none;
+}
+
+.data-table tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.data-table tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
 }
 
 .data-table td[contenteditable="true"] {
-    background: linear-gradient(135deg, var(--light-green) 0%, rgba(240, 255, 240, 0.5) 100%);
+    background: linear-gradient(135deg, var(--light-green) 0%, rgba(240, 255, 240, 0.6) 100%);
     border: 2px solid var(--primary-green);
     cursor: text;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    font-weight: 600;
+}
+
+.data-table td[contenteditable="true"]::before {
+    content: '✏️';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.7em;
+    opacity: 0.6;
 }
 
 .data-table td[contenteditable="true"]:focus {
     background: var(--white);
-    outline: 2px solid var(--primary-green);
-    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+    outline: 3px solid var(--primary-green);
+    box-shadow: 0 0 0 6px rgba(76, 175, 80, 0.15);
+    transform: scale(1.02);
+    z-index: 5;
 }
 
 .data-table tr:hover td {
-    background: var(--gray-50);
+    background: linear-gradient(135deg, #f8fffe 0%, #f0f9ff 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .data-table tr:hover td[contenteditable="true"] {
-    background: rgba(240, 255, 240, 0.8);
+    background: linear-gradient(135deg, rgba(240, 255, 240, 0.9) 0%, var(--light-green) 100%);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+/* Zebra striping para melhor legibilidade */
+.data-table tr:nth-child(even) td {
+    background: rgba(247, 250, 252, 0.5);
+}
+
+.data-table tr:nth-child(even):hover td {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+}
+
+/* Efeitos para números e valores importantes */
+.data-table td:nth-child(1) {
+    font-weight: 700;
+    color: var(--primary-green);
+    font-family: 'Courier New', monospace;
+}
+
+.data-table td:nth-child(3) {
+    font-style: italic;
+    color: var(--text-light);
+}
+
+/* Status indicators para colunas N e U */
+.data-table td:nth-child(4),
+.data-table td:nth-child(5) {
+    position: relative;
+}
+
+.data-table td:nth-child(4)::after {
+    content: 'N';
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    color: var(--text-light);
+    font-weight: bold;
+}
+
+.data-table td:nth-child(5)::after {
+    content: 'U';
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    color: var(--text-light);
+    font-weight: bold;
 }
 
 /* Box de Motivo */
