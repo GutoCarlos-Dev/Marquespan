@@ -4,6 +4,23 @@
  * e gerar totais conforme especificado
  */
 
+// Função para preencher o campo Conferente com o usuário logado
+function preencherConferente() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const campoConferente = document.getElementById('conferente');
+    const campoUsuarioHidden = document.getElementById('usuario-logado-hidden');
+
+    if (usuario && usuario.nome) {
+        campoConferente.value = usuario.nome;
+        campoUsuarioHidden.value = usuario.nome;
+        console.log('Conferente preenchido automaticamente:', usuario.nome);
+    } else {
+        campoConferente.value = 'Usuário não identificado';
+        campoUsuarioHidden.value = '';
+        console.warn('Usuário não encontrado no localStorage');
+    }
+}
+
 document.getElementById("supervisor").value
 
 const tablesContainer = document.getElementById("tables");
@@ -148,4 +165,10 @@ tablesContainer.addEventListener("input", function(e) {
 
     // Atualiza automaticamente ao digitar:
     recalcularTotais();
+});
+
+// Inicialização quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando página de importação XLSX...');
+    preencherConferente();
 });

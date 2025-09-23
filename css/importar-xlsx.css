@@ -109,6 +109,19 @@ body {
     letter-spacing: 0.5px;
 }
 
+.auto-fill-indicator {
+    font-size: 0.7em;
+    color: var(--primary-green);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+    padding: 2px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    margin-left: 8px;
+}
+
 .form-group input,
 .form-group select {
     padding: 14px 18px;
@@ -130,10 +143,19 @@ body {
 }
 
 .form-group input:disabled {
-    background: var(--gray-100);
-    color: var(--text-light);
+    background: linear-gradient(135deg, #e8f5e8 0%, #f0f9f0 100%);
+    color: var(--primary-green);
     cursor: not-allowed;
-    border-color: #cbd5e0;
+    border-color: var(--primary-green);
+    font-weight: 600;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.form-group input:disabled:hover {
+    background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%);
+    transform: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
 /* Seção de Upload */
