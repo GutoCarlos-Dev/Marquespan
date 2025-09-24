@@ -255,6 +255,49 @@ body {
     transform: translateY(-1px);
 }
 
+/* Botão Gerar XLS */
+#btnGerarXLS {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+    color: var(--white);
+    border: none;
+    padding: 18px 50px;
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 24px var(--shadow-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+}
+
+#btnGerarXLS::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+#btnGerarXLS:hover::before {
+    left: 100%;
+}
+
+#btnGerarXLS:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px var(--shadow-green);
+    background: linear-gradient(135deg, var(--secondary-green) 0%, var(--primary-green) 100%);
+}
+
+#btnGerarXLS:active {
+    transform: translateY(-1px);
+}
+
 /* Tabelas de Dados - Design Profissional */
 .tables-section {
     background: var(--white);
