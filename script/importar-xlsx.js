@@ -220,15 +220,19 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             rows.forEach((row, i) => {
                 html += `<tr data-row="${i}">`;
                 row.forEach((cell, j) => {
-                    if (j === 1) { // EQUIP column
+                    if (j === 0) { // QTD column - make it disabled
+                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
+                    } else if (j === 1) { // EQUIP column
                         html += `<td><select class="equip-dropdown">${equipamentosFixos.map(equip => `<option value="${equip}" ${cell === equip ? 'selected' : ''}>${equip}</option>`).join('')}</select></td>`;
+                    } else if (j === 2) { // MOD column - make it disabled
+                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
                     } else if (j === 3 || j === 4) {
                         html += `<td contenteditable="true">${cell}</td>`;
                     } else {
                         html += `<td>${cell}</td>`;
                     }
                 });
-                html += `<td><button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
+                html += `<td><button class="edit-row-btn" data-grid="${grids.length - 1}" data-row="${i}">✏️</button> <button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
                 html += "</tr>";
             });
             html += "</tbody></table></div>";
