@@ -215,7 +215,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
             html += `<div class="data-table"><table data-index="${grids.length - 1}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${h}</th>`);
-            html += `<th>Ações</th></tr></thead><tbody>`;
+            html += `</tr></thead><tbody>`;
 
             rows.forEach((row, i) => {
                 html += `<tr data-row="${i}">`;
@@ -232,7 +232,6 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                         html += `<td>${cell}</td>`;
                     }
                 });
-                html += `<td><button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
                 html += "</tr>";
             });
             html += "</tbody></table></div>";
