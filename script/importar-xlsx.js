@@ -223,7 +223,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                     if (j === 0) { // QTD column - make it disabled
                         html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
                     } else if (j === 1) { // EQUIP column
-                        html += `<td contenteditable="true">${cell}</td>`;
+                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
                     } else if (j === 2) { // MOD column - make it disabled
                         html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
                     } else if (j === 3 || j === 4) {
