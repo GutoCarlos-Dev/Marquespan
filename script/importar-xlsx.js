@@ -219,8 +219,35 @@ function gerarXLSResumo() {
     const conferente = document.getElementById('conferente').value || 'Não informado';
     const supervisor = document.getElementById('supervisor').value || 'Não informado';
 
-    // Agregar totais por equipamento
+    // Lista de equipamentos fixos
+    const equipamentosFixos = [
+        'ARMÁRIO',
+        'ARMÁRIO 60X40',
+        'ARMÁRIO INOX',
+        'ARMÁRIO 10 ESTEIRAS',
+        'ARMÁRIO 16 ESTEIRAS',
+        'CÂMARA FRIA',
+        'CLIMA DE 20',
+        'CLIMA DE 40',
+        'ESQUELETO',
+        'ESTEIRAS',
+        'FORMA LISA',
+        'FORNO DE 5 A GÁS',
+        'FORNO DE 5 ELÉTRICA',
+        'FORNO DE 8 A GÁS',
+        'FORNO DE 8 ELÉTRICO',
+        'FREEZER',
+        'FREZZER VERTICAL',
+        'MOINHO'
+    ];
+
+    // Inicializar equipamentos com zero
     const equipamentos = {};
+    equipamentosFixos.forEach(equip => {
+        equipamentos[equip] = { novos: 0, usados: 0, total: 0, retorno: 0 };
+    });
+
+    // Agregar totais por equipamento
     grids.forEach(grid => {
         grid.rows.forEach(r => {
             const equip = r[1].toString().trim().toUpperCase(); // EQUIP
@@ -228,15 +255,27 @@ function gerarXLSResumo() {
             const nMark = r[3].toString().trim().toUpperCase();
             const uMark = r[4].toString().trim().toUpperCase();
 
-            if (!equipamentos[equip]) {
-                equipamentos[equip] = { novos: 0, usados: 0, total: 0, retorno: 0 };
+            if (equipamentos[equip]) {
+                const addQtd = qtd > 0 ? qtd : 1;
+                if (nMark === "X") equipamentos[equip].novos += addQtd;
+                if (uMark === "X") equipamentos[equip].usados += addQtd;
+                equipamentos[equip].total += addQtd;
+                if (grid.type === "retorno") equipamentos[equip].retorno += addQtd;
             }
+        });
+    });
 
-            const addQtd = qtd > 0 ? qtd : 1;
-            if (nMark === "X") equipamentos[equip].novos += addQtd;
-            if (uMark === "X") equipamentos[equip].usados += addQtd;
-            equipamentos[equip].total += addQtd;
-            if (grid.type === "retorno") equipamentos[equip].retorno += addQtd;
+    // Agregar motivos
+    const motivos = {};
+    grids.forEach(grid => {
+        grid.rows.forEach(r => {
+            // Assumindo que o motivo está em uma coluna específica, mas como não está definido, vou usar o tipo do grid
+            // Para simplicidade, vou usar o tipo do grid como motivo
+            const motivo = grid.type.toUpperCase();
+            if (!motivos[motivo]) {
+                motivos[motivo] = 0;
+            }
+            motivos[motivo] += 1; // Contar cada linha como um motivo
         });
     });
 
@@ -252,7 +291,7 @@ function gerarXLSResumo() {
         ['Equipamento', 'NOVOS', 'USADOS', 'Total', 'Retorno']
     ];
 
-    const tableData = Object.keys(equipamentos).map(equip => [
+    const tableData = equipamentosFixos.map(equip => [
         equip,
         equipamentos[equip].novos,
         equipamentos[equip].usados,
@@ -260,7 +299,18 @@ function gerarXLSResumo() {
         equipamentos[equip].retorno
     ]);
 
-    const wsData = [...headerData, ...tableData];
+    const motivosData = [
+        [], // Linha vazia
+        ['Motivo', 'Total'],
+        ['CLIENTE NOVO', motivos['CARREGAMENTO'] || 0],
+        ['AUMENTO', motivos['AUMENTO'] || 0],
+        ['TROCA', motivos['TROCA'] || 0],
+        ['RETIRADA PARCIAL', motivos['RETIRADA PARCIAL'] || 0],
+        ['RETIRADA DE EMPRÉSTIMO', motivos['RETIRADA DE EMPRÉSTIMO'] || 0],
+        ['RETIRADA TOTAL', motivos['RETIRADA TOTAL'] || 0]
+    ];
+
+    const wsData = [...headerData, ...tableData, ...motivosData];
 
     // Criar workbook
     const wb = XLSX.utils.book_new();
