@@ -4,6 +4,8 @@
  * e gerar totais conforme especificado
  */
 
+import { supabase } from './supabase.js';
+
 // Função para preencher o campo Conferente com o usuário logado
 function preencherConferente() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -18,6 +20,39 @@ function preencherConferente() {
         campoConferente.value = 'Usuário não identificado';
         campoUsuarioHidden.value = '';
         console.warn('Usuário não encontrado no localStorage');
+    }
+}
+
+// Função para buscar placas de veículos do banco de dados e preencher o dropdown
+async function preencherPlacas() {
+    const selectPlaca = document.getElementById('placa');
+    try {
+        const { data, error } = await supabase
+            .from('Veiculos')
+            .select('placa')
+            .not('placa', 'is', null); // Exclui registros onde placa é nula
+
+        if (error) {
+            console.error('Erro ao buscar placas:', error);
+            selectPlaca.innerHTML = '<option value="">Erro ao carregar placas</option>';
+            return;
+        }
+
+        // Limpa opções existentes (exceto a primeira)
+        selectPlaca.innerHTML = '<option value="">Selecione...</option>';
+
+        // Adiciona as placas como opções
+        data.forEach(veiculo => {
+            const option = document.createElement('option');
+            option.value = veiculo.placa;
+            option.textContent = veiculo.placa;
+            selectPlaca.appendChild(option);
+        });
+
+        console.log('Placas carregadas com sucesso:', data.length);
+    } catch (err) {
+        console.error('Erro inesperado ao carregar placas:', err);
+        selectPlaca.innerHTML = '<option value="">Erro ao carregar placas</option>';
     }
 }
 
@@ -173,4 +208,5 @@ tablesContainer.addEventListener("input", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Inicializando página de importação XLSX...');
     preencherConferente();
+    preencherPlacas(); // Carrega as placas do banco de dados
 });
