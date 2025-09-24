@@ -399,7 +399,7 @@ function addNewRow(gridIndex) {
         <td contenteditable="true">${newRow[2]}</td>
         <td contenteditable="true">${newRow[3]}</td>
         <td contenteditable="true">${newRow[4]}</td>
-        <td><button class="delete-row-btn" data-grid="${gridIndex}" data-row="${grids[gridIndex].rows.length - 1}">🗑️</button></td>
+        <td><button class="edit-row-btn" data-grid="${gridIndex}" data-row="${grids[gridIndex].rows.length - 1}">✏️</button> <button class="delete-row-btn" data-grid="${gridIndex}" data-row="${grids[gridIndex].rows.length - 1}">🗑️</button></td>
     `;
     tbody.appendChild(newTr);
 
