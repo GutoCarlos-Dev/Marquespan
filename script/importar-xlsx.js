@@ -62,6 +62,7 @@ const resumoDiv = document.getElementById("resumo");
 const btnAtualizar = document.getElementById("btnAtualizar");
 
 let grids = []; // Armazena todos os dados carregados (para recalcular depois)
+let motivos = {}; // Armazena totais de motivos
 
 function recalcularTotais() {
     let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
@@ -112,6 +113,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
     tablesContainer.innerHTML = "";
     resumoDiv.innerHTML = "";
     grids = [];
+    motivos = {};
 
     for (const file of files) {
         const reader = new FileReader();
@@ -160,6 +162,26 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 type: isCarregamento ? "carregamento" : (isRetorno ? "retorno" : "outro"),
                 rows: rows
             });
+
+            // Contar motivos baseado no nome do arquivo
+            if (name.includes("(NOVO)")) {
+                motivos["CLIENTE NOVO"] = (motivos["CLIENTE NOVO"] || 0) + 1;
+            }
+            if (name.includes("(AM)")) {
+                motivos["AUMENTO"] = (motivos["AUMENTO"] || 0) + 1;
+            }
+            if (name.includes("(AMT)") || name.includes("(TROCA)")) {
+                motivos["TROCA"] = (motivos["TROCA"] || 0) + 1;
+            }
+            if (name.includes("(RP)")) {
+                motivos["RETIRADA PARCIAL"] = (motivos["RETIRADA PARCIAL"] || 0) + 1;
+            }
+            if (name.includes("(RE)")) {
+                motivos["RETIRADA DE EMPRÉSTIMO"] = (motivos["RETIRADA DE EMPRÉSTIMO"] || 0) + 1;
+            }
+            if (name.includes("(RT)")) {
+                motivos["RETIRADA TOTAL"] = (motivos["RETIRADA TOTAL"] || 0) + 1;
+            }
 
             // Cria tabela HTML
             let html = `<h4>Arquivo: ${file.name}</h4>`;
@@ -265,19 +287,7 @@ function gerarXLSResumo() {
         });
     });
 
-    // Agregar motivos
-    const motivos = {};
-    grids.forEach(grid => {
-        grid.rows.forEach(r => {
-            // Assumindo que o motivo está em uma coluna específica, mas como não está definido, vou usar o tipo do grid
-            // Para simplicidade, vou usar o tipo do grid como motivo
-            const motivo = grid.type.toUpperCase();
-            if (!motivos[motivo]) {
-                motivos[motivo] = 0;
-            }
-            motivos[motivo] += 1; // Contar cada linha como um motivo
-        });
-    });
+
 
     // Criar dados para o XLS
     const headerData = [
@@ -302,7 +312,7 @@ function gerarXLSResumo() {
     const motivosData = [
         [], // Linha vazia
         ['Motivo', 'Total'],
-        ['CLIENTE NOVO', motivos['CARREGAMENTO'] || 0],
+        ['CLIENTE NOVO', motivos['CLIENTE NOVO'] || 0],
         ['AUMENTO', motivos['AUMENTO'] || 0],
         ['TROCA', motivos['TROCA'] || 0],
         ['RETIRADA PARCIAL', motivos['RETIRADA PARCIAL'] || 0],
