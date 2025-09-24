@@ -205,6 +205,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 html += "</tr>";
             });
             html += "</tbody></table></div>";
+            html += `<button class="add-row-btn" data-index="${grids.length - 1}">Adicionar Linha</button>`;
 
             tablesContainer.innerHTML += html;
         };
@@ -333,6 +334,45 @@ function gerarXLSResumo() {
     // Download
     XLSX.writeFile(wb, `resumo_carregamento_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+// Função para adicionar nova linha
+function addNewRow(gridIndex) {
+    const qtd = prompt('QTD:');
+    const equip = prompt('EQUIP:');
+    const mod = prompt('MOD.:');
+    const n = prompt('N:');
+    const u = prompt('U:');
+
+    if (qtd && equip && mod && n && u) {
+        const newRow = [qtd, equip, mod, n, u];
+        grids[gridIndex].rows.push(newRow);
+
+        // Atualizar HTML
+        const tables = document.querySelectorAll('table[data-index]');
+        const table = tables[gridIndex];
+        const tbody = table.querySelector('tbody');
+        const newTr = document.createElement('tr');
+        newTr.innerHTML = `
+            <td>${qtd}</td>
+            <td>${equip}</td>
+            <td>${mod}</td>
+            <td contenteditable="true">${n}</td>
+            <td contenteditable="true">${u}</td>
+        `;
+        tbody.appendChild(newTr);
+
+        // Atualizar totais
+        recalcularTotais();
+    }
+}
+
+// Escuta cliques nos botões de adicionar linha
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('add-row-btn')) {
+        const gridIndex = parseInt(e.target.dataset.index);
+        addNewRow(gridIndex);
+    }
+});
 
 // Inicialização quando a página carrega
 document.addEventListener('DOMContentLoaded', function() {
