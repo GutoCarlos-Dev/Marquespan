@@ -123,7 +123,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
             const name = file.name.toUpperCase();
             const isCarregamento = name.includes("(NOVO)") || name.includes("(TROCA)") || name.includes("(AMT)");
-            const isRetorno = name.includes("(RP)") || name.includes("(RT)");
+            const isRetorno = name.includes("(RP)") || name.includes("(RT)") || (name.includes("(RT)") && name.includes("(RP)")) || name.includes("(RE)");
             const isNovo = name.includes("(NOVO)");
 
             const cfg = isNovo
@@ -180,6 +180,9 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 motivos["RETIRADA DE EMPRÉSTIMO"] = (motivos["RETIRADA DE EMPRÉSTIMO"] || 0) + 1;
             }
             if (name.includes("(RT)")) {
+                motivos["RETIRADA TOTAL"] = (motivos["RETIRADA TOTAL"] || 0) + 1;
+            }
+            if (name.includes("(RT)") && name.includes("(RP)")) {
                 motivos["RETIRADA TOTAL"] = (motivos["RETIRADA TOTAL"] || 0) + 1;
             }
 
