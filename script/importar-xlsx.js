@@ -185,8 +185,16 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             // Não é mais necessário adicionar dinamicamente
 
             // Armazena para futuros cálculos
+            let type = "outro";
+            if (isCarregamento && !isRetorno) {
+                type = "carregamento";
+            } else if (isRetorno) {
+                type = "retorno";
+            } else if (isCarregamento && isRetorno) {
+                type = "retorno"; // Prioritize retorno for (TROCA+RP)
+            }
             grids.push({
-                type: isCarregamento ? "carregamento" : (isRetorno ? "retorno" : "outro"),
+                type: type,
                 rows: rows
             });
 
