@@ -231,7 +231,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
             // Cria tabela HTML
             let html = `<h4>Arquivo: ${file.name}</h4>`;
-            html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
+            html += `<div class="motivo-box" style="color: red;">Motivo: ${motivo} | Ordem: <input type="text" id="ordem-${grids.length - 1}" placeholder="Ordem de Carregamento"></div>`;
             html += `<div class="data-table"><table data-index="${grids.length - 1}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${h}</th>`);
             html += `</tr></thead><tbody>`;
