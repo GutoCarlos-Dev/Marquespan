@@ -63,7 +63,27 @@ const btnAtualizar = document.getElementById("btnAtualizar");
 
 let grids = []; // Armazena todos os dados carregados (para recalcular depois)
 let motivos = {}; // Armazena totais de motivos
-let equipamentosList = new Set(); // Lista de equipamentos únicos para dropdown
+// Lista fixa de equipamentos
+const equipamentosFixos = [
+    'ARMÁRIO',
+    'ARMÁRIO 60X40',
+    'ARMÁRIO INOX',
+    'ARMÁRIO 10 ESTEIRAS',
+    'ARMÁRIO 16 ESTEIRAS',
+    'CÂMARA FRIA',
+    'CLIMA DE 20',
+    'CLIMA DE 40',
+    'ESQUELETO',
+    'ESTEIRAS',
+    'FORMA LISA',
+    'FORNO DE 5 A GÁS',
+    'FORNO DE 5 ELÉTRICA',
+    'FORNO DE 8 A GÁS',
+    'FORNO DE 8 ELÉTRICO',
+    'FREEZER',
+    'FREZZER VERTICAL',
+    'MOINHO'
+];
 
 function recalcularTotais() {
     let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
@@ -158,10 +178,8 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 if (linha.some(v => v !== "")) rows.push(linha);
             }
 
-            // Adicionar equipamentos à lista
-            rows.forEach(row => {
-                if (row[1]) equipamentosList.add(row[1].toString().trim().toUpperCase());
-            });
+            // Adicionar equipamentos à lista (agora usa lista fixa)
+            // Não é mais necessário adicionar dinamicamente
 
             // Armazena para futuros cálculos
             grids.push({
@@ -197,19 +215,20 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
             html += `<div class="data-table"><table data-index="${grids.length - 1}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${h}</th>`);
-            html += "</tr></thead><tbody>";
+            html += `<th>Ações</th></tr></thead><tbody>`;
 
             rows.forEach((row, i) => {
                 html += `<tr data-row="${i}">`;
                 row.forEach((cell, j) => {
                     if (j === 1) { // EQUIP column
-                        html += `<td><select class="equip-dropdown">${Array.from(equipamentosList).map(equip => `<option value="${equip}" ${cell === equip ? 'selected' : ''}>${equip}</option>`).join('')}</select></td>`;
+                        html += `<td><select class="equip-dropdown">${equipamentosFixos.map(equip => `<option value="${equip}" ${cell === equip ? 'selected' : ''}>${equip}</option>`).join('')}</select></td>`;
                     } else if (j === 3 || j === 4) {
                         html += `<td contenteditable="true">${cell}</td>`;
                     } else {
                         html += `<td>${cell}</td>`;
                     }
                 });
+                html += `<td><button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
                 html += "</tr>";
             });
             html += "</tbody></table></div>";
@@ -372,10 +391,11 @@ function addNewRow(gridIndex) {
     const newTr = document.createElement('tr');
     newTr.innerHTML = `
         <td contenteditable="true">${newRow[0]}</td>
-        <td><select class="equip-dropdown">${Array.from(equipamentosList).map(equip => `<option value="${equip}">${equip}</option>`).join('')}</select></td>
+        <td><select class="equip-dropdown">${equipamentosFixos.map(equip => `<option value="${equip}">${equip}</option>`).join('')}</select></td>
         <td contenteditable="true">${newRow[2]}</td>
         <td contenteditable="true">${newRow[3]}</td>
         <td contenteditable="true">${newRow[4]}</td>
+        <td><button class="delete-row-btn" data-grid="${gridIndex}" data-row="${grids[gridIndex].rows.length - 1}">🗑️</button></td>
     `;
     tbody.appendChild(newTr);
 
@@ -383,11 +403,40 @@ function addNewRow(gridIndex) {
     recalcularTotais();
 }
 
-// Escuta cliques nos botões de adicionar linha
+// Função para deletar uma linha
+function deleteRow(gridIndex, rowIndex) {
+    // Remove a linha do array de dados
+    grids[gridIndex].rows.splice(rowIndex, 1);
+
+    // Atualizar HTML: remover a linha da tabela
+    const tables = document.querySelectorAll('table[data-index]');
+    const table = tables[gridIndex];
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr[data-row]');
+    rows[rowIndex].remove();
+
+    // Atualizar data-row para as linhas restantes
+    rows.forEach((row, i) => {
+        if (i >= rowIndex) {
+            row.dataset.row = i;
+            const deleteBtn = row.querySelector('.delete-row-btn');
+            deleteBtn.dataset.row = i;
+        }
+    });
+
+    // Atualizar totais
+    recalcularTotais();
+}
+
+// Escuta cliques nos botões de adicionar linha e deletar linha
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('add-row-btn')) {
         const gridIndex = parseInt(e.target.dataset.index);
         addNewRow(gridIndex);
+    } else if (e.target.classList.contains('delete-row-btn')) {
+        const gridIndex = parseInt(e.target.dataset.grid);
+        const rowIndex = parseInt(e.target.dataset.row);
+        deleteRow(gridIndex, rowIndex);
     }
 });
 
