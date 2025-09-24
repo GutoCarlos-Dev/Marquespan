@@ -150,8 +150,11 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             const cfg = isNovo
               ? { sheet: "REQUERIMENTO", motivoCell: "K9", startRow: 13, endRow: 23, startCol: 2, endCol: 7,
                   headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: true }
-              : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 6,
-                  headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: false };
+              : name.includes("(TROCA+RP)")
+                ? { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 8,
+                    headers: ["QTD","EQUIP","MOD.","N","U","OBS","OBS2"], filterQtd: false }
+                : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 6,
+                    headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: false };
 
             if (!workbook.SheetNames.includes(cfg.sheet)) {
                 tablesContainer.innerHTML += `<p style="color:red;text-align:center;">
