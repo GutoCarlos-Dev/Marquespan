@@ -133,7 +133,11 @@ function recalcularTotais() {
     `;
 }
 
-btnAtualizar.addEventListener("click", recalcularTotais);
+btnAtualizar.addEventListener("click", () => {
+    recalcularTotais();
+    // Force update of resumoDiv in case of (TROCA+RP) files
+    // This ensures the totals are recalculated and displayed correctly
+});
 document.getElementById("btnGerarXLS").addEventListener("click", gerarXLSResumo);
 
 document.getElementById("fileUpload").addEventListener("change", function(e) {
@@ -182,6 +186,8 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
                 const qtd = parseFloat(linha[0]) || 0;
                 if (cfg.filterQtd && qtd <= 0) continue;
+                // Normalize equipment name
+                linha[1] = normalizeEquipment(linha[1]);
                 if (linha.some(v => v !== "")) rows.push(linha);
             }
 
