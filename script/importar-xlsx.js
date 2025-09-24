@@ -170,7 +170,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             if (name.includes("(AM)")) {
                 motivos["AUMENTO"] = (motivos["AUMENTO"] || 0) + 1;
             }
-            if (name.includes("(AMT)") || name.includes("(TROCA)")) {
+            if (name.includes("(AMT)") || name.includes("(TROCA)") || name.includes("(TROCA+RP)")) {
                 motivos["TROCA"] = (motivos["TROCA"] || 0) + 1;
             }
             if (name.includes("(RP)")) {
