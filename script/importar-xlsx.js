@@ -229,13 +229,14 @@ function gerarXLSResumo() {
             const uMark = r[4].toString().trim().toUpperCase();
 
             if (!equipamentos[equip]) {
-                equipamentos[equip] = { novos: 0, usados: 0, total: 0 };
+                equipamentos[equip] = { novos: 0, usados: 0, total: 0, retorno: 0 };
             }
 
             const addQtd = qtd > 0 ? qtd : 1;
             if (nMark === "X") equipamentos[equip].novos += addQtd;
             if (uMark === "X") equipamentos[equip].usados += addQtd;
             equipamentos[equip].total += addQtd;
+            if (grid.type === "retorno") equipamentos[equip].retorno += addQtd;
         });
     });
 
@@ -248,14 +249,15 @@ function gerarXLSResumo() {
         ['Conferente:', conferente],
         ['Supervisor:', supervisor],
         [], // Linha vazia
-        ['Equipamento', 'NOVOS', 'USADOS', 'Total']
+        ['Equipamento', 'NOVOS', 'USADOS', 'Total', 'Retorno']
     ];
 
     const tableData = Object.keys(equipamentos).map(equip => [
         equip,
         equipamentos[equip].novos,
         equipamentos[equip].usados,
-        equipamentos[equip].total
+        equipamentos[equip].total,
+        equipamentos[equip].retorno
     ]);
 
     const wsData = [...headerData, ...tableData];
