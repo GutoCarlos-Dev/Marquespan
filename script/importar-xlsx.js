@@ -63,6 +63,7 @@ const btnAtualizar = document.getElementById("btnAtualizar");
 
 let grids = []; // Armazena todos os dados carregados (para recalcular depois)
 let motivos = {}; // Armazena totais de motivos
+let equipamentosList = new Set(); // Lista de equipamentos únicos para dropdown
 
 function recalcularTotais() {
     let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
@@ -157,6 +158,11 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 if (linha.some(v => v !== "")) rows.push(linha);
             }
 
+            // Adicionar equipamentos à lista
+            rows.forEach(row => {
+                if (row[1]) equipamentosList.add(row[1].toString().trim().toUpperCase());
+            });
+
             // Armazena para futuros cálculos
             grids.push({
                 type: isCarregamento ? "carregamento" : (isRetorno ? "retorno" : "outro"),
@@ -196,7 +202,9 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             rows.forEach((row, i) => {
                 html += `<tr data-row="${i}">`;
                 row.forEach((cell, j) => {
-                    if (j === 3 || j === 4) {
+                    if (j === 1) { // EQUIP column
+                        html += `<td><select class="equip-dropdown">${Array.from(equipamentosList).map(equip => `<option value="${equip}" ${cell === equip ? 'selected' : ''}>${equip}</option>`).join('')}</select></td>`;
+                    } else if (j === 3 || j === 4) {
                         html += `<td contenteditable="true">${cell}</td>`;
                     } else {
                         html += `<td>${cell}</td>`;
@@ -227,6 +235,23 @@ tablesContainer.addEventListener("input", function(e) {
     grids[gridIndex].rows[rowIndex][cellIndex] = td.innerText.trim().toUpperCase();
 
     // Atualiza automaticamente ao digitar:
+    recalcularTotais();
+});
+
+// Escuta alterações nos dropdowns de equipamentos
+tablesContainer.addEventListener("change", function(e) {
+    const select = e.target.closest("select.equip-dropdown");
+    if (!select) return;
+
+    const tr = select.parentElement.parentElement;
+    const table = tr.closest("table");
+    const gridIndex = parseInt(table.dataset.index);
+    const rowIndex = parseInt(tr.dataset.row);
+    const cellIndex = 1; // EQUIP column
+
+    grids[gridIndex].rows[rowIndex][cellIndex] = select.value.trim().toUpperCase();
+
+    // Atualiza automaticamente ao alterar:
     recalcularTotais();
 });
 
@@ -337,33 +362,25 @@ function gerarXLSResumo() {
 
 // Função para adicionar nova linha
 function addNewRow(gridIndex) {
-    const qtd = prompt('QTD:');
-    const equip = prompt('EQUIP:');
-    const mod = prompt('MOD.:');
-    const n = prompt('N:');
-    const u = prompt('U:');
+    const newRow = ['', '', '', '', '']; // Linha vazia
+    grids[gridIndex].rows.push(newRow);
 
-    if (qtd && equip && mod && n && u) {
-        const newRow = [qtd, equip, mod, n, u];
-        grids[gridIndex].rows.push(newRow);
+    // Atualizar HTML
+    const tables = document.querySelectorAll('table[data-index]');
+    const table = tables[gridIndex];
+    const tbody = table.querySelector('tbody');
+    const newTr = document.createElement('tr');
+    newTr.innerHTML = `
+        <td contenteditable="true">${newRow[0]}</td>
+        <td><select class="equip-dropdown">${Array.from(equipamentosList).map(equip => `<option value="${equip}">${equip}</option>`).join('')}</select></td>
+        <td contenteditable="true">${newRow[2]}</td>
+        <td contenteditable="true">${newRow[3]}</td>
+        <td contenteditable="true">${newRow[4]}</td>
+    `;
+    tbody.appendChild(newTr);
 
-        // Atualizar HTML
-        const tables = document.querySelectorAll('table[data-index]');
-        const table = tables[gridIndex];
-        const tbody = table.querySelector('tbody');
-        const newTr = document.createElement('tr');
-        newTr.innerHTML = `
-            <td>${qtd}</td>
-            <td>${equip}</td>
-            <td>${mod}</td>
-            <td contenteditable="true">${n}</td>
-            <td contenteditable="true">${u}</td>
-        `;
-        tbody.appendChild(newTr);
-
-        // Atualizar totais
-        recalcularTotais();
-    }
+    // Atualizar totais
+    recalcularTotais();
 }
 
 // Escuta cliques nos botões de adicionar linha
