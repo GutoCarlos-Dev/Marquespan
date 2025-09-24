@@ -232,11 +232,10 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                         html += `<td>${cell}</td>`;
                     }
                 });
-                html += `<td><button class="edit-row-btn" data-grid="${grids.length - 1}" data-row="${i}">✏️</button> <button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
+                html += `<td><button class="delete-row-btn" data-grid="${grids.length - 1}" data-row="${i}">🗑️</button></td>`;
                 html += "</tr>";
             });
             html += "</tbody></table></div>";
-            html += `<button class="add-row-btn" data-index="${grids.length - 1}">Adicionar Linha</button>`;
 
             tablesContainer.innerHTML += html;
         };
