@@ -85,6 +85,13 @@ const equipamentosFixos = [
     'MOINHO'
 ];
 
+function normalizeEquipment(equip) {
+    if (equip.toUpperCase() === "FORNO 8") {
+        return "FORNO DE 8 A GÁS";
+    }
+    return equip;
+}
+
 function recalcularTotais() {
     let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
     let totalEquip_Retorno = 0, totalNovos_Retorno = 0, totalUsados_Retorno = 0;
