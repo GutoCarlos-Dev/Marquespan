@@ -255,10 +255,12 @@ tablesContainer.addEventListener("input", function(e) {
     const rowIndex = parseInt(tr.dataset.row);
     const cellIndex = [...tr.children].indexOf(td);
 
-    grids[gridIndex].rows[rowIndex][cellIndex] = td.innerText.trim().toUpperCase();
-
-    // Atualiza automaticamente ao digitar:
-    recalcularTotais();
+    // Verifica se a linha existe no array
+    if (grids[gridIndex] && grids[gridIndex].rows[rowIndex]) {
+        grids[gridIndex].rows[rowIndex][cellIndex] = td.innerText.trim().toUpperCase();
+        // Atualiza automaticamente ao digitar:
+        recalcularTotais();
+    }
 });
 
 // Escuta alterações nos dropdowns de equipamentos
