@@ -66,31 +66,26 @@ let motivos = {}; // Armazena totais de motivos
 // Lista fixa de equipamentos
 const equipamentosFixos = [
     'ARMÁRIO',
-    'ARMÁRIO 60X40',
+    'ARMÁRIO 10',
+    'ARMÁRIO 16',
+    'ARMÁRIO 40X60',
     'ARMÁRIO INOX',
-    'ARMÁRIO 10 ESTEIRAS',
-    'ARMÁRIO 16 ESTEIRAS',
-    'CÂMARA FRIA',
-    'CLIMA DE 20',
-    'CLIMA DE 40',
+    'CAM. FRIA',
+    'CLIMA 20',
+    'CLIMA 40',
     'ESQUELETO',
     'ESTEIRAS',
-    'FORMA LISA',
-    'FORNO DE 5 A GÁS',
-    'FORNO DE 5 ELÉTRICA',
-    'FORNO DE 8 A GÁS',
-    'FORNO DE 8 ELÉTRICO',
+    'FORMA',
+    'FORNO 10',
+    'FORNO 5',
+    'FORNO 8',
     'FREEZER',
-    'FREZZER VERTICAL',
+    'MESA INOX',
     'MOINHO'
 ];
 
 function normalizeEquipment(equip) {
-    equip = equip.replace(/\s+/g, ' ').trim().toUpperCase();
-    if (equip === "FORNO 8") {
-        return "FORNO DE 8 A GÁS";
-    }
-    return equip;
+    return equip.replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
 function recalcularTotais() {
@@ -320,22 +315,21 @@ function gerarXLSResumo() {
     // Lista de equipamentos fixos
     const equipamentosFixos = [
         'ARMÁRIO',
-        'ARMÁRIO 60X40',
+        'ARMÁRIO 10',
+        'ARMÁRIO 16',
+        'ARMÁRIO 40X60',
         'ARMÁRIO INOX',
-        'ARMÁRIO 10 ESTEIRAS',
-        'ARMÁRIO 16 ESTEIRAS',
-        'CÂMARA FRIA',
-        'CLIMA DE 20',
-        'CLIMA DE 40',
+        'CAM. FRIA',
+        'CLIMA 20',
+        'CLIMA 40',
         'ESQUELETO',
         'ESTEIRAS',
-        'FORMA LISA',
-        'FORNO DE 5 A GÁS',
-        'FORNO DE 5 ELÉTRICA',
-        'FORNO DE 8 A GÁS',
-        'FORNO DE 8 ELÉTRICO',
+        'FORMA',
+        'FORNO 10',
+        'FORNO 5',
+        'FORNO 8',
         'FREEZER',
-        'FREZZER VERTICAL',
+        'MESA INOX',
         'MOINHO'
     ];
 
