@@ -23,9 +23,9 @@ function preencherConferente() {
     }
 }
 
-// Função para buscar placas de veículos do banco de dados e preencher o dropdown
+// Função para buscar placas de veículos do banco de dados e preencher o datalist
 async function preencherPlacas() {
-    const selectPlaca = document.getElementById('placa');
+    const datalistPlacas = document.getElementById('placas-list');
     try {
         const { data, error } = await supabase
             .from('Veiculos')
@@ -34,25 +34,24 @@ async function preencherPlacas() {
 
         if (error) {
             console.error('Erro ao buscar placas:', error);
-            selectPlaca.innerHTML = '<option value="">Erro ao carregar placas</option>';
+            datalistPlacas.innerHTML = '<option value="Erro ao carregar placas">';
             return;
         }
 
-        // Limpa opções existentes (exceto a primeira)
-        selectPlaca.innerHTML = '<option value="">Selecione...</option>';
+        // Limpa opções existentes
+        datalistPlacas.innerHTML = '';
 
         // Adiciona as placas como opções
         data.forEach(veiculo => {
             const option = document.createElement('option');
             option.value = veiculo.placa;
-            option.textContent = veiculo.placa;
-            selectPlaca.appendChild(option);
+            datalistPlacas.appendChild(option);
         });
 
         console.log('Placas carregadas com sucesso:', data.length);
     } catch (err) {
         console.error('Erro inesperado ao carregar placas:', err);
-        selectPlaca.innerHTML = '<option value="">Erro ao carregar placas</option>';
+        datalistPlacas.innerHTML = '<option value="Erro ao carregar placas">';
     }
 }
 
