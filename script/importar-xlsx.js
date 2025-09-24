@@ -413,14 +413,18 @@ function deleteRow(gridIndex, rowIndex) {
     const table = tables[gridIndex];
     const tbody = table.querySelector('tbody');
     const rows = tbody.querySelectorAll('tr[data-row]');
-    rows[rowIndex].remove();
+    if (rows[rowIndex]) {
+        rows[rowIndex].remove();
+    }
 
     // Atualizar data-row para as linhas restantes
-    rows.forEach((row, i) => {
+    Array.from(rows).forEach((row, i) => {
         if (i >= rowIndex) {
             row.dataset.row = i;
             const deleteBtn = row.querySelector('.delete-row-btn');
-            deleteBtn.dataset.row = i;
+            if (deleteBtn) {
+                deleteBtn.dataset.row = i;
+            }
         }
     });
 
