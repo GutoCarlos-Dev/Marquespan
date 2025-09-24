@@ -86,7 +86,8 @@ const equipamentosFixos = [
 ];
 
 function normalizeEquipment(equip) {
-    if (equip.toUpperCase() === "FORNO 8") {
+    equip = equip.replace(/\s+/g, ' ').trim().toUpperCase();
+    if (equip === "FORNO 8") {
         return "FORNO DE 8 A GÁS";
     }
     return equip;
