@@ -160,9 +160,6 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
               : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 5,
                   headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: false };
 
-            // Ajuste para (TROCA+RP) que tem uma coluna a mais
-            if (name.includes("(TROCA+RP)")) cfg.endCol = 6;
-
             if (!workbook.SheetNames.includes(cfg.sheet)) {
                 tablesContainer.innerHTML += `<p style="color:red;text-align:center;">
                   ❌ O arquivo <b>${file.name}</b> não possui a aba "${cfg.sheet}".
