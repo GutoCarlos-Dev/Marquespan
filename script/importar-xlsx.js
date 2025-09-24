@@ -196,12 +196,14 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
             // Armazena para futuros cálculos
             let type = "outro";
-            if (isCarregamento && !isRetorno) {
+            if (name.includes("(TROCA+RP)")) {
+                type = "carregamento"; // Treat (TROCA+RP) as carregamento, like (TROCA)
+            } else if (isCarregamento && !isRetorno) {
                 type = "carregamento";
             } else if (isRetorno) {
                 type = "retorno";
             } else if (isCarregamento && isRetorno) {
-                type = "retorno"; // Prioritize retorno for (TROCA+RP)
+                type = "retorno";
             }
             grids.push({
                 type: type,
