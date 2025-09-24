@@ -28,7 +28,7 @@ async function preencherPlacas() {
     const datalistPlacas = document.getElementById('placas-list');
     try {
         const { data, error } = await supabase
-            .from('Veiculos')
+            .from('veiculos')
             .select('placa')
             .not('placa', 'is', null); // Exclui registros onde placa é nula
 
