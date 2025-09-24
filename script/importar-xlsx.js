@@ -105,6 +105,7 @@ function recalcularTotais() {
 }
 
 btnAtualizar.addEventListener("click", recalcularTotais);
+document.getElementById("btnGerarXLS").addEventListener("click", gerarXLSResumo);
 
 document.getElementById("fileUpload").addEventListener("change", function(e) {
     const files = e.target.files;
@@ -202,6 +203,71 @@ tablesContainer.addEventListener("input", function(e) {
     // Atualiza automaticamente ao digitar:
     recalcularTotais();
 });
+
+// Função para gerar XLS de resumo
+function gerarXLSResumo() {
+    if (grids.length === 0) {
+        alert('Nenhum dado carregado. Importe arquivos primeiro.');
+        return;
+    }
+
+    // Obter dados do formulário
+    const semana = document.getElementById('semana').value || 'Não informado';
+    const data = document.getElementById('data').value || 'Não informado';
+    const placa = document.getElementById('placa').value || 'Não informado';
+    const motorista = document.getElementById('motorista').value || 'Não informado';
+    const conferente = document.getElementById('conferente').value || 'Não informado';
+    const supervisor = document.getElementById('supervisor').value || 'Não informado';
+
+    // Agregar totais por equipamento
+    const equipamentos = {};
+    grids.forEach(grid => {
+        grid.rows.forEach(r => {
+            const equip = r[1].toString().trim().toUpperCase(); // EQUIP
+            const qtd = parseFloat(r[0]) || 0;
+            const nMark = r[3].toString().trim().toUpperCase();
+            const uMark = r[4].toString().trim().toUpperCase();
+
+            if (!equipamentos[equip]) {
+                equipamentos[equip] = { novos: 0, usados: 0, total: 0 };
+            }
+
+            const addQtd = qtd > 0 ? qtd : 1;
+            if (nMark === "X") equipamentos[equip].novos += addQtd;
+            if (uMark === "X") equipamentos[equip].usados += addQtd;
+            equipamentos[equip].total += addQtd;
+        });
+    });
+
+    // Criar dados para o XLS
+    const headerData = [
+        ['Semana:', semana],
+        ['Data:', data],
+        ['Placa:', placa],
+        ['Motorista:', motorista],
+        ['Conferente:', conferente],
+        ['Supervisor:', supervisor],
+        [], // Linha vazia
+        ['Equipamento', 'NOVOS', 'USADOS', 'Total']
+    ];
+
+    const tableData = Object.keys(equipamentos).map(equip => [
+        equip,
+        equipamentos[equip].novos,
+        equipamentos[equip].usados,
+        equipamentos[equip].total
+    ]);
+
+    const wsData = [...headerData, ...tableData];
+
+    // Criar workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Resumo');
+
+    // Download
+    XLSX.writeFile(wb, `resumo_carregamento_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
 
 // Inicialização quando a página carrega
 document.addEventListener('DOMContentLoaded', function() {
