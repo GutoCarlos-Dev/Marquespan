@@ -152,7 +152,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                   headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: true }
               : name.includes("(TROCA+RP)")
                 ? { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 8,
-                    headers: ["QTD","EQUIP","MOD.","N","U","OBS","OBS2"], filterQtd: false }
+                    headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: false, obsFromCol8: true }
                 : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 6,
                     headers: ["QTD","EQUIP","MOD.","N","U","OBS"], filterQtd: false };
 
