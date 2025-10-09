@@ -13,11 +13,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnAdicionarModelo = document.getElementById("btn-adicionar-modelo");
   const btnExcluirModelo = document.getElementById("btn-excluir-modelo");
 
+  const selectTipo = document.getElementById("tipo");
+  const btnAdicionarTipo = document.getElementById("btn-adicionar-tipo");
+  const btnExcluirTipo = document.getElementById("btn-excluir-tipo");
+
   // Marcas pré-cadastradas
   let marcas = ["BRIDGESTONE", "CONTINENTAL", "GOODYEAR", "MICHELIN", "PIRELLI"];
 
   // Modelos pré-cadastrados
   let modelos = ["225/75/16", "235/75/17.5", "275/80/22.5 - LISO", "275/80/22.5 - BORRACHUDO", "295/80/22.5 - LISO", "295/80/22.5 - BORRACHUDO"];
+
+  // Tipos pré-cadastrados
+  let tipos = ["NOVO", "RECAPADO"];
 
   // Função para atualizar opções do select de marcas
   function atualizarOpcoesMarcas() {
@@ -41,8 +48,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Função para atualizar opções do select de tipos
+  function atualizarOpcoesTipos() {
+    selectTipo.innerHTML = '<option value="">Selecione ou adicione</option>';
+    tipos.forEach((tipo) => {
+      const option = document.createElement("option");
+      option.value = tipo;
+      option.textContent = tipo;
+      selectTipo.appendChild(option);
+    });
+  }
+
   atualizarOpcoesMarcas();
   atualizarOpcoesModelos();
+  atualizarOpcoesTipos();
 
   // Adicionar nova marca
   btnAdicionarMarca.addEventListener("click", () => {
@@ -96,6 +115,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Adicionar novo tipo
+  btnAdicionarTipo.addEventListener("click", () => {
+    const novoTipo = prompt("Digite o nome do novo tipo:").toUpperCase().trim();
+    if (novoTipo && !tipos.includes(novoTipo)) {
+      tipos.push(novoTipo);
+      atualizarOpcoesTipos();
+      selectTipo.value = novoTipo;
+    } else if (tipos.includes(novoTipo)) {
+      alert("Tipo já existe na lista.");
+    }
+  });
+
+  // Excluir tipo selecionado
+  btnExcluirTipo.addEventListener("click", () => {
+    const tipoSelecionado = selectTipo.value;
+    if (!tipoSelecionado) {
+      alert("Selecione um tipo para excluir.");
+      return;
+    }
+    const confirmar = confirm(`Tem certeza que deseja excluir o tipo "${tipoSelecionado}"?`);
+    if (confirmar) {
+      tipos = tipos.filter((t) => t !== tipoSelecionado);
+      atualizarOpcoesTipos();
+    }
+  });
+
   // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
     const { data: pneu, error } = await supabase
@@ -123,19 +168,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const marca = form.marca.value.trim();
     const modelo = form.modelo.value.trim();
-    const tamanho = form.tamanho.value.trim();
+    // const tamanho = form.tamanho.value.trim(); // campo removido conforme solicitação
     const tipo = form.tipo.value.trim();
     const quantidade = parseInt(form.quantidade.value);
 
-    if (!marca || !modelo || !tamanho || !tipo) {
-      alert("Por favor, preencha os campos obrigatórios: Marca, Modelo, Tamanho e Tipo.");
+    if (!marca || !modelo || !tipo) {
+      alert("Por favor, preencha os campos obrigatórios: Marca, Modelo e Tipo.");
       return;
     }
 
     const pneu = {
       marca,
       modelo,
-      tamanho,
       tipo,
       quantidade,
     };

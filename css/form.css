@@ -78,17 +78,17 @@
 }
 
 /* 🛠️ Containers para select com botões */
-.marca-container, .modelo-container {
+.marca-container, .modelo-container, .tipo-container {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.marca-container select, .modelo-container select {
+.marca-container select, .modelo-container select, .tipo-container select {
   flex: 1;
 }
 
-.marca-container button, .modelo-container button {
+.marca-container button, .modelo-container button, .tipo-container button {
   padding: 8px 12px;
   background-color: #4CAF50;
   color: white;
@@ -98,15 +98,15 @@
   font-size: 12px;
 }
 
-.marca-container button:hover, .modelo-container button:hover {
+.marca-container button:hover, .modelo-container button:hover, .tipo-container button:hover {
   background-color: #45a049;
 }
 
-.marca-container button:last-child, .modelo-container button:last-child {
+.marca-container button:last-child, .modelo-container button:last-child, .tipo-container button:last-child {
   background-color: #f44336;
 }
 
-.marca-container button:last-child:hover, .modelo-container button:last-child:hover {
+.marca-container button:last-child:hover, .modelo-container button:last-child:hover, .tipo-container button:last-child:hover {
   background-color: #d32f2f;
 }
 

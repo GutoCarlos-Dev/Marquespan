@@ -81,16 +81,14 @@
                 <button type="button" id="btn-excluir-modelo" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
               </div>
 
-              <label>Tamanho *</label>
-              <input type="text" name="tamanho" id="tamanho" placeholder="Ex: 205/55 R16" required />
-
               <label>Tipo *</label>
-              <select name="tipo" id="tipo" required>
-                <option value="">Selecione</option>
-                <option value="radial">Radial</option>
-                <option value="diagonal">Diagonal</option>
-                <option value="run-flat">Run Flat</option>
-              </select>
+              <div class="tipo-container">
+                <select name="tipo" id="tipo" required>
+                  <option value="">Selecione ou adicione</option>
+                </select>
+                <button type="button" id="btn-adicionar-tipo" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
+                <button type="button" id="btn-excluir-tipo" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
+              </div>
 
               <label>Quantidade em Estoque *</label>
               <input type="number" name="quantidade" id="quantidade" min="0" value="0" required />
