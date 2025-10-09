@@ -64,7 +64,13 @@
             <h3>Cadastro de Pneu</h3>
             <div class="form-grid">
               <label>Marca *</label>
-              <input type="text" name="marca" id="marca" placeholder="Marca do pneu" required />
+              <div class="marca-container">
+                <select name="marca" id="marca" required>
+                  <option value="">Selecione ou adicione</option>
+                </select>
+                <button type="button" id="btn-adicionar-marca" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
+                <button type="button" id="btn-excluir-marca" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
+              </div>
 
               <label>Modelo *</label>
               <input type="text" name="modelo" id="modelo" placeholder="Modelo do pneu" required />

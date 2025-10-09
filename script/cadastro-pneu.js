@@ -5,22 +5,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
-  console.log("Página carregada. ID na URL:", id);
+  const selectMarca = document.getElementById("marca");
+  const btnAdicionarMarca = document.getElementById("btn-adicionar-marca");
+  const btnExcluirMarca = document.getElementById("btn-excluir-marca");
+
+  // Marcas pré-cadastradas
+  let marcas = ["BRIDGESTONE", "CONTINENTAL", "GOODYEAR", "MICHELIN", "PIRELLI"];
+
+  // Função para atualizar opções do select
+  function atualizarOpcoesMarcas() {
+    selectMarca.innerHTML = '<option value="">Selecione ou adicione</option>';
+    marcas.forEach((marca) => {
+      const option = document.createElement("option");
+      option.value = marca;
+      option.textContent = marca;
+      selectMarca.appendChild(option);
+    });
+  }
+
+  atualizarOpcoesMarcas();
+
+  // Adicionar nova marca
+  btnAdicionarMarca.addEventListener("click", () => {
+    const novaMarca = prompt("Digite o nome da nova marca:").toUpperCase().trim();
+    if (novaMarca && !marcas.includes(novaMarca)) {
+      marcas.push(novaMarca);
+      atualizarOpcoesMarcas();
+      selectMarca.value = novaMarca;
+    } else if (marcas.includes(novaMarca)) {
+      alert("Marca já existe na lista.");
+    }
+  });
+
+  // Excluir marca selecionada
+  btnExcluirMarca.addEventListener("click", () => {
+    const marcaSelecionada = selectMarca.value;
+    if (!marcaSelecionada) {
+      alert("Selecione uma marca para excluir.");
+      return;
+    }
+    const confirmar = confirm(`Tem certeza que deseja excluir a marca "${marcaSelecionada}"?`);
+    if (confirmar) {
+      marcas = marcas.filter((m) => m !== marcaSelecionada);
+      atualizarOpcoesMarcas();
+    }
+  });
 
   // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
-    console.log("Modo edição ativado. Buscando pneu no Supabase...");
-
     const { data: pneu, error } = await supabase
       .from("pneus")
       .select("*")
       .eq("id", id)
       .single();
 
-    console.log("Resposta da busca:", { pneu, error });
-
     if (error || !pneu) {
-      console.error("Erro ao buscar pneu:", error);
       alert("Erro ao carregar dados do pneu.");
       return;
     }
@@ -36,7 +75,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 💾 Submeter dados
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    console.log("Formulário enviado.");
 
     const marca = form.marca.value.trim();
     const modelo = form.modelo.value.trim();
@@ -57,21 +95,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       quantidade,
     };
 
-    console.log("Dados do pneu a salvar:", pneu);
-
     try {
       if (id) {
-        console.log("Tentando atualizar pneu com ID:", id);
-
         const { data, error } = await supabase
           .from("pneus")
           .update(pneu)
           .eq("id", id);
 
-        console.log("Resposta da atualização:", { data, error });
-
         if (error) {
-          console.error("Erro ao atualizar:", error);
           alert("Erro ao atualizar o pneu.");
           return;
         }
@@ -80,14 +111,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         form.reset();
         window.close();
       } else {
-        console.log("Inserindo novo pneu...");
-
         const { data, error } = await supabase
           .from("pneus")
           .insert([pneu]);
 
         if (error) {
-          console.error("Erro ao salvar:", error);
           alert("Erro ao salvar o pneu. Tente novamente.");
           return;
         }
@@ -97,7 +125,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.close();
       }
     } catch (err) {
-      console.error("Erro inesperado:", err);
       alert("Erro inesperado. Verifique sua conexão.");
     }
   });
