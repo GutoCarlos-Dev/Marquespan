@@ -11,11 +11,55 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <div class="modal-pneu show">
-    <div class="modal-content">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <img src="logo.png" alt="Logo Marquespan" class="logo" />
+    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
+    <nav>
+      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
+      <div class="menu-group">
+        <button class="menu-toggle">
+          <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
+          <a href="incluir-manutencao.html">Incluir Manutenção</a>
+          <a href="buscar-manutencao.html">Buscar Manutenção</a>
+        </div>
+      </div>
+      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
+      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
+      <div class="menu-group">
+        <button class="menu-toggle">
+          <i class="fas fa-truck-loading"></i> <span>Carregamento</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
+          <a href="cadastro-carregamento.html">Cadastro</a>
+          <a href="iniciar-carregamento.html">Iniciar Carregamento</a>
+          <a href="importar-xlsx.html">Importar XLSX</a>
+          <a href="buscar-carregamento.html">Buscar Carregamento</a>
+        </div>
+      </div>
+      <div class="menu-group active">
+        <button class="menu-toggle">
+          <i class="fas fa-tire"></i> <span>Pneus</span> <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="submenu">
+          <a href="cadastro-pneu.html" class="active">Cadastrar Pneu</a>
+          <a href="estoque-pneu.html">Estoque Pneu</a>
+          <a href="manutencao-pneu.html">Manutenção Pneu</a>
+        </div>
+      </div>
+      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="header">📋 Cadastro de Pneus</header>
+    <section class="content-section">
       <div class="form-container">
         <form id="formPneu">
-          <!-- Bloco 1: Informações do Pneu -->
           <div class="form-bloco">
             <h3>Cadastro de Pneu</h3>
             <div class="form-grid">
@@ -41,31 +85,39 @@
             </div>
           </div>
 
-          <!-- Botões -->
           <div class="modal-actions">
             <button type="submit"><i class="fas fa-save"></i> Salvar</button>
             <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
           </div>
         </form>
-
-        <!-- Exibição do usuário logado -->
-        <div class="usuario-logado-modal" id="usuario-logado-modal">
-          <small>👤 Usuário logado: <span id="nome-usuario"></span></small>
-        </div>
       </div>
-    </div>
+    </section>
   </div>
 
-  <!-- Scripts -->
-  <script type="module" src="./script/cadastro-pneu.js" defer></script>
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
   <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-      const nomeSpan = document.getElementById('nome-usuario');
+      const divUsuario = document.getElementById('usuario-logado');
       if (usuario && usuario.nome) {
-        nomeSpan.textContent = usuario.nome;
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
     });
+
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('active');
+      });
+    });
   </script>
+
+  <script type="module" src="./script/cadastro-pneu.js" defer></script>
 </body>
 </html>
