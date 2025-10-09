@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro de Pneus - Marquespan</title>
+
+  <!-- CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css" />
+
+  <!-- Ícones Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="modal-pneu show">
+    <div class="modal-content">
+      <div class="form-container">
+        <form id="formPneu">
+          <!-- Bloco 1: Informações do Pneu -->
+          <div class="form-bloco">
+            <h3>Cadastro de Pneu</h3>
+            <div class="form-grid">
+              <label>Marca *</label>
+              <input type="text" name="marca" id="marca" placeholder="Marca do pneu" required />
+
+              <label>Modelo *</label>
+              <input type="text" name="modelo" id="modelo" placeholder="Modelo do pneu" required />
+
+              <label>Tamanho *</label>
+              <input type="text" name="tamanho" id="tamanho" placeholder="Ex: 205/55 R16" required />
+
+              <label>Tipo *</label>
+              <select name="tipo" id="tipo" required>
+                <option value="">Selecione</option>
+                <option value="radial">Radial</option>
+                <option value="diagonal">Diagonal</option>
+                <option value="run-flat">Run Flat</option>
+              </select>
+
+              <label>Quantidade em Estoque *</label>
+              <input type="number" name="quantidade" id="quantidade" min="0" value="0" required />
+            </div>
+          </div>
+
+          <!-- Botões -->
+          <div class="modal-actions">
+            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
+          </div>
+        </form>
+
+        <!-- Exibição do usuário logado -->
+        <div class="usuario-logado-modal" id="usuario-logado-modal">
+          <small>👤 Usuário logado: <span id="nome-usuario"></span></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="./script/cadastro-pneu.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const nomeSpan = document.getElementById('nome-usuario');
+      if (usuario && usuario.nome) {
+        nomeSpan.textContent = usuario.nome;
+      }
+    });
+  </script>
+</body>
+</html>

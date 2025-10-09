@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard - Marquespan</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Estoque de Pneus - Marquespan</title>
+
+  <!-- CSS modularizado -->
+  <link rel="stylesheet" href="css/index.css" />
 
   <!-- Ícones Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- ✅ CSS modularizado -->
-  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-  <!-- 🟩 Sidebar -->
+  <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo">
@@ -57,44 +56,41 @@
     </nav>
   </div>
 
-  <!-- 🧱 Conteúdo principal -->
-  <div class="main-content">
-    <header class="header">📊 Dashboard Administrativo</header>
+  <!-- Conteúdo principal -->
+  <main class="main-content">
+    <section class="estoque-pneus">
+      <h1 class="header"><i class="fas fa-boxes"></i> Estoque de Pneus</h1>
 
-    <section class="dashboard-container">
-      <div class="card">
-        <h3>Litros Abastecidos</h3>
-        <p>92.052,40 L</p>
+      <div class="filtros-pneus">
+        <input type="text" id="campo-marca" placeholder="Marca" />
+        <input type="text" id="campo-modelo" placeholder="Modelo" />
+        <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
       </div>
-      <div class="card">
-        <h3>Custo Total</h3>
-        <p>R$ 513.488,66</p>
-      </div>
-      <div class="card">
-        <h3>Veículos Utilizados</h3>
-        <p>603</p>
-      </div>
-      <div class="card">
-        <h3>Manutenções</h3>
-        <p>38 | R$ 12.865,87</p>
-      </div>
-      <div class="card">
-        <h3>Multas</h3>
-        <p>R$ 0,00</p>
-      </div>
-      <div class="card">
-        <h3>Pedágios</h3>
-        <p>R$ 0,00</p>
+
+      <div class="grid-wrapper">
+        <section class="grid-pneus">
+          <h2 class="section-title">Pneus em Estoque</h2>
+          <div class="grid-header">
+            <div>Marca</div>
+            <div>Modelo</div>
+            <div>Tamanho</div>
+            <div>Tipo</div>
+            <div>Quantidade</div>
+            <div>Ações</div>
+          </div>
+          <div id="grid-pneus-body" class="grid-body"></div>
+        </section>
       </div>
     </section>
-  </div>
+  </main>
 
-  <!-- 🦶 Rodapé -->
+  <!-- Rodapé -->
   <footer class="footer">
-    &copy; 2025 Marquespan. Todos os direitos reservados ok ok.
+    © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
-  <!-- 🚀 Scripts -->
+  <!-- Scripts -->
+  <script type="module" src="./script/estoque-pneu.js" defer></script>
   <script>
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('collapsed');
