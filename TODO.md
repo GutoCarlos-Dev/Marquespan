@@ -1,3 +1,0 @@
-- [x] Alterar o botão "Voltar" para navegar para dashboard.html
-- [x] Verificar lógica de visibilidade dos botões "Cadastrar" e "Salvar"
-- [x] Garantir reset dos botões após salvar ou cancelar edição
