@@ -208,6 +208,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
+        // Log entrada no estoque
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (usuario && data && data[0]) {
+          await supabase
+            .from("pneu_movimentacoes")
+            .insert([{
+              pneu_id: data[0].id,
+              quantidade: 1, // Assumindo entrada de 1 unidade
+              tipo_movimento: 'entrada',
+              data_hora: new Date().toISOString(),
+              usuario_id: usuario.id
+            }]);
+        }
+
         alert("Pneu cadastrado com sucesso!");
         form.reset();
         window.close();

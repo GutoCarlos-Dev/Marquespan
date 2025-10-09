@@ -1,11 +1,14 @@
 import { supabase } from './supabase.js';
 
 let gridBody;
+let gridMovimentacoesBody;
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   gridBody = document.getElementById('grid-pneus-body');
+  gridMovimentacoesBody = document.getElementById('grid-movimentacoes-body');
   const btnBuscar = document.getElementById('btn-buscar');
+  const btnIncluirPneu = document.getElementById('btn-incluir-pneu');
 
   document.querySelectorAll('.menu-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -18,8 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     buscarPneus();
   });
 
+  // ➕ Incluir pneu
+  btnIncluirPneu?.addEventListener('click', () => {
+    incluirPneu();
+  });
+
   // 🚚 Carrega pneus ao iniciar
   carregarPneus();
+  carregarMovimentacoes();
 });
 
 // 📦 Carregar todos os pneus
@@ -148,3 +157,64 @@ window.excluirPneu = async function (id) {
     carregarPneus();
   }
 };
+
+// ➕ Incluir pneu
+function incluirPneu() {
+  const largura = 900;
+  const altura = 700;
+  const esquerda = (window.screen.width - largura) / 2;
+  const topo = (window.screen.height - altura) / 2;
+
+  window.open(
+    'cadastro-pneu.html',
+    'IncluirPneu',
+    `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
+  );
+}
+
+// 📦 Carregar movimentações de estoque
+async function carregarMovimentacoes() {
+  if (!gridMovimentacoesBody) return;
+
+  const { data, error } = await supabase
+    .from('pneu_movimentacoes')
+    .select(`
+      *,
+      pneus (marca, modelo, tipo),
+      usuarios (nome)
+    `)
+    .order('data_hora', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao carregar movimentações:', error);
+    gridMovimentacoesBody.innerHTML = '<div class="grid-row">Erro ao carregar dados.</div>';
+    return;
+  }
+
+  renderizarMovimentacoes(data);
+}
+
+// 🧱 Renderiza as movimentações na grid
+function renderizarMovimentacoes(lista) {
+  gridMovimentacoesBody.innerHTML = '';
+
+  lista.forEach(mov => {
+    const row = document.createElement('div');
+    row.classList.add('grid-row');
+
+    const dataHora = new Date(mov.data_hora).toLocaleString('pt-BR');
+    const tipoMovimento = mov.tipo_movimento === 'entrada' ? 'Entrada' : 'Saída';
+
+    row.innerHTML = `
+      <div>${mov.pneus?.marca || ''}</div>
+      <div>${mov.pneus?.modelo || ''}</div>
+      <div>${mov.pneus?.tipo || ''}</div>
+      <div>${mov.quantidade}</div>
+      <div>${tipoMovimento}</div>
+      <div>${dataHora}</div>
+      <div>${mov.usuarios?.nome || ''}</div>
+    `;
+
+    gridMovimentacoesBody.appendChild(row);
+  });
+}

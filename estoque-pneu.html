@@ -61,10 +61,11 @@
     <section class="estoque-pneus">
       <h1 class="header"><i class="fas fa-boxes"></i> Estoque de Pneus</h1>
 
-      <div class="filtros-pneus">
+      <div class="filtros-pneus" style="text-align: center;">
         <input type="text" id="campo-marca" placeholder="Marca" />
         <input type="text" id="campo-modelo" placeholder="Modelo" />
         <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
+        <button type="button" id="btn-incluir-pneu"><i class="fas fa-plus"></i> Incluir Pneu</button>
       </div>
 
       <div class="grid-wrapper">
@@ -79,6 +80,20 @@
             <div>Ações</div>
           </div>
           <div id="grid-pneus-body" class="grid-body"></div>
+        </section>
+
+        <section class="grid-movimentacoes">
+          <h2 class="section-title">Movimentações de Estoque</h2>
+          <div class="grid-header">
+            <div>Marca</div>
+            <div>Modelo</div>
+            <div>Tipo</div>
+            <div>Quantidade</div>
+            <div>Tipo Movimento</div>
+            <div>Data/Hora</div>
+            <div>Usuário</div>
+          </div>
+          <div id="grid-movimentacoes-body" class="grid-body"></div>
         </section>
       </div>
     </section>
