@@ -9,10 +9,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnAdicionarMarca = document.getElementById("btn-adicionar-marca");
   const btnExcluirMarca = document.getElementById("btn-excluir-marca");
 
+  const selectModelo = document.getElementById("modelo");
+  const btnAdicionarModelo = document.getElementById("btn-adicionar-modelo");
+  const btnExcluirModelo = document.getElementById("btn-excluir-modelo");
+
   // Marcas pré-cadastradas
   let marcas = ["BRIDGESTONE", "CONTINENTAL", "GOODYEAR", "MICHELIN", "PIRELLI"];
 
-  // Função para atualizar opções do select
+  // Modelos pré-cadastrados
+  let modelos = ["225/75/16", "235/75/17.5", "275/80/22.5 - LISO", "275/80/22.5 - BORRACHUDO", "295/80/22.5 - LISO", "295/80/22.5 - BORRACHUDO"];
+
+  // Função para atualizar opções do select de marcas
   function atualizarOpcoesMarcas() {
     selectMarca.innerHTML = '<option value="">Selecione ou adicione</option>';
     marcas.forEach((marca) => {
@@ -23,7 +30,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Função para atualizar opções do select de modelos
+  function atualizarOpcoesModelos() {
+    selectModelo.innerHTML = '<option value="">Selecione ou adicione</option>';
+    modelos.forEach((modelo) => {
+      const option = document.createElement("option");
+      option.value = modelo;
+      option.textContent = modelo;
+      selectModelo.appendChild(option);
+    });
+  }
+
   atualizarOpcoesMarcas();
+  atualizarOpcoesModelos();
 
   // Adicionar nova marca
   btnAdicionarMarca.addEventListener("click", () => {
@@ -48,6 +67,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (confirmar) {
       marcas = marcas.filter((m) => m !== marcaSelecionada);
       atualizarOpcoesMarcas();
+    }
+  });
+
+  // Adicionar novo modelo
+  btnAdicionarModelo.addEventListener("click", () => {
+    const novoModelo = prompt("Digite o nome do novo modelo:").trim();
+    if (novoModelo && !modelos.includes(novoModelo)) {
+      modelos.push(novoModelo);
+      atualizarOpcoesModelos();
+      selectModelo.value = novoModelo;
+    } else if (modelos.includes(novoModelo)) {
+      alert("Modelo já existe na lista.");
+    }
+  });
+
+  // Excluir modelo selecionado
+  btnExcluirModelo.addEventListener("click", () => {
+    const modeloSelecionado = selectModelo.value;
+    if (!modeloSelecionado) {
+      alert("Selecione um modelo para excluir.");
+      return;
+    }
+    const confirmar = confirm(`Tem certeza que deseja excluir o modelo "${modeloSelecionado}"?`);
+    if (confirmar) {
+      modelos = modelos.filter((m) => m !== modeloSelecionado);
+      atualizarOpcoesModelos();
     }
   });
 
