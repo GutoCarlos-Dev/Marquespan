@@ -170,7 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const modelo = form.modelo.value.trim();
     // const tamanho = form.tamanho.value.trim(); // campo removido conforme solicitação
     const tipo = form.tipo.value.trim();
-    const quantidade = parseInt(form.quantidade.value);
+    // const quantidade = parseInt(form.quantidade.value); // campo removido conforme solicitação
 
     if (!marca || !modelo || !tipo) {
       alert("Por favor, preencha os campos obrigatórios: Marca, Modelo e Tipo.");
@@ -181,7 +181,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       marca,
       modelo,
       tipo,
-      quantidade,
     };
 
     try {
