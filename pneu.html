@@ -2,16 +2,12 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Cadastro de Pneus - Marquespan</title>
-  
-  <!-- CSS modularizado -->
+  <title>Pneu - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
-
-  <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
+  <div class="sidebar" id="sidebar">
     <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <img src="logo.png" alt="Logo Marquespan" class="logo">
     <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
@@ -46,17 +42,15 @@
         <i class="fas fa-tire"></i> <span>Pneus</span> <i class="fas fa-caret-down"></i>
       </button>
       <div class="submenu">
-          <a href="cadastro-pneu.html">Cadastrar Pneu</a>
-          <a href="estoque-pneu.html">Estoque Pneu</a>
-          <a href="manutencao-pneu.html">Manutenção Pneu</a>
+          <a href="pneu.html">Controle Pneu</a>
       </div>
     </div>
       <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
     </nav>
   </div>
 
-  <div class="main-content">
-    <header class="header">📋 Cadastro de Pneus</header>
+  <main class="main-content">
+    <header class="header"><i class="fas fa-tire"></i> Controle de Pneus</header>
     <section class="content-section">
       <div class="form-container">
         <form id="formPneu">
@@ -89,20 +83,51 @@
                 <button type="button" id="btn-adicionar-tipo" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
                 <button type="button" id="btn-excluir-tipo" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
               </div>
+
+              <label>Tamanho</label>
+              <select name="tamanho" id="tamanho">
+                <option value="">Selecione</option>
+              </select>
+
+              <label>Quantidade</label>
+              <input type="number" name="quantidade" id="quantidade" min="0" />
             </div>
           </div>
 
           <div class="modal-actions">
             <button type="submit"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="button" onclick="clearForm()"><i class="fas fa-times"></i> Cancelar</button>
           </div>
         </form>
       </div>
+
+      <div class="estoque-pneus">
+        <h2 class="section-title">Estoque de Pneus</h2>
+        <div class="filtros-pneus" style="text-align: center;">
+          <input type="text" id="campo-marca" placeholder="Marca" />
+          <input type="text" id="campo-modelo" placeholder="Modelo" />
+          <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
+        </div>
+
+        <div class="grid-wrapper">
+          <section class="grid-pneus">
+            <div class="grid-header">
+              <div>Marca</div>
+              <div>Modelo</div>
+              <div>Tamanho</div>
+              <div>Tipo</div>
+              <div>Quantidade</div>
+              <div>Ações</div>
+            </div>
+            <div id="grid-pneus-body" class="grid-body"></div>
+          </section>
+        </div>
+      </div>
     </section>
-  </div>
+  </main>
 
   <footer class="footer">
-    &copy; 2025 Marquespan. Todos os direitos reservados.
+    © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
   <script>
@@ -116,15 +141,14 @@
       if (usuario && usuario.nome) {
         divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
-    });
-
-    document.querySelectorAll('.menu-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.parentElement.classList.toggle('active');
+      document.querySelectorAll('.menu-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.parentElement.classList.toggle('active');
+        });
       });
     });
   </script>
 
-  <script type="module" src="./script/cadastro-pneu.js" defer></script>
+  <script type="module" src="./script/pneu.js" defer></script>
 </body>
 </html>
