@@ -53,6 +53,11 @@ function initializeSelects() {
 
 
 
+function getCurrentUserName() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario ? usuario.nome : 'Usuário Anônimo';
+}
+
 // Handle form submit
 async function handleSubmit(e) {
   e.preventDefault();
@@ -66,6 +71,7 @@ async function handleSubmit(e) {
     tipo: formData.get('tipo'),
     status: formData.get('status'),
     quantidade: parseInt(formData.get('quantidade') || 0),
+    usuario: getCurrentUserName(),
   };
 
   if (!pneu.marca || !pneu.modelo || !pneu.tipo) {
@@ -153,6 +159,8 @@ function renderizarPneus(lista) {
   lista.forEach(pneu => {
     const row = document.createElement('div');
     row.classList.add('grid-row');
+    row.style.display = 'flex';
+    row.style.whiteSpace = 'nowrap';
 
     row.innerHTML = `
       <div>${pneu.marca}</div>
@@ -161,6 +169,7 @@ function renderizarPneus(lista) {
       <div>${pneu.tipo}</div>
       <div>${pneu.status || ''}</div>
       <div>${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
+      <div>${pneu.usuario || ''}</div>
       <div>${pneu.quantidade || 0}</div>
       <div class="acoes">
         <button class="btn-acao editar" onclick="editarPneu('${pneu.id}')">

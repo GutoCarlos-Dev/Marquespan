@@ -86,7 +86,7 @@
               </select>
 
               <label>Descrição</label>
-              <select name="descricao" id="descricao" style="width: 400px; height: 40px;">
+              <select name="descricao" id="descricao" style="width: 180px;">
                 <option value="ESTOQUE">Estoque</option>
                 <option value="EM USO">Em Uso</option>
                 <option value="REFORMA">Reforma</option>
@@ -114,17 +114,17 @@
           <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
         </div>
 
-        <div class="grid-wrapper">
-          <section class="grid-pneus">
-            <div class="grid-header">
+        <div class="grid-wrapper" style="overflow-x: auto;">
+          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column;">
+            <div class="grid-header" style="display: flex; white-space: nowrap;">
               <div>Marca</div>
               <div>Modelo</div>
               <div>Vida</div>
               <div>Tipo</div>
               <div>Status</div>
               <div>Data</div>
+              <div>Usuário</div>
               <div>Quantidade</div>
-              <div>Usuario</div>
               <div>Ações</div>
             </div>
             <div id="grid-pneus-body" class="grid-body"></div>
