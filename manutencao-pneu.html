@@ -99,12 +99,12 @@
       if (usuario && usuario.nome) {
         divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
+      document.querySelectorAll('.menu-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.parentElement.classList.toggle('active');
+        });
+      });
     });
-    document.querySelectorAll('.menu-toggle').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.parentElement.classList.toggle('active');
-  });
-});
   </script>
 </body>
 </html>
