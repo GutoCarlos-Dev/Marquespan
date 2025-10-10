@@ -248,10 +248,10 @@ function renderizarPneus(lista) {
       <div style="flex: 0.5; min-width: 60px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${pneu.quantidade || 0}</div>
       <div style="flex: 1; min-width: 150px; padding: 12px 8px; text-align: center;">
         <button class="btn-acao editar" onclick="editarPneu('${pneu.id}'); event.stopPropagation();" style="margin-right: 5px; background-color: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-          <i class="fas fa-pen"></i> Editar
+          <i class="fas fa-pen"></i> Ed
         </button>
         <button class="btn-acao excluir" onclick="excluirPneu('${pneu.id}'); event.stopPropagation();" style="background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-          <i class="fas fa-trash"></i> Excluir
+          <i class="fas fa-trash"></i> Ex
         </button>
       </div>
     `;
