@@ -1,8 +1,15 @@
-import { supabase } from './supabase.js';
-
 let gridBody;
 let editMode = false;
 let editingId = null;
+
+// Helper functions for localStorage
+function getPneus() {
+  return JSON.parse(localStorage.getItem('pneus')) || [];
+}
+
+function savePneus(pneus) {
+  localStorage.setItem('pneus', JSON.stringify(pneus));
+}
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +66,7 @@ function getCurrentUserName() {
 }
 
 // Handle form submit
-async function handleSubmit(e) {
+function handleSubmit(e) {
   e.preventDefault();
 
   const formData = new FormData(e.target);
@@ -70,6 +77,7 @@ async function handleSubmit(e) {
     vida: parseInt(formData.get('vida') || 0),
     tipo: formData.get('tipo'),
     status: formData.get('status'),
+    descricao: formData.get('descricao'),
     quantidade: parseInt(formData.get('quantidade') || 0),
     usuario: getCurrentUserName(),
   };
@@ -79,27 +87,26 @@ async function handleSubmit(e) {
     return;
   }
 
-  try {
-    let result;
-    if (editMode && editingId) {
-      result = await supabase.from('pneus').update(pneu).eq('id', editingId);
-      if (result.error) throw result.error;
+  let pneus = getPneus();
+  if (editMode && editingId) {
+    const index = pneus.findIndex(p => p.id === editingId);
+    if (index !== -1) {
+      pneus[index] = { ...pneu, id: editingId };
       alert('Pneu atualizado!');
-      clearForm();
-      editMode = false;
-      editingId = null;
     } else {
-      result = await supabase.from('pneus').insert([pneu]);
-      if (result.error) throw result.error;
-      alert('Pneu cadastrado!');
-      // Log movement if needed
-      clearForm();
+      alert('Pneu não encontrado para atualização.');
+      return;
     }
-    carregarPneus();
-  } catch (error) {
-    console.error('Erro:', error);
-    alert('Erro ao salvar.');
+    editMode = false;
+    editingId = null;
+  } else {
+    pneu.id = Date.now().toString();
+    pneus.push(pneu);
+    alert('Pneu cadastrado!');
   }
+  savePneus(pneus);
+  clearForm();
+  carregarPneus();
 }
 
 function clearForm() {
@@ -108,43 +115,28 @@ function clearForm() {
 }
 
 // 📦 Carregar pneus
-async function carregarPneus() {
+function carregarPneus() {
   if (!gridBody) return;
 
-  const { data, error } = await supabase.from('pneus').select('*').order('marca', { ascending: true });
-
-  if (error) {
-    console.error('Erro ao carregar pneus:', error);
-    gridBody.innerHTML = '<div class="grid-row">Erro ao carregar dados.</div>';
-    return;
-  }
-
-  renderizarPneus(data || []);
+  const data = getPneus().sort((a, b) => a.marca.localeCompare(b.marca));
+  renderizarPneus(data);
 }
 
 // 🔍 Buscar pneus
-async function buscarPneus() {
+function buscarPneus() {
   const marca = document.getElementById('campo-marca')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo')?.value.trim().toUpperCase();
-  let query = supabase.from('pneus').select('*');
-
-  if (marca) query = query.ilike('marca', `%${marca}%`);
-  if (modelo) query = query.ilike('modelo', `%${modelo}%`);
 
   if (!marca && !modelo) {
     carregarPneus();
     return;
   }
 
-  const { data, error } = await query;
+  let data = getPneus();
+  if (marca) data = data.filter(p => p.marca.toUpperCase().includes(marca));
+  if (modelo) data = data.filter(p => p.modelo.toUpperCase().includes(modelo));
 
-  if (error) {
-    console.error('Erro ao buscar:', error);
-    gridBody.innerHTML = '<div class="grid-row">Erro ao buscar.</div>';
-    return;
-  }
-
-  renderizarPneus(data || []);
+  renderizarPneus(data);
 }
 
 // 🧱 Renderizar grid
@@ -168,6 +160,7 @@ function renderizarPneus(lista) {
       <div>${pneu.vida || 0}</div>
       <div>${pneu.tipo}</div>
       <div>${pneu.status || ''}</div>
+      <div>${pneu.descricao || ''}</div>
       <div>${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
       <div>${pneu.usuario || ''}</div>
       <div>${pneu.quantidade || 0}</div>
@@ -186,22 +179,24 @@ function renderizarPneus(lista) {
 }
 
 // ✏️ Editar pneu
-window.editarPneu = async function(id) {
-  const { data, error } = await supabase.from('pneus').select('*').eq('id', id).single();
+window.editarPneu = function(id) {
+  let pneus = getPneus();
+  const pneu = pneus.find(p => p.id === id);
 
-  if (error || !data) {
+  if (!pneu) {
     alert('Pneu não encontrado.');
     return;
   }
 
   // Populate form
-  document.getElementById('data').value = data.data ? new Date(data.data).toISOString().slice(0, 16) : '';
-  document.getElementById('marca').value = data.marca;
-  document.getElementById('modelo').value = data.modelo;
-  document.getElementById('vida').value = data.vida || 0;
-  document.getElementById('tipo').value = data.tipo;
-  document.getElementById('status').value = data.status || '';
-  document.getElementById('quantidade').value = data.quantidade || 0;
+  document.getElementById('data').value = pneu.data ? new Date(pneu.data).toISOString().slice(0, 16) : '';
+  document.getElementById('marca').value = pneu.marca;
+  document.getElementById('modelo').value = pneu.modelo;
+  document.getElementById('vida').value = pneu.vida || 0;
+  document.getElementById('tipo').value = pneu.tipo;
+  document.getElementById('status').value = pneu.status || '';
+  document.getElementById('descricao').value = pneu.descricao || '';
+  document.getElementById('quantidade').value = pneu.quantidade || 0;
 
   editMode = true;
   editingId = id;
@@ -211,16 +206,17 @@ window.editarPneu = async function(id) {
 };
 
 // 🗑️ Excluir pneu
-window.excluirPneu = async function(id) {
+window.excluirPneu = function(id) {
   if (!confirm('Tem certeza que deseja excluir este pneu?')) return;
 
-  const { error } = await supabase.from('pneus').delete().eq('id', id);
-
-  if (error) {
-    console.error('Erro ao excluir:', error);
-    alert('Erro ao excluir.');
-  } else {
+  let pneus = getPneus();
+  const index = pneus.findIndex(p => p.id === id);
+  if (index !== -1) {
+    pneus.splice(index, 1);
+    savePneus(pneus);
     alert('Pneu excluído!');
     carregarPneus();
+  } else {
+    alert('Erro ao excluir.');
   }
 };
