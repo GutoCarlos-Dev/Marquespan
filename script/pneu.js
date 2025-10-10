@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
   gridBody = document.getElementById('grid-pneus-body');
   const form = document.getElementById('formPneu');
   const btnBuscar = document.getElementById('btn-buscar');
+  const btnContagemEstoque = document.getElementById('btnContagemEstoque');
+  const closeModalContagem = document.getElementById('closeModalContagem');
+  const cancelModalContagem = document.getElementById('cancelModalContagem');
+  const formContagem = document.getElementById('formContagemEstoque');
 
   // Menu toggle
   document.querySelectorAll('.menu-toggle').forEach(btn => {
@@ -39,6 +43,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Form submit
   form.addEventListener('submit', handleSubmit);
+
+  // Contagem de Estoque modal
+  btnContagemEstoque?.addEventListener('click', () => {
+    document.getElementById('modalContagemEstoque').style.display = 'block';
+    initializeSelectsContagem();
+  });
+
+  closeModalContagem?.addEventListener('click', () => {
+    document.getElementById('modalContagemEstoque').style.display = 'none';
+  });
+
+  cancelModalContagem?.addEventListener('click', () => {
+    document.getElementById('modalContagemEstoque').style.display = 'none';
+  });
+
+  formContagem?.addEventListener('submit', handleContagemSubmit);
+
+  // Close modal on outside click
+  window.addEventListener('click', (event) => {
+    const modal = document.getElementById('modalContagemEstoque');
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
 
   // Initialize selects
   initializeSelects();
@@ -285,3 +313,56 @@ window.excluirPneu = function(id) {
     alert('Erro ao excluir.');
   }
 };
+
+// Initialize selects for contagem modal
+function initializeSelectsContagem() {
+  const selectMarca = document.getElementById('marcaContagem');
+  const selectModelo = document.getElementById('modeloContagem');
+  const selectTipo = document.getElementById('tipoContagem');
+
+  // Predefined options
+  const marcas = ['BRIDGESTONE', 'CONTINENTAL', 'GOODYEAR', 'MICHELIN', 'PIRELLI'];
+  const modelos = ['225/75/16', '235/75/17.5', '275/80/22.5 - LISO', '275/80/22.5 - BORRACHUDO', '295/80/22.5 - LISO', '295/80/22.5 - BORRACHUDO'];
+  const tipos = ['NOVO', 'RECAPADO'];
+
+  selectMarca.innerHTML = '<option value="">Selecione</option>' + marcas.map(m => `<option value="${m}">${m}</option>`).join('');
+  selectModelo.innerHTML = '<option value="">Selecione</option>' + modelos.map(m => `<option value="${m}">${m}</option>`).join('');
+  selectTipo.innerHTML = '<option value="">Selecione</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+// Handle contagem submit
+function handleContagemSubmit(e) {
+  e.preventDefault();
+
+  const formData = new FormData(e.target);
+  const pneu = {
+    data: new Date().toISOString(),
+    marca: formData.get('marcaContagem'),
+    modelo: formData.get('modeloContagem'),
+    vida: parseInt(formData.get('vidaContagem') || 0),
+    tipo: formData.get('tipoContagem'),
+    status: 'ENTRADA',
+    descricao: 'CONTAGEM DE ESTOQUE',
+    quantidade: parseInt(formData.get('quantidadeContagem') || 0),
+    usuario: getCurrentUserName(),
+  };
+
+  if (!pneu.marca || !pneu.modelo || !pneu.tipo || !pneu.quantidade) {
+    alert('Preencha todos os campos obrigatórios.');
+    return;
+  }
+
+  let pneus = getPneus();
+  pneu.id = Date.now().toString();
+  const key = `${pneu.marca}-${pneu.modelo}-${pneu.tipo}-${pneu.vida || 0}`;
+  let estoque = getEstoque();
+  // For contagem, set the stock to the counted quantity
+  estoque[key] = pneu.quantidade;
+  saveEstoque(estoque);
+  pneus.push(pneu);
+  savePneus(pneus);
+  alert('Contagem de estoque registrada!');
+  document.getElementById('modalContagemEstoque').style.display = 'none';
+  e.target.reset();
+  carregarPneus();
+}
