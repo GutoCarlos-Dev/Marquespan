@@ -38,10 +38,14 @@ function renderizarEstoque(lista) {
 
   if (lista.length === 0) {
     gridBody.innerHTML = '<div class="grid-row" style="padding: 20px; text-align: center;">Nenhum item em estoque.</div>';
+    document.getElementById('total-quantidade').textContent = '0';
     return;
   }
 
+  let total = 0;
+
   lista.forEach((item, index) => {
+    total += item.quantidade;
     const row = document.createElement('div');
     row.classList.add('grid-row');
     row.style.display = 'flex';
@@ -60,4 +64,6 @@ function renderizarEstoque(lista) {
 
     gridBody.appendChild(row);
   });
+
+  document.getElementById('total-quantidade').textContent = total;
 }
