@@ -148,27 +148,32 @@ function renderizarPneus(lista) {
     return;
   }
 
-  lista.forEach(pneu => {
+  lista.forEach((pneu, index) => {
     const row = document.createElement('div');
     row.classList.add('grid-row');
     row.style.display = 'flex';
     row.style.whiteSpace = 'nowrap';
+    row.style.borderBottom = '1px solid #eee';
+    row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+    row.style.cursor = 'pointer';
+    row.onmouseover = () => row.style.backgroundColor = '#e9ecef';
+    row.onmouseout = () => row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
 
     row.innerHTML = `
-      <div>${pneu.marca}</div>
-      <div>${pneu.modelo}</div>
-      <div>${pneu.vida || 0}</div>
-      <div>${pneu.tipo}</div>
-      <div>${pneu.status || ''}</div>
-      <div>${pneu.descricao || ''}</div>
-      <div>${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
-      <div>${pneu.usuario || ''}</div>
-      <div>${pneu.quantidade || 0}</div>
-      <div class="acoes">
-        <button class="btn-acao editar" onclick="editarPneu('${pneu.id}')">
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.marca}</div>
+      <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.modelo}</div>
+      <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${pneu.vida || 0}</div>
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.tipo}</div>
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.status || ''}</div>
+      <div style="flex: 2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.descricao || ''}</div>
+      <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.usuario || ''}</div>
+      <div style="flex: 0.5; min-width: 60px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${pneu.quantidade || 0}</div>
+      <div style="flex: 1; min-width: 150px; padding: 12px 8px; text-align: center;">
+        <button class="btn-acao editar" onclick="editarPneu('${pneu.id}'); event.stopPropagation();" style="margin-right: 5px; background-color: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
           <i class="fas fa-pen"></i> Editar
         </button>
-        <button class="btn-acao excluir" onclick="excluirPneu('${pneu.id}')">
+        <button class="btn-acao excluir" onclick="excluirPneu('${pneu.id}'); event.stopPropagation();" style="background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
           <i class="fas fa-trash"></i> Excluir
         </button>
       </div>
