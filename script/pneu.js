@@ -37,53 +37,21 @@ function initializeSelects() {
   const selectMarca = document.getElementById('marca');
   const selectModelo = document.getElementById('modelo');
   const selectTipo = document.getElementById('tipo');
-  const selectTamanho = document.getElementById('tamanho'); // Assuming added to form
-  const selectQuantidade = document.getElementById('quantidade'); // Assuming added
 
   // Predefined options
   const marcas = ['BRIDGESTONE', 'CONTINENTAL', 'GOODYEAR', 'MICHELIN', 'PIRELLI'];
   const modelos = ['225/75/16', '235/75/17.5', '275/80/22.5 - LISO', '275/80/22.5 - BORRACHUDO', '295/80/22.5 - LISO', '295/80/22.5 - BORRACHUDO'];
   const tipos = ['NOVO', 'RECAPADO'];
-  const tamanhos = ['225/75/16', '235/75/17.5', '275/80/22.5', '295/80/22.5']; // Example
-  const quantidades = [1, 2, 3, 4, 5]; // Example, or input type number
 
   // Update marca options
-  selectMarca.innerHTML = '<option value="">Selecione ou adicione</option>' + marcas.map(m => `<option value="${m}">${m}</option>`).join('');
+  selectMarca.innerHTML = '<option value="">Selecione</option>' + marcas.map(m => `<option value="${m}">${m}</option>`).join('');
 
   // Similar for others
-  selectModelo.innerHTML = '<option value="">Selecione ou adicione</option>' + modelos.map(m => `<option value="${m}">${m}</option>`).join('');
-  selectTipo.innerHTML = '<option value="">Selecione ou adicione</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
-  selectTamanho.innerHTML = '<option value="">Selecione</option>' + tamanhos.map(t => `<option value="${t}">${t}</option>`).join('');
-
-  // Add event listeners for add/exclude buttons
-  document.getElementById('btn-adicionar-marca').addEventListener('click', () => addOption('marca'));
-  document.getElementById('btn-excluir-marca').addEventListener('click', () => removeOption('marca'));
-  // Similar for modelo, tipo, etc.
+  selectModelo.innerHTML = '<option value="">Selecione</option>' + modelos.map(m => `<option value="${m}">${m}</option>`).join('');
+  selectTipo.innerHTML = '<option value="">Selecione</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
 }
 
-function addOption(field) {
-  const select = document.getElementById(field);
-  const newValue = prompt(`Digite novo ${field}:`).trim().toUpperCase();
-  if (newValue && !Array.from(select.options).some(opt => opt.value === newValue)) {
-    const option = new Option(newValue, newValue);
-    select.add(option);
-    select.value = newValue;
-  } else if (newValue) {
-    alert(`${field} já existe.`);
-  }
-}
 
-function removeOption(field) {
-  const select = document.getElementById(field);
-  const selected = select.value;
-  if (!selected) {
-    alert(`Selecione um ${field} para excluir.`);
-    return;
-  }
-  if (confirm(`Excluir ${selected}?`)) {
-    select.remove(select.selectedIndex);
-  }
-}
 
 // Handle form submit
 async function handleSubmit(e) {
@@ -91,11 +59,13 @@ async function handleSubmit(e) {
 
   const formData = new FormData(e.target);
   const pneu = {
+    data: new Date().toISOString(),
     marca: formData.get('marca'),
     modelo: formData.get('modelo'),
-    tamanho: formData.get('tamanho'), // Assuming field exists
+    vida: parseInt(formData.get('vida') || 0),
     tipo: formData.get('tipo'),
-    quantidade: parseInt(formData.get('quantidade') || 0), // Assuming field
+    status: formData.get('status'),
+    quantidade: parseInt(formData.get('quantidade') || 0),
   };
 
   if (!pneu.marca || !pneu.modelo || !pneu.tipo) {
@@ -128,6 +98,7 @@ async function handleSubmit(e) {
 
 function clearForm() {
   document.getElementById('formPneu').reset();
+  document.getElementById('data').value = new Date().toISOString().slice(0, 16);
 }
 
 // 📦 Carregar pneus
@@ -186,8 +157,10 @@ function renderizarPneus(lista) {
     row.innerHTML = `
       <div>${pneu.marca}</div>
       <div>${pneu.modelo}</div>
-      <div>${pneu.tamanho || ''}</div>
+      <div>${pneu.vida || 0}</div>
       <div>${pneu.tipo}</div>
+      <div>${pneu.status || ''}</div>
+      <div>${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
       <div>${pneu.quantidade || 0}</div>
       <div class="acoes">
         <button class="btn-acao editar" onclick="editarPneu('${pneu.id}')">
@@ -213,10 +186,12 @@ window.editarPneu = async function(id) {
   }
 
   // Populate form
+  document.getElementById('data').value = data.data ? new Date(data.data).toISOString().slice(0, 16) : '';
   document.getElementById('marca').value = data.marca;
   document.getElementById('modelo').value = data.modelo;
-  document.getElementById('tamanho').value = data.tamanho || '';
+  document.getElementById('vida').value = data.vida || 0;
   document.getElementById('tipo').value = data.tipo;
+  document.getElementById('status').value = data.status || '';
   document.getElementById('quantidade').value = data.quantidade || 0;
 
   editMode = true;
