@@ -279,6 +279,24 @@
   <script type="module" src="./script/incluir-manutencao.js" defer></script>
 
 
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const divUsuario = document.getElementById('usuario-logado');
+      if (usuario && usuario.nome) {
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+    });
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('active');
+      });
+    });
+  </script>
 
 
   

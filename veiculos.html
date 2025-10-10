@@ -102,6 +102,10 @@
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/veiculos.js" defer></script>
   <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
     function abrirCadastroVeiculo() {
       const largura = 900;
       const altura = 700;
@@ -121,6 +125,12 @@
       if (usuario && usuario.nome) {
         divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
+    });
+
+    document.querySelectorAll('.menu-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('active');
+      });
     });
    
   </script>
