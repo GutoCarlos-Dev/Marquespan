@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Pneu - Marquespan</title>
+  <title>Manutenção de Pneus - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
@@ -51,57 +51,8 @@
   </div>
 
   <main class="main-content">
-    <header class="header"><i class="fas fa-tire"></i> Controle de Pneus</header>
+    <header class="header"><i class="fas fa-tire"></i> Manutenção de Pneus</header>
     <section class="content-section">
-      <div class="form-container">
-        <form id="formPneu">
-          <div class="form-bloco">
-            <h3>Cadastro de Pneu</h3>
-            <div class="form-grid">
-              <label>Marca *</label>
-              <div class="marca-container">
-                <select name="marca" id="marca" required>
-                  <option value="">Selecione ou adicione</option>
-                </select>
-                <button type="button" id="btn-adicionar-marca" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
-                <button type="button" id="btn-excluir-marca" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
-              </div>
-
-              <label>Modelo *</label>
-              <div class="modelo-container">
-                <select name="modelo" id="modelo" required>
-                  <option value="">Selecione ou adicione</option>
-                </select>
-                <button type="button" id="btn-adicionar-modelo" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
-                <button type="button" id="btn-excluir-modelo" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
-              </div>
-
-              <label>Tipo *</label>
-              <div class="tipo-container">
-                <select name="tipo" id="tipo" required>
-                  <option value="">Selecione ou adicione</option>
-                </select>
-                <button type="button" id="btn-adicionar-tipo" class="btn-acao"><i class="fas fa-plus"></i> Adicionar</button>
-                <button type="button" id="btn-excluir-tipo" class="btn-acao"><i class="fas fa-trash"></i> Excluir</button>
-              </div>
-
-              <label>Tamanho</label>
-              <select name="tamanho" id="tamanho">
-                <option value="">Selecione</option>
-              </select>
-
-              <label>Quantidade</label>
-              <input type="number" name="quantidade" id="quantidade" min="0" />
-            </div>
-          </div>
-
-          <div class="modal-actions">
-            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" onclick="clearForm()"><i class="fas fa-times"></i> Cancelar</button>
-          </div>
-        </form>
-      </div>
-
       <div class="estoque-pneus">
         <h2 class="section-title">Estoque de Pneus</h2>
         <div class="filtros-pneus" style="text-align: center;">
@@ -113,15 +64,37 @@
         <div class="grid-wrapper">
           <section class="grid-pneus">
             <div class="grid-header">
+              <div>Selecionar</div>
               <div>Marca</div>
               <div>Modelo</div>
               <div>Tamanho</div>
               <div>Tipo</div>
               <div>Quantidade</div>
-              <div>Ações</div>
+              <div>Status</div>
+              <div>Qtd Mov</div>
             </div>
             <div id="grid-pneus-body" class="grid-body"></div>
           </section>
+        </div>
+      </div>
+
+      <div class="carrinho-movimentacoes">
+        <h2 class="section-title">Carrinho de Movimentações</h2>
+        <div class="grid-wrapper">
+          <section class="grid-carrinho">
+            <div class="grid-header">
+              <div>Marca</div>
+              <div>Modelo</div>
+              <div>Status</div>
+              <div>Quantidade</div>
+              <div>Ações</div>
+            </div>
+            <div id="grid-carrinho-body" class="grid-body"></div>
+          </section>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="btn-adicionar-carrinho"><i class="fas fa-cart-plus"></i> Adicionar ao Carrinho</button>
+          <button type="button" id="btn-aplicar-movimentacoes"><i class="fas fa-check"></i> Aplicar Movimentações</button>
         </div>
       </div>
     </section>
@@ -150,6 +123,6 @@
     });
   </script>
 
-  <script type="module" src="./script/pneu.js" defer></script>
+  <script type="module" src="./script/manutencao-pneu.js" defer></script>
 </body>
 </html>
