@@ -21,6 +21,8 @@ function carregarEstoque() {
 function buscarEstoque() {
   const marca = document.getElementById('campo-marca-estoque')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo-estoque')?.value.trim().toUpperCase();
+  const vida = document.getElementById('campo-vida-estoque')?.value.trim();
+  const tipo = document.getElementById('campo-tipo-estoque')?.value.trim().toUpperCase();
 
   let lista = Object.entries(getEstoque()).map(([key, quantidade]) => {
     const [m, mod, t, v] = key.split('-');
@@ -29,6 +31,8 @@ function buscarEstoque() {
 
   if (marca) lista = lista.filter(item => item.marca.toUpperCase().includes(marca));
   if (modelo) lista = lista.filter(item => item.modelo.toUpperCase().includes(modelo));
+  if (vida) lista = lista.filter(item => item.vida.toString().includes(vida));
+  if (tipo) lista = lista.filter(item => item.tipo.toUpperCase().includes(tipo));
 
   renderizarEstoque(lista);
 }
