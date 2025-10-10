@@ -9,3 +9,13 @@
 - [x] Adicionar campo 'descricao' ao objeto pneu
 - [x] Gerar IDs únicos localmente
 - [x] Adicionar coluna Descrição na grid
+
+# TODO - Atualizar Submenus do Menu Pneus
+
+- [x] Atualizar submenu Pneus em dashboard.html
+- [x] Atualizar submenu Pneus em veiculos.html
+- [x] Atualizar submenu Pneus em usuarios.html
+- [x] Atualizar submenu Pneus em incluir-manutencao.html
+- [x] Atualizar submenu Pneus em buscar-manutencao.html
+- [x] Atualizar submenu Pneus em carregamento.html
+- [x] Atualizar submenu Pneus em manutencao-pneu.html

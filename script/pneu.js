@@ -11,6 +11,14 @@ function savePneus(pneus) {
   localStorage.setItem('pneus', JSON.stringify(pneus));
 }
 
+function getEstoque() {
+  return JSON.parse(localStorage.getItem('estoquePneus')) || {};
+}
+
+function saveEstoque(estoque) {
+  localStorage.setItem('estoquePneus', JSON.stringify(estoque));
+}
+
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   gridBody = document.getElementById('grid-pneus-body');
@@ -88,10 +96,38 @@ function handleSubmit(e) {
   }
 
   let pneus = getPneus();
+  const oldPneu = editMode ? pneus.find(p => p.id === editingId) : null;
   if (editMode && editingId) {
     const index = pneus.findIndex(p => p.id === editingId);
     if (index !== -1) {
-      pneus[index] = { ...pneu, id: editingId };
+      const updatedPneu = { ...pneu, id: editingId };
+      pneus[index] = updatedPneu;
+      // Adjust stock for edit: revert old and apply new
+      if (oldPneu) {
+        const oldKey = `${oldPneu.marca}-${oldPneu.modelo}-${oldPneu.tipo}-${oldPneu.vida || 0}`;
+        let estoque = getEstoque();
+        if (oldPneu.status === 'ENTRADA') {
+          estoque[oldKey] = Math.max(0, (estoque[oldKey] || 0) - oldPneu.quantidade);
+          if (estoque[oldKey] === 0) delete estoque[oldKey];
+        } else if (oldPneu.status === 'SAIDA') {
+          estoque[oldKey] = (estoque[oldKey] || 0) + oldPneu.quantidade;
+        }
+        saveEstoque(estoque);
+      }
+      // Apply new
+      const newKey = `${updatedPneu.marca}-${updatedPneu.modelo}-${updatedPneu.tipo}-${updatedPneu.vida || 0}`;
+      let estoque = getEstoque();
+      if (updatedPneu.status === 'ENTRADA') {
+        estoque[newKey] = (estoque[newKey] || 0) + updatedPneu.quantidade;
+      } else if (updatedPneu.status === 'SAIDA') {
+        if ((estoque[newKey] || 0) < updatedPneu.quantidade) {
+          alert('Estoque insuficiente para saída.');
+          return;
+        }
+        estoque[newKey] = (estoque[newKey] || 0) - updatedPneu.quantidade;
+        if (estoque[newKey] === 0) delete estoque[newKey];
+      }
+      saveEstoque(estoque);
       alert('Pneu atualizado!');
     } else {
       alert('Pneu não encontrado para atualização.');
@@ -101,6 +137,19 @@ function handleSubmit(e) {
     editingId = null;
   } else {
     pneu.id = Date.now().toString();
+    const key = `${pneu.marca}-${pneu.modelo}-${pneu.tipo}-${pneu.vida || 0}`;
+    let estoque = getEstoque();
+    if (pneu.status === 'ENTRADA') {
+      estoque[key] = (estoque[key] || 0) + pneu.quantidade;
+    } else if (pneu.status === 'SAIDA') {
+      if ((estoque[key] || 0) < pneu.quantidade) {
+        alert('Estoque insuficiente para saída.');
+        return;
+      }
+      estoque[key] = (estoque[key] || 0) - pneu.quantidade;
+      if (estoque[key] === 0) delete estoque[key];
+    }
+    saveEstoque(estoque);
     pneus.push(pneu);
     alert('Pneu cadastrado!');
   }
@@ -217,6 +266,17 @@ window.excluirPneu = function(id) {
   let pneus = getPneus();
   const index = pneus.findIndex(p => p.id === id);
   if (index !== -1) {
+    const pneu = pneus[index];
+    // Adjust stock: revert the movement
+    const key = `${pneu.marca}-${pneu.modelo}-${pneu.tipo}-${pneu.vida || 0}`;
+    let estoque = getEstoque();
+    if (pneu.status === 'ENTRADA') {
+      estoque[key] = Math.max(0, (estoque[key] || 0) - pneu.quantidade);
+      if (estoque[key] === 0) delete estoque[key];
+    } else if (pneu.status === 'SAIDA') {
+      estoque[key] = (estoque[key] || 0) + pneu.quantidade;
+    }
+    saveEstoque(estoque);
     pneus.splice(index, 1);
     savePneus(pneus);
     alert('Pneu excluído!');
