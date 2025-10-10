@@ -31,12 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarMovimentacoes();
 });
 
-// 📦 Carregar todos os pneus
 async function carregarPneus() {
   if (!gridBody) return;
 
   const { data, error } = await supabase
-    .from('pneus')
+    .from('pneu')
     .select('*')
     .order('marca', { ascending: true });
 
@@ -55,7 +54,7 @@ async function buscarPneus() {
 
   const marca = document.getElementById('campo-marca')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo')?.value.trim().toUpperCase();
-  let query = supabase.from('pneus').select('*');
+  let query = supabase.from('pneu').select('*');
 
   if (marca) {
     query = query.ilike('marca', `%${marca}%`);
@@ -115,7 +114,7 @@ function renderizarPneus(lista) {
 // ✏️ Editar pneu
 window.editarPneu = async function (id) {
   const { data, error } = await supabase
-    .from('pneus')
+    .from('pneu')
     .select('*')
     .eq('id', id)
     .single();
@@ -145,7 +144,7 @@ window.excluirPneu = async function (id) {
   if (!confirmar) return;
 
   const { error } = await supabase
-    .from('pneus')
+    .from('pneu')
     .delete()
     .eq('id', id);
 
@@ -180,7 +179,7 @@ async function carregarMovimentacoes() {
     .from('pneu_movimentacoes')
     .select(`
       *,
-      pneus (marca, modelo, tipo),
+      pneu (marca, modelo, tipo),
       usuarios (nome)
     `)
     .order('data_hora', { ascending: false });
@@ -206,9 +205,9 @@ function renderizarMovimentacoes(lista) {
     const tipoMovimento = mov.tipo_movimento === 'entrada' ? 'Entrada' : 'Saída';
 
     row.innerHTML = `
-      <div>${mov.pneus?.marca || ''}</div>
-      <div>${mov.pneus?.modelo || ''}</div>
-      <div>${mov.pneus?.tipo || ''}</div>
+      <div>${mov.pneu?.marca || ''}</div>
+      <div>${mov.pneu?.modelo || ''}</div>
+      <div>${mov.pneu?.tipo || ''}</div>
       <div>${mov.quantidade}</div>
       <div>${tipoMovimento}</div>
       <div>${dataHora}</div>
