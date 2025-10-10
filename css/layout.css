@@ -8,12 +8,33 @@
   background-color: #2e7d32;
   color: #fff;
   padding: 20px;
-  transition: width 0.3s ease;
+  transition: transform 0.3s ease, width 0.3s ease;
   overflow-x: hidden;
+  z-index: 1000;
 }
 
 .sidebar.collapsed {
   width: 60px;
+}
+
+.sidebar.mobile-open {
+  transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+
+  .sidebar.collapsed {
+    width: 280px;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
 }
 
 .toggle-btn {
@@ -115,10 +136,27 @@ nav a:hover {
   margin-left: 220px;
   padding: 30px;
   transition: margin-left 0.3s ease;
+  min-height: 100vh;
 }
 
 .sidebar.collapsed ~ .main-content {
   margin-left: 60px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 20px 10px;
+  }
+
+  .toggle-btn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+    background-color: #2e7d32;
+    border-radius: 4px;
+  }
 }
 
 .header {
@@ -127,10 +165,68 @@ nav a:hover {
   margin-bottom: 30px;
 }
 
+@media (max-width: 768px) {
+  .header {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+}
+
 /* 🦶 Rodapé */
 .footer {
   margin-top: 40px;
   text-align: center;
   font-size: 14px;
   color: #888;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    margin-top: 20px;
+    font-size: 12px;
+    padding: 10px;
+  }
+}
+
+/* Responsividade para grids e forms */
+@media (max-width: 768px) {
+  .grid-header,
+  .grid-row,
+  .grid-total {
+    flex-direction: column !important;
+    text-align: left;
+  }
+
+  .grid-header div,
+  .grid-row div,
+  .grid-total div {
+    border-right: none !important;
+    border-bottom: 1px solid #eee !important;
+    padding: 10px !important;
+    min-width: auto !important;
+  }
+
+  .filtros-pneus,
+  form.filtros-pneus {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .filtros-pneus input,
+  .filtros-pneus button,
+  form.filtros-pneus input,
+  form.filtros-pneus button {
+    width: 100% !important;
+    max-width: 300px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .grid-wrapper {
+    overflow-x: auto !important;
+  }
+
+  .content-section {
+    padding: 0 10px;
+  }
 }
