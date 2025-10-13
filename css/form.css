@@ -70,6 +70,15 @@
   padding-bottom: 5px;
 }
 
+/* 🔹 Seções de formulário */
+.form-section h3 {
+  font-size: 18px;
+  color: #2e7d32;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #c8e6c9;
+  padding-bottom: 5px;
+}
+
 /* 🔹 Grid de campos */
 .form-grid {
   display: grid;
