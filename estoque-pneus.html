@@ -11,10 +11,7 @@
   <main class="main-content">
     <header class="header"><i class="fas fa-tire"></i> Estoque de Pneus</header>
     <section class="content-section">
-        <div class="form-section">
-          <h3>Buscar</h3>
-          <form class="filtros-pneus" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; align-items: center;">
-            <label for="campo-marca-estoque" style="font-weight: bold;">Buscar por:</label>
+        <form class="filtros-pneus" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; align-items: center;">
             <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
             <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
             <input type="number" id="campo-vida-estoque" placeholder="Vida" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 80px;" />
@@ -23,16 +20,13 @@
           <datalist id="marcas-list"></datalist>
           <datalist id="modelos-list"></datalist>
           <datalist id="tipos-list"></datalist>
-        </div>
-          </form>  
+        </form>  
       <div class="grid-wrapper" style="overflow-x: auto;">
       <div class="form-section">
         <h3>Estoque Pneu</h3>
       </div>  
         <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column;">
-          <fieldset class="form-section">
-        <legend>Estoque Pneu</legend>
-          <div class="grid-header" style="display: flex; white-space: nowrap; border-bottom: 2px solid #ddd; background-color: #f8f9fa; font-weight: bold;">
+            <div class="grid-header" style="display: flex; white-space: nowrap; border-bottom: 2px solid #ddd; background-color: #f8f9fa; font-weight: bold;">
             <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Marca</div>
             <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Modelo</div>
             <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">Vida</div>
@@ -47,7 +41,6 @@
             <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
             <div id="total-quantidade" style="flex: 1.5; min-width: 100px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee; color: #007bff;">0</div>
           </div>
-          </fieldset>
          </section>
       </div>
       </div>
