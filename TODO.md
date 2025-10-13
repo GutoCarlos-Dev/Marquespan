@@ -19,3 +19,5 @@
 - [x] Atualizar submenu Pneus em buscar-manutencao.html
 - [x] Atualizar submenu Pneus em carregamento.html
 - [x] Atualizar submenu Pneus em manutencao-pneu.html
+- [x] Atualizar submenu Pneus em pneu.html
+- [x] Atualizar submenu Pneus em estoque-pneus.html
