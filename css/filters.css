@@ -79,3 +79,33 @@
 .filtro-item input[type="number"] { width: 80px; }
 
 .filtros-estoque .btn-acao { margin-bottom: 0; } /* Garante alinhamento do botão */
+
+/* 🚚 Filtros da página de Pneus (Movimentação) */
+.filtros-pneus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end; /* Alinha os itens na base para que os botões fiquem alinhados */
+  justify-content: flex-start;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.filtro-pneu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filtro-pneu-item label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.filtro-pneu-item input,
+.filtro-pneu-item select {
+  padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+}
