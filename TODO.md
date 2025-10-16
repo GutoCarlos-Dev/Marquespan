@@ -1,10 +1,10 @@
-# Adicionar Dashboard com Gráficos na página estoque-pneus.html
+# Migração para Supabase - Atualização dos Scripts JavaScript
 
 ## Tarefas Pendentes
-- [x] Incluir biblioteca Chart.js no HTML
-- [x] Adicionar seção de dashboard após a tabela de estoque
-- [x] Criar gráfico de barras para quantidade de saída e entrada de pneus (baseado em dados simulados ou filtrados)
-- [x] Criar gráfico de fluxo maior por modelo e marca (usando criatividade: talvez um gráfico de pizza para distribuição por marca e barras para modelos)
-- [x] Implementar lógica JavaScript para gerar gráficos dinâmicos baseados nos filtros aplicados
-- [x] Estilizar o dashboard para ficar atrativo e responsivo
-- [ ] Testar a integração com os filtros de busca
+- [x] Criar script pneu-updated.js com integração Supabase
+- [x] Criar script estoque-pneus-updated.js com integração Supabase
+- [x] Atualizar pneu.html para usar script atualizado
+- [x] Atualizar estoque-pneus.html para usar script atualizado
+- [ ] Testar a funcionalidade após as mudanças
+- [ ] Remover dependência do localStorage (opcional - manter como backup)
+- [ ] Implementar sistema de autenticação com Supabase Auth (futuro)
