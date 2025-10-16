@@ -15,6 +15,30 @@
   <main class="main-content">
     <header class="header"><i class="fas fa-tire"></i> Estoque de Pneus</header>
     <section class="content-section">
+      <!-- Novo Form de Busca -->
+      <section class="search-section" style="margin-bottom: 20px;">
+        <h3 style="margin-bottom: 15px; color: #333;">Busca de Pneus</h3>
+        <form class="busca-form" style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap; padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid #b0c4de;">
+          <div style="display: flex; flex-direction: column;">
+            <label for="busca-marca" style="font-weight: bold; margin-bottom: 5px;">Marca</label>
+            <input type="text" id="busca-marca" placeholder="Digite a marca" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px;">
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <label for="busca-modelo" style="font-weight: bold; margin-bottom: 5px;">Modelo</label>
+            <input type="text" id="busca-modelo" placeholder="Digite o modelo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px;">
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <label for="busca-vida" style="font-weight: bold; margin-bottom: 5px;">Vida</label>
+            <input type="number" id="busca-vida" placeholder="Vida" min="0" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100px;">
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <label for="busca-tipo" style="font-weight: bold; margin-bottom: 5px;">Tipo</label>
+            <input type="text" id="busca-tipo" placeholder="Digite o tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px;">
+          </div>
+          <button type="button" id="btn-busca-novo" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; height: 38px;"><i class="fas fa-search"></i> Buscar</button>
+        </form>
+      </section>
+
       <form class="filtro-container">
         <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" />
         <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" />
