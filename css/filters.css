@@ -135,4 +135,18 @@
 .filtro-container input[type="number"] { width: 80px; }
 
 .filtro-container .btn-acao { margin-top: 0; } /* Remove margem superior dos botões */
+
+/* 📱 Media Query para Responsividade dos Filtros */
+@media (max-width: 768px) {
+  .filtro-container {
+    flex-direction: column; /* Empilha os itens verticalmente */
+    align-items: stretch;   /* Estica os itens para ocupar a largura total */
+  }
+
+  .filtro-container input[type="text"],
+  .filtro-container input[type="number"],
+  .filtro-container .btn-acao {
+    width: 100%; /* Ocupa 100% da largura */
+    justify-content: center; /* Centraliza o conteúdo dos botões */
+  }
 }
