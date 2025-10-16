@@ -25,9 +25,8 @@ async function migrarMovimentacoesPneus() {
       return;
     }
 
-    // Preparar dados para inserção
+    // Preparar dados para inserção (remover id para usar auto-increment)
     const dadosParaMigracao = pneus.map(pneu => ({
-      id: pneu.id,
       data: new Date(pneu.data).toISOString(),
       marca: pneu.marca,
       modelo: pneu.modelo,
