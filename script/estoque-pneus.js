@@ -15,6 +15,7 @@ function carregarEstoque() {
     return { marca, modelo, tipo, vida: parseInt(vida), quantidade };
   }).sort((a, b) => a.marca.localeCompare(b.marca));
 
+  popularDatalists();
   renderizarEstoque(lista);
 }
 
@@ -70,4 +71,53 @@ function renderizarEstoque(lista) {
   });
 
   document.getElementById('total-quantidade').textContent = total;
+}
+
+// Função para popular os datalists com opções únicas
+function popularDatalists() {
+  const estoque = getEstoque();
+  const lista = Object.entries(estoque).map(([key, quantidade]) => {
+    const [marca, modelo, tipo, vida] = key.split('-');
+    return { marca, modelo, tipo, vida: parseInt(vida), quantidade };
+  });
+
+  const marcas = [...new Set(lista.map(item => item.marca))].sort();
+  const modelos = [...new Set(lista.map(item => item.modelo))].sort();
+  const tipos = [...new Set(lista.map(item => item.tipo))].sort();
+  const vidas = [...new Set(lista.map(item => item.vida))].sort();
+
+  const marcasList = document.getElementById('marcas-list');
+  const modelosList = document.getElementById('modelos-list');
+  const tiposList = document.getElementById('tipos-list');
+
+  marcasList.innerHTML = '';
+  modelosList.innerHTML = '';
+  tiposList.innerHTML = '';
+
+  marcas.forEach(marca => {
+    const option = document.createElement('option');
+    option.value = marca;
+    marcasList.appendChild(option);
+  });
+
+  modelos.forEach(modelo => {
+    const option = document.createElement('option');
+    option.value = modelo;
+    modelosList.appendChild(option);
+  });
+
+  tipos.forEach(tipo => {
+    const option = document.createElement('option');
+    option.value = tipo;
+    tiposList.appendChild(option);
+  });
+}
+
+// Função para limpar filtros
+function limparFiltros() {
+  document.getElementById('campo-marca-estoque').value = '';
+  document.getElementById('campo-modelo-estoque').value = '';
+  document.getElementById('campo-vida-estoque').value = '';
+  document.getElementById('campo-tipo-estoque').value = '';
+  carregarEstoque();
 }
