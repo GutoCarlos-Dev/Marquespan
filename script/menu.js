@@ -28,10 +28,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.querySelector('.toggle-btn');
+
   if (window.innerWidth <= 768) {
     sidebar.classList.toggle('mobile-open');
+    // Fechar sidebar quando clicar fora dela no mobile
+    if (!sidebar.classList.contains('mobile-open')) {
+      document.addEventListener('click', closeSidebarOnClickOutside);
+    } else {
+      document.removeEventListener('click', closeSidebarOnClickOutside);
+    }
   } else {
     sidebar.classList.toggle('collapsed');
+  }
+}
+
+function closeSidebarOnClickOutside(event) {
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.querySelector('.toggle-btn');
+
+  if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+    sidebar.classList.remove('mobile-open');
+    document.removeEventListener('click', closeSidebarOnClickOutside);
   }
 }
 
