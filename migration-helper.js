@@ -84,10 +84,13 @@ async function migrarEstoquePneus() {
       };
     });
 
-    // Inserir no Supabase
+    // Inserir no Supabase (usar upsert para evitar conflitos de chave única)
     const { data, error } = await supabase
       .from('estoque_pneus')
-      .insert(dadosParaMigracao);
+      .upsert(dadosParaMigracao, {
+        onConflict: 'marca,modelo,tipo,vida',
+        ignoreDuplicates: false
+      });
 
     if (error) {
       console.error('❌ Erro ao migrar estoque:', error);

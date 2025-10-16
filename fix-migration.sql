@@ -1,54 +1,41 @@
 -- =====================================================
--- CORREÇÕES PARA MIGRAÇÃO SUPABASE
+-- CORREÇÕES PARA MIGRAÇÃO SUPABASE - VERSÃO SIMPLIFICADA
 -- Execute estes comandos no SQL Editor do Supabase ANTES da migração
 -- =====================================================
 
--- 1. DESABILITAR TEMPORARIAMENTE AS POLÍTICAS RLS PARA MIGRAÇÃO
-ALTER TABLE pneus DISABLE ROW LEVEL SECURITY;
-ALTER TABLE estoque_pneus DISABLE ROW LEVEL SECURITY;
-
--- 2. VERIFICAR SE AS TABELAS EXISTEM E CRIAR SE NECESSÁRIO
--- (Execute o migration-supabase.sql primeiro se as tabelas não existirem)
-
--- 3. APÓS A MIGRAÇÃO, REABILITAR RLS COM POLÍTICAS CORRETAS
--- Execute estes comandos APÓS a migração bem-sucedida:
-
--- Políticas para tabela pneus
+-- 1. REMOVER TODAS AS POLÍTICAS RLS EXISTENTES
 DROP POLICY IF EXISTS "Permitir leitura para todos os usuários autenticados" ON pneus;
 DROP POLICY IF EXISTS "Permitir inserção para usuários autenticados" ON pneus;
 DROP POLICY IF EXISTS "Permitir atualização para usuários autenticados" ON pneus;
 DROP POLICY IF EXISTS "Permitir exclusão para usuários autenticados" ON pneus;
-
-CREATE POLICY "Permitir leitura para todos os usuários autenticados" ON pneus
-    FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Permitir inserção para usuários autenticados" ON pneus
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Permitir atualização para usuários autenticados" ON pneus
-    FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Permitir exclusão para usuários autenticados" ON pneus
-    FOR DELETE USING (auth.role() = 'authenticated');
-
--- Políticas para tabela estoque_pneus
 DROP POLICY IF EXISTS "Permitir leitura do estoque para todos os usuários autenticados" ON estoque_pneus;
 DROP POLICY IF EXISTS "Permitir atualização do estoque para usuários autenticados" ON estoque_pneus;
+DROP POLICY IF EXISTS "Usuários podem ler seus próprios dados" ON usuarios;
+DROP POLICY IF EXISTS "Permitir leitura de usuários para admin" ON usuarios;
+DROP POLICY IF EXISTS "Permitir atualização de usuários para admin" ON usuarios;
 
-CREATE POLICY "Permitir leitura do estoque para todos os usuários autenticados" ON estoque_pneus
-    FOR SELECT USING (auth.role() = 'authenticated');
+-- 2. DESABILITAR RLS TEMPORARIAMENTE
+ALTER TABLE pneus DISABLE ROW LEVEL SECURITY;
+ALTER TABLE estoque_pneus DISABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Permitir atualização do estoque para usuários autenticados" ON estoque_pneus
-    FOR ALL USING (auth.role() = 'authenticated');
+-- =====================================================
+-- APÓS MIGRAÇÃO BEM-SUCEDIDA, EXECUTE ESTA PARTE:
+-- =====================================================
 
--- Reabilitar RLS
-ALTER TABLE pneus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE estoque_pneus ENABLE ROW LEVEL SECURITY;
+-- 3. REABILITAR RLS
+-- ALTER TABLE pneus ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE estoque_pneus ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+
+-- 4. CRIAR POLÍTICAS PERMISSIVAS PARA DESENVOLVIMENTO
+-- CREATE POLICY "Permitir tudo para desenvolvimento" ON pneus FOR ALL USING (true);
+-- CREATE POLICY "Permitir tudo para desenvolvimento" ON estoque_pneus FOR ALL USING (true);
+-- CREATE POLICY "Permitir tudo para desenvolvimento" ON usuarios FOR ALL USING (true);
 
 -- =====================================================
 -- INSTRUÇÕES DE USO:
--- 1. Execute o migration-supabase.sql primeiro (se as tabelas não existirem)
--- 2. Execute a primeira parte desta correção (DISABLE RLS)
--- 3. Execute a migração no navegador
--- 4. Execute a segunda parte desta correção (ENABLE RLS com políticas corretas)
+-- 1. Execute apenas a primeira parte (DROP + DISABLE) ANTES da migração
+-- 2. Execute a migração no navegador
+-- 3. Execute a segunda parte (ENABLE + CREATE) APÓS migração
 -- =====================================================
