@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load pneus
   carregarPneus();
+
+  // Verificar permissões após carregar
+  verificarPermissoes();
 });
 
 // Initialize selects with predefined options
@@ -80,10 +83,38 @@ function initializeSelects() {
 }
 
 function getCurrentUserName() {
-  // Por enquanto, usar localStorage para usuário logado
-  // TODO: Implementar sistema de autenticação com Supabase Auth
+  // Usar localStorage para usuário logado
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   return usuario ? usuario.nome : 'Usuário Anônimo';
+}
+
+// Verificar permissões do usuário
+function verificarPermissoes() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  if (!usuario) {
+    alert('Usuário não logado. Redirecionando para login.');
+    window.location.href = 'index.html';
+    return false;
+  }
+
+  // Usuários de estoque podem acessar apenas visualização e contagem
+  if (usuario.nivel === 'Estoque') {
+    // Esconder botões de edição e exclusão
+    const botoesEditar = document.querySelectorAll('.btn-acao.editar');
+    const botoesExcluir = document.querySelectorAll('.btn-acao.excluir');
+    botoesEditar.forEach(btn => btn.style.display = 'none');
+    botoesExcluir.forEach(btn => btn.style.display = 'none');
+
+    // Esconder formulário de cadastro
+    const formCadastro = document.getElementById('formPneu');
+    if (formCadastro) formCadastro.style.display = 'none';
+
+    // Esconder botão de contagem de estoque se não for necessário
+    // const btnContagem = document.getElementById('btnContagemEstoque');
+    // if (btnContagem) btnContagem.style.display = 'none';
+  }
+
+  return true;
 }
 
 // Handle form submit
