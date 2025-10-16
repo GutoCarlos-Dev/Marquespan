@@ -40,3 +40,42 @@
   padding: 20px;
   align-items: center;
 }
+
+/* 🔍 Filtros de Estoque de Pneus */
+.filtros-estoque-container {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.filtros-estoque {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end; /* Alinha os itens na base */
+}
+
+.filtro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filtro-item label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.filtro-item input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.filtro-item input[type="text"] { width: 140px; }
+.filtro-item input[type="number"] { width: 80px; }
+
+.filtros-estoque .btn-acao { margin-bottom: 0; } /* Garante alinhamento do botão */
