@@ -391,8 +391,8 @@ async function gerarGraficos() {
   }
 }
 
-// Função para exportar dados do estoque para CSV com formatação profissional
-async function exportarEstoqueCSV() {
+// Função para exportar dados do estoque para XLSX com formatação profissional
+async function exportarEstoqueXLSX() {
   try {
     // Buscar dados atuais do estoque (mesmos filtros aplicados na tela)
     const marca = document.getElementById('campo-marca-estoque')?.value.trim().toUpperCase();
@@ -434,75 +434,66 @@ async function exportarEstoqueCSV() {
       return;
     }
 
-    // Criar cabeçalho do CSV com formatação profissional
-    const headers = [
-      'MARCA',
-      'MODELO',
-      'VIDA',
-      'TIPO',
-      'QUANTIDADE_EM_ESTOQUE'
-    ];
+    // Preparar dados para XLSX
+    const dadosXLSX = [];
 
-    // Preparar linhas de dados
-    const rows = lista.map(item => [
-      `"${item.marca}"`,
-      `"${item.modelo}"`,
-      item.vida,
-      `"${item.tipo}"`,
-      item.quantidade
-    ]);
+    // Cabeçalho com informações da empresa
+    dadosXLSX.push(['MARQUESPAN - SISTEMA DE GESTÃO DE PNEUS']);
+    dadosXLSX.push([`Relatório de Estoque - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`]);
+    dadosXLSX.push(['Filtros aplicados:']);
+    dadosXLSX.push([marca ? `Marca: ${marca}` : 'Marca: Todos']);
+    dadosXLSX.push([modelo ? `Modelo: ${modelo}` : 'Modelo: Todos']);
+    dadosXLSX.push([vida ? `Vida: ${vida}` : 'Vida: Todos']);
+    dadosXLSX.push([tipo ? `Tipo: ${tipo}` : 'Tipo: Todos']);
+    dadosXLSX.push(['']); // Linha em branco
+
+    // Cabeçalhos das colunas
+    dadosXLSX.push(['MARCA', 'MODELO', 'VIDA', 'TIPO', 'QUANTIDADE EM ESTOQUE']);
+
+    // Dados dos itens
+    lista.forEach(item => {
+      dadosXLSX.push([item.marca, item.modelo, item.vida, item.tipo, item.quantidade]);
+    });
 
     // Calcular totais
     const totalQuantidade = lista.reduce((sum, item) => sum + item.quantidade, 0);
 
     // Adicionar linha de total
-    rows.push([
-      '"TOTAL GERAL"',
-      '""',
-      '""',
-      '""',
-      totalQuantidade
-    ]);
+    dadosXLSX.push(['TOTAL GERAL', '', '', '', totalQuantidade]);
+    dadosXLSX.push(['']); // Linha em branco
+    dadosXLSX.push([`Total de registros exportados: ${lista.length}`]);
+    dadosXLSX.push([`Gerado por: Sistema Marquespan - ${new Date().toLocaleString('pt-BR')}`]);
 
-    // Criar conteúdo CSV
-    const csvContent = [
-      // Cabeçalho com informações da empresa
-      '"MARQUESPAN - SISTEMA DE GESTÃO DE PNEUS"',
-      `"Relatório de Estoque - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}"`,
-      '"Filtros aplicados:"',
-      marca ? `"Marca: ${marca}"` : '"Marca: Todos"',
-      modelo ? `"Modelo: ${modelo}"` : '"Modelo: Todos"',
-      vida ? `"Vida: ${vida}"` : '"Vida: Todos"',
-      tipo ? `"Tipo: ${tipo}"` : '"Tipo: Todos"',
-      '""', // Linha em branco
-      headers.join(','),
-      ...rows.map(row => row.join(',')),
-      '""', // Linha em branco
-      `"Total de registros exportados: ${lista.length}"`,
-      `"Gerado por: Sistema Marquespan - ${new Date().toLocaleString('pt-BR')}"`
-    ].join('\n');
+    // Criar workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(dadosXLSX);
 
-    // Criar blob e link para download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    // Definir larguras das colunas
+    ws['!cols'] = [
+      { wch: 20 }, // MARCA
+      { wch: 30 }, // MODELO
+      { wch: 8 },  // VIDA
+      { wch: 15 }, // TIPO
+      { wch: 20 }  // QUANTIDADE
+    ];
 
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
+    // Estilos para o cabeçalho (simulação básica)
+    // Nota: XLSX não suporta estilos avançados, mas podemos definir tipos de células
+    if (ws['A1']) ws['A1'].t = 's'; // String
+    if (ws['A6']) ws['A6'].t = 's'; // Cabeçalho
 
-      // Nome do arquivo com data e hora
-      const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
-      link.setAttribute('download', `estoque_pneus_marquespan_${dataHora}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    // Adicionar worksheet ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Estoque_Pneus');
 
-      // Feedback visual
-      alert(`✅ Exportação concluída!\n\n📊 ${lista.length} registros exportados\n📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n⏰ Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\nArquivo salvo como: estoque_pneus_marquespan_${dataHora}.csv`);
-    } else {
-      alert('Seu navegador não suporta download automático. Copie o conteúdo abaixo e salve como arquivo CSV:\n\n' + csvContent);
-    }
+    // Nome do arquivo com data e hora
+    const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+    const nomeArquivo = `estoque_pneus_marquespan_${dataHora}.xlsx`;
+
+    // Salvar arquivo
+    XLSX.writeFile(wb, nomeArquivo);
+
+    // Feedback visual
+    alert(`✅ Exportação concluída!\n\n📊 ${lista.length} registros exportados\n📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n⏰ Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\nArquivo salvo como: ${nomeArquivo}`);
   } catch (error) {
     console.error('Erro na exportação:', error);
     alert('Erro ao exportar dados. Verifique o console para mais detalhes.');
@@ -513,5 +504,5 @@ async function exportarEstoqueCSV() {
 window.carregarEstoque = carregarEstoque;
 window.buscarEstoque = buscarEstoque;
 window.limparFiltros = limparFiltros;
-window.exportarEstoqueCSV = exportarEstoqueCSV;
+window.exportarEstoqueXLSX = exportarEstoqueXLSX;
 window.gerarGraficos = gerarGraficos;

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/filters.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 </head>
 <body>
@@ -43,7 +44,7 @@
             <td style="padding: 12px; text-align: center;">
               <button type="button" id="btn-buscar-estoque" class="btn-acao editar" style="background-color: #28a745"><i class="fas fa-search"></i> Buscar</button>
               <button type="button" id="btn-limpar-estoque" class="btn-acao excluir" style="background-color: #6c757d;"><i class="fas fa-eraser"></i> Limpar</button>
-              <button type="button" id="btn-exportar-estoque" class="btn-acao exportar" style="background-color: #28a745;"><i class="fas fa-file-csv"></i> Exportar CSV</button>
+              <button type="button" id="btn-exportar-estoque" class="btn-acao exportar" style="background-color: #28a745;"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
             </td>
           </tr>
         </tbody>
@@ -110,7 +111,7 @@
       carregarEstoque();
       document.getElementById('btn-buscar-estoque').addEventListener('click', buscarEstoque);
       document.getElementById('btn-limpar-estoque').addEventListener('click', limparFiltros);
-      document.getElementById('btn-exportar-estoque').addEventListener('click', exportarEstoqueCSV);
+      document.getElementById('btn-exportar-estoque').addEventListener('click', exportarEstoqueXLSX);
       gerarGraficos();
     });
   </script>
