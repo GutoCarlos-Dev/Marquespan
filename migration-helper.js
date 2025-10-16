@@ -189,7 +189,7 @@ console.log('2. Verifique os dados atuais:');
 console.log('   executarVerificacao()');
 console.log('');
 console.log('3. Execute a migração completa:');
-console.log('   executarMigracaoCompleta()');
+console.log('   executarMigracao()');
 console.log('');
 console.log('4. Ou execute migrações individuais:');
 console.log('   migrarMovimentacoesPneus()  // Para dados de pneu.html');
@@ -199,16 +199,15 @@ console.log('⚠️ IMPORTANTE: Faça backup dos dados antes de migrar!');
 console.log('=============================================================');
 
 // =====================================================
-// FUNÇÕES DE ATALHO PARA EXECUÇÃO
+// FUNÇÕES GLOBAIS PARA EXECUÇÃO NO CONSOLE
 // =====================================================
 
-function executarVerificacao() {
-  verificarDadosLocalStorage();
-}
-
-function executarMigracao() {
-  executarMigracaoCompleta();
-}
+// Tornar funções disponíveis globalmente para uso no console
+window.executarVerificacao = verificarDadosLocalStorage;
+window.executarMigracao = executarMigracaoCompleta;
+window.migrarMovimentacoesPneus = migrarMovimentacoesPneus;
+window.migrarEstoquePneus = migrarEstoquePneus;
+window.limparDadosMigrados = limparDadosMigrados;
 
 // Função para limpar dados migrados (se necessário)
 async function limparDadosMigrados() {
