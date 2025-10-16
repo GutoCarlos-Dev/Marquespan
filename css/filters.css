@@ -109,3 +109,30 @@
 .filtro-pneu-item select {
   padding: 8px; border: 1px solid #ccc; border-radius: 4px;
 }
+
+/* 📦 Filtros de Estoque (Layout Lado a Lado) */
+.filtro-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filtro-container input[type="text"],
+.filtro-container input[type="number"] {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filtro-container input[type="text"] { width: 140px; }
+.filtro-container input[type="number"] { width: 80px; }
+
+.filtro-container .btn-acao { margin-top: 0; } /* Remove margem superior dos botões */
+}

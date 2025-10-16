@@ -15,32 +15,17 @@
   <main class="main-content">
     <header class="header"><i class="fas fa-tire"></i> Estoque de Pneus</header>
     <section class="content-section">
-      <fieldset class="filtros-estoque-container" style="border: none; padding: 0;">
-        <legend style="display: none;">Filtros de Estoque</legend>
-        <form class="filtros-pneus">
-          <div class="filtro-pneu-item">
-            <label for="campo-marca-estoque">Marca</label>
-            <input type="text" id="campo-marca-estoque" placeholder="Digite a marca" list="marcas-list" style="width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item">
-            <label for="campo-modelo-estoque">Modelo</label>
-            <input type="text" id="campo-modelo-estoque" placeholder="Digite o modelo" list="modelos-list" style="width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item">
-            <label for="campo-vida-estoque">Vida</label>
-            <input type="number" id="campo-vida-estoque" placeholder="Vida" style="width: 80px;" />
-          </div>
-          <div class="filtro-pneu-item">
-            <label for="campo-tipo-estoque">Tipo</label>
-            <input type="text" id="campo-tipo-estoque" placeholder="Digite o tipo" list="tipos-list" />
-          </div>
-          <button type="button" id="btn-buscar-estoque" class="btn-acao editar"><i class="fas fa-search"></i> Buscar</button>
-          <button type="button" id="btn-limpar-estoque" class="btn-acao excluir" style="background-color: #6c757d;"><i class="fas fa-eraser"></i> Limpar</button>
-          <datalist id="marcas-list"></datalist>
-          <datalist id="modelos-list"></datalist>
-          <datalist id="tipos-list"></datalist>
-        </form>
-      </fieldset>
+      <form class="filtro-container">
+        <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" />
+        <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" />
+        <input type="number" id="campo-vida-estoque" placeholder="Vida" />
+        <input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" />
+        <button type="button" id="btn-buscar-estoque" class="btn-acao editar"><i class="fas fa-search"></i> Buscar</button>
+        <button type="button" id="btn-limpar-estoque" class="btn-acao excluir" style="background-color: #6c757d;"><i class="fas fa-eraser"></i> Limpar</button>
+        <datalist id="marcas-list"></datalist>
+        <datalist id="modelos-list"></datalist>
+        <datalist id="tipos-list"></datalist>
+      </form>
     </section>
     <section class="content-section">
       <div class="grid-wrapper" style="overflow-x: auto;">
