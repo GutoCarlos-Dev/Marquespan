@@ -50,17 +50,40 @@
         </table>
       </section>
 
-      <form class="filtro-container">
-        <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" />
-        <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" />
-        <input type="number" id="campo-vida-estoque" placeholder="Vida" />
-        <input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" />
-        <button type="button" id="btn-buscar-estoque" class="btn-acao editar"><i class="fas fa-search"></i> Buscar</button>
-        <button type="button" id="btn-limpar-estoque" class="btn-acao excluir" style="background-color: #6c757d;"><i class="fas fa-eraser"></i> Limpar</button>
-        <datalist id="marcas-list"></datalist>
-        <datalist id="modelos-list"></datalist>
-        <datalist id="tipos-list"></datalist>
-      </form>
+      <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;">
+        <thead>
+          <tr style="background-color: #f8f9fa;">
+            <th style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6; font-weight: bold;">Marca</th>
+            <th style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6; font-weight: bold;">Modelo</th>
+            <th style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6; font-weight: bold;">Vida</th>
+            <th style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6; font-weight: bold;">Tipo</th>
+            <th style="padding: 12px; text-align: center; font-weight: bold;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6;">
+              <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
+            </td>
+            <td style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6;">
+              <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
+            </td>
+            <td style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6;">
+              <input type="number" id="campo-vida-estoque" placeholder="Vida" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
+            </td>
+            <td style="padding: 12px; text-align: center; border-right: 1px solid #dee2e6;">
+              <input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
+            </td>
+            <td style="padding: 12px; text-align: center;">
+              <button type="button" id="btn-buscar-estoque" class="btn-acao editar" style="margin-right: 5px;"><i class="fas fa-search"></i> Buscar</button>
+              <button type="button" id="btn-limpar-estoque" class="btn-acao excluir" style="background-color: #6c757d;"><i class="fas fa-eraser"></i> Limpar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <datalist id="marcas-list"></datalist>
+      <datalist id="modelos-list"></datalist>
+      <datalist id="tipos-list"></datalist>
     </section>
     <section class="content-section">
       <div class="grid-wrapper" style="overflow-x: auto;">
