@@ -54,9 +54,10 @@
     top: 10px;
     left: 10px;
     z-index: 1001;
-    background-color: #2e7d32;
+    background-color: #000;
     border-radius: 4px;
     padding: 8px;
+    border: 2px solid #fff;
   }
 }
 
