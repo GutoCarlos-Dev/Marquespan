@@ -244,4 +244,36 @@ nav a:hover {
   .content-section {
     padding: 0 10px;
   }
+
+  /* Responsividade específica para filtros na página pneu.html */
+  .filtros-pneus {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+
+  .filtros-pneus > div {
+    width: 100% !important;
+    max-width: 300px !important;
+  }
+
+  .filtros-pneus input,
+  .filtros-pneus select {
+    width: 100% !important;
+    font-size: 16px !important; /* Evita zoom no iOS */
+    padding: 12px !important;
+  }
+
+  .filtros-pneus label {
+    font-size: 14px !important;
+    margin-bottom: 5px !important;
+    display: block !important;
+  }
+
+  #btn-buscar {
+    width: 100% !important;
+    max-width: 300px !important;
+    padding: 12px !important;
+    font-size: 16px !important;
+    margin-top: 10px !important;
+  }
 }
