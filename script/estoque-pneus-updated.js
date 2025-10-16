@@ -314,7 +314,9 @@ async function gerarGraficos() {
     // Gráfico de Fluxo por Modelo (Barras Horizontais)
     const modelosCount = {};
     lista.forEach(item => {
-      modelosCount[item.modelo] = (modelosCount[item.modelo] || 0) + item.quantidade;
+      if (item.quantidade > 0) { // Filtrar apenas itens com estoque positivo
+        modelosCount[item.modelo] = (modelosCount[item.modelo] || 0) + item.quantidade;
+      }
     });
 
     const topModelos = Object.entries(modelosCount)
