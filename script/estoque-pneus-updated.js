@@ -181,19 +181,67 @@ function gerarDadosMovimentacao() {
 async function gerarGraficos() {
   try {
     // Buscar dados do estoque para gráficos
-    const { data: estoque, error } = await supabase
+    const { data: estoque, error: estoqueError } = await supabase
       .from('estoque_pneus')
       .select('*');
 
-    if (error) {
-      console.error('Erro ao buscar dados para gráficos:', error);
+    if (estoqueError) {
+      console.error('Erro ao buscar dados para gráficos:', estoqueError);
       return;
     }
 
     const lista = estoque || [];
 
-    // Gráfico de Movimentação (Entrada/Saída) - dados simulados por enquanto
-    const { meses, entradas, saidas } = gerarDadosMovimentacao();
+    // Buscar dados de movimentação dos últimos 6 meses
+    const seisMesesAtras = new Date();
+    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
+
+    const { data: movimentacoes, error: movError } = await supabase
+      .from('pneus')
+      .select('data, status, quantidade')
+      .gte('data', seisMesesAtras.toISOString())
+      .order('data', { ascending: true });
+
+    if (movError) {
+      console.error('Erro ao buscar dados de movimentação:', movError);
+      return;
+    }
+
+    const movLista = movimentacoes || [];
+
+    // Processar dados de movimentação por mês
+    const movimentacaoPorMes = {};
+    movLista.forEach(mov => {
+      const data = new Date(mov.data);
+      const mesAno = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!movimentacaoPorMes[mesAno]) {
+        movimentacaoPorMes[mesAno] = { entradas: 0, saidas: 0 };
+      }
+
+      if (mov.status === 'ENTRADA') {
+        movimentacaoPorMes[mesAno].entradas += mov.quantidade;
+      } else if (mov.status === 'SAIDA') {
+        movimentacaoPorMes[mesAno].saidas += mov.quantidade;
+      }
+    });
+
+    // Preparar dados para o gráfico (últimos 6 meses)
+    const meses = [];
+    const entradas = [];
+    const saidas = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const data = new Date();
+      data.setMonth(data.getMonth() - i);
+      const mesAno = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+      const nomeMes = data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+
+      meses.push(nomeMes);
+      entradas.push(movimentacaoPorMes[mesAno]?.entradas || 0);
+      saidas.push(movimentacaoPorMes[mesAno]?.saidas || 0);
+    }
+
     const ctxMovimentacao = document.getElementById('chartMovimentacao');
     if (ctxMovimentacao) {
       const context = ctxMovimentacao.getContext('2d');
