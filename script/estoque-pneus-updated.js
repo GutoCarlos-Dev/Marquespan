@@ -277,7 +277,9 @@ async function gerarGraficos() {
     // Gráfico de Distribuição por Marca (Pizza)
     const marcasCount = {};
     lista.forEach(item => {
-      marcasCount[item.marca] = (marcasCount[item.marca] || 0) + item.quantidade;
+      if (item.quantidade > 0) { // Filtrar apenas itens com estoque positivo
+        marcasCount[item.marca] = (marcasCount[item.marca] || 0) + item.quantidade;
+      }
     });
 
     const ctxMarcas = document.getElementById('chartMarcas');
@@ -353,7 +355,9 @@ async function gerarGraficos() {
     // Gráfico de Análise de Vida Útil (Linha)
     const vidaCount = {};
     lista.forEach(item => {
-      vidaCount[item.vida] = (vidaCount[item.vida] || 0) + item.quantidade;
+      if (item.quantidade > 0) { // Filtrar apenas itens com estoque positivo
+        vidaCount[item.vida] = (vidaCount[item.vida] || 0) + item.quantidade;
+      }
     });
 
     const ctxVida = document.getElementById('chartVida');
