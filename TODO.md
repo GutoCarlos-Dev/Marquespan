@@ -1,8 +1,10 @@
-# Melhorar Campo de Busca em estoque-pneus.html
+# Adicionar Dashboard com Gráficos na página estoque-pneus.html
 
 ## Tarefas Pendentes
-- [x] Popular os datalists com opções únicas de marca, modelo, vida e tipo do estoque
-- [x] Adicionar botão "Limpar" no formulário de filtros
-- [x] Melhorar a função de busca para ser case-insensitive e permitir buscas parciais
-- [x] Implementar função para limpar filtros e recarregar estoque completo
-- [x] Testar a funcionalidade após as mudanças (Ferramenta de navegador desabilitada, mas código implementado corretamente)
+- [x] Incluir biblioteca Chart.js no HTML
+- [x] Adicionar seção de dashboard após a tabela de estoque
+- [x] Criar gráfico de barras para quantidade de saída e entrada de pneus (baseado em dados simulados ou filtrados)
+- [x] Criar gráfico de fluxo maior por modelo e marca (usando criatividade: talvez um gráfico de pizza para distribuição por marca e barras para modelos)
+- [x] Implementar lógica JavaScript para gerar gráficos dinâmicos baseados nos filtros aplicados
+- [x] Estilizar o dashboard para ficar atrativo e responsivo
+- [ ] Testar a integração com os filtros de busca

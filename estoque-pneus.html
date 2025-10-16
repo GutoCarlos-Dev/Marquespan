@@ -6,6 +6,7 @@
   <title>Estoque de Pneus - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <main class="main-content">
@@ -45,6 +46,31 @@
          </section>
       </div>
       </div>
+
+      <!-- Dashboard de Gráficos -->
+      <section class="dashboard-section" style="margin-top: 40px;">
+        <h3 style="text-align: center; margin-bottom: 20px; color: #333;">Dashboard de Análise de Pneus</h3>
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 20px;">
+          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="text-align: center; margin-bottom: 15px; color: #495057;">Movimentação de Pneus (Entrada/Saída)</h4>
+            <canvas id="chartMovimentacao" width="400" height="300"></canvas>
+          </div>
+          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="text-align: center; margin-bottom: 15px; color: #495057;">Distribuição por Marca</h4>
+            <canvas id="chartMarcas" width="400" height="300"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="text-align: center; margin-bottom: 15px; color: #495057;">Fluxo por Modelo</h4>
+            <canvas id="chartModelos" width="400" height="300"></canvas>
+          </div>
+          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="text-align: center; margin-bottom: 15px; color: #495057;">Análise de Vida Útil</h4>
+            <canvas id="chartVida" width="400" height="300"></canvas>
+          </div>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -58,6 +84,7 @@
       carregarEstoque();
       document.getElementById('btn-buscar-estoque').addEventListener('click', buscarEstoque);
       document.getElementById('btn-limpar-estoque').addEventListener('click', limparFiltros);
+      gerarGraficos();
     });
   </script>
 
