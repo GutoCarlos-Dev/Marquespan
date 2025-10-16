@@ -9,9 +9,11 @@ async function carregarEstoque() {
 
   try {
     // Buscar dados da tabela estoque_pneus (mantida automaticamente atualizada pelos triggers)
+    // Filtrar apenas itens com quantidade > 0 para mostrar apenas estoque positivo
     const { data: estoque, error } = await supabase
       .from('estoque_pneus')
       .select('*')
+      .gt('quantidade', 0)
       .order('marca', { ascending: true })
       .order('modelo', { ascending: true });
 
