@@ -391,8 +391,127 @@ async function gerarGraficos() {
   }
 }
 
+// Função para exportar dados do estoque para CSV com formatação profissional
+async function exportarEstoqueCSV() {
+  try {
+    // Buscar dados atuais do estoque (mesmos filtros aplicados na tela)
+    const marca = document.getElementById('campo-marca-estoque')?.value.trim().toUpperCase();
+    const modelo = document.getElementById('campo-modelo-estoque')?.value.trim().toUpperCase();
+    const vida = document.getElementById('campo-vida-estoque')?.value.trim();
+    const tipo = document.getElementById('campo-tipo-estoque')?.value.trim().toUpperCase();
+
+    let query = supabase
+      .from('estoque_pneus')
+      .select('*')
+      .order('marca', { ascending: true })
+      .order('modelo', { ascending: true });
+
+    if (marca) {
+      query = query.ilike('marca', `%${marca}%`);
+    }
+    if (modelo) {
+      query = query.ilike('modelo', `%${modelo}%`);
+    }
+    if (vida) {
+      query = query.eq('vida', parseInt(vida));
+    }
+    if (tipo) {
+      query = query.ilike('tipo', `%${tipo}%`);
+    }
+
+    const { data: estoque, error } = await query;
+
+    if (error) {
+      console.error('Erro ao buscar dados para exportação:', error);
+      alert('Erro ao exportar dados. Tente novamente.');
+      return;
+    }
+
+    const lista = estoque || [];
+
+    if (lista.length === 0) {
+      alert('Nenhum dado encontrado para exportar.');
+      return;
+    }
+
+    // Criar cabeçalho do CSV com formatação profissional
+    const headers = [
+      'MARCA',
+      'MODELO',
+      'VIDA',
+      'TIPO',
+      'QUANTIDADE_EM_ESTOQUE'
+    ];
+
+    // Preparar linhas de dados
+    const rows = lista.map(item => [
+      `"${item.marca}"`,
+      `"${item.modelo}"`,
+      item.vida,
+      `"${item.tipo}"`,
+      item.quantidade
+    ]);
+
+    // Calcular totais
+    const totalQuantidade = lista.reduce((sum, item) => sum + item.quantidade, 0);
+
+    // Adicionar linha de total
+    rows.push([
+      '"TOTAL GERAL"',
+      '""',
+      '""',
+      '""',
+      totalQuantidade
+    ]);
+
+    // Criar conteúdo CSV
+    const csvContent = [
+      // Cabeçalho com informações da empresa
+      '"MARQUESPAN - SISTEMA DE GESTÃO DE PNEUS"',
+      `"Relatório de Estoque - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}"`,
+      '"Filtros aplicados:"',
+      marca ? `"Marca: ${marca}"` : '"Marca: Todos"',
+      modelo ? `"Modelo: ${modelo}"` : '"Modelo: Todos"',
+      vida ? `"Vida: ${vida}"` : '"Vida: Todos"',
+      tipo ? `"Tipo: ${tipo}"` : '"Tipo: Todos"',
+      '""', // Linha em branco
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+      '""', // Linha em branco
+      `"Total de registros exportados: ${lista.length}"`,
+      `"Gerado por: Sistema Marquespan - ${new Date().toLocaleString('pt-BR')}"`
+    ].join('\n');
+
+    // Criar blob e link para download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+
+      // Nome do arquivo com data e hora
+      const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+      link.setAttribute('download', `estoque_pneus_marquespan_${dataHora}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Feedback visual
+      alert(`✅ Exportação concluída!\n\n📊 ${lista.length} registros exportados\n📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n⏰ Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\nArquivo salvo como: estoque_pneus_marquespan_${dataHora}.csv`);
+    } else {
+      alert('Seu navegador não suporta download automático. Copie o conteúdo abaixo e salve como arquivo CSV:\n\n' + csvContent);
+    }
+  } catch (error) {
+    console.error('Erro na exportação:', error);
+    alert('Erro ao exportar dados. Verifique o console para mais detalhes.');
+  }
+}
+
 // Expor funções globalmente
 window.carregarEstoque = carregarEstoque;
 window.buscarEstoque = buscarEstoque;
 window.limparFiltros = limparFiltros;
+window.exportarEstoqueCSV = exportarEstoqueCSV;
 window.gerarGraficos = gerarGraficos;
