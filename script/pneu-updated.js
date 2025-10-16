@@ -105,9 +105,9 @@ function verificarPermissoes() {
     botoesEditar.forEach(btn => btn.style.display = 'none');
     botoesExcluir.forEach(btn => btn.style.display = 'none');
 
-    // Esconder formulário de cadastro
-    const formCadastro = document.getElementById('formPneu');
-    if (formCadastro) formCadastro.style.display = 'none';
+    // Esconder formulário de cadastro - REMOVIDO para permitir lançamentos
+    // const formCadastro = document.getElementById('formPneu');
+    // if (formCadastro) formCadastro.style.display = 'none';
 
     // Esconder botão de contagem de estoque se não for necessário
     // const btnContagem = document.getElementById('btnContagemEstoque');

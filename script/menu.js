@@ -53,21 +53,17 @@ function controlarMenuPorNivel(nivel) {
   // Mostrar links baseado no nível
   switch (nivel.toLowerCase()) {
     case 'estoque':
-      // Mostrar apenas Dashboard e Pneus (Estoque)
+      // Mostrar Dashboard, submenu completo de Pneus e Sair
       const dashboardLink = nav.querySelector('a[href="dashboard.html"]');
       if (dashboardLink) dashboardLink.style.display = 'block';
 
       const pneusGroup = nav.querySelector('.menu-group:has(a[href="estoque-pneus.html"])');
       if (pneusGroup) pneusGroup.style.display = 'block';
 
-      // Esconder submenu de Pneus exceto Estoque
+      // Mostrar todo o submenu de Pneus (Movimentação e Estoque)
       const pneusSubmenu = pneusGroup.querySelectorAll('a');
       pneusSubmenu.forEach(link => {
-        if (link.getAttribute('href') !== 'estoque-pneus.html') {
-          link.style.display = 'none';
-        } else {
-          link.style.display = 'block';
-        }
+        link.style.display = 'block';
       });
 
       // Mostrar link de Sair
