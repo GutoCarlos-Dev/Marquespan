@@ -25,6 +25,7 @@
   .sidebar {
     transform: translateX(-100%);
     width: 280px;
+    padding: 15px;
   }
 
   .sidebar.collapsed {

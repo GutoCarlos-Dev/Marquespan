@@ -380,6 +380,96 @@ button:hover {
   .form-duplo {
     flex-direction: column;
   }
+
+  /* Ajustes adicionais para mobile */
+  .painel-navegacao {
+    gap: 10px;
+  }
+
+  .painel-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .painel-conteudo {
+    padding: 15px;
+  }
+
+  .form-bloco {
+    padding: 15px;
+  }
+
+  .form-linha {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .form-linha label {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .form-linha input,
+  .form-linha select,
+  .form-linha textarea {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .tabela-itens,
+  .tabela-resultados {
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  .tabela-itens th,
+  .tabela-itens td,
+  .tabela-resultados th,
+  .tabela-resultados td {
+    padding: 8px 4px;
+    white-space: nowrap;
+  }
+
+  .modal-acoes {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-acoes button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  /* Ajustes para painéis de navegação */
+  .painel-navegacao button {
+    margin-bottom: 5px;
+  }
+
+  /* Ajustes para formulários de itens */
+  .form-itens {
+    padding: 15px;
+  }
+
+  .form-itens .form-linha {
+    margin-bottom: 15px;
+  }
+
+  /* Ajustes para resumo */
+  .resumo-manutencao {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .resumo-valores {
+    width: 100%;
+    text-align: left;
+  }
 }
 
 /* 📊 Resumo de manutenção */

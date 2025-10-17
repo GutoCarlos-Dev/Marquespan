@@ -141,12 +141,73 @@
   .filtro-container {
     flex-direction: column; /* Empilha os itens verticalmente */
     align-items: stretch;   /* Estica os itens para ocupar a largura total */
+    gap: 15px !important;
+    padding: 15px !important;
   }
 
   .filtro-container input[type="text"],
   .filtro-container input[type="number"],
+  .filtro-container select,
   .filtro-container .btn-acao {
-    width: 100%; /* Ocupa 100% da largura */
+    width: 100% !important; /* Ocupa 100% da largura */
+    font-size: 16px !important; /* Evita zoom no iOS */
+    padding: 12px !important;
     justify-content: center; /* Centraliza o conteúdo dos botões */
+  }
+
+  /* Ajustes específicos para filtros de pneus */
+  .filtros-pneus {
+    flex-direction: column !important;
+    gap: 15px !important;
+    align-items: stretch !important;
+  }
+
+  .filtros-pneus .filtro-pneu-item {
+    width: 100% !important;
+  }
+
+  .filtros-pneus .filtro-pneu-item input,
+  .filtros-pneus .filtro-pneu-item select {
+    width: 100% !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+
+  .filtros-pneus .filtro-pneu-item label {
+    display: block !important;
+    margin-bottom: 5px !important;
+    font-size: 14px !important;
+  }
+
+  /* Ajustes para filtros de estoque */
+  .filtros-estoque-container {
+    padding: 15px !important;
+  }
+
+  .filtros-estoque {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+
+  .filtros-estoque .filtro-item {
+    width: 100% !important;
+  }
+
+  .filtros-estoque .filtro-item input {
+    width: 100% !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+
+  .filtros-estoque .filtro-item label {
+    display: block !important;
+    margin-bottom: 5px !important;
+    font-size: 14px !important;
+  }
+
+  .filtros-estoque .btn-acao {
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 16px !important;
   }
 }

@@ -109,16 +109,18 @@
 
   /* Campos de formulário no mobile */
   .form-grid input,
-  .form-grid select {
+  .form-grid select,
+  .form-grid textarea {
     font-size: 16px !important; /* Evita zoom no iOS */
     padding: 12px !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Descrição com largura maior no mobile */
   #descricao {
     width: 100% !important;
-    height: 45px !important;
+    height: 60px !important;
   }
 
   /* Botões do modal no mobile */
@@ -131,6 +133,17 @@
     width: 100% !important;
     padding: 12px !important;
     font-size: 16px !important;
+  }
+
+  /* Ajustes para containers de select com botões */
+  .marca-container, .modelo-container, .tipo-container {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .marca-container button, .modelo-container button, .tipo-container button {
+    width: 100% !important;
+    padding: 10px !important;
   }
 }
 

@@ -13,6 +13,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  overflow-x: auto; /* Permite rolagem horizontal */
 }
 
 /* 🧩 Cabeçalho e linhas da grid */
@@ -79,4 +80,48 @@
 
 .grid-actions .btn-acao.excluir:hover {
   background-color: #c0392b;
+}
+
+/* 📱 Responsividade para grids */
+@media (max-width: 768px) {
+  .grid-veiculos {
+    min-width: auto; /* Remove largura mínima para mobile */
+    padding: 10px;
+    margin-top: 20px;
+  }
+
+  .grid-header,
+  .grid-row {
+    grid-template-columns: 1fr; /* Empilha as colunas em uma linha */
+    gap: 10px;
+    text-align: left;
+  }
+
+  .grid-header > div,
+  .grid-row > div {
+    padding: 8px 4px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 12px;
+  }
+
+  .grid-header > div::before,
+  .grid-row > div::before {
+    content: attr(data-label) ": ";
+    font-weight: bold;
+    color: #2e7d32;
+  }
+
+  .grid-header > div::before {
+    color: #2e7d32;
+  }
+
+  .grid-actions {
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
+
+  .grid-actions .btn-acao {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
 }

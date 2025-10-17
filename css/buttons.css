@@ -36,6 +36,21 @@
   background-color: #e07064;
 }
 
+/* 📱 Responsividade para botões */
+@media (max-width: 768px) {
+  .btn-acao {
+    padding: 10px 16px;
+    font-size: 1rem;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 5px;
+  }
+
+  .btn-acao i {
+    font-size: 1rem;
+  }
+}
+
 /* 🟢 Botões da seção de ações de veículos */
 .acoes-veiculos {
   display: flex;
