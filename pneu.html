@@ -14,11 +14,14 @@
   <main class="main-content">
     <header class="form-section-header" style="font-size: 2.5rem; font-weight: bold; text-align: center; padding: 30px 10px; background: linear-gradient(135deg, #28a745 0%, #ffffff 50%, #dc3545 100%); color: #333; margin-bottom: 30px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);"><i class="fas fa-tire" style="margin-right: 10px;"></i> Movimentação de Pneus </header>
     <section class="content-section">
-      <div class="form-container">
+      <!-- Card do Formulário de Cadastro -->
+      <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-plus-circle" style="margin-right: 8px;"></i>Cadastro e Aplicação de Pneu</h3>
+        </div>
         <form id="formPneu">
           <div class="form-bloco">
-            <h3>Cadastro e Aplicação de Pneu</h3>
-            <div class="form-grid">
+            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
               <label>Data</label>
               <input type="datetime-local" name="data" id="data" readonly />
 
@@ -69,16 +72,19 @@
             </div>
           </div>
 
-          <div class="modal-actions">
-            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" id="btnContagemEstoque"><i class="fas fa-clipboard-list"></i> Contagem de Estoque</button>
-            <button type="button" onclick="clearForm()"><i class="fas fa-times"></i> Cancelar</button>
+          <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <button type="submit" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);"><i class="fas fa-save" style="margin-right: 8px;"></i>Salvar</button>
+            <button type="button" id="btnContagemEstoque" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);"><i class="fas fa-clipboard-list" style="margin-right: 8px;"></i>Contagem de Estoque</button>
+            <button type="button" onclick="clearForm()" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancelar</button>
           </div>
         </form>
       </div>
 
-      <div class="estoque-pneus">
-        <h2 class="section-title">Lançamento de Pneus</h2>
+      <!-- Card da Tabela de Movimentações -->
+      <div class="table-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <div class="table-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-list" style="margin-right: 8px;"></i>Lançamento de Pneus</h2>
+        </div>
         <div class="filtro-table-wrapper" style="overflow-x: auto; margin-bottom: 20px;">
           <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: none; min-width: 800px; background-color: transparent;">
             <tbody>
@@ -143,7 +149,7 @@
                 </td>
                 <td style="padding: 8px; text-align: center; border: none;">
                   <div style="display: flex; flex-direction: column; align-items: center;">
-                    <button type="button" id="btn-buscar" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px;"><i class="fas fa-search"></i> Buscar</button>
+                    <button type="button" id="btn-buscar" style="padding: 10px 20px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);"><i class="fas fa-search" style="margin-right: 8px;"></i>Buscar</button>
                   </div>
                 </td>
               </tr>
@@ -152,22 +158,22 @@
         </div>
         </div>
 
-        <div class="grid-wrapper" style="overflow-x: auto;">
-          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column;">
-            <div class="grid-header" style="display: flex; white-space: nowrap; border-bottom: 2px solid #ddd; background-color: #f8f9fa; font-weight: bold;">
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Placa</div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Marca</div>
-              <div style="flex: 1.2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Modelo</div>
-              <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">Vida</div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Tipo</div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Status</div>
-              <div style="flex: 2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Descrição</div>
-              <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Data</div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Usuário</div>
-              <div style="flex: 0.5; min-width: 60px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">Qtd</div>
-              <div style="flex: 1; min-width: 150px; padding: 12px 8px; text-align: center;">Ações</div>
+        <div class="grid-wrapper" style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;">
+            <div class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #28a745, #20c997); color: white; font-weight: 600; border-bottom: 2px solid #1e7e34;">
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-car" style="margin-right: 5px;"></i>Placa</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+              <div style="flex: 1.2; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+              <div style="flex: 0.5; min-width: 50px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-info-circle" style="margin-right: 5px;"></i>Status</div>
+              <div style="flex: 2; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-file-alt" style="margin-right: 5px;"></i>Descrição</div>
+              <div style="flex: 1.5; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-calendar" style="margin-right: 5px;"></i>Data</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-user" style="margin-right: 5px;"></i>Usuário</div>
+              <div style="flex: 0.5; min-width: 60px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Qtd</div>
+              <div style="flex: 1; min-width: 150px; padding: 15px 12px; text-align: center;"><i class="fas fa-tools" style="margin-right: 5px;"></i>Ações</div>
             </div>
-            <div id="grid-pneus-body" class="grid-body"></div>
+            <div id="grid-pneus-body" class="grid-body" style="background: #f8f9fa;"></div>
           </section>
         </div>
       </div>
