@@ -155,7 +155,7 @@ async function handleSubmit(e) {
   const formData = new FormData(e.target);
   const pneu = {
     data: new Date().toISOString(),
-    placa: formData.get('placa'),
+    placa: formData.get('placa')?.toUpperCase(),
     marca: formData.get('marca'),
     modelo: formData.get('modelo'),
     vida: parseInt(formData.get('vida') || 0),
