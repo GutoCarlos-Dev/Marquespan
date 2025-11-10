@@ -1,6 +1,12 @@
 -- Script SQL para criar trigger que mantém a tabela estoque_pneus atualizada
 -- Execute este script no SQL Editor do Supabase
 
+-- Primeiro, remover a constraint única existente que está causando conflito
+ALTER TABLE estoque_pneus DROP CONSTRAINT IF EXISTS estoque_pneus_marca_modelo_tipo_vida_key;
+
+-- Criar nova constraint única incluindo placa
+ALTER TABLE estoque_pneus ADD CONSTRAINT estoque_pneus_placa_marca_modelo_tipo_vida_key UNIQUE (placa, marca, modelo, tipo, vida);
+
 -- Criar função para atualizar estoque de pneus
 CREATE OR REPLACE FUNCTION atualizar_estoque_pneus()
 RETURNS TRIGGER AS $$
