@@ -209,7 +209,8 @@ async function handleSubmit(e) {
 
       if (insertError) {
         console.error('Erro ao cadastrar pneu:', insertError);
-        alert('Erro ao cadastrar pneu.');
+        console.error('Detalhes do erro:', JSON.stringify(insertError, null, 2));
+        alert(`Erro ao cadastrar pneu: ${insertError.message || 'Erro desconhecido'}`);
         return;
       }
 
