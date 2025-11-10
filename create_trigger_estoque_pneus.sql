@@ -7,8 +7,8 @@ ALTER TABLE estoque_pneus DROP CONSTRAINT IF EXISTS estoque_pneus_marca_modelo_t
 -- Remover constraint se já existir
 ALTER TABLE estoque_pneus DROP CONSTRAINT IF EXISTS estoque_pneus_placa_marca_modelo_tipo_vida_key;
 
--- Criar nova constraint única incluindo placa
-ALTER TABLE estoque_pneus ADD CONSTRAINT estoque_pneus_placa_marca_modelo_tipo_vida_key UNIQUE (placa, marca, modelo, tipo, vida);
+-- Criar nova constraint única SEM placa (apenas marca, modelo, tipo, vida)
+ALTER TABLE estoque_pneus ADD CONSTRAINT estoque_pneus_marca_modelo_tipo_vida_key UNIQUE (marca, modelo, tipo, vida);
 
 -- Criar função para atualizar estoque de pneus
 CREATE OR REPLACE FUNCTION atualizar_estoque_pneus()
@@ -16,11 +16,10 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Para INSERT ou UPDATE
   IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-    -- Verificar se já existe registro na tabela estoque_pneus
+    -- Verificar se já existe registro na tabela estoque_pneus (SEM placa)
     IF EXISTS (
       SELECT 1 FROM estoque_pneus
-      WHERE placa = NEW.placa
-        AND marca = NEW.marca
+      WHERE marca = NEW.marca
         AND modelo = NEW.modelo
         AND vida = NEW.vida
         AND tipo = NEW.tipo
@@ -32,8 +31,7 @@ BEGIN
         WHEN NEW.status = 'SAIDA' THEN -NEW.quantidade
         ELSE 0
       END
-      WHERE placa = NEW.placa
-        AND marca = NEW.marca
+      WHERE marca = NEW.marca
         AND modelo = NEW.modelo
         AND vida = NEW.vida
         AND tipo = NEW.tipo;
@@ -50,15 +48,14 @@ BEGIN
 
   -- Para DELETE
   IF TG_OP = 'DELETE' THEN
-    -- Reverter a movimentação
+    -- Reverter a movimentação (SEM placa)
     UPDATE estoque_pneus
     SET quantidade = quantidade - CASE
       WHEN OLD.status = 'ENTRADA' THEN OLD.quantidade
       WHEN OLD.status = 'SAIDA' THEN -OLD.quantidade
       ELSE 0
     END
-    WHERE placa = OLD.placa
-      AND marca = OLD.marca
+    WHERE marca = OLD.marca
       AND modelo = OLD.modelo
       AND vida = OLD.vida
       AND tipo = OLD.tipo;
