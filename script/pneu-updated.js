@@ -56,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize selects
   initializeSelects();
 
+  // Load placas
+  carregarPlacas();
+
   // Load pneus
   carregarPneus();
 
@@ -80,6 +83,34 @@ function initializeSelects() {
   // Similar for others
   selectModelo.innerHTML = '<option value="">Selecione</option>' + modelos.map(m => `<option value="${m}">${m}</option>`).join('');
   selectTipo.innerHTML = '<option value="">Selecione</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+// 📦 Carregar placas do Supabase
+async function carregarPlacas() {
+  const selectPlaca = document.getElementById('placa');
+  if (!selectPlaca) return;
+
+  try {
+    const { data: placas, error } = await supabase
+      .from('veiculos')
+      .select('placa')
+      .order('placa', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao carregar placas:', error);
+      return;
+    }
+
+    selectPlaca.innerHTML = '<option value="">Selecione</option>';
+    placas.forEach(veiculo => {
+      const option = document.createElement('option');
+      option.value = veiculo.placa;
+      option.textContent = veiculo.placa;
+      selectPlaca.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar placas:', error);
+  }
 }
 
 function getCurrentUserName() {
@@ -124,6 +155,7 @@ async function handleSubmit(e) {
   const formData = new FormData(e.target);
   const pneu = {
     data: new Date().toISOString(),
+    placa: formData.get('placa'),
     marca: formData.get('marca'),
     modelo: formData.get('modelo'),
     vida: parseInt(formData.get('vida') || 0),
@@ -223,6 +255,7 @@ async function carregarPneus() {
 
 // 🔍 Buscar pneus no Supabase
 async function buscarPneus() {
+  const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
   const marca = document.getElementById('campo-marca')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo')?.value.trim().toUpperCase();
 
@@ -233,6 +266,9 @@ async function buscarPneus() {
       .order('marca', { ascending: true })
       .order('data', { ascending: false });
 
+    if (placa) {
+      query = query.ilike('placa', `%${placa}%`);
+    }
     if (marca) {
       query = query.ilike('marca', `%${marca}%`);
     }
@@ -301,8 +337,9 @@ function renderizarPneus(lista) {
     }
 
     row.innerHTML = `
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.placa || ''}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.marca}</div>
-      <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.modelo}</div>
+      <div style="flex: 1.2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.modelo}</div>
       <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${pneu.vida || 0}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.tipo}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.status || ''}</div>
@@ -339,6 +376,7 @@ window.editarPneu = async function(id) {
 
     // Populate form
     document.getElementById('data').value = pneu.data ? new Date(pneu.data).toISOString().slice(0, 16) : '';
+    document.getElementById('placa').value = pneu.placa || '';
     document.getElementById('marca').value = pneu.marca;
     document.getElementById('modelo').value = pneu.modelo;
     document.getElementById('vida').value = pneu.vida || 0;

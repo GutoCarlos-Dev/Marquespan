@@ -22,6 +22,11 @@
               <label>Data</label>
               <input type="datetime-local" name="data" id="data" readonly />
 
+              <label>Placa *</label>
+              <select name="placa" id="placa" required>
+                <option value="">Selecione</option>
+              </select>
+
               <label>Marca *</label>
               <select name="marca" id="marca" required>
                 <option value="">Selecione</option>
@@ -78,6 +83,10 @@
         <legend>Filtros</legend>
         <div class="filtros-pneus" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px;">
           <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
+            <label for="campo-placa" style="font-size: 12px; margin-bottom: 5px;">Placa</label>
+            <input type="text" id="campo-placa" placeholder="Digite a placa" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+          </div>
+          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
             <label for="campo-marca" style="font-size: 12px; margin-bottom: 5px;">Marca</label>
             <input type="text" id="campo-marca" placeholder="Digite a marca" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
           </div>
@@ -122,8 +131,9 @@
         <div class="grid-wrapper" style="overflow-x: auto;">
           <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column;">
             <div class="grid-header" style="display: flex; white-space: nowrap; border-bottom: 2px solid #ddd; background-color: #f8f9fa; font-weight: bold;">
+              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Placa</div>
               <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Marca</div>
-              <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Modelo</div>
+              <div style="flex: 1.2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Modelo</div>
               <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">Vida</div>
               <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Tipo</div>
               <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Status</div>
