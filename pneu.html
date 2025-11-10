@@ -79,53 +79,77 @@
 
       <div class="estoque-pneus">
         <h2 class="section-title">Movimentação Pneus</h2>
-        <fieldset class="estoque-pneus">
-        <legend>Filtros</legend>
-        <div class="filtros-pneus" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px;">
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-placa" style="font-size: 12px; margin-bottom: 5px;">Placa</label>
-            <input type="text" id="campo-placa" placeholder="Digite a placa" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-marca" style="font-size: 12px; margin-bottom: 5px;">Marca</label>
-            <input type="text" id="campo-marca" placeholder="Digite a marca" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-modelo" style="font-size: 12px; margin-bottom: 5px;">Modelo</label>
-            <input type="text" id="campo-modelo" placeholder="Digite o modelo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-vida" style="font-size: 12px; margin-bottom: 5px;">Vida</label>
-            <input type="number" id="campo-vida" placeholder="Vida" min="0" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 80px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-tipo" style="font-size: 12px; margin-bottom: 5px;">Tipo</label>
-            <input type="text" id="campo-tipo" placeholder="Digite o tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-descricao" style="font-size: 12px; margin-bottom: 5px;">Descrição</label>
-            <input type="text" id="campo-descricao" placeholder="Digite a descrição" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 140px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-status" style="font-size: 12px; margin-bottom: 5px;">Status</label>
-            <select id="campo-status" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
-              <option value="">Todos</option>
-              <option value="ENTRADA">Entrada</option>
-              <option value="SAIDA">Saída</option>
-            </select>
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-data" style="font-size: 12px; margin-bottom: 5px;">Data</label>
-            <input type="date" id="campo-data" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <label for="campo-usuario" style="font-size: 12px; margin-bottom: 5px;">Usuário</label>
-            <input type="text" id="campo-usuario" placeholder="Digite o usuário" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
-          </div>
-          <div class="filtro-pneu-item" style="display: flex; flex-direction: column;">
-            <button type="button" id="btn-buscar" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px;"><i class="fas fa-search"></i> Buscar</button>
-          </div>
-        </fieldset>
+        <div class="filtro-table-wrapper" style="overflow-x: auto; margin-bottom: 20px;">
+          <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: none; min-width: 800px; background-color: transparent;">
+            <tbody>
+              <tr>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-placa" style="font-size: 12px; margin-bottom: 5px;">Placa</label>
+                    <input type="text" id="campo-placa" placeholder="Digite a placa" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-marca" style="font-size: 12px; margin-bottom: 5px;">Marca</label>
+                    <input type="text" id="campo-marca" placeholder="Digite a marca" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-modelo" style="font-size: 12px; margin-bottom: 5px;">Modelo</label>
+                    <input type="text" id="campo-modelo" placeholder="Digite o modelo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-vida" style="font-size: 12px; margin-bottom: 5px;">Vida</label>
+                    <input type="number" id="campo-vida" placeholder="Vida" min="0" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 80px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-tipo" style="font-size: 12px; margin-bottom: 5px;">Tipo</label>
+                    <input type="text" id="campo-tipo" placeholder="Digite o tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-descricao" style="font-size: 12px; margin-bottom: 5px;">Descrição</label>
+                    <input type="text" id="campo-descricao" placeholder="Digite a descrição" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 140px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-status" style="font-size: 12px; margin-bottom: 5px;">Status</label>
+                    <select id="campo-status" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
+                      <option value="">Todos</option>
+                      <option value="ENTRADA">Entrada</option>
+                      <option value="SAIDA">Saída</option>
+                    </select>
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-data" style="font-size: 12px; margin-bottom: 5px;">Data</label>
+                    <input type="date" id="campo-data" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-usuario" style="font-size: 12px; margin-bottom: 5px;">Usuário</label>
+                    <input type="text" id="campo-usuario" placeholder="Digite o usuário" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <button type="button" id="btn-buscar" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px;"><i class="fas fa-search"></i> Buscar</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         </div>
 
         <div class="grid-wrapper" style="overflow-x: auto;">
