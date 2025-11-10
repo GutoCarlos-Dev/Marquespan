@@ -443,6 +443,7 @@ async function handleContagemSubmit(e) {
   const formData = new FormData(e.target);
   const pneu = {
     data: new Date().toISOString(),
+    placa: 'CONTROLE - SP',
     marca: formData.get('marcaContagem'),
     modelo: formData.get('modeloContagem'),
     vida: parseInt(formData.get('vidaContagem') || 0),
