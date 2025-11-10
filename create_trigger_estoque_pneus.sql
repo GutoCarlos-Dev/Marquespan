@@ -4,6 +4,9 @@
 -- Primeiro, remover a constraint única existente que está causando conflito
 ALTER TABLE estoque_pneus DROP CONSTRAINT IF EXISTS estoque_pneus_marca_modelo_tipo_vida_key;
 
+-- Remover constraint se já existir
+ALTER TABLE estoque_pneus DROP CONSTRAINT IF EXISTS estoque_pneus_placa_marca_modelo_tipo_vida_key;
+
 -- Criar nova constraint única incluindo placa
 ALTER TABLE estoque_pneus ADD CONSTRAINT estoque_pneus_placa_marca_modelo_tipo_vida_key UNIQUE (placa, marca, modelo, tipo, vida);
 
