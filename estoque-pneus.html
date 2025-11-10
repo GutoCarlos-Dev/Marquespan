@@ -21,6 +21,7 @@
         <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid #57ee77; min-width: 600px;">
         <thead>
           <tr style="background-color: #d4f7dc;">
+            <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Placa</th>
             <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Marca</th>
             <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Modelo</th>
             <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Vida</th>
@@ -30,6 +31,9 @@
         </thead>
         <tbody>
           <tr>
+            <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
+              <input type="text" id="campo-placa-estoque" placeholder="Placa" list="placas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
+            </td>
             <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
               <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
             </td>
@@ -50,6 +54,7 @@
           </tr>
         </tbody>
       </table>
+      <datalist id="placas-list"></datalist>
       <datalist id="marcas-list"></datalist>
       <datalist id="modelos-list"></datalist>
       <datalist id="tipos-list"></datalist>
@@ -57,6 +62,7 @@
     <section class="content-section">
         <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column;">
             <div class="grid-header" style="display: flex; white-space: nowrap; border-bottom: 2px solid #ddd; background-color: #f8f9fa; font-weight: bold;">
+            <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Placa</div>
             <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Marca</div>
             <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Modelo</div>
             <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">Vida</div>
@@ -66,6 +72,7 @@
           <div id="grid-estoque-body" class="grid-body"></div>
           <div id="total-estoque" class="grid-total" style="display: flex; white-space: nowrap; border-top: 2px solid #ddd; background-color: #e9ecef; font-weight: bold;">
             <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Total Geral</div>
+            <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
             <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
             <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;"></div>
             <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>

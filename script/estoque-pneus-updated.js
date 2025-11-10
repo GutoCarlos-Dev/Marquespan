@@ -33,6 +33,7 @@ async function carregarEstoque() {
 }
 
 async function buscarEstoque() {
+  const placa = document.getElementById('campo-placa-estoque')?.value.trim().toUpperCase();
   const marca = document.getElementById('campo-marca-estoque')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo-estoque')?.value.trim().toUpperCase();
   const vida = document.getElementById('campo-vida-estoque')?.value.trim();
@@ -42,9 +43,13 @@ async function buscarEstoque() {
     let query = supabase
       .from('estoque_pneus')
       .select('*')
+      .order('placa', { ascending: true })
       .order('marca', { ascending: true })
       .order('modelo', { ascending: true });
 
+    if (placa) {
+      query = query.ilike('placa', `%${placa}%`);
+    }
     if (marca) {
       query = query.ilike('marca', `%${marca}%`);
     }
@@ -93,6 +98,7 @@ function renderizarEstoque(lista) {
     row.style.cursor = 'default';
 
     row.innerHTML = `
+      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.placa}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.marca}</div>
       <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.modelo}</div>
       <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${item.vida}</div>
@@ -162,6 +168,7 @@ async function popularDatalists() {
 
 // Função para limpar filtros
 function limparFiltros() {
+  document.getElementById('campo-placa-estoque').value = '';
   document.getElementById('campo-marca-estoque').value = '';
   document.getElementById('campo-modelo-estoque').value = '';
   document.getElementById('campo-vida-estoque').value = '';
@@ -395,6 +402,7 @@ async function gerarGraficos() {
 async function exportarEstoqueXLSX() {
   try {
     // Buscar dados atuais do estoque (mesmos filtros aplicados na tela)
+    const placa = document.getElementById('campo-placa-estoque')?.value.trim().toUpperCase();
     const marca = document.getElementById('campo-marca-estoque')?.value.trim().toUpperCase();
     const modelo = document.getElementById('campo-modelo-estoque')?.value.trim().toUpperCase();
     const vida = document.getElementById('campo-vida-estoque')?.value.trim();
@@ -403,9 +411,13 @@ async function exportarEstoqueXLSX() {
     let query = supabase
       .from('estoque_pneus')
       .select('*')
+      .order('placa', { ascending: true })
       .order('marca', { ascending: true })
       .order('modelo', { ascending: true });
 
+    if (placa) {
+      query = query.ilike('placa', `%${placa}%`);
+    }
     if (marca) {
       query = query.ilike('marca', `%${marca}%`);
     }
@@ -441,6 +453,7 @@ async function exportarEstoqueXLSX() {
     dadosXLSX.push(['MARQUESPAN - SISTEMA DE GESTÃO DE PNEUS']);
     dadosXLSX.push([`Relatório de Estoque - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`]);
     dadosXLSX.push(['Filtros aplicados:']);
+    dadosXLSX.push([placa ? `Placa: ${placa}` : 'Placa: Todos']);
     dadosXLSX.push([marca ? `Marca: ${marca}` : 'Marca: Todos']);
     dadosXLSX.push([modelo ? `Modelo: ${modelo}` : 'Modelo: Todos']);
     dadosXLSX.push([vida ? `Vida: ${vida}` : 'Vida: Todos']);
@@ -448,18 +461,18 @@ async function exportarEstoqueXLSX() {
     dadosXLSX.push(['']); // Linha em branco
 
     // Cabeçalhos das colunas
-    dadosXLSX.push(['MARCA', 'MODELO', 'VIDA', 'TIPO', 'QUANTIDADE EM ESTOQUE']);
+    dadosXLSX.push(['PLACA', 'MARCA', 'MODELO', 'VIDA', 'TIPO', 'QUANTIDADE EM ESTOQUE']);
 
     // Dados dos itens
     lista.forEach(item => {
-      dadosXLSX.push([item.marca, item.modelo, item.vida, item.tipo, item.quantidade]);
+      dadosXLSX.push([item.placa, item.marca, item.modelo, item.vida, item.tipo, item.quantidade]);
     });
 
     // Calcular totais
     const totalQuantidade = lista.reduce((sum, item) => sum + item.quantidade, 0);
 
     // Adicionar linha de total
-    dadosXLSX.push(['TOTAL GERAL', '', '', '', totalQuantidade]);
+    dadosXLSX.push(['TOTAL GERAL', '', '', '', '', totalQuantidade]);
     dadosXLSX.push(['']); // Linha em branco
     dadosXLSX.push([`Total de registros exportados: ${lista.length}`]);
     dadosXLSX.push([`Gerado por: Sistema Marquespan - ${new Date().toLocaleString('pt-BR')}`]);
@@ -470,6 +483,7 @@ async function exportarEstoqueXLSX() {
 
     // Definir larguras das colunas
     ws['!cols'] = [
+      { wch: 15 }, // PLACA
       { wch: 20 }, // MARCA
       { wch: 30 }, // MODELO
       { wch: 8 },  // VIDA
