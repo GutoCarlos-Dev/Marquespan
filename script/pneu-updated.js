@@ -909,13 +909,6 @@ async function gerarPDFCodigosLancamento(codigos) {
     doc.setTextColor(40); // Restaurar cor padrão (cinza escuro)
     startY += lineHeight;
 
-    // Coluna da Direita (Assinaturas)
-    let signatureY = 40;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status:', rightMargin, signatureY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(' _____________________________', rightMargin + doc.getTextWidth('Status:'), signatureY);
-
     signatureY += lineHeight * 2; // Espaço maior entre as assinaturas
 
     doc.setFont('helvetica', 'bold');
