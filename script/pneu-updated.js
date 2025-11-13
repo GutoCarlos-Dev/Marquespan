@@ -512,35 +512,46 @@ async function handleContagemSubmit(e) {
 // Gerar códigos de marca de fogo para um lançamento
 async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
   try {
+    console.log('Iniciando geração de códigos para lançamento:', lancamentoId, 'quantidade:', quantidade);
+
     const codigosParaInserir = [];
 
-    for (let i = 1; i <= quantidade; i++) {
-      // Gerar código sequencial (simular função do banco)
-      const { data: ultimoCodigo, error: ultimoError } = await supabase
-        .from('marcas_fogo_lancamento')
-        .select('codigo_marca_fogo')
-        .order('codigo_marca_fogo', { ascending: false })
-        .limit(1);
+    // Buscar todos os códigos existentes para determinar o próximo número
+    const { data: todosCodigos, error: buscaError } = await supabase
+      .from('marcas_fogo_lancamento')
+      .select('codigo_marca_fogo')
+      .order('codigo_marca_fogo', { ascending: false });
 
-      if (ultimoError) {
-        console.error('Erro ao buscar último código:', ultimoError);
-        continue;
-      }
+    if (buscaError) {
+      console.error('Erro ao buscar códigos existentes:', buscaError);
+      throw new Error('Erro ao buscar códigos existentes');
+    }
 
-      let proximoNumero = 1;
-      if (ultimoCodigo && ultimoCodigo.length > 0) {
-        const ultimoNum = parseInt(ultimoCodigo[0].codigo_marca_fogo);
-        proximoNumero = ultimoNum + 1;
-      }
+    console.log('Códigos existentes encontrados:', todosCodigos?.length || 0);
 
+    let proximoNumero = 1;
+    if (todosCodigos && todosCodigos.length > 0) {
+      // Encontrar o maior número
+      const maiorCodigo = Math.max(...todosCodigos.map(c => parseInt(c.codigo_marca_fogo) || 0));
+      proximoNumero = maiorCodigo + 1;
+      console.log('Maior código encontrado:', maiorCodigo, 'próximo número:', proximoNumero);
+    }
+
+    // Gerar códigos sequenciais
+    for (let i = 0; i < quantidade; i++) {
       const novoCodigo = proximoNumero.toString().padStart(6, '0');
+      console.log('Gerando código:', novoCodigo, 'para posição:', i + 1);
 
       codigosParaInserir.push({
         lancamento_id: lancamentoId,
         codigo_marca_fogo: novoCodigo,
         usuario_criacao: usuario
       });
+
+      proximoNumero++;
     }
+
+    console.log('Códigos para inserir:', codigosParaInserir);
 
     if (codigosParaInserir.length > 0) {
       const { error: insertError } = await supabase
@@ -549,12 +560,15 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
 
       if (insertError) {
         console.error('Erro ao inserir códigos de marca de fogo:', insertError);
-        alert('Aviso: Lançamento realizado, mas houve erro na geração dos códigos de marca de fogo.');
+        console.error('Detalhes do erro:', JSON.stringify(insertError, null, 2));
+        throw new Error('Erro ao inserir códigos: ' + insertError.message);
       }
+
+      console.log('Códigos inseridos com sucesso!');
     }
   } catch (error) {
     console.error('Erro geral na geração de códigos:', error);
-    alert('Aviso: Lançamento realizado, mas houve erro na geração dos códigos de marca de fogo.');
+    throw error; // Re-throw para que o try-catch no handleSubmit capture
   }
 }
 
