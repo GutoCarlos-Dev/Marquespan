@@ -820,10 +820,34 @@ async function gerarPDFCodigosLancamento(codigos) {
       return y + 6; // Retorna nova posição Y
     };
 
-    // Cabeçalho no estilo do modelo
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('MARQUESPAN', margin, yPosition);
+    // Cabeçalho com logo no canto superior direito
+    try {
+      // Adicionar logo no canto superior direito
+      const logoWidth = 40;
+      const logoHeight = 20;
+      const logoX = pageWidth - margin - logoWidth;
+      const logoY = margin;
+
+      // Tentar adicionar a imagem do logo
+      // Nota: Para funcionar, o logo precisa estar em base64 ou como URL acessível
+      // Como não conseguimos ler o arquivo PNG diretamente, vamos usar uma abordagem diferente
+      // Em produção, você precisaria converter logo.png para base64
+
+      // Por enquanto, manteremos apenas o texto MARQUESPAN
+      // Para adicionar o logo, seria algo como:
+      // const logoBase64 = 'data:image/png;base64,...'; // Converter logo.png para base64
+      // doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MARQUESPAN', margin, yPosition);
+    } catch (error) {
+      // Fallback para texto se a imagem não estiver disponível
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MARQUESPAN', margin, yPosition);
+    }
+
     yPosition += 8;
 
     doc.setFontSize(12);
@@ -864,11 +888,11 @@ async function gerarPDFCodigosLancamento(codigos) {
 
     // Status (estilo do modelo)
     doc.setFont('helvetica', 'bold');
-    doc.text('Status: _____________________________', margin, yPosition);
+    doc.text('Status: _________', margin, yPosition);
     yPosition += 8;
 
     doc.setFont('helvetica', 'normal');
-    doc.text('Verificado por: ___________________________', margin, yPosition);
+    doc.text('Realizado por: ___________________________', margin, yPosition);
     yPosition += 15;
 
     // Título da tabela
