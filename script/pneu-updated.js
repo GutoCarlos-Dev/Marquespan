@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('formPneu');
   const btnBuscar = document.getElementById('btn-buscar');
   const btnContagemEstoque = document.getElementById('btnContagemEstoque');
+  const btnRelatorioMarcaFogo = document.getElementById('btnRelatorioMarcaFogo');
   const closeModalContagem = document.getElementById('closeModalContagem');
   const cancelModalContagem = document.getElementById('cancelModalContagem');
   const formContagem = document.getElementById('formContagemEstoque');
@@ -33,6 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
   btnContagemEstoque?.addEventListener('click', () => {
     document.getElementById('modalContagemEstoque').style.display = 'block';
     initializeSelectsContagem();
+  });
+
+  // Relatório Marca de Fogo
+  btnRelatorioMarcaFogo?.addEventListener('click', () => {
+    gerarRelatorioMarcaFogo();
   });
 
   closeModalContagem?.addEventListener('click', () => {
@@ -345,6 +351,7 @@ function renderizarPneus(lista) {
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.tipo}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.status || ''}</div>
       <div style="flex: 2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.descricao || ''}</div>
+      <div style="flex: 1; min-width: 100px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee; font-weight: bold; color: ${pneu.codigo_marca_fogo ? '#dc3545' : '#6c757d'};">${pneu.codigo_marca_fogo || '-'}</div>
       <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.usuario || ''}</div>
       <div style="flex: 0.5; min-width: 60px; padding: 12px 8px; text-align: center; ${isEstoque ? '' : 'border-right: 1px solid #eee;'}">${pneu.quantidade || 0}</div>
@@ -478,5 +485,112 @@ async function handleContagemSubmit(e) {
   } catch (error) {
     console.error('Erro na contagem:', error);
     alert('Erro inesperado na contagem.');
+  }
+}
+
+// 📊 Gerar relatório de marca de fogo
+async function gerarRelatorioMarcaFogo() {
+  try {
+    // Buscar TODOS os pneus com código de marca de fogo (gerados em qualquer entrada)
+    const { data: pneus, error } = await supabase
+      .from('pneus')
+      .select('*')
+      .not('codigo_marca_fogo', 'is', null)
+      .eq('tipo', 'NOVO')
+      .eq('descricao', 'ESTOQUE')
+      .eq('status', 'ENTRADA')
+      .order('codigo_marca_fogo', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar dados para relatório:', error);
+      alert('Erro ao gerar relatório.');
+      return;
+    }
+
+    const lista = pneus || [];
+
+    if (lista.length === 0) {
+      alert('Nenhum pneu com marca de fogo encontrado.');
+      return;
+    }
+
+    // Preparar dados para XLSX
+    const dadosXLSX = [];
+
+    // Cabeçalho com informações da empresa
+    dadosXLSX.push(['MARQUESPAN - RELATÓRIO DE MARCA DE FOGO']);
+    dadosXLSX.push([`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`]);
+    dadosXLSX.push(['Período: Todos os códigos gerados']);
+    dadosXLSX.push(['Filtro: Pneus NOVOS com descrição ESTOQUE e status ENTRADA']);
+    dadosXLSX.push(['']); // Linha em branco
+
+    // Cabeçalhos das colunas
+    dadosXLSX.push(['CÓDIGO MARCA DE FOGO', 'MARCA', 'MODELO', 'TIPO', 'VIDA', 'QUANTIDADE', 'DATA ENTRADA', 'USUÁRIO']);
+
+    // Dados dos pneus
+    lista.forEach(pneu => {
+      dadosXLSX.push([
+        pneu.codigo_marca_fogo,
+        pneu.marca,
+        pneu.modelo,
+        pneu.tipo,
+        pneu.vida || 0,
+        pneu.quantidade || 0,
+        pneu.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : '',
+        pneu.usuario || ''
+      ]);
+    });
+
+    // Estatísticas
+    const totalPneus = lista.reduce((sum, pneu) => sum + (pneu.quantidade || 0), 0);
+    const marcasDistintas = [...new Set(lista.map(p => p.marca))].length;
+    const modelosDistintos = [...new Set(lista.map(p => p.modelo))].length;
+
+    dadosXLSX.push(['']); // Linha em branco
+    dadosXLSX.push(['ESTATÍSTICAS DO RELATÓRIO']);
+    dadosXLSX.push([`Total de códigos gerados: ${lista.length}`]);
+    dadosXLSX.push([`Total de pneus marcados: ${totalPneus}`]);
+    dadosXLSX.push([`Marcas distintas: ${marcasDistintas}`]);
+    dadosXLSX.push([`Modelos distintos: ${modelosDistintos}`]);
+    dadosXLSX.push(['']); // Linha em branco
+    dadosXLSX.push(['INSTRUÇÕES PARA MARCAÇÃO']);
+    dadosXLSX.push(['1. Use o código de marca de fogo para identificar cada pneu fisicamente']);
+    dadosXLSX.push(['2. Marque o código na lateral do pneu com tinta indelével']);
+    dadosXLSX.push(['3. Posicione o código em local visível para facilitar inventário']);
+    dadosXLSX.push(['4. Verifique se o código está legível após a marcação']);
+    dadosXLSX.push(['']); // Linha em branco
+    dadosXLSX.push([`Gerado por: Sistema Marquespan - ${new Date().toLocaleString('pt-BR')}`]);
+
+    // Criar workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(dadosXLSX);
+
+    // Definir larguras das colunas
+    ws['!cols'] = [
+      { wch: 20 }, // CÓDIGO MARCA DE FOGO
+      { wch: 15 }, // MARCA
+      { wch: 25 }, // MODELO
+      { wch: 10 }, // TIPO
+      { wch: 8 },  // VIDA
+      { wch: 12 }, // QUANTIDADE
+      { wch: 15 }, // DATA ENTRADA
+      { wch: 20 }  // USUÁRIO
+    ];
+
+    // Adicionar worksheet ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Relatorio_Marca_Fogo');
+
+    // Nome do arquivo com data e hora
+    const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+    const nomeArquivo = `relatorio_marca_fogo_marquespan_${dataHora}.xlsx`;
+
+    // Salvar arquivo
+    XLSX.writeFile(wb, nomeArquivo);
+
+    // Feedback visual
+    alert(`✅ Relatório de Marca de Fogo gerado com sucesso!\n\n📊 ${lista.length} códigos de marca de fogo\n🛢️ ${totalPneus} pneus marcados\n📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n⏰ Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\nArquivo salvo como: ${nomeArquivo}\n\n📋 Use este relatório para orientar a equipe de marcação física dos pneus.`);
+  } catch (error) {
+    console.error('Erro ao gerar relatório:', error);
+    alert('Erro ao gerar relatório de marca de fogo.');
   }
 }
