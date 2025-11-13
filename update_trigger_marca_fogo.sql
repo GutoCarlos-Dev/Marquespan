@@ -34,36 +34,33 @@ RETURNS TRIGGER AS $$
 DECLARE
   novo_codigo TEXT;
   i INTEGER;
-  lancamento_id INTEGER;
 BEGIN
   -- Para INSERT
   IF TG_OP = 'INSERT' THEN
-    -- Gerar códigos de marca de fogo para cada unidade (quantidade) de pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
+    -- Gerar códigos de marca de fogo para pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
     IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' THEN
-      -- Primeiro, inserir o registro de lançamento (mantém a quantidade original)
-      -- Depois, gerar códigos individuais na tabela marcas_fogo_lancamento
-
       -- Para múltiplas unidades, gerar códigos na tabela separada
       IF NEW.quantidade > 1 THEN
-        -- Inserir o lançamento principal normalmente (com quantidade original)
-        -- Os códigos serão gerados na tabela marcas_fogo_lancamento
-
-        -- Após inserir o lançamento, gerar códigos para cada unidade
-        -- Isso será feito após o INSERT através de uma função separada ou manualmente
-        -- Por enquanto, manter o comportamento atual mas ajustar para usar tabela separada
-
-        -- Para cada unidade do pneu, gerar código na tabela marcas_fogo_lancamento
+        -- Gerar códigos para cada unidade na tabela marcas_fogo_lancamento
         FOR i IN 1..NEW.quantidade LOOP
           novo_codigo := gerar_codigo_marca_fogo();
 
-          -- Inserir código na tabela separada (será feito após o INSERT do lançamento)
-          -- Por enquanto, manter o registro único com quantidade original
+          -- Inserir código na tabela separada
+          INSERT INTO marcas_fogo_lancamento (
+            lancamento_id,
+            codigo_marca_fogo,
+            usuario_criacao
+          ) VALUES (
+            NEW.id,
+            novo_codigo,
+            NEW.usuario
+          );
         END LOOP;
 
         -- Manter o registro único com quantidade original para exibição em grid
         RETURN NEW;
       ELSE
-        -- Para quantidade = 1, processar normalmente
+        -- Para quantidade = 1, gerar código único
         novo_codigo := gerar_codigo_marca_fogo();
         NEW.codigo_marca_fogo := novo_codigo;
         NEW.quantidade := 1;
@@ -148,6 +145,42 @@ DROP TRIGGER IF EXISTS trigger_atualizar_estoque_pneus ON pneus;
 CREATE TRIGGER trigger_atualizar_estoque_pneus
   BEFORE INSERT OR UPDATE OR DELETE ON pneus
   FOR EACH ROW EXECUTE FUNCTION atualizar_estoque_pneus();
+
+-- Criar trigger AFTER INSERT para gerar códigos de marca de fogo
+CREATE OR REPLACE FUNCTION gerar_codigos_marca_fogo_after_insert()
+RETURNS TRIGGER AS $$
+DECLARE
+  novo_codigo TEXT;
+  i INTEGER;
+BEGIN
+  -- Gerar códigos de marca de fogo para pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA' com múltiplas unidades
+  IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' AND NEW.quantidade > 1 THEN
+    -- Gerar códigos para cada unidade na tabela marcas_fogo_lancamento
+    FOR i IN 1..NEW.quantidade LOOP
+      novo_codigo := gerar_codigo_marca_fogo();
+
+      -- Inserir código na tabela separada
+      INSERT INTO marcas_fogo_lancamento (
+        lancamento_id,
+        codigo_marca_fogo,
+        usuario_criacao
+      ) VALUES (
+        NEW.id,
+        novo_codigo,
+        NEW.usuario
+      );
+    END LOOP;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Criar trigger AFTER INSERT
+DROP TRIGGER IF EXISTS trigger_gerar_codigos_after_insert ON pneus;
+CREATE TRIGGER trigger_gerar_codigos_after_insert
+  AFTER INSERT ON pneus
+  FOR EACH ROW EXECUTE FUNCTION gerar_codigos_marca_fogo_after_insert();
 
 -- Verificar se o trigger foi criado
 SELECT trigger_name, event_manipulation, action_timing, action_statement
