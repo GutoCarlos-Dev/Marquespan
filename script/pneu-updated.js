@@ -820,35 +820,32 @@ async function gerarPDFCodigosLancamento(codigos) {
       return y + 6; // Retorna nova posição Y
     };
 
-    // Cabeçalho com logo no canto superior direito
-    try {
-      // Adicionar logo no canto superior direito
-      const logoWidth = 40;
-      const logoHeight = 20;
-      const logoX = pageWidth - margin - logoWidth;
-      const logoY = margin;
+    // --- CABEÇALHO ---
 
-      // Logo em base64 fornecido pelo usuário
-      const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC'; // Substitua este conteúdo
-      const placeholderLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC';
-      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+    // IMPORTANTE: Para usar seu logo 'logo.png', converta-o para o formato Base64.
+    // 1. Acesse um conversor online como: https://www.base64-image.de/
+    // 2. Envie seu arquivo 'logo.png'.
+    // 3. Copie o texto gerado e cole-o dentro das aspas da variável 'logoBase64' abaixo.
+    const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC'; // Substitua este conteúdo
+    const placeholderLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC';
 
-      // Título do relatório ao lado esquerdo
-      doc.setFontSize(12);
-      doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition + 10);
-      yPosition += 25; // Ajustar espaço após a imagem e título
-    } catch (error) {
-      // Fallback para texto se a imagem não estiver disponível
-      console.error('Erro ao adicionar logo:', error);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('MARQUESPAN', margin, yPosition);
-      yPosition += 8;
-
-      doc.setFontSize(12);
-      doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition);
-      yPosition += 15;
+    // Adiciona a logo apenas se não for o placeholder, tratando possíveis erros.
+    if (logoBase64 && logoBase64 !== placeholderLogo) {
+        try {
+            doc.addImage(logoBase64, 'PNG', 150, 8, 45, 20);
+        } catch (e) {
+            console.warn('Não foi possível adicionar o logo ao PDF. Verifique se o código Base64 está correto.', e);
+            alert('Aviso: O logo não pôde ser carregado, mas o PDF foi gerado mesmo assim.');
+        }
+    } else {
+        console.log('Logo placeholder detectado. Pulando a adição do logo no PDF. Substitua o conteúdo da variável "logoBase64" para exibir o logo da sua empresa.');
     }
+
+    // Título do relatório
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition);
+    yPosition += 15;
 
     // Informações do cabeçalho em tabela invisível (4 colunas)
     const tableData = [
