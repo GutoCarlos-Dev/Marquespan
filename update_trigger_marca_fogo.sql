@@ -146,41 +146,9 @@ CREATE TRIGGER trigger_atualizar_estoque_pneus
   BEFORE INSERT OR UPDATE OR DELETE ON pneus
   FOR EACH ROW EXECUTE FUNCTION atualizar_estoque_pneus();
 
--- Criar trigger AFTER INSERT para gerar códigos de marca de fogo
-CREATE OR REPLACE FUNCTION gerar_codigos_marca_fogo_after_insert()
-RETURNS TRIGGER AS $$
-DECLARE
-  novo_codigo TEXT;
-  i INTEGER;
-BEGIN
-  -- Gerar códigos de marca de fogo para pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA' com múltiplas unidades
-  IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' AND NEW.quantidade > 1 THEN
-    -- Gerar códigos para cada unidade na tabela marcas_fogo_lancamento
-    FOR i IN 1..NEW.quantidade LOOP
-      novo_codigo := gerar_codigo_marca_fogo();
-
-      -- Inserir código na tabela separada
-      INSERT INTO marcas_fogo_lancamento (
-        lancamento_id,
-        codigo_marca_fogo,
-        usuario_criacao
-      ) VALUES (
-        NEW.id,
-        novo_codigo,
-        NEW.usuario
-      );
-    END LOOP;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Criar trigger AFTER INSERT
+-- Remover trigger AFTER INSERT problemático
 DROP TRIGGER IF EXISTS trigger_gerar_codigos_after_insert ON pneus;
-CREATE TRIGGER trigger_gerar_codigos_after_insert
-  AFTER INSERT ON pneus
-  FOR EACH ROW EXECUTE FUNCTION gerar_codigos_marca_fogo_after_insert();
+DROP FUNCTION IF EXISTS gerar_codigos_marca_fogo_after_insert();
 
 -- Verificar se o trigger foi criado
 SELECT trigger_name, event_manipulation, action_timing, action_statement
