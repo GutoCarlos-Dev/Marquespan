@@ -908,7 +908,7 @@ async function gerarPDFCodigosLancamento(codigos) {
     startY += lineHeight;
 
     // Coluna da Direita (Assinaturas)
-    let signatureY = 40;
+    let signatureY = 90;
     doc.setFont('helvetica', 'bold');
     doc.text('Responsável:', rightMargin, signatureY);
     doc.setFont('helvetica', 'normal');
