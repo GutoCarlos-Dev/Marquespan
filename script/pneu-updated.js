@@ -837,23 +837,23 @@ async function gerarPDFCodigosLancamento(codigos) {
     // Primeira linha: Data e Usuário
     const dataAtual = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR');
     doc.text(`Data da Geração: ${dataAtual}`, margin, yPosition);
-    doc.text(`Usuário: ${pneu?.usuario || 'Sistema'}`, pageWidth - margin - 80, yPosition, { align: 'right' });
-    yPosition += 8;
+    doc.text(`Usuário: ${pneu?.usuario || 'Sistema'}`, pageWidth - margin - 100, yPosition, { align: 'right' });
+    yPosition += 10;
 
     // Segunda linha: Marca/Modelo e Quantidade
     doc.text(`Marca/Modelo: ${pneu?.marca || ''} ${pneu?.modelo || ''}`, margin, yPosition);
-    doc.text(`Quantidade Total: ${pneu?.quantidade || 0}`, pageWidth - margin - 80, yPosition, { align: 'right' });
-    yPosition += 8;
+    doc.text(`Quantidade Total: ${pneu?.quantidade || 0}`, pageWidth - margin - 100, yPosition, { align: 'right' });
+    yPosition += 10;
 
     // Terceira linha: Nota Fiscal e Tipo
     doc.text(`Nota Fiscal: ${pneu?.nota_fiscal || 'N/A'}`, margin, yPosition);
-    doc.text(`Tipo: ${pneu?.tipo || ''}`, pageWidth - margin - 80, yPosition, { align: 'right' });
-    yPosition += 8;
+    doc.text(`Tipo: ${pneu?.tipo || ''}`, pageWidth - margin - 100, yPosition, { align: 'right' });
+    yPosition += 10;
 
     // Quarta linha: Data Entrada e Vida
     const dataEntrada = pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : 'N/A';
     doc.text(`Data Entrada: ${dataEntrada}`, margin, yPosition);
-    doc.text(`Vida: ${pneu?.vida || 0}`, pageWidth - margin - 80, yPosition, { align: 'right' });
+    doc.text(`Vida: ${pneu?.vida || 0}`, pageWidth - margin - 100, yPosition, { align: 'right' });
     yPosition += 15;
 
     // Status (estilo do modelo)
