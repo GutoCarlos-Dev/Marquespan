@@ -226,7 +226,12 @@ async function handleSubmit(e) {
       // Se foi um lançamento de pneus NOVOS com ESTOQUE e múltiplas unidades,
       // gerar códigos de marca de fogo na tabela separada
       if (pneu.tipo === 'NOVO' && pneu.descricao === 'ESTOQUE' && pneu.status === 'ENTRADA' && pneu.quantidade > 1 && insertedData) {
-        await gerarCodigosMarcaFogo(insertedData.id, pneu.quantidade, pneu.usuario);
+        try {
+          await gerarCodigosMarcaFogo(insertedData.id, pneu.quantidade, pneu.usuario);
+        } catch (error) {
+          console.error('Erro na geração de códigos:', error);
+          alert('Aviso: Lançamento realizado, mas houve erro na geração dos códigos de marca de fogo.');
+        }
       }
 
       alert('Pneu cadastrado com sucesso!');

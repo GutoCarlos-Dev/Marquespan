@@ -28,46 +28,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Atualizar função de trigger para incluir geração de código de marca de fogo
+-- Atualizar função de trigger para apenas atualizar estoque (sem geração de códigos)
 CREATE OR REPLACE FUNCTION atualizar_estoque_pneus()
 RETURNS TRIGGER AS $$
-DECLARE
-  novo_codigo TEXT;
-  i INTEGER;
 BEGIN
   -- Para INSERT
   IF TG_OP = 'INSERT' THEN
-    -- Gerar códigos de marca de fogo para pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
-    IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' THEN
-      -- Para múltiplas unidades, gerar códigos na tabela separada
-      IF NEW.quantidade > 1 THEN
-        -- Gerar códigos para cada unidade na tabela marcas_fogo_lancamento
-        FOR i IN 1..NEW.quantidade LOOP
-          novo_codigo := gerar_codigo_marca_fogo();
-
-          -- Inserir código na tabela separada
-          INSERT INTO marcas_fogo_lancamento (
-            lancamento_id,
-            codigo_marca_fogo,
-            usuario_criacao
-          ) VALUES (
-            NEW.id,
-            novo_codigo,
-            NEW.usuario
-          );
-        END LOOP;
-
-        -- Manter o registro único com quantidade original para exibição em grid
-        RETURN NEW;
-      ELSE
-        -- Para quantidade = 1, gerar código único
-        novo_codigo := gerar_codigo_marca_fogo();
-        NEW.codigo_marca_fogo := novo_codigo;
-        NEW.quantidade := 1;
-        RETURN NEW;
-      END IF;
-    END IF;
-
     -- Verificar se já existe registro na tabela estoque_pneus
     IF EXISTS (
       SELECT 1 FROM estoque_pneus
@@ -100,12 +66,6 @@ BEGIN
 
   -- Para UPDATE
   IF TG_OP = 'UPDATE' THEN
-    -- Se mudou para ENTRADA e é NOVO/ESTOQUE, gerar código se não tiver
-    IF NEW.status = 'ENTRADA' AND OLD.status != 'ENTRADA' AND NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.codigo_marca_fogo IS NULL THEN
-      novo_codigo := gerar_codigo_marca_fogo();
-      NEW.codigo_marca_fogo := novo_codigo;
-    END IF;
-
     -- Atualizar estoque baseado na diferença
     UPDATE estoque_pneus
     SET quantidade = quantidade +
