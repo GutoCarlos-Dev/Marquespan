@@ -34,28 +34,41 @@ RETURNS TRIGGER AS $$
 DECLARE
   novo_codigo TEXT;
   i INTEGER;
+  lancamento_id INTEGER;
 BEGIN
   -- Para INSERT
   IF TG_OP = 'INSERT' THEN
     -- Gerar códigos de marca de fogo para cada unidade (quantidade) de pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
     IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' THEN
-      -- Para cada unidade do pneu, criar um registro separado com código único
-      -- Usar uma abordagem diferente para evitar recursão
-      FOR i IN 1..NEW.quantidade LOOP
+      -- Primeiro, inserir o registro de lançamento (mantém a quantidade original)
+      -- Depois, gerar códigos individuais na tabela marcas_fogo_lancamento
+
+      -- Para múltiplas unidades, gerar códigos na tabela separada
+      IF NEW.quantidade > 1 THEN
+        -- Inserir o lançamento principal normalmente (com quantidade original)
+        -- Os códigos serão gerados na tabela marcas_fogo_lancamento
+
+        -- Após inserir o lançamento, gerar códigos para cada unidade
+        -- Isso será feito após o INSERT através de uma função separada ou manualmente
+        -- Por enquanto, manter o comportamento atual mas ajustar para usar tabela separada
+
+        -- Para cada unidade do pneu, gerar código na tabela marcas_fogo_lancamento
+        FOR i IN 1..NEW.quantidade LOOP
+          novo_codigo := gerar_codigo_marca_fogo();
+
+          -- Inserir código na tabela separada (será feito após o INSERT do lançamento)
+          -- Por enquanto, manter o registro único com quantidade original
+        END LOOP;
+
+        -- Manter o registro único com quantidade original para exibição em grid
+        RETURN NEW;
+      ELSE
+        -- Para quantidade = 1, processar normalmente
         novo_codigo := gerar_codigo_marca_fogo();
-
-        -- Inserir registro individual diretamente (sem passar pelo trigger)
-        INSERT INTO pneus (
-          data, placa, marca, modelo, vida, tipo, status, descricao,
-          quantidade, usuario, codigo_marca_fogo, nota_fiscal
-        ) VALUES (
-          NEW.data, NEW.placa, NEW.marca, NEW.modelo, NEW.vida, NEW.tipo,
-          NEW.status, NEW.descricao, 1, NEW.usuario, novo_codigo, NEW.nota_fiscal
-        );
-      END LOOP;
-
-      -- Não processar o registro original (retornar NULL para cancelar a inserção original)
-      RETURN NULL;
+        NEW.codigo_marca_fogo := novo_codigo;
+        NEW.quantidade := 1;
+        RETURN NEW;
+      END IF;
     END IF;
 
     -- Verificar se já existe registro na tabela estoque_pneus
