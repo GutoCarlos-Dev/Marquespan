@@ -867,7 +867,6 @@ async function gerarPDFCodigosLancamento(codigos) {
     doc.setFontSize(10); // Restaurar fonte padrão
     startY += lineHeight;
 
-
     drawLabeledText('Data do Lançamento:   ', pneu?.data ? new Date(pneu.data).toLocaleString('pt-BR') : 'N/A', leftMargin, startY);
     startY += lineHeight;
     drawLabeledText('Usuário:  ', pneu?.usuario || 'N/A', leftMargin, startY);
@@ -908,8 +907,8 @@ async function gerarPDFCodigosLancamento(codigos) {
     doc.setTextColor(40); // Restaurar cor padrão (cinza escuro)
     startY += lineHeight;
 
-    signatureY += lineHeight * 2; // Espaço maior entre as assinaturas
-
+    // Coluna da Direita (Assinaturas)
+    let signatureY = 40;
     doc.setFont('helvetica', 'bold');
     doc.text('Responsável:', rightMargin, signatureY);
     doc.setFont('helvetica', 'normal');
