@@ -830,31 +830,37 @@ async function gerarPDFCodigosLancamento(codigos) {
     doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition);
     yPosition += 15;
 
-    // Informações do cabeçalho (estilo do modelo)
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    // Informações do cabeçalho em tabela invisível (4 colunas)
+    const tableData = [
+      ['Data', new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR'), 'Usuário', pneu?.usuario || 'Sistema'],
+      ['Marca/Modelo', `${pneu?.marca || ''} ${pneu?.modelo || ''}`, 'Quantidade', pneu?.quantidade || 0],
+      ['Nota Fiscal', pneu?.nota_fiscal || 'N/A', 'Tipo', pneu?.tipo || ''],
+      ['Data Entrada', pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : 'N/A', 'Vida', pneu?.vida || 0]
+    ];
 
-    // Primeira linha: Data e Usuário
-    const dataAtual = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR');
-    doc.text(`Data da Geração: ${dataAtual}`, margin, yPosition);
-    doc.text(`Usuário: ${pneu?.usuario || 'Sistema'}`, pageWidth - margin - 100, yPosition, { align: 'right' });
-    yPosition += 10;
+    // Adicionar tabela invisível (sem bordas)
+    doc.autoTable({
+      startY: yPosition,
+      head: [],
+      body: tableData,
+      theme: 'plain', // Sem bordas
+      styles: {
+        fontSize: 10,
+        cellPadding: 2,
+        lineColor: [255, 255, 255], // Branco (invisível)
+        lineWidth: 0,
+      },
+      columnStyles: {
+        0: { cellWidth: 35, fontStyle: 'bold' }, // Rótulos
+        1: { cellWidth: 70 }, // Valores
+        2: { cellWidth: 35, fontStyle: 'bold' }, // Rótulos
+        3: { cellWidth: 35 }  // Valores
+      },
+      margin: { top: 10 },
+      showHead: 'never', // Sem cabeçalho
+    });
 
-    // Segunda linha: Marca/Modelo e Quantidade
-    doc.text(`Marca/Modelo: ${pneu?.marca || ''} ${pneu?.modelo || ''}`, margin, yPosition);
-    doc.text(`Quantidade Total: ${pneu?.quantidade || 0}`, pageWidth - margin - 100, yPosition, { align: 'right' });
-    yPosition += 10;
-
-    // Terceira linha: Nota Fiscal e Tipo
-    doc.text(`Nota Fiscal: ${pneu?.nota_fiscal || 'N/A'}`, margin, yPosition);
-    doc.text(`Tipo: ${pneu?.tipo || ''}`, pageWidth - margin - 100, yPosition, { align: 'right' });
-    yPosition += 10;
-
-    // Quarta linha: Data Entrada e Vida
-    const dataEntrada = pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : 'N/A';
-    doc.text(`Data Entrada: ${dataEntrada}`, margin, yPosition);
-    doc.text(`Vida: ${pneu?.vida || 0}`, pageWidth - margin - 100, yPosition, { align: 'right' });
-    yPosition += 15;
+    yPosition = doc.lastAutoTable.finalY + 10;
 
     // Status (estilo do modelo)
     doc.setFont('helvetica', 'bold');
@@ -872,7 +878,7 @@ async function gerarPDFCodigosLancamento(codigos) {
     yPosition += 10;
 
     // Preparar dados para tabela (estilo do modelo)
-    const tableData = lista.map(item => [
+    const tableDataCodigos = lista.map(item => [
       item.codigo_marca_fogo,
       item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : '',
       pneu?.nota_fiscal || '',
@@ -884,7 +890,7 @@ async function gerarPDFCodigosLancamento(codigos) {
     doc.autoTable({
       startY: yPosition,
       head: [['Código', 'Data', 'NF', 'Marca', 'Modelo']],
-      body: tableData,
+      body: tableDataCodigos,
       theme: 'grid',
       styles: {
         fontSize: 9,
