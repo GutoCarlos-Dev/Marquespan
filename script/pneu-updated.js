@@ -352,7 +352,6 @@ function renderizarPneus(lista) {
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.tipo}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.status || ''}</div>
       <div style="flex: 2; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.descricao || ''}</div>
-      <div style="flex: 1; min-width: 100px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee; font-weight: bold; color: ${pneu.codigo_marca_fogo ? '#dc3545' : '#6c757d'};">${pneu.codigo_marca_fogo || '-'}</div>
       <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.data ? new Date(pneu.data).toLocaleString() : ''}</div>
       <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${pneu.usuario || ''}</div>
       <div style="flex: 0.5; min-width: 60px; padding: 12px 8px; text-align: center; ${isEstoque ? '' : 'border-right: 1px solid #eee;'}">${pneu.quantidade || 0}</div>

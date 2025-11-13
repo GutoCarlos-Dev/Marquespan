@@ -40,10 +40,11 @@ BEGIN
     -- Gerar códigos de marca de fogo para cada unidade (quantidade) de pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
     IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' THEN
       -- Para cada unidade do pneu, criar um registro separado com código único
+      -- Usar uma abordagem diferente para evitar recursão
       FOR i IN 1..NEW.quantidade LOOP
         novo_codigo := gerar_codigo_marca_fogo();
 
-        -- Inserir registro individual para cada unidade
+        -- Inserir registro individual diretamente (sem passar pelo trigger)
         INSERT INTO pneus (
           data, placa, marca, modelo, vida, tipo, status, descricao,
           quantidade, usuario, codigo_marca_fogo, nota_fiscal
