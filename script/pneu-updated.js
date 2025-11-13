@@ -808,18 +808,6 @@ async function gerarPDFCodigosLancamento(codigos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Configurações da página
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 20;
-    let yPosition = margin;
-
-    // Função auxiliar para adicionar texto com quebra de linha
-    const addText = (text, x, y, options = {}) => {
-      doc.text(text, x, y, options);
-      return y + 6; // Retorna nova posição Y
-    };
-
     // --- CABEÇALHO ---
 
     // IMPORTANTE: Para usar seu logo 'logo.png', converta-o para o formato Base64.
@@ -841,110 +829,157 @@ async function gerarPDFCodigosLancamento(codigos) {
         console.log('Logo placeholder detectado. Pulando a adição do logo no PDF. Substitua o conteúdo da variável "logoBase64" para exibir o logo da sua empresa.');
     }
 
-    // Título do relatório
-    doc.setFontSize(12);
+    // Título do Documento
+    doc.setFontSize(20);
+    doc.setTextColor('#000000'); // Preto
     doc.setFont('helvetica', 'bold');
-    doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition);
-    yPosition += 15;
+    doc.text('RELATÓRIO DE MARCA DE FOGO', 14, 20);
 
-    // Informações do cabeçalho em tabela invisível (4 colunas)
-    const tableData = [
-      ['Data', new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR'), 'Usuário', pneu?.usuario || 'Sistema'],
-      ['Marca/Modelo', `${pneu?.marca || ''} ${pneu?.modelo || ''}`, 'Quantidade', pneu?.quantidade || 0],
-      ['Nota Fiscal', pneu?.nota_fiscal || 'N/A', 'Tipo', pneu?.tipo || ''],
-      ['Data Entrada', pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : 'N/A', 'Vida', pneu?.vida || 0]
+    // Linha divisória
+    doc.setDrawColor(76, 175, 80); // Cor verde
+    doc.setLineWidth(0.5);
+    doc.line(14, 25, 196, 25);
+
+    // --- INFORMAÇÕES GERAIS E ASSINATURAS (NOVO LAYOUT) ---
+    doc.setFontSize(10);
+    doc.setTextColor(40);
+    let startY = 40;
+    const lineHeight = 7; // Espaçamento entre linhas
+    const leftMargin = 14;
+    const rightMargin = 120;
+
+    // Função auxiliar para desenhar texto com rótulo em negrito
+    const drawLabeledText = (label, value, x, y) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, x, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), x + doc.getTextWidth(label), y);
+    };
+
+    // Coluna da Esquerda (Dados do Lançamento)
+    const dataHora = new Date(pneu?.data || new Date()).toLocaleString('pt-BR');
+
+    // MARCA/MODELO primeiro (destacado)
+    doc.setFontSize(15); // Aumentar fonte para destacar
+    doc.setTextColor('#f44336'); // Cor vermelha para destacar
+    drawLabeledText('MARCA/MODELO:  ', `${pneu?.marca || ''} ${pneu?.modelo || ''}`, leftMargin, startY);
+    doc.setTextColor(40); // Restaurar cor padrão
+    doc.setFontSize(10); // Restaurar fonte padrão
+    startY += lineHeight;
+
+    drawLabeledText('Código do Lançamento:    ', String(pneu?.id || 'N/A').padStart(5, '0'), leftMargin, startY);
+    startY += lineHeight;
+    drawLabeledText('Data do Lançamento:   ', pneu?.data ? new Date(pneu.data).toLocaleString('pt-BR') : 'N/A', leftMargin, startY);
+    startY += lineHeight;
+    drawLabeledText('Usuário:  ', pneu?.usuario || 'N/A', leftMargin, startY);
+    startY += lineHeight;
+
+    // Lógica para negritar "Tipo" e "Vida" na mesma linha
+    let currentXPlaca = leftMargin;
+    // 1. "Tipo:" (Negrito)
+    doc.setFont('helvetica', 'bold');
+    const labelTipo = 'Tipo:   ';
+    doc.text(labelTipo, currentXPlaca, startY);
+    currentXPlaca += doc.getTextWidth(labelTipo);
+
+    // 2. Valor do tipo (Normal)
+    doc.setFont('helvetica', 'normal');
+    const valorTipo = `${pneu?.tipo || 'N/A'}    `; // Adiciona espaço para separar
+    doc.text(valorTipo, currentXPlaca, startY);
+    currentXPlaca += doc.getTextWidth(valorTipo);
+
+    // 3. "Vida:" (Negrito)
+    doc.setFont('helvetica', 'bold');
+    const labelVida = 'Vida: ';
+    doc.text(labelVida, currentXPlaca, startY);
+    currentXPlaca += doc.getTextWidth(labelVida);
+
+    // 4. Valor da vida (Normal)
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(pneu?.vida || 0), currentXPlaca, startY);
+    startY += lineHeight;
+
+    // Nota Fiscal
+    drawLabeledText('Nota Fiscal:  ', pneu?.nota_fiscal || 'N/A', leftMargin, startY);
+    startY += lineHeight;
+
+    // Adicionar Quantidade Total em vermelho
+    doc.setTextColor('#f44336'); // Cor vermelha
+    drawLabeledText('Quantidade Total: ', lista.length, leftMargin, startY);
+    doc.setTextColor(40); // Restaurar cor padrão (cinza escuro)
+    startY += lineHeight;
+
+    // Coluna da Direita (Assinaturas)
+    let signatureY = 40;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', rightMargin, signatureY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(' _____________________________', rightMargin + doc.getTextWidth('Status:'), signatureY);
+
+    signatureY += lineHeight * 2; // Espaço maior entre as assinaturas
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Responsável:', rightMargin, signatureY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(' ___________________________', rightMargin + doc.getTextWidth('Responsável:'), signatureY);
+
+    // --- TABELA DE CÓDIGOS ---
+
+    // Adicionar total de códigos antes da tabela
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total de Códigos: ${lista.length}`, 196, startY + 10, { align: 'right' });
+
+    const tableColumn = ["Código de Marca de Fogo", "Data de Criação"];
+    const tableRows = [];
+
+    lista.forEach(item => {
+        tableRows.push([
+            item.codigo_marca_fogo,
+            item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : 'N/A'
+        ]);
+    });
+
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: startY + 15, // Ajustado para dar espaço ao total
+        theme: 'grid',
+        headStyles: { fillColor: [76, 175, 80] },
+        styles: { font: 'helvetica', fontSize: 10 }
+    });
+
+    // --- INSTRUÇÕES PARA MARCAÇÃO ---
+    const instrucoesY = doc.lastAutoTable.finalY + 15;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('INSTRUÇÕES PARA MARCAÇÃO:', leftMargin, instrucoesY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const instrucoes = [
+        '1. Use o código de marca de fogo para identificar cada pneu fisicamente',
+        '2. Marque o código na lateral do pneu com tinta indelével',
+        '3. Posicione o código em local visível para facilitar inventário',
+        '4. Verifique se o código está legível após a marcação'
     ];
 
-    // Adicionar tabela invisível (sem bordas)
-    doc.autoTable({
-      startY: yPosition,
-      head: [],
-      body: tableData,
-      theme: 'plain', // Sem bordas
-      styles: {
-        fontSize: 10,
-        cellPadding: 2,
-        lineColor: [255, 255, 255], // Branco (invisível)
-        lineWidth: 0,
-      },
-      columnStyles: {
-        0: { cellWidth: 35, fontStyle: 'bold' }, // Rótulos
-        1: { cellWidth: 70 }, // Valores
-        2: { cellWidth: 35, fontStyle: 'bold' }, // Rótulos
-        3: { cellWidth: 35 }  // Valores
-      },
-      margin: { top: 10 },
-      showHead: 'never', // Sem cabeçalho
+    instrucoes.forEach((instrucao, index) => {
+        doc.text(instrucao, leftMargin + 5, instrucoesY + 8 + (index * 5));
     });
 
-    yPosition = doc.lastAutoTable.finalY + 10;
+    // --- RODAPÉ ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Documento gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 287);
+        doc.text(`Página ${i} de ${pageCount}`, 196, 287, { align: 'right' });
+    }
 
-    // Status (estilo do modelo)
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status: _________', margin, yPosition);
-    yPosition += 8;
-
-    doc.setFont('helvetica', 'normal');
-    doc.text('Realizado por: ___________________________', margin, yPosition);
-    yPosition += 15;
-
-    // Título da tabela
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('CÓDIGOS DE MARCA DE FOGO', margin, yPosition);
-    yPosition += 10;
-
-    // Preparar dados para tabela (estilo do modelo)
-    const tableDataCodigos = lista.map(item => [
-      item.codigo_marca_fogo,
-      item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : '',
-      pneu?.nota_fiscal || '',
-      pneu?.marca || '',
-      pneu?.modelo || ''
-    ]);
-
-    // Adicionar tabela usando autoTable (estilo do modelo)
-    doc.autoTable({
-      startY: yPosition,
-      head: [['Código', 'Data', 'NF', 'Marca', 'Modelo']],
-      body: tableDataCodigos,
-      theme: 'grid',
-      styles: {
-        fontSize: 9,
-        cellPadding: 4,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: [255, 255, 255], // Branco
-        textColor: [0, 0, 0], // Preto
-        fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.3,
-      },
-      columnStyles: {
-        0: { cellWidth: 30 }, // Código
-        1: { cellWidth: 30 }, // Data
-        2: { cellWidth: 25 }, // NF
-        3: { cellWidth: 30 }, // Marca
-        4: { cellWidth: 40 }, // Modelo
-      },
-      margin: { top: 10 },
-      alternateRowStyles: {
-        fillColor: [248, 249, 250], // Cinza claro alternado
-      },
-    });
-
-    // Adicionar rodapé (estilo do modelo)
-    const finalY = doc.lastAutoTable.finalY + 15;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Documento gerado em: ${new Date().toLocaleString('pt-BR')} (Lançamento: ${pneu?.marca || ''} ${pneu?.modelo || ''})`, margin, finalY);
-    doc.text(`Página 1 de 1`, pageWidth - margin - 40, finalY, { align: 'right' });
-
-    // Salvar PDF
-    const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
-    const nomeArquivo = `relatorio_marca_fogo_${pneu?.marca || 'lancamento'}_${dataHora}.pdf`;
+    // Salvar o PDF
+    const dataHoraArquivo = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+    const nomeArquivo = `relatorio_marca_fogo_${pneu?.marca || 'lancamento'}_${dataHoraArquivo}.pdf`;
 
     doc.save(nomeArquivo);
 
