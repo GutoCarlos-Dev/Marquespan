@@ -731,14 +731,17 @@ async function exportarCodigosLancamento(codigos) {
     dadosXLSX.push(['']); // Linha em branco
 
     // Cabeçalhos das colunas
-    dadosXLSX.push(['CÓDIGO MARCA DE FOGO', 'DATA CRIAÇÃO', 'USUÁRIO']);
+    dadosXLSX.push(['CÓDIGOS DE MARCA DE FOGO', 'DATA', 'NF', 'MARCA', 'MODELO']);
 
     // Dados dos códigos
     lista.forEach(item => {
+      const pneu = item.pneus;
       dadosXLSX.push([
         item.codigo_marca_fogo,
         item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : '',
-        item.usuario_criacao || ''
+        pneu?.nota_fiscal || '',
+        pneu?.marca || '',
+        pneu?.modelo || ''
       ]);
     });
 
@@ -759,9 +762,11 @@ async function exportarCodigosLancamento(codigos) {
 
     // Definir larguras das colunas
     ws['!cols'] = [
-      { wch: 20 }, // CÓDIGO MARCA DE FOGO
-      { wch: 15 }, // DATA CRIAÇÃO
-      { wch: 20 }  // USUÁRIO
+      { wch: 25 }, // CÓDIGOS DE MARCA DE FOGO
+      { wch: 15 }, // DATA
+      { wch: 20 }, // NF
+      { wch: 15 }, // MARCA
+      { wch: 25 }  // MODELO
     ];
 
     // Adicionar worksheet ao workbook
