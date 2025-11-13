@@ -33,13 +33,28 @@ CREATE OR REPLACE FUNCTION atualizar_estoque_pneus()
 RETURNS TRIGGER AS $$
 DECLARE
   novo_codigo TEXT;
+  i INTEGER;
 BEGIN
   -- Para INSERT
   IF TG_OP = 'INSERT' THEN
-    -- Gerar código de marca de fogo apenas para pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
+    -- Gerar códigos de marca de fogo para cada unidade (quantidade) de pneus NOVOS com descrição 'ESTOQUE' e status 'ENTRADA'
     IF NEW.tipo = 'NOVO' AND NEW.descricao = 'ESTOQUE' AND NEW.status = 'ENTRADA' THEN
-      novo_codigo := gerar_codigo_marca_fogo();
-      NEW.codigo_marca_fogo := novo_codigo;
+      -- Para cada unidade do pneu, criar um registro separado com código único
+      FOR i IN 1..NEW.quantidade LOOP
+        novo_codigo := gerar_codigo_marca_fogo();
+
+        -- Inserir registro individual para cada unidade
+        INSERT INTO pneus (
+          data, placa, marca, modelo, vida, tipo, status, descricao,
+          quantidade, usuario, codigo_marca_fogo, nota_fiscal
+        ) VALUES (
+          NEW.data, NEW.placa, NEW.marca, NEW.modelo, NEW.vida, NEW.tipo,
+          NEW.status, NEW.descricao, 1, NEW.usuario, novo_codigo, NEW.nota_fiscal
+        );
+      END LOOP;
+
+      -- Não processar o registro original (retornar NULL para cancelar a inserção original)
+      RETURN NULL;
     END IF;
 
     -- Verificar se já existe registro na tabela estoque_pneus

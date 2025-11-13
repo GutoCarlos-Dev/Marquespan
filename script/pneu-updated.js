@@ -168,6 +168,7 @@ async function handleSubmit(e) {
     tipo: formData.get('tipo'),
     status: formData.get('status'),
     descricao: formData.get('descricao'),
+    nota_fiscal: formData.get('nota_fiscal')?.trim(),
     quantidade: parseInt(formData.get('quantidade') || 0),
     usuario: getCurrentUserName(),
   };
@@ -525,7 +526,7 @@ async function gerarRelatorioMarcaFogo() {
     dadosXLSX.push(['']); // Linha em branco
 
     // Cabeçalhos das colunas
-    dadosXLSX.push(['CÓDIGO MARCA DE FOGO', 'MARCA', 'MODELO', 'TIPO', 'VIDA', 'QUANTIDADE', 'DATA ENTRADA', 'USUÁRIO']);
+    dadosXLSX.push(['CÓDIGO MARCA DE FOGO', 'MARCA', 'MODELO', 'TIPO', 'VIDA', 'QUANTIDADE', 'NOTA FISCAL', 'DATA ENTRADA', 'USUÁRIO']);
 
     // Dados dos pneus
     lista.forEach(pneu => {
@@ -536,6 +537,7 @@ async function gerarRelatorioMarcaFogo() {
         pneu.tipo,
         pneu.vida || 0,
         pneu.quantidade || 0,
+        pneu.nota_fiscal || '',
         pneu.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : '',
         pneu.usuario || ''
       ]);
@@ -573,6 +575,7 @@ async function gerarRelatorioMarcaFogo() {
       { wch: 10 }, // TIPO
       { wch: 8 },  // VIDA
       { wch: 12 }, // QUANTIDADE
+      { wch: 20 }, // NOTA FISCAL
       { wch: 15 }, // DATA ENTRADA
       { wch: 20 }  // USUÁRIO
     ];
