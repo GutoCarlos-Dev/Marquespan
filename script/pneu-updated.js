@@ -681,12 +681,18 @@ window.visualizarCodigosMarcaFogo = async function(lancamentoId) {
     btnFechar.style.cssText = 'padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;';
     btnFechar.onclick = () => document.body.removeChild(modal);
 
-    const btnExportar = document.createElement('button');
-    btnExportar.textContent = 'Exportar XLSX';
-    btnExportar.style.cssText = 'padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;';
-    btnExportar.onclick = () => exportarCodigosLancamento(codigos);
+    const btnExportarXLSX = document.createElement('button');
+    btnExportarXLSX.textContent = 'Exportar XLSX';
+    btnExportarXLSX.style.cssText = 'padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;';
+    btnExportarXLSX.onclick = () => exportarCodigosLancamento(codigos);
 
-    botoesContainer.appendChild(btnExportar);
+    const btnExportarPDF = document.createElement('button');
+    btnExportarPDF.textContent = 'Gerar PDF';
+    btnExportarPDF.style.cssText = 'padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;';
+    btnExportarPDF.onclick = () => gerarPDFCodigosLancamento(codigos);
+
+    botoesContainer.appendChild(btnExportarXLSX);
+    botoesContainer.appendChild(btnExportarPDF);
     botoesContainer.appendChild(btnFechar);
 
     modalContent.appendChild(titulo);
@@ -783,6 +789,126 @@ async function exportarCodigosLancamento(codigos) {
   } catch (error) {
     console.error('Erro na exportação:', error);
     alert('Erro ao exportar códigos.');
+  }
+}
+
+// Gerar PDF dos códigos de marca de fogo de um lançamento específico
+async function gerarPDFCodigosLancamento(codigos) {
+  try {
+    const lista = codigos || [];
+
+    if (lista.length === 0) {
+      alert('Nenhum código para gerar PDF.');
+      return;
+    }
+
+    const pneu = lista[0]?.pneus;
+
+    // Inicializar jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Configurações da página
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    let yPosition = margin;
+
+    // Função auxiliar para adicionar texto com quebra de linha
+    const addText = (text, x, y, options = {}) => {
+      doc.text(text, x, y, options);
+      return y + 6; // Retorna nova posição Y
+    };
+
+    // Cabeçalho - Logo e título
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MARQUESPAN', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10;
+
+    doc.setFontSize(16);
+    doc.text('RELATÓRIO DE MARCA DE FOGO', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Linha separadora
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // Informações do lançamento
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('INFORMAÇÕES DO LANÇAMENTO', margin, yPosition);
+    yPosition += 5;
+
+    doc.setFont('helvetica', 'normal');
+    yPosition = addText(`Marca: ${pneu?.marca || ''}`, margin, yPosition);
+    yPosition = addText(`Modelo: ${pneu?.modelo || ''}`, margin, yPosition);
+    yPosition = addText(`Tipo: ${pneu?.tipo || ''}`, margin, yPosition);
+    yPosition = addText(`Vida: ${pneu?.vida || 0}`, margin, yPosition);
+    yPosition = addText(`Quantidade: ${pneu?.quantidade || 0}`, margin, yPosition);
+    yPosition = addText(`Nota Fiscal: ${pneu?.nota_fiscal || ''}`, margin, yPosition);
+    yPosition = addText(`Data Entrada: ${pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : ''}`, margin, yPosition);
+    yPosition = addText(`Usuário: ${pneu?.usuario || ''}`, margin, yPosition);
+    yPosition += 10;
+
+    // Título dos códigos
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    yPosition = addText('CÓDIGOS DE MARCA DE FOGO', margin, yPosition);
+    yPosition += 5;
+
+    // Preparar dados para tabela
+    const tableData = lista.map(item => [
+      item.codigo_marca_fogo,
+      item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : '',
+      pneu?.nota_fiscal || '',
+      pneu?.marca || '',
+      pneu?.modelo || ''
+    ]);
+
+    // Adicionar tabela usando autoTable
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Código', 'Data', 'NF', 'Marca', 'Modelo']],
+      body: tableData,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [40, 167, 69], // Verde Marquespan
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      columnStyles: {
+        0: { cellWidth: 25 }, // Código
+        1: { cellWidth: 25 }, // Data
+        2: { cellWidth: 20 }, // NF
+        3: { cellWidth: 25 }, // Marca
+        4: { cellWidth: 35 }, // Modelo
+      },
+      margin: { top: 10 },
+    });
+
+    // Adicionar rodapé
+    const finalY = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, finalY);
+    doc.text(`Total de códigos: ${lista.length}`, margin, finalY + 5);
+
+    // Salvar PDF
+    const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+    const nomeArquivo = `relatorio_marca_fogo_${pneu?.marca || 'lancamento'}_${dataHora}.pdf`;
+
+    doc.save(nomeArquivo);
+
+    alert(`✅ PDF gerado com sucesso!\n\n📄 ${lista.length} códigos incluídos\n📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n\nArquivo: ${nomeArquivo}`);
+  } catch (error) {
+    console.error('Erro na geração do PDF:', error);
+    alert('Erro ao gerar PDF.');
   }
 }
 
