@@ -820,45 +820,58 @@ async function gerarPDFCodigosLancamento(codigos) {
       return y + 6; // Retorna nova posição Y
     };
 
-    // Cabeçalho - Logo e título
-    doc.setFontSize(20);
+    // Cabeçalho no estilo do modelo
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('MARQUESPAN', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 10;
+    doc.text('MARQUESPAN', margin, yPosition);
+    yPosition += 8;
 
-    doc.setFontSize(16);
-    doc.text('RELATÓRIO DE MARCA DE FOGO', pageWidth / 2, yPosition, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('RELATÓRIO DE MARCA DE FOGO', margin, yPosition);
     yPosition += 15;
 
-    // Linha separadora
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 10;
+    // Informações do cabeçalho (estilo do modelo)
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
 
-    // Informações do lançamento
-    doc.setFontSize(12);
+    // Primeira linha: Data e Usuário
+    const dataAtual = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR');
+    doc.text(`Data da Geração: ${dataAtual}`, margin, yPosition);
+    doc.text(`Usuário: ${pneu?.usuario || 'Sistema'}`, pageWidth - margin - 80, yPosition, { align: 'right' });
+    yPosition += 8;
+
+    // Segunda linha: Marca/Modelo e Quantidade
+    doc.text(`Marca/Modelo: ${pneu?.marca || ''} ${pneu?.modelo || ''}`, margin, yPosition);
+    doc.text(`Quantidade Total: ${pneu?.quantidade || 0}`, pageWidth - margin - 80, yPosition, { align: 'right' });
+    yPosition += 8;
+
+    // Terceira linha: Nota Fiscal e Tipo
+    doc.text(`Nota Fiscal: ${pneu?.nota_fiscal || 'N/A'}`, margin, yPosition);
+    doc.text(`Tipo: ${pneu?.tipo || ''}`, pageWidth - margin - 80, yPosition, { align: 'right' });
+    yPosition += 8;
+
+    // Quarta linha: Data Entrada e Vida
+    const dataEntrada = pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : 'N/A';
+    doc.text(`Data Entrada: ${dataEntrada}`, margin, yPosition);
+    doc.text(`Vida: ${pneu?.vida || 0}`, pageWidth - margin - 80, yPosition, { align: 'right' });
+    yPosition += 15;
+
+    // Status (estilo do modelo)
     doc.setFont('helvetica', 'bold');
-    yPosition = addText('INFORMAÇÕES DO LANÇAMENTO', margin, yPosition);
-    yPosition += 5;
+    doc.text('Status: _____________________________', margin, yPosition);
+    yPosition += 8;
 
     doc.setFont('helvetica', 'normal');
-    yPosition = addText(`Marca: ${pneu?.marca || ''}`, margin, yPosition);
-    yPosition = addText(`Modelo: ${pneu?.modelo || ''}`, margin, yPosition);
-    yPosition = addText(`Tipo: ${pneu?.tipo || ''}`, margin, yPosition);
-    yPosition = addText(`Vida: ${pneu?.vida || 0}`, margin, yPosition);
-    yPosition = addText(`Quantidade: ${pneu?.quantidade || 0}`, margin, yPosition);
-    yPosition = addText(`Nota Fiscal: ${pneu?.nota_fiscal || ''}`, margin, yPosition);
-    yPosition = addText(`Data Entrada: ${pneu?.data ? new Date(pneu.data).toLocaleDateString('pt-BR') : ''}`, margin, yPosition);
-    yPosition = addText(`Usuário: ${pneu?.usuario || ''}`, margin, yPosition);
+    doc.text('Verificado por: ___________________________', margin, yPosition);
+    yPosition += 15;
+
+    // Título da tabela
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('CÓDIGOS DE MARCA DE FOGO', margin, yPosition);
     yPosition += 10;
 
-    // Título dos códigos
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    yPosition = addText('CÓDIGOS DE MARCA DE FOGO', margin, yPosition);
-    yPosition += 5;
-
-    // Preparar dados para tabela
+    // Preparar dados para tabela (estilo do modelo)
     const tableData = lista.map(item => [
       item.codigo_marca_fogo,
       item.data_criacao ? new Date(item.data_criacao).toLocaleDateString('pt-BR') : '',
@@ -867,37 +880,44 @@ async function gerarPDFCodigosLancamento(codigos) {
       pneu?.modelo || ''
     ]);
 
-    // Adicionar tabela usando autoTable
+    // Adicionar tabela usando autoTable (estilo do modelo)
     doc.autoTable({
       startY: yPosition,
       head: [['Código', 'Data', 'NF', 'Marca', 'Modelo']],
       body: tableData,
       theme: 'grid',
       styles: {
-        fontSize: 8,
-        cellPadding: 3,
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: [40, 167, 69], // Verde Marquespan
-        textColor: 255,
+        fillColor: [255, 255, 255], // Branco
+        textColor: [0, 0, 0], // Preto
         fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.3,
       },
       columnStyles: {
-        0: { cellWidth: 25 }, // Código
-        1: { cellWidth: 25 }, // Data
-        2: { cellWidth: 20 }, // NF
-        3: { cellWidth: 25 }, // Marca
-        4: { cellWidth: 35 }, // Modelo
+        0: { cellWidth: 30 }, // Código
+        1: { cellWidth: 30 }, // Data
+        2: { cellWidth: 25 }, // NF
+        3: { cellWidth: 30 }, // Marca
+        4: { cellWidth: 40 }, // Modelo
       },
       margin: { top: 10 },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250], // Cinza claro alternado
+      },
     });
 
-    // Adicionar rodapé
-    const finalY = doc.lastAutoTable.finalY + 20;
+    // Adicionar rodapé (estilo do modelo)
+    const finalY = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, finalY);
-    doc.text(`Total de códigos: ${lista.length}`, margin, finalY + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Documento gerado em: ${new Date().toLocaleString('pt-BR')} (Lançamento: ${pneu?.marca || ''} ${pneu?.modelo || ''})`, margin, finalY);
+    doc.text(`Página 1 de 1`, pageWidth - margin - 40, finalY, { align: 'right' });
 
     // Salvar PDF
     const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
