@@ -154,6 +154,45 @@ function verificarPermissoes() {
   return true;
 }
 
+// Função para consultar estoque atual de pneus USADOS
+async function consultarEstoqueUsado(marca, modelo, tipo) {
+  try {
+    const { data: entradas, error: errorEntradas } = await supabase
+      .from('pneus')
+      .select('quantidade')
+      .eq('marca', marca)
+      .eq('modelo', modelo)
+      .eq('tipo', tipo)
+      .eq('status', 'ENTRADA');
+
+    if (errorEntradas) {
+      console.error('Erro ao consultar entradas:', errorEntradas);
+      return 0;
+    }
+
+    const { data: saidas, error: errorSaidas } = await supabase
+      .from('pneus')
+      .select('quantidade')
+      .eq('marca', marca)
+      .eq('modelo', modelo)
+      .eq('tipo', tipo)
+      .eq('status', 'SAIDA');
+
+    if (errorSaidas) {
+      console.error('Erro ao consultar saídas:', errorSaidas);
+      return 0;
+    }
+
+    const totalEntradas = entradas?.reduce((sum, item) => sum + (item.quantidade || 0), 0) || 0;
+    const totalSaidas = saidas?.reduce((sum, item) => sum + (item.quantidade || 0), 0) || 0;
+
+    return totalEntradas - totalSaidas;
+  } catch (error) {
+    console.error('Erro ao consultar estoque:', error);
+    return 0;
+  }
+}
+
 // Handle form submit
 async function handleSubmit(e) {
   e.preventDefault();
@@ -176,6 +215,15 @@ async function handleSubmit(e) {
   if (!pneu.marca || !pneu.modelo || !pneu.tipo) {
     alert('Preencha os campos obrigatórios.');
     return;
+  }
+
+  // Verificar estoque para pneus USADOS em SAÍDA
+  if (pneu.tipo === 'USADO' && pneu.status === 'SAIDA') {
+    const estoqueAtual = await consultarEstoqueUsado(pneu.marca, pneu.modelo, pneu.tipo);
+    if (estoqueAtual < pneu.quantidade) {
+      alert(`Estoque insuficiente! Disponível: ${estoqueAtual} unidades. Tentativa de saída: ${pneu.quantidade} unidades.`);
+      return;
+    }
   }
 
   try {
