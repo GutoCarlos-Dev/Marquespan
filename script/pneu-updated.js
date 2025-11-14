@@ -217,8 +217,8 @@ async function handleSubmit(e) {
     return;
   }
 
-  // Verificar estoque para pneus USADOS em SAÍDA
-  if (pneu.tipo === 'USADO' && pneu.status === 'SAIDA') {
+  // Verificar estoque para saídas
+  if (pneu.status === 'SAIDA') {
     const estoqueAtual = await consultarEstoqueUsado(pneu.marca, pneu.modelo, pneu.tipo);
     if (estoqueAtual < pneu.quantidade) {
       alert(`Estoque insuficiente! Disponível: ${estoqueAtual} unidades. Tentativa de saída: ${pneu.quantidade} unidades.`);
