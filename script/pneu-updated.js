@@ -819,7 +819,7 @@ async function gerarPDFCodigosLancamento(codigos) {
     // Logo
     if (logoBase64) {
         try {
-            doc.addImage(logoBase64, 'PNG', 150, 8, 45, 20);
+            doc.addImage(logoBase64, 'PNG', 150, 7, 45, 18);
         } catch (e) {
             console.warn('Não foi possível adicionar o logo ao PDF. Verifique se o código Base64 está correto.', e);
             alert('Aviso: O logo não pôde ser carregado, mas o PDF foi gerado mesmo assim.');
