@@ -173,6 +173,7 @@ async function carregarHistoricoSaidas(placa) {
     const { data: saidas, error } = await supabase
       .from('saidas_detalhadas')
       .select(`
+        lancamento_id,
         data_saida,
         tipo_operacao,
         quilometragem,
