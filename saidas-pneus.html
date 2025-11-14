@@ -108,12 +108,13 @@
 
             <!-- Seleção de Pneu do Estoque -->
             <div style="margin-top: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-              <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu</h4>
-              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+              <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu do Estoque</h4>
 
-                <label>Marca *</label>
-                <select name="marca" id="marca" required>
-                  <option value="">Selecione</option>
+              <!-- Filtros para busca -->
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                <label>Filtrar Marca</label>
+                <select name="filtro_marca" id="filtro_marca">
+                  <option value="">Todas</option>
                   <option value="BRIDGESTONE">BRIDGESTONE</option>
                   <option value="CONTINENTAL">CONTINENTAL</option>
                   <option value="GOODYEAR">GOODYEAR</option>
@@ -121,9 +122,9 @@
                   <option value="PIRELLI">PIRELLI</option>
                 </select>
 
-                <label>Modelo *</label>
-                <select name="modelo" id="modelo" required>
-                  <option value="">Selecione</option>
+                <label>Filtrar Modelo</label>
+                <select name="filtro_modelo" id="filtro_modelo">
+                  <option value="">Todos</option>
                   <option value="225/75/16">225/75/16</option>
                   <option value="235/75/17.5">235/75/17.5</option>
                   <option value="275/80/22.5 - LISO">275/80/22.5 - LISO</option>
@@ -132,24 +133,56 @@
                   <option value="295/80/22.5 - BORRACHUDO">295/80/22.5 - BORRACHUDO</option>
                 </select>
 
-                <label>Tipo *</label>
-                <select name="tipo" id="tipo" required>
-                  <option value="">Selecione</option>
+                <label>Filtrar Tipo</label>
+                <select name="filtro_tipo" id="filtro_tipo">
+                  <option value="">Todos</option>
                   <option value="NOVO">NOVO</option>
                   <option value="RECAPADO">RECAPADO</option>
                   <option value="USADO">USADO</option>
                 </select>
 
-                <label>Vida</label>
-                <input type="number" name="vida" id="vida" min="0" value="0" />
+                <div style="display: flex; align-items: end;">
+                  <button type="button" id="btn-filtrar-estoque" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-search" style="margin-right: 5px;"></i>Filtrar
+                  </button>
+                </div>
+              </div>
 
-                <label>Quantidade *</label>
-                <input type="number" name="quantidade" id="quantidade" min="1" value="1" required />
+              <!-- Grid de Pneus em Estoque -->
+              <div class="estoque-grid-wrapper" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
+                <div id="estoque-grid-header" class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #28a745, #20c997); color: white; font-weight: 600; border-bottom: 2px solid #1e7e34; position: sticky; top: 0; z-index: 10;">
+                  <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"></div>
+                  <div style="flex: 1; min-width: 100px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+                  <div style="flex: 1.5; min-width: 140px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+                  <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+                  <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
+                  <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Qtd</div>
+                  <div style="flex: 1; min-width: 120px; padding: 10px 8px; text-align: center;"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
+                </div>
+                <div id="estoque-grid-body" class="grid-body" style="background: #f8f9fa;">
+                  <!-- Pneus serão carregados dinamicamente -->
+                </div>
+              </div>
 
-                <label>Estoque Disponível</label>
-                <div id="estoque-disponivel" style="display: flex; align-items: center; padding: 8px; background: #e9ecef; border-radius: 4px; font-weight: bold; color: #495057;">
-                  <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
-                  <span id="estoque-texto">Selecione marca, modelo e tipo</span>
+              <!-- Pneu Selecionado -->
+              <div id="pneu-selecionado" style="background: #e9ecef; padding: 15px; border-radius: 6px; border: 1px solid #ced4da; display: none;">
+                <h5 style="color: #495057; margin-bottom: 10px;"><i class="fas fa-check-circle" style="margin-right: 8px;"></i>Pneu Selecionado</h5>
+                <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                  <div><strong>Marca:</strong> <span id="selecionado-marca"></span></div>
+                  <div><strong>Modelo:</strong> <span id="selecionado-modelo"></span></div>
+                  <div><strong>Tipo:</strong> <span id="selecionado-tipo"></span></div>
+                  <div><strong>Vida:</strong> <span id="selecionado-vida"></span></div>
+                  <div><strong>Disponível:</strong> <span id="selecionado-quantidade"></span></div>
+                  <div><strong>Marca Fogo:</strong> <span id="selecionado-codigo"></span></div>
+                </div>
+                <input type="hidden" name="marca" id="marca" />
+                <input type="hidden" name="modelo" id="modelo" />
+                <input type="hidden" name="tipo" id="tipo" />
+                <input type="hidden" name="vida" id="vida" />
+                <input type="hidden" name="codigo_marca_fogo_instalado" id="codigo_marca_fogo_instalado" />
+                <div style="margin-top: 10px;">
+                  <label>Quantidade a utilizar *</label>
+                  <input type="number" name="quantidade" id="quantidade" min="1" value="1" required style="width: 80px; padding: 4px;" />
                 </div>
               </div>
             </div>

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('placa_veiculo').addEventListener('change', selecionarVeiculo);
   document.getElementById('tipo_operacao').addEventListener('change', toggleCamposRodizio);
   document.getElementById('formSaida').addEventListener('submit', handleSubmitSaida);
+  document.getElementById('btn-filtrar-estoque').addEventListener('click', carregarEstoque);
 
   // Verificar permissões
   verificarPermissoes();
@@ -501,7 +502,161 @@ function verificarPermissoes() {
   return true;
 }
 
-// Event listeners para verificar estoque em tempo real
-document.getElementById('marca').addEventListener('change', verificarEstoque);
-document.getElementById('modelo').addEventListener('change', verificarEstoque);
-document.getElementById('tipo').addEventListener('change', verificarEstoque);
+// Carregar estoque de pneus
+async function carregarEstoque() {
+  const container = document.getElementById('estoque-grid-body');
+  const filtroMarca = document.getElementById('filtro_marca').value;
+  const filtroModelo = document.getElementById('filtro_modelo').value;
+  const filtroTipo = document.getElementById('filtro_tipo').value;
+
+  try {
+    // Buscar pneus em estoque (ENTRADA - SAIDA)
+    let query = supabase
+      .from('pneus')
+      .select('marca, modelo, tipo, vida, quantidade, codigo_marca_fogo')
+      .eq('status', 'ENTRADA')
+      .order('marca', { ascending: true })
+      .order('modelo', { ascending: true });
+
+    if (filtroMarca) query = query.eq('marca', filtroMarca);
+    if (filtroModelo) query = query.eq('modelo', filtroModelo);
+    if (filtroTipo) query = query.eq('tipo', filtroTipo);
+
+    const { data: entradas, error: errorEntradas } = await query;
+
+    if (errorEntradas) {
+      console.error('Erro ao buscar entradas:', errorEntradas);
+      container.innerHTML = '<div class="grid-row" style="text-align: center; color: #dc3545;">Erro ao carregar estoque</div>';
+      return;
+    }
+
+    // Agrupar por marca, modelo, tipo, vida
+    const estoqueAgrupado = {};
+
+    entradas?.forEach(pneu => {
+      const chave = `${pneu.marca}-${pneu.modelo}-${pneu.tipo}-${pneu.vida || 0}`;
+      if (!estoqueAgrupado[chave]) {
+        estoqueAgrupado[chave] = {
+          marca: pneu.marca,
+          modelo: pneu.modelo,
+          tipo: pneu.tipo,
+          vida: pneu.vida || 0,
+          quantidade: 0,
+          codigos: []
+        };
+      }
+      estoqueAgrupado[chave].quantidade += pneu.quantidade || 0;
+      if (pneu.codigo_marca_fogo) {
+        estoqueAgrupado[chave].codigos.push(pneu.codigo_marca_fogo);
+      }
+    });
+
+    // Buscar saídas para subtrair
+    let querySaidas = supabase
+      .from('pneus')
+      .select('marca, modelo, tipo, vida, quantidade')
+      .eq('status', 'SAIDA');
+
+    if (filtroMarca) querySaidas = querySaidas.eq('marca', filtroMarca);
+    if (filtroModelo) querySaidas = querySaidas.eq('modelo', filtroModelo);
+    if (filtroTipo) querySaidas = querySaidas.eq('tipo', filtroTipo);
+
+    const { data: saidas, error: errorSaidas } = await querySaidas;
+
+    if (errorSaidas) {
+      console.error('Erro ao buscar saídas:', errorSaidas);
+    } else {
+      saidas?.forEach(pneu => {
+        const chave = `${pneu.marca}-${pneu.modelo}-${pneu.tipo}-${pneu.vida || 0}`;
+        if (estoqueAgrupado[chave]) {
+          estoqueAgrupado[chave].quantidade -= pneu.quantidade || 0;
+        }
+      });
+    }
+
+    // Filtrar apenas itens com quantidade > 0
+    const estoqueDisponivel = Object.values(estoqueAgrupado).filter(item => item.quantidade > 0);
+
+    if (estoqueDisponivel.length === 0) {
+      container.innerHTML = '<div class="grid-row" style="text-align: center; color: #6c757d;">Nenhum pneu encontrado no estoque</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    estoqueDisponivel.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.classList.add('grid-row');
+      row.style.display = 'flex';
+      row.style.borderBottom = '1px solid #eee';
+      row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      row.style.cursor = 'pointer';
+      row.onmouseover = () => row.style.backgroundColor = '#e9ecef';
+      row.onmouseout = () => row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+
+      // Botão de seleção
+      const btnSelecionar = document.createElement('button');
+      btnSelecionar.innerHTML = '<i class="fas fa-plus"></i>';
+      btnSelecionar.style.cssText = `
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+        font-size: 12px;
+      `;
+      btnSelecionar.onclick = () => selecionarPneu(item);
+
+      row.innerHTML = `
+        <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center;"></div>
+        <div style="flex: 1; min-width: 100px; padding: 10px 8px; text-align: left; border-right: 1px solid #eee;">${item.marca}</div>
+        <div style="flex: 1.5; min-width: 140px; padding: 10px 8px; text-align: left; border-right: 1px solid #eee;">${item.modelo}</div>
+        <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: left; border-right: 1px solid #eee;">${item.tipo}</div>
+        <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center; border-right: 1px solid #eee;">${item.vida}</div>
+        <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: center; border-right: 1px solid #eee;">${item.quantidade}</div>
+        <div style="flex: 1; min-width: 120px; padding: 10px 8px; text-align: center;">${item.codigos.length > 0 ? item.codigos.slice(0, 3).join(', ') + (item.codigos.length > 3 ? '...' : '') : '-'}</div>
+      `;
+
+      // Adicionar botão na primeira coluna
+      row.querySelector('div').appendChild(btnSelecionar);
+
+      container.appendChild(row);
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar estoque:', error);
+    container.innerHTML = '<div class="grid-row" style="text-align: center; color: #dc3545;">Erro ao carregar estoque</div>';
+  }
+}
+
+// Selecionar pneu do estoque
+function selecionarPneu(pneu) {
+  // Preencher campos ocultos
+  document.getElementById('marca').value = pneu.marca;
+  document.getElementById('modelo').value = pneu.modelo;
+  document.getElementById('tipo').value = pneu.tipo;
+  document.getElementById('vida').value = pneu.vida;
+  document.getElementById('codigo_marca_fogo_instalado').value = pneu.codigos[0] || '';
+
+  // Mostrar pneu selecionado
+  document.getElementById('selecionado-marca').textContent = pneu.marca;
+  document.getElementById('selecionado-modelo').textContent = pneu.modelo;
+  document.getElementById('selecionado-tipo').textContent = pneu.tipo;
+  document.getElementById('selecionado-vida').textContent = pneu.vida;
+  document.getElementById('selecionado-quantidade').textContent = pneu.quantidade;
+  document.getElementById('selecionado-codigo').textContent = pneu.codigos[0] || '-';
+
+  // Mostrar seção de pneu selecionado
+  document.getElementById('pneu-selecionado').style.display = 'block';
+
+  // Scroll para o pneu selecionado
+  document.getElementById('pneu-selecionado').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Carregar estoque inicial
+document.addEventListener('DOMContentLoaded', () => {
+  // ... outros event listeners ...
+  carregarEstoque();
+});
