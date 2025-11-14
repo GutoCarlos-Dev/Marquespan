@@ -30,6 +30,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form submit
   form.addEventListener('submit', handleSubmit);
 
+  // Toggle campos de saída
+  document.getElementById('status').addEventListener('change', function() {
+    const camposSaida = document.getElementById('campos-saida');
+    const camposRodizio = document.getElementById('campos-rodizio');
+
+    if (this.value === 'SAIDA') {
+      camposSaida.style.display = 'block';
+    } else {
+      camposSaida.style.display = 'none';
+      camposRodizio.style.display = 'none';
+    }
+  });
+
+  // Toggle campos de rodízio
+  document.getElementById('tipo_operacao').addEventListener('change', function() {
+    const camposRodizio = document.getElementById('campos-rodizio');
+
+    if (this.value === 'RODIZIO') {
+      camposRodizio.style.display = 'block';
+    } else {
+      camposRodizio.style.display = 'none';
+    }
+  });
+
   // Contagem de Estoque modal
   btnContagemEstoque?.addEventListener('click', () => {
     document.getElementById('modalContagemEstoque').style.display = 'block';
@@ -269,6 +293,40 @@ async function handleSubmit(e) {
         console.error('Detalhes do erro:', JSON.stringify(insertError, null, 2));
         alert(`Erro ao cadastrar pneu: ${insertError.message || 'Erro desconhecido'}`);
         return;
+      }
+
+      // Se foi uma SAÍDA, registrar detalhes na tabela saidas_detalhadas
+      if (pneu.status === 'SAIDA' && insertedData) {
+        const formData = new FormData(e.target);
+        const saidaDetalhada = {
+          lancamento_id: insertedData.id,
+          codigo_marca_fogo: formData.get('codigo_marca_fogo_trocado') || null,
+          data_saida: new Date().toISOString(),
+          placa: pneu.placa,
+          quilometragem: parseInt(formData.get('quilometragem') || 0),
+          aplicacao: formData.get('aplicacao'),
+          tipo_operacao: formData.get('tipo_operacao'),
+          posicao_anterior: formData.get('posicao_anterior') || null,
+          posicao_nova: formData.get('posicao_nova') || null,
+          codigo_marca_fogo_trocado: formData.get('codigo_marca_fogo_trocado') || null,
+          observacoes: formData.get('observacoes')?.trim() || null,
+          usuario: pneu.usuario
+        };
+
+        // Inserir na tabela saidas_detalhadas
+        const { error: saidaError } = await supabase
+          .from('saidas_detalhadas')
+          .insert([saidaDetalhada]);
+
+        if (saidaError) {
+          console.error('Erro ao registrar saída detalhada:', saidaError);
+          alert('Aviso: Saída registrada, mas houve erro no registro detalhado.');
+        } else {
+          // Se foi rodízio, atualizar posições dos pneus no veículo
+          if (saidaDetalhada.tipo_operacao === 'RODIZIO') {
+            await atualizarPosicoesRodizio(saidaDetalhada);
+          }
+        }
       }
 
       // Se foi um lançamento de pneus NOVOS com ESTOQUE e múltiplas unidades,
@@ -1023,6 +1081,37 @@ async function gerarPDFCodigosLancamento(codigos) {
   } catch (error) {
     console.error('Erro na geração do PDF:', error);
     alert('Erro ao gerar PDF.');
+  }
+}
+
+// Função para atualizar posições dos pneus no veículo durante rodízio
+async function atualizarPosicoesRodizio(saidaDetalhada) {
+  try {
+    // Remover pneu da posição anterior
+    if (saidaDetalhada.posicao_anterior) {
+      await supabase
+        .from('posicoes_veiculos')
+        .delete()
+        .eq('placa', saidaDetalhada.placa)
+        .eq('posicao', saidaDetalhada.posicao_anterior);
+    }
+
+    // Adicionar pneu na nova posição (se especificada)
+    if (saidaDetalhada.posicao_nova && saidaDetalhada.codigo_marca_fogo_trocado) {
+      await supabase
+        .from('posicoes_veiculos')
+        .upsert({
+          placa: saidaDetalhada.placa,
+          posicao: saidaDetalhada.posicao_nova,
+          codigo_marca_fogo: saidaDetalhada.codigo_marca_fogo_trocado,
+          data_instalacao: saidaDetalhada.data_saida,
+          quilometragem_instalacao: saidaDetalhada.quilometragem,
+          usuario_instalacao: saidaDetalhada.usuario
+        });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar posições do rodízio:', error);
+    // Não lançar erro para não interromper o fluxo principal
   }
 }
 
