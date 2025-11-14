@@ -220,6 +220,21 @@ async function carregarHistoricoSaidas(placa) {
         'DESCARTE': '🗑️ Descarte'
       }[saida.tipo_operacao] || saida.tipo_operacao;
 
+      // Botão de excluir
+      const btnExcluir = document.createElement('button');
+      btnExcluir.innerHTML = '<i class="fas fa-trash-alt"></i>';
+      btnExcluir.title = 'Excluir saída e retornar ao estoque';
+      btnExcluir.style.cssText = `
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      `;
+      btnExcluir.onclick = () => excluirSaida(saida);
+
       row.innerHTML = `
         <div style="flex: 1; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${new Date(saida.data_saida).toLocaleString('pt-BR')}</div>
         <div style="flex: 1; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${tipoOperacaoFormatado}</div>
@@ -228,8 +243,12 @@ async function carregarHistoricoSaidas(placa) {
         <div style="flex: 1.2; min-width: 140px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${saida.pneus?.modelo || ''}</div>
         <div style="flex: 0.8; min-width: 100px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${saida.pneus?.tipo || ''}</div>
         <div style="flex: 1; min-width: 120px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${saida.codigo_marca_fogo_trocado || '-'}</div>
-        <div style="flex: 1; min-width: 120px; padding: 12px 8px; text-align: left;">${saida.usuario || ''}</div>
+        <div style="flex: 1; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${saida.usuario || ''}</div>
+        <div style="flex: 0.8; min-width: 100px; padding: 12px 8px; text-align: center;"></div>
       `;
+
+      // Adicionar botão na última coluna
+      row.querySelector('div:last-child').appendChild(btnExcluir);
 
       container.appendChild(row);
     });
@@ -653,6 +672,59 @@ function selecionarPneu(pneu) {
 
   // Scroll para o pneu selecionado
   document.getElementById('pneu-selecionado').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Excluir saída e retornar ao estoque
+async function excluirSaida(saida) {
+  if (!confirm(`Tem certeza que deseja excluir esta saída e retornar ${saida.pneus?.quantidade || 1} unidade(s) ao estoque?\n\nOperação: ${saida.tipo_operacao}\nPneu: ${saida.pneus?.marca} ${saida.pneus?.modelo}\nData: ${new Date(saida.data_saida).toLocaleString('pt-BR')}`)) {
+    return;
+  }
+
+  try {
+    // 1. Excluir da tabela saidas_detalhadas
+    const { error: deleteSaidaError } = await supabase
+      .from('saidas_detalhadas')
+      .delete()
+      .eq('lancamento_id', saida.lancamento_id);
+
+    if (deleteSaidaError) {
+      console.error('Erro ao excluir saída detalhada:', deleteSaidaError);
+      alert('Erro ao excluir saída detalhada.');
+      return;
+    }
+
+    // 2. Excluir da tabela pneus (registro de saída)
+    const { error: deletePneuError } = await supabase
+      .from('pneus')
+      .delete()
+      .eq('id', saida.lancamento_id);
+
+    if (deletePneuError) {
+      console.error('Erro ao excluir registro de pneu:', deletePneuError);
+      alert('Erro ao excluir registro de pneu.');
+      return;
+    }
+
+    // 3. Se foi rodízio, remover da tabela posicoes_veiculos
+    if (saida.tipo_operacao === 'RODIZIO' && saida.posicao_nova) {
+      await supabase
+        .from('posicoes_veiculos')
+        .delete()
+        .eq('placa', placaSelecionada)
+        .eq('posicao', saida.posicao_nova);
+    }
+
+    alert('✅ Saída excluída com sucesso! O pneu foi retornado ao estoque.');
+
+    // Recarregar dados
+    await carregarPosicoesVeiculo(placaSelecionada);
+    await carregarHistoricoSaidas(placaSelecionada);
+    await carregarEstoque();
+
+  } catch (error) {
+    console.error('Erro ao excluir saída:', error);
+    alert('Erro inesperado ao excluir saída.');
+  }
 }
 
 // Carregar estoque inicial
