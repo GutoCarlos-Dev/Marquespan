@@ -218,7 +218,8 @@ async function carregarHistoricoSaidas(placa) {
         'RODIZIO': '🔄 Rodízio',
         'INSTALACAO': '📦 Instalação',
         'TROCA': '🔧 Troca',
-        'DESCARTE': '🗑️ Descarte'
+        'DESCARTE': '🗑️ Descarte',
+        'BORRACHARIA_TERCERIZADA': '🏪 Borracharia Tercerizada'
       }[saida.tipo_operacao] || saida.tipo_operacao;
 
       // Botão de excluir
