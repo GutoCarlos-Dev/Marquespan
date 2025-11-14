@@ -81,7 +81,7 @@ function initializeSelects() {
   // Predefined options
   const marcas = ['BRIDGESTONE', 'CONTINENTAL', 'GOODYEAR', 'MICHELIN', 'PIRELLI'];
   const modelos = ['225/75/16', '235/75/17.5', '275/80/22.5 - LISO', '275/80/22.5 - BORRACHUDO', '295/80/22.5 - LISO', '295/80/22.5 - BORRACHUDO'];
-  const tipos = ['NOVO', 'RECAPADO'];
+  const tipos = ['NOVO', 'RECAPADO', 'USADO'];
 
   // Update marca options
   selectMarca.innerHTML = '<option value="">Selecione</option>' + marcas.map(m => `<option value="${m}">${m}</option>`).join('');
