@@ -814,22 +814,17 @@ async function gerarPDFCodigosLancamento(codigos) {
     // 1. Acesse um conversor online como: https://www.base64-image.de/
     // 2. Envie seu arquivo 'logo.png'.
     // 3. Copie o texto gerado e cole-o dentro das aspas da variável 'logoBase64' abaixo.
-    const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC'; // Substitua este conteúdo
-    const placeholderLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABSSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwZ08AAQAB2ds4AAAAAElFTkSuQmCC';
+    const logoBase64 = '../logo.png'; // Substitua este conteúdo
 
     // Logo
-    doc.addImage(logoBase64, 'PNG', 10, 8, 45, 20);
-
-    // Adiciona a logo apenas se não for o placeholder, tratando possíveis erros.
-    if (logoBase64 && logoBase64 !== placeholderLogo) {
+    if (logoBase64) {
         try {
+            doc.addImage(logoBase64, 'PNG', 10, 8, 45, 20);
             doc.addImage(logoBase64, 'PNG', 150, 8, 45, 20);
         } catch (e) {
             console.warn('Não foi possível adicionar o logo ao PDF. Verifique se o código Base64 está correto.', e);
             alert('Aviso: O logo não pôde ser carregado, mas o PDF foi gerado mesmo assim.');
         }
-    } else {
-        console.log('Logo placeholder detectado. Pulando a adição do logo no PDF. Substitua o conteúdo da variável "logoBase64" para exibir o logo da sua empresa.');
     }
 
     // Título do Documento
