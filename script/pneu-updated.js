@@ -937,9 +937,9 @@ async function gerarPDFCodigosLancamento(codigos) {
     });
 
     // --- INSTRUÇÕES PARA MARCAÇÃO ---
-    const instrucoesY = doc.lastAutoTable.finalY + 15;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
+   // const instrucoesY = doc.lastAutoTable.finalY + 15;
+   // doc.setFont('helvetica', 'bold');
+   /* doc.setFontSize(12);
     doc.text('INSTRUÇÕES PARA MARCAÇÃO:', leftMargin, instrucoesY);
 
     doc.setFont('helvetica', 'normal');
@@ -953,7 +953,7 @@ async function gerarPDFCodigosLancamento(codigos) {
 
     instrucoes.forEach((instrucao, index) => {
         doc.text(instrucao, leftMargin + 5, instrucoesY + 8 + (index * 5));
-    });
+    });*/
 
     // --- RODAPÉ ---
     const pageCount = doc.internal.getNumberOfPages();
