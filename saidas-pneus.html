@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saídas/Rodízio de Pneus - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+  <main class="main-content">
+    <header class="page-title-header"><i class="fas fa-arrow-right page-title-icon"></i><span class="page-title-text">Saídas e Rodízio de Pneus</span></header>
+    <section class="content-section">
+
+      <!-- Seção de Seleção de Veículo -->
+      <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-truck" style="margin-right: 8px;"></i>Seleção de Veículo</h3>
+        </div>
+        <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+          <label>Placa do Veículo *</label>
+          <select name="placa_veiculo" id="placa_veiculo" required style="height: 45px; font-size: 1.1rem;">
+            <option value="">Selecione o veículo</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Visualização das Posições Atuais -->
+      <div class="form-card" id="posicoes-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
+        <div class="form-header" style="border-bottom: 2px solid #17a2b8; padding-bottom: 15px; margin-bottom: 20px;">
+          <h3 style="color: #17a2b8; margin: 0; font-size: 1.4rem;"><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>Posições Atuais dos Pneus</h3>
+        </div>
+        <div id="posicoes-veiculo" class="posicoes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <!-- Posições serão carregadas dinamicamente -->
+        </div>
+      </div>
+
+      <!-- Card do Formulário de Saída -->
+      <div class="form-card" id="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
+        <div class="form-header" style="border-bottom: 2px solid #dc3545; padding-bottom: 15px; margin-bottom: 20px;">
+          <h3 style="color: #dc3545; margin: 0; font-size: 1.4rem;"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registro de Saída</h3>
+        </div>
+        <form id="formSaida">
+          <div class="form-bloco">
+            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+              <label>Data da Operação</label>
+              <input type="datetime-local" name="data_operacao" id="data_operacao" readonly />
+
+              <label>Quilometragem do Veículo *</label>
+              <input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" required />
+
+              <label>Tipo de Operação *</label>
+              <select name="tipo_operacao" id="tipo_operacao" required>
+                <option value="">Selecione</option>
+                <option value="RODIZIO">🔄 Rodízio</option>
+                <option value="INSTALACAO">📦 Instalação</option>
+                <option value="TROCA">🔧 Troca</option>
+                <option value="DESCARTE">🗑️ Descarte</option>
+              </select>
+
+              <label>Aplicação *</label>
+              <select name="aplicacao" id="aplicacao" required>
+                <option value="">Selecione</option>
+                <option value="DIANTEIRO">🚗 Dianteiro</option>
+                <option value="TRACAO">🚛 Tração</option>
+                <option value="TRUCK">🚚 Truck</option>
+              </select>
+            </div>
+
+            <!-- Campos específicos para rodízio -->
+            <div id="campos-rodizio" style="display: none; margin-top: 25px; background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7;">
+              <h4 style="color: #856404; margin-bottom: 15px;"><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h4>
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+
+                <label>Posição Atual do Pneu</label>
+                <select name="posicao_anterior" id="posicao_anterior">
+                  <option value="">Selecione posição atual</option>
+                  <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                  <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                  <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                  <option value="TRACAO_DIREITO">Tração Direito</option>
+                  <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                  <option value="TRUCK_DIREITO">Truck Direito</option>
+                </select>
+
+                <label>Nova Posição</label>
+                <select name="posicao_nova" id="posicao_nova">
+                  <option value="">Selecione nova posição</option>
+                  <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                  <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                  <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                  <option value="TRACAO_DIREITO">Tração Direito</option>
+                  <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                  <option value="TRUCK_DIREITO">Truck Direito</option>
+                </select>
+
+                <label>Código Marca de Fogo (Pneu a ser removido)</label>
+                <input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Ex: MF001" maxlength="10" />
+
+                <label>Código Marca de Fogo (Pneu a ser instalado)</label>
+                <input type="text" name="codigo_marca_fogo_instalado" id="codigo_marca_fogo_instalado" placeholder="Ex: MF002" maxlength="10" />
+              </div>
+            </div>
+
+            <!-- Seleção de Pneu do Estoque -->
+            <div style="margin-top: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+              <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu</h4>
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+
+                <label>Marca *</label>
+                <select name="marca" id="marca" required>
+                  <option value="">Selecione</option>
+                  <option value="BRIDGESTONE">BRIDGESTONE</option>
+                  <option value="CONTINENTAL">CONTINENTAL</option>
+                  <option value="GOODYEAR">GOODYEAR</option>
+                  <option value="MICHELIN">MICHELIN</option>
+                  <option value="PIRELLI">PIRELLI</option>
+                </select>
+
+                <label>Modelo *</label>
+                <select name="modelo" id="modelo" required>
+                  <option value="">Selecione</option>
+                  <option value="225/75/16">225/75/16</option>
+                  <option value="235/75/17.5">235/75/17.5</option>
+                  <option value="275/80/22.5 - LISO">275/80/22.5 - LISO</option>
+                  <option value="275/80/22.5 - BORRACHUDO">275/80/22.5 - BORRACHUDO</option>
+                  <option value="295/80/22.5 - LISO">295/80/22.5 - LISO</option>
+                  <option value="295/80/22.5 - BORRACHUDO">295/80/22.5 - BORRACHUDO</option>
+                </select>
+
+                <label>Tipo *</label>
+                <select name="tipo" id="tipo" required>
+                  <option value="">Selecione</option>
+                  <option value="NOVO">NOVO</option>
+                  <option value="RECAPADO">RECAPADO</option>
+                  <option value="USADO">USADO</option>
+                </select>
+
+                <label>Vida</label>
+                <input type="number" name="vida" id="vida" min="0" value="0" />
+
+                <label>Quantidade *</label>
+                <input type="number" name="quantidade" id="quantidade" min="1" value="1" required />
+
+                <label>Estoque Disponível</label>
+                <div id="estoque-disponivel" style="display: flex; align-items: center; padding: 8px; background: #e9ecef; border-radius: 4px; font-weight: bold; color: #495057;">
+                  <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                  <span id="estoque-texto">Selecione marca, modelo e tipo</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+              <label>Observações</label>
+              <textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a operação..." style="width: 100%; resize: vertical; min-height: 60px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <button type="submit" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registrar Saída</button>
+            <button type="button" onclick="limparFormulario()" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>Limpar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Histórico de Saídas -->
+      <div class="table-card" id="historico-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
+        <div class="table-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-history" style="margin-right: 8px;"></i>Histórico de Saídas</h2>
+        </div>
+
+        <div class="grid-wrapper" style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;">
+            <div class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #dc3545, #c82333); color: white; font-weight: 600; border-bottom: 2px solid #bd2130;">
+              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-calendar" style="margin-right: 5px;"></i>Data</div>
+              <div style="flex: 1; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cogs" style="margin-right: 5px;"></i>Operação</div>
+              <div style="flex: 1; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-road" style="margin-right: 5px;"></i>Km</div>
+              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+              <div style="flex: 1.2; min-width: 140px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+              <div style="flex: 0.8; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
+              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left;"><i class="fas fa-user" style="margin-right: 5px;"></i>Usuário</div>
+            </div>
+            <div id="grid-historico-body" class="grid-body" style="background: #f8f9fa;"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <script src="./script/menu.js" defer></script>
+  <script type="module" src="./script/saidas-pneus.js" defer></script>
+</body>
+</html>
