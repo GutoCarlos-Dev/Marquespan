@@ -617,6 +617,7 @@ async function carregarEstoque() {
 
       // Botão de seleção
       const btnSelecionar = document.createElement('button');
+      btnSelecionar.type = 'button'; // Evitar submissão automática do formulário
       btnSelecionar.innerHTML = '<i class="fas fa-plus"></i>';
       btnSelecionar.style.cssText = `
         background: #28a745;
