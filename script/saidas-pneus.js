@@ -414,10 +414,11 @@ async function handleSubmitSaida(e) {
       usuario: saida.usuario
     };
 
+    console.log('Tentando inserir saida detalhada:', saidaDetalhada);
+
     const { error: saidaError } = await supabase
       .from('saidas_detalhadas')
-      .insert([saidaDetalhada])
-      .select();
+      .insert([saidaDetalhada]);
 
     if (saidaError) {
       console.error('Erro ao registrar saída detalhada:', saidaError);
