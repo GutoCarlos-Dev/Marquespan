@@ -23,120 +23,148 @@
           <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-plus-circle" style="margin-right: 8px;"></i>Cadastro e Aplicação de Pneu</h3>
         </div>
         <form id="formPneu">
-          <div class="form-bloco">
-            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-              <label>Data</label>
-              <input type="datetime-local" name="data" id="data" readonly />
-
-              <label>Placa *</label>
-              <select name="placa" id="placa" required>
-                <option value="">Selecione</option>
-              </select>
-
-              <label>Marca *</label>
-              <select name="marca" id="marca" required>
-                <option value="">Selecione</option>
-              </select>
-
-              <label>Modelo *</label>
-              <select name="modelo" id="modelo" required>
-                <option value="">Selecione</option>
-              </select>
-
-              <label>Tipo *</label>
-              <select name="tipo" id="tipo" required>
-                <option value="">Selecione</option>
-              </select>
-
-              <label>Vida</label>
-              <input type="number" name="vida" id="vida" min="0" value="0" />
-
-              <label>Status</label>
-              <select name="status" id="status">
-                <option value="ENTRADA">Entrada</option>
-                <option value="SAIDA">Saída</option>
-              </select>
-
-              <label>Descrição</label>
-              <select name="descricao" id="descricao" style="width: 400px; height: 40px;">
-                <option value="ESTOQUE">Estoque</option>
-                <option value="CONTAGEM DE ESTOQUE">Contagem de Estoque</option>
-                <option value="RETORNO BORRACHARIA">Retorno Borracharia</option>
-                <option value="ENVIO BORRACHARIA">Envio Borracharia</option>
-                <option value="INSTALADO NO VEICULO">Instalado no Veiculo</option>
-                <option value="REFORMA">Reforma</option>
-                <option value="DESCARTE">Descarte</option>
-                <option value="TRANSFERIDO PARA CD">Transferido para CD</option>
-              </select>
-
-              <!-- Campos condicionais para SAÍDA -->
-              <div id="campos-saida" style="display: none; grid-column: 1 / -1; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Detalhes da Saída</h4>
-                <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-
-                  <label>Quilometragem do Veículo *</label>
-                  <input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" />
-
-                  <label>Aplicação *</label>
-                  <select name="aplicacao" id="aplicacao">
+          <div class="form-bloco" style="display: flex; justify-content: center;">
+            <table style="border: none; border-collapse: collapse; width: 80%; max-width: 1000px;">
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Data</label></td>
+                <td style="border: none; padding: 10px;"><input type="datetime-local" name="data" id="data" readonly /></td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Placa *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="placa" id="placa" required>
                     <option value="">Selecione</option>
-                    <option value="DIANTEIRO">Dianteiro</option>
-                    <option value="TRACAO">Tração</option>
-                    <option value="TRUCK">Truck</option>
                   </select>
-
-                  <label>Tipo de Operação *</label>
-                  <select name="tipo_operacao" id="tipo_operacao">
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Marca *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="marca" id="marca" required>
                     <option value="">Selecione</option>
-                    <option value="RODIZIO">Rodízio</option>
-                    <option value="INSTALACAO">Instalação</option>
-                    <option value="TROCA">Troca</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Modelo *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="modelo" id="modelo" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Tipo *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="tipo" id="tipo" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Vida</label></td>
+                <td style="border: none; padding: 10px;"><input type="number" name="vida" id="vida" min="0" value="0" /></td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Status</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="status" id="status">
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Descrição</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="descricao" id="descricao" style="width: 100%; height: 40px;">
+                    <option value="ESTOQUE">Estoque</option>
+                    <option value="CONTAGEM DE ESTOQUE">Contagem de Estoque</option>
+                    <option value="RETORNO BORRACHARIA">Retorno Borracharia</option>
+                    <option value="ENVIO BORRACHARIA">Envio Borracharia</option>
+                    <option value="INSTALADO NO VEICULO">Instalado no Veiculo</option>
+                    <option value="REFORMA">Reforma</option>
                     <option value="DESCARTE">Descarte</option>
+                    <option value="TRANSFERIDO PARA CD">Transferido para CD</option>
                   </select>
-
-                  <!-- Campos específicos para rodízio -->
-                  <div id="campos-rodizio" style="display: none; grid-column: 1 / -1; background: #fff3cd; padding: 15px; border-radius: 6px; border: 1px solid #ffeaa7;">
-                    <h5 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h5>
-                    <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-
-                      <label>Posição Atual do Pneu</label>
-                      <select name="posicao_anterior" id="posicao_anterior">
-                        <option value="">Selecione posição atual</option>
-                        <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
-                        <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
-                        <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
-                        <option value="TRACAO_DIREITO">Tração Direito</option>
-                        <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
-                        <option value="TRUCK_DIREITO">Truck Direito</option>
-                      </select>
-
-                      <label>Nova Posição</label>
-                      <select name="posicao_nova" id="posicao_nova">
-                        <option value="">Selecione nova posição</option>
-                        <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
-                        <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
-                        <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
-                        <option value="TRACAO_DIREITO">Tração Direito</option>
-                        <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
-                        <option value="TRUCK_DIREITO">Truck Direito</option>
-                      </select>
-
-                      <label>Código Marca de Fogo (Pneu a ser removido)</label>
-                      <input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Ex: MF001" maxlength="10" />
-                    </div>
+                </td>
+              </tr>
+              <!-- Campos condicionais para SAÍDA -->
+              <tr id="campos-saida" style="display: none;">
+                <td colspan="4" style="border: none; padding: 10px;">
+                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Detalhes da Saída</h4>
+                    <table style="border: none; border-collapse: collapse; width: 100%;">
+                      <tr>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Quilometragem do Veículo *</label></td>
+                        <td style="border: none; padding: 5px;"><input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" /></td>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Aplicação *</label></td>
+                        <td style="border: none; padding: 5px;">
+                          <select name="aplicacao" id="aplicacao">
+                            <option value="">Selecione</option>
+                            <option value="DIANTEIRO">Dianteiro</option>
+                            <option value="TRACAO">Tração</option>
+                            <option value="TRUCK">Truck</option>
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Tipo de Operação *</label></td>
+                        <td style="border: none; padding: 5px;">
+                          <select name="tipo_operacao" id="tipo_operacao">
+                            <option value="">Selecione</option>
+                            <option value="RODIZIO">Rodízio</option>
+                            <option value="INSTALACAO">Instalação</option>
+                            <option value="TROCA">Troca</option>
+                            <option value="DESCARTE">Descarte</option>
+                          </select>
+                        </td>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Observações</label></td>
+                        <td style="border: none; padding: 5px;"><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a saída..." style="resize: vertical; min-height: 60px; width: 100%;"></textarea></td>
+                      </tr>
+                      <!-- Campos específicos para rodízio -->
+                      <tr id="campos-rodizio" style="display: none;">
+                        <td colspan="4" style="border: none; padding: 5px;">
+                          <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border: 1px solid #ffeaa7;">
+                            <h5 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h5>
+                            <table style="border: none; border-collapse: collapse; width: 100%;">
+                              <tr>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Posição Atual do Pneu</label></td>
+                                <td style="border: none; padding: 5px;">
+                                  <select name="posicao_anterior" id="posicao_anterior">
+                                    <option value="">Selecione posição atual</option>
+                                    <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                                    <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                                    <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                                    <option value="TRACAO_DIREITO">Tração Direito</option>
+                                    <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                                    <option value="TRUCK_DIREITO">Truck Direito</option>
+                                  </select>
+                                </td>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Nova Posição</label></td>
+                                <td style="border: none; padding: 5px;">
+                                  <select name="posicao_nova" id="posicao_nova">
+                                    <option value="">Selecione nova posição</option>
+                                    <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                                    <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                                    <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                                    <option value="TRACAO_DIREITO">Tração Direito</option>
+                                    <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                                    <option value="TRUCK_DIREITO">Truck Direito</option>
+                                  </select>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Código Marca de Fogo (Pneu a ser removido)</label></td>
+                                <td colspan="3" style="border: none; padding: 5px;"><input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Ex: MF001" maxlength="10" style="width: 100%;" /></td>
+                              </tr>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
                   </div>
-
-                  <label>Observações</label>
-                  <textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a saída..." style="resize: vertical; min-height: 60px;"></textarea>
-                </div>
-              </div>
-
-              <label>Nota Fiscal</label>
-              <input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF (opcional)" />
-
-              <label>Quantidade</label>
-              <input type="number" name="quantidade" id="quantidade" min="0" />
-            </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Nota Fiscal</label></td>
+                <td style="border: none; padding: 10px;"><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF (opcional)" /></td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Quantidade</label></td>
+                <td style="border: none; padding: 10px;"><input type="number" name="quantidade" id="quantidade" min="0" /></td>
+              </tr>
+            </table>
           </div>
 
           <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
