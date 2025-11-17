@@ -113,42 +113,53 @@
               <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu do Estoque</h4>
 
               <!-- Filtros para busca -->
-              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px;">
-                <label>Filtrar Marca</label>
-                <select name="filtro_marca" id="filtro_marca">
-                  <option value="">Todas</option>
-                  <option value="BRIDGESTONE">BRIDGESTONE</option>
-                  <option value="CONTINENTAL">CONTINENTAL</option>
-                  <option value="GOODYEAR">GOODYEAR</option>
-                  <option value="MICHELIN">MICHELIN</option>
-                  <option value="PIRELLI">PIRELLI</option>
-                </select>
-
-                <label>Filtrar Modelo</label>
-                <select name="filtro_modelo" id="filtro_modelo">
-                  <option value="">Todos</option>
-                  <option value="225/75/16">225/75/16</option>
-                  <option value="235/75/17.5">235/75/17.5</option>
-                  <option value="275/80/22.5 - LISO">275/80/22.5 - LISO</option>
-                  <option value="275/80/22.5 - BORRACHUDO">275/80/22.5 - BORRACHUDO</option>
-                  <option value="295/80/22.5 - LISO">295/80/22.5 - LISO</option>
-                  <option value="295/80/22.5 - BORRACHUDO">295/80/22.5 - BORRACHUDO</option>
-                </select>
-
-                <label>Filtrar Tipo</label>
-                <select name="filtro_tipo" id="filtro_tipo">
-                  <option value="">Todos</option>
-                  <option value="NOVO">NOVO</option>
-                  <option value="RECAPADO">RECAPADO</option>
-                  <option value="USADO">USADO</option>
-                </select>
-
-                <div style="display: flex; align-items: end;">
-                  <button type="button" id="btn-filtrar-estoque" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    <i class="fas fa-search" style="margin-right: 5px;"></i>Filtrar
-                  </button>
-                </div>
-              </div>
+              <table style="border: none; border-collapse: collapse; width: 100%; margin-bottom: 15px;">
+                <tr>
+                  <td style="border: none; padding: 5px;"><label>Filtrar Marca</label></td>
+                  <td style="border: none; padding: 5px;">
+                    <select name="filtro_marca" id="filtro_marca">
+                      <option value="">Todas</option>
+                      <option value="BRIDGESTONE">BRIDGESTONE</option>
+                      <option value="CONTINENTAL">CONTINENTAL</option>
+                      <option value="GOODYEAR">GOODYEAR</option>
+                      <option value="MICHELIN">MICHELIN</option>
+                      <option value="PIRELLI">PIRELLI</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border: none; padding: 5px;"><label>Filtrar Modelo</label></td>
+                  <td style="border: none; padding: 5px;">
+                    <select name="filtro_modelo" id="filtro_modelo">
+                      <option value="">Todos</option>
+                      <option value="225/75/16">225/75/16</option>
+                      <option value="235/75/17.5">235/75/17.5</option>
+                      <option value="275/80/22.5 - LISO">275/80/22.5 - LISO</option>
+                      <option value="275/80/22.5 - BORRACHUDO">275/80/22.5 - BORRACHUDO</option>
+                      <option value="295/80/22.5 - LISO">295/80/22.5 - LISO</option>
+                      <option value="295/80/22.5 - BORRACHUDO">295/80/22.5 - BORRACHUDO</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border: none; padding: 5px;"><label>Filtrar Tipo</label></td>
+                  <td style="border: none; padding: 5px;">
+                    <select name="filtro_tipo" id="filtro_tipo">
+                      <option value="">Todos</option>
+                      <option value="NOVO">NOVO</option>
+                      <option value="RECAPADO">RECAPADO</option>
+                      <option value="USADO">USADO</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border: none; padding: 5px;" colspan="2" style="text-align: right;">
+                    <button type="button" id="btn-filtrar-estoque" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      <i class="fas fa-search" style="margin-right: 5px;"></i>Filtrar
+                    </button>
+                  </td>
+                </tr>
+              </table>
 
               <!-- Grid de Pneus em Estoque -->
               <div class="estoque-grid-wrapper" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
