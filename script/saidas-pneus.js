@@ -84,20 +84,10 @@ async function carregarPosicoesVeiculo(placa) {
   const container = document.getElementById('posicoes-veiculo');
 
   try {
+    // Primeiro, carregar as posições sem join
     const { data: posicoes, error } = await supabase
       .from('posicoes_veiculos')
-      .select(`
-        posicao,
-        codigo_marca_fogo,
-        data_instalacao,
-        quilometragem_instalacao,
-        pneus (
-          marca,
-          modelo,
-          tipo,
-          vida
-        )
-      `)
+      .select('posicao, codigo_marca_fogo, data_instalacao, quilometragem_instalacao')
       .eq('placa', placa)
       .order('posicao');
 
@@ -112,6 +102,23 @@ async function carregarPosicoesVeiculo(placa) {
       return;
     }
 
+    // Buscar dados dos pneus para cada código de marca de fogo
+    const codigos = posicoes.map(p => p.codigo_marca_fogo).filter(c => c);
+    let pneusMap = {};
+
+    if (codigos.length > 0) {
+      const { data: pneus, error: pneusError } = await supabase
+        .from('pneus')
+        .select('codigo_marca_fogo, marca, modelo, tipo, vida')
+        .in('codigo_marca_fogo', codigos);
+
+      if (!pneusError && pneus) {
+        pneus.forEach(pneu => {
+          pneusMap[pneu.codigo_marca_fogo] = pneu;
+        });
+      }
+    }
+
     const posicoesPadrao = [
       'DIANTEIRO_ESQUERDO', 'DIANTEIRO_DIREITO',
       'TRACAO_ESQUERDO', 'TRACAO_DIREITO',
@@ -120,7 +127,10 @@ async function carregarPosicoesVeiculo(placa) {
 
     const posicoesMap = {};
     posicoes.forEach(p => {
-      posicoesMap[p.posicao] = p;
+      posicoesMap[p.posicao] = {
+        ...p,
+        pneus: pneusMap[p.codigo_marca_fogo] || null
+      };
     });
 
     container.innerHTML = '';
@@ -145,7 +155,7 @@ async function carregarPosicoesVeiculo(placa) {
           <div style="font-size: 0.9rem; color: #155724; margin-bottom: 8px;">${posicaoFormatada}</div>
           <div style="font-size: 1.2rem; color: #dc3545; margin-bottom: 5px;">${posicaoData.codigo_marca_fogo}</div>
           <div style="font-size: 0.8rem; color: #6c757d;">
-            ${posicaoData.pneus?.marca} ${posicaoData.pneus?.modelo}<br>
+            ${posicaoData.pneus?.marca || ''} ${posicaoData.pneus?.modelo || ''}<br>
             Vida: ${posicaoData.pneus?.vida || 0}
           </div>
         `;
