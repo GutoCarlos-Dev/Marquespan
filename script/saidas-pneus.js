@@ -416,7 +416,8 @@ async function handleSubmitSaida(e) {
 
     const { error: saidaError } = await supabase
       .from('saidas_detalhadas')
-      .insert([saidaDetalhada]);
+      .insert([saidaDetalhada])
+      .select();
 
     if (saidaError) {
       console.error('Erro ao registrar saída detalhada:', saidaError);
