@@ -33,12 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Mostrar a primeira seção por padrão (ou a que não tiver a classe 'hidden')
-    const initialSection = document.querySelector('main .section:not(.hidden)');
-    if (initialSection) {
-        showSection(initialSection.id);
-    }
-
     // --- LÓGICA DE COTAÇÕES ---
     const btnAddToCart = document.getElementById('btnAddToCart');
     const cartBody = document.getElementById('cartBody');
