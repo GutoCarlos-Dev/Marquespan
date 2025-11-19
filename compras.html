@@ -28,16 +28,152 @@
 
     <div class="table-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
       <section id="sectionRealizarCotacoes" class="section">
-        <!-- Conteúdo para Realizar Cotações será inserido dinamicamente -->
+        <h2>Realizar Cotações</h2>
+        <div class="card">
+          <div class="card-title-container">
+            <h3>Código da Cotação</h3>
+          </div>
+          <input type="text" id="quotationCode" placeholder="Código da Cotação" readonly />
+        </div>
+        <div class="card">
+          <div class="card-title-container">
+            <h3>Adicionar Produto ao Carrinho</h3>
+          </div>
+          <select id="cartProductSelect">
+            <option value="">-- Selecione um produto --</option>
+          </select>
+          <input type="number" id="cartQtd" placeholder="Quantidade" min="1" />
+          <button id="btnAddToCart" class="btn-primary">Adicionar ao Carrinho</button>
+        </div>
+        <div class="card">
+          <div class="card-title-container">
+            <h3>Carrinho de Produtos</h3>
+          </div>
+          <table id="cartTable">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Unidade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="cartBody"></tbody>
+          </table>
+        </div>
+        <div class="card-row">
+          <div class="card">
+            <div class="card-title-container">
+              <h3>Empresa 1</h3>
+            </div>
+            <select id="empresa1Cot">
+              <option value="">-- Selecione um fornecedor --</option>
+            </select>
+            <textarea id="obsEmpresa1" placeholder="Observações"></textarea>
+            <div id="precosEmpresa1"></div>
+            <input type="number" id="totalEmpresa1" placeholder="Total" readonly />
+            <input type="radio" name="empresaVencedora" value="1" />
+            <label>Vencedor</label>
+          </div>
+          <div class="card">
+            <div class="card-title-container">
+              <h3>Empresa 2</h3>
+            </div>
+            <select id="empresa2Cot">
+              <option value="">-- Selecione um fornecedor --</option>
+            </select>
+            <textarea id="obsEmpresa2" placeholder="Observações"></textarea>
+            <div id="precosEmpresa2"></div>
+            <input type="number" id="totalEmpresa2" placeholder="Total" readonly />
+            <input type="radio" name="empresaVencedora" value="2" />
+            <label>Vencedor</label>
+          </div>
+          <div class="card">
+            <div class="card-title-container">
+              <h3>Empresa 3</h3>
+            </div>
+            <select id="empresa3Cot">
+              <option value="">-- Selecione um fornecedor --</option>
+            </select>
+            <textarea id="obsEmpresa3" placeholder="Observações"></textarea>
+            <div id="precosEmpresa3"></div>
+            <input type="number" id="totalEmpresa3" placeholder="Total" readonly />
+            <input type="radio" name="empresaVencedora" value="3" />
+            <label>Vencedor</label>
+          </div>
+        </div>
+        <button id="btnExportPdf" class="btn-primary">Exportar PDF</button>
+        <button id="btnRegistrarCotacoes" class="btn-primary">Registrar Cotações</button>
       </section>
       <section id="sectionCotacoesSalvas" class="section hidden">
-        <!-- Conteúdo para Cotações Salvas será inserido dinamicamente -->
+        <h2>Cotações Salvas</h2>
+        <div class="search-container">
+          <label for="searchQuotation">Buscar por Código:</label>
+          <input type="text" id="searchQuotation" placeholder="Digite o código da cotação" />
+          <button id="btnSearchQuotation" class="btn-primary">Buscar</button>
+        </div>
+        <div class="filter-container">
+          <label for="filterStatus">Filtrar por Status:</label>
+          <select id="filterStatus">
+            <option value="Todas">Todas</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Aprovada">Aprovada</option>
+            <option value="Rejeitada">Rejeitada</option>
+          </select>
+        </div>
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Data</th>
+              <th>Vencedor</th>
+              <th>Valor Total</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="savedQuotationsTableBody"></tbody>
+        </table>
       </section>
       <section id="sectionCadastrarProdutos" class="section hidden">
-        <!-- Conteúdo para Cadastrar Produtos será inserido dinamicamente -->
+        <h2>Cadastrar Produtos</h2>
+        <form id="formCadastrarProduto">
+          <input type="text" id="produtoCodigo1" placeholder="Código 1" required />
+          <input type="text" id="produtoCodigo2" placeholder="Código 2" />
+          <input type="text" id="produtoNome" placeholder="Nome do Produto" required />
+          <button type="submit" id="btnSubmitProduto" class="btn-primary">Cadastrar Produto</button>
+        </form>
+        <button id="btnOpenImportExportModal" class="btn-primary">Importar/Exportar</button>
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th>Código 1</th>
+              <th>Código 2</th>
+              <th>Nome</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="produtosTableBody"></tbody>
+        </table>
       </section>
       <section id="sectionCadastrarFornecedor" class="section hidden">
-        <!-- Conteúdo para Cadastrar Fornecedor será inserido dinamicamente -->
+        <h2>Cadastrar Fornecedor</h2>
+        <form id="formCadastrarFornecedor">
+          <input type="text" id="fornecedorNome" placeholder="Nome do Fornecedor" required />
+          <input type="text" id="fornecedorTelefone" placeholder="Telefone" />
+          <button type="submit" id="btnSubmitFornecedor" class="btn-primary">Cadastrar Fornecedor</button>
+        </form>
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Telefone</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="fornecedoresTableBody"></tbody>
+        </table>
       </section>
     </div>
   </section>
