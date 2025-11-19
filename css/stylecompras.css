@@ -36,15 +36,15 @@ h1 {
 }
 
 .btn-menu-compras {
-    background: linear-gradient(135deg, #17a2b8, #138496);
+    background-color: #28a745; /* Cor verde estática */
     color: white;
     border: none;
     padding: 12px 24px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -52,9 +52,14 @@ h1 {
 }
 
 .btn-menu-compras:hover {
-    background-color: #005700;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    color: white;
+    background-color: #218838; /* Verde mais escuro no hover */
+    transform: translateY(-2px); /* Efeito de elevação */
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.3);
+}
+
+.btn-menu-compras:active {
+    transform: translateY(1px); /* Efeito de pressionar */
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
 }
 
 main {
