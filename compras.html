@@ -6,22 +6,14 @@
     <title>Controle de Compras - Frota Pesada</title>
     <link rel="stylesheet" href="css/stylecompras.css">
 </head>
-<body>
-    <header>
-        <img src="logo.png" alt="Logo da Empresa" class="logo">
-        <h1>Controle de Compras - Frota Pesada</h1>
-    </header>
-    
-    <nav id="menu">
-        <a href="#sectionCadastrarCompras" id="btnCadastrarCompras" role="button">Cadastrar Compras</a>
-        <a href="#sectionCotacoesSalvas" id="btnCotacoesSalvas" role="button">Cotações Salvas</a>
-        <a href="#sectionRealizarCotacoes" id="btnRealizarCotacoes" role="button">Realizar Cotações</a>
-        <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button">Cadastrar Fornecedor</a>
-        <a href="#sectionDatabase" id="btnDatabase" role="button">Banco de Dados</a>
-        <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button">Cadastrar Produtos</a>
-    </nav>
-    
-    <main>
+<body class="compras-page">
+    <div class="main-content">
+        <nav id="menu-compras">
+            <a href="#sectionRealizarCotacoes" id="btnRealizarCotacoes" role="button">Realizar Cotações</a>
+            <a href="#sectionCotacoesSalvas" id="btnCotacoesSalvas" role="button">Cotações Salvas</a>
+            <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button">Cadastrar Produtos</a>
+            <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button">Cadastrar Fornecedor</a>
+        </nav>
         <section id="sectionCadastrarCompras" class="section">
             <h2>Cadastrar Compras</h2>
             <div class="upload-section">
@@ -386,12 +378,14 @@
             <button id="btnSaveToDatabase" class="btn-inline btn-primary">Salvar Banco de Dados</button>
         </div>
     </section>
-
     
     <script src="xlsx.min.js"></script>
     <script src="jspdf.umd.min.js"></script>
     <script src="jspdf.plugin.autotable.js"></script>
     <!-- Adicionado type="module" para permitir importações -->
     <script type="module" src="script/scriptcompras.js"></script>
+    <!-- Adicionado script do menu principal -->
+    <script src="./script/menu.js" defer></script>
+    </div>
 </body>
 </html>
