@@ -35,7 +35,8 @@ h1 {
     gap: 15px;
 }
 
-.btn-menu-compras {
+/* Seletor mais específico para garantir prioridade sobre regras genéricas de 'nav a' */
+#menu-compras .btn-menu-compras {
     background-color: #28a745; /* Cor verde estática */
     color: white;
     border: none;
@@ -51,13 +52,13 @@ h1 {
     gap: 8px;
 }
 
-.btn-menu-compras:hover {
+#menu-compras .btn-menu-compras:hover {
     background-color: #218838; /* Verde mais escuro no hover */
     transform: translateY(-2px); /* Efeito de elevação */
     box-shadow: 0 6px 16px rgba(40, 167, 69, 0.3);
 }
 
-.btn-menu-compras:active {
+#menu-compras .btn-menu-compras:active {
     transform: translateY(1px); /* Efeito de pressionar */
     box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
 }
