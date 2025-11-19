@@ -23,14 +23,39 @@
             <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button">Cadastrar Produtos</a>
             <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button">Cadastrar Fornecedor</a>
         </nav>
-        <!-- O restante do conteúdo da página (as seções) permanece aqui dentro -->
-        <section id="sectionCadastrarCompras" class="section">
-            <!-- ... seu conteúdo de cadastrar compras ... -->
-        </section>
-        <section id="sectionCotacoesSalvas" class="section hidden">
-            <!-- ... seu conteúdo de cotações salvas ... -->
-        </section>
-        <!-- ... e assim por diante para todas as outras seções ... -->
+        <!-- Seções organizadas em uma tabela invisível para layout estruturado -->
+        <table class="sections-table">
+            <tbody>
+                <tr>
+                    <td class="section-cell">
+                        <section id="sectionRealizarCotacoes" class="section">
+                            <!-- Conteúdo para Realizar Cotações será inserido dinamicamente -->
+                        </section>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="section-cell">
+                        <section id="sectionCotacoesSalvas" class="section hidden">
+                            <!-- Conteúdo para Cotações Salvas será inserido dinamicamente -->
+                        </section>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="section-cell">
+                        <section id="sectionCadastrarProdutos" class="section hidden">
+                            <!-- Conteúdo para Cadastrar Produtos será inserido dinamicamente -->
+                        </section>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="section-cell">
+                        <section id="sectionCadastrarFornecedor" class="section hidden">
+                            <!-- Conteúdo para Cadastrar Fornecedor será inserido dinamicamente -->
+                        </section>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </main>
 
   <footer class="footer">

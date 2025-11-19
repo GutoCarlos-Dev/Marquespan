@@ -439,6 +439,26 @@ select {
     margin-right: 10px;
 }
 
+/* Estilos para a tabela invisível das seções */
+.sections-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+}
+
+.sections-table tbody,
+.sections-table tr,
+.sections-table td {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.section-cell {
+    padding: 0;
+    vertical-align: top;
+}
+
 /* Estilos para o Modal de Detalhes da Cotação */
 #quotationDetailBody table {
     width: 100%;
