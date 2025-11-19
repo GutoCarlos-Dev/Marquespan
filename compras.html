@@ -38,43 +38,12 @@
   </footer>
 
   <script src="./script/menu.js" defer></script>
+  <script type="module" src="script/scriptcompras.js"></script>
+  <script src="jspdf.plugin.autotable.js"></script>
+  <script src="xlsx.min.js"></script>
+  <script src="jspdf.umd.min.js"></script>
+  
+  
 
-  <!-- Modal Contagem de Estoque -->
-  <div id="modalContagemEstoque" class="modal" style="display: none;">
-    <div class="modal-content">
-      <span class="close" id="closeModalContagem">&times;</span>
-      <h2>Contagem de Estoque</h2>
-      <form id="formContagemEstoque">
-        <div class="form-grid">
-          <label>Marca *</label>
-          <select name="marcaContagem" id="marcaContagem" required>
-            <option value="">Selecione</option>
-          </select>
-
-          <label>Modelo *</label>
-          <select name="modeloContagem" id="modeloContagem" required>
-            <option value="">Selecione</option>
-          </select>
-
-          <label>Tipo *</label>
-          <select name="tipoContagem" id="tipoContagem" required>
-            <option value="">Selecione</option>
-          </select>
-
-          <label>Vida</label>
-          <input type="number" name="vidaContagem" id="vidaContagem" min="0" />
-
-          <label>Quantidade Contada *</label>
-          <input type="number" name="quantidadeContagem" id="quantidadeContagem" min="0" required />
-        </div>
-        <div class="modal-actions">
-          <button type="submit"><i class="fas fa-save"></i> Salvar Contagem</button>
-          <button type="button" id="cancelModalContagem"><i class="fas fa-times"></i> Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script type="module" src="./script/pneu-updated.js" defer></script>
 </body>
 </html>
