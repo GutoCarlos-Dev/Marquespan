@@ -1,45 +1,324 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Compras - Frota Pesada</title>
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/stylecompras.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compras - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
 </head>
 <body>
-    <!-- O menu principal será injetado aqui pelo menu.js -->
 
-    <!-- Conteúdo principal da página -->
-    <main class="main-content">
-        <header class="header"><i class="fas fa-shopping-cart"></i> Cotações e Cadastros</header>
-        
-        <nav id="menu-compras">
-            <a href="#sectionRealizarCotacoes" id="btnRealizarCotacoes" role="button">Realizar Cotações</a>
-            <a href="#sectionCotacoesSalvas" id="btnCotacoesSalvas" role="button">Cotações Salvas</a>
-            <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button">Cadastrar Produtos</a>
-            <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button">Cadastrar Fornecedor</a>
-        </nav>
-        <!-- O restante do conteúdo da página (as seções) permanece aqui dentro -->
-        <section id="sectionCadastrarCompras" class="section">
-            <!-- ... seu conteúdo de cadastrar compras ... -->
-        </section>
-        <section id="sectionCotacoesSalvas" class="section hidden">
-            <!-- ... seu conteúdo de cotações salvas ... -->
-        </section>
-        <!-- ... e assim por diante para todas as outras seções ... -->
-    </main>
 
-    <!-- Rodapé -->
-    <footer class="footer">
-        &copy; 2025 Marquespan. Todos os direitos reservados.
-    </footer>
+  <main class="main-content">
+    <header class="page-title-header"><i class="fas fa-tire page-title-icon"></i><span class="page-title-text">Movimentação de Pneus</span></header>
+    <section class="content-section">
+      <!-- Card do Formulário de Cadastro -->
+      <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-plus-circle" style="margin-right: 8px;"></i>Cadastro e Aplicação de Pneu</h3>
+        </div>
+        <form id="formPneu">
+          <div class="form-bloco" style="display: flex; justify-content: center;">
+            <table style="border: none; border-collapse: collapse; width: 80%; max-width: 1000px;">
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Data</label></td>
+                <td style="border: none; padding: 10px;"><input type="datetime-local" name="data" id="data" readonly /></td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Placa *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="placa" id="placa" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Marca *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="marca" id="marca" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Modelo *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="modelo" id="modelo" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Tipo *</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="tipo" id="tipo" required>
+                    <option value="">Selecione</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Vida</label></td>
+                <td style="border: none; padding: 10px;"><input type="number" name="vida" id="vida" min="0" value="0" /></td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Status</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="status" id="status">
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                  </select>
+                </td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Descrição</label></td>
+                <td style="border: none; padding: 10px;">
+                  <select name="descricao" id="descricao" style="width: 100%; height: 40px;">
+                    <option value="ESTOQUE">Estoque</option>
+                    <option value="CONTAGEM DE ESTOQUE">Contagem de Estoque</option>
+                    <option value="RETORNO BORRACHARIA">Retorno Borracharia</option>
+                    <option value="ENVIO BORRACHARIA">Envio Borracharia</option>
+                    <option value="INSTALADO NO VEICULO">Instalado no Veiculo</option>
+                    <option value="REFORMA">Reforma</option>
+                    <option value="DESCARTE">Descarte</option>
+                    <option value="TRANSFERIDO PARA CD">Transferido para CD</option>
+                  </select>
+                </td>
+              </tr>
+              <!-- Campos condicionais para SAÍDA -->
+              <tr id="campos-saida" style="display: none;">
+                <td colspan="4" style="border: none; padding: 10px;">
+                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Detalhes da Saída</h4>
+                    <table style="border: none; border-collapse: collapse; width: 100%;">
+                      <tr>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Quilometragem do Veículo *</label></td>
+                        <td style="border: none; padding: 5px;"><input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" /></td>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Aplicação *</label></td>
+                        <td style="border: none; padding: 5px;">
+                          <select name="aplicacao" id="aplicacao">
+                            <option value="">Selecione</option>
+                            <option value="DIANTEIRO">Dianteiro</option>
+                            <option value="TRACAO">Tração</option>
+                            <option value="TRUCK">Truck</option>
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Tipo de Operação *</label></td>
+                        <td style="border: none; padding: 5px;">
+                          <select name="tipo_operacao" id="tipo_operacao">
+                            <option value="">Selecione</option>
+                            <option value="RODIZIO">Rodízio</option>
+                            <option value="INSTALACAO">Instalação</option>
+                            <option value="TROCA">Troca</option>
+                            <option value="DESCARTE">Descarte</option>
+                          </select>
+                        </td>
+                        <td style="border: none; padding: 5px; text-align: right;"><label>Observações</label></td>
+                        <td style="border: none; padding: 5px;"><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a saída..." style="resize: vertical; min-height: 60px; width: 100%;"></textarea></td>
+                      </tr>
+                      <!-- Campos específicos para rodízio -->
+                      <tr id="campos-rodizio" style="display: none;">
+                        <td colspan="4" style="border: none; padding: 5px;">
+                          <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border: 1px solid #ffeaa7;">
+                            <h5 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h5>
+                            <table style="border: none; border-collapse: collapse; width: 100%;">
+                              <tr>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Posição Atual do Pneu</label></td>
+                                <td style="border: none; padding: 5px;">
+                                  <select name="posicao_anterior" id="posicao_anterior">
+                                    <option value="">Selecione posição atual</option>
+                                    <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                                    <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                                    <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                                    <option value="TRACAO_DIREITO">Tração Direito</option>
+                                    <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                                    <option value="TRUCK_DIREITO">Truck Direito</option>
+                                  </select>
+                                </td>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Nova Posição</label></td>
+                                <td style="border: none; padding: 5px;">
+                                  <select name="posicao_nova" id="posicao_nova">
+                                    <option value="">Selecione nova posição</option>
+                                    <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+                                    <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+                                    <option value="TRACAO_ESQUERDO">Tração Esquerdo</option>
+                                    <option value="TRACAO_DIREITO">Tração Direito</option>
+                                    <option value="TRUCK_ESQUERDO">Truck Esquerdo</option>
+                                    <option value="TRUCK_DIREITO">Truck Direito</option>
+                                  </select>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="border: none; padding: 5px; text-align: right;"><label>Código Marca de Fogo (Pneu a ser removido)</label></td>
+                                <td colspan="3" style="border: none; padding: 5px;"><input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Ex: MF001" maxlength="10" style="width: 100%;" /></td>
+                              </tr>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Nota Fiscal</label></td>
+                <td style="border: none; padding: 10px;"><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF (opcional)" /></td>
+                <td style="border: none; padding: 10px; text-align: right;"><label>Quantidade</label></td>
+                <td style="border: none; padding: 10px;"><input type="number" name="quantidade" id="quantidade" min="0" /></td>
+              </tr>
+            </table>
+          </div>
 
-    <!-- Scripts -->
-    <script src="xlsx.min.js"></script>
-    <script src="jspdf.umd.min.js"></script>
-    <script src="jspdf.plugin.autotable.js"></script>
-    <script type="module" src="script/scriptcompras.js"></script>
-    <script src="./script/menu.js" defer></script>
+          <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <button type="submit" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);"><i class="fas fa-save" style="margin-right: 8px;"></i>Salvar</button>
+            <button type="button" id="btnContagemEstoque" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);"><i class="fas fa-clipboard-list" style="margin-right: 8px;"></i>Contagem de Estoque</button>
+            <button type="button" id="btnRelatorioMarcaFogo" style="background: linear-gradient(135deg, #fd7e14, #e8680f); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(253, 126, 20, 0.3);"><i class="fas fa-fire" style="margin-right: 8px;"></i>Relatório Marca de Fogo</button>
+            <button type="button" onclick="clearForm()" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Card da Tabela de Movimentações -->
+      <div class="table-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <div class="table-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-list" style="margin-right: 8px;"></i>Lançamento de Pneus</h2>
+        </div>
+        <div class="filtro-table-wrapper" style="overflow-x: auto; margin-bottom: 20px;">
+          <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: none; min-width: 800px; background-color: transparent;">
+            <tbody>
+              <tr>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-placa" style="font-size: 12px; margin-bottom: 5px;">Placa</label>
+                    <input type="text" id="campo-placa" placeholder="Digite a placa" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-marca" style="font-size: 12px; margin-bottom: 5px;">Marca</label>
+                    <input type="text" id="campo-marca" placeholder="Digite a marca" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-modelo" style="font-size: 12px; margin-bottom: 5px;">Modelo</label>
+                    <input type="text" id="campo-modelo" placeholder="Digite o modelo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-vida" style="font-size: 12px; margin-bottom: 5px;">Vida</label>
+                    <input type="number" id="campo-vida" placeholder="Vida" min="0" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 80px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-tipo" style="font-size: 12px; margin-bottom: 5px;">Tipo</label>
+                    <input type="text" id="campo-tipo" placeholder="Digite o tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-descricao" style="font-size: 12px; margin-bottom: 5px;">Descrição</label>
+                    <input type="text" id="campo-descricao" placeholder="Digite a descrição" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 140px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-status" style="font-size: 12px; margin-bottom: 5px;">Status</label>
+                    <select id="campo-status" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
+                      <option value="">Todos</option>
+                      <option value="ENTRADA">Entrada</option>
+                      <option value="SAIDA">Saída</option>
+                    </select>
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-data" style="font-size: 12px; margin-bottom: 5px;">Data</label>
+                    <input type="date" id="campo-data" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <label for="campo-usuario" style="font-size: 12px; margin-bottom: 5px;">Usuário</label>
+                    <input type="text" id="campo-usuario" placeholder="Digite o usuário" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;" />
+                  </div>
+                </td>
+                <td style="padding: 8px; text-align: center; border: none;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <button type="button" id="btn-buscar" style="padding: 10px 20px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);"><i class="fas fa-search" style="margin-right: 8px;"></i>Buscar</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        </div>
+
+        <div class="grid-wrapper" style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;">
+            <div class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #28a745, #20c997); color: white; font-weight: 600; border-bottom: 2px solid #1e7e34;">
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-car" style="margin-right: 5px;"></i>Placa</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+              <div style="flex: 1.2; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+              <div style="flex: 0.5; min-width: 50px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-info-circle" style="margin-right: 5px;"></i>Status</div>
+              <div style="flex: 2; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-file-alt" style="margin-right: 5px;"></i>Descrição</div>
+              <div style="flex: 1.5; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-calendar" style="margin-right: 5px;"></i>Data</div>
+              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-user" style="margin-right: 5px;"></i>Usuário</div>
+              <div style="flex: 0.5; min-width: 60px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Qtd</div>
+              <div style="flex: 1; min-width: 100px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
+              <div style="flex: 1; min-width: 150px; padding: 15px 12px; text-align: center;"><i class="fas fa-tools" style="margin-right: 5px;"></i>Ações</div>
+            </div>
+            <div id="grid-pneus-body" class="grid-body" style="background: #f8f9fa;"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <script src="./script/menu.js" defer></script>
+
+  <!-- Modal Contagem de Estoque -->
+  <div id="modalContagemEstoque" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" id="closeModalContagem">&times;</span>
+      <h2>Contagem de Estoque</h2>
+      <form id="formContagemEstoque">
+        <div class="form-grid">
+          <label>Marca *</label>
+          <select name="marcaContagem" id="marcaContagem" required>
+            <option value="">Selecione</option>
+          </select>
+
+          <label>Modelo *</label>
+          <select name="modeloContagem" id="modeloContagem" required>
+            <option value="">Selecione</option>
+          </select>
+
+          <label>Tipo *</label>
+          <select name="tipoContagem" id="tipoContagem" required>
+            <option value="">Selecione</option>
+          </select>
+
+          <label>Vida</label>
+          <input type="number" name="vidaContagem" id="vidaContagem" min="0" />
+
+          <label>Quantidade Contada *</label>
+          <input type="number" name="quantidadeContagem" id="quantidadeContagem" min="0" required />
+        </div>
+        <div class="modal-actions">
+          <button type="submit"><i class="fas fa-save"></i> Salvar Contagem</button>
+          <button type="button" id="cancelModalContagem"><i class="fas fa-times"></i> Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./script/pneu-updated.js" defer></script>
 </body>
 </html>
