@@ -2,6 +2,10 @@ import { supabase } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- LÓGICA DE COTAÇÕES (Variáveis) ---
+    let cartItems = [];
+    let editingQuotationId = null; // Variável para controlar o modo de edição
+
     // --- LÓGICA DE NAVEGAÇÃO ---
     const navLinks = document.querySelectorAll('#menu-compras a');
     const sections = document.querySelectorAll('main .section');
@@ -38,8 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE COTAÇÕES ---
     const btnAddToCart = document.getElementById('btnAddToCart');
     const cartBody = document.getElementById('cartBody');
-    let cartItems = [];
-    let editingQuotationId = null; // Variável para controlar o modo de edição
 
     // Carregar dados do localStorage
     const loadFromLocalStorage = () => {
