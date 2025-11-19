@@ -38,7 +38,7 @@ h1 {
 /* Seletor mais específico para garantir prioridade sobre regras genéricas de 'nav a' */
 #menu-compras .btn-menu-compras {
     background-color: #28a745; /* Cor verde estática */
-    color: white;
+    color: rgb(14, 61, 12);
     border: none;
     padding: 12px 24px;
     border-radius: 8px;
