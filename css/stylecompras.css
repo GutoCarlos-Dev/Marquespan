@@ -1,0 +1,465 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+header {
+    background-color: #008000;
+    color: #ffffff;
+    text-align: center;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.logo {
+    max-width: 150px;
+    height: auto;
+    margin-bottom: 10px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 2em;
+}
+
+nav {
+    background-color: #ffffff;
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+nav a {
+    margin: 0 10px;
+    padding: 10px 20px;
+    background-color: #008000;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+nav a:hover {
+    background-color: #005700;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+main {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.section {
+    margin-bottom: 30px;
+}
+
+.hidden {
+    display: none;
+}
+
+h2 {
+    color: #008000;
+    border-bottom: 2px solid #008000;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s;
+}
+
+.card:hover {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.card.winner {
+    border-color: #008000;
+    box-shadow: 0 0 10px rgba(0, 128, 0, 0.5);
+}
+
+.card-title-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #008000;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.card-title-container h3 {
+    margin-top: 0;
+    color: #008000;
+    font-size: 1.2em;
+}
+
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.card-row .card {
+    flex: 1;
+    margin-right: 15px;
+    max-width: 30%;
+}
+
+.card-row .card:last-child {
+    margin-right: 0;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #555;
+    font-size: 0.9em;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9em;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: #fafafa;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #008000;
+    outline: none;
+    box-shadow: 0 0 6px rgba(0,128,0,0.2);
+    background-color: #ffffff;
+}
+
+select {
+    height: 37px; /* Garante a mesma altura dos inputs */
+}
+
+/* Estilos comuns para botões de ação em formulários */
+.form-action-button {
+    width: 100%;
+    margin-top: 25px;
+    padding: 12px;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    font-weight: 600;
+}
+
+/* Cor primária para botões de ação */
+.btn-primary {
+    background-color: #008000;
+}
+
+.btn-primary:hover {
+    background-color: #005700;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+/* Estilos para botões inline (que não ocupam 100% da largura) */
+.btn-inline {
+    width: auto;
+    margin-top: 10px;
+    padding: 10px 20px;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-weight: 600;
+}
+
+
+.upload-section {
+    margin-bottom: 25px;
+    padding: 12px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.upload-section label {
+    font-weight: 600;
+    color: #008000;
+}
+
+.upload-section input[type="file"] {
+    margin-top: 8px;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #ffffff;
+}
+
+/* Estilos para a Tabela de Cotações */
+#cartTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#cartTable th, #cartTable td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+#cartTable th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: 600;
+}
+
+.btn-remove {
+    padding: 5px 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-remove:hover {
+    background-color: #c82333;
+}
+
+/* Estilos para entradas de preço dinâmicas */
+.price-entry {
+    margin-bottom: 10px;
+}
+.price-entry label {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.winner-selector {
+    display: flex;
+    align-items: center;
+}
+
+.winner-selector input[type="radio"] {
+    width: auto; /* Para não ocupar 100% da largura */
+    margin: 0 5px 0 0;
+}
+
+.winner-selector label {
+    margin-bottom: 0; /* Remove a margem padrão do label */
+}
+
+/* Estilos para o Modal */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Adiciona display: flex apenas quando o modal NÃO está oculto */
+.modal-backdrop:not(.hidden) {
+    display: flex;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #008000;
+    font-size: 1.5em;
+    border-bottom: none; /* Remove a borda inferior do h2 dentro do modal */
+}
+
+.modal-header .close-button {
+    background: none;
+    border: none;
+    font-size: 2em;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+}
+
+.modal-header .close-button:hover {
+    color: #333;
+}
+
+.modal-body .card {
+    margin-bottom: 15px;
+}
+
+.modal-body button {
+    width: auto; /* Botões dentro do modal não ocupam 100% */
+    margin-top: 10px;
+    margin-right: 10px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Estilos para a Tabela de Produtos Cadastrados */
+.data-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.data-grid th, .data-grid td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.data-grid th {
+    background-color: #f2f2f2;
+}
+
+.data-grid .btn-action {
+    padding: 5px 10px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.btn-edit {
+    background-color: #007bff; /* Azul */
+}
+.btn-edit:hover {
+    background-color: #0056b3;
+}
+
+.btn-delete {
+    background-color: #dc3545; /* Vermelho (igual ao de remover) */
+}
+
+/* Estilos para Cotações Salvas */
+.search-container {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.search-container label {
+    margin-right: 10px;
+    flex-shrink: 0; /* Impede que o label encolha */
+}
+
+.search-container input {
+    margin-right: 10px;
+}
+.filter-container {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+
+#savedQuotationsTable {
+    width: 100%;
+}
+
+#savedQuotationsContainer .card {
+    cursor: pointer;
+}
+
+#savedQuotationsContainer .card:hover {
+    border-color: #008000;
+}
+#savedQuotationsContainer .card.status-Pendente {
+    border-left: 5px solid orange;
+}
+
+
+#savedQuotationsContainer .card h3 {
+    margin-top: 0;
+    color: #008000;
+    font-size: 1.2em;
+    border-bottom: none;
+}
+
+#savedQuotationsContainer .card p {
+    margin: 5px 0;
+}
+
+.filter-container label {
+    margin-right: 10px;
+}
+
+/* Estilos para o Modal de Detalhes da Cotação */
+#quotationDetailBody table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#quotationDetailBody th, #quotationDetailBody td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+#quotationDetailBody th {
+    background-color: #f2f2f2;
+}
+
+#quotationDetailBody .winner {
+    background-color: #e9f5e9;
+    font-weight: bold;
+}
+
+#btnFormalizarCompraModal {
+    margin-top: 20px;
+    width: auto; /* Para não ocupar 100% da largura do modal */
+}

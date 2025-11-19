@@ -93,6 +93,21 @@ function controlarMenuPorNivel(nivel) {
       if (sairLink) sairLink.style.display = 'block';
       break;
 
+    case 'compras':
+      // Mostrar Dashboard, Compras e Sair
+      const comprasDashboardLink = nav.querySelector('a[href="dashboard.html"]');
+      if (comprasDashboardLink) comprasDashboardLink.style.display = 'block';
+
+      const comprasGroup = nav.querySelector('.menu-group:has(a[href="compras.html"])');
+      if (comprasGroup) {
+        comprasGroup.style.display = 'block';
+        comprasGroup.querySelectorAll('a').forEach(link => link.style.display = 'block');
+      }
+
+      const comprasSairLink = nav.querySelector('a[href="index.html"]');
+      if (comprasSairLink) comprasSairLink.style.display = 'block';
+      break;
+
     case 'administrador':
       // Mostrar tudo
       allLinks.forEach(link => link.style.display = 'block');
