@@ -3,7 +3,7 @@ import { supabase } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- LÓGICA DE NAVEGAÇÃO ---
-    const navLinks = document.querySelectorAll('#menu a');
+    const navLinks = document.querySelectorAll('#menu-compras a');
     const sections = document.querySelectorAll('main .section');
 
     const showSection = (targetId) => {
