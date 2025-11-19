@@ -15,48 +15,37 @@
 
 
 <main class="main-content">
-        <header class="header"><i class="fas fa-shopping-cart"></i> Cotações e Cadastros</header>
-        
-        <nav id="menu-compras">
-            <a href="#sectionRealizarCotacoes" id="btnRealizarCotacoes" role="button">Realizar Cotações</a>
-            <a href="#sectionCotacoesSalvas" id="btnCotacoesSalvas" role="button">Cotações Salvas</a>
-            <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button">Cadastrar Produtos</a>
-            <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button">Cadastrar Fornecedor</a>
-        </nav>
-        <!-- Seções organizadas em uma tabela invisível para layout estruturado -->
-        <table class="sections-table">
-            <tbody>
-                <tr>
-                    <td class="section-cell">
-                        <section id="sectionRealizarCotacoes" class="section">
-                            <!-- Conteúdo para Realizar Cotações será inserido dinamicamente -->
-                        </section>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="section-cell">
-                        <section id="sectionCotacoesSalvas" class="section hidden">
-                            <!-- Conteúdo para Cotações Salvas será inserido dinamicamente -->
-                        </section>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="section-cell">
-                        <section id="sectionCadastrarProdutos" class="section hidden">
-                            <!-- Conteúdo para Cadastrar Produtos será inserido dinamicamente -->
-                        </section>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="section-cell">
-                        <section id="sectionCadastrarFornecedor" class="section hidden">
-                            <!-- Conteúdo para Cadastrar Fornecedor será inserido dinamicamente -->
-                        </section>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </main>
+  <header class="page-title-header"><i class="fas fa-shopping-cart page-title-icon"></i><span class="page-title-text">Cotações e Cadastros</span></header>
+
+  <section class="content-section">
+    <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+      <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
+        <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-bars" style="margin-right: 8px;"></i>Menu de Compras</h3>
+      </div>
+      <nav id="menu-compras">
+        <a href="#sectionRealizarCotacoes" id="btnRealizarCotacoes" role="button" class="btn-menu-compras"><i class="fas fa-plus-circle"></i> Realizar Cotações</a>
+        <a href="#sectionCotacoesSalvas" id="btnCotacoesSalvas" role="button" class="btn-menu-compras"><i class="fas fa-save"></i> Cotações Salvas</a>
+        <a href="#sectionCadastrarProdutos" id="btnCadastrarProdutos" role="button" class="btn-menu-compras"><i class="fas fa-box"></i> Cadastrar Produtos</a>
+        <a href="#sectionCadastrarFornecedor" id="btnCadastrarFornecedor" role="button" class="btn-menu-compras"><i class="fas fa-truck"></i> Cadastrar Fornecedor</a>
+      </nav>
+    </div>
+
+    <div class="table-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+      <section id="sectionRealizarCotacoes" class="section">
+        <!-- Conteúdo para Realizar Cotações será inserido dinamicamente -->
+      </section>
+      <section id="sectionCotacoesSalvas" class="section hidden">
+        <!-- Conteúdo para Cotações Salvas será inserido dinamicamente -->
+      </section>
+      <section id="sectionCadastrarProdutos" class="section hidden">
+        <!-- Conteúdo para Cadastrar Produtos será inserido dinamicamente -->
+      </section>
+      <section id="sectionCadastrarFornecedor" class="section hidden">
+        <!-- Conteúdo para Cadastrar Fornecedor será inserido dinamicamente -->
+      </section>
+    </div>
+  </section>
+</main>
 
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
