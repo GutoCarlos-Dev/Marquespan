@@ -27,13 +27,10 @@ h1 {
 
 /* Estilo para a barra de navegação interna da página de compras */
 #menu-compras {
-    background-color: #ffffff;
-    padding: 15px;
-    border-bottom: 1px solid #e0e0e0;
-    margin-bottom: 20px; /* Adiciona espaço antes do conteúdo */
     display: flex;
     justify-content: center;
-    flex-wrap: nowrap;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 nav a, #menu-compras a {
