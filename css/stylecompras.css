@@ -29,6 +29,7 @@ h1 {
 
 /* Estilo para a barra de navegação interna da página de compras */
 #menu-compras {
+    background-color: #28a745; /* Cor verde estática */
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
