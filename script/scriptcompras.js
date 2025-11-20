@@ -430,7 +430,17 @@ const UI = {
       const notaFiscalDisplay = cotacao.nota_fiscal ? `<p><strong>Nota Fiscal:</strong> ${cotacao.nota_fiscal}</p>` : '';
 
       let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
-      orcamentos.forEach(o=>{ const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>Preço</th></tr></thead><tbody>${o.precos.map(p=>{ const prod = itens.find(it=>it.produtos.id===p.id_produto); return `<tr><td>${prod?prod.produtos.nome:'Produto não encontrado'}</td><td>R$ ${parseFloat(p.preco_unitario).toFixed(2)}</td></tr>` }).join('')}</tbody></table></div>` });
+      orcamentos.forEach(o=>{ 
+        const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
+        html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{ 
+          const itemDaCotacao = itens.find(it=>it.produtos.id===p.id_produto); 
+          const nomeProduto = itemDaCotacao ? itemDaCotacao.produtos.nome : 'Produto não encontrado';
+          const quantidade = itemDaCotacao ? itemDaCotacao.quantidade : 0;
+          const precoUnitario = parseFloat(p.preco_unitario);
+          const precoTotal = quantidade * precoUnitario;
+          return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>` 
+        }).join('')}</tbody></table></div>` 
+      });
       this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
