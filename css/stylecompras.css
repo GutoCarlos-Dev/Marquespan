@@ -124,6 +124,13 @@ body{
 .btn-success.hidden,.btn-primary.hidden{display:none}
 /* utilities */
 .hidden{display:none}
+
+/* Permanent compact import panel */
+.import-panel{position:fixed;bottom:20px;right:20px;width:420px;max-width:92%;background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:2147483647}
+.import-panel .panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.import-panel .panel-header h3{margin:0;font-size:16px;color:var(--brand-contrast)}
+.import-panel .panel-body label{display:block;margin-bottom:6px;font-weight:600}
+.import-panel .close-button{background:none;border:none;font-size:18px;cursor:pointer}
 .status{padding:6px 8px;border-radius:6px;font-weight:600}
 .status-Pendente{background: #fff4e5;color:#b36b00}
 .status-Aprovada{background:#e9f5e9;color:#1b7a1b}

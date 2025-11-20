@@ -156,25 +156,22 @@
   </div>
 
   <!-- Modals (permanecem inalterados) -->
-  <div id="importExportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Importar / Exportar Produtos</h2>
-        <button class="close-button" aria-label="Fechar">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="upload-section">
-          <label>Arquivo Excel (colunas: <strong>COD1, COD2, PRODUTO</strong>)</label>
-          <input type="file" id="importExcelFile" accept=".xlsx,.xls" />
-          <p class="muted">Você pode arrastar e soltar o arquivo aqui ou selecionar pelo botão. A importação irá ignorar duplicatas.</p>
-          <div id="importStatus" class="import-status" aria-live="polite"></div>
-          <div id="importPreview" class="import-preview hidden"></div>
-          <div class="row" style="margin-top:10px;">
-            <button id="btnImportProducts" class="btn-primary">Pré-visualizar</button>
-            <button id="btnConfirmImport" class="btn-success hidden">Confirmar Importação</button>
-            <button id="btnExportProducts" class="btn-muted">Exportar</button>
-          </div>
-        </div>
+  <!-- Painel permanente de Import/Export (compacto, canto inferior direito) -->
+  <div id="importPanel" class="import-panel hidden" role="region" aria-label="Importar Produtos">
+    <div class="panel-header">
+      <h3>Importar / Exportar Produtos</h3>
+      <button class="close-button" aria-label="Fechar">×</button>
+    </div>
+    <div class="panel-body">
+      <label>Arquivo Excel (colunas: <strong>COD1, COD2, PRODUTO</strong>)</label>
+      <input type="file" id="importExcelFile" accept=".xlsx,.xls" />
+      <p class="muted">Você pode arrastar e soltar o arquivo aqui ou selecionar pelo botão. A importação irá ignorar duplicatas.</p>
+      <div id="importStatus" class="import-status" aria-live="polite"></div>
+      <div id="importPreview" class="import-preview hidden"></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnImportProducts" class="btn-primary">Pré-visualizar</button>
+        <button id="btnConfirmImport" class="btn-success hidden">Confirmar Importação</button>
+        <button id="btnExportProducts" class="btn-muted">Exportar</button>
       </div>
     </div>
   </div>

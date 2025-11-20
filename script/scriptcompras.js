@@ -79,8 +79,8 @@ const UI = {
     this.renderProdutosGrid(); // Adicionado para carregar produtos no início
     this.renderFornecedoresGrid(); // Adicionado para carregar fornecedores no início
     this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
-    // Close modal on Escape
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') this.closeModal(); });
+    // Close panels/modals on Escape
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } });
   },
 
   cache(){
@@ -103,7 +103,7 @@ const UI = {
     this.produtosTableBody = document.getElementById('produtosTableBody');
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
-    this.importExportModal = document.getElementById('importExportModal');
+    this.importPanel = document.getElementById('importPanel');
     this.btnOpenImportExportModal = document.getElementById('btnOpenImportExportModal');
     this.closeModalButtons = document.querySelectorAll('.modal .close-button');
     this.btnImportProducts = document.getElementById('btnImportProducts');
@@ -140,7 +140,8 @@ const UI = {
 
     this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel());
     this.closeModalButtons?.forEach(btn=>btn.addEventListener('click', ()=>this.closeModal()));
-    this.importExportModal?.addEventListener('click', (e)=>{ if(e.target===this.importExportModal) this.closeModal() });
+    const panelCloseBtn = this.importPanel?.querySelector('.close-button');
+    if(panelCloseBtn) panelCloseBtn.addEventListener('click', ()=>this.closeImportPanel());
 
     this.btnImportProducts?.addEventListener('click', ()=>this.handleImport());
     this.btnConfirmImport?.addEventListener('click', ()=>this.confirmImport());
@@ -562,64 +563,17 @@ const UI = {
     if(this.btnConfirmImport) this.btnConfirmImport.classList.add('hidden');
     this._importPreviewData = null;
   },
-  // Compact import/export panel (no full-screen overlay)
+  // Compact import/export panel (permanent panel element)
   openImportPanel(){
-    if(!this.importExportModal) return;
-    const modalInner = this.importExportModal.querySelector('.modal');
-    if(!modalInner) return;
-
-    // save previous state
-    this._panelPrev = this._panelPrev || {};
-    this._panelPrev.parent = modalInner.parentElement;
-    this._panelPrev.modalStyle = modalInner.getAttribute('style') || '';
-    this._panelPrev.backdropStyle = this.importExportModal.getAttribute('style') || '';
-
-    // hide backdrop (no overlay for compact panel)
-    try{ this.importExportModal.style.display = 'none'; }catch(e){}
-
-    // move modal to body and style as small panel bottom-right
-    try{ document.body.appendChild(modalInner); }catch(e){}
-    modalInner.style.position = 'fixed';
-    modalInner.style.bottom = '20px';
-    modalInner.style.right = '20px';
-    modalInner.style.left = 'auto';
-    modalInner.style.top = 'auto';
-    modalInner.style.transform = 'none';
-    modalInner.style.width = '420px';
-    modalInner.style.maxWidth = '92%';
-    modalInner.style.zIndex = '2147483647';
-    modalInner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
-
-    // ensure visible
-    modalInner.style.display = 'block';
-
-    // wire close button inside panel
-    const closeBtn = modalInner.querySelector('.close-button');
-    if(closeBtn){ closeBtn.onclick = ()=>this.closeImportPanel(); }
-
-    // rebind panel internal buttons to existing handlers (they use ids already)
-    const importBtn = modalInner.querySelector('#btnImportProducts');
-    const confirmBtn = modalInner.querySelector('#btnConfirmImport');
-    const exportBtn = modalInner.querySelector('#btnExportProducts');
-    if(importBtn) importBtn.onclick = ()=>this.handleImport();
-    if(confirmBtn) confirmBtn.onclick = ()=>this.confirmImport();
-    if(exportBtn) exportBtn.onclick = ()=>this.handleExport();
-
+    if(!this.importPanel) return;
+    this.importPanel.classList.remove('hidden');
     // focus first control
-    setTimeout(()=>{ const f = modalInner.querySelector('button,input,select,textarea'); if(f) f.focus(); },50);
+    setTimeout(()=>{ const f = this.importPanel.querySelector('button,input,select,textarea'); if(f) f.focus(); },50);
   },
 
   closeImportPanel(){
-    if(!this.importExportModal) return;
-    const modalInner = document.querySelector('body > .modal');
-    if(!modalInner) return;
-
-    // restore modal inline style and move back into backdrop
-    modalInner.setAttribute('style', this._panelPrev.modalStyle || '');
-    try{ this._panelPrev.parent.appendChild(modalInner); }catch(e){}
-    try{ this.importExportModal.setAttribute('style', this._panelPrev.backdropStyle || ''); }catch(e){}
-    this.importExportModal.style.display = 'none';
-
+    if(!this.importPanel) return;
+    this.importPanel.classList.add('hidden');
     // clear preview and state
     if(this.importPreview){ this.importPreview.innerHTML=''; this.importPreview.classList.add('hidden'); }
     if(this.importStatus) this.importStatus.textContent = '';
@@ -762,7 +716,7 @@ const UI = {
       XLSX.writeFile(wb, 'produtos_cadastrados.xlsx');
 
       alert('Exportação de produtos concluída!');
-      this.closeModal();
+      if(this.closeImportPanel) this.closeImportPanel();
     } catch (e) {
       console.error('Erro ao exportar produtos:', e);
       alert('Erro ao exportar produtos. Verifique o console para detalhes.');
@@ -786,7 +740,7 @@ const UI = {
       // Atualiza UI
       this.renderProdutosGrid();
       this.populateProductDropdown();
-      setTimeout(()=>{ this.closeModal(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
+      setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
     }catch(err){
       console.error('Erro ao inserir produtos no Supabase:', err);
       if(this.importStatus) this.importStatus.textContent = 'Erro ao inserir produtos. Veja console.';
