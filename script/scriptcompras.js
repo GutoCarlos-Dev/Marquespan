@@ -317,17 +317,19 @@ const UI = {
     if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
 
     try{
-      // obter usuário atual (se houver)
-      let userEmail = null;
+      // obter usuário atual do localStorage (fluxo de login custom do projeto) ou do supabase.auth
+      let userIdent = null;
       try{
-        const userRes = await supabase.auth.getUser?.();
-        if(userRes && userRes.data && userRes.data.user) userEmail = userRes.data.user.email || userRes.data.user.id;
-        else if(userRes && userRes.user) userEmail = userRes.user.email || userRes.user.id;
-      }catch(_){ userEmail = null }
+        const local = localStorage.getItem('usuarioLogado');
+        if(local){ const u = JSON.parse(local); if(u && (u.nome || u.email || u.id)) userIdent = u.nome || u.email || u.id; }
+      }catch(_){ /* ignore */ }
+      if(!userIdent){
+        try{ const userRes = await supabase.auth.getUser?.(); if(userRes && userRes.data && userRes.data.user) userIdent = userRes.data.user.email || userRes.data.user.id; else if(userRes && userRes.user) userIdent = userRes.user.email || userRes.user.id }catch(_){ userIdent = null }
+      }
 
-      // inserir cotacao (inclui data/hora). Tentamos também gravar o usuário se a coluna existir; se falhar, tentamos sem ela.
-      const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor, data_cotacao: new Date().toISOString() };
-      if(userEmail) cotacaoPayload.usuario = userEmail;
+      // inserir cotacao: não definimos data_cotacao aqui para garantir que o servidor (DB) use now() configurado no schema.
+      const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor };
+      if(userIdent) cotacaoPayload.usuario = userIdent;
 
       let cot;
       try{
@@ -382,13 +384,13 @@ const UI = {
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
       // Query base
-      let q = supabase.from('cotacoes').select('id,codigo_cotacao,data_cotacao,status,valor_total_vencedor,fornecedores(nome)').order('data_cotacao',{ascending:false});
+      let q = supabase.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
       if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
       if(error) throw error;
       this.savedQuotationsTableBody.innerHTML = '';
-      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="6">Nenhuma cotação encontrada.</td></tr>`;
+      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`;
       data.forEach(c=>{
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
@@ -398,7 +400,10 @@ const UI = {
         const initialStatus = c.status || 'Pendente';
         const statusClass = `quotation-status-select status-${initialStatus}`;
         const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`;
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${new Date(c.data_cotacao).toLocaleDateString('pt-BR')}</td><td>${winnerName}</td><td>${totalValue}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
+        const dateToShow = c.updated_at || c.data_cotacao;
+        const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
+        const usuarioCell = c.usuario || 'N/D';
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
         const selEl = document.getElementById(statusSelectId);
@@ -409,7 +414,7 @@ const UI = {
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); }));
-    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar cotações.</td></tr>`}
+    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar cotações.</td></tr>`}
   },
 
   async openQuotationDetailModal(id){
@@ -418,7 +423,7 @@ const UI = {
       const { data:itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
       const { data:orcamentos } = await supabase.from('cotacao_orcamentos').select('*,fornecedores(nome)').eq('id_cotacao',id);
       for(const o of orcamentos){ const { data:precos } = await supabase.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
-      const dataDisplay = cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A';
+      const dataDisplay = cotacao.updated_at ? new Date(cotacao.updated_at).toLocaleString('pt-BR') : (cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A');
       const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
       const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`;
       let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p><hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
@@ -494,11 +499,16 @@ const UI = {
       return;
     }
     try{
-      // obter usuário atual se possível
+      // obter usuário atual do localStorage (fluxo custom) ou do supabase.auth
       let userEmail = null;
-      try{ const userRes = await supabase.auth.getUser?.(); if(userRes && userRes.data && userRes.data.user) userEmail = userRes.data.user.email || userRes.data.user.id; else if(userRes && userRes.user) userEmail = userRes.user.email || userRes.user.id; }catch(_){ userEmail = null }
+      try{
+        const local = localStorage.getItem('usuarioLogado');
+        if(local){ const u = JSON.parse(local); if(u && (u.nome || u.email || u.id)) userEmail = u.nome || u.email || u.id; }
+      }catch(_){ }
+      if(!userEmail){ try{ const userRes = await supabase.auth.getUser?.(); if(userRes && userRes.data && userRes.data.user) userEmail = userRes.data.user.email || userRes.data.user.id; else if(userRes && userRes.user) userEmail = userRes.user.email || userRes.user.id }catch(_){ userEmail = null } }
 
-      const payload = { status: newStatus, data_cotacao: new Date().toISOString() };
+      // Atualizamos apenas o status e, se disponível, o usuário. O `updated_at` será mantido pelo trigger do banco.
+      const payload = { status: newStatus };
       if(userEmail) payload.usuario = userEmail;
 
       try{
