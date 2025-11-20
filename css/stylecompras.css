@@ -21,6 +21,28 @@ body{
   color:#222;
   -webkit-font-smoothing:antialiased;
 }
+/* Estilo profissional para a navegação por abas da página de compras */
+#menu-compras {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+}
+
+#menu-compras .painel-btn {
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 14px 18px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+#menu-compras .painel-btn.active,
+#menu-compras .painel-btn:hover {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
 .header{
   background:var(--brand);
   color:#fff;
