@@ -5,6 +5,7 @@
   --brand:#008000;
   --brand-light:#28a745;
   --brand-dark:#005700;
+  --brand-contrast:#0b5a0b;
   --muted:#6b6b6b;
   --success:#28a745;
   --danger:#dc3545;
@@ -63,6 +64,7 @@ body{
 .card{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);border:1px solid #e9ecef}
 .card-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .card-header h2{margin:0;color:var(--brand)}
+.card h3{margin-top:0;margin-bottom:12px;color:var(--brand-contrast)}
 .code-and-actions{display:flex;gap:12px;align-items:center}
 #quotationCode{padding:8px 10px;border-radius:8px;border:1px solid #ddd;background:#fafafa;width:180px}
 .actions{display:flex;gap:8px}
@@ -72,16 +74,23 @@ body{
 .btn-primary{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:none;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
 .btn-muted{background:#f0f0f0;color:#333;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
 .btn-inline{display:inline-flex;align-items:center;gap:8px}
+.btn-primary:hover{background:var(--brand-dark);transform:translateY(-1px)}
+.btn-muted:hover{background:#e9e9e9}
+.btn-success{background:var(--success);color:#fff;border-radius:8px;padding:8px 10px;border:none}
 .form-compact input, .form-compact select, .form-compact textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e6e6;background:#fafafa}
 .table-responsive{overflow:auto}
 .data-grid{width:100%;border-collapse:collapse;margin-top:10px}
-.data-grid th,.data-grid td{padding:10px;border:1px solid #eee;text-align:left;font-size:14px}
-.data-grid th{background:#fafafa;font-weight:700}
+.data-grid th,.data-grid td{padding:12px;border:1px solid #f1f1f1;text-align:left;font-size:14px}
+.data-grid th{background:linear-gradient(180deg,#fbfbfb,#f3fef3);font-weight:700;color:var(--brand-contrast)}
+.data-grid tbody tr{background:#fff}
 .data-grid tbody tr:hover{background:#fbfffb}
 .card-row{display:flex;gap:12px}
-.card-row .company-card{flex:1;padding:12px;border-radius:10px;border:1px solid #eaeaea;background:#fff}
+.card-row{align-items:flex-start}
+.card-row .company-card{flex:1;padding:16px;border-radius:12px;border:1px solid #eee;background:linear-gradient(180deg,#ffffff,#fbfffb)}
+.company-card h4{margin:0 0 8px 0;color:var(--brand-contrast);font-size:16px}
 .price-entry{display:flex;flex-direction:column;margin-bottom:8px}
 .price-entry input{padding:8px;border-radius:6px;border:1px solid #ddd}
+.price-entry label{font-size:13px;margin-bottom:6px;color:var(--muted)}
 .winner{border:2px solid var(--brand);box-shadow:0 0 12px rgba(0,128,0,0.08)}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:999}
 .modal{background:#fff;border-radius:12px;padding:18px;max-width:720px;width:92%;box-shadow:var(--shadow-md)}
@@ -93,6 +102,18 @@ body{
 .status-Pendente{background: #fff4e5;color:#b36b00}
 .status-Aprovada{background:#e9f5e9;color:#1b7a1b}
 .status-Rejeitada{background:#ffe9e9;color:#a00}
+/* Carrinho styling */
+#cartTable .btn-remove{background:var(--brand-light);color:#fff;border:none;padding:8px 10px;border-radius:8px}
+#cartTable .btn-remove:hover{background:var(--brand-dark)}
+#cartTable td{vertical-align:middle}
+.cart-empty{color:var(--muted);padding:18px;text-align:center}
+.company-card .obs{font-size:13px;color:var(--muted);margin-bottom:8px}
+
+/* Responsividade: empilha cards de fornecedores em telas pequenas */
+@media (max-width:980px){
+  .card-row{flex-direction:column}
+  .card-row .company-card{width:100%}
+}
 /* small screens tweaks */
 @media (max-width:600px){
   .btn-menu-compras span{display:none}
