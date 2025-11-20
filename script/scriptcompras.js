@@ -383,43 +383,34 @@ const UI = {
     const codigo2 = document.getElementById('produtoCodigo2').value.trim();
     const nome = document.getElementById('produtoNome').value.trim();
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
-
-    // Verificar se o código principal já existe
-    const { data: existente, error: erroBusca } = await supabase
-      .from('produtos')
-      .select('id')
-      .eq('codigo_principal', codigo1);
-
-    if (erroBusca) {
-      console.error('Erro ao verificar código:', erroBusca);
-      alert('Erro ao verificar código. Tente novamente.');
-      return;
-    }
-
-    if (existente.length > 0) {
-      console.warn('Código já existente:', codigo1);
-      alert('Já existe um produto com esse código principal.');
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('produtos')
-        .insert([{ codigo_principal: codigo1, codigo_secundario: codigo2, nome }]);
-
-      if (error) {
-        console.error('Erro ao salvar:', error);
-        alert('Erro ao salvar o produto. Tente novamente.');
-        return;
+    // Verificar se o código principal já existe (usar SupabaseService)
+    try{
+      const existente = await SupabaseService.list('produtos','id',{eq:{field:'codigo_principal',value:codigo1}});
+      if (existente && existente.length > 0) {
+        console.warn('Código já existente:', codigo1);
+        return alert('Já existe um produto com esse código principal.');
       }
+    }catch(err){
+      console.error('Erro ao verificar código (detalhado):', err);
+      return alert('Erro ao verificar código. Tente novamente.\n' + (err.message||JSON.stringify(err)));
+    }
 
+    // Inserir usando SupabaseService para tratamento consistente de erros
+    try{
+      const data = await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome });
+      if(!data){
+        console.error('Resposta vazia ao inserir produto:', data);
+        return alert('Erro ao salvar o produto. Tente novamente.');
+      }
       alert('Produto cadastrado com sucesso!');
       this.formCadastrarProduto.reset();
       this.renderProdutosGrid();
       this.populateProductDropdown();
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      alert('Erro inesperado. Verifique sua conexão.');
+    }catch(err){
+      // Mostra detalhes do erro no console e uma mensagem mais informativa ao usuário
+      console.error('Erro ao salvar produto detalhado:', err);
+      const userMsg = err?.message || err?.error || JSON.stringify(err);
+      alert('Erro ao salvar o produto. Tente novamente.\nDetalhes: ' + userMsg);
     }
   },
 
