@@ -116,6 +116,15 @@
             <input type="text" id="produtoCodigo2" />
             <label for="produtoNome">Nome do Produto</label>
             <input type="text" id="produtoNome" required />
+            <label for="produtoUnidade">Unidade de Medida (opcional)</label>
+            <select id="produtoUnidade">
+              <option value="">-- Deixe em branco para usar 'UN' --</option>
+              <option value="UN">UN</option>
+              <option value="KG">KG</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="PC">PC</option>
+            </select>
             <div class="row">
               <button type="submit" id="btnSubmitProduto" class="btn-primary">Cadastrar</button>
               <button type="button" id="btnOpenImportExportModal" class="btn-muted">Import/Export</button>
@@ -124,7 +133,7 @@
 
           <div class="table-responsive">
             <table class="data-grid" aria-label="Produtos Cadastrados">
-              <thead><tr><th>Cod1</th><th>Cod2</th><th>Nome</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Cod1</th><th>Cod2</th><th>Nome</th><th>Unidade</th><th>Ações</th></tr></thead>
               <tbody id="produtosTableBody"></tbody>
             </table>
           </div>
