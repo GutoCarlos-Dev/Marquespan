@@ -104,8 +104,8 @@ body{
 .winner-selector label{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #dfe7df;background:#fbfffb;color:var(--brand-contrast);cursor:pointer;font-weight:600}
 .winner-selector label:hover{background:#f1fff1}
 .winner-selector input[type="radio"]:checked + label{background:var(--brand);color:#fff;border-color:var(--brand-dark);box-shadow:0 4px 10px rgba(2,80,2,0.12)}
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:999}
-.modal{background:#fff;border-radius:12px;padding:18px;max-width:720px;width:92%;box-shadow:var(--shadow-md)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:1200}
+.modal{background:#fff;border-radius:12px;padding:18px;max-width:720px;width:92%;box-shadow:var(--shadow-md);z-index:1201}
 .modal .close-button{background:none;border:none;font-size:22px;cursor:pointer}
 .footer{max-width:1200px;margin:20px auto;padding:8px 16px;color:var(--muted);font-size:13px}
 /* Import modal specific */
