@@ -394,8 +394,6 @@ const UI = {
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
-      // ensure print button is wired (in case modal moved)
-      setTimeout(()=>{ const btn = document.getElementById('btnPrintQuotation'); if(btn) btn.onclick = ()=>this.printQuotation(); },60);
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
   },
 
@@ -403,51 +401,54 @@ const UI = {
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
     const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
     const cssHref = 'css/stylecompras.css';
-    // Try opening a new window first
+    // Try opening a new window first. Build a richer print HTML including logo in top-right.
+    const printHtml = `<!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <link rel="stylesheet" href="${cssHref}">
+        <style>
+          body{font-family:Inter, Arial, Helvetica, sans-serif;margin:18px;color:#222}
+          .print-header{display:flex;justify-content:space-between;align-items:center}
+          .print-header h2{margin:0;font-size:18px}
+          .print-header img{height:48px}
+          .print-body{margin-top:12px}
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <h2>${title}</h2>
+          <img src="logo.png" alt="Logo" />
+        </div>
+        <div class="print-body">${content}</div>
+      </body>
+      </html>`;
+
     try{
-      const win = window.open('', '_blank', 'noopener');
+      const win = window.open('', '_blank');
       if(win){
-        win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
+        win.document.open();
+        win.document.write(printHtml);
         win.document.close();
-        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },250);
+        // ensure focus and print
+        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },300);
         return;
       }
-    }catch(e){
-      console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e);
-    }
+    }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
 
     // Fallback: print via hidden iframe (não depende de popups)
     try{
       const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.visibility = 'hidden';
+      iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0'; iframe.style.visibility = 'hidden';
       document.body.appendChild(iframe);
       const idoc = iframe.contentWindow.document;
-      idoc.open();
-      idoc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
-      idoc.close();
-      // Give the iframe a moment to render styles, then print
+      idoc.open(); idoc.write(printHtml); idoc.close();
       setTimeout(()=>{
-        try{
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }catch(err){
-          console.error('Erro ao imprimir via iframe', err);
-          alert('Não foi possível iniciar a impressão. Verifique permissões do navegador.');
-        }finally{
-          // remove iframe after a short delay
-          setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(_){ } }, 800);
-        }
-      }, 300);
-    }catch(err){
-      console.error('Fallback de impressão falhou', err);
-      alert('Erro ao preparar impressão. Veja o console para detalhes.');
-    }
+        try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(err){ console.error('Erro ao imprimir via iframe', err); alert('Não foi possível iniciar a impressão. Verifique permissões do navegador.'); }
+        finally{ setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(_){ } }, 900); }
+      }, 400);
+    }catch(err){ console.error('Fallback de impressão falhou', err); alert('Erro ao preparar impressão. Veja o console para detalhes.'); }
   },
 
   async deleteQuotation(id){ if(confirm('Excluir cotação?')){ try{ await SupabaseService.remove('cotacoes',{field:'id',value:id}); alert('Excluído'); this.renderSavedQuotations(); }catch(e){console.error(e);alert('Erro excluir')}} },
