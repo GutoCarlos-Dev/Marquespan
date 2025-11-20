@@ -151,6 +151,7 @@
             <input type="text" id="fornecedorTelefone" />
             <div class="row">
               <button type="submit" id="btnSubmitFornecedor" class="btn-primary">Cadastrar</button>
+              <button type="button" id="btnOpenImportExportFornecedor" class="btn-muted">Import/Export</button>
             </div>
           </form>
 
@@ -173,7 +174,7 @@
       <button class="close-button" aria-label="Fechar">×</button>
     </div>
     <div class="panel-body">
-      <label>Arquivo Excel (colunas: <strong>COD1, COD2, PRODUTO</strong>)</label>
+      <label>Arquivo Excel (colunas: <strong id="importExpectedColumns">COD1, COD2, PRODUTO</strong>)</label>
       <input type="file" id="importExcelFile" accept=".xlsx,.xls" />
       <p class="muted">Você pode arrastar e soltar o arquivo aqui ou selecionar pelo botão. A importação irá ignorar duplicatas.</p>
       <div id="importStatus" class="import-status" aria-live="polite"></div>

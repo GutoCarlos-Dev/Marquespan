@@ -138,7 +138,10 @@ const UI = {
     this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e));
     this.fornecedoresTableBody?.addEventListener('click', (e)=>this.handleFornecedorTableClick(e));
 
-    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel());
+    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel('produtos'));
+    // Import/Export for fornecedores
+    const btnForImport = document.getElementById('btnOpenImportExportFornecedor');
+    if(btnForImport) btnForImport.addEventListener('click', ()=>this.openImportPanel('fornecedores'));
     this.closeModalButtons?.forEach(btn=>btn.addEventListener('click', ()=>this.closeModal()));
     const panelCloseBtn = this.importPanel?.querySelector('.close-button');
     if(panelCloseBtn) panelCloseBtn.addEventListener('click', ()=>this.closeImportPanel());
@@ -616,8 +619,21 @@ const UI = {
     this._importPreviewData = null;
   },
   // Compact import/export panel (permanent panel element)
-  openImportPanel(){
+  openImportPanel(mode='produtos'){
     if(!this.importPanel) return;
+    this._importMode = mode;
+    // adjust header and expected columns
+    const header = this.importPanel.querySelector('.panel-header h3');
+    const expCols = document.getElementById('importExpectedColumns');
+    if(mode==='fornecedores'){
+      if(header) header.textContent = 'Importar / Exportar Fornecedores';
+      if(expCols) expCols.textContent = 'NOME, TELEFONE';
+      if(this.importStatus) this.importStatus.textContent = '';
+    } else {
+      if(header) header.textContent = 'Importar / Exportar Produtos';
+      if(expCols) expCols.textContent = 'COD1, COD2, PRODUTO';
+      if(this.importStatus) this.importStatus.textContent = '';
+    }
     this.importPanel.classList.remove('hidden');
     // focus first control
     setTimeout(()=>{ const f = this.importPanel.querySelector('button,input,select,textarea'); if(f) f.focus(); },50);
@@ -697,11 +713,66 @@ const UI = {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws);
 
+        const importErrors = [];
+        const mode = this._importMode || 'produtos';
+
+        if(mode === 'fornecedores'){
+          const suppliersToInsert = [];
+          const existingNames = new Set();
+          try{
+            const existing = await SupabaseService.list('fornecedores','nome');
+            existing.forEach(x=>existingNames.add(x.nome));
+          }catch(err){ console.error('Erro ao buscar fornecedores existentes para importação:', err); if(this.importStatus) this.importStatus.textContent = 'Erro ao verificar fornecedores existentes. Veja console.'; return }
+          const seenInFile = new Set();
+          for(const row of json){
+            const norm = {};
+            Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; });
+            const nome = String(norm['nome'] ?? norm['name'] ?? '').trim();
+            const telefone = String(norm['telefone'] ?? norm['phone'] ?? '').trim();
+            if(!nome){ importErrors.push(`Linha ignorada: NOME vazio: ${JSON.stringify(row)}`); continue }
+            if(existingNames.has(nome) || seenInFile.has(nome)){ importErrors.push(`Fornecedor '${nome}' já existe ou duplicado no arquivo; será ignorado.`); continue }
+            suppliersToInsert.push({ nome, telefone });
+            seenInFile.add(nome);
+            existingNames.add(nome);
+          }
+
+          // build preview
+          if(this.importPreview){
+            const previewRows = [];
+            const seen = new Set();
+            for(const row of json){
+              const norm = {}; Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; });
+              const nome = String(norm['nome'] ?? norm['name'] ?? '').trim();
+              const telefone = String(norm['telefone'] ?? norm['phone'] ?? '').trim();
+              let status='importar', reason='';
+              if(!nome){ status='ignorado'; reason='NOME vazio' }
+              else if(seen.has(nome)) { status='ignorado'; reason='Duplicado no arquivo' }
+              else if(existingNames.has(nome) && !seen.has(nome)) { /* if existingNames includes current because we updated it above, we need a different set */ }
+              // Note: for preview, we consider the initial existing names by re-checking via a simple approach
+              previewRows.push({ nome, telefone, status, reason });
+              if(status==='importar') seen.add(nome);
+            }
+            const previewCount = Math.min(20, previewRows.length);
+            if(previewRows.length>0){
+              let html = '<table><thead><tr><th>Nome</th><th>Telefone</th><th>Status</th></tr></thead><tbody>' + previewRows.slice(0,previewCount).map(r=>{
+                if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`;
+                return `<tr class="preview-row-ignored"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`;
+              }).join('') + '</tbody></table>';
+              html += `<div class="preview-note">Mostrando ${previewCount} de ${previewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`;
+              if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`;
+              this.importPreview.innerHTML = html; this.importPreview.classList.remove('hidden');
+            } else { this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden'); }
+          }
+
+          if(this.importStatus) this.importStatus.textContent = `Pré-visualização pronta - ${suppliersToInsert.length} novos fornecedores detectados.`;
+          this._importPreviewData = { suppliersToInsert, importErrors };
+          if(this.btnConfirmImport) { this.btnConfirmImport.classList.remove('hidden'); this.btnConfirmImport.disabled = false }
+          return;
+        }
+
+        // Default: produtos (existing logic)
         const productsToInsert = [];
         const existingProductCodes = new Set();
-        const importErrors = [];
-
-        // Busca todos os códigos de produtos existentes no Supabase uma vez para verificação eficiente de duplicatas
         try {
           const existingProducts = await SupabaseService.list('produtos', 'codigo_principal');
           existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal));
@@ -716,7 +787,6 @@ const UI = {
         const ignoredRows = [];
 
         for (const row of json) {
-          // Normalize keys to allow different header cases/formatting (e.g. 'COD1', 'cod1', 'COD 1')
           const norm = {};
           Object.keys(row || {}).forEach(k => {
             const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,'');
@@ -727,7 +797,6 @@ const UI = {
           const codigo_secundario = String(norm['cod2'] ?? norm['cod_2'] ?? norm['codigo2'] ?? '').trim();
           const nome = String(norm['produto'] ?? norm['prod'] ?? norm['nome'] ?? '').trim();
 
-          // Decide if row will be imported or ignored
           if (!codigo_principal || !nome) {
             const reason = 'COD1 ou PRODUTO vazio';
             ignoredRows.push({ row, codigo_principal, codigo_secundario, nome, reason });
@@ -742,7 +811,6 @@ const UI = {
             continue;
           }
 
-          // row accepted
           productsToInsert.push({ codigo_principal, codigo_secundario, nome });
           seenInFile.add(codigo_principal);
           existingProductCodes.add(codigo_principal);
@@ -795,17 +863,26 @@ const UI = {
 
   async handleExport(){
     try {
-      // Busca todos os produtos do Supabase
+      const mode = this._importMode || 'produtos';
+      if(mode === 'fornecedores'){
+        const suppliers = await SupabaseService.list('fornecedores','nome,telefone',{orderBy:'nome'});
+        const aoa = [['NOME','TELEFONE'], ...suppliers.map(s=>[s.nome, s.telefone||''])];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Fornecedores');
+        XLSX.writeFile(wb, 'fornecedores_cadastrados.xlsx');
+        alert('Exportação de fornecedores concluída!');
+        if(this.closeImportPanel) this.closeImportPanel();
+        return;
+      }
+
+      // Default: produtos
       const products = await SupabaseService.list('produtos', 'codigo_principal,codigo_secundario,nome', {orderBy: 'codigo_principal'});
-
-      // Prepara os dados para exportação XLSX
       const aoa = [['COD1','COD2','PRODUTO'], ...products.map(p => [p.codigo_principal, p.codigo_secundario, p.nome])];
-
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
       XLSX.writeFile(wb, 'produtos_cadastrados.xlsx');
-
       alert('Exportação de produtos concluída!');
       if(this.closeImportPanel) this.closeImportPanel();
     } catch (e) {
@@ -816,25 +893,36 @@ const UI = {
 
   async confirmImport(){
     const dataObj = this._importPreviewData;
-    if(!dataObj || !dataObj.productsToInsert || dataObj.productsToInsert.length===0){
-      alert('Nada para importar. Faça a pré-visualização antes.');
-      return;
-    }
-    const productsToInsert = dataObj.productsToInsert;
+    const mode = this._importMode || 'produtos';
+    if(!dataObj) { alert('Nada para importar. Faça a pré-visualização antes.'); return; }
     try{
       if(this.btnConfirmImport) { this.btnConfirmImport.disabled = true; this.btnConfirmImport.textContent = 'Importando...'; }
+      if(mode === 'fornecedores'){
+        const suppliersToInsert = dataObj.suppliersToInsert || [];
+        if(suppliersToInsert.length===0){ alert('Nada para importar. Faça a pré-visualização antes.'); if(this.btnConfirmImport){ this.btnConfirmImport.disabled=false; this.btnConfirmImport.textContent='Confirmar Importação'; } return }
+        await SupabaseService.insert('fornecedores', suppliersToInsert);
+        if(this.importStatus) this.importStatus.textContent = `Importação concluída! ${suppliersToInsert.length} fornecedores adicionados.`;
+        if(dataObj.importErrors && dataObj.importErrors.length) console.warn('Avisos durante a importação:\n', dataObj.importErrors.join('\n'));
+        // Atualiza UI
+        this.renderFornecedoresGrid();
+        this.populateSupplierDropdowns();
+        setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
+        return;
+      }
+
+      // Default: produtos
+      const productsToInsert = dataObj.productsToInsert || [];
+      if(productsToInsert.length===0){ alert('Nada para importar. Faça a pré-visualização antes.'); if(this.btnConfirmImport){ this.btnConfirmImport.disabled=false; this.btnConfirmImport.textContent='Confirmar Importação'; } return }
       await SupabaseService.insert('produtos', productsToInsert);
       if(this.importStatus) this.importStatus.textContent = `Importação concluída! ${productsToInsert.length} produtos adicionados.`;
-      if(dataObj.importErrors && dataObj.importErrors.length){
-        console.warn('Avisos durante a importação:\n', dataObj.importErrors.join('\n'));
-      }
+      if(dataObj.importErrors && dataObj.importErrors.length) console.warn('Avisos durante a importação:\n', dataObj.importErrors.join('\n'));
       // Atualiza UI
       this.renderProdutosGrid();
       this.populateProductDropdown();
       setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
     }catch(err){
-      console.error('Erro ao inserir produtos no Supabase:', err);
-      if(this.importStatus) this.importStatus.textContent = 'Erro ao inserir produtos. Veja console.';
+      console.error('Erro ao inserir no Supabase:', err);
+      if(this.importStatus) this.importStatus.textContent = 'Erro ao inserir dados. Veja console.';
       if(this.btnConfirmImport) { this.btnConfirmImport.disabled = false; this.btnConfirmImport.textContent = 'Confirmar Importação'; }
     }
   },
