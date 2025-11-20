@@ -382,23 +382,42 @@ const UI = {
     const nome = document.getElementById('produtoNome').value.trim();
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
 
-    // Verificar se o usuário está autenticado no Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !session.user) {
-      alert('Você precisa estar logado para cadastrar produtos. Redirecionando para login...');
-      window.location.href = 'index.html'; // Redirecionar para página de login
+    // Verificar se o código principal já existe
+    const { data: existente, error: erroBusca } = await supabase
+      .from('produtos')
+      .select('id')
+      .eq('codigo_principal', codigo1);
+
+    if (erroBusca) {
+      console.error('Erro ao verificar código:', erroBusca);
+      alert('Erro ao verificar código. Tente novamente.');
+      return;
+    }
+
+    if (existente.length > 0) {
+      console.warn('Código já existente:', codigo1);
+      alert('Já existe um produto com esse código principal.');
       return;
     }
 
     try {
-      await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome });
-      alert('Produto salvo com sucesso!');
+      const { data, error } = await supabase
+        .from('produtos')
+        .insert([{ codigo_principal: codigo1, codigo_secundario: codigo2, nome }]);
+
+      if (error) {
+        console.error('Erro ao salvar:', error);
+        alert('Erro ao salvar o produto. Tente novamente.');
+        return;
+      }
+
+      alert('Produto cadastrado com sucesso!');
       this.formCadastrarProduto.reset();
       this.renderProdutosGrid();
       this.populateProductDropdown();
-    } catch (e) {
-      console.error('Erro detalhado ao salvar produto:', e);
-      alert(`❌ Erro ao salvar produto: ${e.message}`);
+    } catch (err) {
+      console.error('Erro inesperado:', err);
+      alert('Erro inesperado. Verifique sua conexão.');
     }
   },
 
