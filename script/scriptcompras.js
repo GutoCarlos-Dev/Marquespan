@@ -79,7 +79,7 @@ const UI = {
   },
 
   cache(){
-    this.navLinks = document.querySelectorAll('#menu-compras a');
+    this.navLinks = document.querySelectorAll('#menu-compras button.painel-btn');
     this.sections = document.querySelectorAll('section.section');
     this.cartBody = document.getElementById('cartBody');
     this.cartProductSelect = document.getElementById('cartProductSelect');
@@ -111,12 +111,12 @@ const UI = {
 
   bind(){
     // Navigation
-    this.navLinks.forEach(link=>link.addEventListener('click', e=>{
+    this.navLinks.forEach(btn=>btn.addEventListener('click', e=>{
       e.preventDefault();
-      this.navLinks.forEach(l=>l.classList.remove('active'));
-      link.classList.add('active');
-      const target = link.getAttribute('href').substring(1);
-      this.showSection(target);
+      this.navLinks.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      this.showSection(btn.dataset.secao);
     }));
 
     this.btnAddToCart.addEventListener('click', ()=>this.handleAddToCart());
@@ -152,7 +152,14 @@ const UI = {
     document.querySelectorAll('section.section').forEach(s=>s.classList.add('hidden'));
     const el = document.getElementById(id);
     if(el) el.classList.remove('hidden');
+    
+    // Inicializa os dados da aba quando ela é aberta
     if(id==='sectionRealizarCotacoes'){ this.generateNextQuotationCode(); this.populateProductDropdown(); this.populateSupplierDropdowns(); }
+    if(id==='sectionCotacoesSalvas'){ this.renderSavedQuotations(); }
+    if(id==='sectionCadastrarProdutos'){ this.renderProdutosGrid(); }
+    if(id==='sectionCadastrarFornecedor'){ this.renderFornecedoresGrid(); }
+
+
   },
 
   async populateProductDropdown(){

@@ -4,32 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Compras - Marquespan</title>
-  <link rel="stylesheet" href="css/stylecompras.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/buttons.css" />
+  <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- Dependências (jsPDF, SheetJS) são carregadas no fim do body -->
 </head>
 <body>
+  <!-- Conteúdo principal que será gerenciado pelo menu.js -->
+  <div class="main-content">
+    <header class="header">🛒 Compras</header>
 
-  <header class="header">
-    <div class="header-inner">
-      <h1>Compras — Marquespan</h1>
+    <!-- Navegação por abas, seguindo o padrão do projeto -->
+    <div class="painel-navegacao" role="tablist" id="menu-compras">
+      <button class="painel-btn active" data-secao="sectionRealizarCotacoes" aria-selected="true">
+        <i class="fas fa-plus-circle"></i> Realizar Cotações
+      </button>
+      <button class="painel-btn" data-secao="sectionCotacoesSalvas" aria-selected="false">
+        <i class="fas fa-save"></i> Cotações Salvas
+      </button>
+      <button class="painel-btn" data-secao="sectionCadastrarProdutos" aria-selected="false">
+        <i class="fas fa-box"></i> Cadastrar Produtos
+      </button>
+      <button class="painel-btn" data-secao="sectionCadastrarFornecedor" aria-selected="false">
+        <i class="fas fa-truck"></i> Cadastrar Fornecedor
+      </button>
     </div>
-  </header>
-
-  <main class="main-layout">
-    <aside class="sidebar" role="navigation" aria-label="Menu de Compras">
-      <nav id="menu-compras" class="menu-compras">
-        <a href="#sectionRealizarCotacoes" class="btn-menu-compras active"><i class="fas fa-plus-circle"></i><span>Realizar Cotações</span></a>
-        <a href="#sectionCotacoesSalvas" class="btn-menu-compras"><i class="fas fa-save"></i><span>Cotações Salvas</span></a>
-        <a href="#sectionCadastrarProdutos" class="btn-menu-compras"><i class="fas fa-box"></i><span>Cadastrar Produtos</span></a>
-        <a href="#sectionCadastrarFornecedor" class="btn-menu-compras"><i class="fas fa-truck"></i><span>Cadastrar Fornecedor</span></a>
-      </nav>
-      <div class="sidebar-footer">© 2025 Marquespan</div>
-    </aside>
-
-    <section class="content" aria-live="polite">
 
       <!-- REALIZAR COTAÇÕES -->
       <section id="sectionRealizarCotacoes" class="section">
@@ -152,11 +150,9 @@
           </div>
         </div>
       </section>
-
-    </section>
   </div>
 
-  <!-- Modals -->
+  <!-- Modals (permanecem inalterados) -->
   <div id="importExportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
@@ -186,7 +182,7 @@
     </div>
   </div>
 
-  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>  
   
   
   <script src="./script/menu.js" defer></script>
