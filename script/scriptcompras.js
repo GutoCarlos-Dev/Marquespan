@@ -398,18 +398,54 @@ const UI = {
   },
 
   printQuotation(){
+    const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
+    const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
+    const cssHref = 'css/stylecompras.css';
+    // Try opening a new window first
     try{
-      const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
-      const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
       const win = window.open('', '_blank', 'noopener');
-      if(!win){ alert('Não foi possível abrir a janela de impressão. Verifique bloqueadores.'); return }
-      // build print HTML
-      const cssHref = 'css/stylecompras.css';
-      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
-      win.document.close();
-      // wait for styles to load then print
-      setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir',e) } },250);
-    }catch(err){ console.error('Erro em printQuotation',err); alert('Erro ao preparar impressão. Veja console.'); }
+      if(win){
+        win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
+        win.document.close();
+        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },250);
+        return;
+      }
+    }catch(e){
+      console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e);
+    }
+
+    // Fallback: print via hidden iframe (não depende de popups)
+    try{
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+      const idoc = iframe.contentWindow.document;
+      idoc.open();
+      idoc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
+      idoc.close();
+      // Give the iframe a moment to render styles, then print
+      setTimeout(()=>{
+        try{
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }catch(err){
+          console.error('Erro ao imprimir via iframe', err);
+          alert('Não foi possível iniciar a impressão. Verifique permissões do navegador.');
+        }finally{
+          // remove iframe after a short delay
+          setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(_){ } }, 800);
+        }
+      }, 300);
+    }catch(err){
+      console.error('Fallback de impressão falhou', err);
+      alert('Erro ao preparar impressão. Veja o console para detalhes.');
+    }
   },
 
   async deleteQuotation(id){ if(confirm('Excluir cotação?')){ try{ await SupabaseService.remove('cotacoes',{field:'id',value:id}); alert('Excluído'); this.renderSavedQuotations(); }catch(e){console.error(e);alert('Erro excluir')}} },
