@@ -107,6 +107,9 @@ const UI = {
     this.btnImportProducts = document.getElementById('btnImportProducts');
     this.btnExportProducts = document.getElementById('btnExportProducts');
     this.importExcelFile = document.getElementById('importExcelFile');
+    this.importPreview = document.getElementById('importPreview');
+    this.importStatus = document.getElementById('importStatus');
+    this.btnConfirmImport = document.getElementById('btnConfirmImport');
     this.quotationDetailModal = document.getElementById('quotationDetailModal');
     this.quotationDetailTitle = document.getElementById('quotationDetailTitle');
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
@@ -138,6 +141,7 @@ const UI = {
     this.importExportModal?.addEventListener('click', (e)=>{ if(e.target===this.importExportModal) this.closeModal() });
 
     this.btnImportProducts?.addEventListener('click', ()=>this.handleImport());
+    this.btnConfirmImport?.addEventListener('click', ()=>this.confirmImport());
     this.btnExportProducts?.addEventListener('click', ()=>this.handleExport());
 
     // detail modal
@@ -491,72 +495,73 @@ const UI = {
 
   async handleImport(){
     const file = this.importExcelFile.files[0];
-    if(!file) return alert('Selecione um arquivo para importar.');
+    if(!file){ if(this.importStatus) this.importStatus.textContent = 'Selecione um arquivo para importar.'; return }
+
+    // Limpar preview/status
+    if(this.importPreview) { this.importPreview.innerHTML = ''; this.importPreview.classList.add('hidden') }
+    if(this.importStatus) this.importStatus.textContent = 'Lendo arquivo e gerando pré-visualização...';
 
     const reader = new FileReader();
     reader.onload = async (e)=>{
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data,{type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws);
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws);
 
-      const productsToInsert = [];
-      const existingProductCodes = new Set();
-      const importErrors = [];
+        const productsToInsert = [];
+        const existingProductCodes = new Set();
+        const importErrors = [];
 
-      // Busca todos os códigos de produtos existentes no Supabase uma vez para verificação eficiente de duplicatas
-      try {
-        const existingProducts = await SupabaseService.list('produtos', 'codigo_principal');
-        existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal));
-      } catch (err) {
-        console.error('Erro ao buscar produtos existentes para importação:', err);
-        alert('Erro ao verificar produtos existentes. A importação pode falhar.');
-        return;
-      }
-
-      for (const row of json) {
-        const codigo_principal = String(row.COD1 || '').trim();
-        const codigo_secundario = String(row.COD2 || '').trim();
-        const nome = String(row.PRODUTO || '').trim();
-
-        if (!codigo_principal || !nome) {
-          importErrors.push(`Linha ignorada: Código Principal (COD1) ou Nome (PRODUTO) está vazio para a linha ${JSON.stringify(row)}.`);
-          continue;
-        }
-
-        if (existingProductCodes.has(codigo_principal)) {
-          importErrors.push(`Produto com Código Principal '${codigo_principal}' já existe e será ignorado.`);
-          continue;
-        }
-
-        productsToInsert.push({
-          codigo_principal: codigo_principal,
-          codigo_secundario: codigo_secundario,
-          nome: nome
-        });
-        existingProductCodes.add(codigo_principal); // Adiciona ao conjunto para evitar duplicatas dentro do mesmo lote de importação
-      }
-
-      if (productsToInsert.length > 0) {
+        // Busca todos os códigos de produtos existentes no Supabase uma vez para verificação eficiente de duplicatas
         try {
-          await SupabaseService.insert('produtos', productsToInsert);
-          alert(`Importação concluída! ${productsToInsert.length} produtos adicionados.`);
+          const existingProducts = await SupabaseService.list('produtos', 'codigo_principal');
+          existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal));
         } catch (err) {
-          console.error('Erro ao inserir produtos no Supabase:', err);
-          alert('Erro ao importar produtos. Verifique o console para detalhes.');
+          console.error('Erro ao buscar produtos existentes para importação:', err);
+          if(this.importStatus) this.importStatus.textContent = 'Erro ao verificar produtos existentes. Veja console.';
+          return;
         }
-      } else {
-        alert('Nenhum produto novo para importar ou todos já existem no sistema.');
-      }
 
-      if (importErrors.length > 0) {
-        console.warn('Avisos/Erros durante a importação:\n', importErrors.join('\n'));
-        alert('Alguns produtos não foram importados devido a erros ou duplicatas. Verifique o console para mais detalhes.');
-      }
+        for (const row of json) {
+          const codigo_principal = String(row.COD1 || '').trim();
+          const codigo_secundario = String(row.COD2 || '').trim();
+          const nome = String(row.PRODUTO || '').trim();
 
-      this.renderProdutosGrid(); // Atualiza a grade de produtos
-      this.populateProductDropdown(); // Atualiza o dropdown de produtos
-      this.closeModal();
+          if (!codigo_principal || !nome) {
+            importErrors.push(`Linha ignorada: COD1 ou PRODUTO está vazio: ${JSON.stringify(row)}`);
+            continue;
+          }
+
+          if (existingProductCodes.has(codigo_principal)) {
+            importErrors.push(`Produto com Código Principal '${codigo_principal}' já existe e será ignorado.`);
+            continue;
+          }
+
+          productsToInsert.push({ codigo_principal, codigo_secundario, nome });
+          existingProductCodes.add(codigo_principal);
+        }
+
+        // Mostrar pré-visualização (até 20 linhas)
+        if(this.importPreview){
+          const previewCount = Math.min(20, productsToInsert.length);
+          if(previewCount>0){
+            let html = '<table><thead><tr><th>Cod1</th><th>Cod2</th><th>Produto</th></tr></thead><tbody>' + productsToInsert.slice(0,previewCount).map(p=>`<tr><td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td></tr>`).join('') + '</tbody></table>';
+            html += `<div class="preview-note">Mostrando ${previewCount} de ${productsToInsert.length} novos produtos detectados.</div>`;
+            if(importErrors.length) html += `<div class="preview-note">${importErrors.length} linhas com avisos (veja console para detalhes).</div>`;
+            this.importPreview.innerHTML = html; this.importPreview.classList.remove('hidden');
+          } else {
+            this.importPreview.innerHTML = `<div class="preview-note">Nenhum produto novo detectado. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden');
+          }
+        }
+
+        if(this.importStatus) this.importStatus.textContent = `Pré-visualização pronta - ${productsToInsert.length} novos produtos detectados.`;
+        this._importPreviewData = { productsToInsert, importErrors };
+        if(this.btnConfirmImport) { this.btnConfirmImport.classList.remove('hidden'); this.btnConfirmImport.disabled = false }
+      }catch(err){
+        console.error('Erro ao processar arquivo:', err);
+        if(this.importStatus) this.importStatus.textContent = 'Erro ao processar o arquivo. Veja console.';
+      }
     };
     reader.readAsArrayBuffer(file);
   },
@@ -579,6 +584,31 @@ const UI = {
     } catch (e) {
       console.error('Erro ao exportar produtos:', e);
       alert('Erro ao exportar produtos. Verifique o console para detalhes.');
+    }
+  },
+
+  async confirmImport(){
+    const dataObj = this._importPreviewData;
+    if(!dataObj || !dataObj.productsToInsert || dataObj.productsToInsert.length===0){
+      alert('Nada para importar. Faça a pré-visualização antes.');
+      return;
+    }
+    const productsToInsert = dataObj.productsToInsert;
+    try{
+      if(this.btnConfirmImport) { this.btnConfirmImport.disabled = true; this.btnConfirmImport.textContent = 'Importando...'; }
+      await SupabaseService.insert('produtos', productsToInsert);
+      if(this.importStatus) this.importStatus.textContent = `Importação concluída! ${productsToInsert.length} produtos adicionados.`;
+      if(dataObj.importErrors && dataObj.importErrors.length){
+        console.warn('Avisos durante a importação:\n', dataObj.importErrors.join('\n'));
+      }
+      // Atualiza UI
+      this.renderProdutosGrid();
+      this.populateProductDropdown();
+      setTimeout(()=>{ this.closeModal(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
+    }catch(err){
+      console.error('Erro ao inserir produtos no Supabase:', err);
+      if(this.importStatus) this.importStatus.textContent = 'Erro ao inserir produtos. Veja console.';
+      if(this.btnConfirmImport) { this.btnConfirmImport.disabled = false; this.btnConfirmImport.textContent = 'Confirmar Importação'; }
     }
   },
 }
