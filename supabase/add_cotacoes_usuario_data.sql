@@ -12,6 +12,10 @@ ALTER TABLE public.cotacoes
 ALTER TABLE public.cotacoes
   ADD COLUMN IF NOT EXISTS usuario text;
 
+-- adiciona coluna para nota fiscal (quando recebido)
+ALTER TABLE public.cotacoes
+  ADD COLUMN IF NOT EXISTS nota_fiscal text;
+
 -- opcional: coluna para marcação de última atualização
 ALTER TABLE public.cotacoes
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();

@@ -384,7 +384,7 @@ const UI = {
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
       // Query base
-      let q = supabase.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
+      let q = supabase.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
       if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
@@ -395,6 +395,7 @@ const UI = {
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
+        const notaFiscal = c.nota_fiscal || 'N/A';
         // status select para permitir alteração e registro de data/usuário
         const statusSelectId = `status-select-${c.id}`;
         const initialStatus = c.status || 'Pendente';
@@ -403,7 +404,7 @@ const UI = {
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
         const selEl = document.getElementById(statusSelectId);
@@ -414,7 +415,7 @@ const UI = {
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); }));
-    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar cotações.</td></tr>`}
+    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`}
   },
 
   async openQuotationDetailModal(id){
@@ -491,13 +492,23 @@ const UI = {
 
   async deleteQuotation(id){ if(confirm('Excluir cotação?')){ try{ await SupabaseService.remove('cotacoes',{field:'id',value:id}); alert('Excluído'); this.renderSavedQuotations(); }catch(e){console.error(e);alert('Erro excluir')}} },
 
-  async handleChangeQuotationStatus(id, newStatus){
+  async handleChangeQuotationStatus(id, newStatus) {
     if(!id) return;
-    if(!confirm(`Alterar status da cotação para '${newStatus}'?`)){
-      // Re-render list to restore old value
+
+    let notaFiscal = null;
+    if (newStatus === 'Recebido') {
+      notaFiscal = prompt('Por favor, informe o número da Nota Fiscal:');
+      if (notaFiscal === null) { // Usuário cancelou o prompt
+        this.renderSavedQuotations(); // Restaura o select para o valor anterior
+        return;
+      }
+    }
+
+    if (!confirm(`Alterar status da cotação para '${newStatus}'?`)) {
       this.renderSavedQuotations();
       return;
     }
+
     try{
       // obter usuário atual do localStorage (fluxo custom) ou do supabase.auth
       let userEmail = null;
@@ -509,6 +520,9 @@ const UI = {
 
       // Atualizamos apenas o status e, se disponível, o usuário. O `updated_at` será mantido pelo trigger do banco.
       const payload = { status: newStatus };
+      if (notaFiscal !== null) {
+        payload.nota_fiscal = notaFiscal.trim();
+      }
       if(userEmail) payload.usuario = userEmail;
 
       try{
