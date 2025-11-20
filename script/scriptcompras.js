@@ -317,9 +317,29 @@ const UI = {
     if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
 
     try{
-      // inserir cotacao
-      const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor };
-      const cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+      // obter usuário atual (se houver)
+      let userEmail = null;
+      try{
+        const userRes = await supabase.auth.getUser?.();
+        if(userRes && userRes.data && userRes.data.user) userEmail = userRes.data.user.email || userRes.data.user.id;
+        else if(userRes && userRes.user) userEmail = userRes.user.email || userRes.user.id;
+      }catch(_){ userEmail = null }
+
+      // inserir cotacao (inclui data/hora). Tentamos também gravar o usuário se a coluna existir; se falhar, tentamos sem ela.
+      const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor, data_cotacao: new Date().toISOString() };
+      if(userEmail) cotacaoPayload.usuario = userEmail;
+
+      let cot;
+      try{
+        cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+      }catch(err){
+        // se falhar por causa de coluna inexistente para 'usuario', remover e tentar novamente
+        const emsg = String(err?.message || err?.error || JSON.stringify(err)).toLowerCase();
+        if(emsg.includes('column') && emsg.includes('usuario') && emsg.includes('does not exist')){
+          delete cotacaoPayload.usuario;
+          cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+        } else throw err;
+      }
       const cotacaoId = cot[0].id;
 
       // itens
@@ -373,12 +393,19 @@ const UI = {
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${new Date(c.data_cotacao).toLocaleDateString('pt-BR')}</td><td>${winnerName}</td><td>${totalValue}</td><td><span class="status status-${c.status}">${c.status}</span></td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
+        // status select para permitir alteração e registro de data/usuário
+        const statusSelectId = `status-select-${c.id}`;
+        const statusSelect = `<select class="quotation-status-select" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${new Date(c.data_cotacao).toLocaleDateString('pt-BR')}</td><td>${winnerName}</td><td>${totalValue}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
         this.savedQuotationsTableBody.appendChild(tr);
+        // set selected value after append
+        setTimeout(()=>{ const sel = document.getElementById(statusSelectId); if(sel) sel.value = c.status; }, 10);
       });
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id)));
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id)));
+      // status change listeners
+      this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); }));
     }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar cotações.</td></tr>`}
   },
 
@@ -388,7 +415,9 @@ const UI = {
       const { data:itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
       const { data:orcamentos } = await supabase.from('cotacao_orcamentos').select('*,fornecedores(nome)').eq('id_cotacao',id);
       for(const o of orcamentos){ const { data:precos } = await supabase.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
-      let html = `<p><strong>Data:</strong> ${new Date(cotacao.data_cotacao).toLocaleDateString('pt-BR')}</p><p><strong>Status:</strong> ${cotacao.status}</p><hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
+      const dataDisplay = cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A';
+      const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
+      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${cotacao.status}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p><hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
       orcamentos.forEach(o=>{ const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>Preço</th></tr></thead><tbody>${o.precos.map(p=>{ const prod = itens.find(it=>it.produtos.id===p.id_produto); return `<tr><td>${prod?prod.produtos.nome:'Produto não encontrado'}</td><td>R$ ${parseFloat(p.preco_unitario).toFixed(2)}</td></tr>` }).join('')}</tbody></table></div>` });
       this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
       this.quotationDetailBody.innerHTML = html;
@@ -452,6 +481,36 @@ const UI = {
   },
 
   async deleteQuotation(id){ if(confirm('Excluir cotação?')){ try{ await SupabaseService.remove('cotacoes',{field:'id',value:id}); alert('Excluído'); this.renderSavedQuotations(); }catch(e){console.error(e);alert('Erro excluir')}} },
+
+  async handleChangeQuotationStatus(id, newStatus){
+    if(!id) return;
+    if(!confirm(`Alterar status da cotação para '${newStatus}'?`)){
+      // Re-render list to restore old value
+      this.renderSavedQuotations();
+      return;
+    }
+    try{
+      // obter usuário atual se possível
+      let userEmail = null;
+      try{ const userRes = await supabase.auth.getUser?.(); if(userRes && userRes.data && userRes.data.user) userEmail = userRes.data.user.email || userRes.data.user.id; else if(userRes && userRes.user) userEmail = userRes.user.email || userRes.user.id; }catch(_){ userEmail = null }
+
+      const payload = { status: newStatus, data_cotacao: new Date().toISOString() };
+      if(userEmail) payload.usuario = userEmail;
+
+      try{
+        await SupabaseService.update('cotacoes', payload, { field: 'id', value: id });
+      }catch(err){
+        const emsg = String(err?.message || err?.error || JSON.stringify(err)).toLowerCase();
+        if(emsg.includes('column') && emsg.includes('usuario') && emsg.includes('does not exist')){
+          delete payload.usuario;
+          await SupabaseService.update('cotacoes', payload, { field: 'id', value: id });
+        } else throw err;
+      }
+
+      alert('Status atualizado');
+      this.renderSavedQuotations();
+    }catch(e){ console.error('Erro atualizar status', e); alert('Erro ao atualizar status. Veja console.'); this.renderSavedQuotations(); }
+  },
 
   async renderProdutosGrid(){
     try{
