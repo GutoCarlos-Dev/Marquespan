@@ -492,19 +492,69 @@ const UI = {
     }
   },
 
-  openModal(){ if(this.importExportModal) this.importExportModal.classList.remove('hidden'); },
+
   openModal(){
     if(!this.importExportModal) return;
     // move modal to body to guarantee it's above fixed sidebars and other z-indexed elements
     try{ document.body.appendChild(this.importExportModal); }catch(e){}
+
+    // store previous inline styles to restore on close
+    this._modalPrevStyles = this._modalPrevStyles || {};
+    this._modalPrevStyles.backdropDisplay = this.importExportModal.style.display || '';
+    this._modalPrevStyles.backdropZ = this.importExportModal.style.zIndex || '';
+    this._modalPrevStyles.backdropPointer = this.importExportModal.style.pointerEvents || '';
+    this._modalPrevStyles.bodyOverflow = document.body.style.overflow || '';
+
+    // force backdrop and modal to be visible and interactive (fallback against conflicting CSS)
     this.importExportModal.classList.remove('hidden');
+    this.importExportModal.style.display = 'flex';
+    this.importExportModal.style.zIndex = '2147483646';
+    this.importExportModal.style.pointerEvents = 'auto';
+
+    const modalInner = this.importExportModal.querySelector('.modal');
+    if(modalInner){
+      // save previous modal inline style
+      this._modalPrevStyles.modalStyle = modalInner.getAttribute('style') || '';
+      modalInner.style.position = 'fixed';
+      modalInner.style.top = '50%';
+      modalInner.style.left = '50%';
+      modalInner.style.transform = 'translate(-50%,-50%)';
+      modalInner.style.zIndex = '2147483647';
+      modalInner.style.maxWidth = '900px';
+      modalInner.style.width = 'min(900px,92%)';
+      modalInner.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+      modalInner.style.background = '#fff';
+    }
+
     // prevent background scroll while modal is open
     document.body.style.overflow = 'hidden';
+
+    // focus first focusable element inside modal (small delay to ensure DOM ready)
+    setTimeout(()=>{
+      const focusable = this.importExportModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if(focusable) focusable.focus();
+    }, 60);
   },
+
   closeModal(){
     if(!this.importExportModal) return;
+    // hide
     this.importExportModal.classList.add('hidden');
-    document.body.style.overflow = '';
+
+    // restore inline styles if we saved them
+    if(this._modalPrevStyles){
+      this.importExportModal.style.display = this._modalPrevStyles.backdropDisplay || '';
+      this.importExportModal.style.zIndex = this._modalPrevStyles.backdropZ || '';
+      this.importExportModal.style.pointerEvents = this._modalPrevStyles.backdropPointer || '';
+      document.body.style.overflow = this._modalPrevStyles.bodyOverflow || '';
+      const modalInner = this.importExportModal.querySelector('.modal');
+      if(modalInner){
+        modalInner.setAttribute('style', this._modalPrevStyles.modalStyle || '');
+      }
+    } else {
+      document.body.style.overflow = '';
+    }
+
     // clear preview state
     if(this.importPreview){ this.importPreview.innerHTML=''; this.importPreview.classList.add('hidden') }
     if(this.importStatus) this.importStatus.textContent = '';
