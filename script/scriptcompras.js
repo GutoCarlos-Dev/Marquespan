@@ -424,7 +424,27 @@ const UI = {
     e.preventDefault(); const nome=document.getElementById('fornecedorNome').value.trim(); const tel=document.getElementById('fornecedorTelefone').value.trim(); if(!nome) return alert('Preencha o nome'); try{ await SupabaseService.insert('fornecedores',{nome,telefone:tel}); alert('Fornecedor salvo'); this.formCadastrarFornecedor.reset(); this.renderFornecedoresGrid(); this.populateSupplierDropdowns(); }catch(err){console.error(err);alert('Erro salvar fornecedor')}
   },
 
-  async handleFornecedorTableClick(e){ const btn=e.target; const id=btn.dataset.id; if(btn.classList.contains('btn-delete')){ if(confirm('Excluir fornecedor?')){ await SupabaseService.remove('fornecedores',{field:'id',value:id}); this.renderFornecedoresGrid(); this.populateSupplierDropdowns(); } } else if(btn.classList.contains('btn-edit')){ const { data } = await supabase.from('fornecedores').select('nome,telefone').eq('id',id).single(); document.getElementById('fornecedorNome').value=data.nome; document.getElementById('fornecedorTelefone').value=data.telefone||''; window.scrollTo(0,0); } },
+  async handleFornecedorTableClick(e) {
+    const btn = e.target.closest('.btn-action');
+    if (!btn) return;
+
+    const id = btn.dataset.id;
+
+    if (btn.classList.contains('btn-delete')) {
+      if (confirm('Tem certeza que deseja excluir este fornecedor?')) {
+        await SupabaseService.remove('fornecedores', { field: 'id', value: id });
+        this.renderFornecedoresGrid();
+        this.populateSupplierDropdowns();
+      }
+    } else if (btn.classList.contains('btn-edit')) {
+      const { data } = await supabase.from('fornecedores').select('nome,telefone').eq('id', id).single();
+      if (data) {
+        document.getElementById('fornecedorNome').value = data.nome;
+        document.getElementById('fornecedorTelefone').value = data.telefone || '';
+        window.scrollTo(0, 0); // Rola para o topo para editar
+      }
+    }
+  },
 
   openModal(){ if(this.importExportModal) this.importExportModal.classList.remove('hidden'); },
   closeModal(){ if(this.importExportModal) this.importExportModal.classList.add('hidden'); },
