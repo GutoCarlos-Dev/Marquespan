@@ -365,7 +365,8 @@ const UI = {
       orcamentos.forEach(o=>{ const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>Preço</th></tr></thead><tbody>${o.precos.map(p=>{ const prod = itens.find(it=>it.produtos.id===p.id_produto); return `<tr><td>${prod?prod.produtos.nome:'Produto não encontrado'}</td><td>R$ ${parseFloat(p.preco_unitario).toFixed(2)}</td></tr>` }).join('')}</tbody></table></div>` });
       this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
       this.quotationDetailBody.innerHTML = html;
-      this.quotationDetailModal.classList.remove('hidden');
+      // open as compact detail panel (avoid overlay conflicts)
+      this.openDetailPanel();
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
   },
 
@@ -624,6 +625,54 @@ const UI = {
     if(this.importStatus) this.importStatus.textContent = '';
     if(this.btnConfirmImport) this.btnConfirmImport.classList.add('hidden');
     this._importPreviewData = null;
+  },
+
+  // Compact panel for quotation details (no full-screen overlay)
+  openDetailPanel(){
+    if(!this.quotationDetailModal) return;
+    const modalInner = this.quotationDetailModal.querySelector('.modal');
+    if(!modalInner) return;
+
+    // save previous state
+    this._detailPrev = this._detailPrev || {};
+    this._detailPrev.parent = modalInner.parentElement;
+    this._detailPrev.modalStyle = modalInner.getAttribute('style') || '';
+    this._detailPrev.backdropStyle = this.quotationDetailModal.getAttribute('style') || '';
+
+    // hide backdrop
+    try{ this.quotationDetailModal.style.display = 'none'; }catch(e){}
+
+    // move modal to body and style as centered small panel
+    try{ document.body.appendChild(modalInner); }catch(e){}
+    modalInner.style.position = 'fixed';
+    modalInner.style.top = '50%';
+    modalInner.style.left = '50%';
+    modalInner.style.transform = 'translate(-50%, -50%)';
+    modalInner.style.width = 'min(760px,92%)';
+    modalInner.style.maxWidth = '760px';
+    modalInner.style.zIndex = '2147483647';
+    modalInner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.18)';
+    modalInner.style.background = '#fff';
+    modalInner.style.display = 'block';
+
+    // wire close
+    const closeBtn = modalInner.querySelector('.close-button');
+    if(closeBtn) closeBtn.onclick = ()=>this.closeDetailPanel();
+
+    // ensure body scroll not locked (detail shouldn't block page)
+    document.body.style.overflow = '';
+  },
+
+  closeDetailPanel(){
+    if(!this.quotationDetailModal) return;
+    const modalInner = document.querySelector('body > .modal');
+    if(!modalInner) return;
+
+    // restore modal inline style and move back into backdrop
+    modalInner.setAttribute('style', this._detailPrev.modalStyle || '');
+    try{ this._detailPrev.parent.appendChild(modalInner); }catch(e){}
+    try{ this.quotationDetailModal.setAttribute('style', this._detailPrev.backdropStyle || ''); }catch(e){}
+    this.quotationDetailModal.style.display = 'none';
   },
 
   async handleImport(){
