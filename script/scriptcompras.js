@@ -76,6 +76,8 @@ const UI = {
     this.renderCart();
     this.generateNextQuotationCode();
     this.renderSavedQuotations();
+    this.renderProdutosGrid(); // Adicionado para carregar produtos no início
+    this.renderFornecedoresGrid(); // Adicionado para carregar fornecedores no início
     this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
   },
 
