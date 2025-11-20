@@ -76,6 +76,7 @@ const UI = {
     this.renderCart();
     this.generateNextQuotationCode();
     this.renderSavedQuotations();
+    this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
   },
 
   cache(){
