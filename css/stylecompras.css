@@ -125,6 +125,13 @@ body{
 /* utilities */
 .hidden{display:none}
 
+.import-preview table{width:100%;border-collapse:collapse}
+.import-preview td{padding:8px;border-bottom:1px solid #f1f1f1}
+.preview-row-ignored{background:#fff6f6}
+.preview-row-accept{background:#f6fff6}
+.status-Rejeitada{background:#ffe9e9;color:#a00;padding:4px 8px;border-radius:6px}
+.status-Aprovada{background:#e9f5e9;color:#1b7a1b;padding:4px 8px;border-radius:6px}
+
 /* Permanent compact import panel */
 .import-panel{position:fixed;bottom:20px;right:20px;width:420px;max-width:92%;background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:2147483647}
 .import-panel .panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}

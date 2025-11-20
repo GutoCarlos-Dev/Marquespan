@@ -659,35 +659,74 @@ const UI = {
           return;
         }
 
-        for (const row of json) {
-          const codigo_principal = String(row.COD1 || '').trim();
-          const codigo_secundario = String(row.COD2 || '').trim();
-          const nome = String(row.PRODUTO || '').trim();
+        const existingProductsStart = new Set(existingProductCodes);
+        const seenInFile = new Set();
+        const ignoredRows = [];
 
+        for (const row of json) {
+          // Normalize keys to allow different header cases/formatting (e.g. 'COD1', 'cod1', 'COD 1')
+          const norm = {};
+          Object.keys(row || {}).forEach(k => {
+            const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,'');
+            norm[nk] = row[k];
+          });
+
+          const codigo_principal = String(norm['cod1'] ?? norm['cod'] ?? norm['codigo'] ?? norm['codigo1'] ?? '').trim();
+          const codigo_secundario = String(norm['cod2'] ?? norm['cod_2'] ?? norm['codigo2'] ?? '').trim();
+          const nome = String(norm['produto'] ?? norm['prod'] ?? norm['nome'] ?? '').trim();
+
+          // Decide if row will be imported or ignored
           if (!codigo_principal || !nome) {
-            importErrors.push(`Linha ignorada: COD1 ou PRODUTO está vazio: ${JSON.stringify(row)}`);
+            const reason = 'COD1 ou PRODUTO vazio';
+            ignoredRows.push({ row, codigo_principal, codigo_secundario, nome, reason });
+            importErrors.push(`Linha ignorada: ${reason}: ${JSON.stringify(row)}`);
             continue;
           }
 
-          if (existingProductCodes.has(codigo_principal)) {
+          if (existingProductsStart.has(codigo_principal) || seenInFile.has(codigo_principal)) {
+            const reason = existingProductsStart.has(codigo_principal) ? 'Código já existe' : 'Duplicado no arquivo';
+            ignoredRows.push({ row, codigo_principal, codigo_secundario, nome, reason });
             importErrors.push(`Produto com Código Principal '${codigo_principal}' já existe e será ignorado.`);
             continue;
           }
 
+          // row accepted
           productsToInsert.push({ codigo_principal, codigo_secundario, nome });
+          seenInFile.add(codigo_principal);
           existingProductCodes.add(codigo_principal);
         }
 
-        // Mostrar pré-visualização (até 20 linhas)
+        // Mostrar pré-visualização (até 20 linhas) com destaque das linhas ignoradas
         if(this.importPreview){
-          const previewCount = Math.min(20, productsToInsert.length);
-          if(previewCount>0){
-            let html = '<table><thead><tr><th>Cod1</th><th>Cod2</th><th>Produto</th></tr></thead><tbody>' + productsToInsert.slice(0,previewCount).map(p=>`<tr><td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td></tr>`).join('') + '</tbody></table>';
-            html += `<div class="preview-note">Mostrando ${previewCount} de ${productsToInsert.length} novos produtos detectados.</div>`;
-            if(importErrors.length) html += `<div class="preview-note">${importErrors.length} linhas com avisos (veja console para detalhes).</div>`;
+          const allPreviewRows = [];
+          // recreate a preview array that preserves original order: include both accepted and ignored
+          const seenAccepted = new Set();
+          for (const row of json) {
+            const norm = {};
+            Object.keys(row || {}).forEach(k => { const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk] = row[k]; });
+            const codigo_principal = String(norm['cod1'] ?? norm['cod'] ?? norm['codigo'] ?? norm['codigo1'] ?? '').trim();
+            const codigo_secundario = String(norm['cod2'] ?? norm['cod_2'] ?? norm['codigo2'] ?? '').trim();
+            const nome = String(norm['produto'] ?? norm['prod'] ?? norm['nome'] ?? '').trim();
+            let status = 'importar';
+            let reason = '';
+            if (!codigo_principal || !nome) { status = 'ignorado'; reason = 'COD1 ou PRODUTO vazio'; }
+            else if (existingProductsStart.has(codigo_principal)) { status = 'ignorado'; reason = 'Código já existe'; }
+            else if (seenAccepted.has(codigo_principal)) { status = 'ignorado'; reason = 'Duplicado no arquivo'; }
+            else { status = 'importar'; seenAccepted.add(codigo_principal); }
+            allPreviewRows.push({ codigo_principal, codigo_secundario, nome, status, reason });
+          }
+
+          const previewCount = Math.min(20, allPreviewRows.length);
+          if(allPreviewRows.length>0){
+            let html = '<table><thead><tr><th>Cod1</th><th>Cod2</th><th>Produto</th><th>Status</th></tr></thead><tbody>' + allPreviewRows.slice(0,previewCount).map(r=>{
+              if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`;
+              return `<tr class="preview-row-ignored"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`;
+            }).join('') + '</tbody></table>';
+            html += `<div class="preview-note">Mostrando ${previewCount} de ${allPreviewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`;
+            if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`;
             this.importPreview.innerHTML = html; this.importPreview.classList.remove('hidden');
           } else {
-            this.importPreview.innerHTML = `<div class="preview-note">Nenhum produto novo detectado. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden');
+            this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden');
           }
         }
 
