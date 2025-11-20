@@ -395,11 +395,14 @@ const UI = {
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
         // status select para permitir alteração e registro de data/usuário
         const statusSelectId = `status-select-${c.id}`;
-        const statusSelect = `<select class="quotation-status-select" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`;
+        const initialStatus = c.status || 'Pendente';
+        const statusClass = `quotation-status-select status-${initialStatus}`;
+        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`;
         tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${new Date(c.data_cotacao).toLocaleDateString('pt-BR')}</td><td>${winnerName}</td><td>${totalValue}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
         this.savedQuotationsTableBody.appendChild(tr);
-        // set selected value after append
-        setTimeout(()=>{ const sel = document.getElementById(statusSelectId); if(sel) sel.value = c.status; }, 10);
+        // set selected value and ensure class matches status
+        const selEl = document.getElementById(statusSelectId);
+        if(selEl){ selEl.value = initialStatus; selEl.className = `quotation-status-select status-${initialStatus}` }
       });
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id)));
@@ -417,7 +420,8 @@ const UI = {
       for(const o of orcamentos){ const { data:precos } = await supabase.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
       const dataDisplay = cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A';
       const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
-      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${cotacao.status}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p><hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
+      const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`;
+      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p><hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
       orcamentos.forEach(o=>{ const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>Preço</th></tr></thead><tbody>${o.precos.map(p=>{ const prod = itens.find(it=>it.produtos.id===p.id_produto); return `<tr><td>${prod?prod.produtos.nome:'Produto não encontrado'}</td><td>R$ ${parseFloat(p.preco_unitario).toFixed(2)}</td></tr>` }).join('')}</tbody></table></div>` });
       this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
       this.quotationDetailBody.innerHTML = html;
