@@ -381,7 +381,16 @@ const UI = {
     const codigo2 = document.getElementById('produtoCodigo2').value.trim();
     const nome = document.getElementById('produtoNome').value.trim();
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
-    try{ await SupabaseService.insert('produtos',{ codigo_principal:codigo1,codigo_secundario:codigo2,nome }); alert('Produto salvo'); this.formCadastrarProduto.reset(); this.renderProdutosGrid(); this.populateProductDropdown(); }catch(e){console.error(e);alert('Erro salvar produto')}
+    try {
+      await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome });
+      alert('Produto salvo com sucesso!');
+      this.formCadastrarProduto.reset();
+      this.renderProdutosGrid();
+      this.populateProductDropdown();
+    } catch (e) {
+      console.error('Erro detalhado ao salvar produto:', e);
+      alert(`❌ Erro ao salvar produto: ${e.message}`);
+    }
   },
 
   async handleProdutoTableClick(e){
