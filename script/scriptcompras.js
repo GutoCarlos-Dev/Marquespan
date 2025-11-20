@@ -490,7 +490,25 @@ const UI = {
     const nome=document.getElementById('fornecedorNome').value.trim();
     const tel=document.getElementById('fornecedorTelefone').value.trim();
     if(!nome) return alert('Preencha o nome');
-    try{ await SupabaseService.insert('fornecedores',{nome,telefone:tel}); alert('Fornecedor salvo'); this.formCadastrarFornecedor.reset(); this.renderFornecedoresGrid(); this.populateSupplierDropdowns(); }catch(err){console.error('Erro ao salvar fornecedor:', err);alert('Erro salvar fornecedor')}
+    try{
+      if(this._editingFornecedorId){
+        // Atualizar fornecedor existente
+        const payload = { nome, telefone: tel };
+        const updated = await SupabaseService.update('fornecedores', payload, { field: 'id', value: this._editingFornecedorId });
+        if(!updated){ console.error('Resposta vazia ao atualizar fornecedor:', updated); return alert('Erro ao atualizar o fornecedor. Tente novamente.'); }
+        alert('Fornecedor atualizado com sucesso!');
+        this.clearFornecedorForm();
+        this.renderFornecedoresGrid();
+        this.populateSupplierDropdowns();
+        this._editingFornecedorId = null;
+      } else {
+        await SupabaseService.insert('fornecedores',{nome,telefone:tel});
+        alert('Fornecedor salvo');
+        this.formCadastrarFornecedor.reset();
+        this.renderFornecedoresGrid();
+        this.populateSupplierDropdowns();
+      }
+    }catch(err){console.error('Erro ao salvar fornecedor:', err);alert('Erro salvar fornecedor')}
   },
 
   async handleFornecedorTableClick(e) {
@@ -510,9 +528,22 @@ const UI = {
       if (data) {
         document.getElementById('fornecedorNome').value = data.nome;
         document.getElementById('fornecedorTelefone').value = data.telefone || '';
+        // set editing mode (mesma UX dos produtos)
+        this._editingFornecedorId = id;
+        const submitBtn = document.getElementById('btnSubmitFornecedor');
+        if(submitBtn) submitBtn.textContent = 'Salvar Alteração';
         window.scrollTo(0, 0); // Rola para o topo para editar
+        const first = document.getElementById('fornecedorNome'); if(first) first.focus();
       }
     }
+  },
+
+  // Limpa formulário de fornecedor e restaura estado de edição
+  clearFornecedorForm(){
+    if(this.formCadastrarFornecedor) this.formCadastrarFornecedor.reset();
+    this._editingFornecedorId = null;
+    const submitBtn = document.getElementById('btnSubmitFornecedor');
+    if(submitBtn) submitBtn.textContent = 'Cadastrar';
   },
 
 
