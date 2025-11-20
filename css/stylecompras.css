@@ -30,7 +30,19 @@ body{
 .header .header-inner{display:flex;align-items:center;gap:16px;max-width:1200px;margin:0 auto}
 .logo{height:40px;display:block}
 .main-layout{display:grid;grid-template-columns:260px 1fr;gap:20px;max-width:1200px;margin:20px auto;padding:0 16px}
-.sidebar{background:transparent;padding:8px 0}
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100vh;
+  background-color: #2e7d32;
+  color: #fff;
+  padding: 20px;
+  transition: transform 0.3s ease, width 0.3s ease;
+  overflow-x: hidden;
+  z-index: 1000;
+}
 .menu-compras{display:flex;flex-direction:column;gap:8px}
 .btn-menu-compras{display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;text-decoration:none;color:var(--brand-dark);background:var(--brand-light);font-weight:600}
 .btn-menu-compras i{width:20px;text-align:center}
