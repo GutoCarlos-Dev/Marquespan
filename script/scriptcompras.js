@@ -138,7 +138,7 @@ const UI = {
     this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e));
     this.fornecedoresTableBody?.addEventListener('click', (e)=>this.handleFornecedorTableClick(e));
 
-    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openModal());
+    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel());
     this.closeModalButtons?.forEach(btn=>btn.addEventListener('click', ()=>this.closeModal()));
     this.importExportModal?.addEventListener('click', (e)=>{ if(e.target===this.importExportModal) this.closeModal() });
 
@@ -557,6 +557,70 @@ const UI = {
 
     // clear preview state
     if(this.importPreview){ this.importPreview.innerHTML=''; this.importPreview.classList.add('hidden') }
+    if(this.importStatus) this.importStatus.textContent = '';
+    if(this.btnConfirmImport) this.btnConfirmImport.classList.add('hidden');
+    this._importPreviewData = null;
+  },
+  // Compact import/export panel (no full-screen overlay)
+  openImportPanel(){
+    if(!this.importExportModal) return;
+    const modalInner = this.importExportModal.querySelector('.modal');
+    if(!modalInner) return;
+
+    // save previous state
+    this._panelPrev = this._panelPrev || {};
+    this._panelPrev.parent = modalInner.parentElement;
+    this._panelPrev.modalStyle = modalInner.getAttribute('style') || '';
+    this._panelPrev.backdropStyle = this.importExportModal.getAttribute('style') || '';
+
+    // hide backdrop (no overlay for compact panel)
+    try{ this.importExportModal.style.display = 'none'; }catch(e){}
+
+    // move modal to body and style as small panel bottom-right
+    try{ document.body.appendChild(modalInner); }catch(e){}
+    modalInner.style.position = 'fixed';
+    modalInner.style.bottom = '20px';
+    modalInner.style.right = '20px';
+    modalInner.style.left = 'auto';
+    modalInner.style.top = 'auto';
+    modalInner.style.transform = 'none';
+    modalInner.style.width = '420px';
+    modalInner.style.maxWidth = '92%';
+    modalInner.style.zIndex = '2147483647';
+    modalInner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
+
+    // ensure visible
+    modalInner.style.display = 'block';
+
+    // wire close button inside panel
+    const closeBtn = modalInner.querySelector('.close-button');
+    if(closeBtn){ closeBtn.onclick = ()=>this.closeImportPanel(); }
+
+    // rebind panel internal buttons to existing handlers (they use ids already)
+    const importBtn = modalInner.querySelector('#btnImportProducts');
+    const confirmBtn = modalInner.querySelector('#btnConfirmImport');
+    const exportBtn = modalInner.querySelector('#btnExportProducts');
+    if(importBtn) importBtn.onclick = ()=>this.handleImport();
+    if(confirmBtn) confirmBtn.onclick = ()=>this.confirmImport();
+    if(exportBtn) exportBtn.onclick = ()=>this.handleExport();
+
+    // focus first control
+    setTimeout(()=>{ const f = modalInner.querySelector('button,input,select,textarea'); if(f) f.focus(); },50);
+  },
+
+  closeImportPanel(){
+    if(!this.importExportModal) return;
+    const modalInner = document.querySelector('body > .modal');
+    if(!modalInner) return;
+
+    // restore modal inline style and move back into backdrop
+    modalInner.setAttribute('style', this._panelPrev.modalStyle || '');
+    try{ this._panelPrev.parent.appendChild(modalInner); }catch(e){}
+    try{ this.importExportModal.setAttribute('style', this._panelPrev.backdropStyle || ''); }catch(e){}
+    this.importExportModal.style.display = 'none';
+
+    // clear preview and state
+    if(this.importPreview){ this.importPreview.innerHTML=''; this.importPreview.classList.add('hidden'); }
     if(this.importStatus) this.importStatus.textContent = '';
     if(this.btnConfirmImport) this.btnConfirmImport.classList.add('hidden');
     this._importPreviewData = null;
