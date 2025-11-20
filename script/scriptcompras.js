@@ -79,6 +79,8 @@ const UI = {
     this.renderProdutosGrid(); // Adicionado para carregar produtos no início
     this.renderFornecedoresGrid(); // Adicionado para carregar fornecedores no início
     this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
+    // Close modal on Escape
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') this.closeModal(); });
   },
 
   cache(){
@@ -491,7 +493,24 @@ const UI = {
   },
 
   openModal(){ if(this.importExportModal) this.importExportModal.classList.remove('hidden'); },
-  closeModal(){ if(this.importExportModal) this.importExportModal.classList.add('hidden'); },
+  openModal(){
+    if(!this.importExportModal) return;
+    // move modal to body to guarantee it's above fixed sidebars and other z-indexed elements
+    try{ document.body.appendChild(this.importExportModal); }catch(e){}
+    this.importExportModal.classList.remove('hidden');
+    // prevent background scroll while modal is open
+    document.body.style.overflow = 'hidden';
+  },
+  closeModal(){
+    if(!this.importExportModal) return;
+    this.importExportModal.classList.add('hidden');
+    document.body.style.overflow = '';
+    // clear preview state
+    if(this.importPreview){ this.importPreview.innerHTML=''; this.importPreview.classList.add('hidden') }
+    if(this.importStatus) this.importStatus.textContent = '';
+    if(this.btnConfirmImport) this.btnConfirmImport.classList.add('hidden');
+    this._importPreviewData = null;
+  },
 
   async handleImport(){
     const file = this.importExcelFile.files[0];
