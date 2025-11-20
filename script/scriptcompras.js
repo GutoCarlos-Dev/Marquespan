@@ -382,9 +382,9 @@ const UI = {
     const nome = document.getElementById('produtoNome').value.trim();
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
 
-    // Verificar se o usuário está autenticado
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Verificar se o usuário está autenticado (usando localStorage como no menu.js)
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    if (!usuario || !usuario.nome) {
       alert('Você precisa estar logado para cadastrar produtos. Redirecionando para login...');
       window.location.href = 'index.html'; // Redirecionar para página de login
       return;
