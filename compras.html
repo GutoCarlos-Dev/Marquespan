@@ -48,9 +48,8 @@
         <div class="card grid-2">
           <div>
             <h3>Adicionar Produto</h3>
-            <select id="cartProductSelect" aria-label="Produtos">
-              <option value="">-- Carregando produtos --</option>
-            </select>
+            <input type="text" id="cartProductInput" list="productList" placeholder="Digite para buscar um produto..." aria-label="Produtos">
+            <datalist id="productList"></datalist>
             <input type="number" id="cartQtd" placeholder="Quantidade" min="1" aria-label="Quantidade" />
             <div class="row">
               <button id="btnAddToCart" class="btn-inline btn-primary">Adicionar ao Carrinho</button>

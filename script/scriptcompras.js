@@ -89,8 +89,8 @@ const UI = {
   cache(){
     this.navLinks = document.querySelectorAll('#menu-compras button.painel-btn');
     this.sections = document.querySelectorAll('section.section');
-    this.cartBody = document.getElementById('cartBody');
-    this.cartProductSelect = document.getElementById('cartProductSelect');
+    this.cartBody = document.getElementById('cartBody'); // Cache do corpo do carrinho
+    this.cartProductInput = document.getElementById('cartProductInput'); // Novo input de produto
     this.cartQtd = document.getElementById('cartQtd');
     this.btnAddToCart = document.getElementById('btnAddToCart');
     this.btnClearCart = document.getElementById('btnClearCart');
@@ -200,15 +200,17 @@ const UI = {
 
   async populateProductDropdown(){
     try{
+      const productList = document.getElementById('productList');
+      if (!productList) return;
       const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida', {orderBy:'nome'});
-      this.cartProductSelect.innerHTML = '<option value="">-- Selecione um produto --</option>';
+      productList.innerHTML = ''; // Limpa a lista de sugestões
       produtos.forEach(p=>{
         const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
-        this.cartProductSelect.appendChild(opt);
+        opt.value = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
+        opt.dataset.id = p.id; // Armazena o ID do produto no dataset da opção
+        productList.appendChild(opt);
       });
-    }catch(e){console.error('Erro carregar produtos',e);this.cartProductSelect.innerHTML='<option value="">Erro ao carregar</option>'}
+    }catch(e){console.error('Erro carregar produtos',e);}
   },
 
   async populateSupplierDropdowns(){
@@ -286,15 +288,26 @@ const UI = {
   updateAllTotals(){ this.updateCompanyTotal(1); this.updateCompanyTotal(2); this.updateCompanyTotal(3); },
 
   async handleAddToCart(){
-    const pid = this.cartProductSelect.value;
+    const productText = this.cartProductInput.value;
     const qtd = parseInt(this.cartQtd.value);
-    if(!pid || isNaN(qtd) || qtd<=0) return alert('Selecione produto e quantidade válida');
-    try{
+
+    if(!productText || isNaN(qtd) || qtd<=0) return alert('Selecione um produto e informe uma quantidade válida.');
+
+    // Encontra o ID do produto a partir do texto selecionado na datalist
+    const productList = document.getElementById('productList');
+    const selectedOption = Array.from(productList.options).find(opt => opt.value === productText);
+
+    if (!selectedOption) {
+      return alert('Produto inválido. Por favor, selecione um item da lista.');
+    }
+    const pid = selectedOption.dataset.id;
+
+    try {
       const prod = await SupabaseService.list('produtos','id,codigo_principal,nome,unidade_medida',{eq:{field:'id',value:pid}});
       const p = Array.isArray(prod)?prod[0]:prod;
       const item = { id:p.id, cod:p.codigo_principal, produto:p.nome, qtd, uni: (p.unidade_medida || 'UN') };
       if(!this.cart.add(item)) return alert('Produto já adicionado');
-      this.renderCart(); this.cartProductSelect.value=''; this.cartQtd.value='';
+      this.renderCart(); this.cartProductInput.value=''; this.cartQtd.value='';
     }catch(e){console.error(e);alert('Erro ao adicionar produto')}
   },
 
