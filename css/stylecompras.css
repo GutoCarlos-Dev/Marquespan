@@ -30,19 +30,7 @@ body{
 .header .header-inner{display:flex;align-items:center;gap:16px;max-width:1200px;margin:0 auto}
 .logo{height:40px;display:block}
 .main-layout{display:grid;grid-template-columns:260px 1fr;gap:20px;max-width:1200px;margin:20px auto;padding:0 16px}
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 220px;
-  height: 100vh;
-  background-color: #2e7d32;
-  color: #fff;
-  padding: 20px;
-  transition: transform 0.3s ease, width 0.3s ease;
-  overflow-x: hidden;
-  z-index: 1000;
-}
+.sidebar {position: fixed;top: 0;left: 0;width: 220px;height: 100vh;background-color: #2e7d32;color: #fff;padding: 20px;transition:transform 0.3s ease,width 0.3s ease;overflow-x: hidden;z-index: 1000;}
 .menu-compras{display:flex;flex-direction:column;gap:8px}
 .btn-menu-compras{display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;text-decoration:none;color:var(--brand-dark);background:var(--brand-light);font-weight:600}
 .btn-menu-compras i{width:20px;text-align:center}
@@ -59,8 +47,8 @@ body{
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:980px){.main-layout{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}.sidebar{order:2}.content{order:1}}
 .row{display:flex;gap:8px;align-items:center}
-.btn-primary{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:none;cursor:pointer}
-.btn-muted{background:#f0f0f0;color:#333;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;cursor:pointer}
+.btn-primary{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:none;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
+.btn-muted{background:#f0f0f0;color:#333;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
 .btn-inline{display:inline-flex;align-items:center;gap:8px}
 .form-compact input, .form-compact select, .form-compact textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e6e6;background:#fafafa}
 .table-responsive{overflow:auto}
