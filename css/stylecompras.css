@@ -144,6 +144,8 @@ body{
 .status-Pendente{background: #fff4e5;color:#b36b00}
 .status-Aprovada{background:#e9f5e9;color:#1b7a1b}
 .status-Rejeitada{background:#ffe9e9;color:#a00}
+/* Recebido - novo status */
+.status-Recebido{background:#e7f4ff;color:#0b5a88;padding:4px 8px;border-radius:6px}
 /* Carrinho styling */
 #cartTable .btn-remove{background:var(--brand-light);color:#fff;border:none;padding:8px 10px;border-radius:8px}
 #cartTable .btn-remove:hover{background:var(--brand-dark)}
