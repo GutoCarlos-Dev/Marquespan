@@ -458,10 +458,16 @@ const UI = {
   },
   // Adicionado para limpar o formulário após adicionar ou editar (se a edição for implementada)
   clearProductForm() {
-    document.getElementById('produtoCodigo1').value = '';
-    document.getElementById('produtoCodigo2').value = '';
-    document.getElementById('produtoNome').value = '';
-    // Se houver um ID de produto para edição, ele também precisaria ser limpo
+    // Reset form fields if available
+    if (this.formCadastrarProduto) this.formCadastrarProduto.reset();
+    const el1 = document.getElementById('produtoCodigo1'); if(el1) el1.value = '';
+    const el2 = document.getElementById('produtoCodigo2'); if(el2) el2.value = '';
+    const elNome = document.getElementById('produtoNome'); if(elNome) elNome.value = '';
+
+    // Clear editing state and restore submit button label
+    this._editingProductId = null;
+    const submitBtn = document.getElementById('btnSubmitProduto');
+    if(submitBtn) submitBtn.textContent = 'Cadastrar';
   },
 
   async renderFornecedoresGrid(){
