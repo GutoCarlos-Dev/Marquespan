@@ -118,6 +118,7 @@ const UI = {
     this.quotationDetailModal = document.getElementById('quotationDetailModal');
     this.quotationDetailTitle = document.getElementById('quotationDetailTitle');
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
+    this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
   },
 
   bind(){
@@ -158,6 +159,9 @@ const UI = {
       this.quotationDetailModal.querySelector('.close-button').addEventListener('click', ()=>this.quotationDetailModal.classList.add('hidden'));
       this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') });
     }
+
+    // print button for quotation details
+    this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation());
 
     // product form
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e));
@@ -388,7 +392,24 @@ const UI = {
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
+      // ensure print button is wired (in case modal moved)
+      setTimeout(()=>{ const btn = document.getElementById('btnPrintQuotation'); if(btn) btn.onclick = ()=>this.printQuotation(); },60);
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
+  },
+
+  printQuotation(){
+    try{
+      const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
+      const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
+      const win = window.open('', '_blank', 'noopener');
+      if(!win){ alert('Não foi possível abrir a janela de impressão. Verifique bloqueadores.'); return }
+      // build print HTML
+      const cssHref = 'css/stylecompras.css';
+      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="${cssHref}"></head><body><h2>${title}</h2><div>${content}</div></body></html>`);
+      win.document.close();
+      // wait for styles to load then print
+      setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir',e) } },250);
+    }catch(err){ console.error('Erro em printQuotation',err); alert('Erro ao preparar impressão. Veja console.'); }
   },
 
   async deleteQuotation(id){ if(confirm('Excluir cotação?')){ try{ await SupabaseService.remove('cotacoes',{field:'id',value:id}); alert('Excluído'); this.renderSavedQuotations(); }catch(e){console.error(e);alert('Erro excluir')}} },

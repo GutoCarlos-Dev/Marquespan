@@ -112,6 +112,8 @@ body{
   .modal{left:50% !important;width:92% !important;max-width:720px !important}
 }
 .modal .close-button{background:none;border:none;font-size:22px;cursor:pointer}
+.modal .modal-body{max-height:70vh;overflow:auto;padding:12px}
+.modal .modal-header .btn-muted{margin-right:8px;padding:8px 10px;border-radius:8px}
 .footer{max-width:1200px;margin:20px auto;padding:8px 16px;color:var(--muted);font-size:13px}
 /* Import modal specific */
 .modal .upload-section label{display:block;margin-bottom:6px;font-weight:600}
