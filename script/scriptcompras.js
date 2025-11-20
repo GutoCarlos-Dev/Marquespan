@@ -435,7 +435,7 @@ const UI = {
       }
     } else if (btn.classList.contains('btn-edit')) {
       const { data } = await supabase.from('produtos').select('codigo_principal,codigo_secundario,nome').eq('id', id).single();
-      if (data) {
+      if (data) { // Popula o formulário para edição
         document.getElementById('produtoCodigo1').value = data.codigo_principal;
         document.getElementById('produtoCodigo2').value = data.codigo_secundario || '';
         document.getElementById('produtoNome').value = data.nome;
@@ -443,13 +443,32 @@ const UI = {
       }
     }
   },
-
-  async renderFornecedoresGrid(){
-    try{ const f = await SupabaseService.list('fornecedores','id,nome,telefone',{orderBy:'nome'}); this.fornecedoresTableBody.innerHTML=''; f.forEach(item=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${item.nome}</td><td>${item.telefone||''}</td><td><button class="btn-action btn-edit" data-id="${item.id}">Editar</button> <button class="btn-action btn-delete" data-id="${item.id}">Excluir</button></td>`; this.fornecedoresTableBody.appendChild(tr) }); }catch(e){console.error(e)}
+  // Adicionado para limpar o formulário após adicionar ou editar (se a edição for implementada)
+  clearProductForm() {
+    document.getElementById('produtoCodigo1').value = '';
+    document.getElementById('produtoCodigo2').value = '';
+    document.getElementById('produtoNome').value = '';
+    // Se houver um ID de produto para edição, ele também precisaria ser limpo
   },
 
-  async handleFornecedorForm(e){
-    e.preventDefault(); const nome=document.getElementById('fornecedorNome').value.trim(); const tel=document.getElementById('fornecedorTelefone').value.trim(); if(!nome) return alert('Preencha o nome'); try{ await SupabaseService.insert('fornecedores',{nome,telefone:tel}); alert('Fornecedor salvo'); this.formCadastrarFornecedor.reset(); this.renderFornecedoresGrid(); this.populateSupplierDropdowns(); }catch(err){console.error(err);alert('Erro salvar fornecedor')}
+  async renderFornecedoresGrid(){
+    try{
+      const f = await SupabaseService.list('fornecedores','id,nome,telefone',{orderBy:'nome'});
+      this.fornecedoresTableBody.innerHTML='';
+      f.forEach(item=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${item.nome}</td><td>${item.telefone||''}</td><td><button class="btn-action btn-edit" data-id="${item.id}">Editar</button> <button class="btn-action btn-delete" data-id="${item.id}">Excluir</button></td>`;
+        this.fornecedoresTableBody.appendChild(tr)
+      });
+    }catch(e){console.error('Erro ao renderizar fornecedores:', e)}
+  },
+
+  async handleFornecedorForm(e){ // Este formulário atualmente suporta apenas a adição, não a edição.
+    e.preventDefault();
+    const nome=document.getElementById('fornecedorNome').value.trim();
+    const tel=document.getElementById('fornecedorTelefone').value.trim();
+    if(!nome) return alert('Preencha o nome');
+    try{ await SupabaseService.insert('fornecedores',{nome,telefone:tel}); alert('Fornecedor salvo'); this.formCadastrarFornecedor.reset(); this.renderFornecedoresGrid(); this.populateSupplierDropdowns(); }catch(err){console.error('Erro ao salvar fornecedor:', err);alert('Erro salvar fornecedor')}
   },
 
   async handleFornecedorTableClick(e) {
@@ -477,21 +496,98 @@ const UI = {
   openModal(){ if(this.importExportModal) this.importExportModal.classList.remove('hidden'); },
   closeModal(){ if(this.importExportModal) this.importExportModal.classList.add('hidden'); },
 
-  handleImport(){
-    const file = this.importExcelFile.files[0]; if(!file) return alert('Selecione um arquivo');
-    const reader = new FileReader(); reader.onload = (e)=>{
-      const data = new Uint8Array(e.target.result); const wb = XLSX.read(data,{type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(ws);
-      const armazenados = [];
-      json.forEach(row=>{ const c1=String(row.COD1||'').trim(); const c2=String(row.COD2||'').trim(); const nome=String(row.PRODUTO||'').trim(); if(c1&&nome) armazenados.push({codigo_principal:c1,codigo_secundario:c2,nome}) });
-      // Inserir no localStorage temporariamente (ou pode enviar pro supabase)
-      localStorage.setItem('produtosCadastrados', JSON.stringify(armazenados));
-      this.renderProdutosGrid(); alert('Import concluída'); this.closeModal();
+  async handleImport(){
+    const file = this.importExcelFile.files[0];
+    if(!file) return alert('Selecione um arquivo para importar.');
+
+    const reader = new FileReader();
+    reader.onload = async (e)=>{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data,{type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+
+      const productsToInsert = [];
+      const existingProductCodes = new Set();
+      const importErrors = [];
+
+      // Busca todos os códigos de produtos existentes no Supabase uma vez para verificação eficiente de duplicatas
+      try {
+        const existingProducts = await SupabaseService.list('produtos', 'codigo_principal');
+        existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal));
+      } catch (err) {
+        console.error('Erro ao buscar produtos existentes para importação:', err);
+        alert('Erro ao verificar produtos existentes. A importação pode falhar.');
+        return;
+      }
+
+      for (const row of json) {
+        const codigo_principal = String(row.COD1 || '').trim();
+        const codigo_secundario = String(row.COD2 || '').trim();
+        const nome = String(row.PRODUTO || '').trim();
+
+        if (!codigo_principal || !nome) {
+          importErrors.push(`Linha ignorada: Código Principal (COD1) ou Nome (PRODUTO) está vazio para a linha ${JSON.stringify(row)}.`);
+          continue;
+        }
+
+        if (existingProductCodes.has(codigo_principal)) {
+          importErrors.push(`Produto com Código Principal '${codigo_principal}' já existe e será ignorado.`);
+          continue;
+        }
+
+        productsToInsert.push({
+          codigo_principal: codigo_principal,
+          codigo_secundario: codigo_secundario,
+          nome: nome
+        });
+        existingProductCodes.add(codigo_principal); // Adiciona ao conjunto para evitar duplicatas dentro do mesmo lote de importação
+      }
+
+      if (productsToInsert.length > 0) {
+        try {
+          await SupabaseService.insert('produtos', productsToInsert);
+          alert(`Importação concluída! ${productsToInsert.length} produtos adicionados.`);
+        } catch (err) {
+          console.error('Erro ao inserir produtos no Supabase:', err);
+          alert('Erro ao importar produtos. Verifique o console para detalhes.');
+        }
+      } else {
+        alert('Nenhum produto novo para importar ou todos já existem no sistema.');
+      }
+
+      if (importErrors.length > 0) {
+        console.warn('Avisos/Erros durante a importação:\n', importErrors.join('\n'));
+        alert('Alguns produtos não foram importados devido a erros ou duplicatas. Verifique o console para mais detalhes.');
+      }
+
+      this.renderProdutosGrid(); // Atualiza a grade de produtos
+      this.populateProductDropdown(); // Atualiza o dropdown de produtos
+      this.closeModal();
     };
     reader.readAsArrayBuffer(file);
   },
 
-  handleExport(){ const stored = JSON.parse(localStorage.getItem('produtosCadastrados')||'[]'); const aoa=[['COD1','COD2','PRODUTO'],...stored.map(p=>[p.codigo_principal,p.codigo_secundario,p.nome])]; const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Produtos'); XLSX.writeFile(wb,'produtos_cadastrados.xlsx'); alert('Export completo'); this.closeModal(); },
+  async handleExport(){
+    try {
+      // Busca todos os produtos do Supabase
+      const products = await SupabaseService.list('produtos', 'codigo_principal,codigo_secundario,nome', {orderBy: 'codigo_principal'});
 
+      // Prepara os dados para exportação XLSX
+      const aoa = [['COD1','COD2','PRODUTO'], ...products.map(p => [p.codigo_principal, p.codigo_secundario, p.nome])];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+      XLSX.writeFile(wb, 'produtos_cadastrados.xlsx');
+
+      alert('Exportação de produtos concluída!');
+      this.closeModal();
+    } catch (e) {
+      console.error('Erro ao exportar produtos:', e);
+      alert('Erro ao exportar produtos. Verifique o console para detalhes.');
+    }
+  },
 }
 
 // Inicializa a UI quando o DOM estiver pronto
