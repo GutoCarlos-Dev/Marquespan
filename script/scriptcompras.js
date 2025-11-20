@@ -385,7 +385,26 @@ const UI = {
   },
 
   async handleProdutoTableClick(e){
-    const btn = e.target; const id = btn.dataset.id; if(btn.classList.contains('btn-delete')){ if(confirm('Excluir produto?')){ await SupabaseService.remove('produtos',{field:'id',value:id}); await this.renderProdutosGrid(); this.populateProductDropdown(); } } else if(btn.classList.contains('btn-edit')){ const { data } = await supabase.from('produtos').select('codigo_principal,codigo_secundario,nome').eq('id',id).single(); document.getElementById('produtoCodigo1').value=data.codigo_principal; document.getElementById('produtoCodigo2').value=data.codigo_secundario||''; document.getElementById('produtoNome').value=data.nome; window.scrollTo(0,0); }
+    const btn = e.target.closest('.btn-action');
+    if (!btn) return;
+
+    const id = btn.dataset.id;
+
+    if (btn.classList.contains('btn-delete')) {
+      if (confirm('Tem certeza que deseja excluir este produto?')) {
+        await SupabaseService.remove('produtos', { field: 'id', value: id });
+        await this.renderProdutosGrid();
+        this.populateProductDropdown();
+      }
+    } else if (btn.classList.contains('btn-edit')) {
+      const { data } = await supabase.from('produtos').select('codigo_principal,codigo_secundario,nome').eq('id', id).single();
+      if (data) {
+        document.getElementById('produtoCodigo1').value = data.codigo_principal;
+        document.getElementById('produtoCodigo2').value = data.codigo_secundario || '';
+        document.getElementById('produtoNome').value = data.nome;
+        window.scrollTo(0, 0); // Rola para o topo para editar
+      }
+    }
   },
 
   async renderFornecedoresGrid(){
