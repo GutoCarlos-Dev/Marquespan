@@ -381,6 +381,15 @@ const UI = {
     const codigo2 = document.getElementById('produtoCodigo2').value.trim();
     const nome = document.getElementById('produtoNome').value.trim();
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
+
+    // Verificar se o usuário está autenticado
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('Você precisa estar logado para cadastrar produtos. Redirecionando para login...');
+      window.location.href = 'index.html'; // Redirecionar para página de login
+      return;
+    }
+
     try {
       await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome });
       alert('Produto salvo com sucesso!');
