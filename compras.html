@@ -133,7 +133,13 @@
 
           <div class="table-responsive">
             <table class="data-grid" aria-label="Produtos Cadastrados">
-              <thead><tr><th>Cod1</th><th>Cod2</th><th>Nome</th><th>Unidade</th><th>Ações</th></tr></thead>
+              <thead><tr>
+                <th data-field="codigo_principal">Cod1</th>
+                <th data-field="codigo_secundario">Cod2</th>
+                <th data-field="nome">Nome</th>
+                <th data-field="unidade_medida">Unidade</th>
+                <th>Ações</th>
+              </tr></thead>
               <tbody id="produtosTableBody"></tbody>
             </table>
           </div>
@@ -157,7 +163,11 @@
 
           <div class="table-responsive">
             <table class="data-grid" aria-label="Fornecedores Cadastrados">
-              <thead><tr><th>Nome</th><th>Telefone</th><th>Ações</th></tr></thead>
+              <thead><tr>
+                <th data-field="nome">Nome</th>
+                <th data-field="telefone">Telefone</th>
+                <th>Ações</th>
+              </tr></thead>
               <tbody id="fornecedoresTableBody"></tbody>
             </table>
           </div>

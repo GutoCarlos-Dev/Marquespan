@@ -162,6 +162,10 @@ body{
 #sectionCadastrarFornecedor .table-responsive{max-height:360px;overflow:auto;border:1px solid #eef4ee;border-radius:10px;padding:6px;background:linear-gradient(180deg,#ffffff,#fbfffb)}
 #sectionCadastrarFornecedor .data-grid{width:100%;border-collapse:collapse;margin:0}
 #sectionCadastrarFornecedor .data-grid thead th{position:sticky;top:0;background:linear-gradient(180deg,#fbfffb,#f3fef3);box-shadow:0 2px 6px rgba(0,0,0,0.04);z-index:4;padding:12px;font-weight:700;color:var(--brand-contrast);text-transform:uppercase;font-size:13px}
+
+/* Make only data-field headers show pointer cursor for sorting */
+.data-grid thead th[data-field]{cursor:pointer}
+.data-grid thead th .sort-indicator{margin-left:8px;font-size:11px;opacity:0.8}
 #sectionCadastrarFornecedor .data-grid thead th:first-child{border-top-left-radius:8px}
 #sectionCadastrarFornecedor .data-grid thead th:last-child{border-top-right-radius:8px}
 #sectionCadastrarFornecedor .data-grid tbody td{padding:10px;border-bottom:1px solid #f1f1f1}

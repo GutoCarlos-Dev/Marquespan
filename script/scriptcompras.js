@@ -76,8 +76,11 @@ const UI = {
     this.renderCart();
     this.generateNextQuotationCode();
     this.renderSavedQuotations();
-    this.renderProdutosGrid(); // Adicionado para carregar produtos no início
-    this.renderFornecedoresGrid(); // Adicionado para carregar fornecedores no início
+    // sort state
+    this._produtosSort = { field: 'nome', ascending: true };
+    this._fornecedoresSort = { field: 'nome', ascending: true };
+    this.renderProdutosGrid(); // carregar produtos no início
+    this.renderFornecedoresGrid(); // carregar fornecedores no início
     this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } });
@@ -159,6 +162,20 @@ const UI = {
     // product form
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e));
     this.formCadastrarFornecedor?.addEventListener('submit', e=>this.handleFornecedorForm(e));
+
+    // Attach sortable header handlers for produtos and fornecedores
+    try{
+      const prodThs = document.querySelectorAll('#sectionCadastrarProdutos .data-grid thead th[data-field]');
+      prodThs.forEach(th=>{
+        const field = th.getAttribute('data-field');
+        th.addEventListener('click', ()=>{ this.toggleProdutosSort(field) });
+      });
+      const fornThs = document.querySelectorAll('#sectionCadastrarFornecedor .data-grid thead th[data-field]');
+      fornThs.forEach(th=>{
+        const field = th.getAttribute('data-field');
+        th.addEventListener('click', ()=>{ this.toggleFornecedoresSort(field) });
+      });
+    }catch(e){ /* ignore if not present yet */ }
   },
 
   showSection(id){
@@ -378,13 +395,16 @@ const UI = {
 
   async renderProdutosGrid(){
     try{
-      const produtos = await SupabaseService.list('produtos','id,codigo_principal,codigo_secundario,nome,unidade_medida',{orderBy:'nome'});
+      const orderField = this._produtosSort?.field || 'nome';
+      const asc = !!this._produtosSort?.ascending;
+      const produtos = await SupabaseService.list('produtos','id,codigo_principal,codigo_secundario,nome,unidade_medida',{orderBy:orderField, ascending:asc});
       this.produtosTableBody.innerHTML='';
       produtos.forEach(p=>{
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td><td>${p.unidade_medida||'UN'}</td><td><button class="btn-action btn-edit" data-id="${p.id}">Editar</button> <button class="btn-action btn-delete" data-id="${p.id}">Excluir</button></td>`;
         this.produtosTableBody.appendChild(tr);
       });
+      this.updateProdutosSortIndicators();
     }catch(e){console.error('Erro produtos',e)}
   },
 
@@ -478,13 +498,16 @@ const UI = {
 
   async renderFornecedoresGrid(){
     try{
-      const f = await SupabaseService.list('fornecedores','id,nome,telefone',{orderBy:'nome'});
+      const orderField = this._fornecedoresSort?.field || 'nome';
+      const asc = !!this._fornecedoresSort?.ascending;
+      const f = await SupabaseService.list('fornecedores','id,nome,telefone',{orderBy:orderField, ascending:asc});
       this.fornecedoresTableBody.innerHTML='';
       f.forEach(item=>{
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${item.nome}</td><td>${item.telefone||''}</td><td><button class="btn-action btn-edit" data-id="${item.id}">Editar</button> <button class="btn-action btn-delete" data-id="${item.id}">Excluir</button></td>`;
         this.fornecedoresTableBody.appendChild(tr)
       });
+      this.updateFornecedoresSortIndicators();
     }catch(e){console.error('Erro ao renderizar fornecedores:', e)}
   },
 
@@ -547,6 +570,60 @@ const UI = {
     this._editingFornecedorId = null;
     const submitBtn = document.getElementById('btnSubmitFornecedor');
     if(submitBtn) submitBtn.textContent = 'Cadastrar';
+  },
+
+  // Sorting helpers for produtos
+  toggleProdutosSort(field){
+    if(!field) return;
+    if(this._produtosSort && this._produtosSort.field === field){
+      this._produtosSort.ascending = !this._produtosSort.ascending;
+    } else {
+      this._produtosSort = { field, ascending: true };
+    }
+    this.renderProdutosGrid();
+  },
+
+  updateProdutosSortIndicators(){
+    try{
+      const ths = document.querySelectorAll('#sectionCadastrarProdutos .data-grid thead th[data-field]');
+      ths.forEach(th=>{
+        const field = th.getAttribute('data-field');
+        const label = th.textContent.replace(/\s*[▲▼]$/,'').trim();
+        if(this._produtosSort && this._produtosSort.field === field){
+          const arrow = this._produtosSort.ascending ? '▲' : '▼';
+          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`;
+        } else {
+          th.innerHTML = label;
+        }
+      });
+    }catch(e){}
+  },
+
+  // Sorting helpers for fornecedores
+  toggleFornecedoresSort(field){
+    if(!field) return;
+    if(this._fornecedoresSort && this._fornecedoresSort.field === field){
+      this._fornecedoresSort.ascending = !this._fornecedoresSort.ascending;
+    } else {
+      this._fornecedoresSort = { field, ascending: true };
+    }
+    this.renderFornecedoresGrid();
+  },
+
+  updateFornecedoresSortIndicators(){
+    try{
+      const ths = document.querySelectorAll('#sectionCadastrarFornecedor .data-grid thead th[data-field]');
+      ths.forEach(th=>{
+        const field = th.getAttribute('data-field');
+        const label = th.textContent.replace(/\s*[▲▼]$/,'').trim();
+        if(this._fornecedoresSort && this._fornecedoresSort.field === field){
+          const arrow = this._fornecedoresSort.ascending ? '▲' : '▼';
+          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`;
+        } else {
+          th.innerHTML = label;
+        }
+      });
+    }catch(e){}
   },
 
 
