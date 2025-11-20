@@ -174,12 +174,12 @@ const UI = {
 
   async populateProductDropdown(){
     try{
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome', {orderBy:'nome'});
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida', {orderBy:'nome'});
       this.cartProductSelect.innerHTML = '<option value="">-- Selecione um produto --</option>';
       produtos.forEach(p=>{
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.codigo_principal} - ${p.nome}`;
+        opt.textContent = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
         this.cartProductSelect.appendChild(opt);
       });
     }catch(e){console.error('Erro carregar produtos',e);this.cartProductSelect.innerHTML='<option value="">Erro ao carregar</option>'}
@@ -264,9 +264,9 @@ const UI = {
     const qtd = parseInt(this.cartQtd.value);
     if(!pid || isNaN(qtd) || qtd<=0) return alert('Selecione produto e quantidade válida');
     try{
-      const prod = await SupabaseService.list('produtos','id,codigo_principal,nome',{eq:{field:'id',value:pid}});
+      const prod = await SupabaseService.list('produtos','id,codigo_principal,nome,unidade_medida',{eq:{field:'id',value:pid}});
       const p = Array.isArray(prod)?prod[0]:prod;
-      const item = { id:p.id, cod:p.codigo_principal, produto:p.nome, qtd, uni:'UN' };
+      const item = { id:p.id, cod:p.codigo_principal, produto:p.nome, qtd, uni: (p.unidade_medida || 'UN') };
       if(!this.cart.add(item)) return alert('Produto já adicionado');
       this.renderCart(); this.cartProductSelect.value=''; this.cartQtd.value='';
     }catch(e){console.error(e);alert('Erro ao adicionar produto')}
@@ -375,11 +375,11 @@ const UI = {
 
   async renderProdutosGrid(){
     try{
-      const produtos = await SupabaseService.list('produtos','id,codigo_principal,codigo_secundario,nome',{orderBy:'nome'});
+      const produtos = await SupabaseService.list('produtos','id,codigo_principal,codigo_secundario,nome,unidade_medida',{orderBy:'nome'});
       this.produtosTableBody.innerHTML='';
       produtos.forEach(p=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td><td><button class="btn-action btn-edit" data-id="${p.id}">Editar</button> <button class="btn-action btn-delete" data-id="${p.id}">Excluir</button></td>`;
+        tr.innerHTML = `<td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td><td>${p.unidade_medida||'UN'}</td><td><button class="btn-action btn-edit" data-id="${p.id}">Editar</button> <button class="btn-action btn-delete" data-id="${p.id}">Excluir</button></td>`;
         this.produtosTableBody.appendChild(tr);
       });
     }catch(e){console.error('Erro produtos',e)}
@@ -390,6 +390,7 @@ const UI = {
     const codigo1 = document.getElementById('produtoCodigo1').value.trim();
     const codigo2 = document.getElementById('produtoCodigo2').value.trim();
     const nome = document.getElementById('produtoNome').value.trim();
+    const unidade = (document.getElementById('produtoUnidade') && document.getElementById('produtoUnidade').value) ? document.getElementById('produtoUnidade').value.trim() : '';
     if(!codigo1||!nome) return alert('Preencha Código 1 e Nome');
     // Verificar se o código principal já existe (usar SupabaseService)
     try{
@@ -408,7 +409,8 @@ const UI = {
     // If editing, update; otherwise insert
     try{
       if(this._editingProductId){
-        const updated = await SupabaseService.update('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome }, { field: 'id', value: this._editingProductId });
+        const payload = { codigo_principal: codigo1, codigo_secundario: codigo2, nome, unidade_medida: unidade || 'UN' };
+        const updated = await SupabaseService.update('produtos', payload, { field: 'id', value: this._editingProductId });
         if(!updated){ console.error('Resposta vazia ao atualizar produto:', updated); return alert('Erro ao atualizar o produto. Tente novamente.'); }
         alert('Produto atualizado com sucesso!');
         this.clearProductForm();
@@ -416,7 +418,7 @@ const UI = {
         this.populateProductDropdown();
         this._editingProductId = null;
       } else {
-        const data = await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome });
+        const data = await SupabaseService.insert('produtos', { codigo_principal: codigo1, codigo_secundario: codigo2, nome, unidade_medida: unidade || 'UN' });
         if(!data){ console.error('Resposta vazia ao inserir produto:', data); return alert('Erro ao salvar o produto. Tente novamente.'); }
         alert('Produto cadastrado com sucesso!');
         this.formCadastrarProduto.reset();
@@ -443,11 +445,12 @@ const UI = {
         this.populateProductDropdown();
       }
     } else if (btn.classList.contains('btn-edit')) {
-      const { data } = await supabase.from('produtos').select('codigo_principal,codigo_secundario,nome').eq('id', id).single();
+      const { data } = await supabase.from('produtos').select('codigo_principal,codigo_secundario,nome,unidade_medida').eq('id', id).single();
       if (data) { // Popula o formulário para edição
         document.getElementById('produtoCodigo1').value = data.codigo_principal;
         document.getElementById('produtoCodigo2').value = data.codigo_secundario || '';
         document.getElementById('produtoNome').value = data.nome;
+        const unidadeEl = document.getElementById('produtoUnidade'); if(unidadeEl) unidadeEl.value = data.unidade_medida || '';
         // set editing mode
         this._editingProductId = id;
         const submitBtn = document.getElementById('btnSubmitProduto');
