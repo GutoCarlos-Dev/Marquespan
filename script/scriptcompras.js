@@ -119,6 +119,7 @@ const UI = {
     this.quotationDetailTitle = document.getElementById('quotationDetailTitle');
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
+    this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
   },
 
   bind(){
@@ -160,8 +161,9 @@ const UI = {
       this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') });
     }
 
-    // print button for quotation details
+    // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation());
+    this.btnCloseQuotation?.addEventListener('click', ()=>this.closeDetailPanel());
 
     // product form
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e));
