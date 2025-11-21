@@ -139,8 +139,7 @@ const UI = {
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
     this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
-    this.recebimentoSection = document.getElementById('recebimentoSection');
-    this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
+    // Removido cache de recebimentoSection e btnSalvarRecebimento pois são criados dinamicamente
   },
 
   bind(){
@@ -511,8 +510,8 @@ const UI = {
   },
 
   renderRecebimentoItems(itens, cotacaoId) {
-    this.recebimentoSection.classList.remove('hidden');
     const container = document.getElementById('recebimentoItems');
+    if (!container) return;
     container.innerHTML = '';
     container.dataset.cotacaoId = cotacaoId;
 
@@ -528,12 +527,18 @@ const UI = {
     });
 
     // Controle de visibilidade do botão Salvar
+    const btnSalvar = document.getElementById('btnSalvarRecebimento');
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
     if (['estoque', 'administrador'].includes(nivelUsuario)) {
-      this.btnSalvarRecebimento.classList.remove('hidden');
+      if (btnSalvar) btnSalvar.classList.remove('hidden');
     } else {
-      this.btnSalvarRecebimento.classList.add('hidden');
+      if (btnSalvar) btnSalvar.classList.add('hidden');
+    }
+
+    // Re-bind do botão salvar
+    if (btnSalvar) {
+      btnSalvar.addEventListener('click', () => this.salvarRecebimento());
     }
   },
 
