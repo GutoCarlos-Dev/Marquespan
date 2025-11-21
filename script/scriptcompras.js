@@ -476,7 +476,7 @@ const UI = {
           return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>` 
         }).join('')}</tbody></table></div>` 
       });
-      this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
+      this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
@@ -517,8 +517,17 @@ const UI = {
         win.document.open();
         win.document.write(printHtml);
         win.document.close();
-        // ensure focus and print
-        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },300);
+        // Aguarda o conteúdo ser renderizado antes de imprimir
+        setTimeout(() => {
+          try {
+            win.focus(); // Foca na nova janela
+            win.print(); // Abre o diálogo de impressão
+          } catch (e) {
+            console.error('Erro ao chamar impressão:', e);
+          } finally {
+            win.close(); // Garante que a janela seja fechada mesmo se a impressão falhar
+          }
+        }, 300); // Um pequeno delay para garantir que tudo carregou
         return;
       }
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
@@ -958,10 +967,10 @@ const UI = {
 
   closeDetailPanel(){
     if(!this.quotationDetailModal) return;
-    const modalInner = document.querySelector('body > .modal');
+    const modalInner = document.querySelector('body > .modal[data-is-detail-panel="true"]');
     if(!modalInner) return;
 
-    // restore modal inline style and move back into backdrop
+    // restaura o estilo inline e move de volta para o backdrop
     modalInner.setAttribute('style', this._detailPrev.modalStyle || '');
     try{ this._detailPrev.parent.appendChild(modalInner); }catch(e){}
     try{ this.quotationDetailModal.setAttribute('style', this._detailPrev.backdropStyle || ''); }catch(e){}
