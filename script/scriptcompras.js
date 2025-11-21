@@ -516,18 +516,16 @@ const UI = {
       if(win){
         win.document.open();
         win.document.write(printHtml);
-        win.document.close();
-        // Aguarda o conteúdo ser renderizado antes de imprimir
-        setTimeout(() => {
-          try {
-            win.focus(); // Foca na nova janela
-            win.print(); // Abre o diálogo de impressão
-          } catch (e) {
-            console.error('Erro ao chamar impressão:', e);
-          } finally {
-            win.close(); // Garante que a janela seja fechada mesmo se a impressão falhar
-          }
-        }, 300); // Um pequeno delay para garantir que tudo carregou
+        win.document.close(); // Finaliza a escrita do documento.
+
+        // Usa onload para garantir que tudo (incluindo CSS) carregou antes de imprimir.
+        win.onload = function() {
+          win.focus(); // Foca na nova janela.
+          win.print(); // Abre o diálogo de impressão.
+          // A janela será fechada pelo navegador ou pelo usuário após a impressão.
+          // Chamar win.close() aqui pode ser prematuro e causar problemas.
+          // Deixar o navegador gerenciar o fechamento é mais seguro.
+        };
         return;
       }
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
