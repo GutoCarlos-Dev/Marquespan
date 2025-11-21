@@ -371,8 +371,8 @@ const UI = {
       const cotacaoId = cot[0].id;
 
       // itens
-      const itens = this.cart.items.map(i=>({ id_cotacao:cotacaoId, id_produto:i.id, quantidade:i.qtd }));
-      await SupabaseService.insert('cotacao_itens', itens);
+     // const itens = this.cart.items.map(i=>({ id_cotacao:cotacaoId, id_produto:i.id, quantidade:i.qtd }));
+     // await SupabaseService.insert('cotacao_itens', itens);
 
       // orçamentos e preços
       for(let idx=1;idx<=3;idx++){
