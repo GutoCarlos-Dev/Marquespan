@@ -531,5 +531,231 @@ const UI = {
     const btnSalvar = document.getElementById('btnSalvarRecebimento');
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-    if (['estoque', 'administrador'].includes(nivelUsuario)) {
-      if (btn
+    if (btnSalvar) { // Verifica se o botão existe antes de manipulá-lo
+      if (['estoque', 'administrador'].includes(nivelUsuario)) {
+        btnSalvar.style.display = 'block'; // Mostra o botão
+      } else {
+        btnSalvar.style.display = 'none'; // Oculta o botão para outros níveis
+      }
+    }
+
+    this.recebimentoSection.classList.remove('hidden');
+  },
+
+  closeModal(){
+    document.querySelectorAll('.modal').forEach(modal => modal.classList.add('hidden'));
+  },
+
+  closeImportPanel(){
+    this.importPanel.classList.add('hidden');
+  },
+
+  closeDetailPanel(){
+    this.quotationDetailModal.classList.add('hidden');
+  },
+
+  openDetailPanel(){
+    this.quotationDetailModal.classList.remove('hidden');
+  },
+
+  async handleProductForm(e){
+    e.preventDefault();
+    const form = e.target;
+    const data = new FormData(form);
+    const payload = Object.fromEntries(data);
+    try {
+      await SupabaseService.insert('produtos', payload);
+      alert('Produto cadastrado com sucesso!');
+      form.reset();
+      this.renderProdutosGrid();
+    } catch(err) {
+      console.error(err);
+      alert('Erro ao cadastrar produto');
+    }
+  },
+
+  async handleFornecedorForm(e){
+    e.preventDefault();
+    const form = e.target;
+    const data = new FormData(form);
+    const payload = Object.fromEntries(data);
+    try {
+      await SupabaseService.insert('fornecedores', payload);
+      alert('Fornecedor cadastrado com sucesso!');
+      form.reset();
+      this.renderFornecedoresGrid();
+    } catch(err) {
+      console.error(err);
+      alert('Erro ao cadastrar fornecedor');
+    }
+  },
+
+  handleProdutoTableClick(e){
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    if(btn.classList.contains('btn-delete')) {
+      if(confirm('Excluir produto?')) {
+        SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
+      }
+    }
+  },
+
+  handleFornecedorTableClick(e){
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    if(btn.classList.contains('btn-delete')) {
+      if(confirm('Excluir fornecedor?')) {
+        SupabaseService.remove('fornecedores', {field:'id',value:id}).then(() => this.renderFornecedoresGrid());
+      }
+    }
+  },
+
+  toggleProdutosSort(field){
+    if(this._produtosSort.field === field) {
+      this._produtosSort.ascending = !this._produtosSort.ascending;
+    } else {
+      this._produtosSort.field = field;
+      this._produtosSort.ascending = true;
+    }
+    this.renderProdutosGrid();
+  },
+
+  toggleFornecedoresSort(field){
+    if(this._fornecedoresSort.field === field) {
+      this._fornecedoresSort.ascending = !this._fornecedoresSort.ascending;
+    } else {
+      this._fornecedoresSort.field = field;
+      this._fornecedoresSort.ascending = true;
+    }
+    this.renderFornecedoresGrid();
+  },
+
+  async renderProdutosGrid(){
+    try {
+      const produtos = await SupabaseService.list('produtos', '*', {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending});
+      this.produtosTableBody.innerHTML = produtos.map(p => `<tr><td>${p.nome}</td><td>${p.codigo_principal}</td><td><button class="btn-delete" data-id="${p.id}">Excluir</button></td></tr>`).join('');
+    } catch(e) {
+      console.error('Erro ao carregar produtos', e);
+    }
+  },
+
+  async renderFornecedoresGrid(){
+    try {
+      const fornecedores = await SupabaseService.list('fornecedores', '*', {orderBy: this._fornecedoresSort.field, ascending: this._fornecedoresSort.ascending});
+      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => `<tr><td>${f.nome}</td><td>${f.contato}</td><td><button class="btn-delete" data-id="${f.id}">Excluir</button></td></tr>`).join('');
+    } catch(e) {
+      console.error('Erro ao carregar fornecedores', e);
+    }
+  },
+
+  openImportPanel(type){
+    this.importPanel.classList.remove('hidden');
+    this.importPanel.dataset.type = type;
+  },
+
+  handleImport(){
+    const file = this.importExcelFile.files[0];
+    if(!file) return alert('Selecione um arquivo');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, {type:'array'});
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet);
+      this.importPreview.innerHTML = `<pre>${JSON.stringify(json.slice(0,5),null,2)}</pre>`;
+      this.importPreview.dataset.data = JSON.stringify(json);
+      this.importStatus.textContent = `${json.length} registros encontrados`;
+    };
+    reader.readAsArrayBuffer(file);
+  },
+
+  async confirmImport(){
+    const data = JSON.parse(this.importPreview.dataset.data);
+    const type = this.importPanel.dataset.type;
+    try {
+      await SupabaseService.insert(type, data);
+      alert('Importação realizada com sucesso!');
+      this.closeImportPanel();
+      if(type === 'produtos') this.renderProdutosGrid();
+      else if(type === 'fornecedores') this.renderFornecedoresGrid();
+    } catch(e) {
+      console.error(e);
+      alert('Erro na importação');
+    }
+  },
+
+  async handleExport(){
+    const type = this.importPanel.dataset.type;
+    try {
+      const data = await SupabaseService.list(type);
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, type);
+      XLSX.writeFile(wb, `${type}.xlsx`);
+    } catch(e) {
+      console.error(e);
+      alert('Erro na exportação');
+    }
+  },
+
+  printQuotation(){
+    window.print();
+  },
+
+  async deleteQuotation(id){
+    if(confirm('Excluir cotação?')) {
+      try {
+        await SupabaseService.remove('cotacoes', {field:'id',value:id});
+        this.renderSavedQuotations();
+      } catch(e) {
+        console.error(e);
+        alert('Erro ao excluir');
+      }
+    }
+  },
+
+  async handleChangeQuotationStatus(id, newStatus){
+    try {
+      await SupabaseService.update('cotacoes', {status: newStatus}, {field:'id',value:id});
+      this.renderSavedQuotations();
+    } catch(e) {
+      console.error(e);
+      alert('Erro ao alterar status');
+    }
+  },
+
+  async salvarRecebimento(){
+    const cotacaoId = document.getElementById('recebimentoItems').dataset.cotacaoId;
+    const itens = [];
+    document.querySelectorAll('.recebimento-item').forEach(div => {
+      const idProduto = div.dataset.itemId;
+      const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
+      if(!isNaN(qtd) && qtd > 0) {
+        itens.push({
+          id_cotacao: cotacaoId,
+          id_produto: idProduto,
+          qtd_recebida: qtd,
+          data_recebimento: new Date().toISOString()
+        });
+      }
+    });
+    if(itens.length) {
+      try {
+        await SupabaseService.insert('recebimentos', itens);
+        alert('Recebimento salvo com sucesso!');
+        this.closeDetailPanel();
+      } catch(e) {
+        console.error(e);
+        alert('Erro ao salvar recebimento');
+      }
+    } else {
+      alert('Nenhum item válido para receber');
+    }
+  }
+};
+
+// Initialize UI on DOM load
+document.addEventListener('DOMContentLoaded', () => UI.init());
+  
