@@ -92,6 +92,12 @@ const UI = {
       document.querySelector('.painel-btn[data-secao="sectionRealizarCotacoes"]')?.classList.add('hidden');
       document.querySelector('.painel-btn[data-secao="sectionCadastrarProdutos"]')?.classList.add('hidden');
       document.querySelector('.painel-btn[data-secao="sectionCadastrarFornecedor"]')?.classList.add('hidden');
+      // Ativar o botão de Cotações Salvas
+      const btnCotacoesSalvas = document.querySelector('.painel-btn[data-secao="sectionCotacoesSalvas"]');
+      if (btnCotacoesSalvas) {
+        btnCotacoesSalvas.classList.add('active');
+        btnCotacoesSalvas.setAttribute('aria-selected', 'true');
+      }
     } else {
       this.showSection('sectionRealizarCotacoes'); // Comportamento padrão para outros usuários
     }
@@ -1288,3 +1294,8 @@ const UI = {
     }
   },
 }
+
+// Inicializar a UI quando o DOM estiver carregado
+document.addEventListener('DOMContentLoaded', () => {
+  UI.init();
+});
