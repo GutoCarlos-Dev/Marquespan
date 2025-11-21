@@ -744,8 +744,12 @@ const UI = {
     if(itens.length) {
       try {
         await SupabaseService.insert('recebimentos', itens);
+        // Atualizar o status da cotação para "Recebido"
+        await SupabaseService.update('cotacoes', {status: 'Recebido'}, {field:'id',value:cotacaoId});
         alert('Recebimento salvo com sucesso!');
         this.closeDetailPanel();
+        // Atualizar a lista de cotações salvas
+        this.renderSavedQuotations();
       } catch(e) {
         console.error(e);
         alert('Erro ao salvar recebimento');
