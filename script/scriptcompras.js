@@ -251,6 +251,7 @@ const UI = {
         <select id="empresa${i}Cot"><option value="">-- Carregando --</option></select>
         <textarea id="obsEmpresa${i}" placeholder="Observações" rows="2"></textarea>
         <div id="precosEmpresa${i}"></div>
+        <input type="number" step="0.01" id="freteEmpresa${i}" placeholder="Frete" />
         <input type="text" id="totalEmpresa${i}" placeholder="Total" readonly />
         <div class="winner-selector"><input type="radio" name="empresaVencedora" value="${i}" id="vencedor${i}" /><label for="vencedor${i}">Vencedor</label></div>
       `;
@@ -282,6 +283,9 @@ const UI = {
       const cod = e.target.closest('tr').dataset.cod; this.cart.remove(cod); this.renderCart(); this.updateAllTotals();
     }));
 
+    // Adiciona listener para o campo de frete
+    document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa',''))));
+
     document.querySelectorAll('.price-entry input').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.dataset.empresa)));
 
     this.updateAllTotals();
@@ -294,8 +298,12 @@ const UI = {
       const price = inp ? parseFloat(inp.value)||0 : 0;
       total += price * item.qtd;
     });
+    // Adiciona o valor do frete ao total
+    const freteInput = document.getElementById(`freteEmpresa${index}`);
+    const frete = freteInput ? parseFloat(freteInput.value) || 0 : 0;
     const totalInput = document.getElementById(`totalEmpresa${index}`);
     if(totalInput) totalInput.value = total.toFixed(2);
+    if(totalInput) totalInput.value = (total + frete).toFixed(2);
   },
 
   updateAllTotals(){ this.updateCompanyTotal(1); this.updateCompanyTotal(2); this.updateCompanyTotal(3); },
@@ -378,8 +386,9 @@ const UI = {
       for(let idx=1;idx<=3;idx++){
         const fornecedorId = document.getElementById(`empresa${idx}Cot`).value;
         const valorTotal = parseFloat(document.getElementById(`totalEmpresa${idx}`).value)||null;
+        const valorFrete = parseFloat(document.getElementById(`freteEmpresa${idx}`).value)||null;
         if(fornecedorId && valorTotal){
-          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, observacao:document.getElementById(`obsEmpresa${idx}`).value||'' });
+          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, observacao:document.getElementById(`obsEmpresa${idx}`).value||'' });
           const orcamentoId = orc[0].id;
           const precos = [];
           this.cart.items.forEach(it=>{
@@ -396,6 +405,7 @@ const UI = {
   },
 
   clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); },
+  clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); },
 
   async generateNextQuotationCode(){
     try{
