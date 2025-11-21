@@ -953,6 +953,7 @@ const UI = {
     modalInner.style.zIndex = '2147483647';
     modalInner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.18)';
     modalInner.style.background = '#fff';
+    modalInner.dataset.isDetailPanel = 'true'; // Adiciona um identificador
     modalInner.style.display = 'block';
 
     // wire close
