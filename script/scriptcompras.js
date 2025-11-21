@@ -285,7 +285,6 @@ const UI = {
 
     // Adiciona listener para o campo de frete
     document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa',''))));
-
     document.querySelectorAll('.price-entry input').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.dataset.empresa)));
 
     this.updateAllTotals();
