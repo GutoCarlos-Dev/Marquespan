@@ -516,9 +516,13 @@ const UI = {
       if(win){
         win.document.open();
         win.document.write(printHtml);
-        win.document.close();
-        // ensure focus and print
-        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },300);
+        win.document.close(); // Fecha o stream de escrita do documento
+        // Aguarda o conteúdo ser renderizado antes de imprimir
+        setTimeout(() => {
+          win.focus(); // Foca na nova janela
+          win.print(); // Abre o diálogo de impressão
+          win.close(); // Fecha a janela após a impressão
+        }, 300); // Um pequeno delay para garantir que tudo carregou
         return;
       }
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
