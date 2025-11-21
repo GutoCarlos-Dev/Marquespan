@@ -133,6 +133,8 @@ const UI = {
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
     this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
+    this.recebimentoSection = document.getElementById('recebimentoSection');
+    this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
   },
 
   bind(){
@@ -177,6 +179,7 @@ const UI = {
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
     this.btnCloseQuotation?.addEventListener('click', ()=>this.closeDetailPanel()); // Corrigido: &gt; para >
+    this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
 
     // product form
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e)); // Corrigido: &gt; para >
@@ -472,6 +475,10 @@ const UI = {
       const notaFiscalDisplay = cotacao.nota_fiscal ? `<p><strong>Nota Fiscal:</strong> ${cotacao.nota_fiscal}</p>` : ''; // Corrigido: &lt; e &gt;
 
       let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Orçamentos</h3>`; // Corrigido: &lt; e &gt;
+      
+      // Limpa a seção de recebimento antes de popular
+      this.recebimentoSection.classList.add('hidden');
+
       orcamentos.forEach(o=>{  // Corrigido: &gt; para >
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
         const freteDisplay = o.valor_frete ? `<p><strong>Frete:</strong> R$ ${parseFloat(o.valor_frete).toFixed(2)}</p>` : '';
@@ -487,8 +494,75 @@ const UI = {
       this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
+
+      // Lógica para exibir a seção de recebimento
+      if (cotacao.status === 'Aprovada') {
+        this.renderRecebimentoItems(itens, cotacao.id);
+      }
+
       this.openDetailPanel();
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
+  },
+
+  renderRecebimentoItems(itens, cotacaoId) {
+    this.recebimentoSection.classList.remove('hidden');
+    const container = document.getElementById('recebimentoItems');
+    container.innerHTML = '';
+    container.dataset.cotacaoId = cotacaoId;
+
+    itens.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'recebimento-item';
+      div.dataset.itemId = item.produtos.id;
+      div.innerHTML = `
+        <label>${item.produtos.nome} (Qtd. Pedido: ${item.quantidade})</label>
+        <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
+      `;
+      container.appendChild(div);
+    });
+
+    // Controle de visibilidade do botão Salvar
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+    if (['estoque', 'administrador'].includes(nivelUsuario)) {
+      this.btnSalvarRecebimento.classList.remove('hidden');
+    } else {
+      this.btnSalvarRecebimento.classList.add('hidden');
+    }
+  },
+
+  async salvarRecebimento() {
+    const container = document.getElementById('recebimentoItems');
+    const cotacaoId = container.dataset.cotacaoId;
+    const itensRecebidos = [];
+
+    container.querySelectorAll('.recebimento-item').forEach(itemDiv => {
+      const itemId = itemDiv.dataset.itemId;
+      const quantidadeRecebida = itemDiv.querySelector('.qtd-recebida').value;
+      itensRecebidos.push({
+        id_cotacao: cotacaoId,
+        id_produto: itemId,
+        quantidade_recebida: parseInt(quantidadeRecebida) || 0,
+        data_recebimento: new Date()
+      });
+    });
+
+    if (itensRecebidos.length === 0) {
+      alert('Nenhum item para registrar.');
+      return;
+    }
+
+    const { error } = await SupabaseService.insert('cotacao_recebimentos', itensRecebidos);
+
+    if (error) {
+      alert('❌ Erro ao salvar o recebimento.');
+      console.error('Erro ao salvar recebimento:', error);
+    } else {
+      alert('✅ Recebimento salvo com sucesso!');
+      await SupabaseService.update('cotacoes', { status: 'Recebido' }, { field: 'id', value: cotacaoId });
+      this.closeDetailPanel();
+      this.renderSavedQuotations();
+    }
   },
 
   printQuotation(){
@@ -1214,6 +1288,3 @@ const UI = {
     }
   },
 }
-
-// Inicializa a UI quando o DOM estiver pronto
-window.addEventListener('DOMContentLoaded', ()=>UI.init()); // Corrigido: &gt; para >
