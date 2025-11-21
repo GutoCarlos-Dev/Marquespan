@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 
 // Compras.js - Versão refatorada mantendo funcionalidades principais
-// Estrutura: Services (Supabase), UI, Cart
+// Estrutura: Services (Supabase), UI, Cart, TESTE
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
