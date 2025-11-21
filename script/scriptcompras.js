@@ -475,7 +475,7 @@ const UI = {
       orcamentos.forEach(o=>{  // Corrigido: &gt; para >
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
         const freteDisplay = o.valor_frete ? `<p><strong>Frete:</strong> R$ ${parseFloat(o.valor_frete).toFixed(2)}</p>` : '';
-        html += `<div class="card ${isWinner?'winner':''}">${isWinner? '<span class="status status-Aprovada" style="float:right; margin-top:-5px;">VENCEDOR</span>':''}<h4>${o.fornecedores.nome}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p>${freteDisplay}<p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{  // Corrigido: &lt; e &gt;
+        html += `<div class="card ${isWinner?'winner':''}">${isWinner? '<span class="status status-Aprovada" style="float:right; margin-top:-5px;">VENCEDOR</span>':''}<h4>${o.fornecedores.nome}</h4><p><strong>Total+Frete:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p>${freteDisplay}<p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{  // Corrigido: &lt; e &gt;
           const itemDaCotacao = itens.find(it=>it.produtos.id===p.id_produto);  // Corrigido: &gt; para >
           const nomeProduto = itemDaCotacao ? itemDaCotacao.produtos.nome : 'Produto não encontrado';
           const quantidade = itemDaCotacao ? itemDaCotacao.quantidade : 0;
