@@ -404,6 +404,12 @@ const UI = {
       if(error) throw error;
       this.savedQuotationsTableBody.innerHTML = '';
       if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`;
+
+      // Obter o nível do usuário logado para controlar a visibilidade dos botões
+      const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+      const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
+
       data.forEach(c=>{
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
@@ -417,7 +423,10 @@ const UI = {
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button></td>`;
+
+        const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : '';
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnExcluirHtml}</td>`;
+
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
         const selEl = document.getElementById(statusSelectId);
