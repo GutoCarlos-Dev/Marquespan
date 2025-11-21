@@ -165,6 +165,7 @@ body{
 #sectionCadastrarProdutos .data-grid thead th:first-child{border-top-left-radius:8px}
 #sectionCadastrarProdutos .data-grid thead th:last-child{border-top-right-radius:8px}
 #sectionCadastrarProdutos .data-grid tbody td{padding:10px;border-bottom:1px solid #f1f1f1}
+#sectionCadastrarProdutos .data-grid tbody td:last-child{white-space:nowrap; min-width:120px}
 #sectionCadastrarProdutos .data-grid tbody tr:hover{background:#f8fff8}
 
 /* Fornecedores grid: same styling as produtos (scroll + sticky header) */
@@ -178,6 +179,7 @@ body{
 #sectionCadastrarFornecedor .data-grid thead th:first-child{border-top-left-radius:8px}
 #sectionCadastrarFornecedor .data-grid thead th:last-child{border-top-right-radius:8px}
 #sectionCadastrarFornecedor .data-grid tbody td{padding:10px;border-bottom:1px solid #f1f1f1}
+#sectionCadastrarFornecedor .data-grid tbody td:last-child{white-space:nowrap}
 #sectionCadastrarFornecedor .data-grid tbody tr:hover{background:#f8fff8}
 
 /* Responsividade: empilha cards de fornecedores em telas pequenas */
