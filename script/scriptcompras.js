@@ -302,7 +302,6 @@ const UI = {
     const freteInput = document.getElementById(`freteEmpresa${index}`);
     const frete = freteInput ? parseFloat(freteInput.value) || 0 : 0;
     const totalInput = document.getElementById(`totalEmpresa${index}`);
-    if(totalInput) totalInput.value = total.toFixed(2);
     if(totalInput) totalInput.value = (total + frete).toFixed(2);
   },
 
@@ -404,7 +403,6 @@ const UI = {
     }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
   },
 
-  clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); },
   clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); },
 
   async generateNextQuotationCode(){
