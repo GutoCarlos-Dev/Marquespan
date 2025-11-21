@@ -516,12 +516,17 @@ const UI = {
       if(win){
         win.document.open();
         win.document.write(printHtml);
-        win.document.close(); // Fecha o stream de escrita do documento
+        win.document.close();
         // Aguarda o conteúdo ser renderizado antes de imprimir
         setTimeout(() => {
-          win.focus(); // Foca na nova janela
-          win.print(); // Abre o diálogo de impressão
-          win.close(); // Fecha a janela após a impressão
+          try {
+            win.focus(); // Foca na nova janela
+            win.print(); // Abre o diálogo de impressão
+          } catch (e) {
+            console.error('Erro ao chamar impressão:', e);
+          } finally {
+            win.close(); // Garante que a janela seja fechada mesmo se a impressão falhar
+          }
         }, 300); // Um pequeno delay para garantir que tudo carregou
         return;
       }
@@ -962,10 +967,10 @@ const UI = {
 
   closeDetailPanel(){
     if(!this.quotationDetailModal) return;
-    const modalInner = document.querySelector('body > .modal');
+    const modalInner = document.querySelector('body > .modal[data-is-detail-panel="true"]');
     if(!modalInner) return;
 
-    // restore modal inline style and move back into backdrop
+    // restaura o estilo inline e move de volta para o backdrop
     modalInner.setAttribute('style', this._detailPrev.modalStyle || '');
     try{ this._detailPrev.parent.appendChild(modalInner); }catch(e){}
     try{ this.quotationDetailModal.setAttribute('style', this._detailPrev.backdropStyle || ''); }catch(e){}
