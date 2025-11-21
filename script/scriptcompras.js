@@ -512,22 +512,23 @@ const UI = {
       </html>`;
 
     try{
-      const win = window.open('', '_blank');
-      if(win){
-        win.document.open();
-        win.document.write(printHtml);
-        win.document.close(); // Finaliza a escrita do documento.
+      // Cria um Blob com o HTML, que é uma abordagem mais segura e contorna erros de 'TrustedScript'.
+      const blob = new Blob([printHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
 
-        // Usa onload para garantir que tudo (incluindo CSS) carregou antes de imprimir.
-        win.onload = function() {
-          win.focus(); // Foca na nova janela.
-          win.print(); // Abre o diálogo de impressão.
-          // A janela será fechada pelo navegador ou pelo usuário após a impressão.
-          // Chamar win.close() aqui pode ser prematuro e causar problemas.
-          // Deixar o navegador gerenciar o fechamento é mais seguro.
+      const win = window.open(url, '_blank');
+      if (win) {
+        win.onload = () => {
+          win.focus();
+          win.print();
+          // A URL do Blob não precisa ser revogada imediatamente, o navegador cuida disso.
+          // Fechar a janela após a impressão ajuda a evitar a página em branco.
+          setTimeout(() => win.close(), 500);
         };
-        return;
+      } else {
+        alert('O bloqueador de pop-ups pode estar impedindo a impressão.');
       }
+      return;
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
 
     // Fallback: print via hidden iframe (não depende de popups)
