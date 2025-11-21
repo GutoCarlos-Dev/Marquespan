@@ -486,6 +486,7 @@ const UI = {
   printQuotation(){
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
     const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
+    const title = this.quotationDetailTitle ? this.quotationDetailTitle.innerHTML : 'Detalhes';
     
     // Obtém a URL base da página atual para construir caminhos absolutos
     const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -529,6 +530,10 @@ const UI = {
           // A URL do Blob não precisa ser revogada imediatamente, o navegador cuida disso.
           // Fechar a janela após a impressão ajuda a evitar a página em branco.
           setTimeout(() => win.close(), 500);
+          setTimeout(() => {
+            win.close();
+            this.closeDetailPanel(); // Fecha o painel de detalhes após a impressão
+          }, 500);
         };
       } else {
         alert('O bloqueador de pop-ups pode estar impedindo a impressão.');
