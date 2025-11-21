@@ -464,7 +464,7 @@ const UI = {
       const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`;
       const notaFiscalDisplay = cotacao.nota_fiscal ? `<p><strong>Nota Fiscal:</strong> ${cotacao.nota_fiscal}</p>` : '';
 
-      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Orçamentos</h3>`;
+      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Itens</h3><ul>${itens.map(i=>`<li>${i.quantidade}x ${i.produtos.nome} (${i.produtos.codigo_principal})</li>`).join('')}</ul><hr><h3>Orçamentos</h3>`;
       orcamentos.forEach(o=>{ 
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
         html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{ 
@@ -476,7 +476,7 @@ const UI = {
           return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>` 
         }).join('')}</tbody></table></div>` 
       });
-      this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`;
+      this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
@@ -485,13 +485,8 @@ const UI = {
 
   printQuotation(){
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
-    const title = this.quotationDetailTitle ? this.quotationDetailTitle.innerHTML : 'Detalhes';
-    
-    // Obtém a URL base da página atual para construir caminhos absolutos
-    const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-    const cssHref = `${baseUrl}/css/stylecompras.css`;
-    const logoSrc = `${baseUrl}/logo.png`;
-
+    const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
+    const cssHref = 'css/stylecompras.css';
     // Try opening a new window first. Build a richer print HTML including logo in top-right.
     const printHtml = `<!doctype html>
       <html>
@@ -510,40 +505,22 @@ const UI = {
       <body>
         <div class="print-header">
           <h2>${title}</h2>
-          <img src="${logoSrc}" alt="Logo" />
+          <img src="logo.png" alt="Logo" />
         </div>
         <div class="print-body">${content}</div>
       </body>
       </html>`;
 
     try{
-      // Cria um Blob com o HTML, que é uma abordagem mais segura e contorna erros de 'TrustedScript'.
-      const blob = new Blob([printHtml], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-
-      const win = window.open(url, '_blank');
-      const win = window.open('', '_blank', 'width=800,height=600');
-      if (win) {
+      const win = window.open('', '_blank');
+      if(win){
         win.document.open();
         win.document.write(printHtml);
         win.document.close();
-        win.onload = () => {
-          win.focus();
-          win.print();
-          // A URL do Blob não precisa ser revogada imediatamente, o navegador cuida disso.
-          // Fechar a janela após a impressão ajuda a evitar a página em branco.
-          setTimeout(() => win.close(), 500);
-          setTimeout(() => {
-            win.close();
-            this.closeDetailPanel(); // Fecha o painel de detalhes após a impressão
-          }, 500);
-          }, 100); // Reduzido o tempo para fechar mais rápido
-        };
-      } else {
-        alert('O bloqueador de pop-ups pode estar impedindo a impressão.');
-        this.closeDetailPanel();
+        // ensure focus and print
+        setTimeout(()=>{ try{ win.focus(); win.print(); win.close(); }catch(e){ console.error('Erro imprimir via janela',e); alert('Erro ao imprimir via nova janela. Veja console.'); } },300);
+        return;
       }
-      return;
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
 
     // Fallback: print via hidden iframe (não depende de popups)
@@ -981,10 +958,10 @@ const UI = {
 
   closeDetailPanel(){
     if(!this.quotationDetailModal) return;
-    const modalInner = document.querySelector('body > .modal[data-is-detail-panel="true"]');
+    const modalInner = document.querySelector('body > .modal');
     if(!modalInner) return;
 
-    // restaura o estilo inline e move de volta para o backdrop
+    // restore modal inline style and move back into backdrop
     modalInner.setAttribute('style', this._detailPrev.modalStyle || '');
     try{ this._detailPrev.parent.appendChild(modalInner); }catch(e){}
     try{ this.quotationDetailModal.setAttribute('style', this._detailPrev.backdropStyle || ''); }catch(e){}
