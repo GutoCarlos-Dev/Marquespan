@@ -476,7 +476,7 @@ const UI = {
           return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>` 
         }).join('')}</tbody></table></div>` 
       });
-      this.quotationDetailTitle.textContent = `Detalhes: ${cotacao.codigo_cotacao}`;
+      this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
