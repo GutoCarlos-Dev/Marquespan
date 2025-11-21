@@ -486,7 +486,12 @@ const UI = {
   printQuotation(){
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
     const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
-    const cssHref = 'css/stylecompras.css';
+    
+    // Obtém a URL base da página atual para construir caminhos absolutos
+    const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    const cssHref = `${baseUrl}/css/stylecompras.css`;
+    const logoSrc = `${baseUrl}/logo.png`;
+
     // Try opening a new window first. Build a richer print HTML including logo in top-right.
     const printHtml = `<!doctype html>
       <html>
@@ -505,7 +510,7 @@ const UI = {
       <body>
         <div class="print-header">
           <h2>${title}</h2>
-          <img src="logo.png" alt="Logo" />
+          <img src="${logoSrc}" alt="Logo" />
         </div>
         <div class="print-body">${content}</div>
       </body>
