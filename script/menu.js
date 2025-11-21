@@ -71,26 +71,25 @@ function controlarMenuPorNivel(nivel) {
   // Mostrar links baseado no nível
   switch (nivel.toLowerCase()) {
     case 'estoque':
-      // Mostrar Dashboard, submenu de Pneus (apenas Movimentação) e Sair
-      const dashboardLink = nav.querySelector('a[href="dashboard.html"]');
-      if (dashboardLink) dashboardLink.style.display = 'block';
+      // Mostrar Dashboard, Compras (apenas Cotações Salvas) e Sair
+      const estoqueDashboardLink = nav.querySelector('a[href="dashboard.html"]');
+      if (estoqueDashboardLink) estoqueDashboardLink.style.display = 'block';
 
-      const pneusGroup = nav.querySelector('.menu-group:has(a[href="estoque-pneus.html"])');
-      if (pneusGroup) pneusGroup.style.display = 'block';
+      const estoqueComprasGroup = nav.querySelector('.menu-group:has(a[href="compras.html"])');
+      if (estoqueComprasGroup) {
+        estoqueComprasGroup.style.display = 'block';
+        // Esconder submenu de compras, exceto o link para compras.html
+        estoqueComprasGroup.querySelectorAll('a').forEach(link => {
+          if (link.getAttribute('href') === 'compras.html') {
+            link.style.display = 'block';
+          } else {
+            link.style.display = 'none';
+          }
+        });
+      }
 
-      // Mostrar apenas Movimentação no submenu de Pneus
-      const pneusSubmenu = pneusGroup.querySelectorAll('a');
-      pneusSubmenu.forEach(link => {
-        if (link.getAttribute('href') === 'pneu.html') {
-          link.style.display = 'block';
-        } else {
-          link.style.display = 'none';
-        }
-      });
-
-      // Mostrar link de Sair
-      const sairLink = nav.querySelector('a[href="index.html"]');
-      if (sairLink) sairLink.style.display = 'block';
+      const estoqueSairLink = nav.querySelector('a[href="index.html"]');
+      if (estoqueSairLink) estoqueSairLink.style.display = 'block';
       break;
 
     case 'compras':
