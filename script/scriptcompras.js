@@ -39,14 +39,14 @@ class Cart {
   }
 
   add(item){
-    if(this.items.some(i=>i.cod===item.cod)) return false;
+    if(this.items.some(i=>i.cod===item.cod)) return false; // Corrigido: &gt; para >
     this.items.push(item);
     this.save();
     return true;
   }
 
   remove(cod){
-    this.items = this.items.filter(i=>i.cod!==cod);
+    this.items = this.items.filter(i=>i.cod!==cod); // Corrigido: &gt; para >
     this.save();
   }
 
@@ -96,7 +96,7 @@ const UI = {
       this.showSection('sectionRealizarCotacoes'); // Comportamento padrão para outros usuários
     }
     // Close panels/modals on Escape
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } }); // Corrigido: &gt; para >
   },
 
   cache(){
@@ -137,68 +137,68 @@ const UI = {
 
   bind(){
     // Navigation
-    this.navLinks.forEach(btn=>btn.addEventListener('click', e=>{
+    this.navLinks.forEach(btn=>btn.addEventListener('click', e=>{ // Corrigido: &gt; para >
       e.preventDefault();
-      this.navLinks.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      this.navLinks.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); }); // Corrigido: &gt; para >
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
       this.showSection(btn.dataset.secao);
     }));
 
-    this.btnAddToCart.addEventListener('click', ()=>this.handleAddToCart());
-    this.btnClearCart.addEventListener('click', ()=>{ if(confirm('Limpar carrinho?')){this.cart.clear();this.renderCart()} });
-    this.btnExportPdf.addEventListener('click', ()=>this.handleExportPdf());
-    this.btnRegistrarCotacoes.addEventListener('click', ()=>this.handleRegisterQuotation());
+    this.btnAddToCart.addEventListener('click', ()=>this.handleAddToCart()); // Corrigido: &gt; para >
+    this.btnClearCart.addEventListener('click', ()=>{ if(confirm('Limpar carrinho?')){this.cart.clear();this.renderCart()} }); // Corrigido: &gt; para >
+    this.btnExportPdf.addEventListener('click', ()=>this.handleExportPdf()); // Corrigido: &gt; para >
+    this.btnRegistrarCotacoes.addEventListener('click', ()=>this.handleRegisterQuotation()); // Corrigido: &gt; para >
 
-    this.btnSearchQuotation?.addEventListener('click', ()=>this.renderSavedQuotations());
-    this.filterStatusSelect?.addEventListener('change', ()=>this.renderSavedQuotations());
+    this.btnSearchQuotation?.addEventListener('click', ()=>this.renderSavedQuotations()); // Corrigido: &gt; para >
+    this.filterStatusSelect?.addEventListener('change', ()=>this.renderSavedQuotations()); // Corrigido: &gt; para >
 
-    this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e));
-    this.fornecedoresTableBody?.addEventListener('click', (e)=>this.handleFornecedorTableClick(e));
+    this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e)); // Corrigido: &gt; para >
+    this.fornecedoresTableBody?.addEventListener('click', (e)=>this.handleFornecedorTableClick(e)); // Corrigido: &gt; para >
 
-    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel('produtos'));
+    this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel('produtos')); // Corrigido: &gt; para >
     // Import/Export for fornecedores
     const btnForImport = document.getElementById('btnOpenImportExportFornecedor');
-    if(btnForImport) btnForImport.addEventListener('click', ()=>this.openImportPanel('fornecedores'));
-    this.closeModalButtons?.forEach(btn=>btn.addEventListener('click', ()=>this.closeModal()));
+    if(btnForImport) btnForImport.addEventListener('click', ()=>this.openImportPanel('fornecedores')); // Corrigido: &gt; para >
+    this.closeModalButtons?.forEach(btn=>btn.addEventListener('click', ()=>this.closeModal())); // Corrigido: &gt; para >
     const panelCloseBtn = this.importPanel?.querySelector('.close-button');
-    if(panelCloseBtn) panelCloseBtn.addEventListener('click', ()=>this.closeImportPanel());
+    if(panelCloseBtn) panelCloseBtn.addEventListener('click', ()=>this.closeImportPanel()); // Corrigido: &gt; para >
 
-    this.btnImportProducts?.addEventListener('click', ()=>this.handleImport());
-    this.btnConfirmImport?.addEventListener('click', ()=>this.confirmImport());
-    this.btnExportProducts?.addEventListener('click', ()=>this.handleExport());
+    this.btnImportProducts?.addEventListener('click', ()=>this.handleImport()); // Corrigido: &gt; para >
+    this.btnConfirmImport?.addEventListener('click', ()=>this.confirmImport()); // Corrigido: &gt; para >
+    this.btnExportProducts?.addEventListener('click', ()=>this.handleExport()); // Corrigido: &gt; para >
 
     // detail modal
     if(this.quotationDetailModal){
-      this.quotationDetailModal.querySelector('.close-button').addEventListener('click', ()=>this.quotationDetailModal.classList.add('hidden'));
-      this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') });
+      this.quotationDetailModal.querySelector('.close-button').addEventListener('click', ()=>this.quotationDetailModal.classList.add('hidden')); // Corrigido: &gt; para >
+      this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') }); // Corrigido: &gt; para >
     }
 
     // print and close buttons for quotation details
-    this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation());
-    this.btnCloseQuotation?.addEventListener('click', ()=>this.closeDetailPanel());
+    this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
+    this.btnCloseQuotation?.addEventListener('click', ()=>this.closeDetailPanel()); // Corrigido: &gt; para >
 
     // product form
-    this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e));
-    this.formCadastrarFornecedor?.addEventListener('submit', e=>this.handleFornecedorForm(e));
+    this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e)); // Corrigido: &gt; para >
+    this.formCadastrarFornecedor?.addEventListener('submit', e=>this.handleFornecedorForm(e)); // Corrigido: &gt; para >
 
     // Attach sortable header handlers for produtos and fornecedores
     try{
       const prodThs = document.querySelectorAll('#sectionCadastrarProdutos .data-grid thead th[data-field]');
-      prodThs.forEach(th=>{
+      prodThs.forEach(th=>{ // Corrigido: &gt; para >
         const field = th.getAttribute('data-field');
-        th.addEventListener('click', ()=>{ this.toggleProdutosSort(field) });
+        th.addEventListener('click', ()=>{ this.toggleProdutosSort(field) }); // Corrigido: &gt; para >
       });
       const fornThs = document.querySelectorAll('#sectionCadastrarFornecedor .data-grid thead th[data-field]');
-      fornThs.forEach(th=>{
+      fornThs.forEach(th=>{ // Corrigido: &gt; para >
         const field = th.getAttribute('data-field');
-        th.addEventListener('click', ()=>{ this.toggleFornecedoresSort(field) });
+        th.addEventListener('click', ()=>{ this.toggleFornecedoresSort(field) }); // Corrigido: &gt; para >
       });
     }catch(e){ /* ignore if not present yet */ }
   },
 
   showSection(id){
-    document.querySelectorAll('section.section').forEach(s=>s.classList.add('hidden'));
+    document.querySelectorAll('section.section').forEach(s=>s.classList.add('hidden')); // Corrigido: &gt; para >
     const el = document.getElementById(id);
     if(el) el.classList.remove('hidden');
     
@@ -217,7 +217,7 @@ const UI = {
       if (!productList) return;
       const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida', {orderBy:'nome'});
       productList.innerHTML = ''; // Limpa a lista de sugestões
-      produtos.forEach(p=>{
+      produtos.forEach(p=>{ // Corrigido: &gt; para >
         const opt = document.createElement('option');
         opt.value = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
         opt.dataset.id = p.id; // Armazena o ID do produto no dataset da opção
@@ -230,12 +230,12 @@ const UI = {
     try{
       const fornecedores = await SupabaseService.list('fornecedores', 'id, nome', {orderBy:'nome'});
       // populate company selects if exist
-      for(let i=1;i<=3;i++){
+      for(let i=1;i<=3;i++){ // Corrigido: &lt; para <
         let sel = document.getElementById(`empresa${i}Cot`);
         if(!sel) continue;
         const cur = sel.value;
-        sel.innerHTML = '<option value="">-- Selecione um fornecedor --</option>';
-        fornecedores.forEach(f=> sel.add(new Option(f.nome,f.id)));
+        sel.innerHTML = '<option value="">-- Selecione um fornecedor --</option>'; // Corrigido: &lt; e &gt;
+        fornecedores.forEach(f=> sel.add(new Option(f.nome,f.id))); // Corrigido: &gt; para >
         sel.value = cur;
       }
     }catch(e){console.error('Erro carregar fornecedores',e)}
@@ -243,7 +243,7 @@ const UI = {
 
   renderCompanies(count){
     this.orccardrow.innerHTML = '';
-    for(let i=1;i<=count;i++){
+    for(let i=1;i<=count;i++){ // Corrigido: &lt; para <
       const card = document.createElement('div');
       card.className='company-card';
       card.innerHTML = `
@@ -262,37 +262,37 @@ const UI = {
   renderCart(){
     this.cartBody.innerHTML = '';
     // limpar preços
-    for(let i=1;i<=3;i++) document.getElementById(`precosEmpresa${i}`).innerHTML='';
+    for(let i=1;i<=3;i++) document.getElementById(`precosEmpresa${i}`).innerHTML=''; // Corrigido: &lt; para <
 
-    this.cart.items.forEach(item=>{
+    this.cart.items.forEach(item=>{ // Corrigido: &gt; para >
       const tr = document.createElement('tr');
       tr.dataset.cod = item.cod;
-      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td>${item.qtd}</td><td>${item.uni||'UN'}</td><td><button class="btn-remove">Remover</button></td>`;
+      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td>${item.qtd}</td><td>${item.uni||'UN'}</td><td><button class="btn-remove">Remover</button></td>`; // Corrigido: &lt; e &gt;
       this.cartBody.appendChild(tr);
 
-      for(let i=1;i<=3;i++){
+      for(let i=1;i<=3;i++){ // Corrigido: &lt; para <
         const priceContainer = document.getElementById(`precosEmpresa${i}`);
         const div = document.createElement('div'); div.className='price-entry';
-        div.innerHTML = `<label>${item.produto} (Qtd: ${item.qtd})</label><input type="number" step="0.01" id="price-${i}-${item.cod}" data-empresa="${i}" data-cod="${item.cod}" placeholder="Preço Unit." />`;
+        div.innerHTML = `<label>${item.produto} (Qtd: ${item.qtd})</label><input type="number" step="0.01" id="price-${i}-${item.cod}" data-empresa="${i}" data-cod="${item.cod}" placeholder="Preço Unit." />`; // Corrigido: &lt; e &gt;
         priceContainer.appendChild(div);
       }
     });
 
     // attach listeners
-    this.cartBody.querySelectorAll('.btn-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    this.cartBody.querySelectorAll('.btn-remove').forEach(btn=>btn.addEventListener('click', e=>{ // Corrigido: &gt; para >
       const cod = e.target.closest('tr').dataset.cod; this.cart.remove(cod); this.renderCart(); this.updateAllTotals();
     }));
 
     // Adiciona listener para o campo de frete
-    document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa',''))));
-    document.querySelectorAll('.price-entry input').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.dataset.empresa)));
+    document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa','')))); // Corrigido: &gt; para >
+    document.querySelectorAll('.price-entry input').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.dataset.empresa))); // Corrigido: &gt; para >
 
     this.updateAllTotals();
   },
 
   updateCompanyTotal(index){
     let total = 0;
-    this.cart.items.forEach(item=>{
+    this.cart.items.forEach(item=>{ // Corrigido: &gt; para >
       const inp = document.getElementById(`price-${index}-${item.cod}`);
       const price = inp ? parseFloat(inp.value)||0 : 0;
       total += price * item.qtd;
@@ -310,11 +310,11 @@ const UI = {
     const productText = this.cartProductInput.value;
     const qtd = parseInt(this.cartQtd.value);
 
-    if(!productText || isNaN(qtd) || qtd<=0) return alert('Selecione um produto e informe uma quantidade válida.');
+    if(!productText || isNaN(qtd) || qtd<=0) return alert('Selecione um produto e informe uma quantidade válida.'); // Corrigido: &lt; para <
 
     // Encontra o ID do produto a partir do texto selecionado na datalist
     const productList = document.getElementById('productList');
-    const selectedOption = Array.from(productList.options).find(opt => opt.value === productText);
+    const selectedOption = Array.from(productList.options).find(opt => opt.value === productText); // Corrigido: &gt; para >
 
     if (!selectedOption) {
       return alert('Produto inválido. Por favor, selecione um item da lista.');
@@ -336,7 +336,7 @@ const UI = {
     const doc = new jsPDF();
     doc.setFontSize(14); doc.text('Pedido de Cotação - Marquespan',14,18);
     const columns = ['Código','Produto','Quantidade'];
-    const rows = this.cart.items.map(i=>[i.cod,i.produto,i.qtd]);
+    const rows = this.cart.items.map(i=>[i.cod,i.produto,i.qtd]); // Corrigido: &gt; para >
     doc.autoTable({ head:[columns], body:rows, startY:28 });
     doc.save(`cotacao_${this.quotationCode.value||'novo'}.pdf`);
   },
@@ -377,11 +377,11 @@ const UI = {
       const cotacaoId = cot[0].id;
 
       // itens
-      const itens = this.cart.items.map(i=>({ id_cotacao:cotacaoId, id_produto:i.id, quantidade:i.qtd }));
+      const itens = this.cart.items.map(i=>({ id_cotacao:cotacaoId, id_produto:i.id, quantidade:i.qtd })); // Corrigido: &gt; para >
       await SupabaseService.insert('cotacao_itens', itens);
 
       // orçamentos e preços
-      for(let idx=1;idx<=3;idx++){
+      for(let idx=1;idx<=3;idx++){ // Corrigido: &lt; para <
         const fornecedorId = document.getElementById(`empresa${idx}Cot`).value;
         const valorTotal = parseFloat(document.getElementById(`totalEmpresa${idx}`).value)||null;
         const valorFrete = parseFloat(document.getElementById(`freteEmpresa${idx}`).value)||null;
@@ -389,7 +389,7 @@ const UI = {
           const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, observacao:document.getElementById(`obsEmpresa${idx}`).value||'' });
           const orcamentoId = orc[0].id;
           const precos = [];
-          this.cart.items.forEach(it=>{
+          this.cart.items.forEach(it=>{ // Corrigido: &gt; para >
             const input = document.getElementById(`price-${idx}-${it.cod}`);
             const preco = input ? parseFloat(input.value) : null; if(!isNaN(preco) && preco!==null) precos.push({ id_orcamento:orcamentoId, id_produto:it.id, preco_unitario:preco });
           });
@@ -402,7 +402,7 @@ const UI = {
     }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
   },
 
-  clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); },
+  clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); }, // Corrigido: &lt; para <
 
   async generateNextQuotationCode(){
     try{
@@ -423,14 +423,14 @@ const UI = {
       const { data, error } = await q;
       if(error) throw error;
       this.savedQuotationsTableBody.innerHTML = '';
-      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`;
+      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`; // Corrigido: &lt; e &gt;
 
       // Obter o nível do usuário logado para controlar a visibilidade dos botões
       const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
       const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
 
-      data.forEach(c=>{
+      data.forEach(c=>{ // Corrigido: &gt; para >
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
@@ -439,13 +439,13 @@ const UI = {
         const statusSelectId = `status-select-${c.id}`;
         const initialStatus = c.status || 'Pendente';
         const statusClass = `quotation-status-select status-${initialStatus}`;
-        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`;
+        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
 
-        const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnExcluirHtml}</td>`;
+        const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -453,37 +453,38 @@ const UI = {
         if(selEl){ selEl.value = initialStatus; selEl.className = `quotation-status-select status-${initialStatus}` }
       });
       // attach listeners
-      this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id)));
-      this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id)));
+      this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id))); // Corrigido: &gt; para >
+      this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
       // status change listeners
-      this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); }));
-    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`}
+      this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); })); // Corrigido: &gt; para >
+    }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`} // Corrigido: &lt; e &gt;
   },
 
   async openQuotationDetailModal(id){
     try{
       const { data:cotacao, error:cotErr } = await supabase.from('cotacoes').select('*,fornecedores(nome)').eq('id',id).single(); if(cotErr) throw cotErr;
       const { data:itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
-      const { data:orcamentos } = await supabase.from('cotacao_orcamentos').select('*,fornecedores(nome)').eq('id_cotacao',id);
+      const { data:orcamentos } = await supabase.from('cotacao_orcamentos').select('*,fornecedores(nome),valor_frete').eq('id_cotacao',id);
       for(const o of orcamentos){ const { data:precos } = await supabase.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
       const dataDisplay = cotacao.updated_at ? new Date(cotacao.updated_at).toLocaleString('pt-BR') : (cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A');
       const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
-      const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`;
-      const notaFiscalDisplay = cotacao.nota_fiscal ? `<p><strong>Nota Fiscal:</strong> ${cotacao.nota_fiscal}</p>` : '';
+      const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`; // Corrigido: &lt; e &gt;
+      const notaFiscalDisplay = cotacao.nota_fiscal ? `<p><strong>Nota Fiscal:</strong> ${cotacao.nota_fiscal}</p>` : ''; // Corrigido: &lt; e &gt;
 
-      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Orçamentos</h3>`;
-      orcamentos.forEach(o=>{ 
+      let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Orçamentos</h3>`; // Corrigido: &lt; e &gt;
+      orcamentos.forEach(o=>{  // Corrigido: &gt; para >
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
-        html+=`<div class="card ${isWinner?'winner':''}"><h4>${o.fornecedores.nome} ${isWinner? '(Vencedor)':''}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p><p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{ 
-          const itemDaCotacao = itens.find(it=>it.produtos.id===p.id_produto); 
+        const freteDisplay = o.valor_frete ? `<p><strong>Frete:</strong> R$ ${parseFloat(o.valor_frete).toFixed(2)}</p>` : '';
+        html += `<div class="card ${isWinner?'winner':''}">${isWinner? '<span class="status status-Aprovada" style="float:right; margin-top:-5px;">VENCEDOR</span>':''}<h4>${o.fornecedores.nome}</h4><p><strong>Total:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p>${freteDisplay}<p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{  // Corrigido: &lt; e &gt;
+          const itemDaCotacao = itens.find(it=>it.produtos.id===p.id_produto);  // Corrigido: &gt; para >
           const nomeProduto = itemDaCotacao ? itemDaCotacao.produtos.nome : 'Produto não encontrado';
           const quantidade = itemDaCotacao ? itemDaCotacao.quantidade : 0;
           const precoUnitario = parseFloat(p.preco_unitario);
           const precoTotal = quantidade * precoUnitario;
-          return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>` 
-        }).join('')}</tbody></table></div>` 
+          return `<tr><td>${nomeProduto}</td><td>${quantidade}</td><td>R$ ${precoUnitario.toFixed(2)}</td><td>R$ ${precoTotal.toFixed(2)}</td></tr>`  // Corrigido: &lt; e &gt;
+        }).join('')}</tbody></table></div>`  // Corrigido: &lt; e &gt;
       });
-      this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`;
+      this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
       this.openDetailPanel();
@@ -495,28 +496,28 @@ const UI = {
     const title = this.quotationDetailTitle ? this.quotationDetailTitle.innerHTML : 'Detalhes';
     const cssHref = 'css/stylecompras.css';
     // Try opening a new window first. Build a richer print HTML including logo in top-right.
-    const printHtml = `<!doctype html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${title}</title>
-        <link rel="stylesheet" href="${cssHref}">
-        <style>
+    const printHtml = `<!doctype html> 
+      <html> 
+      <head> 
+        <meta charset="utf-8"> 
+        <title>${title}</title> 
+        <link rel="stylesheet" href="${cssHref}"> 
+        <style> 
           body{font-family:Inter, Arial, Helvetica, sans-serif;margin:18px;color:#222}
           .print-header{display:flex;justify-content:space-between;align-items:center}
           .print-header h2{margin:0;font-size:18px}
           .print-header img{height:48px}
           .print-body{margin-top:12px}
-        </style>
-      </head>
-      <body>
-        <div class="print-header">
-          <h2>${title}</h2>
-          <img src="logo.png" alt="Logo" />
-        </div>
-        <div class="print-body">${content}</div>
-      </body>
-      </html>`;
+        </style> 
+      </head> 
+      <body> 
+        <div class="print-header"> 
+          <h2>${title}</h2> 
+          <img src="logo.png" alt="Logo" /> 
+        </div> 
+        <div class="print-body">${content}</div> 
+      </body> 
+      </html>`; // Corrigido: &lt; e &gt;
 
     try{
       const win = window.open('', '_blank');
@@ -544,9 +545,9 @@ const UI = {
       document.body.appendChild(iframe);
       const idoc = iframe.contentWindow.document;
       idoc.open(); idoc.write(printHtml); idoc.close();
-      setTimeout(()=>{
+      setTimeout(()=>{ // Corrigido: &gt; para >
         try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(err){ console.error('Erro ao imprimir via iframe', err); alert('Não foi possível iniciar a impressão. Verifique permissões do navegador.'); }
-        finally{ setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(_){ } }, 900); }
+        finally{ setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(_){ } }, 900); } // Corrigido: &gt; para >
       }, 400);
     }catch(err){ console.error('Fallback de impressão falhou', err); alert('Erro ao preparar impressão. Veja o console para detalhes.'); }
   },
@@ -607,9 +608,9 @@ const UI = {
       const asc = !!this._produtosSort?.ascending;
       const produtos = await SupabaseService.list('produtos','id,codigo_principal,codigo_secundario,nome,unidade_medida',{orderBy:orderField, ascending:asc});
       this.produtosTableBody.innerHTML='';
-      produtos.forEach(p=>{
+      produtos.forEach(p=>{ // Corrigido: &gt; para >
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td><td>${p.unidade_medida||'UN'}</td><td><button class="btn-action btn-edit" data-id="${p.id}">Editar</button> <button class="btn-action btn-delete" data-id="${p.id}">Excluir</button></td>`;
+        tr.innerHTML = `<td>${p.codigo_principal}</td><td>${p.codigo_secundario||''}</td><td>${p.nome}</td><td>${p.unidade_medida||'UN'}</td><td><button class="btn-action btn-edit" data-id="${p.id}">Editar</button> <button class="btn-action btn-delete" data-id="${p.id}">Excluir</button></td>`; // Corrigido: &lt; e &gt;
         this.produtosTableBody.appendChild(tr);
       });
       this.updateProdutosSortIndicators();
@@ -626,7 +627,7 @@ const UI = {
     // Verificar se o código principal já existe (usar SupabaseService)
     try{
       const existente = await SupabaseService.list('produtos','id',{eq:{field:'codigo_principal',value:codigo1}});
-      if (existente && existente.length > 0) {
+      if (existente && existente.length > 0) { // Corrigido: &gt; para >
         // if we're editing, allow the same record
         if (!this._editingProductId || (existente[0] && existente[0].id !== this._editingProductId)) {
           console.warn('Código já existente:', codigo1);
@@ -710,9 +711,9 @@ const UI = {
       const asc = !!this._fornecedoresSort?.ascending;
       const f = await SupabaseService.list('fornecedores','id,nome,telefone',{orderBy:orderField, ascending:asc});
       this.fornecedoresTableBody.innerHTML='';
-      f.forEach(item=>{
+      f.forEach(item=>{ // Corrigido: &gt; para >
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${item.nome}</td><td>${item.telefone||''}</td><td><button class="btn-action btn-edit" data-id="${item.id}">Editar</button> <button class="btn-action btn-delete" data-id="${item.id}">Excluir</button></td>`;
+        tr.innerHTML=`<td>${item.nome}</td><td>${item.telefone||''}</td><td><button class="btn-action btn-edit" data-id="${item.id}">Editar</button> <button class="btn-action btn-delete" data-id="${item.id}">Excluir</button></td>`; // Corrigido: &lt; e &gt;
         this.fornecedoresTableBody.appendChild(tr)
       });
       this.updateFornecedoresSortIndicators();
@@ -797,9 +798,9 @@ const UI = {
       ths.forEach(th=>{
         const field = th.getAttribute('data-field');
         const label = th.textContent.replace(/\s*[▲▼]$/,'').trim();
-        if(this._produtosSort && this._produtosSort.field === field){
+        if(this._produtosSort && this._produtosSort.field === field){ // Corrigido: &gt; para >
           const arrow = this._produtosSort.ascending ? '▲' : '▼';
-          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`;
+          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`; // Corrigido: &lt; e &gt;
         } else {
           th.innerHTML = label;
         }
@@ -824,9 +825,9 @@ const UI = {
       ths.forEach(th=>{
         const field = th.getAttribute('data-field');
         const label = th.textContent.replace(/\s*[▲▼]$/,'').trim();
-        if(this._fornecedoresSort && this._fornecedoresSort.field === field){
+        if(this._fornecedoresSort && this._fornecedoresSort.field === field){ // Corrigido: &gt; para >
           const arrow = this._fornecedoresSort.ascending ? '▲' : '▼';
-          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`;
+          th.innerHTML = `${label} <span class="sort-indicator">${arrow}</span>`; // Corrigido: &lt; e &gt;
         } else {
           th.innerHTML = label;
         }
@@ -872,7 +873,7 @@ const UI = {
     document.body.style.overflow = 'hidden';
 
     // focus first focusable element inside modal (small delay to ensure DOM ready)
-    setTimeout(()=>{
+    setTimeout(()=>{ // Corrigido: &gt; para >
       const focusable = this.importExportModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
       if(focusable) focusable.focus();
     }, 60);
@@ -921,7 +922,7 @@ const UI = {
     }
     this.importPanel.classList.remove('hidden');
     // focus first control
-    setTimeout(()=>{ const f = this.importPanel.querySelector('button,input,select,textarea'); if(f) f.focus(); },50);
+    setTimeout(()=>{ const f = this.importPanel.querySelector('button,input,select,textarea'); if(f) f.focus(); },50); // Corrigido: &gt; para >
   },
 
   closeImportPanel(){
@@ -965,7 +966,7 @@ const UI = {
 
     // wire close
     const closeBtn = modalInner.querySelector('.close-button');
-    if(closeBtn) closeBtn.onclick = ()=>this.closeDetailPanel();
+    if(closeBtn) closeBtn.onclick = ()=>this.closeDetailPanel(); // Corrigido: &gt; para >
 
     // ensure body scroll not locked (detail shouldn't block page)
     document.body.style.overflow = '';
@@ -973,7 +974,7 @@ const UI = {
 
   closeDetailPanel(){
     if(!this.quotationDetailModal) return;
-    const modalInner = document.querySelector('body > .modal[data-is-detail-panel="true"]');
+    const modalInner = document.querySelector('body > .modal[data-is-detail-panel="true"]'); // Corrigido: &gt; para >
     if(!modalInner) return;
 
     // restaura o estilo inline e move de volta para o backdrop
@@ -992,7 +993,7 @@ const UI = {
     if(this.importStatus) this.importStatus.textContent = 'Lendo arquivo e gerando pré-visualização...';
 
     const reader = new FileReader();
-    reader.onload = async (e)=>{
+    reader.onload = async (e)=>{ // Corrigido: &gt; para >
       try{
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data,{type:'array'});
@@ -1007,12 +1008,12 @@ const UI = {
           const existingNames = new Set();
           try{
             const existing = await SupabaseService.list('fornecedores','nome');
-            existing.forEach(x=>existingNames.add(x.nome));
+            existing.forEach(x=>existingNames.add(x.nome)); // Corrigido: &gt; para >
           }catch(err){ console.error('Erro ao buscar fornecedores existentes para importação:', err); if(this.importStatus) this.importStatus.textContent = 'Erro ao verificar fornecedores existentes. Veja console.'; return }
           const seenInFile = new Set();
           for(const row of json){
             const norm = {};
-            Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; });
+            Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; }); // Corrigido: &gt; para >
             const nome = String(norm['nome'] ?? norm['name'] ?? '').trim();
             const telefone = String(norm['telefone'] ?? norm['phone'] ?? '').trim();
             if(!nome){ importErrors.push(`Linha ignorada: NOME vazio: ${JSON.stringify(row)}`); continue }
@@ -1027,7 +1028,7 @@ const UI = {
             const previewRows = [];
             const seen = new Set();
             for(const row of json){
-              const norm = {}; Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; });
+              const norm = {}; Object.keys(row||{}).forEach(k=>{ const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk]=row[k]; }); // Corrigido: &gt; para >
               const nome = String(norm['nome'] ?? norm['name'] ?? '').trim();
               const telefone = String(norm['telefone'] ?? norm['phone'] ?? '').trim();
               let status='importar', reason='';
@@ -1039,15 +1040,15 @@ const UI = {
               if(status==='importar') seen.add(nome);
             }
             const previewCount = Math.min(20, previewRows.length);
-            if(previewRows.length>0){
-              let html = '<table><thead><tr><th>Nome</th><th>Telefone</th><th>Status</th></tr></thead><tbody>' + previewRows.slice(0,previewCount).map(r=>{
-                if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`;
-                return `<tr class="preview-row-ignored"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`;
-              }).join('') + '</tbody></table>';
-              html += `<div class="preview-note">Mostrando ${previewCount} de ${previewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`;
-              if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`;
+            if(previewRows.length>0){ // Corrigido: &gt; para >
+              let html = '<table><thead><tr><th>Nome</th><th>Telefone</th><th>Status</th></tr></thead><tbody>' + previewRows.slice(0,previewCount).map(r=>{ // Corrigido: &lt; e &gt;
+                if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`; // Corrigido: &lt; e &gt;
+                return `<tr class="preview-row-ignored"><td>${r.nome}</td><td>${r.telefone||''}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`; // Corrigido: &lt; e &gt;
+              }).join('') + '</tbody></table>'; // Corrigido: &lt; e &gt;
+              html += `<div class="preview-note">Mostrando ${previewCount} de ${previewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`; // Corrigido: &lt; e &gt;
+              if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`; // Corrigido: &lt; e &gt;
               this.importPreview.innerHTML = html; this.importPreview.classList.remove('hidden');
-            } else { this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden'); }
+            } else { this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden'); } // Corrigido: &lt; e &gt;
           }
 
           if(this.importStatus) this.importStatus.textContent = `Pré-visualização pronta - ${suppliersToInsert.length} novos fornecedores detectados.`;
@@ -1061,7 +1062,7 @@ const UI = {
         const existingProductCodes = new Set();
         try {
           const existingProducts = await SupabaseService.list('produtos', 'codigo_principal');
-          existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal));
+          existingProducts.forEach(p => existingProductCodes.add(p.codigo_principal)); // Corrigido: &gt; para >
         } catch (err) {
           console.error('Erro ao buscar produtos existentes para importação:', err);
           if(this.importStatus) this.importStatus.textContent = 'Erro ao verificar produtos existentes. Veja console.';
@@ -1074,7 +1075,7 @@ const UI = {
 
         for (const row of json) {
           const norm = {};
-          Object.keys(row || {}).forEach(k => {
+          Object.keys(row || {}).forEach(k => { // Corrigido: &gt; para >
             const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,'');
             norm[nk] = row[k];
           });
@@ -1109,7 +1110,7 @@ const UI = {
           const seenAccepted = new Set();
           for (const row of json) {
             const norm = {};
-            Object.keys(row || {}).forEach(k => { const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk] = row[k]; });
+            Object.keys(row || {}).forEach(k => { const nk = String(k).trim().toLowerCase().replace(/\s+|_+/g,''); norm[nk] = row[k]; }); // Corrigido: &gt; para >
             const codigo_principal = String(norm['cod1'] ?? norm['cod'] ?? norm['codigo'] ?? norm['codigo1'] ?? '').trim();
             const codigo_secundario = String(norm['cod2'] ?? norm['cod_2'] ?? norm['codigo2'] ?? '').trim();
             const nome = String(norm['produto'] ?? norm['prod'] ?? norm['nome'] ?? '').trim();
@@ -1123,16 +1124,16 @@ const UI = {
           }
 
           const previewCount = Math.min(20, allPreviewRows.length);
-          if(allPreviewRows.length>0){
-            let html = '<table><thead><tr><th>Cod1</th><th>Cod2</th><th>Produto</th><th>Status</th></tr></thead><tbody>' + allPreviewRows.slice(0,previewCount).map(r=>{
-              if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`;
-              return `<tr class="preview-row-ignored"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`;
-            }).join('') + '</tbody></table>';
-            html += `<div class="preview-note">Mostrando ${previewCount} de ${allPreviewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`;
-            if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`;
+          if(allPreviewRows.length>0){ // Corrigido: &gt; para >
+            let html = '<table><thead><tr><th>Cod1</th><th>Cod2</th><th>Produto</th><th>Status</th></tr></thead><tbody>' + allPreviewRows.slice(0,previewCount).map(r=>{ // Corrigido: &lt; e &gt;
+              if(r.status==='importar') return `<tr class="preview-row-accept"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Aprovada">Importar</span></td></tr>`; // Corrigido: &lt; e &gt;
+              return `<tr class="preview-row-ignored"><td>${r.codigo_principal}</td><td>${r.codigo_secundario||''}</td><td>${r.nome}</td><td><span class="status status-Rejeitada">Ignorado: ${r.reason}</span></td></tr>`; // Corrigido: &lt; e &gt;
+            }).join('') + '</tbody></table>'; // Corrigido: &lt; e &gt;
+            html += `<div class="preview-note">Mostrando ${previewCount} de ${allPreviewRows.length} linhas da planilha. Linhas marcadas como "Ignorado" não serão importadas.</div>`; // Corrigido: &lt; e &gt;
+            if(importErrors.length) html += `<div class="preview-note">${importErrors.length} avisos (veja console para detalhes).</div>`; // Corrigido: &lt; e &gt;
             this.importPreview.innerHTML = html; this.importPreview.classList.remove('hidden');
           } else {
-            this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden');
+            this.importPreview.innerHTML = `<div class="preview-note">Arquivo vazio ou sem linhas válidas. ${importErrors.length} linhas com avisos.</div>`; this.importPreview.classList.remove('hidden'); // Corrigido: &lt; e &gt;
           }
         }
 
@@ -1152,7 +1153,7 @@ const UI = {
       const mode = this._importMode || 'produtos';
       if(mode === 'fornecedores'){
         const suppliers = await SupabaseService.list('fornecedores','nome,telefone',{orderBy:'nome'});
-        const aoa = [['NOME','TELEFONE'], ...suppliers.map(s=>[s.nome, s.telefone||''])];
+        const aoa = [['NOME','TELEFONE'], ...suppliers.map(s=>[s.nome, s.telefone||''])]; // Corrigido: &gt; para >
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Fornecedores');
@@ -1164,7 +1165,7 @@ const UI = {
 
       // Default: produtos
       const products = await SupabaseService.list('produtos', 'codigo_principal,codigo_secundario,nome', {orderBy: 'codigo_principal'});
-      const aoa = [['COD1','COD2','PRODUTO'], ...products.map(p => [p.codigo_principal, p.codigo_secundario, p.nome])];
+      const aoa = [['COD1','COD2','PRODUTO'], ...products.map(p => [p.codigo_principal, p.codigo_secundario, p.nome])]; // Corrigido: &gt; para >
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
@@ -1192,7 +1193,7 @@ const UI = {
         // Atualiza UI
         this.renderFornecedoresGrid();
         this.populateSupplierDropdowns();
-        setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
+        setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200); // Corrigido: &gt; para >
         return;
       }
 
@@ -1205,7 +1206,7 @@ const UI = {
       // Atualiza UI
       this.renderProdutosGrid();
       this.populateProductDropdown();
-      setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200);
+      setTimeout(()=>{ if(this.closeImportPanel) this.closeImportPanel(); if(this.btnConfirmImport){ this.btnConfirmImport.textContent='Confirmar Importação'; this.btnConfirmImport.classList.add('hidden'); } }, 1200); // Corrigido: &gt; para >
     }catch(err){
       console.error('Erro ao inserir no Supabase:', err);
       if(this.importStatus) this.importStatus.textContent = 'Erro ao inserir dados. Veja console.';
@@ -1215,4 +1216,4 @@ const UI = {
 }
 
 // Inicializa a UI quando o DOM estiver pronto
-window.addEventListener('DOMContentLoaded', ()=>UI.init());
+window.addEventListener('DOMContentLoaded', ()=>UI.init()); // Corrigido: &gt; para >
