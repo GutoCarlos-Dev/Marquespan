@@ -110,12 +110,19 @@ export async function atualizarUsuario(event) {
   const nivel = document.getElementById('nivel').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
+  // Preparar dados para update, só incluir senha se não estiver vazia
+  const updateData = { nome, nomecompleto, email, nivel };
+  if (senha) {
+    updateData.senha = senha;
+  }
+
   const { error } = await supabase
     .from('usuarios')
-    .update({ nome, nomecompleto, email, nivel, senha })
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
+    console.error(error);
     alert('❌ Erro ao atualizar usuário.');
     return;
   }
