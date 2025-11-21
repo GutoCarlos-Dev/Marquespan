@@ -92,7 +92,8 @@ export async function editarUsuario(id) {
   document.getElementById('nomecompleto').value = data.nomecompleto;
   document.getElementById('email').value = data.email;
   document.getElementById('nivel').value = data.nivel;
-  document.getElementById('senha').value = data.senha;
+  // Não carregar senha por segurança; deixar campo vazio para alteração opcional
+  document.getElementById('senha').value = '';
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
 
   document.getElementById('btnSalvar').classList.add('hidden');
