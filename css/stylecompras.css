@@ -77,6 +77,8 @@ body{
 .btn-primary:hover{background:var(--brand-dark);transform:translateY(-1px)}
 .btn-muted:hover{background:#e9e9e9}
 .btn-success{background:var(--success);color:#fff;border-radius:8px;padding:8px 10px;border:none}
+.btn-delete{background:var(--danger);color:#fff;padding:8px 10px;border-radius:8px;border:none;cursor:pointer;transition:background-color 0.2s ease-in-out;}
+.btn-delete:hover{background:#b02a37;}
 .form-compact input, .form-compact select, .form-compact textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e6e6;background:#fafafa}
 .table-responsive{overflow:auto}
 .data-grid{width:100%;border-collapse:collapse;margin-top:10px}
