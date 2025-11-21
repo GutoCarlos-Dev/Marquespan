@@ -485,7 +485,6 @@ const UI = {
 
   printQuotation(){
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
-    const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
     const title = this.quotationDetailTitle ? this.quotationDetailTitle.innerHTML : 'Detalhes';
     
     // Obtém a URL base da página atual para construir caminhos absolutos
@@ -523,7 +522,11 @@ const UI = {
       const url = URL.createObjectURL(blob);
 
       const win = window.open(url, '_blank');
+      const win = window.open('', '_blank', 'width=800,height=600');
       if (win) {
+        win.document.open();
+        win.document.write(printHtml);
+        win.document.close();
         win.onload = () => {
           win.focus();
           win.print();
@@ -534,9 +537,11 @@ const UI = {
             win.close();
             this.closeDetailPanel(); // Fecha o painel de detalhes após a impressão
           }, 500);
+          }, 100); // Reduzido o tempo para fechar mais rápido
         };
       } else {
         alert('O bloqueador de pop-ups pode estar impedindo a impressão.');
+        this.closeDetailPanel();
       }
       return;
     }catch(e){ console.warn('Abertura de janela bloqueada, tentando fallback por iframe', e); }
