@@ -81,7 +81,20 @@ const UI = {
     this._fornecedoresSort = { field: 'nome', ascending: true };
     this.renderProdutosGrid(); // carregar produtos no início
     this.renderFornecedoresGrid(); // carregar fornecedores no início
-    this.showSection('sectionRealizarCotacoes'); // Garante que apenas a primeira aba seja exibida inicialmente
+
+    // Verifica o nível do usuário para definir a aba inicial e visibilidade das outras
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+
+    if (nivelUsuario === 'estoque') {
+      this.showSection('sectionCotacoesSalvas'); // Inicia na aba de cotações salvas
+      // Oculta as outras abas do menu de compras
+      document.querySelector('.painel-btn[data-secao="sectionRealizarCotacoes"]')?.classList.add('hidden');
+      document.querySelector('.painel-btn[data-secao="sectionCadastrarProdutos"]')?.classList.add('hidden');
+      document.querySelector('.painel-btn[data-secao="sectionCadastrarFornecedor"]')?.classList.add('hidden');
+    } else {
+      this.showSection('sectionRealizarCotacoes'); // Comportamento padrão para outros usuários
+    }
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } });
   },
