@@ -485,7 +485,7 @@ const UI = {
 
   printQuotation(){
     const content = this.quotationDetailBody ? this.quotationDetailBody.innerHTML : '';
-    const title = this.quotationDetailTitle ? this.quotationDetailTitle.textContent : 'Detalhes';
+    const title = this.quotationDetailTitle ? this.quotationDetailTitle.innerHTML : 'Detalhes';
     const cssHref = 'css/stylecompras.css';
     // Try opening a new window first. Build a richer print HTML including logo in top-right.
     const printHtml = `<!doctype html>
