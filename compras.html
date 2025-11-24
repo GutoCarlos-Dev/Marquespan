@@ -198,16 +198,16 @@
     </div>
   </div>
 
-  <div id="quotationDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header">
+  <!-- Painel Lateral de Detalhes da Cotação -->
+  <div id="detailPanelBackdrop" class="panel-backdrop hidden">
+    <div id="detailPanel" class="panel-lateral" role="dialog" aria-modal="true">
+      <div class="panel-header">
         <h2 id="quotationDetailTitle">Detalhes da Cotação</h2>
-        <button id="btnPrintQuotation" class="btn-muted" aria-label="Imprimir">🖨️ Imprimir</button>
-        <button id="btnCloseQuotation" class="btn-muted" aria-label="Fechar">Fechar</button>
         <button class="close-button" aria-label="Fechar">&times;</button>
       </div>
-      <div id="quotationDetailBody" class="modal-body">
-        <!-- Conteúdo será preenchido dinamicamente pelo JS -->
+      <div id="quotationDetailBody" class="panel-body"></div>
+      <div class="panel-footer">
+        <button id="btnPrintQuotation" class="btn-muted"><i class="fas fa-print"></i> Imprimir</button>
       </div>
     </div>
   </div>

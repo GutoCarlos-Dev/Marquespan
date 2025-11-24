@@ -115,11 +115,11 @@ const UI = {
     this.importPreview = document.getElementById('importPreview');
     this.importStatus = document.getElementById('importStatus');
     this.btnConfirmImport = document.getElementById('btnConfirmImport');
-    this.quotationDetailModal = document.getElementById('quotationDetailModal');
+    this.detailPanelBackdrop = document.getElementById('detailPanelBackdrop');
+    this.detailPanel = document.getElementById('detailPanel');
     this.quotationDetailTitle = document.getElementById('quotationDetailTitle');
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
-    this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
     // Cache para o novo painel de recebimento
     this.recebimentoPanelBackdrop = document.getElementById('recebimentoPanelBackdrop');
     this.recebimentoPanel = document.getElementById('recebimentoPanel');
@@ -160,11 +160,9 @@ const UI = {
     this.btnConfirmImport?.addEventListener('click', ()=>this.confirmImport()); // Corrigido: &gt; para >
     this.btnExportProducts?.addEventListener('click', ()=>this.handleExport()); // Corrigido: &gt; para >
 
-    // detail modal
-    if(this.quotationDetailModal){
-      this.quotationDetailModal.querySelector('.close-button').addEventListener('click', ()=>this.quotationDetailModal.classList.add('hidden')); // Corrigido: &gt; para >
-      this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') }); // Corrigido: &gt; para >
-    }
+    // Novo painel de detalhes
+    this.detailPanel?.querySelector('.close-button').addEventListener('click', () => this.closeDetailPanel());
+    this.detailPanelBackdrop?.addEventListener('click', e => { if (e.target === this.detailPanelBackdrop) this.closeDetailPanel() });
 
     // Novo painel de recebimento
     this.recebimentoPanel?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoPanel());
@@ -172,7 +170,6 @@ const UI = {
 
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
-    this.btnCloseQuotation?.addEventListener('click', ()=>this.closeDetailPanel()); // Corrigido: &gt; para >
     this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
 
     // product form
@@ -483,7 +480,7 @@ const UI = {
         if(selEl){ selEl.value = initialStatus; selEl.className = `quotation-status-select status-${initialStatus}` }
       });
       // attach listeners
-      this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id))); // Corrigido: &gt; para >
+      this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openDetailPanel(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoPanel(e.target.dataset.id)));
       // status change listeners
@@ -491,7 +488,7 @@ const UI = {
     }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`} // Corrigido: &lt; e &gt;
   },
 
-  async openQuotationDetailModal(id){
+  async openDetailPanel(id){
     try{
       const { data:cotacao, error:cotErr } = await supabase.from('cotacoes').select('*,fornecedores(nome)').eq('id',id).single(); if(cotErr) throw cotErr;
       const { data:itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
@@ -518,8 +515,7 @@ const UI = {
       });
       this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
       this.quotationDetailBody.innerHTML = html;
-      // open as compact detail panel (avoid overlay conflicts)
-      this.openDetailPanel();
+      this.detailPanelBackdrop.classList.remove('hidden');
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
   },
 
@@ -532,7 +528,7 @@ const UI = {
 
       document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
       this.renderRecebimentoItems(itens, id);
-      this.recebimentoPanelBackdrop.classList.remove('hidden');
+      this.recebimentoPanelBackdrop?.classList.remove('hidden');
     } catch (e) {
       console.error('Erro ao abrir painel de recebimento', e);
       alert('Não foi possível carregar os dados para recebimento.');
@@ -591,11 +587,7 @@ const UI = {
   },
 
   closeDetailPanel(){
-    this.quotationDetailModal.classList.add('hidden');
-  },
-
-  openDetailPanel(){
-    this.quotationDetailModal.classList.remove('hidden');
+    this.detailPanelBackdrop.classList.add('hidden');
   },
 
   async handleProductForm(e){
