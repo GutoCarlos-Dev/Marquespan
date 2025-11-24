@@ -1,3 +1,5 @@
+import { supabase } from './supabase.js';
+
 document.addEventListener('DOMContentLoaded', function() {
   // Carregar o menu
   fetch('menu.html')
@@ -53,48 +55,42 @@ function closeSidebarOnClickOutside(event) {
   }
 }
 
-function controlarMenuPorNivel(nivel) {
+async function controlarMenuPorNivel(nivel) {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
 
   const nav = sidebar.querySelector('nav');
   if (!nav) return;
 
-  // Esconder todos os links inicialmente
   const allLinks = nav.querySelectorAll('a');
-  allLinks.forEach(link => link.style.display = 'none');
-
   const allGroups = nav.querySelectorAll('.menu-group');
+
+  // Esconde tudo por padrão
+  allLinks.forEach(link => link.style.display = 'none');
   allGroups.forEach(group => group.style.display = 'none');
 
-  // Define quais links e grupos cada perfil pode ver.
-  const permissoes = {
-    // Acesso visual total para todos os níveis.
-    estoque: 'all',
-    compras: 'all',
-    administrador: 'all', // Administrador pode ver tudo
-    default: [
-      'a[href="dashboard.html"]',
-      'a[href="index.html"]'
-    ]
-  };
-
   const nivelAtual = nivel.toLowerCase();
-  const linksPermitidos = permissoes[nivelAtual] || permissoes.default;
 
-  if (linksPermitidos === 'all') {
-    // Mostra tudo para os perfis com permissão 'all'
-    allLinks.forEach(link => link.style.display = 'block');
-    allGroups.forEach(group => group.style.display = 'block');
-  } else {
-    // Outros perfis
-    linksPermitidos.forEach(seletor => {
-      const link = nav.querySelector(seletor);
-      if (link) {
-        link.style.display = 'block';
-        const parentGroup = link.closest('.menu-group');
-        if (parentGroup) parentGroup.style.display = 'block';
-      }
-    });
+  // Busca as permissões do banco de dados
+  const { data, error } = await supabase
+    .from('nivel_permissoes')
+    .select('paginas_permitidas')
+    .eq('nivel', nivelAtual)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Erro ao buscar permissões do menu:', error);
+    return;
   }
+
+  const paginasPermitidas = data ? data.paginas_permitidas : [];
+
+  paginasPermitidas.forEach(paginaHref => {
+    const link = nav.querySelector(`a[href="${paginaHref}"]`);
+    if (link) {
+      link.style.display = 'block';
+      const parentGroup = link.closest('.menu-group');
+      if (parentGroup) parentGroup.style.display = 'block';
+    }
+  });
 }

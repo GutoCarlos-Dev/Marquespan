@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurar Permissões - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    .permissoes-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+    .niveis-lista { list-style: none; padding: 0; margin: 0; }
+    .niveis-lista li { padding: 10px; cursor: pointer; border-radius: 8px; }
+    .niveis-lista li:hover { background-color: #f0f0f0; }
+    .niveis-lista li.active { background-color: var(--brand); color: white; font-weight: bold; }
+    .paginas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .pagina-item { display: flex; align-items: center; gap: 8px; background: #f9f9f9; padding: 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-content">
+      <header class="header">🔑 Configurar Permissões de Acesso</header>
+
+      <div class="card permissoes-container">
+        <div>
+          <h3>Níveis de Usuário</h3>
+          <ul id="lista-niveis" class="niveis-lista">
+            <!-- Níveis serão carregados aqui -->
+          </ul>
+        </div>
+        <div>
+          <h3>Páginas Acessíveis para: <span id="nivel-selecionado" style="color: var(--brand);"></span></h3>
+          <div id="grid-paginas" class="paginas-grid">
+            <!-- Checkboxes das páginas serão carregados aqui -->
+          </div>
+          <button id="btnSalvarPermissoes" class="btn-primary" style="margin-top: 20px;">Salvar Permissões</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <script src="./script/menu.js" defer></script>
+  <script type="module" src="script/permissoes.js"></script>
+</body>
+</html>
