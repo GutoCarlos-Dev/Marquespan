@@ -417,6 +417,16 @@ const UI = {
       if (this.editingQuotationId) {
         // Não é ideal deletar em cascata pelo JS, mas para este fluxo é uma solução.
         // O ideal seria uma stored procedure no Supabase.
+
+        // ANTES de apagar, verifica se o status era 'Recebido' para reverter o estoque.
+        const { data: oldCotacao } = await supabase.from('cotacoes').select('status').eq('id', this.editingQuotationId).single();
+        if (oldCotacao && oldCotacao.status === 'Recebido') {
+          console.log(`Revertendo estoque para a cotação ${this.editingQuotationId}...`);
+          await supabase.from('recebimentos').delete().eq('id_cotacao', this.editingQuotationId);
+          alert('Atenção: O lançamento de estoque anterior foi revertido. O status da cotação voltará para "Aprovada" para que um novo recebimento possa ser feito.');
+        }
+
+        // O ideal seria uma stored procedure no Supabase.
         await supabase.from('cotacao_itens').delete().eq('id_cotacao', this.editingQuotationId);
         await supabase.from('cotacao_orcamentos').delete().eq('id_cotacao', this.editingQuotationId);
         // orcamento_item_precos são deletados em cascata com cotacao_orcamentos
@@ -424,7 +434,12 @@ const UI = {
 
       const userIdent = this._getCurrentUser()?.nome || 'Sistema';
       // inserir cotacao: não definimos data_cotacao aqui para garantir que o servidor (DB) use now() configurado no schema.
-      const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor };
+      const cotacaoPayload = { 
+        codigo_cotacao: code, 
+        status: 'Pendente', // Por padrão, volta para pendente.
+        id_fornecedor_vencedor:idFornecedorVencedor, 
+        valor_total_vencedor:valorTotalVencedor 
+      };
       if(userIdent) cotacaoPayload.usuario = userIdent;
 
       let cot;
