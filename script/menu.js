@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 document.addEventListener('DOMContentLoaded', function() {
   // Carregar o menu
   fetch('menu.html')
@@ -55,48 +53,43 @@ function closeSidebarOnClickOutside(event) {
   }
 }
 
-async function controlarMenuPorNivel(nivel) {
+function controlarMenuPorNivel(nivel) {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
 
   const nav = sidebar.querySelector('nav');
   if (!nav) return;
 
-  const allLinks = nav.querySelectorAll('a');
-  const allGroups = nav.querySelectorAll('.menu-group');
+  const allLinks = nav.querySelectorAll('a, .menu-group');
+  allLinks.forEach(el => el.style.display = 'none'); // Esconde tudo por padrão
 
-  // Esconde tudo por padrão
-  allLinks.forEach(link => link.style.display = 'none');
-  allGroups.forEach(group => group.style.display = 'none');
+  // Links que todos os usuários veem
+  const linksComuns = ['a[href="dashboard.html"]', 'a[href="index.html"]'];
+  linksComuns.forEach(sel => {
+    const el = nav.querySelector(sel);
+    if (el) el.style.display = 'block';
+  });
 
   const nivelAtual = nivel.toLowerCase();
 
-  // Busca as permissões do banco de dados
-  try {
-    const { data, error } = await supabase.from('nivel_permissoes').select('paginas_permitidas').eq('nivel', nivelAtual).single();
+  // Lógica de permissão hardcoded
+  switch (nivelAtual) {
+    case 'administrador':
+      // Mostra todos os links e grupos
+      allLinks.forEach(el => el.style.display = 'block');
+      break;
 
-    // Se houver um erro (ex: 406 Not Acceptable) ou se não houver dados
-    if (error || !data) {
-      console.warn(`Permissões não encontradas para o nível "${nivelAtual}". Erro:`, error?.message);
-      // REGRA DE SEGURANÇA: Se o usuário for administrador, libera tudo mesmo em caso de erro.
-      if (nivelAtual === 'administrador') {
-        console.log("Fallback: Liberando acesso total para o administrador.");
-        allLinks.forEach(link => link.style.display = 'block');
-        allGroups.forEach(group => group.style.display = 'block');
-      }
-      return; // Para outros usuários, não mostra nada.
-    }
+    case 'estoque':
+      // Mostra os grupos de Estoque e Compras
+      nav.querySelector('.menu-group:has(a[href="estoque_geral.html"])').style.display = 'block';
+      nav.querySelector('.menu-group:has(a[href="compras.html"])').style.display = 'block';
+      break;
 
-    const paginasPermitidas = data.paginas_permitidas || [];
-    paginasPermitidas.forEach(paginaHref => {
-      const link = nav.querySelector(`a[href="${paginaHref}"]`);
-      if (link) {
-        link.style.display = 'block';
-        const parentGroup = link.closest('.menu-group');
-        if (parentGroup) parentGroup.style.display = 'block';
-      }
-    });
-  } catch (e) {
-    console.error("Erro crítico ao controlar o menu:", e);
+    case 'compras':
+      // Mostra apenas o grupo de Compras
+      nav.querySelector('.menu-group:has(a[href="compras.html"])').style.display = 'block';
+      break;
+
+    // Outros níveis não veem menus específicos por padrão
   }
 }
