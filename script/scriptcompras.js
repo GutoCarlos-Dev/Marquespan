@@ -358,16 +358,7 @@ const UI = {
     if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
 
     try{
-      // obter usuário atual do localStorage (fluxo de login custom do projeto) ou do supabase.auth
-      let userIdent = null;
-      try{
-        const local = localStorage.getItem('usuarioLogado');
-        if(local){ const u = JSON.parse(local); if(u && (u.nome || u.email || u.id)) userIdent = u.nome || u.email || u.id; }
-      }catch(_){ /* ignore */ }
-      if(!userIdent){
-        try{ const userRes = await supabase.auth.getUser?.(); if(userRes && userRes.data && userRes.data.user) userIdent = userRes.data.user.email || userRes.data.user.id; else if(userRes && userRes.user) userIdent = userRes.user.email || userRes.user.id }catch(_){ userIdent = null }
-      }
-
+      const userIdent = this._getCurrentUser()?.nome || 'Sistema';
       // inserir cotacao: não definimos data_cotacao aqui para garantir que o servidor (DB) use now() configurado no schema.
       const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor };
       if(userIdent) cotacaoPayload.usuario = userIdent;
@@ -435,8 +426,8 @@ const UI = {
       if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`; // Corrigido: &lt; e &gt;
 
       // Obter o nível do usuário logado para controlar a visibilidade dos botões
-      const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+      const usuarioLogado = this._getCurrentUser();
+      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
 
       data.forEach(c=>{ // Corrigido: &gt; para >
@@ -540,6 +531,15 @@ const UI = {
     }
 
     this.recebimentoSection.classList.remove('hidden');
+  },
+
+  _getCurrentUser() {
+    try {
+      const usuario = localStorage.getItem('usuarioLogado');
+      return usuario ? JSON.parse(usuario) : null;
+    } catch (e) {
+      return null;
+    }
   },
 
   closeModal(){
