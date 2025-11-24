@@ -763,7 +763,7 @@ const UI = {
     const notaFiscal = document.getElementById('notaFiscalRecebimento').value.trim();
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
-      const idProduto = parseInt(div.dataset.itemId);
+      const idProduto = div.dataset.itemId; // Correção: Manter como string para ser compatível com UUID
       const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
       if(!isNaN(qtd) && qtd > 0) {
         itens.push({
@@ -791,7 +791,7 @@ const UI = {
 
         // 3. Recalcular o valor total com base nas quantidades recebidas
         let novoValorTotal = 0;
-        itens.forEach(itemRecebido => {
+        itens.forEach(itemRecebido => { // itemRecebido.id_produto é uma string aqui
           const precoUnitario = precosMap.get(itemRecebido.id_produto);
           if (precoUnitario) {
             novoValorTotal += itemRecebido.qtd_recebida * precoUnitario;
