@@ -334,7 +334,7 @@ const UI = {
         const cod = e.target.dataset.cod;
         const newQtd = parseInt(e.target.value, 10);
         if (newQtd > 0 && this.cart.updateCartItemQuantity(cod, newQtd)) {
-          this.renderCart(); // Re-renderiza para atualizar os preços nos cards de orçamento
+          this.updateAllTotals(); // Apenas atualiza os totais, sem limpar os campos de preço
         }
       });
     });
