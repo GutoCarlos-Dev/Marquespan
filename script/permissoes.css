@@ -1,0 +1,120 @@
+/* css/permissoes.css */
+
+.permissoes-container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 30px;
+}
+
+.permissoes-titulo-coluna {
+    font-size: 1.2rem;
+    color: var(--brand-dark);
+    border-bottom: 2px solid var(--brand-light);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.niveis-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.niveis-lista li {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 500;
+    color: #333;
+}
+
+.niveis-lista li:hover {
+    background-color: #e9f5e9;
+    color: var(--brand-dark);
+}
+
+.niveis-lista li.active {
+    background-color: var(--brand);
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 128, 0, 0.2);
+}
+
+.paginas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.paginas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+    background-color: #fdfdfd;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+}
+
+.pagina-item, .pagina-item-master {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    transition: box-shadow 0.2s ease;
+}
+
+.pagina-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.custom-checkbox {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--brand-light);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.custom-checkbox:checked {
+    background-color: var(--brand);
+    border-color: var(--brand-dark);
+}
+
+.custom-checkbox:checked::after {
+    content: '✔';
+    font-size: 14px;
+    color: white;
+    position: absolute;
+    top: -2px;
+    left: 2px;
+}
+
+.checkbox-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.loading-state {
+    color: #888;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .permissoes-container {
+        grid-template-columns: 1fr;
+    }
+}

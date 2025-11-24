@@ -1,22 +1,6 @@
 import { supabase } from './supabase.js';
 
-// Lista de todas as páginas disponíveis no sistema
-const PAGINAS_SISTEMA = [
-    { id: 'dashboard.html', nome: 'Dashboard' },
-    { id: 'veiculos.html', nome: 'Veículos' },
-    { id: 'incluir-manutencao.html', nome: 'Incluir Manutenção' },
-    { id: 'buscar-manutencao.html', nome: 'Buscar Manutenção' },
-    { id: 'usuarios.html', nome: 'Usuários' },
-    { id: 'cadastro-carregamento.html', nome: 'Cadastro Carregamento' },
-    { id: 'iniciar-carregamento.html', nome: 'Iniciar Carregamento' },
-    { id: 'importar-xlsx.html', nome: 'Importar XLSX' },
-    { id: 'buscar-carregamento.html', nome: 'Buscar Carregamento' },
-    { id: 'estoque-pneus.html', nome: 'Estoque de Pneus' },
-    { id: 'estoque_geral.html', nome: 'Estoque Geral' },
-    { id: 'compras.html', nome: 'Compras' },
-    { id: 'permissoes.html', nome: 'Configurar Permissões' },
-    { id: 'index.html', nome: 'Sair (Login)' }
-];
+let PAGINAS_SISTEMA = [];
 
 let nivelSelecionado = null;
 
@@ -28,22 +12,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    await carregarPaginasDisponiveis();
     await carregarNiveis();
-    renderizarGridPaginas();
 
     document.getElementById('btnSalvarPermissoes').addEventListener('click', salvarPermissoes);
+    document.getElementById('marcar-todos').addEventListener('change', marcarDesmarcarTodos);
 });
+
+/**
+ * Carrega dinamicamente as páginas disponíveis a partir do menu.html.
+ */
+async function carregarPaginasDisponiveis() {
+    try {
+        const response = await fetch('menu.html');
+        const menuHtml = await response.text();
+        const parser = new DOMParser();
+        const menuDoc = parser.parseFromString(menuHtml, 'text/html');
+        
+        const links = menuDoc.querySelectorAll('nav a');
+        const paginasUnicas = new Map();
+
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            // Usa o texto do span, ou o texto do link como fallback
+            const nome = link.querySelector('span')?.textContent.trim() || link.textContent.trim();
+            if (href && href !== '#' && !paginasUnicas.has(href)) {
+                paginasUnicas.set(href, { id: href, nome: nome });
+            }
+        });
+
+        PAGINAS_SISTEMA = Array.from(paginasUnicas.values());
+    } catch (error) {
+        console.error("Erro ao carregar páginas do menu:", error);
+        alert("Não foi possível carregar a lista de páginas do sistema.");
+    }
+}
 
 async function carregarNiveis() {
     const listaNiveisEl = document.getElementById('lista-niveis');
-    listaNiveisEl.innerHTML = '<li>Carregando...</li>';
+    listaNiveisEl.innerHTML = '<li class="loading-state">Carregando...</li>';
 
     const { data, error } = await supabase
         .from('usuarios')
         .select('nivel');
 
     if (error) {
-        listaNiveisEl.innerHTML = '<li>Erro ao carregar níveis</li>';
+        listaNiveisEl.innerHTML = '<li class="loading-state">Erro ao carregar níveis</li>';
         console.error(error);
         return;
     }
@@ -68,13 +82,13 @@ async function carregarNiveis() {
 function renderizarGridPaginas() {
     const gridPaginasEl = document.getElementById('grid-paginas');
     gridPaginasEl.innerHTML = '';
-
+    
     PAGINAS_SISTEMA.forEach(pagina => {
         const item = document.createElement('div');
         item.className = 'pagina-item';
         item.innerHTML = `
-            <input type="checkbox" id="chk-${pagina.id}" data-pagina-id="${pagina.id}">
-            <label for="chk-${pagina.id}">${pagina.nome}</label>
+            <input type="checkbox" id="chk-${pagina.id}" data-pagina-id="${pagina.id}" class="custom-checkbox">
+            <label for="chk-${pagina.id}" class="checkbox-label">${pagina.nome}</label>
         `;
         gridPaginasEl.appendChild(item);
     });
@@ -89,6 +103,7 @@ async function selecionarNivel(nivel) {
     });
 
     document.getElementById('nivel-selecionado').textContent = nivel;
+    renderizarGridPaginas(); // Renderiza o grid de páginas após selecionar o nível
 
     // Limpa todos os checkboxes
     document.querySelectorAll('#grid-paginas input[type="checkbox"]').forEach(chk => chk.checked = false);
@@ -134,4 +149,12 @@ async function salvarPermissoes() {
     } else {
         alert('✅ Permissões salvas com sucesso!');
     }
+}
+
+function marcarDesmarcarTodos(event) {
+    const isChecked = event.target.checked;
+    const checkboxes = document.querySelectorAll('#grid-paginas input[type="checkbox"]');
+    checkboxes.forEach(chk => {
+        chk.checked = isChecked;
+    });
 }

@@ -33,3 +33,6 @@
 
 /* 🛒 Estilos específicos da página de compras */
 @import url("stylecompras.css");
+
+/* 🔑 Estilos específicos da página de permissões */
+@import url("permissoes.css");
