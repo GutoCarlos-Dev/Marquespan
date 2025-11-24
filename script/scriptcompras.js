@@ -520,15 +520,17 @@ const UI = {
         // status select para permitir alteração e registro de data/usuário
         const statusSelectId = `status-select-${c.id}`;
         const initialStatus = c.status || 'Pendente';
+        const isRecebido = initialStatus === 'Recebido';
         const statusClass = `quotation-status-select status-${initialStatus}`;
-        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}"><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
+        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}" ${isRecebido ? 'disabled' : ''}><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
 
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
-        const btnEditarHtml = `<button class="btn-action btn-edit" data-id="${c.id}">Editar</button>`;
+        // O botão de editar só aparece se o status NÃO for 'Recebido'
+        const btnEditarHtml = !isRecebido ? `<button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
         tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
