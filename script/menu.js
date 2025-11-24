@@ -65,32 +65,26 @@ async function controlarMenuPorNivel(nivel) {
   const allLinks = nav.querySelectorAll('a');
   const allGroups = nav.querySelectorAll('.menu-group');
 
-  // Esconde tudo por padrão
-  allLinks.forEach(link => link.style.display = 'none');
-  allGroups.forEach(group => group.style.display = 'none');
+  // --- INÍCIO DA ALTERAÇÃO PARA TESTE ---
+  // Libera o acesso visual a todos os menus para qualquer usuário logado.
+  // Para reativar o sistema de permissões, remova estas 3 linhas
+  // e descomente o bloco de código abaixo.
+  allLinks.forEach(link => link.style.display = 'block');
+  allGroups.forEach(group => group.style.display = 'block');
+  // --- FIM DA ALTERAÇÃO PARA TESTE ---
 
-  const nivelAtual = nivel.toLowerCase();
-
-  // Busca as permissões do banco de dados
-  const { data, error } = await supabase
-    .from('nivel_permissoes')
-    .select('paginas_permitidas', { count: 'exact' })
-    .eq('nivel', nivelAtual)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('Erro ao buscar permissões do menu:', error);
-    return;
-  }
-
-  const paginasPermitidas = data ? data.paginas_permitidas : [];
-
-  paginasPermitidas.forEach(paginaHref => {
-    const link = nav.querySelector(`a[href="${paginaHref}"]`);
-    if (link) {
-      link.style.display = 'block';
-      const parentGroup = link.closest('.menu-group');
-      if (parentGroup) parentGroup.style.display = 'block';
-    }
-  });
+  /* CÓDIGO ORIGINAL DE PERMISSÕES (COMENTADO PARA TESTE)
+    const nivelAtual = nivel.toLowerCase();
+    const { data, error } = await supabase.from('nivel_permissoes').select('paginas_permitidas', { count: 'exact' }).eq('nivel', nivelAtual).single();
+    if (error && error.code !== 'PGRST116') { console.error('Erro ao buscar permissões do menu:', error); return; }
+    const paginasPermitidas = data ? data.paginas_permitidas : [];
+    paginasPermitidas.forEach(paginaHref => {
+      const link = nav.querySelector(`a[href="${paginaHref}"]`);
+      if (link) {
+        link.style.display = 'block';
+        const parentGroup = link.closest('.menu-group');
+        if (parentGroup) parentGroup.style.display = 'block';
+      }
+    });
+  */
 }
