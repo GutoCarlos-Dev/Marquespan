@@ -64,24 +64,14 @@ function controlarMenuPorNivel(nivel) {
   const allLinks = nav.querySelectorAll('a');
   allLinks.forEach(link => link.style.display = 'none');
 
-  // Esconder todos os grupos de menu
   const allGroups = nav.querySelectorAll('.menu-group');
   allGroups.forEach(group => group.style.display = 'none');
 
   // Define quais links e grupos cada perfil pode ver.
   const permissoes = {
-    estoque: [
-      'a[href="dashboard.html"]',
-      'a[href="estoque-pneus.html"]',
-      'a[href="estoque_geral.html"]',
-      'a[href="compras.html"]', // O próprio scriptcompras.js já limita as abas internas
-      'a[href="index.html"]'
-    ],
-    compras: [
-      'a[href="dashboard.html"]',
-      'a[href="compras.html"]',
-      'a[href="index.html"]'
-    ],
+    // Acesso visual total para todos os níveis.
+    estoque: 'all',
+    compras: 'all',
     administrador: 'all', // Administrador pode ver tudo
     default: [
       'a[href="dashboard.html"]',
@@ -93,7 +83,7 @@ function controlarMenuPorNivel(nivel) {
   const linksPermitidos = permissoes[nivelAtual] || permissoes.default;
 
   if (linksPermitidos === 'all') {
-    // Administrador vê tudo
+    // Mostra tudo para os perfis com permissão 'all'
     allLinks.forEach(link => link.style.display = 'block');
     allGroups.forEach(group => group.style.display = 'block');
   } else {
@@ -102,7 +92,6 @@ function controlarMenuPorNivel(nivel) {
       const link = nav.querySelector(seletor);
       if (link) {
         link.style.display = 'block';
-        // Se o link estiver dentro de um grupo, mostra o grupo
         const parentGroup = link.closest('.menu-group');
         if (parentGroup) parentGroup.style.display = 'block';
       }
