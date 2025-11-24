@@ -81,26 +81,7 @@ const UI = {
     this._fornecedoresSort = { field: 'nome', ascending: true };
     this.renderProdutosGrid(); // carregar produtos no início
     this.renderFornecedoresGrid(); // carregar fornecedores no início
-
-    // Verifica o nível do usuário para definir a aba inicial e visibilidade das outras
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-    const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-
-    if (nivelUsuario === 'estoque') {
-      this.showSection('sectionCotacoesSalvas'); // Inicia na aba de cotações salvas
-      // Oculta as outras abas do menu de compras
-      document.querySelector('.painel-btn[data-secao="sectionRealizarCotacoes"]')?.classList.add('hidden');
-      document.querySelector('.painel-btn[data-secao="sectionCadastrarProdutos"]')?.classList.add('hidden');
-      document.querySelector('.painel-btn[data-secao="sectionCadastrarFornecedor"]')?.classList.add('hidden');
-      // Ativar o botão de Cotações Salvas
-      const btnCotacoesSalvas = document.querySelector('.painel-btn[data-secao="sectionCotacoesSalvas"]');
-      if (btnCotacoesSalvas) {
-        btnCotacoesSalvas.classList.add('active');
-        btnCotacoesSalvas.setAttribute('aria-selected', 'true');
-      }
-    } else {
-      this.showSection('sectionRealizarCotacoes'); // Comportamento padrão para outros usuários
-    }
+    this.setupUserAccess();
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } }); // Corrigido: &gt; para >
   },
@@ -224,6 +205,46 @@ const UI = {
     if(id==='sectionCadastrarFornecedor'){ this.renderFornecedoresGrid(); }
 
 
+  },
+
+  setupUserAccess() {
+    const usuario = this._getCurrentUser();
+    const nivel = usuario ? usuario.nivel.toLowerCase() : 'default';
+    const menuCompras = document.getElementById('menu-compras');
+    if (!menuCompras) return;
+
+    const botoes = menuCompras.querySelectorAll('.painel-btn');
+    let abaInicial = 'sectionRealizarCotacoes'; // Padrão
+
+    const permissoes = {
+      estoque: ['sectionCotacoesSalvas'],
+      compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
+      administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
+      default: []
+    };
+
+    const abasPermitidas = permissoes[nivel] || permissoes.default;
+
+    botoes.forEach(btn => {
+      const secao = btn.getAttribute('data-secao');
+      if (abasPermitidas.includes(secao)) {
+        btn.style.display = 'inline-block';
+      } else {
+        btn.style.display = 'none';
+      }
+    });
+
+    if (nivel === 'estoque') {
+      abaInicial = 'sectionCotacoesSalvas';
+    }
+
+    // Ativa a aba inicial correta
+    const btnParaAtivar = menuCompras.querySelector(`[data-secao="${abaInicial}"]`);
+    if (btnParaAtivar) {
+      btnParaAtivar.click();
+    } else if (abasPermitidas.length > 0) {
+      menuCompras.querySelector(`[data-secao="${abasPermitidas[0]}"]`)?.click();
+    }
   },
 
   async populateProductDropdown(){
