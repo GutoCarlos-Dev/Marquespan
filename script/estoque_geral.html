@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque Geral - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/style_estoque.css" /> <!-- Pode reutilizar ou criar um novo CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div class="main-content">
+      <header class="header">📦 Estoque Geral</header>
+
+      <div class="card">
+        <div class="filtros-container">
+          <input type="text" id="filtro-codigo" placeholder="Buscar por Código...">
+          <input type="text" id="filtro-nome" placeholder="Buscar por Nome...">
+          <button id="btn-buscar-estoque" class="btn-primary">Buscar</button>
+          <button id="btn-limpar-filtros" class="btn-muted">Limpar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid-container">
+          <div class="grid-header">
+            <div>Código</div>
+            <div>Nome do Produto</div>
+            <div>Unidade</div>
+            <div>Quantidade em Estoque</div>
+          </div>
+          <div id="grid-estoque-body" class="grid-body">
+            <!-- Dados serão carregados aqui -->
+          </div>
+        </div>
+        <div class="grid-footer">
+          Total de Itens: <span id="total-itens">0</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <script src="./script/menu.js" defer></script>
+  <script type="module" src="script/estoque_geral.js"></script>
+</body>
+</html>
