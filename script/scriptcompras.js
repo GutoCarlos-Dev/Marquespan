@@ -208,7 +208,10 @@ const UI = {
     if(el) el.classList.remove('hidden');
     
     // Inicializa os dados da aba quando ela é aberta
-    if(id==='sectionRealizarCotacoes'){ this.generateNextQuotationCode(); this.populateProductDropdown(); this.populateSupplierDropdowns(); }
+    // Apenas gera um novo código se NÃO estiver em modo de edição
+    if(id==='sectionRealizarCotacoes' && !this.editingQuotationId){ 
+      this.generateNextQuotationCode(); this.populateProductDropdown(); this.populateSupplierDropdowns(); 
+    }
     if(id==='sectionCotacoesSalvas'){ this.renderSavedQuotations(); }
     if(id==='sectionCadastrarProdutos'){ this.renderProdutosGrid(); }
     if(id==='sectionCadastrarFornecedor'){ this.renderFornecedoresGrid(); }
