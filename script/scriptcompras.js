@@ -403,7 +403,12 @@ const UI = {
   async handleRegisterQuotation(){
     if(this.cart.items.length===0) return alert('Adicione produtos para registrar a cotação');
     const code = this.quotationCode.value.trim(); if(!code) return alert('Código não gerado');
+
+    // Validação: Exige que um vencedor seja selecionado antes de registrar.
     const winner = document.querySelector('input[name="empresaVencedora"]:checked');
+    if (!winner) {
+      return alert('Por favor, selecione um fornecedor como "Vencedor" antes de registrar a cotação.');
+    }
     let idFornecedorVencedor=null, valorTotalVencedor=null;
     if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
 
