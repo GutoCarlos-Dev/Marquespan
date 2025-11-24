@@ -174,22 +174,6 @@
         </div>
       </section>
 
-      <!-- SEÇÃO DE RECEBIMENTO (inicialmente oculta) -->
-      <section id="recebimentoSection" class="section hidden">
-        <div class="card">
-          <h2>Recebimento de Itens</h2>
-          <p>Confirme as quantidades recebidas para a cotação.</p>
-          <div id="recebimentoItems">
-            <!-- Itens para recebimento serão populados aqui -->
-          </div>
-          <div class="form-group">
-            <label for="notaFiscalRecebimento">Nota Fiscal:</label>
-            <input type="text" id="notaFiscalRecebimento" placeholder="Digite o número da NF">
-          </div>
-          <button id="btnSalvarRecebimento" class="btn-primary">Salvar Recebimento</button>
-        </div>
-      </section>
-
     </div>
   </div>
 
@@ -224,6 +208,27 @@
       </div>
       <div id="quotationDetailBody" class="modal-body">
         <!-- Conteúdo será preenchido dinamicamente pelo JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Recebimento -->
+  <div id="recebimentoModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="recebimentoModalTitle">Recebimento de Itens</h2>
+        <button class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <div id="recebimentoModalBody" class="modal-body">
+        <p>Confirme as quantidades recebidas para a cotação.</p>
+        <div id="recebimentoItems">
+          <!-- Itens para recebimento serão populados aqui -->
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label for="notaFiscalRecebimento">Nota Fiscal:</label>
+          <input type="text" id="notaFiscalRecebimento" placeholder="Digite o número da NF">
+        </div>
+        <button id="btnSalvarRecebimento" class="btn-primary" style="margin-top: 15px;">Salvar Recebimento</button>
       </div>
     </div>
   </div>

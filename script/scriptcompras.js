@@ -139,8 +139,10 @@ const UI = {
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
     this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
-    this.recebimentoSection = document.getElementById('recebimentoSection');
+    // Cache para o novo modal de recebimento
+    this.recebimentoModal = document.getElementById('recebimentoModal');
     this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
+    this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
   },
 
   bind(){
@@ -181,6 +183,10 @@ const UI = {
       this.quotationDetailModal.querySelector('.close-button').addEventListener('click', ()=>this.quotationDetailModal.classList.add('hidden')); // Corrigido: &gt; para >
       this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') }); // Corrigido: &gt; para >
     }
+
+    // Novo modal de recebimento
+    this.recebimentoModal?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoModal());
+    this.recebimentoModal?.addEventListener('click', e=>{ if(e.target===this.recebimentoModal) this.closeRecebimentoModal() });
 
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
@@ -431,6 +437,7 @@ const UI = {
       const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
 
       data.forEach(c=>{ // Corrigido: &gt; para >
+        const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && c.status === 'Aprovada';
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
@@ -445,7 +452,8 @@ const UI = {
         const usuarioCell = c.usuario || 'N/D';
 
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -455,6 +463,7 @@ const UI = {
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
+      this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoModal(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); })); // Corrigido: &gt; para >
     }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`} // Corrigido: &lt; e &gt;
@@ -473,9 +482,6 @@ const UI = {
 
       let html = `<p><strong>Data/Hora:</strong> ${dataDisplay}</p><p><strong>Status:</strong> ${statusBadge}</p><p><strong>Usuário:</strong> ${usuarioDisplay}</p>${notaFiscalDisplay}<hr><h3>Orçamentos</h3>`; // Corrigido: &lt; e &gt;
       
-      // Limpa a seção de recebimento antes de popular
-      this.recebimentoSection.classList.add('hidden');
-
       orcamentos.forEach(o=>{  // Corrigido: &gt; para >
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
         const freteDisplay = o.valor_frete ? `<p><strong>Frete:</strong> R$ ${parseFloat(o.valor_frete).toFixed(2)}</p>` : '';
@@ -491,46 +497,54 @@ const UI = {
       this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
       this.quotationDetailBody.innerHTML = html;
       // open as compact detail panel (avoid overlay conflicts)
-
-      // Lógica para exibir a seção de recebimento
-      if (cotacao.status === 'Aprovada') {
-        this.renderRecebimentoItems(itens, cotacao.id);
-      }
-
       this.openDetailPanel();
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
   },
 
+  async openRecebimentoModal(id) {
+    try {
+      const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id, codigo_cotacao').eq('id', id).single();
+      if (cotErr) throw cotErr;
+
+      const { data: itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
+
+      document.getElementById('recebimentoModalTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
+      this.renderRecebimentoItems(itens, id);
+      this.recebimentoModal.classList.remove('hidden');
+    } catch (e) {
+      console.error('Erro ao abrir modal de recebimento', e);
+      alert('Não foi possível carregar os dados para recebimento.');
+    }
+  },
+
   renderRecebimentoItems(itens, cotacaoId) {
-    const container = document.getElementById('recebimentoItems');
-    if (!container) return;
-    container.innerHTML = '';
-    container.dataset.cotacaoId = cotacaoId;
+    if (!this.recebimentoItemsContainer) return;
+    this.recebimentoItemsContainer.innerHTML = '';
+    this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
 
     itens.forEach(item => {
       const div = document.createElement('div');
       div.className = 'recebimento-item';
       div.dataset.itemId = item.produtos.id;
       div.innerHTML = `
-        <label>${item.produtos.nome} (Qtd. Pedido: ${item.quantidade})</label>
+        <label for="qtd-recebida-${item.produtos.id}">${item.produtos.nome} (Pedido: ${item.quantidade})</label>
         <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
       `;
-      container.appendChild(div);
+      this.recebimentoItemsContainer.appendChild(div);
     });
 
     // Controle de visibilidade do botão Salvar
     const btnSalvar = document.getElementById('btnSalvarRecebimento');
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuarioLogado = this._getCurrentUser();
     const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
     if (btnSalvar) { // Verifica se o botão existe antes de manipulá-lo
-      if (['estoque', 'administrador'].includes(nivelUsuario)) {
+      if (['estoque', 'administrador', 'compras'].includes(nivelUsuario)) {
         btnSalvar.style.display = 'block'; // Mostra o botão
       } else {
         btnSalvar.style.display = 'none'; // Oculta o botão para outros níveis
       }
     }
 
-    this.recebimentoSection.classList.remove('hidden');
   },
 
   _getCurrentUser() {
@@ -548,6 +562,10 @@ const UI = {
 
   closeImportPanel(){
     this.importPanel.classList.add('hidden');
+  },
+
+  closeRecebimentoModal() {
+    this.recebimentoModal.classList.add('hidden');
   },
 
   closeDetailPanel(){
@@ -727,7 +745,8 @@ const UI = {
   },
 
   async salvarRecebimento(){
-    const cotacaoId = document.getElementById('recebimentoItems').dataset.cotacaoId;
+    const cotacaoId = this.recebimentoItemsContainer.dataset.cotacaoId;
+    const notaFiscal = document.getElementById('notaFiscalRecebimento').value.trim();
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
       const idProduto = div.dataset.itemId;
@@ -744,10 +763,13 @@ const UI = {
     if(itens.length) {
       try {
         await SupabaseService.insert('recebimentos', itens);
-        // Atualizar o status da cotação para "Recebido"
-        await SupabaseService.update('cotacoes', {status: 'Recebido'}, {field:'id',value:cotacaoId});
+        
+        const updatePayload = { status: 'Recebido' };
+        if (notaFiscal) updatePayload.nota_fiscal = notaFiscal;
+
+        await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
         alert('Recebimento salvo com sucesso!');
-        this.closeDetailPanel();
+        this.closeRecebimentoModal();
         // Atualizar a lista de cotações salvas
         this.renderSavedQuotations();
       } catch(e) {
