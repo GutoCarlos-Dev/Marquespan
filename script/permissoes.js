@@ -62,7 +62,7 @@ async function carregarNiveis() {
         return;
     }
 
-    const niveisUnicos = [...new Set(data.map(u => u.nivel))].sort();
+    const niveisUnicos = [...new Set(data.map(u => u.nivel.toLowerCase()))].sort();
     listaNiveisEl.innerHTML = '';
 
     niveisUnicos.forEach(nivel => {
@@ -112,7 +112,7 @@ async function selecionarNivel(nivel) {
     const { data, error } = await supabase
         .from('nivel_permissoes')
         .select('paginas_permitidas')
-        .eq('nivel', nivel)
+        .eq('nivel', nivel.toLowerCase())
         .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
@@ -141,7 +141,7 @@ async function salvarPermissoes() {
 
     const { error } = await supabase
         .from('nivel_permissoes')
-        .upsert({ nivel: nivelSelecionado, paginas_permitidas: paginasPermitidas });
+        .upsert({ nivel: nivelSelecionado.toLowerCase(), paginas_permitidas: paginasPermitidas });
 
     if (error) {
         alert('❌ Erro ao salvar permissões.');

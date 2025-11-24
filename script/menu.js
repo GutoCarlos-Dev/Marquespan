@@ -74,7 +74,7 @@ async function controlarMenuPorNivel(nivel) {
   // Busca as permissões do banco de dados
   const { data, error } = await supabase
     .from('nivel_permissoes')
-    .select('paginas_permitidas')
+    .select('paginas_permitidas', { count: 'exact' })
     .eq('nivel', nivelAtual)
     .single();
 
