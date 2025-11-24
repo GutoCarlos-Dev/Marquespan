@@ -150,7 +150,10 @@ async function salvarPermissoes() {
 
     const { error } = await supabase
         .from('nivel_permissoes')
-        .upsert({ nivel: nivelSelecionado.toLowerCase(), paginas_permitidas: paginasPermitidas });
+        .upsert(
+            { nivel: nivelSelecionado.toLowerCase(), paginas_permitidas: paginasPermitidas },
+            { onConflict: 'nivel' } // Garante que ele atualize se o nível já existir, ou crie se for novo.
+        );
 
     if (error) {
         alert('❌ Erro ao salvar permissões.');
