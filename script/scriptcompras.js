@@ -763,24 +763,53 @@ const UI = {
     const notaFiscal = document.getElementById('notaFiscalRecebimento').value.trim();
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
-      const idProduto = div.dataset.itemId;
+      const idProduto = parseInt(div.dataset.itemId);
       const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
       if(!isNaN(qtd) && qtd > 0) {
         itens.push({
           id_cotacao: cotacaoId,
           id_produto: idProduto,
           qtd_recebida: qtd,
-          data_recebimento: new Date().toISOString()
+          data_recebimento: new Date().toISOString(),
         });
       }
     });
     if(itens.length) {
       try {
+        // 1. Buscar dados da cotação e do orçamento vencedor
+        const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id_fornecedor_vencedor').eq('id', cotacaoId).single();
+        if (cotErr || !cotacao) throw new Error('Cotação não encontrada para recalcular valores.');
+
+        const { data: orcamento, error: orcErr } = await supabase.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
+        if (orcErr || !orcamento) throw new Error('Orçamento vencedor não encontrado.');
+
+        // 2. Buscar os preços unitários dos itens do orçamento vencedor
+        const { data: precos, error: precosErr } = await supabase.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
+        if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
+
+        const precosMap = new Map(precos.map(p => [p.id_produto, parseFloat(p.preco_unitario)]));
+
+        // 3. Recalcular o valor total com base nas quantidades recebidas
+        let novoValorTotal = 0;
+        itens.forEach(itemRecebido => {
+          const precoUnitario = precosMap.get(itemRecebido.id_produto);
+          if (precoUnitario) {
+            novoValorTotal += itemRecebido.qtd_recebida * precoUnitario;
+          }
+        });
+
+        // 4. Adicionar o frete ao novo total
+        const frete = parseFloat(orcamento.valor_frete) || 0;
+        novoValorTotal += frete;
+
+        // 5. Salvar os itens recebidos na tabela de log 'recebimentos'
         await SupabaseService.insert('recebimentos', itens);
         
-        const updatePayload = { status: 'Recebido' };
+        // 6. Preparar o payload para atualizar a cotação principal
+        const updatePayload = { status: 'Recebido', valor_total_vencedor: novoValorTotal };
         if (notaFiscal) updatePayload.nota_fiscal = notaFiscal;
 
+        // 7. Atualizar a cotação com o novo status e o valor recalculado
         await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
         alert('Recebimento salvo com sucesso!');
         this.closeRecebimentoPanel();
