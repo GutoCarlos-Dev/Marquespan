@@ -890,36 +890,47 @@ const UI = {
     if(itens.length) {
       try {
         // 1. Buscar dados da cotação e do orçamento vencedor
-        const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id_fornecedor_vencedor').eq('id', cotacaoId).single();
+        const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor').eq('id', cotacaoId).single();
         if (cotErr || !cotacao) throw new Error('Cotação não encontrada para recalcular valores.');
 
-        const { data: orcamento, error: orcErr } = await supabase.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
-        if (orcErr || !orcamento) throw new Error('Orçamento vencedor não encontrado.');
+        let novoValorTotal = cotacao.valor_total_vencedor; // Mantém o valor original por padrão
 
-        // 2. Buscar os preços unitários dos itens do orçamento vencedor
-        const { data: precos, error: precosErr } = await supabase.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
-        if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
+        // Apenas recalcula o valor se houver um fornecedor vencedor definido
+        if (cotacao.id_fornecedor_vencedor) {
+          const { data: orcamento, error: orcErr } = await supabase.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
+          
+          // Se houver um orçamento vencedor, prossiga com o recálculo
+          if (orcamento && !orcErr) {
+            const { data: precos, error: precosErr } = await supabase.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
+            if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
 
-        const precosMap = new Map(precos.map(p => [String(p.id_produto).trim(), parseFloat(p.preco_unitario)]));
+            const precosMap = new Map(precos.map(p => [String(p.id_produto).trim(), parseFloat(p.preco_unitario)]));
+            
+            let valorCalculado = 0;
+            itens.forEach(itemRecebido => {
+              const precoUnitario = precosMap.get(String(itemRecebido.id_produto).trim());
+              if (precoUnitario) {
+                valorCalculado += itemRecebido.qtd_recebida * precoUnitario;
+              }
+            });
 
-        // 3. Recalcular o valor total com base nas quantidades recebidas
-        let novoValorTotal = 0;
-        itens.forEach(itemRecebido => { // itemRecebido.id_produto é uma string aqui
-          const precoUnitario = precosMap.get(String(itemRecebido.id_produto).trim());
-          if (precoUnitario) {
-            novoValorTotal += itemRecebido.qtd_recebida * precoUnitario;
+            const frete = parseFloat(orcamento.valor_frete) || 0;
+            valorCalculado += frete;
+            novoValorTotal = valorCalculado; // Atualiza o valor total com o novo cálculo
           }
-        });
-
-        // 4. Adicionar o frete ao novo total
-        const frete = parseFloat(orcamento.valor_frete) || 0;
-        novoValorTotal += frete;
+        } else {
+          console.warn(`Cotação ${cotacaoId} não possui fornecedor vencedor. O valor total não será recalculado.`);
+        }
 
         // 5. Salvar os itens recebidos na tabela de log 'recebimentos'
         await SupabaseService.insert('recebimentos', itens);
         
         // 6. Preparar o payload para atualizar a cotação principal
-        const updatePayload = { status: 'Recebido', valor_total_vencedor: novoValorTotal };
+        const updatePayload = { status: 'Recebido' };
+        // Apenas atualiza o valor se ele foi recalculado (ou seja, se novoValorTotal não for nulo)
+        if (novoValorTotal !== null) {
+          updatePayload.valor_total_vencedor = novoValorTotal;
+        }
         if (notaFiscal) updatePayload.nota_fiscal = notaFiscal;
 
         // 7. Atualizar a cotação com o novo status e o valor recalculado
