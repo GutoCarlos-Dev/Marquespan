@@ -463,17 +463,18 @@ const UI = {
     }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
   },
 
-  clearQuotationForm(isEditing = false){ 
+  clearQuotationForm(){ 
     this.cart.clear(); 
     this.renderCart(); 
     for(let i=1;i<=3;i++){ 
       document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; 
     } 
     document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); 
-    this.editingQuotationId = null;
-    if (!isEditing) {
-      this.generateNextQuotationCode(); 
+    // Se não estivermos editando, geramos um novo código. Se estivermos, mantemos o campo como está até o próximo passo.
+    if (!this.editingQuotationId) {
+      this.generateNextQuotationCode();
     }
+    this.editingQuotationId = null; // Limpa o modo de edição
   },
 
   async generateNextQuotationCode(){
