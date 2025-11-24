@@ -120,8 +120,9 @@ const UI = {
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
     this.btnCloseQuotation = document.getElementById('btnCloseQuotation');
-    // Cache para o novo modal de recebimento
-    this.recebimentoModal = document.getElementById('recebimentoModal');
+    // Cache para o novo painel de recebimento
+    this.recebimentoPanelBackdrop = document.getElementById('recebimentoPanelBackdrop');
+    this.recebimentoPanel = document.getElementById('recebimentoPanel');
     this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
     this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
   },
@@ -165,9 +166,9 @@ const UI = {
       this.quotationDetailModal.addEventListener('click', e=>{ if(e.target===this.quotationDetailModal) this.quotationDetailModal.classList.add('hidden') }); // Corrigido: &gt; para >
     }
 
-    // Novo modal de recebimento
-    this.recebimentoModal?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoModal());
-    this.recebimentoModal?.addEventListener('click', e=>{ if(e.target===this.recebimentoModal) this.closeRecebimentoModal() });
+    // Novo painel de recebimento
+    this.recebimentoPanel?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoPanel());
+    this.recebimentoPanelBackdrop?.addEventListener('click', e=>{ if(e.target===this.recebimentoPanelBackdrop) this.closeRecebimentoPanel() });
 
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
@@ -484,7 +485,7 @@ const UI = {
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openQuotationDetailModal(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
-      this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoModal(e.target.dataset.id)));
+      this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoPanel(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); })); // Corrigido: &gt; para >
     }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`} // Corrigido: &lt; e &gt;
@@ -522,18 +523,18 @@ const UI = {
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
   },
 
-  async openRecebimentoModal(id) {
+  async openRecebimentoPanel(id) {
     try {
       const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id, codigo_cotacao').eq('id', id).single();
       if (cotErr) throw cotErr;
 
       const { data: itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
 
-      document.getElementById('recebimentoModalTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
+      document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
       this.renderRecebimentoItems(itens, id);
-      this.recebimentoModal.classList.remove('hidden');
+      this.recebimentoPanelBackdrop.classList.remove('hidden');
     } catch (e) {
-      console.error('Erro ao abrir modal de recebimento', e);
+      console.error('Erro ao abrir painel de recebimento', e);
       alert('Não foi possível carregar os dados para recebimento.');
     }
   },
@@ -585,8 +586,8 @@ const UI = {
     this.importPanel.classList.add('hidden');
   },
 
-  closeRecebimentoModal() {
-    this.recebimentoModal.classList.add('hidden');
+  closeRecebimentoPanel() {
+    this.recebimentoPanelBackdrop.classList.add('hidden');
   },
 
   closeDetailPanel(){
@@ -790,7 +791,7 @@ const UI = {
 
         await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
         alert('Recebimento salvo com sucesso!');
-        this.closeRecebimentoModal();
+        this.closeRecebimentoPanel();
         // Atualizar a lista de cotações salvas
         this.renderSavedQuotations();
       } catch(e) {

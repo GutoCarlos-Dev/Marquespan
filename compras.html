@@ -212,23 +212,23 @@
     </div>
   </div>
 
-  <!-- Modal de Recebimento -->
-  <div id="recebimentoModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="recebimentoModalTitle">Recebimento de Itens</h2>
-        <button class="close-button" aria-label="Fechar">&times;</button>
+  <!-- Painel Lateral de Recebimento -->
+  <div id="recebimentoPanelBackdrop" class="panel-backdrop hidden">
+    <div id="recebimentoPanel" class="panel-lateral" role="dialog" aria-modal="true">
+      <div class="panel-header">
+        <h2 id="recebimentoPanelTitle">Recebimento de Itens</h2>
+        <button class="close-button" aria-label="Fechar">×</button>
       </div>
-      <div id="recebimentoModalBody" class="modal-body">
+      <div class="panel-body">
         <p>Confirme as quantidades recebidas para a cotação.</p>
         <div id="recebimentoItems">
           <!-- Itens para recebimento serão populados aqui -->
         </div>
-        <div class="form-group" style="margin-top: 15px;">
+        <div class="form-group" style="margin-top: 20px;">
           <label for="notaFiscalRecebimento">Nota Fiscal:</label>
           <input type="text" id="notaFiscalRecebimento" placeholder="Digite o número da NF">
         </div>
-        <button id="btnSalvarRecebimento" class="btn-primary" style="margin-top: 15px;">Salvar Recebimento</button>
+        <button id="btnSalvarRecebimento" class="btn-primary" style="width: 100%; margin-top: 20px;">Salvar Recebimento</button>
       </div>
     </div>
   </div>
