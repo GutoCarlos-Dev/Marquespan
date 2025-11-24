@@ -81,6 +81,7 @@ const UI = {
     this._fornecedoresSort = { field: 'nome', ascending: true };
     this.renderProdutosGrid(); // carregar produtos no início
     this.renderFornecedoresGrid(); // carregar fornecedores no início
+    this.editingQuotationId = null; // Controla o modo de edição
     this.setupUserAccess();
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } }); // Corrigido: &gt; para >
@@ -383,6 +384,15 @@ const UI = {
     if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
 
     try{
+      // Se estiver editando, primeiro apaga os dados antigos relacionados
+      if (this.editingQuotationId) {
+        // Não é ideal deletar em cascata pelo JS, mas para este fluxo é uma solução.
+        // O ideal seria uma stored procedure no Supabase.
+        await supabase.from('cotacao_itens').delete().eq('id_cotacao', this.editingQuotationId);
+        await supabase.from('cotacao_orcamentos').delete().eq('id_cotacao', this.editingQuotationId);
+        // orcamento_item_precos são deletados em cascata com cotacao_orcamentos
+      }
+
       const userIdent = this._getCurrentUser()?.nome || 'Sistema';
       // inserir cotacao: não definimos data_cotacao aqui para garantir que o servidor (DB) use now() configurado no schema.
       const cotacaoPayload = { codigo_cotacao: code, status:'Pendente', id_fornecedor_vencedor:idFornecedorVencedor, valor_total_vencedor:valorTotalVencedor };
@@ -390,13 +400,18 @@ const UI = {
 
       let cot;
       try{
-        cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+        if (this.editingQuotationId) {
+          cot = await SupabaseService.update('cotacoes', cotacaoPayload, { field: 'id', value: this.editingQuotationId });
+        } else {
+          cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+        }
       }catch(err){
         // se falhar por causa de coluna inexistente para 'usuario', remover e tentar novamente
         const emsg = String(err?.message || err?.error || JSON.stringify(err)).toLowerCase();
         if(emsg.includes('column') && emsg.includes('usuario') && emsg.includes('does not exist')){
           delete cotacaoPayload.usuario;
-          cot = await SupabaseService.insert('cotacoes', cotacaoPayload);
+          if (this.editingQuotationId) { cot = await SupabaseService.update('cotacoes', cotacaoPayload, { field: 'id', value: this.editingQuotationId }); }
+          else { cot = await SupabaseService.insert('cotacoes', cotacaoPayload); }
         } else throw err;
       }
       const cotacaoId = cot[0].id;
@@ -422,12 +437,21 @@ const UI = {
         }
       }
 
-      alert('Cotação registrada com sucesso!');
+      alert(`Cotação ${this.editingQuotationId ? 'atualizada' : 'registrada'} com sucesso!`);
       this.clearQuotationForm(); this.renderSavedQuotations();
     }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
   },
 
-  clearQuotationForm(){ this.cart.clear(); this.renderCart(); for(let i=1;i<=3;i++){ document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; } document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); this.generateNextQuotationCode(); }, // Corrigido: &lt; para <
+  clearQuotationForm(){ 
+    this.cart.clear(); 
+    this.renderCart(); 
+    for(let i=1;i<=3;i++){ 
+      document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; 
+    } 
+    document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); 
+    this.editingQuotationId = null; // Limpa o modo de edição
+    this.generateNextQuotationCode(); 
+  },
 
   async generateNextQuotationCode(){
     try{
@@ -472,7 +496,8 @@ const UI = {
 
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        const btnEditarHtml = `<button class="btn-action btn-edit" data-id="${c.id}">Editar</button>`;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -482,6 +507,7 @@ const UI = {
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openDetailPanel(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
+      this.savedQuotationsTableBody.querySelectorAll('.btn-edit').forEach(b=>b.addEventListener('click', e=>this.loadQuotationForEditing(e.target.dataset.id)));
       this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoPanel(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); })); // Corrigido: &gt; para >
@@ -517,6 +543,66 @@ const UI = {
       this.quotationDetailBody.innerHTML = html;
       this.detailPanelBackdrop.classList.remove('hidden');
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
+  },
+
+  async loadQuotationForEditing(id) {
+    if (!confirm('Deseja editar esta cotação? As informações não salvas no formulário atual serão perdidas.')) return;
+
+    try {
+      // 1. Limpar formulário atual
+      this.clearQuotationForm();
+
+      // 2. Buscar todos os dados da cotação
+      const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('*').eq('id', id).single();
+      if (cotErr) throw cotErr;
+
+      const { data: itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(*)').eq('id_cotacao', id);
+      if (!itens) throw new Error('Itens da cotação não encontrados.');
+
+      const { data: orcamentos } = await supabase.from('cotacao_orcamentos').select('*, fornecedores(id, nome)').eq('id_cotacao', id);
+      if (!orcamentos) throw new Error('Orçamentos não encontrados.');
+
+      for (const o of orcamentos) {
+        const { data: precos } = await supabase.from('orcamento_item_precos').select('preco_unitario, id_produto').eq('id_orcamento', o.id);
+        o.precos = precos || [];
+      }
+
+      // 3. Preencher o estado da aplicação
+      this.editingQuotationId = id;
+      this.quotationCode.value = cotacao.codigo_cotacao;
+
+      // Preencher o carrinho
+      this.cart.clear();
+      itens.forEach(item => {
+        this.cart.add({
+          id: item.produtos.id,
+          cod: item.produtos.codigo_principal,
+          produto: item.produtos.nome,
+          qtd: item.quantidade,
+          uni: item.produtos.unidade_medida || 'UN'
+        });
+      });
+      this.renderCart();
+
+      // Preencher os orçamentos
+      orcamentos.forEach((orc, index) => {
+        const cardIndex = index + 1;
+        document.getElementById(`empresa${cardIndex}Cot`).value = orc.id_fornecedor;
+        document.getElementById(`obsEmpresa${cardIndex}`).value = orc.observacao || '';
+        document.getElementById(`freteEmpresa${cardIndex}`).value = orc.valor_frete || '';
+
+        orc.precos.forEach(p => {
+          const produtoNoCarrinho = itens.find(i => i.produtos.id === p.id_produto);
+          if (produtoNoCarrinho) {
+            const inputPreco = document.getElementById(`price-${cardIndex}-${produtoNoCarrinho.produtos.codigo_principal}`);
+            if (inputPreco) inputPreco.value = p.preco_unitario;
+          }
+        });
+      });
+
+      this.updateAllTotals();
+      this.showSection('sectionRealizarCotacoes');
+    } catch (e) { console.error('Erro ao carregar cotação para edição', e); alert('Não foi possível carregar a cotação para edição.'); }
   },
 
   async openRecebimentoPanel(id) {
