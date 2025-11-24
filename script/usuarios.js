@@ -51,7 +51,7 @@ export async function cadastrarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim();
+  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
   const senha = document.getElementById('senha').value.trim();
 
   if (!nome || !nomecompleto || !email || !nivel || !senha) {
@@ -107,7 +107,7 @@ export async function atualizarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim();
+  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
   const senha = document.getElementById('senha').value.trim();
 
   // Preparar dados para update, só incluir senha se não estiver vazia
