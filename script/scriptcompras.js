@@ -50,6 +50,16 @@ class Cart {
     this.save();
   }
 
+  updateCartItemQuantity(cod, newQtd) {
+    const item = this.items.find(i => i.cod === cod);
+    if (item) {
+      item.qtd = newQtd;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
   clear(){
     this.items = [];
     this.save();
@@ -302,7 +312,7 @@ const UI = {
     this.cart.items.forEach(item=>{ // Corrigido: &gt; para >
       const tr = document.createElement('tr');
       tr.dataset.cod = item.cod;
-      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td>${item.qtd}</td><td>${item.uni||'UN'}</td><td><button class="btn-remove">Remover</button></td>`; // Corrigido: &lt; e &gt;
+      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td><input type="number" class="cart-item-qtd" value="${item.qtd}" min="1" data-cod="${item.cod}" style="width: 60px; text-align: center;"></td><td>${item.uni||'UN'}</td><td><button class="btn-remove">Remover</button></td>`; // Corrigido: &lt; e &gt;
       this.cartBody.appendChild(tr);
 
       for(let i=1;i<=3;i++){ // Corrigido: &lt; para <
@@ -317,6 +327,17 @@ const UI = {
     this.cartBody.querySelectorAll('.btn-remove').forEach(btn=>btn.addEventListener('click', e=>{ // Corrigido: &gt; para >
       const cod = e.target.closest('tr').dataset.cod; this.cart.remove(cod); this.renderCart(); this.updateAllTotals();
     }));
+
+    // Adiciona listener para os inputs de quantidade no carrinho
+    this.cartBody.querySelectorAll('.cart-item-qtd').forEach(input => {
+      input.addEventListener('change', e => {
+        const cod = e.target.dataset.cod;
+        const newQtd = parseInt(e.target.value, 10);
+        if (newQtd > 0 && this.cart.updateCartItemQuantity(cod, newQtd)) {
+          this.renderCart(); // Re-renderiza para atualizar os preços nos cards de orçamento
+        }
+      });
+    });
 
     // Adiciona listener para o campo de frete
     document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa','')))); // Corrigido: &gt; para >
