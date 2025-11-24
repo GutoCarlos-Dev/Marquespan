@@ -787,12 +787,12 @@ const UI = {
         const { data: precos, error: precosErr } = await supabase.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
         if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
 
-        const precosMap = new Map(precos.map(p => [String(p.id_produto), parseFloat(p.preco_unitario)]));
+        const precosMap = new Map(precos.map(p => [String(p.id_produto).trim(), parseFloat(p.preco_unitario)]));
 
         // 3. Recalcular o valor total com base nas quantidades recebidas
         let novoValorTotal = 0;
         itens.forEach(itemRecebido => { // itemRecebido.id_produto é uma string aqui
-          const precoUnitario = precosMap.get(String(itemRecebido.id_produto));
+          const precoUnitario = precosMap.get(String(itemRecebido.id_produto).trim());
           if (precoUnitario) {
             novoValorTotal += itemRecebido.qtd_recebida * precoUnitario;
           }
