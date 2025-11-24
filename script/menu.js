@@ -72,15 +72,31 @@ async function controlarMenuPorNivel(nivel) {
   const nivelAtual = nivel.toLowerCase();
 
   // Busca as permissões do banco de dados
-  const { data, error } = await supabase.from('nivel_permissoes').select('paginas_permitidas', { count: 'exact' }).eq('nivel', nivelAtual).single();
-  if (error && error.code !== 'PGRST116') { console.error('Erro ao buscar permissões do menu:', error); return; }
-  const paginasPermitidas = data ? data.paginas_permitidas : [];
-  paginasPermitidas.forEach(paginaHref => {
-    const link = nav.querySelector(`a[href="${paginaHref}"]`);
-    if (link) {
-      link.style.display = 'block';
-      const parentGroup = link.closest('.menu-group');
-      if (parentGroup) parentGroup.style.display = 'block';
+  try {
+    const { data, error } = await supabase.from('nivel_permissoes').select('paginas_permitidas').eq('nivel', nivelAtual).single();
+
+    // Se houver um erro (ex: 406 Not Acceptable) ou se não houver dados
+    if (error || !data) {
+      console.warn(`Permissões não encontradas para o nível "${nivelAtual}". Erro:`, error?.message);
+      // REGRA DE SEGURANÇA: Se o usuário for administrador, libera tudo mesmo em caso de erro.
+      if (nivelAtual === 'administrador') {
+        console.log("Fallback: Liberando acesso total para o administrador.");
+        allLinks.forEach(link => link.style.display = 'block');
+        allGroups.forEach(group => group.style.display = 'block');
+      }
+      return; // Para outros usuários, não mostra nada.
     }
-  });
+
+    const paginasPermitidas = data.paginas_permitidas || [];
+    paginasPermitidas.forEach(paginaHref => {
+      const link = nav.querySelector(`a[href="${paginaHref}"]`);
+      if (link) {
+        link.style.display = 'block';
+        const parentGroup = link.closest('.menu-group');
+        if (parentGroup) parentGroup.style.display = 'block';
+      }
+    });
+  } catch (e) {
+    console.error("Erro crítico ao controlar o menu:", e);
+  }
 }
