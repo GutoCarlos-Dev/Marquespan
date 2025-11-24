@@ -101,30 +101,39 @@ async function selecionarNivel(nivel) {
     document.querySelectorAll('#lista-niveis li').forEach(li => {
         li.classList.toggle('active', li.dataset.nivel === nivel);
     });
-
     document.getElementById('nivel-selecionado').textContent = nivel;
     renderizarGridPaginas(); // Renderiza o grid de páginas após selecionar o nível
 
     // Limpa todos os checkboxes
     document.querySelectorAll('#grid-paginas input[type="checkbox"]').forEach(chk => chk.checked = false);
+    document.getElementById('marcar-todos').checked = false; // Desmarca o master checkbox por padrão
 
-    // Busca e marca as permissões atuais
-    const { data, error } = await supabase
-        .from('nivel_permissoes')
-        .select('paginas_permitidas')
-        .eq('nivel', nivel.toLowerCase())
-        .single();
+    if (nivel.toLowerCase() === 'administrador') {
+        // Para o administrador, marca todas as páginas por padrão
+        document.querySelectorAll('#grid-paginas input[type="checkbox"]').forEach(chk => chk.checked = true);
+        document.getElementById('marcar-todos').checked = true; // Marca o master checkbox
+    } else {
+        // Para outros níveis, busca e marca as permissões salvas no banco
+        const { data, error } = await supabase
+            .from('nivel_permissoes')
+            .select('paginas_permitidas')
+            .eq('nivel', nivel.toLowerCase())
+            .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
-        console.error('Erro ao buscar permissões:', error);
-        return;
-    }
-
-    if (data && data.paginas_permitidas) {
-        data.paginas_permitidas.forEach(paginaId => {
-            const chk = document.getElementById(`chk-${paginaId}`);
-            if (chk) chk.checked = true;
-        });
+        if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
+            console.error('Erro ao buscar permissões:', error);
+            return;
+        }
+        if (data && data.paginas_permitidas) {
+            data.paginas_permitidas.forEach(paginaId => {
+                const chk = document.getElementById(`chk-${paginaId}`);
+                if (chk) chk.checked = true;
+            });
+        }
+        // Verifica se todos os checkboxes estão marcados para atualizar o master checkbox
+        const allCheckboxes = document.querySelectorAll('#grid-paginas input[type="checkbox"]');
+        const allChecked = Array.from(allCheckboxes).every(chk => chk.checked);
+        document.getElementById('marcar-todos').checked = allChecked;
     }
 }
 
