@@ -68,59 +68,44 @@ function controlarMenuPorNivel(nivel) {
   const allGroups = nav.querySelectorAll('.menu-group');
   allGroups.forEach(group => group.style.display = 'none');
 
-  // Mostrar links baseado no nível
-  switch (nivel.toLowerCase()) {
-    case 'estoque':
-      // Mostrar Dashboard, Compras (apenas Cotações Salvas) e Sair
-      const estoqueDashboardLink = nav.querySelector('a[href="dashboard.html"]');
-      if (estoqueDashboardLink) estoqueDashboardLink.style.display = 'block';
+  // Define quais links e grupos cada perfil pode ver.
+  const permissoes = {
+    estoque: [
+      'a[href="dashboard.html"]',
+      'a[href="estoque-pneus.html"]',
+      'a[href="estoque_geral.html"]',
+      'a[href="compras.html"]', // O próprio scriptcompras.js já limita as abas internas
+      'a[href="index.html"]'
+    ],
+    compras: [
+      'a[href="dashboard.html"]',
+      'a[href="compras.html"]',
+      'a[href="index.html"]'
+    ],
+    administrador: 'all', // Administrador pode ver tudo
+    default: [
+      'a[href="dashboard.html"]',
+      'a[href="index.html"]'
+    ]
+  };
 
-      const estoqueComprasGroup = nav.querySelector('.menu-group:has(a[href="compras.html"])');
-      if (estoqueComprasGroup) {
-        estoqueComprasGroup.style.display = 'block';
-        // Esconder submenu de compras, exceto o link para compras.html
-        estoqueComprasGroup.querySelectorAll('a').forEach(link => {
-          if (link.getAttribute('href') === 'compras.html') {
-            link.style.display = 'block';
-          } else {
-            link.style.display = 'none';
-          }
-        });
+  const nivelAtual = nivel.toLowerCase();
+  const linksPermitidos = permissoes[nivelAtual] || permissoes.default;
+
+  if (linksPermitidos === 'all') {
+    // Administrador vê tudo
+    allLinks.forEach(link => link.style.display = 'block');
+    allGroups.forEach(group => group.style.display = 'block');
+  } else {
+    // Outros perfis
+    linksPermitidos.forEach(seletor => {
+      const link = nav.querySelector(seletor);
+      if (link) {
+        link.style.display = 'block';
+        // Se o link estiver dentro de um grupo, mostra o grupo
+        const parentGroup = link.closest('.menu-group');
+        if (parentGroup) parentGroup.style.display = 'block';
       }
-
-      const estoqueSairLink = nav.querySelector('a[href="index.html"]');
-      if (estoqueSairLink) estoqueSairLink.style.display = 'block';
-      break;
-
-    case 'compras':
-      // Mostrar Dashboard, Compras e Sair
-      const comprasDashboardLink = nav.querySelector('a[href="dashboard.html"]');
-      if (comprasDashboardLink) comprasDashboardLink.style.display = 'block';
-
-      const comprasGroup = nav.querySelector('.menu-group:has(a[href="compras.html"])');
-      if (comprasGroup) {
-        comprasGroup.style.display = 'block';
-        comprasGroup.querySelectorAll('a').forEach(link => link.style.display = 'block');
-      }
-
-      const comprasSairLink = nav.querySelector('a[href="index.html"]');
-      if (comprasSairLink) comprasSairLink.style.display = 'block';
-      break;
-
-    case 'administrador':
-      // Mostrar tudo
-      allLinks.forEach(link => link.style.display = 'block');
-      allGroups.forEach(group => group.style.display = 'block');
-      break;
-
-    // Adicionar outros níveis conforme necessário
-    default:
-      // Para outros níveis, mostrar apenas dashboard e sair
-      const defaultDashboard = nav.querySelector('a[href="dashboard.html"]');
-      if (defaultDashboard) defaultDashboard.style.display = 'block';
-
-      const defaultSair = nav.querySelector('a[href="index.html"]');
-      if (defaultSair) defaultSair.style.display = 'block';
-      break;
+    });
   }
 }
