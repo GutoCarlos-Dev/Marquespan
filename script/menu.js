@@ -81,13 +81,25 @@ function controlarMenuPorNivel(nivel) {
 
     case 'estoque':
       // Mostra os grupos de Estoque e Compras
-      nav.querySelector('.menu-group:has(a[href="estoque_geral.html"])').style.display = 'block';
-      nav.querySelector('.menu-group:has(a[href="compras.html"])').style.display = 'block';
+      const grupoEstoque = nav.querySelector('.menu-group:has(a[href="estoque_geral.html"])');
+      if (grupoEstoque) {
+        grupoEstoque.style.display = 'block';
+        grupoEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
+      }
+      const grupoComprasEstoque = nav.querySelector('.menu-group:has(a[href="compras.html"])');
+      if (grupoComprasEstoque) {
+        grupoComprasEstoque.style.display = 'block';
+        grupoComprasEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
+      }
       break;
 
     case 'compras':
       // Mostra apenas o grupo de Compras
-      nav.querySelector('.menu-group:has(a[href="compras.html"])').style.display = 'block';
+      const grupoCompras = nav.querySelector('.menu-group:has(a[href="compras.html"])');
+      if (grupoCompras) {
+        grupoCompras.style.display = 'block';
+        grupoCompras.querySelectorAll('a').forEach(link => link.style.display = 'block');
+      }
       break;
 
     // Outros níveis não veem menus específicos por padrão
