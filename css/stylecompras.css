@@ -270,3 +270,28 @@ body{
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* Estilos para impressão */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #detailPanel, #detailPanel * {
+    visibility: visible;
+  }
+  #detailPanel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    box-shadow: none;
+    border: none;
+  }
+  .panel-backdrop {
+    display: none !important;
+  }
+  .panel-footer {
+    display: none;
+  }
+}
