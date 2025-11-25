@@ -281,7 +281,11 @@ body{
     position: static !important;
     width: 100% !important;
     max-width: none !important;
+    height: auto !important;
     box-shadow: none !important;
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    page-break-after: avoid;
   }
   body * {
     visibility: hidden;
