@@ -131,6 +131,7 @@ const UI = {
     this.quotationDetailTitle = document.getElementById('quotationDetailTitle');
     this.quotationDetailBody = document.getElementById('quotationDetailBody');
     this.btnPrintQuotation = document.getElementById('btnPrintQuotation');
+    this.btnGeneratePdf = document.getElementById('btnGeneratePdf');
     // Cache para o novo painel de recebimento
     this.recebimentoPanelBackdrop = document.getElementById('recebimentoPanelBackdrop');
     this.recebimentoPanel = document.getElementById('recebimentoPanel');
@@ -869,6 +870,20 @@ const UI = {
 
   printQuotation(){
     window.print();
+  },
+
+  async generatePdf(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const title = document.getElementById('quotationDetailTitle').textContent;
+    const body = document.getElementById('quotationDetailBody').innerText;
+
+    doc.setFontSize(16);
+    doc.text(title, 20, 20);
+    doc.setFontSize(12);
+    const lines = doc.splitTextToSize(body, 180);
+    doc.text(lines, 20, 40);
+    doc.save(`${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   },
 
   async deleteQuotation(id){
