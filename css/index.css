@@ -1,3 +1,8 @@
+/* Classe para controlar visibilidade de itens do menu via JS */
+.oculto-por-nivel {
+  display: none !important;
+}
+
 /* 🌐 Reset e base */
 @import url("base.css");
 

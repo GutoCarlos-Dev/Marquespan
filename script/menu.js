@@ -61,13 +61,13 @@ function controlarMenuPorNivel(nivel) {
   if (!nav) return;
 
   const allLinks = nav.querySelectorAll('a, .menu-group');
-  allLinks.forEach(el => el.style.display = 'none'); // Esconde tudo por padrão
+  allLinks.forEach(el => el.classList.add('oculto-por-nivel')); // Esconde tudo por padrão
 
   // Links que todos os usuários veem
   const linksComuns = ['a[href="dashboard.html"]', 'a[href="index.html"]'];
   linksComuns.forEach(sel => {
     const el = nav.querySelector(sel);
-    if (el) el.style.display = 'block';
+    if (el) el.classList.remove('oculto-por-nivel');
   });
 
   const nivelAtual = nivel.toLowerCase();
@@ -76,20 +76,20 @@ function controlarMenuPorNivel(nivel) {
   switch (nivelAtual) {
     case 'administrador':
       // Mostra todos os links e grupos
-      allLinks.forEach(el => el.style.display = 'block');
+      allLinks.forEach(el => el.classList.remove('oculto-por-nivel'));
       break;
 
     case 'estoque':
       // Mostra os grupos de Estoque e Compras
       const grupoEstoque = nav.querySelector('.menu-group:has(a[href="estoque_geral.html"])');
       if (grupoEstoque) {
-        grupoEstoque.style.display = 'block';
-        grupoEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
+        grupoEstoque.classList.remove('oculto-por-nivel');
+        grupoEstoque.querySelectorAll('a').forEach(link => link.classList.remove('oculto-por-nivel'));
       }
       const grupoComprasEstoque = nav.querySelector('.menu-group:has(a[href="compras.html"])');
       if (grupoComprasEstoque) {
-        grupoComprasEstoque.style.display = 'block';
-        grupoComprasEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
+        grupoComprasEstoque.classList.remove('oculto-por-nivel');
+        grupoComprasEstoque.querySelectorAll('a').forEach(link => link.classList.remove('oculto-por-nivel'));
       }
       break;
 
@@ -97,8 +97,8 @@ function controlarMenuPorNivel(nivel) {
       // Mostra apenas o grupo de Compras
       const grupoCompras = nav.querySelector('.menu-group:has(a[href="compras.html"])');
       if (grupoCompras) {
-        grupoCompras.style.display = 'block';
-        grupoCompras.querySelectorAll('a').forEach(link => link.style.display = 'block');
+        grupoCompras.classList.remove('oculto-por-nivel');
+        grupoCompras.querySelectorAll('a').forEach(link => link.classList.remove('oculto-por-nivel'));
       }
       break;
 
