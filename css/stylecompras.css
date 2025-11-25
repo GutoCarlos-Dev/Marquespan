@@ -273,23 +273,21 @@ body{
 
 /* Estilos para impressão */
 @media print {
+  .panel-backdrop {
+    background: transparent !important;
+    position: static !important;
+  }
+  .panel-lateral {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
   body * {
     visibility: hidden;
   }
-  #detailPanel, #detailPanel * {
+  .panel-lateral, .panel-lateral * {
     visibility: visible;
-  }
-  #detailPanel {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: auto;
-    box-shadow: none;
-    border: none;
-  }
-  .panel-backdrop {
-    display: none !important;
   }
   .panel-footer {
     display: none;
