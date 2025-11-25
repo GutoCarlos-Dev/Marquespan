@@ -873,17 +873,15 @@ const UI = {
   },
 
   async generatePdf(){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const title = document.getElementById('quotationDetailTitle').textContent;
-    const body = document.getElementById('quotationDetailBody').innerText;
-
-    doc.setFontSize(16);
-    doc.text(title, 20, 20);
-    doc.setFontSize(12);
-    const lines = doc.splitTextToSize(body, 180);
-    doc.text(lines, 20, 40);
-    doc.save(`${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    const element = document.getElementById('detailPanel');
+    const opt = {
+      margin: 1,
+      filename: 'detalhes_cotacao.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
   },
 
   async deleteQuotation(id){
