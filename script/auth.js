@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Corrigido: A coluna de login é 'nome', não 'usuario'
+        // ⚠️ AVISO DE SEGURANÇA: Este método não é seguro.
+        // A senha está sendo comparada diretamente no banco de dados.
+        // O ideal é usar `supabase.auth.signInWithPassword`.
         const { data, error } = await supabase
           .from('usuarios')
           .select('*')
@@ -30,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        // Corrigido: Salva o objeto completo do usuário para uso em outras páginas
         localStorage.setItem('usuarioLogado', JSON.stringify(data));
         alert(`✅ Bem-vindo, ${data.nome}!`);
         window.location.href = 'dashboard.html';
@@ -47,10 +48,3 @@ document.addEventListener('DOMContentLoaded', () => {
     divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
   }
 });
-
-const usuarios = [
-  { nome: 'admin', senha: 'admin' },
-  { nome: 'guto', senha: '123456' },
-  { nome: 'jones', senha: '123456' },
-  { nome: 'acacio', senha: '123456' }
-];
