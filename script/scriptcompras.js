@@ -1051,12 +1051,20 @@ const UI = {
   async salvarRecebimento(){
     const cotacaoId = this.recebimentoItemsContainer.dataset.cotacaoId;
     const notaFiscal = document.getElementById('notaFiscalRecebimento').value.trim();
+
+    // Validação robusta para garantir que o ID da cotação é um UUID válido.
+    if (!cotacaoId || cotacaoId.length < 36) {
+      alert('❌ Erro crítico: ID da cotação inválido. Não é possível salvar o recebimento.');
+      return;
+    }
+
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
-      const idProduto = div.dataset.itemId; // Correção: Manter como string para ser compatível com UUID
+      const idProduto = div.dataset.itemId;
       const qtdPedida = parseFloat(div.dataset.qtdPedida);
       const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
-      if(!isNaN(qtd) && qtd > 0) {
+      // Garante que o ID do produto também seja um UUID válido.
+      if(!isNaN(qtd) && qtd > 0 && idProduto && idProduto.length >= 36) {
         itens.push({
           id_cotacao: cotacaoId,
           id_produto: idProduto,
