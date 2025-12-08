@@ -138,6 +138,7 @@ const UI = {
     this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
     this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
   },
+  
 
   bind(){
     // Navigation
@@ -200,6 +201,10 @@ const UI = {
         const field = th.getAttribute('data-field');
         th.addEventListener('click', ()=>{ this.toggleFornecedoresSort(field) }); // Corrigido: &gt; para >
       });
+
+      // Adiciona o listener para o novo campo de busca de produtos
+      const searchProdutoInput = document.getElementById('searchProdutoInput');
+      if(searchProdutoInput) searchProdutoInput.addEventListener('input', () => this.renderProdutosGrid());
     }catch(e){ /* ignore if not present yet */ }
   },
 
@@ -849,7 +854,15 @@ const UI = {
 
   async renderProdutosGrid(){
     try {
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida', {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending});
+      const searchTerm = document.getElementById('searchProdutoInput')?.value.trim();
+      let queryOptions = {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending};
+
+      // Se houver um termo de busca, adiciona o filtro 'ilike' para o campo 'nome'
+      if (searchTerm) {
+        queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
+      }
+
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida', queryOptions);
       this.produtosTableBody.innerHTML = produtos.map(p => `
         <tr>
           <td>${p.codigo_principal || ''}</td>
