@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 // === FUNÇÕES AUXILIARES ===
 
 /**
@@ -7,7 +5,7 @@ import { supabase } from './supabase.js';
  * @returns {Promise<string>} O próximo código como string.
  */
 async function obterProximoCodigoItem() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('itens')
     .select('codigo')
     .order('codigo', { ascending: false, nullsFirst: false, foreignTable: undefined }) // Ordena como número
@@ -33,7 +31,7 @@ export async function carregarItens() {
   const corpoTabela = document.getElementById('corpoTabelaItens');
   corpoTabela.innerHTML = '';
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('itens')
     .select('*')
     .order('id', { ascending: true });
@@ -88,13 +86,13 @@ export async function salvarItem(event) {
   let result;
   if (id) {
     // Update
-    result = await supabase
+    result = await supabaseClient
       .from('itens')
       .update({ nome, tipo })
       .eq('id', id);
   } else {
     // Insert
-    result = await supabase
+    result = await supabaseClient
       .from('itens')
       .insert([{ codigo, nome, tipo }]);
   }
@@ -117,7 +115,7 @@ export async function salvarItem(event) {
 }
 
 export async function editarItem(id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('itens')
     .select('*')
     .eq('id', id)
@@ -158,7 +156,7 @@ export async function excluirItem(id) {
 
   if (!confirmar) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('itens')
     .delete()
     .eq('id', id);
@@ -179,7 +177,7 @@ export async function carregarClientes() {
   const corpoTabela = document.getElementById('corpoTabelaClientes');
   corpoTabela.innerHTML = '';
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('clientes')
     .select('*')
     .order('codigo', { ascending: true });
@@ -228,13 +226,13 @@ export async function salvarCliente(event) {
   let result;
   if (id) {
     // Update
-    result = await supabase
+    result = await supabaseClient
       .from('clientes')
       .update({ codigo, nome, cidade, estado })
       .eq('id', id);
   } else {
     // Insert
-    result = await supabase
+    result = await supabaseClient
       .from('clientes')
       .insert([{ codigo, nome, cidade, estado }]);
   }
@@ -252,7 +250,7 @@ export async function salvarCliente(event) {
 }
 
 export async function editarCliente(id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('clientes')
     .select('*')
     .eq('id', id)
@@ -275,7 +273,7 @@ export async function excluirCliente(id) {
 
   if (!confirmar) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('clientes')
     .delete()
     .eq('id', id);
@@ -296,7 +294,7 @@ export async function carregarMotoristas() {
   const corpoTabela = document.getElementById('corpoTabelaMotoristas');
   corpoTabela.innerHTML = '';
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('motoristas')
     .select('*')
     .order('nome', { ascending: true });
@@ -341,13 +339,13 @@ export async function salvarMotorista(event) {
   let result;
   if (id) {
     // Update
-    result = await supabase
+    result = await supabaseClient
       .from('motoristas')
       .update({ nome, nome_completo })
       .eq('id', id);
   } else {
     // Insert
-    result = await supabase
+    result = await supabaseClient
       .from('motoristas')
       .insert([{ nome, nome_completo }]);
   }
@@ -365,7 +363,7 @@ export async function salvarMotorista(event) {
 }
 
 export async function editarMotorista(id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('motoristas')
     .select('*')
     .eq('id', id)
@@ -389,7 +387,7 @@ export async function excluirMotorista(id) {
 
   if (!confirmar) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('motoristas')
     .delete()
     .eq('id', id);

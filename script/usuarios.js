@@ -1,11 +1,9 @@
-import { supabase } from './supabase.js';
-
 export async function mostrarUsuarios() {
   const termo = document.getElementById('termoBusca').value.trim().toLowerCase();
   const corpoTabela = document.getElementById('corpoTabelaUsuarios');
   corpoTabela.innerHTML = '';
 
-  let { data, error } = await supabase
+  let { data, error } = await supabaseClient
     .from('usuarios')
     .select('id, nome, nomecompleto, email, nivel');
 
@@ -59,7 +57,7 @@ export async function cadastrarUsuario(event) {
     return;
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('usuarios')
     .insert([{ nome, nomecompleto, email, nivel, senha }]);
 
@@ -77,7 +75,7 @@ export async function cadastrarUsuario(event) {
 
 
 export async function editarUsuario(id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('usuarios')
     .select('*')
     .eq('id', id)
@@ -116,7 +114,7 @@ export async function atualizarUsuario(event) {
     updateData.senha = senha;
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('usuarios')
     .update(updateData)
     .eq('id', id);
@@ -141,7 +139,7 @@ export async function excluirUsuario(id) {
 
   if (!confirmar) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('usuarios')
     .delete()
     .eq('id', id);

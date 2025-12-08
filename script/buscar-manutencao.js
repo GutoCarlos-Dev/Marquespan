@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   if (usuario?.nome) {
@@ -9,10 +7,10 @@ function preencherUsuarioLogado() {
 
 async function carregarFiltros() {
   const [placas, titulos, filiais, fornecedores] = await Promise.all([
-    supabase.from('veiculos').select('placa'),
-    supabase.from('titulomanutencao').select('manutencao'),
-    supabase.from('filial').select('uf'),
-    supabase.from('fornecedor').select('fornecedor')
+    supabaseClient.from('veiculos').select('placa'),
+    supabaseClient.from('titulomanutencao').select('manutencao'),
+    supabaseClient.from('filial').select('uf'),
+    supabaseClient.from('fornecedor').select('fornecedor')
   ]);
 
   preencherDatalist('listaPlacas', placas.data, 'placa');
@@ -52,7 +50,7 @@ async function buscarManutencao() {
     fornecedor: document.getElementById('fornecedor').value
   };
 
-  let query = supabase.from('manutencao').select('*');
+  let query = supabaseClient.from('manutencao').select('*');
 
   // Aplicar filtros encadeando corretamente
   if (filtros.dataInicial) query = query.gte('data', filtros.dataInicial);

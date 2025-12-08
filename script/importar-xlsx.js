@@ -4,8 +4,6 @@
  * e gerar totais conforme especificado
  */
 
-import { supabase } from './supabase.js';
-
 // Função para preencher o campo Conferente com o usuário logado
 function preencherConferente() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -27,7 +25,7 @@ function preencherConferente() {
 async function preencherPlacas() {
     const datalistPlacas = document.getElementById('placas-list');
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('veiculos')
             .select('placa')
             .not('placa', 'is', null); // Exclui registros onde placa é nula

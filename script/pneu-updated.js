@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 let gridBody;
 let editMode = false;
 let editingId = null;
@@ -121,7 +119,7 @@ async function carregarPlacas() {
   if (!selectPlaca) return;
 
   try {
-    const { data: placas, error } = await supabase
+    const { data: placas, error } = await supabaseClient
       .from('veiculos')
       .select('placa')
       .order('placa', { ascending: true });
@@ -181,7 +179,7 @@ function verificarPermissoes() {
 // Função para consultar estoque atual de pneus USADOS
 async function consultarEstoqueUsado(marca, modelo, tipo) {
   try {
-    const { data: entradas, error: errorEntradas } = await supabase
+    const { data: entradas, error: errorEntradas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -194,7 +192,7 @@ async function consultarEstoqueUsado(marca, modelo, tipo) {
       return 0;
     }
 
-    const { data: saidas, error: errorSaidas } = await supabase
+    const { data: saidas, error: errorSaidas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -253,7 +251,7 @@ async function handleSubmit(e) {
   try {
     if (editMode && editingId) {
       // UPDATE: Primeiro, buscar o registro antigo para reverter estoque
-      const { data: oldPneu, error: fetchError } = await supabase
+      const { data: oldPneu, error: fetchError } = await supabaseClient
         .from('pneus')
         .select('*')
         .eq('id', editingId)
@@ -266,7 +264,7 @@ async function handleSubmit(e) {
       }
 
       // Atualizar o registro
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
         .from('pneus')
         .update(pneu)
         .eq('id', editingId);
@@ -282,7 +280,7 @@ async function handleSubmit(e) {
       editingId = null;
     } else {
       // INSERT: Inserir novo registro
-      const { data: insertedData, error: insertError } = await supabase
+      const { data: insertedData, error: insertError } = await supabaseClient
         .from('pneus')
         .insert([pneu])
         .select()
@@ -314,7 +312,7 @@ async function handleSubmit(e) {
         };
 
         // Inserir na tabela saidas_detalhadas
-        const { error: saidaError } = await supabase
+        const { error: saidaError } = await supabaseClient
           .from('saidas_detalhadas')
           .insert([saidaDetalhada]);
 
@@ -361,7 +359,7 @@ async function carregarPneus() {
   if (!gridBody) return;
 
   try {
-    const { data: pneus, error } = await supabase
+    const { data: pneus, error } = await supabaseClient
       .from('pneus')
       .select('*')
       .order('marca', { ascending: true })
@@ -387,7 +385,7 @@ async function buscarPneus() {
   const modelo = document.getElementById('campo-modelo')?.value.trim().toUpperCase();
 
   try {
-    let query = supabase
+    let query = supabaseClient
       .from('pneus')
       .select('*')
       .order('marca', { ascending: true })
@@ -492,7 +490,7 @@ function renderizarPneus(lista) {
 // ✏️ Editar pneu
 window.editarPneu = async function(id) {
   try {
-    const { data: pneu, error } = await supabase
+    const { data: pneu, error } = await supabaseClient
       .from('pneus')
       .select('*')
       .eq('id', id)
@@ -536,7 +534,7 @@ window.excluirPneu = async function(id) {
   if (!confirm('Tem certeza que deseja excluir este pneu?')) return;
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('pneus')
       .delete()
       .eq('id', id);
@@ -595,7 +593,7 @@ async function handleContagemSubmit(e) {
   }
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('pneus')
       .insert([pneu]);
 
@@ -623,7 +621,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
     const codigosParaInserir = [];
 
     // Buscar todos os códigos existentes para determinar o próximo número
-    const { data: todosCodigos, error: buscaError } = await supabase
+    const { data: todosCodigos, error: buscaError } = await supabaseClient
       .from('marcas_fogo_lancamento')
       .select('codigo_marca_fogo')
       .order('codigo_marca_fogo', { ascending: false });
@@ -660,7 +658,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
     console.log('Códigos para inserir:', codigosParaInserir);
 
     if (codigosParaInserir.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseClient
         .from('marcas_fogo_lancamento')
         .insert(codigosParaInserir);
 
@@ -682,7 +680,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
 window.visualizarCodigosMarcaFogo = async function(lancamentoId) {
   try {
     // Buscar códigos de marca de fogo para este lançamento
-    const { data: codigos, error } = await supabase
+    const { data: codigos, error } = await supabaseClient
       .from('marcas_fogo_lancamento')
       .select(`
         codigo_marca_fogo,
@@ -1089,7 +1087,7 @@ async function atualizarPosicoesRodizio(saidaDetalhada) {
   try {
     // Remover pneu da posição anterior
     if (saidaDetalhada.posicao_anterior) {
-      await supabase
+      await supabaseClient
         .from('posicoes_veiculos')
         .delete()
         .eq('placa', saidaDetalhada.placa)
@@ -1098,7 +1096,7 @@ async function atualizarPosicoesRodizio(saidaDetalhada) {
 
     // Adicionar pneu na nova posição (se especificada)
     if (saidaDetalhada.posicao_nova && saidaDetalhada.codigo_marca_fogo_trocado) {
-      await supabase
+      await supabaseClient
         .from('posicoes_veiculos')
         .upsert({
           placa: saidaDetalhada.placa,
@@ -1119,7 +1117,7 @@ async function atualizarPosicoesRodizio(saidaDetalhada) {
 async function gerarRelatorioMarcaFogo() {
   try {
     // Buscar códigos de marca de fogo da tabela separada
-    const { data: codigos, error } = await supabase
+    const { data: codigos, error } = await supabaseClient
       .from('marcas_fogo_lancamento')
       .select(`
         codigo_marca_fogo,

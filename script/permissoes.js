@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 let PAGINAS_SISTEMA = [];
 
 let nivelSelecionado = null;
@@ -52,7 +50,7 @@ async function carregarNiveis() {
     const listaNiveisEl = document.getElementById('lista-niveis');
     listaNiveisEl.innerHTML = '<li class="loading-state">Carregando...</li>';
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('usuarios')
         .select('nivel');
 
@@ -114,7 +112,7 @@ async function selecionarNivel(nivel) {
         document.getElementById('marcar-todos').checked = true; // Marca o master checkbox
     } else {
         // Para outros níveis, busca e marca as permissões salvas no banco
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('nivel_permissoes')
             .select('paginas_permitidas')
             .eq('nivel', nivel.toLowerCase())
@@ -148,7 +146,7 @@ async function salvarPermissoes() {
         paginasPermitidas.push(chk.dataset.paginaId);
     });
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('nivel_permissoes')
         .upsert(
             { nivel: nivelSelecionado.toLowerCase(), paginas_permitidas: paginasPermitidas },

@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 let gridBody;
 
 // 🚀 Inicialização
@@ -65,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const { error } = await supabase.from('veiculos').insert([veiculo]);
+    const { error } = await supabaseClient.from('veiculos').insert([veiculo]);
 
     if (error) {
       alert('❌ Erro ao salvar veículo.');
@@ -107,7 +105,7 @@ function limparFormulario(form) {
 async function carregarVeiculos() {
   if (!gridBody) return;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('veiculos')
     .select('*')
     .order('placa', { ascending: true });
@@ -127,7 +125,7 @@ async function buscarVeiculos() {
   if (!gridBody) return;
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
-  let query = supabase.from('veiculos').select('*');
+  let query = supabaseClient.from('veiculos').select('*');
 
   if (placa) {
     query = query.ilike('placa', `%${placa}%`);
@@ -187,7 +185,7 @@ function renderizarVeiculos(lista) {
 
 // ✏️ Editar veículo
 window.editarVeiculo = async function (id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('veiculos')
     .select('*')
     .eq('id', id)
@@ -218,7 +216,7 @@ window.excluirVeiculo = async function (id) {
   const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
   if (!confirmar) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('veiculos')
     .delete()
     .eq('id', id);

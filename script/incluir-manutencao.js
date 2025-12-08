@@ -1,5 +1,4 @@
 // 📦 Importação do Supabase
-import { supabase } from './supabase.js';
 
 // 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
@@ -37,7 +36,7 @@ function preencherUsuarioLogado() {
 
 // 🔧 Carregamento de dados dinâmicos
 async function carregarPlacas() {
-  const { data, error } = await supabase.from('veiculos').select('placa');
+  const { data, error } = await supabaseClient.from('veiculos').select('placa');
   const lista = document.getElementById('listaPlacas');
   if (error) return console.error('Erro ao carregar placas:', error);
   lista.innerHTML = '';
@@ -45,7 +44,7 @@ async function carregarPlacas() {
 }
 
 async function carregarFiliais() {
-  const { data, error } = await supabase.from('filial').select('uf');
+  const { data, error } = await supabaseClient.from('filial').select('uf');
   const select = document.getElementById('filial');
   if (error) return console.error('Erro ao carregar filiais:', error);
   select.innerHTML = '<option value="">Selecione</option>';
@@ -53,7 +52,7 @@ async function carregarFiliais() {
 }
 
 async function carregarTitulosManutencao() {
-  const { data, error } = await supabase.from('titulomanutencao').select('manutencao');
+  const { data, error } = await supabaseClient.from('titulomanutencao').select('manutencao');
   const lista = document.getElementById('listaTitulos');
   if (error) return console.error('Erro ao carregar títulos:', error);
   lista.innerHTML = '';
@@ -61,7 +60,7 @@ async function carregarTitulosManutencao() {
 }
 
 async function carregarFornecedores() {
-  const { data, error } = await supabase.from('fornecedor').select('fornecedor');
+  const { data, error } = await supabaseClient.from('fornecedor').select('fornecedor');
   const lista = document.getElementById('listaFornecedores');
   if (error) return console.error('Erro ao carregar fornecedores:', error);
   lista.innerHTML = '';
@@ -69,7 +68,7 @@ async function carregarFornecedores() {
 }
 
 async function carregarPecasServicos() {
-  const { data, error } = await supabase.from('pecaeservico').select('descricao');
+  const { data, error } = await supabaseClient.from('pecaeservico').select('descricao');
   const lista = document.getElementById('listaPecasServicos');
   if (error) return console.error('Erro ao carregar peças/serviços:', error);
   lista.innerHTML = '';
@@ -147,7 +146,7 @@ async function salvarManutencao() {
     return;
   }
 
-  const { data, error } = await supabase.from('manutencao').insert([dados]).select();
+  const { data, error } = await supabaseClient.from('manutencao').insert([dados]).select();
   if (error) {
     console.error('Erro ao salvar manutenção:', error);
     alert('❌ Erro ao salvar manutenção.');
@@ -176,7 +175,7 @@ async function salvarItensManutencao(idManutencao) {
   });
 
   if (itens.length) {
-    const { error } = await supabase.from('manutencao_itens').insert(itens);
+    const { error } = await supabaseClient.from('manutencao_itens').insert(itens);
     if (error) alert('❌ Erro ao salvar itens da manutenção.');
   }
 }
@@ -192,7 +191,7 @@ async function salvarArquivosManutencao(idManutencao) {
   });
 
   if (arquivos.length) {
-    const { error } = await supabase.from('manutencao_arquivos').insert(arquivos);
+    const { error } = await supabaseClient.from('manutencao_arquivos').insert(arquivos);
     if (error) alert('❌ Erro ao salvar arquivos.');
   }
 }
@@ -205,7 +204,7 @@ async function salvarTitulo() {
   const titulo = document.getElementById('novoTitulo').value.trim();
   if (!titulo) return;
 
-  const { error } = await supabase.from('titulomanutencao').insert([{ manutencao: titulo }]);
+  const { error } = await supabaseClient.from('titulomanutencao').insert([{ manutencao: titulo }]);
   if (error) {
     console.error('Erro ao salvar título:', error);
     alert('❌ Erro ao salvar título.');
@@ -234,7 +233,7 @@ async function salvarFornecedor() {
   const obsFornecedor = document.getElementById('obsFornecedor').value.trim();
   if (!nome) return;
 
-  const { error } = await supabase.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor }]);
+  const { error } = await supabaseClient.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor }]);
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
     alert('❌ Erro ao salvar fornecedor.');
@@ -264,7 +263,7 @@ async function salvarPecaServico() {
   const tipo = document.getElementById('novoTipo').value;
   if (!descricao || !tipo) return;
 
-  const { error } = await supabase.from('pecaeservico').insert([{ descricao, tipo }]);
+  const { error } = await supabaseClient.from('pecaeservico').insert([{ descricao, tipo }]);
   if (error) {
     console.error('Erro ao salvar peça/serviço:', error);
     alert('❌ Erro ao salvar peça/serviço.');

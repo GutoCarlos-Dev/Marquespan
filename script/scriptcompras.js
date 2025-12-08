@@ -1,11 +1,9 @@
-import { supabase } from './supabase.js';
-
 // Compras.js - Versão refatorada mantendo funcionalidades principais
 // Estrutura: Services (Supabase), UI, Cart, TESTE
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
-    let q = supabase.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
+    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
     if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
     if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
     const { data, error } = await q;
@@ -14,19 +12,19 @@ class SupabaseService {
   }
 
   static async insert(table, payload){
-    const { data, error } = await supabase.from(table).insert(payload).select();
+    const { data, error } = await supabaseClient.from(table).insert(payload).select();
     if (error) throw error;
     return data;
   }
 
   static async update(table, payload, key){
-    const { data, error } = await supabase.from(table).update(payload).eq(key.field, key.value).select();
+    const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
     if (error) throw error;
     return data;
   }
 
   static async remove(table, key){
-    const { data, error } = await supabase.from(table).delete().eq(key.field, key.value);
+    const { data, error } = await supabaseClient.from(table).delete().eq(key.field, key.value);
     if (error) throw error;
     return data;
   }
@@ -566,10 +564,10 @@ const UI = {
 
   async openDetailPanel(id){
     try{
-      const { data:cotacao, error:cotErr } = await supabase.from('cotacoes').select('*,fornecedores(nome)').eq('id',id).single(); if(cotErr) throw cotErr;
-      const { data:itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
-      const { data:orcamentos } = await supabase.from('cotacao_orcamentos').select('*,fornecedores(nome),valor_frete').eq('id_cotacao',id);
-      for(const o of orcamentos){ const { data:precos } = await supabase.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
+      const { data:cotacao, error:cotErr } = await supabaseClient.from('cotacoes').select('*,fornecedores(nome)').eq('id',id).single(); if(cotErr) throw cotErr;
+      const { data:itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
+      const { data:orcamentos } = await supabaseClient.from('cotacao_orcamentos').select('*,fornecedores(nome),valor_frete').eq('id_cotacao',id);
+      for(const o of orcamentos){ const { data:precos } = await supabaseClient.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
       const dataDisplay = cotacao.updated_at ? new Date(cotacao.updated_at).toLocaleString('pt-BR') : (cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A');
       const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
       const statusBadge = `<span class="status status-${cotacao.status}">${cotacao.status}</span>`; // Corrigido: &lt; e &gt;
@@ -603,17 +601,17 @@ const UI = {
       this.clearQuotationForm();
 
       // 2. Buscar todos os dados da cotação
-      const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('*').eq('id', id).single();
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('*').eq('id', id).single();
       if (cotErr) throw cotErr;
 
-      const { data: itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(*)').eq('id_cotacao', id);
+      const { data: itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(*)').eq('id_cotacao', id);
       if (!itens) throw new Error('Itens da cotação não encontrados.');
 
-      const { data: orcamentos } = await supabase.from('cotacao_orcamentos').select('*, fornecedores(id, nome)').eq('id_cotacao', id);
+      const { data: orcamentos } = await supabaseClient.from('cotacao_orcamentos').select('*, fornecedores(id, nome)').eq('id_cotacao', id);
       if (!orcamentos) throw new Error('Orçamentos não encontrados.');
 
       for (const o of orcamentos) {
-        const { data: precos } = await supabase.from('orcamento_item_precos').select('preco_unitario, id_produto').eq('id_orcamento', o.id);
+        const { data: precos } = await supabaseClient.from('orcamento_item_precos').select('preco_unitario, id_produto').eq('id_orcamento', o.id);
         o.precos = precos || [];
       }
 
@@ -657,10 +655,10 @@ const UI = {
 
   async openRecebimentoPanel(id) {
     try {
-      const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id, codigo_cotacao').eq('id', id).single();
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id, codigo_cotacao').eq('id', id).single();
       if (cotErr) throw cotErr;
 
-      const { data: itens } = await supabase.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
+      const { data: itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
 
       document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
       this.renderRecebimentoItems(itens, id);
@@ -925,18 +923,18 @@ const UI = {
     if(itens.length) {
       try {
         // 1. Buscar dados da cotação e do orçamento vencedor
-        const { data: cotacao, error: cotErr } = await supabase.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor').eq('id', cotacaoId).single();
+        const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor').eq('id', cotacaoId).single();
         if (cotErr || !cotacao) throw new Error('Cotação não encontrada para recalcular valores.');
 
         let novoValorTotal = cotacao.valor_total_vencedor; // Mantém o valor original por padrão
 
         // Apenas recalcula o valor se houver um fornecedor vencedor definido
         if (cotacao.id_fornecedor_vencedor) {
-          const { data: orcamento, error: orcErr } = await supabase.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
+          const { data: orcamento, error: orcErr } = await supabaseClient.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
           
           // Se houver um orçamento vencedor, prossiga com o recálculo
           if (orcamento && !orcErr) {
-            const { data: precos, error: precosErr } = await supabase.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
+            const { data: precos, error: precosErr } = await supabaseClient.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
             if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
 
             const precosMap = new Map(precos.map(p => [String(p.id_produto).trim(), parseFloat(p.preco_unitario)]));

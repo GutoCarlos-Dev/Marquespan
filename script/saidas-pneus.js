@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 let placaSelecionada = null;
 
 // 🚀 Inicialização
@@ -30,7 +28,7 @@ async function carregarPlacas() {
   if (!selectPlaca) return;
 
   try {
-    const { data: placas, error } = await supabase
+    const { data: placas, error } = await supabaseClient
       .from('veiculos')
       .select('placa')
       .order('placa', { ascending: true });
@@ -85,7 +83,7 @@ async function carregarPosicoesVeiculo(placa) {
 
   try {
     // Primeiro, carregar as posições sem join
-    const { data: posicoes, error } = await supabase
+    const { data: posicoes, error } = await supabaseClient
       .from('posicoes_veiculos')
       .select('posicao, codigo_marca_fogo, data_instalacao, quilometragem_instalacao')
       .eq('placa', placa)
@@ -107,7 +105,7 @@ async function carregarPosicoesVeiculo(placa) {
     let pneusMap = {};
 
     if (codigos.length > 0) {
-      const { data: pneus, error: pneusError } = await supabase
+      const { data: pneus, error: pneusError } = await supabaseClient
         .from('pneus')
         .select('codigo_marca_fogo, marca, modelo, tipo, vida')
         .in('codigo_marca_fogo', codigos);
@@ -180,7 +178,7 @@ async function carregarHistoricoSaidas(placa) {
   const container = document.getElementById('grid-historico-body');
 
   try {
-    const { data: saidas, error } = await supabase
+    const { data: saidas, error } = await supabaseClient
       .from('saidas_detalhadas')
       .select(`
         lancamento_id,
@@ -298,7 +296,7 @@ async function verificarEstoque() {
   }
 
   try {
-    const { data: entradas, error: errorEntradas } = await supabase
+    const { data: entradas, error: errorEntradas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -313,7 +311,7 @@ async function verificarEstoque() {
       return;
     }
 
-    const { data: saidas, error: errorSaidas } = await supabase
+    const { data: saidas, error: errorSaidas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -386,7 +384,7 @@ async function handleSubmitSaida(e) {
 
   try {
     // Inserir registro de saída na tabela pneus
-    const { data: insertedData, error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabaseClient
       .from('pneus')
       .insert([saida])
       .select()
@@ -416,7 +414,7 @@ async function handleSubmitSaida(e) {
 
     console.log('Tentando inserir saida detalhada:', saidaDetalhada);
 
-    const { error: saidaError } = await supabase
+    const { error: saidaError } = await supabaseClient
       .from('saidas_detalhadas')
       .insert([saidaDetalhada]);
 
@@ -446,7 +444,7 @@ async function handleSubmitSaida(e) {
 // Função para consultar estoque atual
 async function consultarEstoqueUsado(marca, modelo, tipo) {
   try {
-    const { data: entradas, error: errorEntradas } = await supabase
+    const { data: entradas, error: errorEntradas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -459,7 +457,7 @@ async function consultarEstoqueUsado(marca, modelo, tipo) {
       return 0;
     }
 
-    const { data: saidas, error: errorSaidas } = await supabase
+    const { data: saidas, error: errorSaidas } = await supabaseClient
       .from('pneus')
       .select('quantidade')
       .eq('marca', marca)
@@ -487,7 +485,7 @@ async function atualizarPosicoesRodizio(saidaDetalhada) {
   try {
     // Remover pneu da posição anterior
     if (saidaDetalhada.posicao_anterior) {
-      await supabase
+      await supabaseClient
         .from('posicoes_veiculos')
         .delete()
         .eq('placa', saidaDetalhada.placa)
@@ -496,7 +494,7 @@ async function atualizarPosicoesRodizio(saidaDetalhada) {
 
     // Adicionar pneu na nova posição
     if (saidaDetalhada.posicao_nova && saidaDetalhada.codigo_marca_fogo) {
-      await supabase
+      await supabaseClient
         .from('posicoes_veiculos')
         .upsert({
           placa: saidaDetalhada.placa,
@@ -544,7 +542,7 @@ async function carregarEstoque() {
 
   try {
     // Buscar pneus em estoque (ENTRADA - SAIDA)
-    let query = supabase
+    let query = supabaseClient
       .from('pneus')
       .select('marca, modelo, tipo, vida, quantidade, codigo_marca_fogo')
       .eq('status', 'ENTRADA')
@@ -585,7 +583,7 @@ async function carregarEstoque() {
     });
 
     // Buscar saídas para subtrair
-    let querySaidas = supabase
+    let querySaidas = supabaseClient
       .from('pneus')
       .select('marca, modelo, tipo, vida, quantidade')
       .eq('status', 'SAIDA');
@@ -697,7 +695,7 @@ async function excluirSaida(saida) {
 
   try {
     // 1. Excluir da tabela saidas_detalhadas
-    const { error: deleteSaidaError } = await supabase
+    const { error: deleteSaidaError } = await supabaseClient
       .from('saidas_detalhadas')
       .delete()
       .eq('lancamento_id', saida.lancamento_id);
@@ -709,7 +707,7 @@ async function excluirSaida(saida) {
     }
 
     // 2. Excluir da tabela pneus (registro de saída)
-    const { error: deletePneuError } = await supabase
+    const { error: deletePneuError } = await supabaseClient
       .from('pneus')
       .delete()
       .eq('id', saida.lancamento_id);
@@ -722,7 +720,7 @@ async function excluirSaida(saida) {
 
     // 3. Se foi rodízio, remover da tabela posicoes_veiculos
     if (saida.tipo_operacao === 'RODIZIO' && saida.posicao_nova) {
-      await supabase
+      await supabaseClient
         .from('posicoes_veiculos')
         .delete()
         .eq('placa', placaSelecionada)

@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 let gridBody;
 
 // 🚀 Inicialização
@@ -10,7 +8,7 @@ async function carregarEstoque() {
   try {
     // Buscar dados da tabela estoque_pneus (mantida automaticamente atualizada pelos triggers)
     // Filtrar apenas itens com quantidade > 0 para mostrar apenas estoque positivo
-    const { data: estoque, error } = await supabase
+    const { data: estoque, error } = await supabaseClient
       .from('estoque_pneus')
       .select('*')
       .gt('quantidade', 0)
@@ -40,7 +38,7 @@ async function buscarEstoque() {
   const tipo = document.getElementById('campo-tipo-estoque')?.value.trim().toUpperCase();
 
   try {
-    let query = supabase
+    let query = supabaseClient
       .from('estoque_pneus')
       .select('*')
       .order('placa', { ascending: true })
@@ -115,7 +113,7 @@ function renderizarEstoque(lista) {
 // Função para popular os datalists com opções únicas do Supabase
 async function popularDatalists() {
   try {
-    const { data: estoque, error } = await supabase
+    const { data: estoque, error } = await supabaseClient
       .from('estoque_pneus')
       .select('marca, modelo, tipo, vida');
 
@@ -203,7 +201,7 @@ async function gerarGraficos() {
     const seisMesesAtras = new Date();
     seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
 
-    const { data: movimentacoes, error: movError } = await supabase
+    const { data: movimentacoes, error: movError } = await supabaseClient
       .from('pneus')
       .select('data, status, quantidade')
       .gte('data', seisMesesAtras.toISOString())
@@ -408,7 +406,7 @@ async function exportarEstoqueXLSX() {
     const vida = document.getElementById('campo-vida-estoque')?.value.trim();
     const tipo = document.getElementById('campo-tipo-estoque')?.value.trim().toUpperCase();
 
-    let query = supabase
+    let query = supabaseClient
       .from('estoque_pneus')
       .select('*')
       .order('placa', { ascending: true })

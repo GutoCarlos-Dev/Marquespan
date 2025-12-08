@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("formVeiculo");
   const btnExcluir = document.getElementById("btnExcluir");
@@ -12,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (id) {
     console.log("Modo edição ativado. Buscando veículo no Supabase...");
 
-    const { data: veiculo, error } = await supabase
+    const { data: veiculo, error } = await supabaseClient
       .from("veiculos")
       .select("*")
       .eq("id", id)
@@ -42,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         console.log("Solicitando exclusão do veículo ID:", id);
 
-        const { error: erroExclusao } = await supabase
+        const { error: erroExclusao } = await supabaseClient
           .from("veiculos")
           .delete()
           .eq("id", id);
@@ -96,7 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (id) {
         console.log("Tentando atualizar veículo com ID:", id);
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from("veiculos")
           .update(veiculo)
           .eq("id", id);
@@ -115,7 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         console.log("Modo cadastro. Verificando placa duplicada...");
 
-        const { data: existente, error: erroBusca } = await supabase
+        const { data: existente, error: erroBusca } = await supabaseClient
           .from("veiculos")
           .select("id")
           .eq("placa", veiculo.placa);
@@ -136,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         console.log("Inserindo novo veículo...");
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from("veiculos")
           .insert([veiculo]);
 

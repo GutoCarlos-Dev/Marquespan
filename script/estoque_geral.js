@@ -1,5 +1,3 @@
-import { supabase } from './supabase.js';
-
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoqueGeral();
 
@@ -15,7 +13,7 @@ async function carregarEstoqueGeral() {
     const filtroNome = document.getElementById('filtro-nome').value.trim();
 
     try {
-        let query = supabase
+        let query = supabaseClient
             .from('estoque_geral') // Usando a nova VIEW
             .select('*')
             .gt('quantidade_em_estoque', 0) // Apenas itens com estoque
