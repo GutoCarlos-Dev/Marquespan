@@ -1054,12 +1054,14 @@ const UI = {
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
       const idProduto = div.dataset.itemId; // Correção: Manter como string para ser compatível com UUID
+      const qtdPedida = parseFloat(div.dataset.qtdPedida);
       const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
       if(!isNaN(qtd) && qtd > 0) {
         itens.push({
           id_cotacao: cotacaoId,
           id_produto: idProduto,
           qtd_recebida: qtd,
+          qtd_pedida: qtdPedida, // Registra a quantidade original do pedido
           data_recebimento: new Date().toISOString(),
         });
       }
@@ -1070,7 +1072,7 @@ const UI = {
         const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor').eq('id', cotacaoId).single();
         if (cotErr || !cotacao) throw new Error('Cotação não encontrada para recalcular valores.');
 
-        let novoValorTotal = cotacao.valor_total_vencedor; // Mantém o valor original por padrão
+        let novoValorTotal = null; // Inicia como nulo para garantir o recálculo
 
         // Apenas recalcula o valor se houver um fornecedor vencedor definido
         if (cotacao.id_fornecedor_vencedor) {
@@ -1099,7 +1101,7 @@ const UI = {
           console.warn(`Cotação ${cotacaoId} não possui fornecedor vencedor. O valor total não será recalculado.`);
         }
 
-        // 5. Salvar os itens recebidos na tabela de log 'recebimentos'
+        // Salvar os itens recebidos na tabela de log 'recebimentos'
         await SupabaseService.insert('recebimentos', itens);
         
         // 6. Preparar o payload para atualizar a cotação principal
@@ -1110,7 +1112,7 @@ const UI = {
         }
         if (notaFiscal) updatePayload.nota_fiscal = notaFiscal;
 
-        // 7. Atualizar a cotação com o novo status e o valor recalculado
+        // Atualizar a cotação com o novo status e o valor recalculado
         await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
         alert('Recebimento salvo com sucesso!');
         this.closeRecebimentoPanel();
@@ -1124,6 +1126,36 @@ const UI = {
       alert('Nenhum item válido para receber');
     }
   }
+};
+
+UI.renderRecebimentoItems = function(itens, cotacaoId) {
+    if (!this.recebimentoItemsContainer) return;
+    this.recebimentoItemsContainer.innerHTML = '';
+    this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
+
+    itens.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'recebimento-item';
+        div.dataset.itemId = item.produtos.id;
+        div.dataset.qtdPedida = item.quantidade; // Armazena a quantidade pedida
+        div.innerHTML = `
+        <label for="qtd-recebida-${item.produtos.id}">${item.produtos.nome} (Pedido: ${item.quantidade})</label>
+        <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
+      `;
+        this.recebimentoItemsContainer.appendChild(div);
+    });
+
+    // Controle de visibilidade do botão Salvar
+    const btnSalvar = document.getElementById('btnSalvarRecebimento');
+    const usuarioLogado = this._getCurrentUser();
+    const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+    if (btnSalvar) { // Verifica se o botão existe antes de manipulá-lo
+        if (['estoque', 'administrador', 'compras'].includes(nivelUsuario)) {
+            btnSalvar.style.display = 'block'; // Mostra o botão
+        } else {
+            btnSalvar.style.display = 'none'; // Oculta o botão para outros níveis
+        }
+    }
 };
 
 // Initialize UI on DOM load
