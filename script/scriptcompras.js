@@ -1069,8 +1069,8 @@ const UI = {
           id_cotacao: cotacaoId,
           id_produto: idProduto,
           qtd_recebida: qtd,
-          qtd_pedida: qtdPedida, // Registra a quantidade original do pedido
-          data_recebimento: new Date().toISOString(),
+          qtd_pedida: qtdPedida, // Re-adicionado: Registra a quantidade original do pedido
+          data_recebimento: new Date().toISOString()
         });
       }
     });
