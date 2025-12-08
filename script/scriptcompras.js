@@ -828,7 +828,10 @@ const UI = {
           <td>${p.codigo_secundario || ''}</td>
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || 'UN'}</td>
-          <td><button class="btn-delete" data-id="${p.id}">Excluir</button></td>
+          <td>
+            <button class="btn-action btn-edit" data-id="${p.id}">Editar</button>
+            <button class="btn-delete" data-id="${p.id}">Excluir</button>
+          </td>
         </tr>`).join('');
     } catch(e) {
       console.error('Erro ao carregar produtos', e);
