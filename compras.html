@@ -234,11 +234,21 @@
     </div>
   </div>
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
+  <!-- 1. Carrega a biblioteca do Supabase a partir do CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- 2. Inicializa o cliente Supabase e o torna global -->
+  <script>
+    const supabaseUrl = 'https://hlzcycvlcuhgnnjkmslt.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY';
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+  </script>
+
+  <script src="./script/menu.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script type="module" src="script/scriptcompras.js"></script>
+  <script src="script/scriptcompras.js"></script>
 </body>
 </html>

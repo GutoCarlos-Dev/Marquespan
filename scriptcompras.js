@@ -418,16 +418,16 @@ const UI = {
         // O ideal seria uma stored procedure no Supabase.
 
         // ANTES de apagar, verifica se o status era 'Recebido' para reverter o estoque.
-        const { data: oldCotacao } = await supabase.from('cotacoes').select('status').eq('id', this.editingQuotationId).single();
+        const { data: oldCotacao } = await supabaseClient.from('cotacoes').select('status').eq('id', this.editingQuotationId).single();
         if (oldCotacao && oldCotacao.status === 'Recebido') {
           console.log(`Revertendo estoque para a cotação ${this.editingQuotationId}...`);
-          await supabase.from('recebimentos').delete().eq('id_cotacao', this.editingQuotationId);
+          await supabaseClient.from('recebimentos').delete().eq('id_cotacao', this.editingQuotationId);
           alert('Atenção: O lançamento de estoque anterior foi revertido. O status da cotação voltará para "Aprovada" para que um novo recebimento possa ser feito.');
         }
 
         // O ideal seria uma stored procedure no Supabase.
-        await supabase.from('cotacao_itens').delete().eq('id_cotacao', this.editingQuotationId);
-        await supabase.from('cotacao_orcamentos').delete().eq('id_cotacao', this.editingQuotationId);
+        await supabaseClient.from('cotacao_itens').delete().eq('id_cotacao', this.editingQuotationId);
+        await supabaseClient.from('cotacao_orcamentos').delete().eq('id_cotacao', this.editingQuotationId);
         // orcamento_item_precos são deletados em cascata com cotacao_orcamentos
       }
 
@@ -512,7 +512,7 @@ const UI = {
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
       // Query base
-      let q = supabase.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
+      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
       if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
