@@ -117,6 +117,8 @@ const UI = {
     this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
+    this.btnSubmitFornecedor = document.getElementById('btnSubmitFornecedor');
+    this.searchFornecedorInput = document.getElementById('searchFornecedorInput');
     this.importPanel = document.getElementById('importPanel');
     this.btnOpenImportExportModal = document.getElementById('btnOpenImportExportModal');
     this.closeModalButtons = document.querySelectorAll('.modal .close-button');
@@ -205,6 +207,9 @@ const UI = {
       // Adiciona o listener para o novo campo de busca de produtos
       const searchProdutoInput = document.getElementById('searchProdutoInput');
       if(searchProdutoInput) searchProdutoInput.addEventListener('input', () => this.renderProdutosGrid());
+
+      // Adiciona o listener para o novo campo de busca de fornecedores
+      if(this.searchFornecedorInput) this.searchFornecedorInput.addEventListener('input', () => this.renderFornecedoresGrid());
     }catch(e){ /* ignore if not present yet */ }
   },
 
@@ -793,17 +798,54 @@ const UI = {
 
   async handleFornecedorForm(e){
     e.preventDefault();
-    const form = e.target;
-    const data = new FormData(form);
-    const payload = Object.fromEntries(data);
+    const form = this.formCadastrarFornecedor;
+    const editingId = form.dataset.editingId;
+
+    const payload = {
+      nome: document.getElementById('fornecedorNome').value,
+      telefone: document.getElementById('fornecedorTelefone').value,
+    };
+
+    if (!payload.nome) {
+      return alert('O campo "Nome do Fornecedor" é obrigatório.');
+    }
+
     try {
-      await SupabaseService.insert('fornecedores', payload);
-      alert('Fornecedor cadastrado com sucesso!');
-      form.reset();
+      if (editingId) {
+        await SupabaseService.update('fornecedores', payload, { field: 'id', value: editingId });
+        alert('✅ Fornecedor atualizado com sucesso!');
+      } else {
+        await SupabaseService.insert('fornecedores', payload);
+        alert('✅ Fornecedor cadastrado com sucesso!');
+      }
+
+      this.clearFornecedorForm();
       this.renderFornecedoresGrid();
     } catch(err) {
       console.error(err);
-      alert('Erro ao cadastrar fornecedor');
+      alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} fornecedor.`);
+    }
+  },
+
+  clearFornecedorForm() {
+    this.formCadastrarFornecedor.reset();
+    this.formCadastrarFornecedor.dataset.editingId = '';
+    this.btnSubmitFornecedor.textContent = 'Cadastrar';
+  },
+
+  async loadFornecedorForEditing(id) {
+    try {
+      const [fornecedor] = await SupabaseService.list('fornecedores', '*', { eq: { field: 'id', value: id } });
+      if (!fornecedor) return alert('Fornecedor não encontrado.');
+
+      this.formCadastrarFornecedor.dataset.editingId = id;
+      document.getElementById('fornecedorNome').value = fornecedor.nome || '';
+      document.getElementById('fornecedorTelefone').value = fornecedor.telefone || '';
+
+      this.btnSubmitFornecedor.textContent = 'Atualizar';
+      this.formCadastrarFornecedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      console.error('Erro ao carregar fornecedor para edição', e);
     }
   },
 
@@ -811,7 +853,8 @@ const UI = {
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;
-    if(btn.classList.contains('btn-delete')) {
+    // Oculta o botão de exclusão para o nível 'compras'
+    if(btn.classList.contains('btn-delete') && this._getCurrentUser()?.nivel.toLowerCase() !== 'compras') {
       if(confirm('Excluir produto?')) {
         SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
       }
@@ -825,10 +868,13 @@ const UI = {
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;
-    if(btn.classList.contains('btn-delete')) {
+    if(btn.classList.contains('btn-delete') && this._getCurrentUser()?.nivel.toLowerCase() !== 'compras') {
       if(confirm('Excluir fornecedor?')) {
         SupabaseService.remove('fornecedores', {field:'id',value:id}).then(() => this.renderFornecedoresGrid());
       }
+    }
+    if (btn.classList.contains('btn-edit')) {
+      this.loadFornecedorForEditing(id);
     }
   },
 
@@ -881,8 +927,23 @@ const UI = {
 
   async renderFornecedoresGrid(){
     try {
-      const fornecedores = await SupabaseService.list('fornecedores', '*', {orderBy: this._fornecedoresSort.field, ascending: this._fornecedoresSort.ascending});
-      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => `<tr><td>${f.nome}</td><td>${f.contato}</td><td><button class="btn-delete" data-id="${f.id}">Excluir</button></td></tr>`).join('');
+      const searchTerm = this.searchFornecedorInput?.value.trim();
+      let queryOptions = {orderBy: this._fornecedoresSort.field, ascending: this._fornecedoresSort.ascending};
+
+      if (searchTerm) {
+        queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
+      }
+
+      const fornecedores = await SupabaseService.list('fornecedores', 'id, nome, telefone', queryOptions);
+      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => `
+        <tr>
+          <td>${f.nome || ''}</td>
+          <td>${f.telefone || ''}</td>
+          <td>
+            <button class="btn-edit" data-id="${f.id}">Editar</button>
+            <button class="btn-delete" data-id="${f.id}">Excluir</button>
+          </td>
+        </tr>`).join('');
     } catch(e) {
       console.error('Erro ao carregar fornecedores', e);
     }
