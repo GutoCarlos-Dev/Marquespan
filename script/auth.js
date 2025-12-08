@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         // Passo 1: Buscar o e-mail do usuário com base no nome de usuário fornecido.
         // Esta consulta é anônima e precisa que a RLS permita a leitura da coluna 'email' e 'nome'.
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabaseClient
           .from('usuarios')
           .select('email, nome, nivel') // Seleciona apenas os dados necessários
           .eq('nome', usuario)
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Passo 2: Usar o e-mail encontrado para fazer o login seguro com Supabase Auth.
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
           email: userData.email,
           password: senha,
         });
