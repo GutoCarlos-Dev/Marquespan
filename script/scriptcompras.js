@@ -724,49 +724,6 @@ const UI = {
     this.detailPanelBackdrop.classList.add('hidden');
   },
 
-  async handleProductForm(e){
-    e.preventDefault();
-    const form = e.target;
-    const data = new FormData(form);
-    const payload = Object.fromEntries(data);
-    const form = this.formCadastrarProduto;
-    const editingId = form.dataset.editingId;
-
-    const payload = {
-      codigo_principal: document.getElementById('produtoCodigo1').value,
-      codigo_secundario: document.getElementById('produtoCodigo2').value,
-      nome: document.getElementById('produtoNome').value,
-      unidade_medida: document.getElementById('produtoUnidade').value,
-    };
-
-    if (!payload.codigo_principal || !payload.nome) {
-      return alert('Os campos "Código 1" e "Nome do Produto" são obrigatórios.');
-    }
-
-    try {
-      await SupabaseService.insert('produtos', payload);
-      alert('Produto cadastrado com sucesso!');
-      form.reset();
-      if (editingId) {
-        // Modo de Atualização
-        await SupabaseService.update('produtos', payload, { field: 'id', value: editingId });
-        alert('✅ Produto atualizado com sucesso!');
-      } else {
-        // Modo de Cadastro
-        await SupabaseService.insert('produtos', payload);
-        alert('✅ Produto cadastrado com sucesso!');
-      }
-
-      // Limpa o formulário e reseta o estado de edição
-      this.clearProductForm();
-      this.renderProdutosGrid();
-    } catch(err) {
-      console.error(err);
-      alert('Erro ao cadastrar produto');
-      alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} produto.`);
-    }
-  },
-
   clearProductForm() {
     this.formCadastrarProduto.reset();
     this.formCadastrarProduto.dataset.editingId = ''; // Limpa o ID de edição
