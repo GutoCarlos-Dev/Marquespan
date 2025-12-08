@@ -17,23 +17,40 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // ⚠️ AVISO DE SEGURANÇA: Este método não é seguro.
-        // A senha está sendo comparada diretamente no banco de dados.
-        // O ideal é usar `supabase.auth.signInWithPassword`.
-        const { data, error } = await supabase
+        // Passo 1: Buscar o e-mail do usuário com base no nome de usuário fornecido.
+        // Esta consulta é anônima e precisa que a RLS permita a leitura da coluna 'email' e 'nome'.
+        const { data: userData, error: userError } = await supabase
           .from('usuarios')
-          .select('*')
+          .select('email, nome, nivel') // Seleciona apenas os dados necessários
           .eq('nome', usuario)
-          .eq('senha', senha)
           .single();
 
-        if (error || !data) {
+        if (userError || !userData) {
+          console.error('Erro ao buscar usuário ou usuário não encontrado:', userError);
           alert('❌ Usuário ou senha inválidos.');
           return;
         }
 
-        localStorage.setItem('usuarioLogado', JSON.stringify(data));
-        alert(`✅ Bem-vindo, ${data.nome}!`);
+        // Passo 2: Usar o e-mail encontrado para fazer o login seguro com Supabase Auth.
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: userData.email,
+          password: senha,
+        });
+
+        if (authError) {
+          console.error('Erro de autenticação:', authError);
+          alert('❌ Usuário ou senha inválidos.');
+          return;
+        }
+
+        // Passo 3: Se o login for bem-sucedido, armazena os dados do perfil do usuário.
+        // É uma boa prática armazenar apenas os dados do perfil, não os dados de autenticação.
+        const perfilUsuario = {
+          nome: userData.nome,
+          nivel: userData.nivel,
+        };
+        localStorage.setItem('usuarioLogado', JSON.stringify(perfilUsuario));
+        alert(`✅ Bem-vindo, ${userData.nome}!`);
         window.location.href = 'dashboard.html';
       } catch (err) {
         console.error('Erro ao conectar com Supabase:', err);

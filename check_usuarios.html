@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verificar Tabela Usuários</title>
+</head>
+<body>
+    <h1>Verificação da Tabela Usuários</h1>
+    <button id="check-btn">Verificar Usuários</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { supabase } from './script/supabase.js';
+
+        document.getElementById('check-btn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            output.textContent = 'Carregando...';
+
+            try {
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('*');
+
+                if (error) {
+                    output.textContent = `Erro: ${error.message}`;
+                } else {
+                    output.textContent = `Dados da tabela usuarios:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (err) {
+                output.textContent = `Erro de conexão: ${err.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
