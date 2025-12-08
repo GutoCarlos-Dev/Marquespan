@@ -1004,15 +1004,25 @@ const UI = {
   },
 
   async generatePdf(){
-    const element = document.getElementById('detailPanel');
+    // Cria um contêiner temporário para o conteúdo do PDF
+    const contentToPrint = document.createElement('div');
+    contentToPrint.style.padding = '20px'; // Adiciona uma margem interna para o PDF
+    
+    // Clona o título e o corpo para não afetar a exibição original
+    const title = this.quotationDetailTitle.cloneNode(true);
+    const body = this.quotationDetailBody.cloneNode(true);
+    
+    contentToPrint.appendChild(title);
+    contentToPrint.appendChild(body);
+
     const opt = {
-      margin: 1,
+      margin: 0.5,
       filename: 'detalhes_cotacao.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-    html2pdf().set(opt).from(element).save();
+    html2pdf().set(opt).from(contentToPrint).save();
   },
 
   async deleteQuotation(id){
