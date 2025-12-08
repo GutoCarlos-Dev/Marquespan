@@ -1,4 +1,4 @@
-export async function mostrarUsuarios() {
+async function mostrarUsuarios() {
   const termo = document.getElementById('termoBusca').value.trim().toLowerCase();
   const corpoTabela = document.getElementById('corpoTabelaUsuarios');
   corpoTabela.innerHTML = '';
@@ -43,7 +43,7 @@ export async function mostrarUsuarios() {
   });
 }
 
-export async function cadastrarUsuario(event) {
+async function cadastrarUsuario(event) {
   event.preventDefault(); // evita recarregar a página
 
   const nome = document.getElementById('nome').value.trim();
@@ -74,7 +74,7 @@ export async function cadastrarUsuario(event) {
 }
 
 
-export async function editarUsuario(id) {
+async function editarUsuario(id) {
   const { data, error } = await supabaseClient
     .from('usuarios')
     .select('*')
@@ -99,7 +99,7 @@ export async function editarUsuario(id) {
   window.mostrarSecao('cadastro');
 }
 
-export async function atualizarUsuario(event) {
+async function atualizarUsuario(event) {
   event.preventDefault();
   const id = document.getElementById('formUsuario').dataset.usuarioId;
   const nome = document.getElementById('nome').value.trim();
@@ -134,7 +134,7 @@ export async function atualizarUsuario(event) {
   mostrarUsuarios();
 }
 
-export async function excluirUsuario(id) {
+async function excluirUsuario(id) {
   const confirmar = confirm('Tem certeza que deseja excluir este usuário?');
 
   if (!confirmar) return;
@@ -153,3 +153,10 @@ export async function excluirUsuario(id) {
   alert('✅ Usuário excluído com sucesso!');
   mostrarUsuarios();
 }
+
+// Expor funções para o escopo global (window) para que os botões no HTML possam chamá-las
+window.mostrarUsuarios = mostrarUsuarios;
+window.cadastrarUsuario = cadastrarUsuario;
+window.editarUsuario = editarUsuario;
+window.atualizarUsuario = atualizarUsuario;
+window.excluirUsuario = excluirUsuario;
