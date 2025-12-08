@@ -601,6 +601,29 @@ const UI = {
         }).join('')}</tbody></table></div>`  // Corrigido: &lt; e &gt;
       });
       this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
+
+      // Se o status for 'Recebido', busca e exibe os detalhes do recebimento com as divergências
+      if (cotacao.status === 'Recebido') {
+        const { data: recebimentos, error: recErr } = await supabaseClient
+          .from('recebimentos')
+          .select('qtd_pedida, qtd_recebida, produtos(nome)')
+          .eq('id_cotacao', id);
+
+        if (recErr) throw recErr;
+
+        if (recebimentos && recebimentos.length > 0) {
+          html += `<hr><h3>Detalhes do Recebimento</h3>`;
+          html += `<table class="data-grid"><thead><tr><th>Produto</th><th>Qtd. Pedida</th><th>Qtd. Recebida</th><th>Divergência</th></tr></thead><tbody>`;
+          recebimentos.forEach(rec => {
+            const divergencia = rec.qtd_recebida - rec.qtd_pedida;
+            const divergenciaClass = divergencia < 0 ? 'divergence-negative' : (divergencia > 0 ? 'divergence-positive' : '');
+            const divergenciaSignal = divergencia > 0 ? `+${divergencia}` : divergencia;
+            html += `<tr><td>${rec.produtos.nome}</td><td>${rec.qtd_pedida}</td><td>${rec.qtd_recebida}</td><td class="${divergenciaClass}">${divergencia !== 0 ? divergenciaSignal : 'OK'}</td></tr>`;
+          });
+          html += `</tbody></table>`;
+        }
+      }
+
       this.quotationDetailBody.innerHTML = html;
       this.detailPanelBackdrop.classList.remove('hidden');
     }catch(e){console.error(e);alert('Erro ao abrir detalhes')}
