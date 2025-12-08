@@ -1109,8 +1109,11 @@ const UI = {
           console.warn(`Cotação ${cotacaoId} não possui fornecedor vencedor. O valor total não será recalculado.`);
         }
 
-        // Salvar os itens recebidos na tabela de log 'recebimentos'
-        await SupabaseService.insert('recebimentos', itens);
+        // Correção: Itera sobre os itens e insere cada um individualmente.
+        // O método 'insert' do SupabaseService espera um único objeto ou um array para uma única chamada.
+        for (const item of itens) {
+          await SupabaseService.insert('recebimentos', item);
+        }
         
         // 6. Preparar o payload para atualizar a cotação principal
         const updatePayload = { status: 'Recebido' };
