@@ -867,7 +867,25 @@ const UI = {
   },
 
   printQuotation(){
-    window.print();
+    const panelContent = this.detailPanel.innerHTML;
+    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    
+    printWindow.document.write('<html><head><title>Imprimir Cotação</title>');
+    // Adiciona os mesmos estilos da página principal para manter a aparência
+    printWindow.document.write('<link rel="stylesheet" href="css/index.css">');
+    printWindow.document.write('<link rel="stylesheet" href="css/stylecompras.css">');
+    printWindow.document.write('<style>body { margin: 20px; } .panel-header, .panel-footer { display: none; } </style>'); // Esconde cabeçalho/rodapé do painel
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(panelContent);
+    printWindow.document.write('</body></html>');
+    
+    printWindow.document.close();
+    printWindow.focus(); // Necessário para alguns navegadores
+    // Adiciona um pequeno delay para garantir que os estilos sejam carregados
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   },
 
   async generatePdf(){
@@ -879,7 +897,7 @@ const UI = {
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-    html2pdf().set(opt).from(element).save();
+    html2pdf().from(element).set(opt).save();
   },
 
   async deleteQuotation(id){
