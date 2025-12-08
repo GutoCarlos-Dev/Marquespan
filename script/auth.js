@@ -16,34 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Passo 1: Buscar o e-mail do usuário com base no nome de usuário fornecido.
-        // Esta consulta é anônima e precisa que a RLS permita a leitura da coluna 'email' e 'nome'.
+        // AVISO DE SEGURANÇA: Este método não é o ideal.
+        // A senha está sendo comparada diretamente no banco de dados.
+        // O correto é migrar o cadastro de usuários para usar `supabase.auth.signUp()`.
         const { data: userData, error: userError } = await supabaseClient
           .from('usuarios')
-          .select('email, nome, nivel') // Seleciona apenas os dados necessários
+          .select('nome, nivel, senha') // Seleciona a senha para verificação
           .eq('nome', usuario)
           .single();
 
-        if (userError || !userData) {
+        // Verifica se o usuário existe e se a senha corresponde
+        if (userError || !userData || userData.senha !== senha) {
           console.error('Erro ao buscar usuário ou usuário não encontrado:', userError);
           alert('❌ Usuário ou senha inválidos.');
           return;
         }
 
-        // Passo 2: Usar o e-mail encontrado para fazer o login seguro com Supabase Auth.
-        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-          email: userData.email,
-          password: senha,
-        });
-
-        if (authError) {
-          console.error('Erro de autenticação:', authError);
-          alert('❌ Usuário ou senha inválidos.');
-          return;
-        }
-
-        // Passo 3: Se o login for bem-sucedido, armazena os dados do perfil do usuário.
-        // É uma boa prática armazenar apenas os dados do perfil, não os dados de autenticação.
+        // Se a verificação for bem-sucedida, armazena os dados do perfil do usuário.
         const perfilUsuario = {
           nome: userData.nome,
           nivel: userData.nivel,
