@@ -867,25 +867,29 @@ const UI = {
   },
 
   printQuotation(){
-    const panelContent = this.detailPanel.innerHTML;
-    const printWindow = window.open('', '_blank', 'height=600,width=800');
-    
-    printWindow.document.write('<html><head><title>Imprimir Cotação</title>');
-    // Adiciona os mesmos estilos da página principal para manter a aparência
-    printWindow.document.write('<link rel="stylesheet" href="css/index.css">');
-    printWindow.document.write('<link rel="stylesheet" href="css/stylecompras.css">');
-    printWindow.document.write('<style>body { margin: 20px; } .panel-header, .panel-footer { display: none; } </style>'); // Esconde cabeçalho/rodapé do painel
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(panelContent);
-    printWindow.document.write('</body></html>');
-    
-    printWindow.document.close();
-    printWindow.focus(); // Necessário para alguns navegadores
-    // Adiciona um pequeno delay para garantir que os estilos sejam carregados
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    const panelContent = this.detailPanel.innerHTML; // Pega o conteúdo do painel
+    const printWindow = window.open('', '_blank'); // Abre uma nova janela
+
+    // Escreve o conteúdo na nova janela
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Imprimir Cotação</title>
+          <link rel="stylesheet" href="css/index.css">
+          <link rel="stylesheet" href="css/stylecompras.css">
+          <style>
+            body { margin: 20px; background: #fff; } 
+            .panel-header, .panel-footer { display: none; } /* Esconde botões */
+          </style>
+        </head>
+        <body>${panelContent}</body>
+      </html>
+    `);
+    printWindow.document.close(); // Finaliza a escrita no documento
+    printWindow.onload = function() { // Espera a janela carregar completamente
+        printWindow.print(); // Chama a impressão
+        printWindow.close(); // Fecha a janela após imprimir
+    };
   },
 
   async generatePdf(){
