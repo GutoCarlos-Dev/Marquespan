@@ -113,6 +113,7 @@ const UI = {
     this.btnSearchQuotation = document.getElementById('btnSearchQuotation');
     this.formCadastrarProduto = document.getElementById('formCadastrarProduto');
     this.produtosTableBody = document.getElementById('produtosTableBody');
+    this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
     this.importPanel = document.getElementById('importPanel');
@@ -848,17 +849,7 @@ const UI = {
   async renderProdutosGrid(){
     try {
       const produtos = await SupabaseService.list('produtos', '*', {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending});
-      this.produtosTableBody.innerHTML = produtos.map(p => `
-        <tr>
-          <td>${p.codigo_principal || ''}</td>
-          <td>${p.codigo_secundario || ''}</td>
-          <td>${p.nome || ''}</td>
-          <td>${p.unidade_medida || 'UN'}</td>
-          <td>
-            <button class="btn-action btn-edit" data-id="${p.id}">Editar</button>
-            <button class="btn-delete" data-id="${p.id}">Excluir</button>
-          </td>
-        </tr>`).join('');
+      this.produtosTableBody.innerHTML = produtos.map(p => `<tr><td>${p.nome}</td><td>${p.codigo_principal}</td><td><button class="btn-delete" data-id="${p.id}">Excluir</button></td></tr>`).join('');
     } catch(e) {
       console.error('Erro ao carregar produtos', e);
     }
@@ -924,29 +915,7 @@ const UI = {
   },
 
   printQuotation(){
-    const panelContent = this.detailPanel.innerHTML; // Pega o conteúdo do painel
-    const printWindow = window.open('', '_blank'); // Abre uma nova janela
-
-    // Escreve o conteúdo na nova janela
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Imprimir Cotação</title>
-          <link rel="stylesheet" href="css/index.css">
-          <link rel="stylesheet" href="css/stylecompras.css">
-          <style>
-            body { margin: 20px; background: #fff; } 
-            .panel-header, .panel-footer { display: none; } /* Esconde botões */
-          </style>
-        </head>
-        <body>${panelContent}</body>
-      </html>
-    `);
-    printWindow.document.close(); // Finaliza a escrita no documento
-    printWindow.onload = function() { // Espera a janela carregar completamente
-        printWindow.print(); // Chama a impressão
-        printWindow.close(); // Fecha a janela após imprimir
-    };
+    window.print();
   },
 
   async generatePdf(){
@@ -958,7 +927,7 @@ const UI = {
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-    html2pdf().from(element).set(opt).save();
+    html2pdf().set(opt).from(element).save();
   },
 
   async deleteQuotation(id){
