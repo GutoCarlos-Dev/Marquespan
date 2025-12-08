@@ -548,7 +548,8 @@ const UI = {
         const initialStatus = c.status || 'Pendente';
         const isRecebido = initialStatus === 'Recebido';
         const statusClass = `quotation-status-select status-${initialStatus}`;
-        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}" ${isRecebido ? 'disabled' : ''}><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
+        // Desabilita o seletor se o status for 'Recebido' ou se o usuário for do nível 'estoque'
+        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}" ${isRecebido || nivelUsuario === 'estoque' ? 'disabled' : ''}><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
