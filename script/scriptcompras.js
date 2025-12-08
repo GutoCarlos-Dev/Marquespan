@@ -740,6 +740,24 @@ const UI = {
     }
   },
 
+  async loadProductForEditing(id) {
+    try {
+      const [product] = await SupabaseService.list('produtos', '*', { eq: { field: 'id', value: id } });
+      if (!product) return alert('Produto não encontrado.');
+
+      this.formCadastrarProduto.dataset.editingId = id; // Marca que estamos editando
+      document.getElementById('produtoCodigo1').value = product.codigo_principal || '';
+      document.getElementById('produtoCodigo2').value = product.codigo_secundario || '';
+      document.getElementById('produtoNome').value = product.nome || '';
+      document.getElementById('produtoUnidade').value = product.unidade_medida || '';
+
+      this.btnSubmitProduto.textContent = 'Atualizar'; // Muda o texto do botão
+      this.formCadastrarProduto.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      console.error('Erro ao carregar produto para edição', e);
+    }
+  },
+
   async handleFornecedorForm(e){
     e.preventDefault();
     const form = e.target;
@@ -764,6 +782,9 @@ const UI = {
       if(confirm('Excluir produto?')) {
         SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
       }
+    }
+    if (btn.classList.contains('btn-edit')) {
+      this.loadProductForEditing(id);
     }
   },
 
