@@ -1,5 +1,6 @@
 // Compras.js - Versão refatorada mantendo funcionalidades principais
 // Estrutura: Services (Supabase), UI, Cart, TESTE
+import { supabaseClient } from './supabase.js';
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
