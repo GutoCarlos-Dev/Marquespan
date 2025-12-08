@@ -113,7 +113,7 @@ const UI = {
     this.btnSearchQuotation = document.getElementById('btnSearchQuotation');
     this.formCadastrarProduto = document.getElementById('formCadastrarProduto');
     this.produtosTableBody = document.getElementById('produtosTableBody');
-    this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
+    this.btnSubmitProduto = document.getElementById('btnSubmitProduto'); // Cache do botão de submit do produto
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
     this.importPanel = document.getElementById('importPanel');
@@ -848,19 +848,9 @@ const UI = {
 
   async renderProdutosGrid(){
     try {
-      const produtos = await SupabaseService.list('produtos', '*', { orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending });
-      this.produtosTableBody.innerHTML = produtos.map(p => `
-        <tr>
-          <td>${p.codigo_principal || ''}</td>
-          <td>${p.codigo_secundario || ''}</td>
-          <td>${p.nome || ''}</td>
-          <td>${p.unidade_medida || 'UN'}</td>
-          <td>
-            <button class="btn-action btn-edit" data-id="${p.id}">Editar</button>
-            <button class="btn-delete" data-id="${p.id}">Excluir</button>
-          </td>
-        </tr>`).join('');
-    } catch (e) {
+      const produtos = await SupabaseService.list('produtos', '*', {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending});
+      this.produtosTableBody.innerHTML = produtos.map(p => `<tr><td>${p.nome}</td><td>${p.codigo_principal}</td><td><button class="btn-delete" data-id="${p.id}">Excluir</button></td></tr>`).join('');
+    } catch(e) {
       console.error('Erro ao carregar produtos', e);
     }
   },
