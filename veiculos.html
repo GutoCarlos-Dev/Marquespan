@@ -55,32 +55,8 @@
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
-
   <!-- 🚀 Scripts -->
-  <!-- 1. Carrega a biblioteca do Supabase a partir do CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- 2. Inicializa o cliente Supabase e o torna global -->
-  <script>
-    const supabaseUrl = 'https://hlzcycvlcuhgnnjkmslt.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-  </script>
-  <script src="./script/menu.js" defer></script>
-  <script src="./script/veiculos.js" defer></script>
-  <script>
-    function abrirCadastroVeiculo() {
-      const largura = 900;
-      const altura = 700;
-      const esquerda = (window.screen.width - largura) / 2;
-      const topo = (window.screen.height - altura) / 2;
-
-      window.open(
-        'cadastro-veiculo.html',
-        'CadastroVeiculo',
-        `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
-      );
-    }
-  </script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/veiculos.js" defer></script>
 </body>
 </html>

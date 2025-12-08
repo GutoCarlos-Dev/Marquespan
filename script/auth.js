@@ -1,4 +1,5 @@
 // script/auth.js
+import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Corrigido: ID do formulário é 'login-form'

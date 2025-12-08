@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 async function mostrarUsuarios() {
   const termo = document.getElementById('termoBusca').value.trim().toLowerCase();
   const corpoTabela = document.getElementById('corpoTabelaUsuarios');
@@ -153,6 +155,39 @@ async function excluirUsuario(id) {
   alert('✅ Usuário excluído com sucesso!');
   mostrarUsuarios();
 }
+
+// Expor funções para o escopo global (window) para que os botões no HTML possam chamá-las
+window.mostrarUsuarios = mostrarUsuarios;
+window.cadastrarUsuario = cadastrarUsuario;
+window.editarUsuario = editarUsuario;
+window.atualizarUsuario = atualizarUsuario;
+window.excluirUsuario = excluirUsuario;
+
+function mostrarSecao(id) {
+  document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  if (id === 'cadastro') {
+    document.getElementById('formUsuario').reset();
+    document.getElementById('btnSalvar').classList.remove('hidden');
+    document.getElementById('btnAtualizar').classList.add('hidden');
+    document.getElementById('formUsuario').dataset.usuarioId = '';
+  }
+}
+window.mostrarSecao = mostrarSecao;
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btnAtualizarLista')?.addEventListener('click', mostrarUsuarios);
+  document.getElementById('termoBusca')?.addEventListener('input', mostrarUsuarios);
+  document.getElementById('formUsuario')?.addEventListener('submit', (e) => {
+    const id = document.getElementById('formUsuario').dataset.usuarioId;
+    if (id) {
+      atualizarUsuario(e);
+    } else {
+      cadastrarUsuario(e);
+    }
+  });
+  mostrarUsuarios();
+});
 
 // Expor funções para o escopo global (window) para que os botões no HTML possam chamá-las
 window.mostrarUsuarios = mostrarUsuarios;

@@ -76,41 +76,7 @@
   </div>
 
   <!-- 🚀 Scripts -->
-  <!-- 1. Carrega a biblioteca do Supabase a partir do CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- 2. Inicializa o cliente Supabase e o torna global -->
-  <script>
-    const supabaseUrl = 'https://hlzcycvlcuhgnnjkmslt.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsemN5Y3ZsY3VoZ25uamttc2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwODA1ODgsImV4cCI6MjA2OTY1NjU4OH0.GEm-OCzpScQ5uFvhkNFHxdKdwZc3W2bnxphq0pjBwxY';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-  </script>
-
-  <!-- 3. Carrega os scripts da página -->
-  <script src="./script/menu.js" defer></script>
-  <script src="./script/usuarios.js" defer></script>
-
-  <script>
-    function mostrarSecao(id) {
-      document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
-      // Limpa e reseta o formulário ao alternar para a seção de cadastro
-      if (id === 'cadastro') {
-        document.getElementById('formUsuario').reset();
-        document.getElementById('btnSalvar').classList.remove('hidden');
-        document.getElementById('btnAtualizar').classList.add('hidden');
-        document.getElementById('formUsuario').dataset.usuarioId = '';
-      }
-    }
-    window.mostrarSecao = mostrarSecao;
-
-    window.onload = () => {
-      document.getElementById('btnAtualizarLista').addEventListener('click', mostrarUsuarios);
-      document.getElementById('termoBusca').addEventListener('input', mostrarUsuarios);
-      document.getElementById('formUsuario').addEventListener('submit', cadastrarUsuario); // Simplificado para chamar a função correta
-      document.getElementById('btnAtualizar').addEventListener('click', atualizarUsuario);
-      mostrarUsuarios();
-    };
-  </script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/usuarios.js" defer></script>
 </body>
 </html>
