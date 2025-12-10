@@ -177,6 +177,7 @@ const RotasUI = {
             }
         });
 
+        let rotas = []; // Declarar a variável aqui para que seja acessível fora do try/catch
         try {
             const searchTerm = this.searchInput?.value.trim();
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
@@ -194,7 +195,7 @@ const RotasUI = {
                 queryOptions.or = searchConditions.join(',');
             }
 
-            const rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
+            rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
 
             const dayClassMap = {
                 'SEGUNDA': 'semana-segunda',
