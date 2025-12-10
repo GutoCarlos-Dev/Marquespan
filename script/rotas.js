@@ -166,6 +166,16 @@ const RotasUI = {
 
     async renderGrid() {
         if (!this.tableBody) return;
+
+        // Atualiza os indicadores de ordenação nos cabeçalhos
+        const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
+        ths?.forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.field === this._sort.field) {
+                th.classList.add(this._sort.ascending ? 'sort-asc' : 'sort-desc');
+            }
+        });
+
         try {
             const searchTerm = this.searchInput?.value.trim();
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
@@ -177,8 +187,19 @@ const RotasUI = {
             }
 
             const rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
-            this.tableBody.innerHTML = rotas.map(r => `
-                <tr>
+
+            const dayClassMap = {
+                'SEGUNDA': 'semana-segunda',
+                'TERÇA': 'semana-terca',
+                'QUARTA': 'semana-quarta',
+                'QUINTA': 'semana-quinta',
+                'SEXTA': 'semana-sexta',
+            };
+
+            this.tableBody.innerHTML = rotas.map(r => {
+                const rowClass = dayClassMap[r.semana] || '';
+                return `
+                <tr class="${rowClass}">
                     <td>${r.numero || ''}</td>
                     <td>${r.semana || ''}</td>
                     <td>${r.responsavel || ''}</td>
@@ -189,7 +210,8 @@ const RotasUI = {
                         <button class="btn-edit" data-id="${r.id}">Editar</button>
                         <button class="btn-delete" data-id="${r.id}">Excluir</button>
                     </td>
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
         } catch (e) {
             console.error('Erro ao carregar rotas', e);
             this.tableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar rotas.</td></tr>`;

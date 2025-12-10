@@ -100,3 +100,46 @@
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+
+/* Estilos para cabeçalhos de tabela ordenáveis */
+.data-grid thead th[data-field] {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px; /* Espaço para o ícone de ordenação */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none; /* Padrão */
+}
+
+.data-grid thead th[data-field]::after {
+    content: ' \2195'; /* Seta para cima e para baixo (↕) */
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    transition: color 0.2s;
+}
+
+.data-grid thead th[data-field]:hover::after {
+    color: #333;
+}
+
+.data-grid thead th.sort-asc::after {
+    content: ' \25B2'; /* Seta para cima (▲) */
+    color: #007bff;
+}
+
+.data-grid thead th.sort-desc::after {
+    content: ' \25BC'; /* Seta para baixo (▼) */
+    color: #007bff;
+}
+
+/* Cores para as linhas da tabela de rotas */
+.data-grid .semana-segunda { background-color: #e6f7ff; } /* Azul claro */
+.data-grid .semana-terca { background-color: #fff0e6; } /* Laranja claro */
+.data-grid .semana-quarta { background-color: #e6ffe6; } /* Verde claro */
+.data-grid .semana-quinta { background-color: #f2e6ff; } /* Roxo claro */
+.data-grid .semana-sexta { background-color: #fff9e6; } /* Amarelo claro */
+
+
