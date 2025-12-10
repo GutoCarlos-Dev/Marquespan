@@ -84,10 +84,10 @@ const DespesasUI = {
         this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome' })
       ]);
 
-      this.fillSelect('despesaRota', rotas, 'numero', 'numero', 'Selecione uma Rota');
-      this.fillSelect('despesaHotel', hoteis, 'id', 'nome', 'Selecione um Hotel');
-      this.fillSelect('despesaFuncionario1', funcionarios, 'id', 'nome', 'Selecione o Funcionário 1');
-      this.fillSelect('despesaFuncionario2', funcionarios, 'id', 'nome', 'Selecione o Funcionário 2 (Opcional)');
+      this.fillDatalist('rotasList', rotas, 'numero', 'numero');
+      this.fillDatalist('hoteisList', hoteis, 'id', 'nome');
+      this.fillDatalist('funcionarios1List', funcionarios, 'id', 'nome');
+      this.fillDatalist('funcionarios2List', funcionarios, 'id', 'nome');
 
     } catch (error) {
       console.error("Erro ao popular seletores:", error);
@@ -95,16 +95,31 @@ const DespesasUI = {
     }
   },
 
-  fillSelect(selectId, data, valueField, textField, placeholder) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+  fillDatalist(datalistId, data, valueField, textField) {
+    const datalist = document.getElementById(datalistId);
+    if (!datalist) return;
+    datalist.innerHTML = '';
     data.forEach(item => {
       const option = document.createElement('option');
-      option.value = item[valueField];
-      option.textContent = item[textField];
-      select.appendChild(option);
+      option.value = item[textField];
+      option.dataset.value = item[valueField]; // Armazena o ID/valor real no dataset
+      datalist.appendChild(option);
     });
+  },
+
+  // Função auxiliar para obter o ID de um datalist
+  getValueFromDatalist(inputId) {
+    const input = document.getElementById(inputId);
+    const datalistId = input.getAttribute('list');
+    const datalist = document.getElementById(datalistId);
+    const inputValue = input.value;
+
+    for (const option of datalist.options) {
+      if (option.value === inputValue) {
+        return option.dataset.value; // Retorna o ID armazenado
+      }
+    }
+    return inputValue; // Retorna o próprio valor digitado se não encontrar correspondência
   },
 
   calculateTotal() {
@@ -119,10 +134,10 @@ const DespesasUI = {
     const editingId = this.editingIdInput.value;
 
     const payload = {
-      numero_rota: document.getElementById('despesaRota').value,
-      id_hotel: document.getElementById('despesaHotel').value,
-      id_funcionario1: document.getElementById('despesaFuncionario1').value,
-      id_funcionario2: document.getElementById('despesaFuncionario2').value || null,
+      numero_rota: this.getValueFromDatalist('despesaRotaInput'),
+      id_hotel: this.getValueFromDatalist('despesaHotelInput'),
+      id_funcionario1: this.getValueFromDatalist('despesaFuncionario1Input'),
+      id_funcionario2: this.getValueFromDatalist('despesaFuncionario2Input') || null,
       tipo_quarto: document.getElementById('despesaTipoQuarto').value,
       qtd_diarias: parseInt(document.getElementById('despesaDiarias').value),
       data_reserva: document.getElementById('despesaDataReserva').value || null,
@@ -167,10 +182,21 @@ const DespesasUI = {
       if (!despesa) return alert('Despesa não encontrada.');
 
       this.editingIdInput.value = id;
-      document.getElementById('despesaRota').value = despesa.numero_rota || '';
-      document.getElementById('despesaHotel').value = despesa.id_hotel || '';
-      document.getElementById('despesaFuncionario1').value = despesa.id_funcionario1 || '';
-      document.getElementById('despesaFuncionario2').value = despesa.id_funcionario2 || '';
+
+      // Para preencher os inputs, precisamos buscar o texto correspondente ao ID
+      const [rota, hotel, func1, func2] = await Promise.all([
+        despesa.numero_rota ? this.SupabaseService.list('rotas', 'numero', { eq: { field: 'numero', value: despesa.numero_rota } }) : Promise.resolve([]),
+        despesa.id_hotel ? this.SupabaseService.list('hotel', 'nome', { eq: { field: 'id', value: despesa.id_hotel } }) : Promise.resolve([]),
+        despesa.id_funcionario1 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario1 } }) : Promise.resolve([]),
+        despesa.id_funcionario2 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario2 } }) : Promise.resolve([])
+      ]);
+
+      document.getElementById('despesaRotaInput').value = rota[0]?.numero || '';
+      document.getElementById('despesaHotelInput').value = hotel[0]?.nome || '';
+      document.getElementById('despesaFuncionario1Input').value = func1[0]?.nome || '';
+      document.getElementById('despesaFuncionario2Input').value = func2[0]?.nome || '';
+
+      // Preenche o resto do formulário
       document.getElementById('despesaTipoQuarto').value = despesa.tipo_quarto || '';
       document.getElementById('despesaDiarias').value = despesa.qtd_diarias || '';
       document.getElementById('despesaDataReserva').value = despesa.data_reserva || '';

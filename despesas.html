@@ -17,40 +17,39 @@
 
       <section id="sectionCadastrarDespesa" class="section">
         <div class="form-container">
-          <h3>Formulário de Despesa de Viagem</h3>
+          <h3>Formulário de Despesas</h3>
           <form id="formCadastrarDespesa">
             <input type="hidden" id="despesaEditingId">
             <div class="form-group">
-              <label for="despesaRota">Número da Rota</label>
-              <input type="text" id="despesaRota" list="rotasList" required placeholder="Digite ou selecione o número da rota">
+              <label for="despesaRotaInput">Número da Rota</label>
+              <input type="text" id="despesaRotaInput" list="rotasList" required>
               <datalist id="rotasList"></datalist>
             </div>
             <div class="form-group">
-              <label for="despesaHotel">Nome do Hotel</label>
-              <input type="text" id="despesaHotel" list="hoteisList" required placeholder="Digite ou selecione o hotel">
+              <label for="despesaHotelInput">Nome do Hotel</label>
+              <input type="text" id="despesaHotelInput" list="hoteisList" required>
               <datalist id="hoteisList"></datalist>
             </div>
             <div class="form-group">
-              <label for="despesaFuncionario1">Funcionário 1 (Motorista)</label>
-              <input type="text" id="despesaFuncionario1" list="funcionarios1List" required placeholder="Digite ou selecione o motorista">
+              <label for="despesaFuncionario1Input">Funcionário 1 (Motorista)</label>
+              <input type="text" id="despesaFuncionario1Input" list="funcionarios1List" required>
               <datalist id="funcionarios1List"></datalist>
             </div>
             <div class="form-group">
-              <label for="despesaFuncionario2">Funcionário 2 (Auxiliar)</label>
-              <input type="text" id="despesaFuncionario2" list="funcionarios2List" placeholder="Digite ou selecione o auxiliar">
+              <label for="despesaFuncionario2Input">Funcionário 2 (Auxiliar)</label>
+              <input type="text" id="despesaFuncionario2Input" list="funcionarios2List">
               <datalist id="funcionarios2List"></datalist>
             </div>
             <div class="form-group">
-              <label for="despesaTipoQuarto">Tipo do Quarto</label>
+              <label for="despesaTipoQuarto">Tipo de Quarto</label>
               <select id="despesaTipoQuarto" required>
                 <option value="SINGLE">SINGLE</option>
-                <option value="DUPLO_ECONOMICO">DUPLO ECONOMICO</option>
-                <option value="DUPLO_SIMPLES">DUPLO SIMPLES</option>
+                <option value="DUPLO">DUPLO</option>
                 <option value="TRIPLO">TRIPLO</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="despesaDiarias">Quantidade de Diárias</label>
+              <label for="despesaDiarias">Qtd. Diárias</label>
               <input type="number" id="despesaDiarias" required min="1">
             </div>
             <div class="form-group">
@@ -94,8 +93,8 @@
               <thead>
                 <tr>
                   <th data-field="numero_rota">Rota</th>
-                  <th data-field="nome_hotel">Hotel</th>
-                  <th data-field="funcionario1">Funcionário 1</th>
+                  <th data-field="hotel.nome">Hotel</th>
+                  <th data-field="funcionario1.nome">Funcionário</th>
                   <th data-field="valor_total">Valor Total</th>
                   <th data-field="data_checkin">Check-in</th>
                   <th>Ações</th>
