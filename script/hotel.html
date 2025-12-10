@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Hotel - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/hotel.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div class="main-content">
+      <header class="header"><i class="fas fa-hotel"></i> Cadastro de Hotel</header>
+
+      <section id="sectionCadastrarHotel" class="section">
+        <div class="form-container">
+          <h3>Formulário de Hotel</h3>
+          <form id="formCadastrarHotel">
+            <input type="hidden" id="hotelEditingId">
+            <div class="form-group">
+              <label for="hotelNome">Nome do Hotel</label>
+              <input type="text" id="hotelNome" required>
+            </div>
+            <div class="form-group">
+              <label for="hotelCnpj">CNPJ</label>
+              <input type="text" id="hotelCnpj">
+            </div>
+            <div class="form-group">
+              <label for="hotelEndereco">Endereço Completo</label>
+              <input type="text" id="hotelEndereco" required>
+            </div>
+            <div class="form-group">
+              <label for="hotelTelefone">Telefone</label>
+              <input type="text" id="hotelTelefone">
+            </div>
+            <div class="form-group">
+              <label for="hotelResponsavel">Responsável</label>
+              <input type="text" id="hotelResponsavel">
+            </div>
+            <div class="form-buttons">
+              <button type="submit" id="btnSubmitHotel">Cadastrar Hotel</button>
+              <button type="button" id="btnClearHotelForm">Limpar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Hotéis Cadastrados</h3>
+          <div class="search-bar">
+            <input type="text" id="searchHotelInput" placeholder="Buscar por nome, CNPJ ou responsável...">
+          </div>
+          <div class="table-scroll-container">
+            <table class="data-grid" aria-label="Hotéis Cadastrados">
+              <thead>
+                <tr>
+                  <th data-field="nome">Nome do Hotel</th>
+                  <th data-field="cnpj">CNPJ</th>
+                  <th data-field="endereco">Endereço</th>
+                  <th data-field="telefone">Telefone</th>
+                  <th data-field="responsavel">Responsável</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="hotelTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/menu.js" defer></script>
+  <!-- O script de hotel agora importa o supabase.js diretamente -->
+  <script type="module" src="script/hotel.js"></script>
+</body>
+</html>
