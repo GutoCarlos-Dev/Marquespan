@@ -25,13 +25,9 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="rota">Rota</label>
-                            <select id="rota" name="rota" required>
-                                <option value="">Selecione uma rota</option>
-                                <!-- As opções de rota seriam carregadas dinamicamente aqui -->
-                                <option value="1">Rota 1</option>
-                                <option value="2">Rota 2</option>
-                                <option value="3">Rota 3</option>
-                            </select>
+                            <!-- O campo de rota agora permite digitar ou selecionar da lista -->
+                            <input type="text" id="rota" name="rota" list="rotasList" placeholder="Todas as rotas">
+                            <datalist id="rotasList"></datalist>
                         </div>
                     </div>
                     <div class="form-row">

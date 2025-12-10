@@ -4,13 +4,14 @@
 // import * as XLSX from "xlsx";
 
 document.addEventListener('DOMContentLoaded', () => {
-    const formFiltro = document.getElementById('formFiltroRelatorio');
-    const resultadoRelatorio = document.getElementById('resultadoRelatorio');
-    const relatorioTableBody = document.getElementById('relatorioTableBody');
-    const periodoRelatorioSpan = document.getElementById('periodoRelatorio');
-    const totalGeralRelatorioSpan = document.getElementById('totalGeralRelatorio');
-    const btnExportarXLSX = document.getElementById('btnExportarXLSX');
-    const btnExportarPDF = document.getElementById('btnExportarPDF');
+    const formFiltro = document.getElementById('filtro-despesas-form');
+    const resultadosContainer = document.getElementById('resultados-container');
+    const tabelaResultadosBody = document.getElementById('tabela-resultados');
+    const rotasList = document.getElementById('rotasList');
+
+    // Elementos para exportação (se existirem na sua página final)
+    // const btnExportarXLSX = document.getElementById('btnExportarXLSX');
+    // const btnExportarPDF = document.getElementById('btnExportarPDF');
 
     let reportData = [];
 
@@ -136,4 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // });
         // doc.save('Relatorio_Despesas.pdf');
     });
+    // --- Fim das Funções de Exportação ---  
+
+    // Carrega as rotas ao iniciar a página
+    popularRotas();
 });
