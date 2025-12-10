@@ -46,6 +46,7 @@ const FuncionarioUI = {
         this.btnSubmit = document.getElementById('btnSubmitFuncionario');
         this.btnClearForm = document.getElementById('btnClearFuncionarioForm');
         this.searchInput = document.getElementById('searchFuncionarioInput');
+        this.summaryContainer = document.getElementById('funcionarioSummary');
         this.editingIdInput = document.getElementById('funcionarioEditingId');
     },
 
@@ -170,6 +171,7 @@ const FuncionarioUI = {
             }
         });
 
+        let funcionarios = []; // Declarar a variável aqui para que seja acessível fora do try/catch
         try {
             const searchTerm = this.searchInput?.value.trim();
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
@@ -178,7 +180,7 @@ const FuncionarioUI = {
                 queryOptions.or = `nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`;
             }
 
-            const funcionarios = await this.SupabaseService.list('funcionario', '*', queryOptions);
+            funcionarios = await this.SupabaseService.list('funcionario', '*', queryOptions);
 
             this.tableBody.innerHTML = funcionarios.map(f => `
                 <tr>
@@ -195,6 +197,40 @@ const FuncionarioUI = {
             console.error('Erro ao carregar funcionários', e);
             this.tableBody.innerHTML = `<tr><td colspan="5">Erro ao carregar funcionários.</td></tr>`;
         }
+
+        this.renderSummary(funcionarios);
+    },
+
+    renderSummary(funcionarios) {
+        if (!this.summaryContainer) return;
+
+        const summary = {
+            'Motorista': 0,
+            'Auxiliar': 0,
+        };
+
+        funcionarios.forEach(func => {
+            if (summary.hasOwnProperty(func.funcao)) {
+                summary[func.funcao]++;
+            }
+        });
+
+        const summaryHtml = `
+            <h3>Resumo por Função</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Função</th>
+                        <th>Total de Funcionários</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Motoristas</td><td>${summary['Motorista']}</td></tr>
+                    <tr><td>Auxiliares</td><td>${summary['Auxiliar']}</td></tr>
+                </tbody>
+            </table>
+        `;
+        this.summaryContainer.innerHTML = summaryHtml;
     }
 };
 

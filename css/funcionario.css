@@ -171,3 +171,39 @@
     content: ' \25BC'; /* Seta para baixo (▼) */
     color: #007bff;
 }
+
+/* Estilos para o resumo de funcionários */
+.funcionario-summary {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.funcionario-summary h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.funcionario-summary table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.funcionario-summary th,
+.funcionario-summary td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.funcionario-summary th {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #495057;
+}
