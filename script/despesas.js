@@ -234,16 +234,24 @@ const DespesasUI = {
       const selectQuery = `
         id,
         numero_rota,
-        hotel ( nome ),
+        hotel!inner ( nome ),
         funcionario1:funcionario!despesas_id_funcionario1_fkey ( nome ),
         valor_total,
         data_checkin
       `;
 
       let query = supabaseClient.from('despesas').select(selectQuery).order(this._sort.field, { ascending: this._sort.ascending });
-
+      
       if (searchTerm) {
-        query = query.or(`hotel.nome.ilike.%${searchTerm}%,funcionario1.nome.ilike.%${searchTerm}%`);
+        const searchConditions = [
+          `hotel.nome.ilike.%${searchTerm}%`,
+          `funcionario1.nome.ilike.%${searchTerm}%`
+        ];
+        if (!isNaN(searchTerm)) {
+          searchConditions.push(`numero_rota.eq.${searchTerm}`);
+        }
+        query = query.or(searchConditions.join(','), { foreignTable: 'hotel' });
+        query = query.or(searchConditions.join(','), { foreignTable: 'funcionario1' });
       }
 
       const { data: despesas, error } = await query;
