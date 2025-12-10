@@ -1,68 +1,105 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatório de Despesas - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/relatorio-despesas.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="icon" href="logo.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Despesas - Sistema de Frota</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> <!-- Supondo que você tenha um style.css -->
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
+
+    <div id="menu-container"></div>
+
     <div class="main-content">
-      <header class="header"><i class="fas fa-chart-pie"></i> Relatório de Despesas</header>
+        <header>
+            <h1>Relatório de Despesas</h1>
+        </header>
 
-      <section id="sectionRelatorioDespesa" class="section">
-        <div class="card">
-          <h3>Filtros do Relatório</h3>
-          <form id="formFiltroRelatorio">
-            <div class="filter-group">
-              <div class="form-group">
-                <label for="dataInicio">Data de Início (Check-in)</label>
-                <input type="date" id="dataInicio" required>
-              </div>
-              <div class="form-group">
-                <label for="dataFim">Data de Fim (Check-in)</label>
-                <input type="date" id="dataFim" required>
-              </div>
+        <main>
+            <div class="card">
+                <h2>Filtrar Despesas</h2>
+                <form id="filtro-despesas-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rota">Rota</label>
+                            <select id="rota" name="rota" required>
+                                <option value="">Selecione uma rota</option>
+                                <!-- As opções de rota seriam carregadas dinamicamente aqui -->
+                                <option value="1">Rota 1</option>
+                                <option value="2">Rota 2</option>
+                                <option value="3">Rota 3</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="data-inicial">Período Inicial</label>
+                            <input type="date" id="data-inicial" name="data-inicial" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="data-final">Período Final</label>
+                            <input type="date" id="data-final" name="data-final" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Buscar</button>
+                    </div>
+                </form>
             </div>
-            <div class="form-buttons">
-              <button type="submit" id="btnGerarRelatorio">Gerar Relatório</button>
-            </div>
-          </form>
-        </div>
 
-        <div class="card" id="resultadoRelatorio" style="display: none;">
-          <h3>Resultados do Relatório</h3>
-          <div class="report-summary">
-             <p>Período: <span id="periodoRelatorio"></span></p>
-             <p>Total Geral Gasto: <strong id="totalGeralRelatorio"></strong></p>
-          </div>
-          <div class="report-actions">
-            <button id="btnExportarXLSX"><i class="fas fa-file-excel"></i> Exportar para XLSX</button>
-            <button id="btnExportarPDF"><i class="fas fa-file-pdf"></i> Exportar para PDF</button>
-          </div>
-          <div class="table-scroll-container">
-            <table class="data-grid" aria-label="Relatório de Despesas por Rota">
-              <thead>
-                <tr>
-                  <th>Rota</th>
-                  <th>Total Gasto (R$)</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="relatorioTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+            <div class="card" id="resultados-container" style="display: none;">
+                <h2>Resultados da Busca</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo de Despesa</th>
+                            <th>Valor</th>
+                            <th>Funcionário</th>
+                            <th>Observação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-resultados">
+                        <!-- Os resultados da busca serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
     </div>
-  </div>
-  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/relatorio-despesas.js"></script>
+
+    <script src="script.js"></script> <!-- Supondo que você tenha um script.js -->
+    <script>
+        // Carrega o menu dinamicamente
+        fetch('menu.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('menu-container').innerHTML = data;
+
+                // Adiciona a lógica para o menu (toggle, etc.) se ela não estiver no script.js global
+                const script = document.createElement('script');
+                // Se a lógica do menu estiver em um arquivo separado, carregue-o
+                // script.src = 'menu-logic.js'; 
+                // Se estiver inline no script.js principal, ele já deve funcionar.
+                // document.body.appendChild(script);
+            });
+
+        document.getElementById('filtro-despesas-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            // Lógica para buscar os dados e popular a tabela
+            console.log('Buscando despesas...');
+            const rota = document.getElementById('rota').value;
+            const dataInicial = document.getElementById('data-inicial').value;
+            const dataFinal = document.getElementById('data-final').value;
+            console.log(`Filtros: Rota=${rota}, Início=${dataInicial}, Fim=${dataFinal}`);
+
+            // Exibe a área de resultados (para demonstração)
+            document.getElementById('resultados-container').style.display = 'block';
+            
+            // Aqui você faria a chamada para sua API para buscar os dados
+            // e depois preencheria a <tbody> com id="tabela-resultados"
+        });
+    </script>
+
 </body>
 </html>
