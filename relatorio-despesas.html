@@ -69,40 +69,6 @@
             </div>
         </main>
     </div>
-
-    <script src="script.js"></script> <!-- Supondo que você tenha um script.js -->
-    <script>
-        // Carrega o menu dinamicamente
-        fetch('menu.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('menu-container').innerHTML = data;
-
-                // Adiciona a lógica para o menu (toggle, etc.) se ela não estiver no script.js global
-                const script = document.createElement('script');
-                // Se a lógica do menu estiver em um arquivo separado, carregue-o
-                // script.src = 'menu-logic.js'; 
-                // Se estiver inline no script.js principal, ele já deve funcionar.
-                // document.body.appendChild(script);
-            });
-
-        document.getElementById('filtro-despesas-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            // Lógica para buscar os dados e popular a tabela
-            console.log('Buscando despesas...');
-            const rota = document.getElementById('rota').value;
-            const dataInicial = document.getElementById('data-inicial').value;
-            const dataFinal = document.getElementById('data-final').value;
-            console.log(`Filtros: Rota=${rota}, Início=${dataInicial}, Fim=${dataFinal}`);
-
-            // Exibe a área de resultados (para demonstração)
-            document.getElementById('resultados-container').style.display = 'block';
-            
-            // Aqui você faria a chamada para sua API para buscar os dados
-            // e depois preencheria a <tbody> com id="tabela-resultados"
-        });
-    </script>
-
 <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/relatorio-despesas.js"></script>
