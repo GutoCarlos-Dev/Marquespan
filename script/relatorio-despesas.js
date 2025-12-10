@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 valor_total,
                 numero_rota,
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
+                funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
                 obs:voucher
             `)
             .gte('data_checkin', startDate)
@@ -77,11 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
         dados.forEach(item => {
             totalGeral += item.valor_total;
             const tr = document.createElement('tr');
+
+            // Formata os nomes dos funcionários para exibição
+            const func1 = item.funcionario1?.nome || null;
+            const func2 = item.funcionario2?.nome || null;
+            let funcionariosDisplay = func1 || 'N/A';
+            if (func1 && func2) {
+                funcionariosDisplay = `<strong>${func1}</strong><br><small>${func2}</small>`;
+            }
+
             tr.innerHTML = `
                 <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td>${item.numero_rota}</td>
                 <td>${formatCurrency(item.valor_total)}</td>
-                <td>${item.funcionario1?.nome || 'N/A'}</td>
+                <td>${funcionariosDisplay}</td>
                 <td>${item.obs || ''}</td>
             `;
             tabelaResultadosBody.appendChild(tr);
