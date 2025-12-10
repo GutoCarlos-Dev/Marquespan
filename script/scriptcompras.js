@@ -1193,5 +1193,9 @@ UI.renderRecebimentoItems = function(itens, cotacaoId) {
 };
 
 // Initialize UI on DOM load
-document.addEventListener('DOMContentLoaded', () => UI.init());
+document.addEventListener('DOMContentLoaded', () => {
+  UI.init();
+  window.UI = UI; // Expor UI globalmente
+  window.SupabaseService = SupabaseService; // Expor SupabaseService globalmente
+});
   
