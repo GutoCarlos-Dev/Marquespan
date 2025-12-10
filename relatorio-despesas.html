@@ -8,6 +8,59 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="css/relatorio-despesas.css">
     <link rel="icon" href="logo.png" type="image/png">
+    <style>
+        /* Estilos para uma tabela de dados mais profissional */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table thead tr {
+            background-color: #0056b3; /* Azul mais escuro para o cabeçalho */
+            color: #ffffff;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dddddd;
+        }
+
+        .data-table tbody tr {
+            background-color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+
+        .data-table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #e8f4fd; /* Um azul claro no hover */
+        }
+
+        .data-table tbody td {
+            color: #333;
+        }
+
+        .data-table tfoot tr {
+            background-color: #e9ecef;
+            font-weight: bold;
+            color: #343a40;
+        }
+
+        .data-table tfoot td {
+            padding: 15px;
+            font-size: 1.1rem;
+        }
+    </style>
   </head>
 <body>
 
@@ -61,6 +114,9 @@
                     <tbody id="tabela-resultados">
                         <!-- Os resultados da busca serão inseridos aqui via JavaScript -->
                     </tbody>
+                    <tfoot>
+                        <!-- O total geral será inserido aqui -->
+                    </tfoot>
                 </table>
             </div>
         </main>

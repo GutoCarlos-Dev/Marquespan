@@ -67,11 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderizarTabela = (dados) => {
+        const tfoot = tabelaResultadosBody.parentElement.querySelector('tfoot');
         tabelaResultadosBody.innerHTML = '';
+        if (tfoot) tfoot.innerHTML = ''; // Limpa o rodapé a cada nova busca
         let totalGeral = 0;
 
         if (dados.length === 0) {
             tabelaResultadosBody.innerHTML = '<tr><td colspan="5">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
+            if (tfoot) tfoot.style.display = 'none'; // Esconde o rodapé se não houver dados
             return;
         }
 
@@ -98,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Adiciona a linha de rodapé com o total
-        const tfoot = tabelaResultadosBody.parentElement.querySelector('tfoot') || document.createElement('tfoot');
+        if (tfoot) tfoot.style.display = 'table-footer-group'; // Garante que o rodapé seja exibido
         tfoot.innerHTML = `
             <tr>
                 <td colspan="2"><strong>Total Geral</strong></td>
@@ -106,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td colspan="2"></td>
             </tr>
         `;
-        tabelaResultadosBody.parentElement.appendChild(tfoot);
     };
 
     formFiltro.addEventListener('submit', async (e) => {
