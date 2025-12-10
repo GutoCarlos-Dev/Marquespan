@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Despesas - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/despesas.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div class="main-content">
+      <header class="header"><i class="fas fa-dollar-sign"></i> Cadastro de Despesas</header>
+
+      <section id="sectionCadastrarDespesa" class="section">
+        <div class="form-container">
+          <h3>Formulário de Despesa de Viagem</h3>
+          <form id="formCadastrarDespesa">
+            <input type="hidden" id="despesaEditingId">
+            <div class="form-group">
+              <label for="despesaRota">Número da Rota</label>
+              <select id="despesaRota" required></select>
+            </div>
+            <div class="form-group">
+              <label for="despesaHotel">Nome do Hotel</label>
+              <select id="despesaHotel" required></select>
+            </div>
+            <div class="form-group">
+              <label for="despesaFuncionario1">Funcionário 1 (Motorista)</label>
+              <select id="despesaFuncionario1" required></select>
+            </div>
+            <div class="form-group">
+              <label for="despesaFuncionario2">Funcionário 2 (Auxiliar)</label>
+              <select id="despesaFuncionario2"></select>
+            </div>
+            <div class="form-group">
+              <label for="despesaTipoQuarto">Tipo do Quarto</label>
+              <select id="despesaTipoQuarto" required>
+                <option value="SINGLE">SINGLE</option>
+                <option value="DUPLO">DUPLO</option>
+                <option value="TRIPLO">TRIPLO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="despesaDiarias">Quantidade de Diárias</label>
+              <input type="number" id="despesaDiarias" required min="1">
+            </div>
+            <div class="form-group">
+              <label for="despesaDataReserva">Data da Reserva</label>
+              <input type="date" id="despesaDataReserva">
+            </div>
+            <div class="form-group">
+              <label for="despesaVoucher">Voucher</label>
+              <input type="text" id="despesaVoucher">
+            </div>
+            <div class="form-group">
+              <label for="despesaCheckin">Data Check-in</label>
+              <input type="date" id="despesaCheckin" required>
+            </div>
+            <div class="form-group">
+              <label for="despesaCheckout">Data Check-out</label>
+              <input type="date" id="despesaCheckout" required>
+            </div>
+            <div class="form-group">
+              <label for="despesaValorDiaria">Valor da Diária (R$)</label>
+              <input type="number" id="despesaValorDiaria" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="despesaValorTotal">Valor Total (R$)</label>
+              <input type="text" id="despesaValorTotal" readonly>
+            </div>
+            <div class="form-buttons">
+              <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
+              <button type="button" id="btnClearDespesaForm">Limpar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Despesas Cadastradas</h3>
+          <div class="search-bar">
+            <input type="text" id="searchDespesaInput" placeholder="Buscar por rota, hotel ou funcionário...">
+          </div>
+          <div class="table-scroll-container">
+            <table class="data-grid" aria-label="Despesas Cadastradas">
+              <thead>
+                <tr>
+                  <th data-field="numero_rota">Rota</th>
+                  <th data-field="nome_hotel">Hotel</th>
+                  <th data-field="funcionario1">Funcionário 1</th>
+                  <th data-field="valor_total">Valor Total</th>
+                  <th data-field="data_checkin">Check-in</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="despesaTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/despesas.js"></script>
+</body>
+</html>
