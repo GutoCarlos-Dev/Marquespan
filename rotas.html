@@ -78,20 +78,7 @@
   </div>
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/supabase.js"></script>
-  <script type="module" src="script/scriptcompras.js" id="scriptCompras"></script> <!-- Para SupabaseService e UI -->
+  <!-- O script de rotas agora importa o supabase.js diretamente -->
   <script type="module" src="script/rotas.js"></script>
-  <script type="module">
-    // Aguarda o evento 'load' do script de compras para garantir que UI e SupabaseService estejam prontos.
-    document.getElementById('scriptCompras').addEventListener('load', () => {
-        // A classe SupabaseService e o objeto UI são expostos globalmente por scriptcompras.js
-        if (window.SupabaseService && window.UI) {
-            RotasUI.init(window.SupabaseService, window.UI);
-            RotasUI.renderGrid(); // Carrega os dados iniciais
-        } else {
-            console.error("SupabaseService ou UI não estão definidos. Verifique a ordem de carregamento dos scripts.");
-        }
-    });
-  </script>
 </body>
 </html>

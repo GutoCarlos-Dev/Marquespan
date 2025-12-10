@@ -1,11 +1,39 @@
 // rotas.js - Lógica para o módulo de Cadastro de Rotas
-// Importa o SupabaseService que já existe no scriptcompras.js
-// (Assumindo que SupabaseService e UI serão expostos globalmente ou importados)
+import { supabaseClient } from './supabase.js';
+
+class SupabaseService {
+  static async list(table, cols='*', opts={}){
+    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
+    if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
+    if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
+    if(opts.or) q = q.or(opts.or);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  }
+
+  static async insert(table, payload){
+    const { data, error } = await supabaseClient.from(table).insert(payload).select();
+    if (error) throw error;
+    return data;
+  }
+
+  static async update(table, payload, key){
+    const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
+    if (error) throw error;
+    return data;
+  }
+
+  static async remove(table, key){
+    const { data, error } = await supabaseClient.from(table).delete().eq(key.field, key.value);
+    if (error) throw error;
+    return data;
+  }
+}
 
 const RotasUI = {
-    init(supabaseService, uiObject) {
-        this.SupabaseService = supabaseService;
-        this.UI = uiObject; // Referência ao objeto UI principal
+    init() {
+        this.SupabaseService = SupabaseService;
         this.cache();
         this.bind();
         this.setupInitialState();
@@ -168,3 +196,9 @@ const RotasUI = {
         }
     }
 };
+
+// Inicializa a UI quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+    RotasUI.init();
+    RotasUI.renderGrid(); // Carrega os dados iniciais
+});
