@@ -181,9 +181,16 @@ const RotasUI = {
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
 
             if (searchTerm) {
-                // Para buscar em múltiplos campos, o Supabase precisaria de uma função ou `or`
-                // Por simplicidade, vamos buscar em 'responsavel' e 'cidades'
-                queryOptions.or = `responsavel.ilike.%${searchTerm}%,cidades.ilike.%${searchTerm}%`;
+                const searchConditions = [
+                    `semana.ilike.%${searchTerm}%`,
+                    `responsavel.ilike.%${searchTerm}%`,
+                    `supervisor.ilike.%${searchTerm}%`,
+                ];
+                // Se o termo de busca for um número, também busca no campo 'numero'
+                if (!isNaN(searchTerm)) {
+                    searchConditions.push(`numero.eq.${searchTerm}`);
+                }
+                queryOptions.or = searchConditions.join(',');
             }
 
             const rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
