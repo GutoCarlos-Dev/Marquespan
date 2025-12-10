@@ -22,19 +22,23 @@
             <input type="hidden" id="despesaEditingId">
             <div class="form-group">
               <label for="despesaRota">Número da Rota</label>
-              <select id="despesaRota" required></select>
+              <input type="text" id="despesaRota" list="rotasList" required placeholder="Digite ou selecione o número da rota">
+              <datalist id="rotasList"></datalist>
             </div>
             <div class="form-group">
               <label for="despesaHotel">Nome do Hotel</label>
-              <select id="despesaHotel" required></select>
+              <input type="text" id="despesaHotel" list="hoteisList" required placeholder="Digite ou selecione o hotel">
+              <datalist id="hoteisList"></datalist>
             </div>
             <div class="form-group">
               <label for="despesaFuncionario1">Funcionário 1 (Motorista)</label>
-              <select id="despesaFuncionario1" required></select>
+              <input type="text" id="despesaFuncionario1" list="funcionarios1List" required placeholder="Digite ou selecione o motorista">
+              <datalist id="funcionarios1List"></datalist>
             </div>
             <div class="form-group">
               <label for="despesaFuncionario2">Funcionário 2 (Auxiliar)</label>
-              <select id="despesaFuncionario2"></select>
+              <input type="text" id="despesaFuncionario2" list="funcionarios2List" placeholder="Digite ou selecione o auxiliar">
+              <datalist id="funcionarios2List"></datalist>
             </div>
             <div class="form-group">
               <label for="despesaTipoQuarto">Tipo do Quarto</label>
