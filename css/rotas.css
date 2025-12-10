@@ -101,6 +101,43 @@
     border-radius: 4px;
 }
 
+/* Container para rolagem da tabela */
+.table-scroll-container {
+    max-height: 400px; /* Altura máxima antes de ativar a rolagem */
+    overflow-y: auto; /* Ativa a rolagem vertical */
+    border: 1px solid #e0e0e0; /* Borda para o container de rolagem */
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* Estilos para a barra de rolagem */
+.table-scroll-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Garante que o cabeçalho da tabela não role com o corpo */
+.data-grid thead {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa; /* Cor de fundo para o cabeçalho fixo */
+    z-index: 1; /* Garante que o cabeçalho fique acima do conteúdo da tabela */
+}
+
 /* Estilos para cabeçalhos de tabela ordenáveis */
 .data-grid thead th[data-field] {
     cursor: pointer;
@@ -142,4 +179,38 @@
 .data-grid .semana-quinta { background-color: #f2e6ff; } /* Roxo claro */
 .data-grid .semana-sexta { background-color: #fff9e6; } /* Amarelo claro */
 
+/* Estilos para o resumo */
+.rota-summary {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 
+.rota-summary h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.rota-summary table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.rota-summary th,
+.rota-summary td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.rota-summary th {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #495057;
+}

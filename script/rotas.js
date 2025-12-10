@@ -46,6 +46,7 @@ const RotasUI = {
         this.btnSubmit = document.getElementById('btnSubmitRota');
         this.btnClearForm = document.getElementById('btnClearRotaForm');
         this.searchInput = document.getElementById('searchRotaInput');
+        this.rotaSummary = document.getElementById('rotaSummary');
         this.editingIdInput = document.getElementById('rotaEditingId');
     },
 
@@ -216,6 +217,7 @@ const RotasUI = {
                     <td>
                         <button class="btn-edit" data-id="${r.id}">Editar</button>
                         <button class="btn-delete" data-id="${r.id}">Excluir</button>
+
                     </td>
                 </tr>`;
             }).join('');
@@ -223,6 +225,51 @@ const RotasUI = {
             console.error('Erro ao carregar rotas', e);
             this.tableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar rotas.</td></tr>`;
         }
+
+        // Renderiza o resumo após carregar o grid
+        this.renderSummary(rotas);
+    },
+
+    renderSummary(rotas) {
+        if (!this.rotaSummary) return;
+
+        const summaryData = {};
+
+        rotas.forEach(rota => {
+            const supervisor = rota.supervisor || 'Não Atribuído';
+            if (!summaryData[supervisor]) {
+                summaryData[supervisor] = {
+                    quantidadeRotas: 0,
+                    totalDias: 0
+                };
+            }
+            summaryData[supervisor].quantidadeRotas++;
+            summaryData[supervisor].totalDias += (rota.dias || 0);
+        });
+
+        let summaryHtml = `
+            <h3>Resumo por Supervisor</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Supervisor</th>
+                        <th>Quantidade de Rotas</th>
+                        <th>Total de Dias</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        for (const supervisor in summaryData) {
+            summaryHtml += `
+                <tr>
+                    <td>${supervisor}</td>
+                    <td>${summaryData[supervisor].quantidadeRotas}</td>
+                    <td>${summaryData[supervisor].totalDias}</td>
+                </tr>
+            `;
+        }
+        summaryHtml += `</tbody></table>`;
+        this.rotaSummary.innerHTML = summaryHtml;
     }
 };
 

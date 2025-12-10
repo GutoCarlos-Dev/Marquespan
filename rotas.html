@@ -65,7 +65,10 @@
           <div class="search-bar">
             <input type="text" id="searchRotaInput" placeholder="Buscar por responsável ou cidades...">
           </div>
-          <div class="table-responsive">
+          <!-- Adicionado um container para a barra de rolagem -->
+          <div class="table-scroll-container">
+            <!-- A classe table-responsive pode ser mantida se tiver outros estilos,
+                 mas a rolagem será controlada por table-scroll-container -->
             <table class="data-grid" aria-label="Rotas Cadastradas">
               <thead>
                 <tr>
@@ -80,6 +83,10 @@
               </thead>
               <tbody id="rotasTableBody"></tbody>
             </table>
+          </div>
+          <!-- Novo campo de resumo abaixo do grid -->
+          <div id="rotaSummary" class="rota-summary">
+            <h3>Resumo por Supervisor</h3>
           </div>
         </div>
       </section>
