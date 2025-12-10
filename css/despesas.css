@@ -1,0 +1,209 @@
+/* Estilos específicos para a seção de Cadastro de Despesas */
+
+#sectionCadastrarDespesa h2,
+#sectionCadastrarDespesa h3 {
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Mantém o padrão do formulário */
+#sectionCadastrarDespesa .form-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+#formCadastrarDespesa {
+    display: grid;
+    /* Cria um layout responsivo para os campos do formulário */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: center;
+}
+
+#formCadastrarDespesa .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+#formCadastrarDespesa label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+#formCadastrarDespesa input,
+#formCadastrarDespesa select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+#formCadastrarDespesa input:focus,
+#formCadastrarDespesa select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* Estilo para os botões do formulário */
+#formCadastrarDespesa button {
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+#btnSubmitDespesa {
+    background-color: #28a745; /* Verde */
+    color: white;
+}
+
+#btnSubmitDespesa:hover {
+    background-color: #218838;
+}
+
+#btnClearDespesaForm {
+    background-color: #6c757d; /* Cinza */
+    color: white;
+}
+
+#btnClearDespesaForm:hover {
+    background-color: #5a6268;
+}
+
+/* Agrupa os botões em uma linha no final do formulário */
+.form-buttons {
+    grid-column: 1 / -1; /* Ocupa todas as colunas */
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+/* Mantém o padrão da barra de busca e da tabela (data-grid) */
+#sectionCadastrarDespesa .search-bar {
+    margin-bottom: 15px;
+}
+
+#searchDespesaInput {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Container para rolagem da tabela */
+.table-scroll-container {
+    max-height: 400px; /* Altura máxima antes de ativar a rolagem */
+    overflow-y: auto; /* Ativa a rolagem vertical */
+    border: 1px solid #e0e0e0; /* Borda para o container de rolagem */
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* Estilos para a barra de rolagem */
+.table-scroll-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Garante que o cabeçalho da tabela não role com o corpo */
+.data-grid thead {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa; /* Cor de fundo para o cabeçalho fixo */
+    z-index: 1; /* Garante que o cabeçalho fique acima do conteúdo da tabela */
+}
+
+/* Estilos para cabeçalhos de tabela ordenáveis */
+.data-grid thead th[data-field] {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px; /* Espaço para o ícone de ordenação */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none; /* Padrão */
+}
+
+.data-grid thead th[data-field]::after {
+    content: ' \2195'; /* Seta para cima e para baixo (↕) */
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    transition: color 0.2s;
+}
+
+.data-grid thead th[data-field]:hover::after {
+    color: #333;
+}
+
+.data-grid thead th.sort-asc::after {
+    content: ' \25B2'; /* Seta para cima (▲) */
+    color: #007bff;
+}
+
+.data-grid thead th.sort-desc::after {
+    content: ' \25BC'; /* Seta para baixo (▼) */
+    color: #007bff;
+}
+
+/* Estilos para o resumo de funcionários */
+.funcionario-summary {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.funcionario-summary h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.funcionario-summary table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.funcionario-summary th,
+.funcionario-summary td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.funcionario-summary th {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #495057;
+}
