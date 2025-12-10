@@ -6,10 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabelaResultadosBody = document.getElementById('tabela-resultados');
     const rotasList = document.getElementById('rotasList');
 
-    // Elementos para exportação (se existirem na sua página final)
-    // const btnExportarXLSX = document.getElementById('btnExportarXLSX');
-    // const btnExportarPDF = document.getElementById('btnExportarPDF');
-
     let reportData = [];
 
     // Função para formatar moeda
