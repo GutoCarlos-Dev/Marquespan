@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultadosContainer = document.getElementById('resultados-container');
     const tabelaResultadosBody = document.getElementById('tabela-resultados');
     const rotasList = document.getElementById('rotasList');
+    const btnExportarXLSX = document.getElementById('btnExportarXLSX');
+    const btnExportarPDF = document.getElementById('btnExportarPDF');
 
     let reportData = [];
 
@@ -130,6 +132,86 @@ document.addEventListener('DOMContentLoaded', () => {
         reportData = despesas; // Armazena os dados brutos para exportação
 
         renderizarTabela(reportData);
+    });
+
+    // --- Funções de Exportação ---
+
+    const getExportData = () => {
+        return reportData.map(item => {
+            const func1 = item.funcionario1?.nome || '';
+            const func2 = item.funcionario2?.nome || '';
+            let funcionarios = func1;
+            if (func1 && func2) {
+                funcionarios = `${func1} / ${func2}`;
+            }
+
+            return {
+                'Data': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
+                'Rota': item.numero_rota,
+                'Valor': item.valor_total,
+                'Funcionários': funcionarios,
+                'Observação': item.obs || ''
+            };
+        });
+    };
+
+    btnExportarXLSX.addEventListener('click', () => {
+        if (reportData.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+
+        const dataToExport = getExportData();
+        const totalGeral = reportData.reduce((sum, item) => sum + item.valor_total, 0);
+
+        // Adiciona a linha de total ao final dos dados
+        dataToExport.push({
+            'Data': 'TOTAL GERAL',
+            'Rota': '',
+            'Valor': totalGeral,
+            'Funcionários': '',
+            'Observação': ''
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        // Formata a coluna de valor como moeda
+        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 40 }, { wch: 30 }];
+        dataToExport.forEach((_, index) => {
+            const cellRef = XLSX.utils.encode_cell({ r: index + 1, c: 2 }); // Coluna 'C' (Valor)
+            if (worksheet[cellRef]) {
+                worksheet[cellRef].t = 'n';
+                worksheet[cellRef].z = 'R$ #,##0.00';
+            }
+        });
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "RelatorioDespesas");
+        XLSX.writeFile(workbook, "Relatorio_de_Despesas.xlsx");
+    });
+
+    btnExportarPDF.addEventListener('click', () => {
+        if (reportData.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const dataToExport = getExportData();
+        const totalGeral = reportData.reduce((sum, item) => sum + item.valor_total, 0);
+
+        doc.text("Relatório de Despesas", 14, 16);
+        doc.autoTable({
+            head: [['Data', 'Rota', 'Valor', 'Funcionários', 'Observação']],
+            body: dataToExport.map(item => [item.Data, item.Rota, formatCurrency(item.Valor), item.Funcionários, item.Observação]),
+            foot: [['Total Geral', '', formatCurrency(totalGeral), '', '']],
+            startY: 20,
+            headStyles: { fillColor: [0, 86, 179] }, // Azul do cabeçalho da tabela
+            footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
+        });
+
+        doc.save('Relatorio_de_Despesas.pdf');
     });
 
     // Carrega as rotas ao iniciar a página

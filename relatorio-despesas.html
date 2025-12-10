@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="css/relatorio-despesas.css">
     <link rel="icon" href="logo.png" type="image/png">
+    <!-- Bibliotecas para exportação -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         /* Estilos para uma tabela de dados mais profissional */
         .data-table {
@@ -19,6 +24,23 @@
             border-radius: 8px;
             overflow: hidden;
         }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .card-header h2 {
+            margin: 0;
+        }
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+
 
         .data-table thead tr {
             background-color: #0056b3; /* Azul mais escuro para o cabeçalho */
@@ -100,7 +122,13 @@
             </div>
 
             <div class="card" id="resultados-container" style="display: none;">
-                <h2>Resultados da Busca</h2>
+                <div class="card-header">
+                    <h2>Resultados da Busca</h2>
+                    <div class="report-actions">
+                        <button id="btnExportarXLSX" class="btn btn-secondary"><i class="fas fa-file-excel"></i> Exportar para Excel</button>
+                        <button id="btnExportarPDF" class="btn btn-secondary"><i class="fas fa-file-pdf"></i> Exportar para PDF</button>
+                    </div>
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
