@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data_checkin,
                 valor_total,
                 numero_rota,
+                hotel:hotel(nome),
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
                 funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
                 obs:voucher
@@ -75,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalGeral = 0;
 
         if (dados.length === 0) {
-            tabelaResultadosBody.innerHTML = '<tr><td colspan="5">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
+            tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
             if (tfoot) tfoot.style.display = 'none'; // Esconde o rodapé se não houver dados
             return;
         }
@@ -95,9 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td>${item.numero_rota}</td>
+                <td>${item.hotel?.nome || 'N/A'}</td>
                 <td>${formatCurrency(item.valor_total)}</td>
                 <td>${funcionariosDisplay}</td>
-                <td>${item.obs || ''}</td>
+                <td>${item.obs || ''}</td> 
             `;
             tabelaResultadosBody.appendChild(tr);
         });
@@ -106,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tfoot) tfoot.style.display = 'table-footer-group'; // Garante que o rodapé seja exibido
         tfoot.innerHTML = `
             <tr>
-                <td colspan="2"><strong>Total Geral</strong></td>
+                <td colspan="3"><strong>Total Geral</strong></td>
                 <td><strong>${formatCurrency(totalGeral)}</strong></td>
                 <td colspan="2"></td>
             </tr>
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Mostra um feedback de carregamento
-        tabelaResultadosBody.innerHTML = '<tr><td colspan="5">Buscando...</td></tr>';
+        tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
         resultadosContainer.style.display = 'block';
 
         const despesas = await fetchDespesas(dataInicial, dataFinal, rota);
@@ -148,9 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 'Data': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
                 'Rota': item.numero_rota,
+                'Hotel': item.hotel?.nome || 'N/A',
                 'Valor': item.valor_total,
                 'Funcionários': funcionarios,
-                'Observação': item.obs || ''
+                'Voucher': item.obs || ''
             };
         });
     };
@@ -168,15 +171,16 @@ document.addEventListener('DOMContentLoaded', () => {
         dataToExport.push({
             'Data': 'TOTAL GERAL',
             'Rota': '',
+            'Hotel': '',
             'Valor': totalGeral,
             'Funcionários': '',
-            'Observação': ''
+            'Voucher': ''
         });
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
 
         // Formata a coluna de valor como moeda
-        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 40 }, { wch: 30 }];
+        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 30 }];
         dataToExport.forEach((_, index) => {
             const cellRef = XLSX.utils.encode_cell({ r: index + 1, c: 2 }); // Coluna 'C' (Valor)
             if (worksheet[cellRef]) {
@@ -203,9 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         doc.text("Relatório de Despesas", 14, 16);
         doc.autoTable({
-            head: [['Data', 'Rota', 'Valor', 'Funcionários', 'Observação']],
-            body: dataToExport.map(item => [item.Data, item.Rota, formatCurrency(item.Valor), item.Funcionários, item.Observação]),
-            foot: [['Total Geral', '', formatCurrency(totalGeral), '', '']],
+            head: [['Data', 'Rota', 'Hotel', 'Valor', 'Funcionários', 'Voucher']],
+            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, formatCurrency(item.Valor), item.Funcionários, item.Voucher]),
+            foot: [['Total Geral', '', '', formatCurrency(totalGeral), '', '']],
             startY: 20,
             headStyles: { fillColor: [0, 86, 179] }, // Azul do cabeçalho da tabela
             footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
