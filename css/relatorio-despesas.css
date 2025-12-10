@@ -1,0 +1,42 @@
+/* Estilos específicos para a página de Relatório de Despesas */
+
+#sectionRelatorioDespesa .card {
+    margin-bottom: 20px;
+}
+
+#formFiltroRelatorio .filter-group {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+#formFiltroRelatorio .form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.report-summary {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-left: 4px solid #0056b3;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.report-summary p {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.report-actions {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.report-actions button {
+    padding: 8px 12px;
+}
