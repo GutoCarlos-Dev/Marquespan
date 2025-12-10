@@ -1,7 +1,4 @@
-// Para a exportação, você precisará instalar bibliotecas como jsPDF e SheetJS (xlsx)
-// import { jsPDF } from "jspdf";
-// import "jspdf-autotable";
-// import * as XLSX from "xlsx";
+import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const formFiltro = document.getElementById('filtro-despesas-form');
@@ -20,124 +17,112 @@ document.addEventListener('DOMContentLoaded', () => {
         return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    // Função para buscar dados (simulação)
-    const fetchDespesas = async (startDate, endDate) => {
-        // Em um cenário real, você faria uma chamada de API aqui:
-        // const response = await fetch(`/api/despesas?checkin_start=${startDate}&checkin_end=${endDate}`);
-        // const data = await response.json();
-        // return data;
+    // Função para buscar rotas do banco de dados
+    const fetchRotas = async () => {
+        const { data, error } = await supabaseClient
+            .from('rotas')
+            .select('numero')
+            .order('numero', { ascending: true });
 
-        // Dados de exemplo para simulação:
-        console.log(`Buscando despesas entre ${startDate} e ${endDate}`);
-        return [
-            { id: 1, numero_rota: '101', valor_total: 450.00, data_checkin: '2024-07-20' },
-            { id: 2, numero_rota: '102', valor_total: 500.00, data_checkin: '2024-07-21' },
-            { id: 3, numero_rota: '101', valor_total: 480.50, data_checkin: '2024-07-22' },
-            { id: 4, numero_rota: '103', valor_total: 600.00, data_checkin: '2024-07-23' },
-            { id: 5, numero_rota: '102', valor_total: 510.00, data_checkin: '2024-07-24' },
-            { id: 6, numero_rota: '101', valor_total: 460.00, data_checkin: '2024-07-25' },
-        ].filter(d => d.data_checkin >= startDate && d.data_checkin <= endDate);
+        if (error) {
+            console.error('Erro ao buscar rotas:', error);
+            return [];
+        }
+        return data;
     };
 
-    const processarRelatorio = (despesas) => {
-        const gastosPorRota = despesas.reduce((acc, despesa) => {
-            const { numero_rota, valor_total } = despesa;
-            if (!acc[numero_rota]) {
-                acc[numero_rota] = { total: 0, count: 0 };
-            }
-            acc[numero_rota].total += valor_total;
-            acc[numero_rota].count++;
-            return acc;
-        }, {});
+    // Função para buscar despesas do banco de dados
+    const fetchDespesas = async (startDate, endDate, rota) => {
+        let query = supabaseClient
+            .from('despesas')
+            .select(`
+                data_checkin,
+                valor_total,
+                numero_rota,
+                funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
+                obs:voucher
+            `)
+            .gte('data_checkin', startDate)
+            .lte('data_checkin', endDate)
+            .order('data_checkin', { ascending: false });
 
-        return Object.entries(gastosPorRota).map(([rota, dados]) => ({
-            rota,
-            totalGasto: dados.total,
-            quantidade: dados.count
-        })).sort((a, b) => b.totalGasto - a.totalGasto);
+        if (rota) {
+            query = query.eq('numero_rota', rota);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('Erro ao buscar despesas:', error);
+            return [];
+        }
+        return data;
+    };
+
+    const popularRotas = async () => {
+        const rotas = await fetchRotas();
+        rotasList.innerHTML = '';
+        rotas.forEach(rota => {
+            const option = document.createElement('option');
+            option.value = rota.numero;
+            rotasList.appendChild(option);
+        });
     };
 
     const renderizarTabela = (dados) => {
-        relatorioTableBody.innerHTML = '';
+        tabelaResultadosBody.innerHTML = '';
+        let totalGeral = 0;
+
         if (dados.length === 0) {
-            relatorioTableBody.innerHTML = '<tr><td colspan="3">Nenhum dado encontrado para o período selecionado.</td></tr>';
+            tabelaResultadosBody.innerHTML = '<tr><td colspan="5">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
             return;
         }
 
         dados.forEach(item => {
+            totalGeral += item.valor_total;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${item.rota}</td>
-                <td>${formatCurrency(item.totalGasto)}</td>
-                <td>
-                    <button class="action-btn" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
-                </td>
+                <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                <td>${item.numero_rota}</td>
+                <td>${formatCurrency(item.valor_total)}</td>
+                <td>${item.funcionario1?.nome || 'N/A'}</td>
+                <td>${item.obs || ''}</td>
             `;
-            // Adicionar evento para ver detalhes (funcionalidade futura)
-            tr.querySelector('.action-btn').addEventListener('click', () => {
-                alert(`Detalhes para a Rota ${item.rota}:\n- Total de Lançamentos: ${item.quantidade}\n- Valor Total: ${formatCurrency(item.totalGasto)}`);
-            });
-            relatorioTableBody.appendChild(tr);
+            tabelaResultadosBody.appendChild(tr);
         });
+
+        // Adiciona a linha de rodapé com o total
+        const tfoot = tabelaResultadosBody.parentElement.querySelector('tfoot') || document.createElement('tfoot');
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="2"><strong>Total Geral</strong></td>
+                <td><strong>${formatCurrency(totalGeral)}</strong></td>
+                <td colspan="2"></td>
+            </tr>
+        `;
+        tabelaResultadosBody.parentElement.appendChild(tfoot);
     };
 
     formFiltro.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const dataInicio = document.getElementById('dataInicio').value;
-        const dataFim = document.getElementById('dataFim').value;
+        const rota = document.getElementById('rota').value;
+        const dataInicial = document.getElementById('data-inicial').value;
+        const dataFinal = document.getElementById('data-final').value;
 
-        if (!dataInicio || !dataFim) {
+        if (!dataInicial || !dataFinal) {
             alert('Por favor, selecione as datas de início e fim.');
             return;
         }
 
-        const despesas = await fetchDespesas(dataInicio, dataFim);
-        reportData = processarRelatorio(despesas);
-        
-        const totalGeral = reportData.reduce((sum, item) => sum + item.totalGasto, 0);
+        // Mostra um feedback de carregamento
+        tabelaResultadosBody.innerHTML = '<tr><td colspan="5">Buscando...</td></tr>';
+        resultadosContainer.style.display = 'block';
 
-        periodoRelatorioSpan.textContent = `${new Date(dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`;
-        totalGeralRelatorioSpan.textContent = formatCurrency(totalGeral);
+        const despesas = await fetchDespesas(dataInicial, dataFinal, rota);
+        reportData = despesas; // Armazena os dados brutos para exportação
 
         renderizarTabela(reportData);
-        resultadoRelatorio.style.display = 'block';
     });
-
-    // --- Funções de Exportação ---
-
-    btnExportarXLSX.addEventListener('click', () => {
-        if (reportData.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-        }
-        alert("Funcionalidade de exportar para XLSX a ser implementada.\nVocê precisará da biblioteca SheetJS (xlsx).");
-        // Exemplo com SheetJS:
-        // const worksheet = XLSX.utils.json_to_sheet(reportData.map(item => ({
-        //     'Rota': item.rota,
-        //     'Total Gasto': item.totalGasto
-        // })));
-        // const workbook = XLSX.utils.book_new();
-        // XLSX.utils.book_append_sheet(workbook, worksheet, "RelatorioDespesas");
-        // XLSX.writeFile(workbook, "Relatorio_Despesas.xlsx");
-    });
-
-    btnExportarPDF.addEventListener('click', () => {
-        if (reportData.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-        }
-        alert("Funcionalidade de exportar para PDF a ser implementada.\nVocê precisará das bibliotecas jsPDF e jspdf-autotable.");
-        // Exemplo com jsPDF:
-        // const doc = new jsPDF();
-        // doc.text("Relatório de Despesas por Rota", 14, 16);
-        // doc.autoTable({
-        //     head: [['Rota', 'Total Gasto']],
-        //     body: reportData.map(item => [item.rota, formatCurrency(item.totalGasto)]),
-        //     startY: 20
-        // });
-        // doc.save('Relatorio_Despesas.pdf');
-    });
-    // --- Fim das Funções de Exportação ---  
 
     // Carrega as rotas ao iniciar a página
     popularRotas();
