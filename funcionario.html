@@ -40,6 +40,13 @@
                 <option value="Auxiliar">Auxiliar</option>
               </select>
             </div>
+            <div class="form-group">
+              <label for="funcionarioStatus">Status</label>
+              <select id="funcionarioStatus" required>
+                <option value="Ativo" selected>Ativo</option>
+                <option value="Desligado">Desligado</option>
+              </select>
+            </div>
             <div class="form-buttons">
               <button type="submit" id="btnSubmitFuncionario">Cadastrar Funcionário</button>
               <button type="button" id="btnClearFuncionarioForm">Limpar</button>
@@ -60,6 +67,7 @@
                   <th data-field="nome_completo">Nome Completo</th>
                   <th data-field="cpf">CPF</th>
                   <th data-field="funcao">Função</th>
+                  <th data-field="status">Status</th>
                   <th>Ações</th>
                 </tr>
               </thead>

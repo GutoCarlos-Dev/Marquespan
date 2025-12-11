@@ -207,3 +207,21 @@
     font-weight: bold;
     color: #495057;
 }
+
+/* Estilos para os badges de status */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+}
+
+.status-ativo {
+    background-color: #28a745; /* Verde */
+}
+
+.status-desligado {
+    background-color: #dc3545; /* Vermelho */
+}

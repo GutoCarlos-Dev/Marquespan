@@ -1,154 +1,128 @@
-// funcionario.js - Lógica para o módulo de Cadastro de Funcionário
 import { supabaseClient } from './supabase.js';
 
-class SupabaseService {
-  static async list(table, cols='*', opts={}){
-    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
-    if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
-    if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
-    if(opts.or) q = q.or(opts.or);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  }
-
-  static async insert(table, payload){
-    const { data, error } = await supabaseClient.from(table).insert(payload).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async update(table, payload, key){
-    const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async remove(table, key){
-    const { data, error } = await supabaseClient.from(table).delete().eq(key.field, key.value);
-    if (error) throw error;
-    return data;
-  }
-}
-
-const FuncionarioUI = {
-    init() {
-        this.SupabaseService = SupabaseService;
+class FuncionarioManager {
+    constructor() {
         this.cache();
         this.bind();
         this.setupInitialState();
-    },
+        this.renderGrid();
+    }
 
     cache() {
-        this.section = document.getElementById('sectionCadastrarFuncionario');
         this.form = document.getElementById('formCadastrarFuncionario');
         this.tableBody = document.getElementById('funcionarioTableBody');
+        this.editingIdInput = document.getElementById('funcionarioEditingId');
         this.btnSubmit = document.getElementById('btnSubmitFuncionario');
         this.btnClearForm = document.getElementById('btnClearFuncionarioForm');
         this.searchInput = document.getElementById('searchFuncionarioInput');
-        this.summaryContainer = document.getElementById('funcionarioSummary');
-        this.editingIdInput = document.getElementById('funcionarioEditingId');
-    },
+        this.summaryDiv = document.getElementById('funcionarioSummary');
+
+        // Campos do formulário
+        this.nomeInput = document.getElementById('funcionarioNome');
+        this.nomeCompletoInput = document.getElementById('funcionarioNomeCompleto');
+        this.cpfInput = document.getElementById('funcionarioCpf');
+        this.funcaoSelect = document.getElementById('funcionarioFuncao');
+        this.statusSelect = document.getElementById('funcionarioStatus');
+    }
 
     bind() {
-        if (this.form) {
-            this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
-        }
-        if (this.btnClearForm) {
-            this.btnClearForm.addEventListener('click', () => this.clearForm());
-        }
-        if (this.tableBody) {
-            this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
-        }
-        if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.renderGrid());
-        }
+        this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        this.btnClearForm.addEventListener('click', () => this.clearForm());
+        this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
+        this.searchInput.addEventListener('input', () => this.renderGrid());
 
-        const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
-        ths?.forEach(th => {
+        const ths = document.querySelectorAll('#sectionCadastrarFuncionario .data-grid thead th[data-field]');
+        ths.forEach(th => {
             const field = th.getAttribute('data-field');
             th.addEventListener('click', () => { this.toggleSort(field) });
         });
-    },
+    }
 
     setupInitialState() {
         this._sort = { field: 'nome', ascending: true };
-    },
+    }
 
     async handleFormSubmit(e) {
         e.preventDefault();
-        const editingId = this.editingIdInput.value;
+        const id = this.editingIdInput.value;
 
         const payload = {
-            nome: document.getElementById('funcionarioNome').value,
-            nome_completo: document.getElementById('funcionarioNomeCompleto').value,
-            cpf: document.getElementById('funcionarioCpf').value,
-            funcao: document.getElementById('funcionarioFuncao').value,
+            nome: this.nomeInput.value,
+            nome_completo: this.nomeCompletoInput.value,
+            cpf: this.cpfInput.value,
+            funcao: this.funcaoSelect.value,
+            status: this.statusSelect.value,
         };
 
         if (!payload.nome || !payload.funcao) {
-            return alert('Os campos "Nome" e "Função" são obrigatórios.');
+            alert('Os campos "Nome" e "Função" são obrigatórios.');
+            return;
         }
 
         try {
-            if (editingId) {
-                await this.SupabaseService.update('funcionario', payload, { field: 'id', value: editingId });
-                alert('✅ Funcionário atualizado com sucesso!');
+            let result;
+            if (id) {
+                result = await supabaseClient.from('funcionario').update(payload).eq('id', id);
             } else {
-                await this.SupabaseService.insert('funcionario', payload);
-                alert('✅ Funcionário cadastrado com sucesso!');
+                result = await supabaseClient.from('funcionario').insert([payload]);
             }
+
+            if (result.error) throw result.error;
+
+            alert(`Funcionário ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
             this.clearForm();
             this.renderGrid();
-        } catch (err) {
-            console.error(err);
-            alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} funcionário.`);
+
+        } catch (error) {
+            console.error('Erro ao salvar funcionário:', error);
+            alert('Erro ao salvar funcionário: ' + error.message);
         }
-    },
-
-    clearForm() {
-        this.form?.reset();
-        this.editingIdInput.value = '';
-        this.btnSubmit.textContent = 'Cadastrar Funcionário';
-    },
-
-    async loadForEditing(id) {
-        try {
-            const [funcionario] = await this.SupabaseService.list('funcionario', '*', { eq: { field: 'id', value: id } });
-            if (!funcionario) return alert('Funcionário não encontrado.');
-
-            this.editingIdInput.value = id;
-            document.getElementById('funcionarioNome').value = funcionario.nome || '';
-            document.getElementById('funcionarioNomeCompleto').value = funcionario.nome_completo || '';
-            document.getElementById('funcionarioCpf').value = funcionario.cpf || '';
-            document.getElementById('funcionarioFuncao').value = funcionario.funcao || '';
-
-            this.btnSubmit.textContent = 'Atualizar Funcionário';
-            this.form.scrollIntoView({ behavior: 'smooth' });
-        } catch (e) {
-            console.error('Erro ao carregar funcionário para edição', e);
-        }
-    },
+    }
 
     async handleTableClick(e) {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        const id = btn.dataset.id;
+        const target = e.target.closest('button');
+        if (!target) return;
 
-        if (btn.classList.contains('btn-delete')) {
+        const id = target.dataset.id;
+
+        if (target.classList.contains('btn-edit')) {
+            const { data, error } = await supabaseClient.from('funcionario').select('*').eq('id', id).single();
+            if (error) {
+                alert('Erro ao carregar dados para edição.');
+                console.error(error);
+            } else if (data) {
+                this.fillForm(data);
+            }
+        } else if (target.classList.contains('btn-delete')) {
             if (confirm('Tem certeza que deseja excluir este funcionário?')) {
-                try {
-                    await this.SupabaseService.remove('funcionario', { field: 'id', value: id });
+                const { error } = await supabaseClient.from('funcionario').delete().eq('id', id);
+                if (error) {
+                    alert('Erro ao excluir: ' + error.message);
+                } else {
                     this.renderGrid();
-                } catch (err) {
-                    console.error('Erro ao excluir funcionário', err);
-                    alert('❌ Não foi possível excluir o funcionário.');
                 }
             }
-        } else if (btn.classList.contains('btn-edit')) {
-            this.loadForEditing(id);
         }
-    },
+    }
+
+    fillForm(funcionario) {
+        this.editingIdInput.value = funcionario.id;
+        this.nomeInput.value = funcionario.nome;
+        this.nomeCompletoInput.value = funcionario.nome_completo || '';
+        this.cpfInput.value = funcionario.cpf || '';
+        this.funcaoSelect.value = funcionario.funcao;
+        this.statusSelect.value = funcionario.status || 'Ativo'; // Garante um valor padrão
+
+        this.btnSubmit.textContent = 'Atualizar Funcionário';
+        this.form.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    clearForm() {
+        this.form.reset();
+        this.editingIdInput.value = '';
+        this.btnSubmit.textContent = 'Cadastrar Funcionário';
+        this.statusSelect.value = 'Ativo'; // Garante que o padrão seja 'Ativo' ao limpar
+    }
 
     toggleSort(field) {
         if (this._sort.field === field) {
@@ -158,84 +132,89 @@ const FuncionarioUI = {
             this._sort.ascending = true;
         }
         this.renderGrid();
-    },
+    }
 
     async renderGrid() {
-        if (!this.tableBody) return;
+        const searchTerm = this.searchInput.value.trim();
+        let query = supabaseClient.from('funcionario').select('*').order(this._sort.field, { ascending: this._sort.ascending });
 
-        const ths = this.section?.querySelectorAll('.data-grid tbody th[data-field]');
-        ths?.forEach(th => {
-            th.classList.remove('sort-asc', 'sort-desc');
-            if (th.dataset.field === this._sort.field) {
-                th.classList.add(this._sort.ascending ? 'sort-asc' : 'sort-desc');
-            }
-        });
-
-        let funcionarios = []; // Declarar a variável aqui para que seja acessível fora do try/catch
-        try {
-            const searchTerm = this.searchInput?.value.trim();
-            let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
-
-            if (searchTerm) {
-                queryOptions.or = `nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`;
-            }
-
-            funcionarios = await this.SupabaseService.list('funcionario', '*', queryOptions);
-
-            this.tableBody.innerHTML = funcionarios.map(f => `
-                <tr>
-                    <td>${f.nome || ''}</td>
-                    <td>${f.nome_completo || ''}</td>
-                    <td>${f.cpf || ''}</td>
-                    <td>${f.funcao || ''}</td>
-                    <td>
-                        <button class="btn-edit" data-id="${f.id}">Editar</button>
-                        <button class="btn-delete" data-id="${f.id}">Excluir</button>
-                    </td>
-                </tr>`).join('');
-        } catch (e) {
-            console.error('Erro ao carregar funcionários', e);
-            this.tableBody.innerHTML = `<tr><td colspan="5">Erro ao carregar funcionários.</td></tr>`;
+        if (searchTerm) {
+            query = query.or(`nome.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`);
         }
 
-        this.renderSummary(funcionarios);
-    },
+        const { data, error } = await query;
+        if (error) {
+            console.error('Erro ao buscar funcionários:', error);
+            this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar dados.</td></tr>`;
+            return;
+        }
 
-    renderSummary(funcionarios) {
-        if (!this.summaryContainer) return;
+        this.tableBody.innerHTML = '';
+        if (data.length === 0) {
+            this.tableBody.innerHTML = `<tr><td colspan="6">Nenhum funcionário encontrado.</td></tr>`;
+        } else {
+            data.forEach(func => {
+                const tr = document.createElement('tr');
+                // Adiciona uma classe para estilizar o status se desejar
+                const statusClass = func.status === 'Ativo' ? 'status-ativo' : 'status-desligado';
+                tr.innerHTML = `
+                    <td>${func.nome}</td>
+                    <td>${func.nome_completo || ''}</td>
+                    <td>${func.cpf || ''}</td>
+                    <td>${func.funcao}</td>
+                    <td><span class="status-badge ${statusClass}">${func.status}</span></td>
+                    <td>
+                        <button class="btn-action btn-edit" data-id="${func.id}">Editar</button>
+                        <button class="btn-action btn-delete" data-id="${func.id}">Excluir</button>
+                    </td>
+                `;
+                this.tableBody.appendChild(tr);
+            });
+        }
 
-        const summary = {
-            'Motorista': 0,
-            'Auxiliar': 0,
-        };
+        this.renderSummary(data);
+    }
 
-        funcionarios.forEach(func => {
-            if (summary.hasOwnProperty(func.funcao)) {
-                summary[func.funcao]++;
-            }
-        });
+    renderSummary(data) {
+        if (!data) {
+            this.summaryDiv.innerHTML = '';
+            return;
+        }
 
-        const summaryHtml = `
-            <h3>Resumo por Função</h3>
+        const total = data.length;
+        const ativos = data.filter(f => f.status === 'Ativo').length;
+        const desligados = total - ativos;
+        const motoristas = data.filter(f => f.funcao === 'Motorista' && f.status === 'Ativo').length;
+        const auxiliares = data.filter(f => f.funcao === 'Auxiliar' && f.status === 'Ativo').length;
+
+        this.summaryDiv.innerHTML = `
+            <h3>Resumo</h3>
             <table>
-                <thead>
-                    <tr>
-                        <th>Função</th>
-                        <th>Total de Funcionários</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>Motoristas</td><td>${summary['Motorista']}</td></tr>
-                    <tr><td>Auxiliares</td><td>${summary['Auxiliar']}</td></tr>
-                </tbody>
+                <tr>
+                    <th>Total de Funcionários</th>
+                    <td>${total}</td>
+                </tr>
+                <tr>
+                    <th>Ativos</th>
+                    <td>${ativos}</td>
+                </tr>
+                <tr>
+                    <th>Desligados</th>
+                    <td>${desligados}</td>
+                </tr>
+                <tr>
+                    <th>Motoristas (Ativos)</th>
+                    <td>${motoristas}</td>
+                </tr>
+                <tr>
+                    <th>Auxiliares (Ativos)</th>
+                    <td>${auxiliares}</td>
+                </tr>
             </table>
         `;
-        this.summaryContainer.innerHTML = summaryHtml;
     }
-};
+}
 
-// Inicializa a UI quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-    FuncionarioUI.init();
-    FuncionarioUI.renderGrid(); // Carrega os dados iniciais
+    new FuncionarioManager();
 });
