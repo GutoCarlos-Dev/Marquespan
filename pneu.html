@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pneu - Marquespan</title>
+  <title>Entrada de Pneus - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/pneu.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -16,48 +16,25 @@
 
 
   <main class="main-content">
-    <header class="page-title-header"><i class="fas fa-dot-circle"></i><span class="page-title-text">Movimentação de Pneus</span></header>
+    <header class="page-title-header"><i class="fas fa-dolly-flatbed"></i><span class="page-title-text">Entrada de Pneus (Nota Fiscal)</span></header>
     <section class="content-section">
       <!-- Card do Formulário de Cadastro -->
       <div class="form-card">
         <div class="form-header">
-          <h3><i class="fas fa-plus-circle"></i>Cadastro e Aplicação de Pneu</h3>
+          <h3><i class="fas fa-plus-circle"></i>Registrar Entrada de Pneus</h3>
         </div>
         <form id="formPneu">
           <div class="form-group-pneu"><label for="data">Data</label><input type="datetime-local" name="data" id="data" readonly /></div>
-          <div class="form-group-pneu"><label for="placa">Placa *</label><select name="placa" id="placa" required><option value="">Selecione</option></select></div>
+          <div class="form-group-pneu"><label for="nota_fiscal">Nota Fiscal *</label><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF" required /></div>
           <div class="form-group-pneu"><label for="marca">Marca *</label><select name="marca" id="marca" required><option value="">Selecione</option></select></div>
           <div class="form-group-pneu"><label for="modelo">Modelo *</label><select name="modelo" id="modelo" required><option value="">Selecione</option></select></div>
           <div class="form-group-pneu"><label for="tipo">Tipo *</label><select name="tipo" id="tipo" required><option value="">Selecione</option></select></div>
-          <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="0" value="0" /></div>
-          <div class="form-group-pneu"><label for="status">Status</label><select name="status" id="status"><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option></select></div>
-          <div class="form-group-pneu"><label for="descricao">Descrição</label><select name="descricao" id="descricao"><option value="ESTOQUE">Estoque</option><option value="CONTAGEM DE ESTOQUE">Contagem de Estoque</option><option value="RETORNO BORRACHARIA">Retorno Borracharia</option><option value="ENVIO BORRACHARIA">Envio Borracharia</option><option value="INSTALADO NO VEICULO">Instalado no Veiculo</option><option value="REFORMA">Reforma</option><option value="DESCARTE">Descarte</option><option value="TRANSFERIDO PARA CD">Transferido para CD</option></select></div>
-          <div class="form-group-pneu"><label for="nota_fiscal">Nota Fiscal</label><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF (opcional)" /></div>
-          <div class="form-group-pneu"><label for="quantidade">Quantidade</label><input type="number" name="quantidade" id="quantidade" min="0" /></div>
-
-          <!-- Campos condicionais para SAÍDA -->
-          <div id="campos-saida" class="saida-details hidden">
-            <h4><i class="fas fa-arrow-right"></i>Detalhes da Saída</h4>
-            <div class="form-group-pneu"><label for="quilometragem">Quilometragem do Veículo *</label><input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" /></div>
-            <div class="form-group-pneu"><label for="aplicacao">Aplicação *</label><select name="aplicacao" id="aplicacao"><option value="">Selecione</option><option value="DIANTEIRO">Dianteiro</option><option value="TRACAO">Tração</option><option value="TRUCK">Truck</option></select></div>
-            <div class="form-group-pneu"><label for="tipo_operacao">Tipo de Operação *</label><select name="tipo_operacao" id="tipo_operacao"><option value="">Selecione</option><option value="RODIZIO">Rodízio</option><option value="INSTALACAO">Instalação</option><option value="TROCA">Troca</option><option value="DESCARTE">Descarte</option></select></div>
-            <div class="form-group-pneu form-group-full-width"><label for="observacoes">Observações</label><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a saída..."></textarea></div>
-            
-            <!-- Campos específicos para rodízio (ainda podem ser uma sub-seção se necessário) -->
-            <div id="campos-rodizio" class="form-group-full-width campos-rodizio-details hidden">
-              <h5><i class="fas fa-sync-alt"></i>Configuração do Rodízio</h5>
-              <div class="rodizio-grid">
-                <div class="form-group-pneu"><label for="posicao_anterior">Posição Atual do Pneu</label><select name="posicao_anterior" id="posicao_anterior"><option value="">Selecione posição atual</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO">Tração Esquerdo</option><option value="TRACAO_DIREITO">Tração Direito</option><option value="TRUCK_ESQUERDO">Truck Esquerdo</option><option value="TRUCK_DIREITO">Truck Direito</option></select></div>
-                <div class="form-group-pneu"><label for="posicao_nova">Nova Posição</label><select name="posicao_nova" id="posicao_nova"><option value="">Selecione nova posição</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO">Tração Esquerdo</option><option value="TRACAO_DIREITO">Tração Direito</option><option value="TRUCK_ESQUERDO">Truck Esquerdo</option><option value="TRUCK_DIREITO">Truck Direito</option></select></div>
-                <div class="form-group-pneu rodizio-full-width"><label for="codigo_marca_fogo_trocado">Código Marca de Fogo (Pneu a ser removido)</label><input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Ex: MF001" maxlength="10" /></div>
-              </div>
-            </div>
-          </div>
+          <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="1" value="1" readonly /></div>
+          <div class="form-group-pneu"><label for="quantidade">Quantidade *</label><input type="number" name="quantidade" id="quantidade" min="1" required /></div>
+          <div class="form-group-pneu form-group-full-width"><label for="observacoes">Observações</label><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a entrada..."></textarea></div>
 
           <div class="form-actions-pneu">
             <button type="submit" class="btn-pneu btn-pneu-save"><i class="fas fa-save"></i>Salvar</button>
-            <button type="button" id="btnContagemEstoque" class="btn-pneu btn-pneu-stock"><i class="fas fa-clipboard-list"></i>Contagem de Estoque</button>
-            <button type="button" id="btnRelatorioMarcaFogo" class="btn-pneu btn-pneu-report"><i class="fas fa-fire"></i>Relatório Marca de Fogo</button>
             <button type="button" id="btnCancelForm" class="btn-pneu btn-pneu-cancel"><i class="fas fa-times"></i>Cancelar</button>
           </div>
         </form>
@@ -66,21 +43,12 @@
       <!-- Card da Tabela de Movimentações -->
       <div class="table-card">
         <div class="form-header">
-          <h3><i class="fas fa-list"></i>Lançamento de Pneus</h3>
+          <h3><i class="fas fa-list"></i>Últimas Entradas no Estoque</h3>
         </div>
         <div class="filtros-pneus">
-          <div class="form-group-pneu"><label for="campo-placa">Placa</label><input type="text" id="campo-placa" placeholder="Digite a placa" /></div>
+          <div class="form-group-pneu"><label for="campo-nf">Nota Fiscal</label><input type="text" id="campo-nf" placeholder="Digite a NF" /></div>
           <div class="form-group-pneu"><label for="campo-marca">Marca</label><input type="text" id="campo-marca" placeholder="Digite a marca" /></div>
           <div class="form-group-pneu"><label for="campo-modelo">Modelo</label><input type="text" id="campo-modelo" placeholder="Digite o modelo" /></div>
-          <div class="form-group-pneu"><label for="campo-tipo">Tipo</label><input type="text" id="campo-tipo" placeholder="Digite o tipo" /></div>
-          <div class="form-group-pneu">
-            <label for="campo-status">Status</label>
-            <select id="campo-status">
-              <option value="">Todos</option>
-              <option value="ENTRADA">Entrada</option>
-              <option value="SAIDA">Saída</option>
-            </select>
-          </div>
           <div class="form-group-pneu filter-actions">
             <button type="button" id="btn-buscar" class="btn-pneu btn-buscar"><i class="fas fa-search"></i>Buscar</button>
             <button type="button" id="btn-limpar-busca" class="btn-pneu btn-pneu-cancel"><i class="fas fa-eraser"></i>Limpar</button>
@@ -91,15 +59,12 @@
           <table class="data-grid">
             <thead>
               <tr>
-                <th><i class="fas fa-car"></i> Placa</th>
+                <th><i class="fas fa-calendar"></i> Data</th>
+                <th><i class="fas fa-file-invoice"></i> Nota Fiscal</th>
                 <th><i class="fas fa-tag"></i> Marca</th>
                 <th><i class="fas fa-cog"></i> Modelo</th>
-                <th><i class="fas fa-recycle"></i> Vida</th>
                 <th><i class="fas fa-shapes"></i> Tipo</th>
-                <th><i class="fas fa-info-circle"></i> Status</th>
-                <th><i class="fas fa-file-alt"></i> Descrição</th>
-                <th><i class="fas fa-calendar"></i> Data</th>
-                <th><i class="fas fa-user"></i> Usuário</th>
+                <th><i class="fas fa-recycle"></i> Vida</th>
                 <th><i class="fas fa-hashtag"></i> Qtd</th>
                 <th><i class="fas fa-fire"></i> Marca Fogo</th>
                 <th><i class="fas fa-tools"></i> Ações</th>
@@ -120,42 +85,7 @@
 
   <script type="module" src="./script/menu.js" defer></script>
 
-  <!-- Modal Contagem de Estoque -->
-  <div id="modalContagemEstoque" class="modal hidden">
-    <div class="modal-content">
-      <span class="close" id="closeModalContagem">&times;</span>
-      <h2>Contagem de Estoque</h2>
-      <form id="formContagemEstoque" class="form-grid-modal">
-        <div class="form-group-pneu"><label for="marcaContagem">Marca *</label><select name="marcaContagem" id="marcaContagem" required><option value="">Selecione</option></select></div>
-        <div class="form-group-pneu"><label for="modeloContagem">Modelo *</label><select name="modeloContagem" id="modeloContagem" required><option value="">Selecione</option></select></div>
-        <div class="form-group-pneu"><label for="tipoContagem">Tipo *</label><select name="tipoContagem" id="tipoContagem" required><option value="">Selecione</option></select></div>
-        <div class="form-group-pneu"><label for="vidaContagem">Vida</label><input type="number" name="vidaContagem" id="vidaContagem" min="0" /></div>
-        <div class="form-group-pneu"><label for="quantidadeContagem">Quantidade Contada *</label><input type="number" name="quantidadeContagem" id="quantidadeContagem" min="0" required /></div>
-        <div class="form-actions-pneu">
-          <button type="submit" class="btn-pneu btn-pneu-save"><i class="fas fa-save"></i> Salvar Contagem</button>
-          <button type="button" id="cancelModalContagem" class="btn-pneu btn-pneu-cancel"><i class="fas fa-times"></i> Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script type="module" src="./script/pneu-updated.js" defer></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const statusSelect = document.getElementById('status');
-      const camposSaida = document.getElementById('campos-saida');
-
-      if (statusSelect && camposSaida) {
-        statusSelect.addEventListener('change', (event) => {
-          if (event.target.value === 'SAIDA') {
-            camposSaida.classList.remove('hidden');
-          } else {
-            camposSaida.classList.add('hidden');
-          }
-        });
-      }
-    });
-  </script>
+  <!-- O script pneu-updated.js precisará ser ajustado para esta nova estrutura -->
+  <script type="module" src="./script/pneu-entrada.js" defer></script>
 </body>
 </html>
