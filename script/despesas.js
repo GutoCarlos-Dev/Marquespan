@@ -186,6 +186,19 @@ const DespesasUI = {
       return alert('Por favor, preencha todos os campos obrigatórios.');
     }
 
+    // Validação da quantidade de diárias vs. datas de check-in/checkout
+    if (payload.data_checkin && payload.data_checkout) {
+      // Adiciona 'T00:00:00' para evitar problemas de fuso horário ao criar o objeto Date
+      const checkin = new Date(payload.data_checkin + 'T00:00:00');
+      const checkout = new Date(payload.data_checkout + 'T00:00:00');
+      const diffTime = checkout - checkin;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays !== payload.qtd_diarias) {
+        return alert(`A quantidade de diárias (${payload.qtd_diarias}) não corresponde ao período entre o Check-in e o Check-out (${diffDays} dias). Por favor, ajuste os valores.`);
+      }
+    }
+
     try {
       if (editingId) {
         await this.SupabaseService.update('despesas', payload, { field: 'id', value: editingId });
