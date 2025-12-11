@@ -83,6 +83,21 @@
             padding: 15px;
             font-size: 1.1rem;
         }
+
+        /* Estilos para o grid de gráficos */
+        .charts-grid {
+            display: flex;
+            flex-wrap: wrap; /* Permite que os gráficos quebrem para a linha de baixo em telas pequenas */
+            gap: 2rem; /* Espaçamento entre os gráficos */
+            justify-content: center; /* Centraliza os gráficos no container */
+        }
+
+        .chart-card {
+            flex: 1; /* Permite que os cards cresçam */
+            min-width: 300px; /* Largura mínima */
+            max-width: 450px; /* Largura máxima para não ficarem muito grandes */
+            padding: 1rem;
+        }
     </style>
   </head>
 <body>
