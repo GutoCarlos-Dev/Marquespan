@@ -81,16 +81,17 @@ const DespesasUI = {
 
   async populateSelects() {
     try {
-      const [rotas, hoteis, funcionarios] = await Promise.all([
+      const [rotas, hoteis, motoristas, auxiliares] = await Promise.all([
         this.SupabaseService.list('rotas', 'id, numero', { orderBy: 'numero' }),
         this.SupabaseService.list('hoteis', 'id, nome', { orderBy: 'nome' }),
-        this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome' })
+        this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome', eq: { field: 'funcao', value: 'Motorista' } }),
+        this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome', eq: { field: 'funcao', value: 'Auxiliar' } })
       ]);
 
       this.fillDatalist('rotasList', rotas, 'numero', 'numero');
       this.fillDatalist('hoteisList', hoteis, 'id', 'nome');
-      this.fillDatalist('funcionarios1List', funcionarios, 'id', 'nome');
-      this.fillDatalist('funcionarios2List', funcionarios, 'id', 'nome');
+      this.fillDatalist('funcionarios1List', motoristas, 'id', 'nome');
+      this.fillDatalist('funcionarios2List', auxiliares, 'id', 'nome');
 
     } catch (error) {
       console.error("Erro ao popular seletores:", error);
