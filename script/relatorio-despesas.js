@@ -311,7 +311,12 @@ const ReportUI = {
         };
 
         const logoBase64 = await getLogoBase64();
-        doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10); // Adiciona o logo (X, Y, Largura, Altura)
+
+        // 2. Desenha um retângulo branco atrás do logo para garantir fundo branco
+        doc.setFillColor(255, 255, 255); // Define a cor de preenchimento para branco
+        doc.rect(14, 10, 40, 10, 'F'); // Desenha o retângulo preenchido (X, Y, Largura, Altura, 'F' para preencher)
+
+        doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10); // 3. Adiciona o logo por cima do retângulo
 
         const dataToExport = this.getExportData();
         const totalGeral = this.reportData.reduce((sum, item) => sum + item.valor_total, 0);
