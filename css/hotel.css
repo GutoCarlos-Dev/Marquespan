@@ -1,216 +1,100 @@
-/* Estilos específicos para a seção de Cadastro de Hotel */
+/* Estilos para a página de Cadastro de Hotel */
 
-#sectionCadastrarHotel h2,
-#sectionCadastrarHotel h3 {
-    color: #333;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 10px;
-    margin-top: 20px;
-    margin-bottom: 20px;
+/* Painel Modal (Backdrop) */
+.panel-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* Mantém o padrão do formulário */
-#sectionCadastrarHotel .form-container {
-    background-color: #fff;
-    padding: 20px;
+.panel-backdrop:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Painel Modal (Conteúdo) */
+.panel {
+    background-color: #ffffff; /* Fundo branco */
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    width: 450px; /* Largura do modal */
+    max-width: 90%;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
 }
 
-#formCadastrarHotel {
-    display: grid;
-    /* Cria um layout responsivo para os campos do formulário */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+.panel-backdrop:not(.hidden) .panel {
+    transform: scale(1);
+}
+
+.panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 
-#formCadastrarHotel .form-group {
-    display: flex;
-    flex-direction: column;
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
 }
 
-#formCadastrarHotel label {
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
+.panel-body {
+    padding: 20px;
+    max-height: 70vh; /* Altura máxima para o corpo do modal */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo for grande */
 }
 
-#formCadastrarHotel input,
-#formCadastrarHotel select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 100%;
-    box-sizing: border-box;
-    transition: border-color 0.3s;
+/* Formulário dentro do modal */
+.form-title-quarto, .list-title-quarto {
+    font-size: 1rem;
+    color: #0056b3;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
 }
 
-#formCadastrarHotel input:focus,
-#formCadastrarHotel select:focus {
-    border-color: #007bff;
-    outline: none;
-}
-
-/* Estilo para os botões do formulário */
-#formCadastrarHotel button {
-    padding: 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-#btnSubmitHotel {
-    background-color: #28a745; /* Verde */
-    color: white;
-}
-
-#btnSubmitHotel:hover {
-    background-color: #218838;
-}
-
-#btnClearHotelForm {
-    background-color: #6c757d; /* Cinza */
-    color: white;
-}
-
-#btnClearHotelForm:hover {
-    background-color: #5a6268;
-}
-
-/* Agrupa os botões em uma linha no final do formulário */
-.form-buttons {
-    grid-column: 1 / -1; /* Ocupa todas as colunas */
+.form-inline {
     display: flex;
     gap: 10px;
-    justify-content: flex-start;
+    align-items: center;
 }
 
-/* Mantém o padrão da barra de busca e da tabela (data-grid) */
-#sectionCadastrarHotel .search-bar {
-    margin-bottom: 15px;
+.flex-grow {
+    flex-grow: 1;
 }
 
-#searchHotelInput {
-    width: 100%;
+/* Lista de quartos */
+.quarto-list-container {
+    margin-top: 15px;
+}
+
+.quarto-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 10px;
-    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
     border-radius: 4px;
+    margin-bottom: 8px;
 }
 
-/* Container para rolagem da tabela */
-.table-scroll-container {
-    max-height: 400px; /* Altura máxima antes de ativar a rolagem */
-    overflow-y: auto; /* Ativa a rolagem vertical */
-    border: 1px solid #e0e0e0; /* Borda para o container de rolagem */
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-/* Estilos para a barra de rolagem */
-.table-scroll-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.table-scroll-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.table-scroll-container::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
-}
-
-.table-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Garante que o cabeçalho da tabela não role com o corpo */
-.data-grid thead {
-    position: sticky;
-    top: 0;
-    background-color: #f8f9fa; /* Cor de fundo para o cabeçalho fixo */
-    z-index: 1; /* Garante que o cabeçalho fique acima do conteúdo da tabela */
-}
-
-/* Estilos para cabeçalhos de tabela ordenáveis */
-.data-grid thead th[data-field] {
-    cursor: pointer;
-    position: relative;
-    padding-right: 20px; /* Espaço para o ícone de ordenação */
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none; /* IE 10+ */
-    user-select: none; /* Padrão */
-}
-
-.data-grid thead th[data-field]::after {
-    content: ' \2195'; /* Seta para cima e para baixo (↕) */
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    transition: color 0.2s;
-}
-
-.data-grid thead th[data-field]:hover::after {
-    color: #333;
-}
-
-.data-grid thead th.sort-asc::after {
-    content: ' \25B2'; /* Seta para cima (▲) */
-    color: #007bff;
-}
-
-.data-grid thead th.sort-desc::after {
-    content: ' \25BC'; /* Seta para baixo (▼) */
-    color: #007bff;
-}
-
-/* Cores para as linhas da tabela de rotas */
-.data-grid .semana-segunda { background-color: #e6f7ff; } /* Azul claro */
-.data-grid .semana-terca { background-color: #fff0e6; } /* Laranja claro */
-.data-grid .semana-quarta { background-color: #e6ffe6; } /* Verde claro */
-.data-grid .semana-quinta { background-color: #f2e6ff; } /* Roxo claro */
-.data-grid .semana-sexta { background-color: #fff9e6; } /* Amarelo claro */
-
-/* Estilos para o resumo */
-.rota-summary {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.rota-summary h3 {
-    color: #333;
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-
-.rota-summary table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.rota-summary th,
-.rota-summary td {
-    border: 1px solid #ddd;
-    padding: 10px;
-    text-align: left;
-}
-
-.rota-summary th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    color: #495057;
+.quarto-item-name {
+    color: #343a40;
 }
