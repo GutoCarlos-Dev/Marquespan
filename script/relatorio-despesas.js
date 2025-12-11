@@ -300,7 +300,7 @@ const ReportUI = {
 
         // 1. Carregar a imagem do logo e converter para Base64
         const getLogoBase64 = async () => {
-            const response = await fetch('Logo.png');
+            const response = await fetch('logo.png');
             const blob = await response.blob();
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
