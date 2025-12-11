@@ -81,6 +81,15 @@
     background-color: #5a6268;
 }
 
+.btn-import {
+    background-color: #007bff; /* Azul */
+    color: white;
+}
+
+.btn-import:hover {
+    background-color: #0056b3;
+}
+
 /* Agrupa os botões em uma linha no final do formulário */
 .form-buttons {
     grid-column: 1 / -1; /* Ocupa todas as colunas */
