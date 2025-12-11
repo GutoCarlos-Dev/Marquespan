@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/rotas.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -56,6 +57,8 @@
             <div class="form-buttons">
               <button type="submit" id="btnSubmitRota">Cadastrar Rota</button>
               <button type="button" id="btnClearRotaForm">Limpar</button>
+              <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
+              <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
             </div>
           </form>
         </div>

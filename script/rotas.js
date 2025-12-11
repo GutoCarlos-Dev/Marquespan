@@ -48,6 +48,10 @@ const RotasUI = {
         this.searchInput = document.getElementById('searchRotaInput');
         this.rotaSummary = document.getElementById('rotaSummary');
         this.editingIdInput = document.getElementById('rotaEditingId');
+
+        // Botão e input de importação
+        this.btnImportarLista = document.getElementById('btnImportarLista');
+        this.importFileInput = document.getElementById('importFile');
     },
 
     bind() {
@@ -62,6 +66,12 @@ const RotasUI = {
         }
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.renderGrid());
+        }
+
+        // Eventos de importação
+        if (this.btnImportarLista) {
+            this.btnImportarLista.addEventListener('click', () => this.handleImportClick());
+            this.importFileInput.addEventListener('change', (e) => this.handleFileImport(e));
         }
 
         // Adiciona listeners para ordenação dos cabeçalhos da tabela
@@ -163,6 +173,79 @@ const RotasUI = {
             this._sort.ascending = true;
         }
         this.renderGrid();
+    },
+
+    handleImportClick() {
+        // Aciona o clique no input de arquivo oculto
+        this.importFileInput.click();
+    },
+
+    handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length === 0) {
+                    alert('A planilha está vazia ou em um formato inválido.');
+                    return;
+                }
+
+                await this.processImportedData(json);
+
+            } catch (error) {
+                console.error('Erro ao processar o arquivo XLSX:', error);
+                alert('Ocorreu um erro ao ler a planilha. Verifique se o formato está correto.');
+            } finally {
+                // Limpa o valor do input para permitir a importação do mesmo arquivo novamente
+                this.importFileInput.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    },
+
+    async processImportedData(importedRows) {
+        if (!confirm(`Foram encontradas ${importedRows.length} rotas na planilha. Deseja continuar?\n\nAtenção:\n1. Rotas existentes (pelo número) serão ATUALIZADAS.\n2. Rotas novas serão CADASTRADAS.`)) {
+            return;
+        }
+
+        const upsertPayload = importedRows.map(row => ({
+            numero: row.ROTA,
+            semana: row.SEMANA,
+            responsavel: row.RESPONSÁVEL,
+            supervisor: row.SUPERVISOR,
+            cidades: row.CIDADES,
+            dias: row.DIAS
+        })).filter(r => r.numero); // Garante que a rota tenha um número
+
+        if (upsertPayload.length === 0) {
+            alert("Nenhuma rota válida encontrada na planilha para importar.");
+            return;
+        }
+
+        try {
+            // O método 'upsert' do Supabase faz exatamente o que precisamos:
+            // Insere se não existir, atualiza se existir, com base na chave primária ou em uma constraint.
+            // Assumindo que 'numero' é a chave primária ou tem uma constraint UNIQUE.
+            const { error } = await supabaseClient
+                .from('rotas')
+                .upsert(upsertPayload, { onConflict: 'numero' });
+
+            if (error) throw error;
+
+            alert(`Importação concluída com sucesso! ${upsertPayload.length} rotas foram processadas.`);
+            this.renderGrid();
+        } catch (error) {
+            console.error('Erro detalhado no processamento:', error);
+            alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+        }
     },
 
     async renderGrid() {

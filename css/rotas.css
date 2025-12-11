@@ -179,6 +179,17 @@
 .data-grid .semana-quinta { background-color: #f2e6ff; } /* Roxo claro */
 .data-grid .semana-sexta { background-color: #fff9e6; } /* Amarelo claro */
 
+/* Adicione este código ao seu arquivo css/rotas.css */
+
+.btn-import {
+    background-color: #007bff; /* Azul */
+    color: white;
+}
+
+.btn-import:hover {
+    background-color: #0056b3;
+}
+
 /* Estilos para o resumo */
 .rota-summary {
     background-color: #f9f9f9;
