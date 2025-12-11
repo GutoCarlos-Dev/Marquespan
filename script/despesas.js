@@ -53,6 +53,8 @@ const DespesasUI = {
     this.diariasInput = document.getElementById('despesaDiarias');
     this.valorDiariaInput = document.getElementById('despesaValorDiaria');
     this.valorTotalInput = document.getElementById('despesaValorTotal');
+    this.hotelInput = document.getElementById('despesaHotelInput');
+    this.tipoQuartoSelect = document.getElementById('despesaTipoQuarto');
   },
 
   bind() {
@@ -64,6 +66,7 @@ const DespesasUI = {
     // Listeners para cálculo automático
     this.diariasInput?.addEventListener('input', () => this.calculateTotal());
     this.valorDiariaInput?.addEventListener('input', () => this.calculateTotal());
+    this.hotelInput?.addEventListener('change', () => this.populateTiposQuarto());
 
     const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
     ths?.forEach(th => {
@@ -122,6 +125,34 @@ const DespesasUI = {
     return inputValue; // Retorna o próprio valor digitado se não encontrar correspondência
   },
 
+  async populateTiposQuarto() {
+    const hotelId = this.getValueFromDatalist('despesaHotelInput');
+    this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel --</option>';
+    this.tipoQuartoSelect.disabled = true;
+
+    // Verifica se o hotelId é um número válido (ID do hotel) e não apenas texto
+    if (!hotelId || isNaN(parseInt(hotelId))) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('hotel_quartos')
+        .select('nome_quarto')
+        .eq('id_hotel', hotelId)
+        .order('nome_quarto');
+
+      if (error) throw error;
+
+      this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione o tipo --</option>';
+      data.forEach(quarto => {
+        this.tipoQuartoSelect.add(new Option(quarto.nome_quarto, quarto.nome_quarto));
+      });
+      this.tipoQuartoSelect.disabled = data.length === 0;
+      if (data.length === 0) this.tipoQuartoSelect.innerHTML = '<option value="">-- Nenhum quarto cadastrado --</option>';
+    } catch (e) { console.error("Erro ao buscar tipos de quarto:", e); }
+  },
+
   calculateTotal() {
     const diarias = parseFloat(this.diariasInput.value) || 0;
     const valorDiaria = parseFloat(this.valorDiariaInput.value) || 0;
@@ -174,6 +205,8 @@ const DespesasUI = {
     this.editingIdInput.value = '';
     this.btnSubmit.textContent = 'Cadastrar Despesa';
     this.valorTotalInput.value = '';
+    this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
+    this.tipoQuartoSelect.disabled = true;
   },
 
   async loadForEditing(id) {
@@ -206,6 +239,9 @@ const DespesasUI = {
       document.getElementById('despesaValorDiaria').value = despesa.valor_diaria || '';
       document.getElementById('despesaValorTotal').value = despesa.valor_total || '';
 
+      // Popula os tipos de quarto e depois seleciona o valor salvo
+      await this.populateTiposQuarto();
+      this.tipoQuartoSelect.value = despesa.tipo_quarto || '';
       this.btnSubmit.textContent = 'Atualizar Despesa';
       this.form.scrollIntoView({ behavior: 'smooth' });
     } catch (e) {
