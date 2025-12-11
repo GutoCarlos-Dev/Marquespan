@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 let gridBody;
 let editMode = false;
 let editingId = null;
