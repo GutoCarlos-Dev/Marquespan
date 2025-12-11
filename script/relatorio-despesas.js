@@ -53,12 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('despesas')
             .select(`
                 data_checkin,
-                valor_total,
                 numero_rota,
                 hoteis:hoteis(nome),
+                qtd_diarias,
+                valor_diaria,
+                valor_total,
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
                 funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
-                obs:voucher
+                nota_fiscal
             `)
             .gte('data_checkin', startDate)
             .lte('data_checkin', endDate)
@@ -127,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         graficosContainer.style.display = 'none';
 
         if (dados.length === 0) {
-            tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
+            tabelaResultadosBody.innerHTML = '<tr><td colspan="8">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
             if (tfoot) tfoot.style.display = 'none'; // Esconde o rodapé se não houver dados
             return;
         }
@@ -148,9 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td>${item.numero_rota}</td>
                 <td>${item.hoteis?.nome || 'N/A'}</td>
+                <td>${item.qtd_diarias || 'N/A'}</td>
+                <td>${formatCurrency(item.valor_diaria)}</td>
                 <td>${formatCurrency(item.valor_total)}</td>
                 <td>${funcionariosDisplay}</td>
-                <td>${item.obs || ''}</td> 
+                <td>${item.nota_fiscal || ''}</td> 
             `;
             tabelaResultadosBody.appendChild(tr);
         });
@@ -159,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tfoot) tfoot.style.display = 'table-footer-group'; // Garante que o rodapé seja exibido
         tfoot.innerHTML = `
             <tr>
-                <td colspan="3"><strong>Total Geral</strong></td>
+                <td colspan="5"><strong>Total Geral</strong></td>
                 <td><strong>${formatCurrency(totalGeral)}</strong></td>
                 <td colspan="2"></td>
             </tr>
@@ -183,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Mostra um feedback de carregamento
-        tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+        tabelaResultadosBody.innerHTML = '<tr><td colspan="8">Buscando...</td></tr>';
         graficosContainer.style.display = 'none'; // Esconde gráficos durante a busca
         resultadosContainer.style.display = 'block';
 
@@ -282,9 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Data': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
                 'Rota': item.numero_rota,
                 'Hotel': item.hoteis?.nome || 'N/A',
-                'Valor': item.valor_total,
+                'Qtd Diarias': item.qtd_diarias,
+                'Valor Diaria': item.valor_diaria,
+                'Valor Total': item.valor_total,
                 'Funcionários': funcionarios,
-                'Voucher': item.obs || ''
+                'Nota Fiscal': item.nota_fiscal || ''
             };
         });
     };
@@ -301,17 +307,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Adiciona a linha de total ao final dos dados
         dataToExport.push({
             'Data': 'TOTAL GERAL',
-            'Rota': '',
-            'Hotel': '',
-            'Valor': totalGeral,
+            'Rota': '', 'Hotel': '',
+            'Qtd Diarias': '',
+            'Valor Diaria': '',
+            'Valor Total': totalGeral,
             'Funcionários': '',
-            'Voucher': ''
+            'Nota Fiscal': ''
         });
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
 
         // Formata a coluna de valor como moeda
-        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 30 }];
+        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 20 }];
         dataToExport.forEach((_, index) => {
             const cellRef = XLSX.utils.encode_cell({ r: index + 1, c: 2 }); // Coluna 'C' (Valor)
             if (worksheet[cellRef]) {
@@ -338,9 +345,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         doc.text("Relatório de Despesas", 14, 16);
         doc.autoTable({
-            head: [['Data', 'Rota', 'Hotel', 'Valor', 'Funcionários', 'Voucher']],
-            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, formatCurrency(item.Valor), item.Funcionários, item.Voucher]),
-            foot: [['Total Geral', '', '', formatCurrency(totalGeral), '', '']],
+            head: [['Data', 'Rota', 'Hotel', 'Qtd Diárias', 'Valor Diária', 'Valor Total', 'Funcionários', 'Nota Fiscal']],
+            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], formatCurrency(item['Valor Diaria']), formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
+            foot: [['Total Geral', '', '', '', '', formatCurrency(totalGeral), '', '']],
             startY: 20,
             headStyles: { fillColor: [0, 86, 179] }, // Azul do cabeçalho da tabela
             footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
