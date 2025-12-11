@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { XLSX } from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 class HotelManager {
     constructor() {
@@ -14,6 +15,9 @@ class HotelManager {
         this.hotelEditingId = document.getElementById('hotelEditingId');
         this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
         this.searchHotelInput = document.getElementById('searchHotelInput');
+        // Elementos de importação
+        this.btnImportarLista = document.getElementById('btnImportarLista');
+        this.importFileInput = document.getElementById('importFile');
 
         // Painel de Quartos
         this.quartosPanelBackdrop = document.getElementById('quartosPanelBackdrop');
@@ -38,6 +42,12 @@ class HotelManager {
         });
         this.formQuarto.addEventListener('submit', (e) => this.handleQuartoSubmit(e));
         this.listaQuartos.addEventListener('click', (e) => this.handleQuartoListClick(e));
+
+        // Eventos de importação
+        if (this.btnImportarLista) {
+            this.btnImportarLista.addEventListener('click', () => this.handleImportClick());
+            this.importFileInput.addEventListener('change', (e) => this.handleFileImport(e));
+        }
     }
 
     // --- Lógica para Hotéis ---
@@ -134,6 +144,84 @@ class HotelManager {
         this.formHotel.reset();
         this.hotelEditingId.value = '';
         this.btnSubmitHotel.textContent = 'Cadastrar Hotel';
+    }
+
+    // --- Lógica para Importação ---
+
+    handleImportClick() {
+        // Aciona o clique no input de arquivo oculto
+        this.importFileInput.click();
+    }
+
+    handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length === 0) {
+                    alert('A planilha está vazia ou em um formato inválido.');
+                    return;
+                }
+
+                await this.processImportedData(json);
+
+            } catch (error) {
+                console.error('Erro ao processar o arquivo XLSX:', error);
+                alert('Ocorreu um erro ao ler a planilha. Verifique se o formato está correto.');
+            } finally {
+                // Limpa o valor do input para permitir a importação do mesmo arquivo novamente
+                this.importFileInput.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async processImportedData(importedRows) {
+        if (!confirm(`Foram encontrados ${importedRows.length} hotéis na planilha. Deseja continuar?
+
+Atenção:
+1. Hotéis existentes (identificados pelo CNPJ) serão ATUALIZADOS.
+2. Novos hotéis serão CADASTRADOS.`)) {
+            return;
+        }
+
+        // Mapeia os dados da planilha para o formato do banco de dados
+        // e filtra registros que não possuem CNPJ, que é a chave de conflito.
+        const upsertPayload = importedRows.map(row => {
+            const cnpj = String(row.CNPJ || '').trim();
+            if (!cnpj) return null; // Ignora linhas sem CNPJ
+
+            return {
+                nome: row['Nome do Hotel'],
+                cnpj: cnpj,
+                endereco: row.Endereço,
+                telefone: String(row.Telefone || ''),
+                responsavel: row.Responsável || null // Campo opcional
+            };
+        }).filter(Boolean); // Remove as entradas nulas (sem CNPJ)
+
+        if (upsertPayload.length === 0) {
+            return alert('Nenhum hotel com CNPJ válido encontrado na planilha para importar.');
+        }
+
+        try {
+            const { error } = await supabaseClient.from('hoteis').upsert(upsertPayload, { onConflict: 'cnpj' });
+            if (error) throw error;
+
+            alert(`Importação concluída! ${upsertPayload.length} registros de hotéis foram processados.`);
+            this.renderHotels(); // Atualiza a tabela na tela
+        } catch (error) {
+            console.error('Erro detalhado no processamento:', error);
+            alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+        }
     }
 
     // --- Lógica para Tipos de Quarto ---
