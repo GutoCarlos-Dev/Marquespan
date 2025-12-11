@@ -1,84 +1,84 @@
-// hotel.js - Lógica para o módulo de Cadastro de Hotel
 import { supabaseClient } from './supabase.js';
 
-class SupabaseService {
-  static async list(table, cols='*', opts={}){
-    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
-    if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
-    if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
-    if(opts.or) q = q.or(opts.or);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  }
-
-  static async insert(table, payload){
-    const { data, error } = await supabaseClient.from(table).insert(payload).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async update(table, payload, key){
-    const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async remove(table, key){
-    const { data, error } = await supabaseClient.from(table).delete().eq(key.field, key.value);
-    if (error) throw error;
-    return data;
-  }
-}
-
-const HotelUI = {
-    init() {
-        this.SupabaseService = SupabaseService;
+class HotelManager {
+    constructor() {
         this.cache();
         this.bind();
-        this.setupInitialState();
-    },
+        this.renderHotels();
+    }
 
     cache() {
-        this.section = document.getElementById('sectionCadastrarHotel');
-        this.form = document.getElementById('formCadastrarHotel');
-        this.tableBody = document.getElementById('hotelTableBody');
-        this.btnSubmit = document.getElementById('btnSubmitHotel');
-        this.btnClearForm = document.getElementById('btnClearHotelForm');
-        this.searchInput = document.getElementById('searchHotelInput');
-        this.editingIdInput = document.getElementById('hotelEditingId');
-    },
+        // Formulário e tabela de Hotéis
+        this.formHotel = document.getElementById('formCadastrarHotel');
+        this.hotelTableBody = document.getElementById('hotelTableBody');
+        this.hotelEditingId = document.getElementById('hotelEditingId');
+        this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
+        this.searchHotelInput = document.getElementById('searchHotelInput');
+
+        // Painel de Quartos
+        this.quartosPanelBackdrop = document.getElementById('quartosPanelBackdrop');
+        this.quartosPanel = document.getElementById('quartosPanel');
+        this.quartosPanelTitle = document.getElementById('quartosPanelTitle');
+        this.listaQuartos = document.getElementById('listaQuartos');
+        this.formQuarto = document.getElementById('formCadastrarQuarto');
+        this.quartoHotelIdInput = document.getElementById('quartoHotelId');
+        this.quartoNomeInput = document.getElementById('quartoNome');
+    }
 
     bind() {
-        if (this.form) {
-            this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
-        }
-        if (this.btnClearForm) {
-            this.btnClearForm.addEventListener('click', () => this.clearForm());
-        }
-        if (this.tableBody) {
-            this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
-        }
-        if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.renderGrid());
-        }
+        this.formHotel.addEventListener('submit', (e) => this.handleHotelSubmit(e));
+        document.getElementById('btnClearHotelForm').addEventListener('click', () => this.clearHotelForm());
+        this.hotelTableBody.addEventListener('click', (e) => this.handleHotelTableClick(e));
+        this.searchHotelInput.addEventListener('input', () => this.renderHotels());
 
-        const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
-        ths?.forEach(th => {
-            const field = th.getAttribute('data-field');
-            th.addEventListener('click', () => { this.toggleSort(field) });
+        // Eventos do painel de quartos
+        this.quartosPanel.querySelector('.close-button').addEventListener('click', () => this.closeQuartosPanel());
+        this.quartosPanelBackdrop.addEventListener('click', (e) => {
+            if (e.target === this.quartosPanelBackdrop) this.closeQuartosPanel();
         });
-    },
+        this.formQuarto.addEventListener('submit', (e) => this.handleQuartoSubmit(e));
+        this.listaQuartos.addEventListener('click', (e) => this.handleQuartoListClick(e));
+    }
 
-    setupInitialState() {
-        this._sort = { field: 'nome', ascending: true };
-    },
+    // --- Lógica para Hotéis ---
 
-    async handleFormSubmit(e) {
+    async renderHotels() {
+        const searchTerm = this.searchHotelInput.value.trim();
+        let query = supabaseClient.from('hoteis').select('*').order('nome', { ascending: true });
+
+        if (searchTerm) {
+            query = query.or(`nome.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%,responsavel.ilike.%${searchTerm}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            console.error('Erro ao buscar hotéis:', error);
+            return;
+        }
+
+        this.hotelTableBody.innerHTML = '';
+        data.forEach(hotel => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${hotel.nome}</td>
+                <td>${hotel.cnpj || ''}</td>
+                <td>${hotel.endereco}</td>
+                <td>${hotel.telefone || ''}</td>
+                <td>${hotel.responsavel || ''}</td>
+                <td>
+                    <button class="btn-action btn-edit" data-id="${hotel.id}">Editar</button>
+                    <button class="btn-action btn-delete" data-id="${hotel.id}">Excluir</button>
+                    <button class="btn-action btn-manage-rooms" data-id="${hotel.id}" data-name="${hotel.nome}">Gerenciar Quartos</button>
+                </td>
+            `;
+            this.hotelTableBody.appendChild(tr);
+        });
+    }
+
+    async handleHotelSubmit(e) {
         e.preventDefault();
-        const editingId = this.editingIdInput.value;
-
-        const payload = {
+        const id = this.hotelEditingId.value;
+        const hotelData = {
             nome: document.getElementById('hotelNome').value,
             cnpj: document.getElementById('hotelCnpj').value,
             endereco: document.getElementById('hotelEndereco').value,
@@ -86,123 +86,141 @@ const HotelUI = {
             responsavel: document.getElementById('hotelResponsavel').value,
         };
 
-        if (!payload.nome || !payload.endereco) {
-            return alert('Os campos "Nome do Hotel" e "Endereço" são obrigatórios.');
-        }
-
-        try {
-            if (editingId) {
-                await this.SupabaseService.update('hotel', payload, { field: 'id', value: editingId });
-                alert('✅ Hotel atualizado com sucesso!');
-            } else {
-                await this.SupabaseService.insert('hotel', payload);
-                alert('✅ Hotel cadastrado com sucesso!');
-            }
-            this.clearForm();
-            this.renderGrid();
-        } catch (err) {
-            console.error(err);
-            alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} hotel.`);
-        }
-    },
-
-    clearForm() {
-        this.form?.reset();
-        this.editingIdInput.value = '';
-        this.btnSubmit.textContent = 'Cadastrar Hotel';
-    },
-
-    async loadForEditing(id) {
-        try {
-            const [hotel] = await this.SupabaseService.list('hotel', '*', { eq: { field: 'id', value: id } });
-            if (!hotel) return alert('Hotel não encontrado.');
-
-            this.editingIdInput.value = id;
-            document.getElementById('hotelNome').value = hotel.nome || '';
-            document.getElementById('hotelCnpj').value = hotel.cnpj || '';
-            document.getElementById('hotelEndereco').value = hotel.endereco || '';
-            document.getElementById('hotelTelefone').value = hotel.telefone || '';
-            document.getElementById('hotelResponsavel').value = hotel.responsavel || '';
-
-            this.btnSubmit.textContent = 'Atualizar Hotel';
-            this.form.scrollIntoView({ behavior: 'smooth' });
-        } catch (e) {
-            console.error('Erro ao carregar hotel para edição', e);
-        }
-    },
-
-    async handleTableClick(e) {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        const id = btn.dataset.id;
-
-        if (btn.classList.contains('btn-delete')) {
-            if (confirm('Tem certeza que deseja excluir este hotel?')) {
-                try {
-                    await this.SupabaseService.remove('hotel', { field: 'id', value: id });
-                    this.renderGrid();
-                } catch (err) {
-                    console.error('Erro ao excluir hotel', err);
-                    alert('❌ Não foi possível excluir o hotel.');
-                }
-            }
-        } else if (btn.classList.contains('btn-edit')) {
-            this.loadForEditing(id);
-        }
-    },
-
-    toggleSort(field) {
-        if (this._sort.field === field) {
-            this._sort.ascending = !this._sort.ascending;
+        let result;
+        if (id) {
+            result = await supabaseClient.from('hoteis').update(hotelData).eq('id', id);
         } else {
-            this._sort.field = field;
-            this._sort.ascending = true;
+            result = await supabaseClient.from('hoteis').insert([hotelData]);
         }
-        this.renderGrid();
-    },
 
-    async renderGrid() {
-        if (!this.tableBody) return;
-
-        const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
-        ths?.forEach(th => {
-            th.classList.remove('sort-asc', 'sort-desc');
-            if (th.dataset.field === this._sort.field) {
-                th.classList.add(this._sort.ascending ? 'sort-asc' : 'sort-desc');
-            }
-        });
-
-        try {
-            const searchTerm = this.searchInput?.value.trim();
-            let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
-
-            if (searchTerm) {
-                queryOptions.or = `nome.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%,responsavel.ilike.%${searchTerm}%`;
-            }
-
-            const hoteis = await this.SupabaseService.list('hotel', '*', queryOptions);
-
-            this.tableBody.innerHTML = hoteis.map(h => `
-                <tr>
-                    <td>${h.nome || ''}</td>
-                    <td>${h.cnpj || ''}</td>
-                    <td>${h.endereco || ''}</td>
-                    <td>${h.telefone || ''}</td>
-                    <td>${h.responsavel || ''}</td>
-                    <td>
-                        <button class="btn-edit" data-id="${h.id}">Editar</button>
-                        <button class="btn-delete" data-id="${h.id}">Excluir</button>
-                    </td>
-                </tr>`).join('');
-        } catch (e) {
-            console.error('Erro ao carregar hotéis', e);
-            this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar hotéis.</td></tr>`;
+        if (result.error) {
+            alert('Erro ao salvar hotel: ' + result.error.message);
+        } else {
+            alert(`Hotel ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
+            this.clearHotelForm();
+            this.renderHotels();
         }
     }
-};
 
-// Inicializa a UI quando o DOM estiver pronto
+    async handleHotelTableClick(e) {
+        const target = e.target;
+        const id = target.dataset.id;
+
+        if (target.classList.contains('btn-edit')) {
+            const { data, error } = await supabaseClient.from('hoteis').select('*').eq('id', id).single();
+            if (data) this.fillHotelForm(data);
+        } else if (target.classList.contains('btn-delete')) {
+            if (confirm('Tem certeza que deseja excluir este hotel?')) {
+                const { error } = await supabaseClient.from('hoteis').delete().eq('id', id);
+                if (error) alert('Erro ao excluir: ' + error.message);
+                else this.renderHotels();
+            }
+        } else if (target.classList.contains('btn-manage-rooms')) {
+            this.openQuartosPanel(id, target.dataset.name);
+        }
+    }
+
+    fillHotelForm(hotel) {
+        this.hotelEditingId.value = hotel.id;
+        document.getElementById('hotelNome').value = hotel.nome;
+        document.getElementById('hotelCnpj').value = hotel.cnpj || '';
+        document.getElementById('hotelEndereco').value = hotel.endereco;
+        document.getElementById('hotelTelefone').value = hotel.telefone || '';
+        document.getElementById('hotelResponsavel').value = hotel.responsavel || '';
+        this.btnSubmitHotel.textContent = 'Atualizar Hotel';
+    }
+
+    clearHotelForm() {
+        this.formHotel.reset();
+        this.hotelEditingId.value = '';
+        this.btnSubmitHotel.textContent = 'Cadastrar Hotel';
+    }
+
+    // --- Lógica para Tipos de Quarto ---
+
+    async openQuartosPanel(hotelId, hotelName) {
+        this.quartoHotelIdInput.value = hotelId;
+        this.quartosPanelTitle.textContent = `Gerenciar Quartos - ${hotelName}`;
+        this.quartosPanelBackdrop.classList.remove('hidden');
+        await this.renderQuartos(hotelId);
+    }
+
+    closeQuartosPanel() {
+        this.quartosPanelBackdrop.classList.add('hidden');
+        this.formQuarto.reset();
+        this.listaQuartos.innerHTML = '';
+    }
+
+    async renderQuartos(hotelId) {
+        this.listaQuartos.innerHTML = '<li>Carregando...</li>';
+        const { data, error } = await supabaseClient
+            .from('hotel_quartos')
+            .select('*')
+            .eq('id_hotel', hotelId)
+            .order('nome_quarto', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar quartos:', error);
+            this.listaQuartos.innerHTML = '<li>Erro ao carregar quartos.</li>';
+            return;
+        }
+
+        this.listaQuartos.innerHTML = '';
+        if (data.length === 0) {
+            this.listaQuartos.innerHTML = '<li>Nenhum tipo de quarto cadastrado.</li>';
+        } else {
+            data.forEach(quarto => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${quarto.nome_quarto}</span>
+                    <button class="btn-delete-quarto" data-id="${quarto.id}">&times;</button>
+                `;
+                this.listaQuartos.appendChild(li);
+            });
+        }
+    }
+
+    async handleQuartoSubmit(e) {
+        e.preventDefault();
+        const hotelId = this.quartoHotelIdInput.value;
+        const nomeQuarto = this.quartoNomeInput.value.trim();
+
+        if (!nomeQuarto || !hotelId) {
+            alert('Por favor, preencha o nome do quarto.');
+            return;
+        }
+
+        const { error } = await supabaseClient.from('hotel_quartos').insert([{
+            id_hotel: hotelId,
+            nome_quarto: nomeQuarto
+        }]);
+
+        if (error) {
+            alert('Erro ao adicionar quarto: ' + error.message);
+        } else {
+            this.quartoNomeInput.value = '';
+            await this.renderQuartos(hotelId);
+        }
+    }
+
+    async handleQuartoListClick(e) {
+        const target = e.target;
+        if (target.classList.contains('btn-delete-quarto')) {
+            const quartoId = target.dataset.id;
+            const hotelId = this.quartoHotelIdInput.value;
+
+            if (confirm('Tem certeza que deseja excluir este tipo de quarto?')) {
+                const { error } = await supabaseClient.from('hotel_quartos').delete().eq('id', quartoId);
+                if (error) {
+                    alert('Erro ao excluir quarto: ' + error.message);
+                } else {
+                    await this.renderQuartos(hotelId);
+                }
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    HotelUI.init();
-    HotelUI.renderGrid(); // Carrega os dados iniciais
+    new HotelManager();
 });

@@ -80,7 +80,7 @@ const DespesasUI = {
     try {
       const [rotas, hoteis, funcionarios] = await Promise.all([
         this.SupabaseService.list('rotas', 'id, numero', { orderBy: 'numero' }),
-        this.SupabaseService.list('hotel', 'id, nome', { orderBy: 'nome' }),
+        this.SupabaseService.list('hoteis', 'id, nome', { orderBy: 'nome' }),
         this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome' })
       ]);
 
@@ -186,7 +186,7 @@ const DespesasUI = {
       // Para preencher os inputs, precisamos buscar o texto correspondente ao ID
       const [rota, hotel, func1, func2] = await Promise.all([
         despesa.numero_rota ? this.SupabaseService.list('rotas', 'numero', { eq: { field: 'numero', value: despesa.numero_rota } }) : Promise.resolve([]),
-        despesa.id_hotel ? this.SupabaseService.list('hotel', 'nome', { eq: { field: 'id', value: despesa.id_hotel } }) : Promise.resolve([]),
+        despesa.id_hotel ? this.SupabaseService.list('hoteis', 'nome', { eq: { field: 'id', value: despesa.id_hotel } }) : Promise.resolve([]),
         despesa.id_funcionario1 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario1 } }) : Promise.resolve([]),
         despesa.id_funcionario2 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario2 } }) : Promise.resolve([])
       ]);
@@ -260,7 +260,7 @@ const DespesasUI = {
       const selectQuery = `
         id,
         numero_rota,
-        hotel!inner ( nome ),
+        hoteis!inner ( nome ),
         funcionario1:funcionario!despesas_id_funcionario1_fkey ( nome ),
         valor_total,
         data_checkin
@@ -270,13 +270,13 @@ const DespesasUI = {
       
       if (searchTerm) {
         const searchConditions = [
-          `hotel.nome.ilike.%${searchTerm}%`,
+          `hoteis.nome.ilike.%${searchTerm}%`,
           `funcionario1.nome.ilike.%${searchTerm}%`
         ];
         if (!isNaN(searchTerm)) {
           searchConditions.push(`numero_rota.eq.${searchTerm}`);
         }
-        query = query.or(searchConditions.join(','), { foreignTable: 'hotel' });
+        query = query.or(searchConditions.join(','), { foreignTable: 'hoteis' });
         query = query.or(searchConditions.join(','), { foreignTable: 'funcionario1' });
       }
 
@@ -286,7 +286,7 @@ const DespesasUI = {
       this.tableBody.innerHTML = despesas.map(d => `
         <tr>
           <td>${d.numero_rota || ''}</td>
-          <td>${d.hotel?.nome || 'N/A'}</td>
+          <td>${d.hoteis?.nome || 'N/A'}</td>
           <td>${d.funcionario1?.nome || 'N/A'}</td>
           <td>${d.valor_total ? `R$ ${d.valor_total.toFixed(2)}` : ''}</td>
           <td>${d.data_checkin ? new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>

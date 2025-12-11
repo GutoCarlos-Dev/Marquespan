@@ -1162,36 +1162,6 @@ const UI = {
   }
 };
 
-UI.renderRecebimentoItems = function(itens, cotacaoId) {
-    if (!this.recebimentoItemsContainer) return;
-    this.recebimentoItemsContainer.innerHTML = '';
-    this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
-
-    itens.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'recebimento-item';
-        div.dataset.itemId = item.produtos.id; // Garante que estamos usando o UUID do produto
-        div.dataset.qtdPedida = item.quantidade; // Armazena a quantidade pedida
-        div.innerHTML = `
-        <label for="qtd-recebida-${item.produtos.id}">${item.produtos.nome} (Pedido: ${item.quantidade})</label>
-        <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
-      `;
-        this.recebimentoItemsContainer.appendChild(div);
-    });
-
-    // Controle de visibilidade do botão Salvar
-    const btnSalvar = document.getElementById('btnSalvarRecebimento');
-    const usuarioLogado = this._getCurrentUser();
-    const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-    if (btnSalvar) { // Verifica se o botão existe antes de manipulá-lo
-        if (['estoque', 'administrador', 'compras'].includes(nivelUsuario)) {
-            btnSalvar.style.display = 'block'; // Mostra o botão
-        } else {
-            btnSalvar.style.display = 'none'; // Oculta o botão para outros níveis
-        }
-    }
-};
-
 // Initialize UI on DOM load
 document.addEventListener('DOMContentLoaded', () => {
   UI.init();

@@ -69,6 +69,31 @@
           </div>
         </div>
       </section>
+
+      <!-- Painel Modal para Gerenciar Quartos -->
+      <div id="quartosPanelBackdrop" class="panel-backdrop hidden">
+        <div id="quartosPanel" class="panel">
+          <div class="panel-header">
+            <h3 id="quartosPanelTitle">Gerenciar Quartos</h3>
+            <button class="close-button">&times;</button>
+          </div>
+          <div class="panel-body">
+            <div class="form-container">
+              <h4>Adicionar Novo Tipo de Quarto</h4>
+              <form id="formCadastrarQuarto">
+                <input type="hidden" id="quartoHotelId">
+                <div class="form-group">
+                  <label for="quartoNome">Nome do Tipo de Quarto</label>
+                  <input type="text" id="quartoNome" required>
+                </div>
+                <button type="submit">Adicionar Quarto</button>
+              </form>
+            </div>
+            <h4>Tipos de Quarto Cadastrados</h4>
+            <ul id="listaQuartos" class="item-list"></ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
