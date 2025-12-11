@@ -134,6 +134,23 @@
   </div>
 
   <script type="module" src="./script/pneu-updated.js" defer></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusSelect = document.getElementById('status');
+      const camposSaida = document.getElementById('campos-saida');
+
+      if (statusSelect && camposSaida) {
+        statusSelect.addEventListener('change', (event) => {
+          if (event.target.value === 'SAIDA') {
+            camposSaida.classList.remove('hidden');
+          } else {
+            camposSaida.classList.add('hidden');
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
             </div>
