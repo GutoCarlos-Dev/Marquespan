@@ -11,6 +11,7 @@
     <!-- Bibliotecas para exportação -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <style>
@@ -152,6 +153,21 @@
                         <!-- O total geral será inserido aqui -->
                     </tfoot>
                 </table>
+            </div>
+
+            <!-- Seção de Gráficos -->
+            <div class="card" id="graficos-container" style="display: none;">
+                <h2>Análise Gráfica dos Resultados</h2>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Despesas por Rota</h3>
+                        <canvas id="grafico-despesas-rota"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Top 5 Hotéis com Maiores Despesas</h3>
+                        <canvas id="grafico-despesas-hotel"></canvas>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

@@ -3,10 +3,15 @@ import { supabaseClient } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
     const formFiltro = document.getElementById('filtro-despesas-form');
     const resultadosContainer = document.getElementById('resultados-container');
+    const graficosContainer = document.getElementById('graficos-container');
     const tabelaResultadosBody = document.getElementById('tabela-resultados');
     const rotasSelect = document.getElementById('rotas');
     const btnExportarXLSX = document.getElementById('btnExportarXLSX');
     const btnExportarPDF = document.getElementById('btnExportarPDF');
+
+    // Variáveis para armazenar as instâncias dos gráficos
+    let graficoRotasInstance = null;
+    let graficoHoteisInstance = null;
 
     let reportData = [];
 
@@ -118,6 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tfoot) tfoot.innerHTML = ''; // Limpa o rodapé a cada nova busca
         let totalGeral = 0;
 
+        // Esconde os gráficos se não houver dados
+        graficosContainer.style.display = 'none';
+
         if (dados.length === 0) {
             tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
             if (tfoot) tfoot.style.display = 'none'; // Esconde o rodapé se não houver dados
@@ -156,6 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td colspan="2"></td>
             </tr>
         `;
+
+        // Mostra e renderiza os gráficos
+        graficosContainer.style.display = 'block';
+        renderizarGraficos(dados);
     };
 
     formFiltro.addEventListener('submit', async (e) => {
@@ -172,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Mostra um feedback de carregamento
         tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+        graficosContainer.style.display = 'none'; // Esconde gráficos durante a busca
         resultadosContainer.style.display = 'block';
 
         const despesas = await fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId);
@@ -179,6 +192,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderizarTabela(reportData);
     });
+
+    // --- Funções de Gráficos ---
+
+    const renderizarGraficos = (dados) => {
+        // 1. Gráfico de Despesas por Rota
+        const despesasPorRota = dados.reduce((acc, item) => {
+            const rota = item.numero_rota || 'Sem Rota';
+            acc[rota] = (acc[rota] || 0) + item.valor_total;
+            return acc;
+        }, {});
+
+        const ctxRota = document.getElementById('grafico-despesas-rota').getContext('2d');
+        if (graficoRotasInstance) {
+            graficoRotasInstance.destroy(); // Destrói o gráfico anterior para evitar sobreposição
+        }
+        graficoRotasInstance = new Chart(ctxRota, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(despesasPorRota),
+                datasets: [{
+                    label: 'Total Gasto (R$)',
+                    data: Object.values(despesasPorRota),
+                    backgroundColor: 'rgba(0, 86, 179, 0.7)',
+                    borderColor: 'rgba(0, 86, 179, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // 2. Gráfico de Top 5 Hotéis com Maiores Despesas
+        const despesasPorHotel = dados.reduce((acc, item) => {
+            const hotel = item.hoteis?.nome || 'Hotel não especificado';
+            acc[hotel] = (acc[hotel] || 0) + item.valor_total;
+            return acc;
+        }, {});
+
+        const top5Hoteis = Object.entries(despesasPorHotel)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5);
+
+        const ctxHotel = document.getElementById('grafico-despesas-hotel').getContext('2d');
+        if (graficoHoteisInstance) {
+            graficoHoteisInstance.destroy();
+        }
+        graficoHoteisInstance = new Chart(ctxHotel, {
+            type: 'pie',
+            data: {
+                labels: top5Hoteis.map(([nome]) => nome),
+                datasets: [{
+                    label: 'Total Gasto (R$)',
+                    data: top5Hoteis.map(([, valor]) => valor),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+    };
 
     // --- Funções de Exportação ---
 
