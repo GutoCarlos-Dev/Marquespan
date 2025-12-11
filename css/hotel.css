@@ -1,100 +1,101 @@
-/* Estilos para a página de Cadastro de Hotel */
+/* Estilos específicos para a seção de Cadastro de Hotéis */
 
-/* Painel Modal (Backdrop) */
-.panel-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+#sectionCadastrarHotel h2,
+#sectionCadastrarHotel h3 {
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
-.panel-backdrop:not(.hidden) {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Painel Modal (Conteúdo) */
-.panel {
-    background-color: #ffffff; /* Fundo branco */
+/* Mantém o padrão do formulário */
+#sectionCadastrarHotel .form-container {
+    background-color: #fff;
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-    width: 450px; /* Largura do modal */
-    max-width: 90%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+#formCadastrarHotel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: center;
+}
+
+#formCadastrarHotel .form-group {
     display: flex;
     flex-direction: column;
-    transform: scale(0.95);
-    transition: transform 0.3s ease;
 }
 
-.panel-backdrop:not(.hidden) .panel {
-    transform: scale(1);
+#formCadastrarHotel label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
 }
 
-.panel-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+#formCadastrarHotel input,
+#formCadastrarHotel select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
 }
 
-.panel-header h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    color: #333;
+#formCadastrarHotel input:focus,
+#formCadastrarHotel select:focus {
+    border-color: #007bff;
+    outline: none;
 }
 
-.panel-body {
-    padding: 20px;
-    max-height: 70vh; /* Altura máxima para o corpo do modal */
-    overflow-y: auto; /* Adiciona scroll se o conteúdo for grande */
+/* Estilo para os botões do formulário */
+#formCadastrarHotel button {
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
 }
 
-/* Formulário dentro do modal */
-.form-title-quarto, .list-title-quarto {
-    font-size: 1rem;
-    color: #0056b3;
-    margin-top: 15px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
+/* Cores específicas para os botões do formulário de hotel */
+#btnSubmitHotel {
+    background-color: #28a745; /* Verde */
+    color: white;
 }
 
-.form-inline {
+#btnSubmitHotel:hover {
+    background-color: #218838;
+}
+
+#btnClearHotelForm {
+    background-color: #6c757d; /* Cinza */
+    color: white;
+}
+
+#btnClearHotelForm:hover {
+    background-color: #5a6268;
+}
+
+.btn-import {
+    background-color: #007bff; /* Azul */
+    color: white;
+}
+
+.btn-import:hover {
+    background-color: #0056b3;
+}
+
+/* Agrupa os botões em uma linha no final do formulário */
+.form-buttons {
+    grid-column: 1 / -1; /* Ocupa todas as colunas */
     display: flex;
     gap: 10px;
-    align-items: center;
+    justify-content: flex-start;
 }
 
-.flex-grow {
-    flex-grow: 1;
-}
-
-/* Lista de quartos */
-.quarto-list-container {
-    margin-top: 15px;
-}
-
-.quarto-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
-    margin-bottom: 8px;
-}
-
-.quarto-item-name {
-    color: #343a40;
-}
+/* O restante dos estilos (tabela, busca, etc.) são herdados do index.css */
