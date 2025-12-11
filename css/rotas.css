@@ -225,3 +225,12 @@
     font-weight: bold;
     color: #495057;
 }
+
+/* Estilo para a linha de total no resumo */
+.rota-summary tfoot tr.summary-total td {
+    background-color: #f0f8ff; /* Um azul bem claro */
+    color: #02940e;
+    font-weight: bold;
+    border-top: 2px solid #00ff6a;
+    text-align: center;
+}

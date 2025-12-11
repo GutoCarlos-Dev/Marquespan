@@ -331,6 +331,11 @@ const RotasUI = {
             summaryData[supervisor].totalDias += (rota.dias || 0);
         });
 
+        // --- Cálculos para o totalizador ---
+        const totalSupervisores = Object.keys(summaryData).length;
+        const totalRotas = rotas.length; // Mais simples que somar, é só pegar o total de rotas
+        const totalGeralDias = Object.values(summaryData).reduce((sum, data) => sum + data.totalDias, 0);
+
         let summaryHtml = `
             <h3>Resumo por Supervisor</h3>
             <table>
@@ -352,7 +357,16 @@ const RotasUI = {
                 </tr>
             `;
         }
-        summaryHtml += `</tbody></table>`;
+        summaryHtml += `
+                </tbody>
+                <tfoot>
+                    <tr class="summary-total">
+                        <td><strong>${totalSupervisores} Supervisor(es)</strong></td>
+                        <td><strong>${totalRotas} Rota(s)</strong></td>
+                        <td><strong>${totalGeralDias} Dia(s)</strong></td>
+                    </tr>
+                </tfoot>
+            </table>`;
         this.rotaSummary.innerHTML = summaryHtml;
     }
 };
