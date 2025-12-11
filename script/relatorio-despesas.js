@@ -292,26 +292,39 @@ const ReportUI = {
         XLSX.writeFile(workbook, "Relatorio_de_Despesas.xlsx");
     },
 
-    exportarPDF() {
+    async exportarPDF() {
         if (this.reportData.length === 0) return alert("Não há dados para exportar.");
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape' });
+
+        // 1. Carregar a imagem do logo e converter para Base64
+        const getLogoBase64 = async () => {
+            const response = await fetch('Logo.png');
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        };
+
+        const logoBase64 = await getLogoBase64();
+        doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10); // Adiciona o logo (X, Y, Largura, Altura)
+
         const dataToExport = this.getExportData();
         const totalGeral = this.reportData.reduce((sum, item) => sum + item.valor_total, 0);
 
-        doc.text("Relatório de Despesas", 14, 16);
+        doc.setFontSize(18);
+        doc.text("Relatório de Despesas", 14, 28); // Ajusta a posição Y do título para baixo do logo
+
         doc.autoTable({
             head: [['Data', 'Rota', 'Hotel', 'Qtd Diárias', 'Valor Diária', 'Valor Total', 'Funcionários', 'Nota Fiscal']],
-            body: dataToExport.map(item => [
-                item.Data, item.Rota, item.Hotel, item['Qtd Diarias'],
-                this.formatCurrency(item['Valor Diaria']),
-                this.formatCurrency(item['Valor Total']),
-                item.Funcionários, item['Nota Fiscal']
-            ]),
+            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], this.formatCurrency(item['Valor Diaria']), this.formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
             foot: [['Total Geral', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
-            startY: 20,
-            headStyles: { fillColor: [0, 86, 179] },
+            startY: 35, // Ajusta o início da tabela
+            headStyles: { fillColor: [0, 105, 55] }, // Cor verde da Marquespan
             footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
         });
 
