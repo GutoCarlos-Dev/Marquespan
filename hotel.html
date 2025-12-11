@@ -79,18 +79,18 @@
           </div>
           <div class="panel-body">
             <div class="form-container">
-              <h4>Adicionar Novo Tipo de Quarto</h4>
-              <form id="formCadastrarQuarto">
+              <h4 class="form-title-quarto">Adicionar Novo Tipo de Quarto</h4>
+              <form id="formCadastrarQuarto" class="form-inline">
                 <input type="hidden" id="quartoHotelId">
-                <div class="form-group">
-                  <label for="quartoNome">Nome do Tipo de Quarto</label>
-                  <input type="text" id="quartoNome" required>
+                <div class="form-group flex-grow">
+                  <label for="quartoNome" class="sr-only">Nome do Tipo de Quarto</label>
+                  <input type="text" id="quartoNome" placeholder="Ex: Suíte Luxo, Quarto Standard" required>
                 </div>
-                <button type="submit">Adicionar Quarto</button>
+                <button type="submit" class="btn-add-quarto"><i class="fas fa-plus"></i> Adicionar</button>
               </form>
             </div>
-            <h4>Tipos de Quarto Cadastrados</h4>
-            <ul id="listaQuartos" class="item-list"></ul>
+            <h4 class="list-title-quarto">Tipos de Quarto Cadastrados</h4>
+            <div id="listaQuartos" class="quarto-list-container"></div>
           </div>
         </div>
       </div>

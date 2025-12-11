@@ -167,15 +167,16 @@ class HotelManager {
 
         this.listaQuartos.innerHTML = '';
         if (data.length === 0) {
-            this.listaQuartos.innerHTML = '<li>Nenhum tipo de quarto cadastrado.</li>';
+            this.listaQuartos.innerHTML = '<p class="empty-list-message">Nenhum tipo de quarto cadastrado.</p>';
         } else {
             data.forEach(quarto => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span>${quarto.nome_quarto}</span>
-                    <button class="btn-delete-quarto" data-id="${quarto.id}">&times;</button>
+                const div = document.createElement('div');
+                div.className = 'quarto-item';
+                div.innerHTML = `
+                    <span class="quarto-item-name"><i class="fas fa-bed"></i> ${quarto.nome_quarto}</span>
+                    <button class="btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto"><i class="fas fa-trash-alt"></i></button>
                 `;
-                this.listaQuartos.appendChild(li);
+                this.listaQuartos.appendChild(div);
             });
         }
     }
