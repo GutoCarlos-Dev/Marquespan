@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formFiltro = document.getElementById('filtro-despesas-form');
     const resultadosContainer = document.getElementById('resultados-container');
     const tabelaResultadosBody = document.getElementById('tabela-resultados');
-    const rotasList = document.getElementById('rotasList');
+    const rotasSelect = document.getElementById('rotas');
     const btnExportarXLSX = document.getElementById('btnExportarXLSX');
     const btnExportarPDF = document.getElementById('btnExportarPDF');
 
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    // Função para buscar rotas do banco de dados
+    // Função para buscar dados para os filtros
     const fetchRotas = async () => {
         const { data, error } = await supabaseClient
             .from('rotas')
@@ -29,15 +29,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return data;
     };
 
+    const fetchHoteis = async () => {
+        const { data, error } = await supabaseClient
+            .from('hoteis')
+            .select('id, nome')
+            .order('nome', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar hotéis:', error);
+            return [];
+        }
+        return data;
+    };
+
     // Função para buscar despesas do banco de dados
-    const fetchDespesas = async (startDate, endDate, rota) => {
+    const fetchDespesas = async (startDate, endDate, rotas, hotelId) => {
         let query = supabaseClient
             .from('despesas')
             .select(`
                 data_checkin,
                 valor_total,
                 numero_rota,
-                hotel:hotel(nome),
+                hoteis:hoteis(nome),
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
                 funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
                 obs:voucher
@@ -46,8 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .lte('data_checkin', endDate)
             .order('data_checkin', { ascending: false });
 
-        if (rota) {
-            query = query.eq('numero_rota', rota);
+        if (rotas && rotas.length > 0) {
+            query = query.in('numero_rota', rotas);
+        }
+
+        if (hotelId) {
+            query = query.eq('id_hotel', hotelId);
         }
 
         const { data, error } = await query;
@@ -59,14 +76,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return data;
     };
 
-    const popularRotas = async () => {
+    const popularFiltros = async () => {
         const rotas = await fetchRotas();
-        rotasList.innerHTML = '';
+        rotasSelect.innerHTML = '';
         rotas.forEach(rota => {
             const option = document.createElement('option');
             option.value = rota.numero;
-            rotasList.appendChild(option);
+            option.textContent = `Rota ${rota.numero}`;
+            rotasSelect.appendChild(option);
         });
+
+        const hoteis = await fetchHoteis();
+        const hoteisList = document.getElementById('hoteisList');
+        hoteisList.innerHTML = '';
+        hoteis.forEach(hotel => {
+            const option = document.createElement('option');
+            option.value = hotel.nome;
+            option.dataset.id = hotel.id;
+            hoteisList.appendChild(option);
+        });
+    };
+
+    // Função auxiliar para obter o ID de um datalist
+    const getValueFromDatalist = (inputId) => {
+        const input = document.getElementById(inputId);
+        const datalistId = input.getAttribute('list');
+        const datalist = document.getElementById(datalistId);
+        const inputValue = input.value;
+
+        for (const option of datalist.options) {
+            if (option.value === inputValue) {
+                return option.dataset.id; // Retorna o ID armazenado
+            }
+        }
+        return null; // Retorna nulo se não encontrar correspondência
     };
 
     const renderizarTabela = (dados) => {
@@ -96,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td>${item.numero_rota}</td>
-                <td>${item.hotel?.nome || 'N/A'}</td>
+                <td>${item.hoteis?.nome || 'N/A'}</td>
                 <td>${formatCurrency(item.valor_total)}</td>
                 <td>${funcionariosDisplay}</td>
                 <td>${item.obs || ''}</td> 
@@ -117,7 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     formFiltro.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const rota = document.getElementById('rota').value;
+        const rotasSelecionadas = Array.from(rotasSelect.selectedOptions).map(opt => opt.value);
+        const hotelId = getValueFromDatalist('hotel');
         const dataInicial = document.getElementById('data-inicial').value;
         const dataFinal = document.getElementById('data-final').value;
 
@@ -130,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabelaResultadosBody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
         resultadosContainer.style.display = 'block';
 
-        const despesas = await fetchDespesas(dataInicial, dataFinal, rota);
+        const despesas = await fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId);
         reportData = despesas; // Armazena os dados brutos para exportação
 
         renderizarTabela(reportData);
@@ -150,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 'Data': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
                 'Rota': item.numero_rota,
-                'Hotel': item.hotel?.nome || 'N/A',
+                'Hotel': item.hoteis?.nome || 'N/A',
                 'Valor': item.valor_total,
                 'Funcionários': funcionarios,
                 'Voucher': item.obs || ''
@@ -219,5 +263,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Carrega as rotas ao iniciar a página
-    popularRotas();
+    popularFiltros();
 });

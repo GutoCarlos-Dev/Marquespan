@@ -99,10 +99,15 @@
                 <form id="filtro-despesas-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="rota">Rota</label>
-                            <!-- O campo de rota agora permite digitar ou selecionar da lista -->
-                            <input type="text" id="rota" name="rota" list="rotasList" placeholder="Todas as rotas">
-                            <datalist id="rotasList"></datalist>
+                            <label for="rotas">Rotas (selecione uma ou mais)</label>
+                            <select id="rotas" name="rotas" multiple size="5">
+                                <!-- Opções serão preenchidas pelo JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="hotel">Hotel</label>
+                            <input type="text" id="hotel" name="hotel" list="hoteisList" placeholder="Todos os hotéis">
+                            <datalist id="hoteisList"></datalist>
                         </div>
                     </div>
                     <div class="form-row">
