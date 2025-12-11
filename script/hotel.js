@@ -14,6 +14,7 @@ class HotelManager {
         this.hotelTableBody = document.getElementById('hotelTableBody');
         this.hotelEditingId = document.getElementById('hotelEditingId');
         this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
+        this.hotelRazaoSocialInput = document.getElementById('hotelRazaoSocial');
         this.searchHotelInput = document.getElementById('searchHotelInput');
         // Elementos de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
@@ -57,7 +58,7 @@ class HotelManager {
         let query = supabaseClient.from('hoteis').select('*').order('nome', { ascending: true });
 
         if (searchTerm) {
-            query = query.or(`nome.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%,responsavel.ilike.%${searchTerm}%`);
+            query = query.or(`razao_social.ilike.%${searchTerm}%,nome.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%,responsavel.ilike.%${searchTerm}%`);
         }
 
         const { data, error } = await query;
@@ -70,7 +71,8 @@ class HotelManager {
         data.forEach(hotel => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${hotel.nome}</td>
+                <td>${hotel.razao_social || ''}</td>
+                <td>${hotel.nome || ''}</td>
                 <td>${hotel.cnpj || ''}</td>
                 <td>${hotel.endereco}</td>
                 <td>${hotel.telefone || ''}</td>
@@ -89,6 +91,7 @@ class HotelManager {
         e.preventDefault();
         const id = this.hotelEditingId.value;
         const hotelData = {
+            razao_social: document.getElementById('hotelRazaoSocial').value,
             nome: document.getElementById('hotelNome').value,
             cnpj: document.getElementById('hotelCnpj').value,
             endereco: document.getElementById('hotelEndereco').value,
@@ -132,6 +135,7 @@ class HotelManager {
 
     fillHotelForm(hotel) {
         this.hotelEditingId.value = hotel.id;
+        document.getElementById('hotelRazaoSocial').value = hotel.razao_social || '';
         document.getElementById('hotelNome').value = hotel.nome;
         document.getElementById('hotelCnpj').value = hotel.cnpj || '';
         document.getElementById('hotelEndereco').value = hotel.endereco;
@@ -200,6 +204,7 @@ Atenção:
             if (!cnpj) return null; // Ignora linhas sem CNPJ
 
             return {
+                razao_social: row['Razão Social'],
                 nome: row['Nome do Hotel'],
                 cnpj: cnpj,
                 endereco: row.Endereço,

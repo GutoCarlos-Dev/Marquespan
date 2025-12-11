@@ -21,7 +21,11 @@
           <form id="formCadastrarHotel">
             <input type="hidden" id="hotelEditingId">
             <div class="form-group">
-              <label for="hotelNome">Nome do Hotel</label>
+              <label for="hotelRazaoSocial">Razão Social</label>
+              <input type="text" id="hotelRazaoSocial" required>
+            </div>
+            <div class="form-group">
+              <label for="hotelNome">Nome Fantasia</label>
               <input type="text" id="hotelNome" required>
             </div>
             <div class="form-group">
@@ -58,7 +62,8 @@
             <table class="data-grid" aria-label="Hotéis Cadastrados">
               <thead>
                 <tr>
-                  <th data-field="nome">Nome do Hotel</th>
+                  <th data-field="razao_social">Razão Social</th>
+                  <th data-field="nome">Nome Fantasia</th>
                   <th data-field="cnpj">CNPJ</th>
                   <th data-field="endereco">Endereço</th>
                   <th data-field="telefone">Telefone</th>
