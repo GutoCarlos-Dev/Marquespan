@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnBuscar = document.getElementById('btn-buscar');
   const btnContagemEstoque = document.getElementById('btnContagemEstoque');
   const btnRelatorioMarcaFogo = document.getElementById('btnRelatorioMarcaFogo');
+  const btnCancelForm = document.getElementById('btnCancelForm');
   const closeModalContagem = document.getElementById('closeModalContagem');
   const cancelModalContagem = document.getElementById('cancelModalContagem');
   const formContagem = document.getElementById('formContagemEstoque');
@@ -28,16 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form submit
   form.addEventListener('submit', handleSubmit);
 
+  // Botão Cancelar
+  btnCancelForm?.addEventListener('click', () => clearForm());
+
   // Toggle campos de saída
   document.getElementById('status').addEventListener('change', function() {
     const camposSaida = document.getElementById('campos-saida');
     const camposRodizio = document.getElementById('campos-rodizio');
 
     if (this.value === 'SAIDA') {
-      camposSaida.style.display = 'block';
+      camposSaida.classList.remove('hidden');
     } else {
-      camposSaida.style.display = 'none';
-      camposRodizio.style.display = 'none';
+      camposSaida.classList.add('hidden');
+      camposRodizio.classList.add('hidden');
     }
   });
 
@@ -46,15 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const camposRodizio = document.getElementById('campos-rodizio');
 
     if (this.value === 'RODIZIO') {
-      camposRodizio.style.display = 'block';
+      camposRodizio.classList.remove('hidden');
     } else {
-      camposRodizio.style.display = 'none';
+      camposRodizio.classList.add('hidden');
     }
   });
 
   // Contagem de Estoque modal
   btnContagemEstoque?.addEventListener('click', () => {
-    document.getElementById('modalContagemEstoque').style.display = 'block';
+    document.getElementById('modalContagemEstoque').classList.remove('hidden');
     initializeSelectsContagem();
   });
 
@@ -64,11 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   closeModalContagem?.addEventListener('click', () => {
-    document.getElementById('modalContagemEstoque').style.display = 'none';
+    document.getElementById('modalContagemEstoque').classList.add('hidden');
   });
 
   cancelModalContagem?.addEventListener('click', () => {
-    document.getElementById('modalContagemEstoque').style.display = 'none';
+    document.getElementById('modalContagemEstoque').classList.add('hidden');
   });
 
   formContagem?.addEventListener('submit', handleContagemSubmit);
@@ -77,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('click', (event) => {
     const modal = document.getElementById('modalContagemEstoque');
     if (event.target === modal) {
-      modal.style.display = 'none';
+      modal.classList.add('hidden');
     }
   });
 

@@ -234,3 +234,42 @@
     border-top: 2px solid #fd0505;
     text-align: center;
 }
+
+/* Estilos para pneu.html */
+.hidden {
+    display: none;
+}
+
+.saida-details {
+    /* Estilos para a seção de detalhes da saída, se necessário */
+}
+
+.campos-rodizio-details {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #ffeaa7;
+}
+
+.campos-rodizio-details h5 {
+    color: #856404;
+    margin-bottom: 10px;
+}
+
+.rodizio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.rodizio-full-width {
+    grid-column: 1 / -1;
+}
+
+.btn-buscar {
+    background-color: #007bff;
+}
+
+.form-grid-modal {
+    grid-template-columns: 1fr;
+}
