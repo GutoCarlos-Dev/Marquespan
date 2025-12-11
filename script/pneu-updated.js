@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('formPneu');
   const btnBuscar = document.getElementById('btn-buscar');
   const btnContagemEstoque = document.getElementById('btnContagemEstoque');
+  const btnLimparBusca = document.getElementById('btn-limpar-busca');
   const btnRelatorioMarcaFogo = document.getElementById('btnRelatorioMarcaFogo');
   const btnCancelForm = document.getElementById('btnCancelForm');
   const closeModalContagem = document.getElementById('closeModalContagem');
@@ -26,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Buscar pneus
   btnBuscar?.addEventListener('click', () => {
     buscarPneus();
+  });
+
+  // Limpar busca
+  btnLimparBusca?.addEventListener('click', () => {
+    limparFiltrosBusca();
   });
 
   // Form submit
@@ -418,6 +424,17 @@ async function buscarPneus() {
   } catch (error) {
     console.error('Erro ao buscar pneus:', error);
   }
+}
+
+// 🧹 Limpar filtros de busca
+function limparFiltrosBusca() {
+  document.getElementById('campo-placa').value = '';
+  document.getElementById('campo-marca').value = '';
+  document.getElementById('campo-modelo').value = '';
+  document.getElementById('campo-tipo').value = '';
+  document.getElementById('campo-status').value = '';
+  // Após limpar, recarrega todos os pneus
+  carregarPneus();
 }
 
 // 🧱 Renderizar grid

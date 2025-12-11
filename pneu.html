@@ -68,17 +68,35 @@
         <div class="form-header">
           <h3><i class="fas fa-list"></i>Lançamento de Pneus</h3>
         </div>
-        <div class="filtros-pneus">
-            <div class="filtro-pneu-item"><label for="campo-placa">Placa</label><input type="text" id="campo-placa" placeholder="Digite a placa" /></div>
-            <div class="filtro-pneu-item"><label for="campo-marca">Marca</label><input type="text" id="campo-marca" placeholder="Digite a marca" /></div>
-            <div class="filtro-pneu-item"><label for="campo-modelo">Modelo</label><input type="text" id="campo-modelo" placeholder="Digite o modelo" /></div>
-            <div class="filtro-pneu-item"><label for="campo-vida">Vida</label><input type="number" id="campo-vida" placeholder="Vida" min="0" /></div>
-            <div class="filtro-pneu-item"><label for="campo-tipo">Tipo</label><input type="text" id="campo-tipo" placeholder="Digite o tipo" /></div>
-            <div class="filtro-pneu-item"><label for="campo-descricao">Descrição</label><input type="text" id="campo-descricao" placeholder="Digite a descrição" /></div>
-            <div class="filtro-pneu-item"><label for="campo-status">Status</label><select id="campo-status"><option value="">Todos</option><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option></select></div>
-            <div class="filtro-pneu-item"><label for="campo-data">Data</label><input type="date" id="campo-data" /></div>
-            <div class="filtro-pneu-item"><label for="campo-usuario">Usuário</label><input type="text" id="campo-usuario" placeholder="Digite o usuário" /></div>
-            <div class="filtro-pneu-item"><button type="button" id="btn-buscar" class="btn-pneu btn-buscar"><i class="fas fa-search"></i>Buscar</button></div>
+        <div class="filtros-pneus" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+              <tr>
+                <td style="padding: 5px;"><label for="campo-placa">Placa</label></td>
+                <td style="padding: 5px;"><input type="text" id="campo-placa" placeholder="Digite a placa" style="width: 100%;" /></td>
+                <td style="padding: 5px;"><label for="campo-marca">Marca</label></td>
+                <td style="padding: 5px;"><input type="text" id="campo-marca" placeholder="Digite a marca" style="width: 100%;" /></td>
+                <td style="padding: 5px;"><label for="campo-modelo">Modelo</label></td>
+                <td style="padding: 5px;"><input type="text" id="campo-modelo" placeholder="Digite o modelo" style="width: 100%;" /></td>
+              </tr>
+              <tr>
+                <td style="padding: 5px;"><label for="campo-tipo">Tipo</label></td>
+                <td style="padding: 5px;"><input type="text" id="campo-tipo" placeholder="Digite o tipo" style="width: 100%;" /></td>
+                <td style="padding: 5px;"><label for="campo-status">Status</label></td>
+                <td style="padding: 5px;">
+                  <select id="campo-status" style="width: 100%;">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                  </select>
+                </td>
+                <td style="padding: 5px;" colspan="2">
+                  <button type="button" id="btn-buscar" class="btn-pneu btn-buscar" style="width: calc(50% - 5px); margin-right: 10px;"><i class="fas fa-search"></i>Buscar</button>
+                  <button type="button" id="btn-limpar-busca" class="btn-pneu btn-pneu-cancel" style="width: calc(50% - 5px);"><i class="fas fa-eraser"></i>Limpar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div class="table-scroll-container">
