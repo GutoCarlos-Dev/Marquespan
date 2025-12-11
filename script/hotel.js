@@ -205,7 +205,7 @@ Atenção:
 
             return {
                 razao_social: row['Razão Social'],
-                nome: row['Nome do Hotel'],
+                nome: row['Nome Fantasia'],
                 cnpj: cnpj,
                 endereco: row.Endereço,
                 telefone: String(row.Telefone || ''),
