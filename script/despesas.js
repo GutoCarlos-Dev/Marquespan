@@ -173,7 +173,8 @@ const DespesasUI = {
       tipo_quarto: document.getElementById('despesaTipoQuarto').value,
       qtd_diarias: parseInt(document.getElementById('despesaDiarias').value),
       data_reserva: document.getElementById('despesaDataReserva').value || null,
-      voucher: document.getElementById('despesaVoucher').value,
+      nota_fiscal: document.getElementById('despesaNotaFiscal').value,
+      observacao: document.getElementById('despesaObservacao').value,
       data_checkin: document.getElementById('despesaCheckin').value,
       data_checkout: document.getElementById('despesaCheckout').value,
       valor_diaria: parseFloat(document.getElementById('despesaValorDiaria').value),
@@ -234,7 +235,8 @@ const DespesasUI = {
       document.getElementById('despesaTipoQuarto').value = despesa.tipo_quarto || '';
       document.getElementById('despesaDiarias').value = despesa.qtd_diarias || '';
       document.getElementById('despesaDataReserva').value = despesa.data_reserva || '';
-      document.getElementById('despesaVoucher').value = despesa.voucher || '';
+      document.getElementById('despesaNotaFiscal').value = despesa.nota_fiscal || '';
+      document.getElementById('despesaObservacao').value = despesa.observacao || '';
       document.getElementById('despesaCheckin').value = despesa.data_checkin || '';
       document.getElementById('despesaCheckout').value = despesa.data_checkout || '';
       document.getElementById('despesaValorDiaria').value = despesa.valor_diaria || '';
