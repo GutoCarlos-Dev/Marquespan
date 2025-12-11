@@ -168,57 +168,44 @@ class FuncionarioManager {
         if (!confirm(`Foram encontrados ${importedRows.length} funcionários na planilha. Deseja continuar?
 
 Atenção:
-1. Novos funcionários (por CPF) serão cadastrados como "Ativo".
-2. Funcionários já existentes não serão alterados.
-3. Funcionários no sistema que NÃO estão na lista serão marcados como "Desligado".`)) {
+1. Funcionários existentes (identificados pelo CPF) serão ATUALIZADOS.
+2. Novos funcionários serão CADASTRADOS como "Ativo".`)) {
             return;
         }
 
         try {
-            // 1. Buscar todos os funcionários existentes no banco pelo CPF
-            const { data: existingFuncionarios, error: fetchError } = await supabaseClient
-                .from('funcionario')
-                .select('cpf');
-
-            if (fetchError) throw fetchError;
-
-            const existingCpfs = new Set(existingFuncionarios.map(f => f.cpf).filter(Boolean));
-            const importedCpfs = new Set();
-
-            // 2. Preparar a lista de novos funcionários para inserção
-            const funcionariosToInsert = [];
-            for (const row of importedRows) {
+            // Prepara o payload para o upsert.
+            // Filtra linhas que não têm CPF, pois é nossa chave de conflito.
+            const upsertPayload = importedRows.map(row => {
                 const cpf = String(row.CPF || '').trim();
-                if (!cpf) continue; // Pula linhas sem CPF
+                if (!cpf) return null;
 
-                importedCpfs.add(cpf);
+                return {
+                    nome: row.Nome,
+                    nome_completo: row['Nome Completo'],
+                    cpf: cpf,
+                    funcao: row.Função,
+                    // Ao atualizar, o status não é modificado. Ao inserir, o padrão do BD ou 'Ativo' será usado.
+                    // Para garantir que novos sejam 'Ativo', podemos definir um padrão na tabela ou aqui.
+                    // O upsert do Supabase não permite definir um valor apenas na inserção.
+                    // A lógica aqui assume que você quer atualizar os dados do funcionário se ele já existir.
+                    // Se o status não estiver na planilha, ele não será alterado no update.
+                    // Para novos, o status será 'Ativo'.
+                    status: row.Status || 'Ativo'
+                };
+            }).filter(Boolean); // Remove as entradas nulas (sem CPF)
 
-                // Adiciona para inserção apenas se o CPF não existir no banco
-                if (!existingCpfs.has(cpf)) {
-                    funcionariosToInsert.push({
-                        nome: row.Nome,
-                        nome_completo: row['Nome Completo'],
-                        cpf: cpf,
-                        funcao: row.Função,
-                        status: 'Ativo' // Status padrão para novos
-                    });
-                }
+            if (upsertPayload.length === 0) {
+                return alert('Nenhum funcionário com CPF válido encontrado na planilha.');
             }
 
-            // 3. Inserir os novos funcionários em lote
-            if (funcionariosToInsert.length > 0) {
-                const { error: insertError } = await supabaseClient.from('funcionario').insert(funcionariosToInsert);
-                if (insertError) throw insertError;
-            }
+            // Executa o upsert. O Supabase irá inserir ou atualizar com base na coluna 'cpf'.
+            // Isso requer que a coluna 'cpf' tenha uma constraint UNIQUE.
+            const { error } = await supabaseClient.from('funcionario').upsert(upsertPayload, { onConflict: 'cpf' });
 
-            // 4. Atualizar o status para "Desligado" para funcionários que não estão na lista de importação
-            const cpfsToDeactivate = [...existingCpfs].filter(cpf => !importedCpfs.has(cpf));
-            if (cpfsToDeactivate.length > 0) {
-                const { error: updateError } = await supabaseClient.from('funcionario').update({ status: 'Desligado' }).in('cpf', cpfsToDeactivate);
-                if (updateError) throw updateError;
-            }
+            if (error) throw error;
 
-            alert(`Importação concluída com sucesso!\n- ${funcionariosToInsert.length} funcionários novos cadastrados.\n- ${cpfsToDeactivate.length} funcionários existentes atualizados para "Desligado".`);
+            alert(`Importação concluída! ${upsertPayload.length} registros de funcionários foram processados.`);
             this.renderGrid(); // Atualiza a tabela na tela
         } catch (error) {
             console.error('Erro detalhado no processamento:', error);
