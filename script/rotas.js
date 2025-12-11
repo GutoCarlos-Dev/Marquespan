@@ -88,7 +88,6 @@ const RotasUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
-        const editingId = this.editingIdInput.value;
 
         const payload = {
             numero: parseInt(document.getElementById('rotaNumero').value),
@@ -97,6 +96,9 @@ const RotasUI = {
             supervisor: document.getElementById('rotaSupervisor').value,
             cidades: document.getElementById('rotaCidades').value,
             dias: parseInt(document.getElementById('rotaDias').value),
+            // Incluímos o ID para o caso de estarmos editando, mas o upsert cuidará disso.
+            // Se o ID existir, ele atualiza. Se não, o upsert usará o 'numero' para o conflito.
+            id: this.editingIdInput.value || undefined
         };
 
         if (!payload.numero || !payload.semana || !payload.responsavel || !payload.cidades || !payload.dias) {
@@ -104,18 +106,15 @@ const RotasUI = {
         }
 
         try {
-            if (editingId) {
-                await this.SupabaseService.update('rotas', payload, { field: 'id', value: editingId });
-                alert('✅ Rota atualizada com sucesso!');
-            } else {
-                await this.SupabaseService.insert('rotas', payload);
-                alert('✅ Rota cadastrada com sucesso!');
-            }
+            const { error } = await supabaseClient.from('rotas').upsert(payload, { onConflict: 'numero' });
+            if (error) throw error;
+
+            alert('✅ Rota salva com sucesso!');
             this.clearForm();
             this.renderGrid();
         } catch (err) {
-            console.error(err);
-            alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} rota.`);
+            console.error('Erro ao salvar rota:', err);
+            alert(`❌ Erro ao salvar rota: ${err.message}`);
         }
     },
 
@@ -127,10 +126,11 @@ const RotasUI = {
 
     async loadForEditing(id) {
         try {
-            const [rota] = await this.SupabaseService.list('rotas', '*', { eq: { field: 'id', value: id } });
+            const { data: rota, error } = await supabaseClient.from('rotas').select('*').eq('id', id).single();
+            if (error) throw error;
             if (!rota) return alert('Rota não encontrada.');
 
-            this.editingIdInput.value = id;
+            this.editingIdInput.value = rota.id;
             document.getElementById('rotaNumero').value = rota.numero || '';
             document.getElementById('rotaSemana').value = rota.semana || '';
             document.getElementById('rotaResponsavel').value = rota.responsavel || '';
