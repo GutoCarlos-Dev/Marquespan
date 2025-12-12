@@ -163,15 +163,19 @@ window.editarUsuario = editarUsuario;
 window.atualizarUsuario = atualizarUsuario;
 window.excluirUsuario = excluirUsuario;
 
-function mostrarSecao(id) {
-  document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-  if (id === 'cadastro') {
+function prepararNovoCadastro() {
     document.getElementById('formUsuario').reset();
     document.getElementById('btnSalvar').classList.remove('hidden');
     document.getElementById('btnAtualizar').classList.add('hidden');
     document.getElementById('formUsuario').dataset.usuarioId = '';
-  }
+    mostrarSecao('cadastro');
+}
+window.prepararNovoCadastro = prepararNovoCadastro;
+
+
+function mostrarSecao(id) {
+  document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
 }
 window.mostrarSecao = mostrarSecao;
 
@@ -186,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cadastrarUsuario(e);
     }
   });
+  document.getElementById('btnAdicionarNovo')?.addEventListener('click', prepararNovoCadastro);
   mostrarUsuarios();
 });
 
