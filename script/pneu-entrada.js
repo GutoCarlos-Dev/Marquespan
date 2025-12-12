@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 
+let listaDeEntradas = []; // Cache local para evitar múltiplas buscas
 let gridBody;
 let editMode = false;
 let editingId = null;
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnBuscar?.addEventListener('click', buscarEntradas);
     btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
     btnCancelForm?.addEventListener('click', () => clearForm());
+    gridBody?.addEventListener('click', handleGridActions);
 
     // Adiciona a lógica para o campo 'Vida' quando 'Tipo' for 'NOVO'
     selectTipo?.addEventListener('change', (event) => {
@@ -193,6 +195,7 @@ async function carregarEntradas() {
 
         if (error) throw error;
 
+        listaDeEntradas = data || [];
         renderizarGrid(data || []);
     } catch (error) {
         console.error('Erro ao carregar entradas:', error);
@@ -221,7 +224,8 @@ async function buscarEntradas() {
 
         if (error) throw error;
 
-        renderizarGrid(data || []);
+        listaDeEntradas = data || [];
+        renderizarGrid(listaDeEntradas);
     } catch (error) {
         console.error('Erro ao buscar entradas:', error);
     }
@@ -248,22 +252,22 @@ function renderizarGrid(lista) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${pneu.data ? new Date(pneu.data).toLocaleString('pt-BR') : ''}</td>
-            <td>${pneu.nota_fiscal || ''}</td>
+            <td class="uppercase">${pneu.nota_fiscal || ''}</td>
             <td>${pneu.marca}</td>
             <td>${pneu.modelo}</td>
             <td>${pneu.tipo}</td>
             <td>${pneu.vida || 0}</td>
             <td>${pneu.quantidade || 0}</td>
             <td>
-                <button class="btn-pneu-action view" onclick="visualizarCodigosMarcaFogo('${pneu.id}')" title="Visualizar Marcas de Fogo">
+                <button class="btn-pneu-action view" data-action="view" data-id="${pneu.id}" title="Visualizar Marcas de Fogo">
                     <i class="fas fa-eye"></i> Ver Códigos
                 </button>
             </td>
             <td class="actions-cell">
-                <button class="btn-pneu-action edit" onclick="editarEntrada('${pneu.id}')" title="Editar Lançamento">
+                <button class="btn-pneu-action edit" data-action="edit" data-id="${pneu.id}" title="Editar Lançamento">
                     <i class="fas fa-pen"></i>
                 </button>
-                <button class="btn-pneu-action delete" onclick="excluirEntrada('${pneu.id}')" title="Excluir Lançamento">
+                <button class="btn-pneu-action delete" data-action="delete" data-id="${pneu.id}" title="Excluir Lançamento">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -272,17 +276,33 @@ function renderizarGrid(lista) {
     });
 }
 
+// 🎬 Lida com cliques nos botões da tabela (editar, excluir, visualizar)
+function handleGridActions(event) {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    const action = button.dataset.action;
+    const id = button.dataset.id;
+
+    if (!action || !id) return;
+
+    if (action === 'edit') {
+        editarEntrada(id);
+    } else if (action === 'delete') {
+        excluirEntrada(id);
+    } else if (action === 'view') {
+        visualizarCodigosMarcaFogo(id);
+    }
+}
+
 // ✏️ Preenche o formulário para edição
-window.editarEntrada = async function(id) {
+function editarEntrada(id) {
+    const data = listaDeEntradas.find(p => p.id == id);
+    if (!data) {
+        alert('Erro: Entrada não encontrada para edição.');
+        return;
+    }
     try {
-        const { data, error } = await supabaseClient
-            .from('pneus')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (error) throw error;
-
         document.getElementById('data').value = data.data ? new Date(data.data).toISOString().slice(0, 16) : '';
         document.getElementById('nota_fiscal').value = data.nota_fiscal || '';
         document.getElementById('marca').value = data.marca;
@@ -303,7 +323,7 @@ window.editarEntrada = async function(id) {
 };
 
 // 🗑️ Exclui uma entrada e suas marcas de fogo associadas
-window.excluirEntrada = async function(id) {
+async function excluirEntrada(id) {
     if (!confirm('Tem certeza que deseja excluir este lançamento? TODOS os códigos de marca de fogo associados a ele também serão excluídos. Esta ação não pode ser desfeita.')) {
         return;
     }
@@ -335,7 +355,7 @@ window.excluirEntrada = async function(id) {
 };
 
 // 👀 Visualiza os códigos de marca de fogo em um modal
-window.visualizarCodigosMarcaFogo = async function(lancamentoId) {
+async function visualizarCodigosMarcaFogo(lancamentoId) {
     try {
         const { data: codigos, error } = await supabaseClient
             .from('marcas_fogo_pneus')
@@ -423,6 +443,7 @@ if (!document.getElementById('pneu-modal-styles')) {
         .btn-pneu-action.view { color: #17a2b8; }
         .btn-pneu-action.edit { color: #ffc107; }
         .btn-pneu-action.delete { color: #dc3545; }
+        .uppercase { text-transform: uppercase; }
     `;
     document.head.appendChild(style);
 }
