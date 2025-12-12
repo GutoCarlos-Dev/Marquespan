@@ -55,8 +55,8 @@ async function carregarNiveis() {
     listaNiveisEl.innerHTML = '<li class="loading-state">Carregando...</li>';
 
     const { data, error } = await supabaseClient
-        .from('usuarios')
-        .select('nivel');
+        .from('nivel_permissoes') // <<< MUDANÇA AQUI
+        .select('nivel'); // Busca da tabela correta
 
     if (error) {
         listaNiveisEl.innerHTML = '<li class="loading-state">Erro ao carregar níveis</li>';
