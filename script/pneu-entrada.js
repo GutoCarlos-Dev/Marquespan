@@ -131,19 +131,19 @@ async function handleSubmit(e) {
 async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
     try {
         // 1. Buscar o último código gerado para saber onde continuar
-        const { data: ultimoCodigo, error: buscaError } = await supabaseClient
+        const { data: ultimosCodigos, error: buscaError } = await supabaseClient
             .from('marcas_fogo_pneus')
             .select('codigo_marca_fogo')
             .order('id', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
 
-        if (buscaError && buscaError.code !== 'PGRST116') { // Ignora erro se a tabela estiver vazia
+        if (buscaError) {
             throw buscaError;
         }
 
         let proximoNumero = 1;
-        if (ultimoCodigo) {
+        if (ultimosCodigos && ultimosCodigos.length > 0) {
+            const ultimoCodigo = ultimosCodigos[0];
             const numero = parseInt(ultimoCodigo.codigo_marca_fogo.replace('MF', ''), 10);
             proximoNumero = numero + 1;
         }
