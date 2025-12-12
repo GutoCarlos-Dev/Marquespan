@@ -49,7 +49,12 @@ function getCurrentUserName() {
 function clearForm() {
     const form = document.getElementById('formPneu');
     form.reset();
-    document.getElementById('data').value = new Date().toISOString().slice(0, 16);
+    
+    // Ajuste para usar a data e hora local, corrigindo o fuso horário.
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('data').value = now.toISOString().slice(0, 16);
+
     editMode = false;
     editingId = null;
 }
@@ -67,6 +72,7 @@ async function handleSubmit(e) {
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 1),
         quantidade: parseInt(formData.get('quantidade') || 0),
+        observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
         status: 'ENTRADA',
@@ -275,7 +281,7 @@ window.editarEntrada = async function(id) {
         document.getElementById('tipo').value = data.tipo;
         document.getElementById('vida').value = data.vida || 1;
         document.getElementById('quantidade').value = data.quantidade || 0;
-        document.getElementById('observacoes').value = data.observacoes || '';
+        // document.getElementById('observacoes').value = data.observacoes || ''; // Removido pois a coluna não existe
 
         editMode = true;
         editingId = id;
