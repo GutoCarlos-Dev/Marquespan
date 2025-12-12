@@ -117,15 +117,14 @@ async function selecionarNivel(nivel) {
         const { data, error } = await supabaseClient
             .from('nivel_permissoes')
             .select('paginas_permitidas')
-            .eq('nivel', nivel.toLowerCase())
-            .single();
+            .eq('nivel', nivel.toLowerCase());
 
-        if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
+        if (error) {
             console.error('Erro ao buscar permissões:', error);
             return;
         }
-        if (data && data.paginas_permitidas) {
-            data.paginas_permitidas.forEach(paginaId => {
+        if (data && data.length > 0 && data[0].paginas_permitidas) {
+            data[0].paginas_permitidas.forEach(paginaId => {
                 const chk = document.getElementById(`chk-${paginaId}`);
                 if (chk) chk.checked = true;
             });
