@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 let PAGINAS_SISTEMA = [];
 
 let nivelSelecionado = null;
