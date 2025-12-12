@@ -11,12 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBuscar = document.getElementById('btn-buscar');
     const btnLimparBusca = document.getElementById('btn-limpar-busca');
     const btnCancelForm = document.getElementById('btnCancelForm');
+    const selectTipo = document.getElementById('tipo');
+    const inputVida = document.getElementById('vida');
 
     // --- Event Listeners ---
     form.addEventListener('submit', handleSubmit);
     btnBuscar?.addEventListener('click', buscarEntradas);
     btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
     btnCancelForm?.addEventListener('click', () => clearForm());
+
+    // Adiciona a lógica para o campo 'Vida' quando 'Tipo' for 'NOVO'
+    selectTipo?.addEventListener('change', (event) => {
+        if (event.target.value === 'NOVO') {
+            inputVida.value = 0;
+        }
+    });
 
     // --- Inicialização da Página ---
     initializeSelects();
@@ -70,7 +79,7 @@ async function handleSubmit(e) {
         marca: formData.get('marca'),
         modelo: formData.get('modelo'),
         tipo: formData.get('tipo'),
-        vida: parseInt(formData.get('vida') || 1),
+        vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
@@ -279,7 +288,7 @@ window.editarEntrada = async function(id) {
         document.getElementById('marca').value = data.marca;
         document.getElementById('modelo').value = data.modelo;
         document.getElementById('tipo').value = data.tipo;
-        document.getElementById('vida').value = data.vida || 1;
+        document.getElementById('vida').value = data.vida ?? 1; // Usa ?? para permitir 0
         document.getElementById('quantidade').value = data.quantidade || 0;
         document.getElementById('observacoes').value = data.observacoes || '';
 
