@@ -91,6 +91,12 @@ function controlarMenuPorNivel(nivel) {
         grupoComprasEstoque.style.display = 'block';
         grupoComprasEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
       }
+      // Mostra o grupo de Pneus para o nível Estoque
+      const grupoPneus = nav.querySelector('.menu-group:has(a[href="pneu.html"])');
+      if (grupoPneus) {
+        grupoPneus.style.display = 'block';
+        grupoPneus.querySelectorAll('a').forEach(link => link.style.display = 'block');
+      }
       break;
 
     case 'compras':
