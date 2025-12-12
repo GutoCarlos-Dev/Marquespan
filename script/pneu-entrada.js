@@ -72,7 +72,6 @@ async function handleSubmit(e) {
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 1),
         quantidade: parseInt(formData.get('quantidade') || 0),
-        observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
         status: 'ENTRADA',
