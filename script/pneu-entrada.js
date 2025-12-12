@@ -114,14 +114,8 @@ async function handleSubmit(e) {
                 .select()
                 .single();
 
-            if (error) throw error;
-
-            // Gera códigos de marca de fogo se a quantidade for maior que 0
-            if (insertedData && pneuData.quantidade > 0) {
-                await gerarCodigosMarcaFogo(insertedData.id, pneuData.quantidade, pneuData.usuario);
-            }
-
-            alert('Entrada de pneu registrada com sucesso!');
+            if (error) throw error;            
+            alert('Entrada de pneu registrada com sucesso! Agora você pode gerar as marcas de fogo na tabela.');
         }
 
         clearForm();
@@ -188,7 +182,7 @@ async function carregarEntradas() {
     try {
         const { data, error } = await supabaseClient
             .from('pneus')
-            .select('*')
+            .select('*, marcas_fogo_pneus(count)') // Conta os códigos de fogo associados
             .eq('status', 'ENTRADA') // Filtra apenas por entradas
             .order('data', { ascending: false })
             .limit(100); // Limita aos 100 registros mais recentes
@@ -212,7 +206,7 @@ async function buscarEntradas() {
     try {
         let query = supabaseClient
             .from('pneus')
-            .select('*')
+            .select('*, marcas_fogo_pneus(count)')
             .eq('status', 'ENTRADA')
             .order('data', { ascending: false });
 
@@ -250,6 +244,17 @@ function renderizarGrid(lista) {
 
     lista.forEach(pneu => {
         const tr = document.createElement('tr');
+        const temCodigos = pneu.marcas_fogo_pneus && pneu.marcas_fogo_pneus.length > 0 && pneu.marcas_fogo_pneus[0].count > 0;
+
+        // Define o botão a ser exibido na coluna "Marca Fogo"
+        const botaoMarcaFogo = temCodigos
+            ? `<button class="btn-pneu-action view" data-action="view" data-id="${pneu.id}" title="Visualizar Marcas de Fogo">
+                   <i class="fas fa-eye"></i> Ver Códigos
+               </button>`
+            : `<button class="btn-pneu-action generate" data-action="generate" data-id="${pneu.id}" title="Gerar Marcas de Fogo">
+                   <i class="fas fa-fire"></i> Gerar
+               </button>`;
+
         tr.innerHTML = `
             <td>${pneu.data ? new Date(pneu.data).toLocaleString('pt-BR') : ''}</td>
             <td class="uppercase">${pneu.nota_fiscal || ''}</td>
@@ -259,9 +264,7 @@ function renderizarGrid(lista) {
             <td>${pneu.vida || 0}</td>
             <td>${pneu.quantidade || 0}</td>
             <td>
-                <button class="btn-pneu-action view" data-action="view" data-id="${pneu.id}" title="Visualizar Marcas de Fogo">
-                    <i class="fas fa-eye"></i> Ver Códigos
-                </button>
+                ${botaoMarcaFogo}
             </td>
             <td class="actions-cell">
                 <button class="btn-pneu-action edit" data-action="edit" data-id="${pneu.id}" title="Editar Lançamento">
@@ -292,6 +295,8 @@ function handleGridActions(event) {
         excluirEntrada(id);
     } else if (action === 'view') {
         visualizarCodigosMarcaFogo(id);
+    } else if (action === 'generate') {
+        handleGerarCodigos(id);
     }
 }
 
@@ -321,6 +326,24 @@ function editarEntrada(id) {
         alert('Erro ao carregar dados para edição.');
     }
 };
+
+// 🎬 Lida com o clique no botão "Gerar"
+async function handleGerarCodigos(id) {
+    const entrada = listaDeEntradas.find(p => p.id == id);
+    if (!entrada) {
+        alert('Erro: Lançamento não encontrado.');
+        return;
+    }
+
+    if (!confirm(`Deseja gerar ${entrada.quantidade} código(s) de marca de fogo para a NF ${entrada.nota_fiscal}?`)) {
+        return;
+    }
+
+    const usuario = getCurrentUserName();
+    await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario);
+    alert('Códigos de marca de fogo gerados com sucesso!');
+    await carregarEntradas(); // Recarrega a tabela para atualizar o botão
+}
 
 // 🗑️ Exclui uma entrada e suas marcas de fogo associadas
 async function excluirEntrada(id) {
@@ -443,6 +466,7 @@ if (!document.getElementById('pneu-modal-styles')) {
         .btn-pneu-action.view { color: #17a2b8; }
         .btn-pneu-action.edit { color: #ffc107; }
         .btn-pneu-action.delete { color: #dc3545; }
+        .btn-pneu-action.generate { color: #fd7e14; }
         .uppercase { text-transform: uppercase; }
     `;
     document.head.appendChild(style);
