@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 let PAGINAS_SISTEMA = [];
 
 let nivelSelecionado = null;
+let niveisAtuais = []; // Armazena os níveis carregados para verificação
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Proteção de página: apenas administradores podem ver
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnSalvarPermissoes').addEventListener('click', salvarPermissoes);
     document.getElementById('marcar-todos').addEventListener('change', marcarDesmarcarTodos);
+    document.getElementById('btn-adicionar-nivel').addEventListener('click', adicionarNovoNivel);
 });
 
 /**
@@ -62,10 +64,10 @@ async function carregarNiveis() {
         return;
     }
 
-    const niveisUnicos = [...new Set(data.map(u => u.nivel.toLowerCase()))].sort();
+    niveisAtuais = [...new Set(data.map(u => u.nivel.toLowerCase()))].sort();
     listaNiveisEl.innerHTML = '';
 
-    niveisUnicos.forEach(nivel => {
+    niveisAtuais.forEach(nivel => {
         const li = document.createElement('li');
         li.textContent = nivel;
         li.dataset.nivel = nivel;
@@ -74,8 +76,8 @@ async function carregarNiveis() {
     });
 
     // Seleciona o primeiro nível por padrão
-    if (niveisUnicos.length > 0) {
-        selecionarNivel(niveisUnicos[0]);
+    if (niveisAtuais.length > 0 && !nivelSelecionado) {
+        selecionarNivel(niveisAtuais[0]);
     }
 }
 
@@ -168,4 +170,43 @@ function marcarDesmarcarTodos(event) {
     checkboxes.forEach(chk => {
         chk.checked = isChecked;
     });
+}
+
+/**
+ * Adiciona um novo nível de usuário.
+ */
+async function adicionarNovoNivel() {
+    const input = document.getElementById('novo-nivel-input');
+    const novoNivel = input.value.trim().toLowerCase();
+
+    if (!novoNivel) {
+        alert('Por favor, digite o nome do novo nível.');
+        return;
+    }
+
+    // Verifica se o nível já existe (case-insensitive)
+    if (niveisAtuais.includes(novoNivel)) {
+        alert(`O nível "${novoNivel}" já existe.`);
+        return;
+    }
+
+    // Insere o novo nível na tabela de permissões com uma lista de páginas vazia.
+    // Isso garante que o nível exista para futuras configurações.
+    const { error } = await supabaseClient
+        .from('nivel_permissoes')
+        .insert({ nivel: novoNivel, paginas_permitidas: [] });
+
+    if (error) {
+        alert('❌ Erro ao criar o novo nível.');
+        console.error('Erro ao adicionar nível:', error);
+    } else {
+        alert('✅ Nível adicionado com sucesso!');
+        input.value = ''; // Limpa o campo
+        
+        // Adiciona o novo nível à lista e a re-renderiza
+        niveisAtuais.push(novoNivel);
+        niveisAtuais.sort();
+        await carregarNiveis(); // Recarrega a lista para manter a ordem e os eventos
+        selecionarNivel(novoNivel); // Seleciona o nível recém-criado
+    }
 }
