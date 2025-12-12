@@ -162,7 +162,7 @@ window.cadastrarUsuario = cadastrarUsuario;
 window.editarUsuario = editarUsuario;
 window.atualizarUsuario = atualizarUsuario;
 window.excluirUsuario = excluirUsuario;
-
+ 
 function prepararNovoCadastro() {
     document.getElementById('formUsuario').reset();
     document.getElementById('btnSalvar').classList.remove('hidden');
@@ -171,8 +171,8 @@ function prepararNovoCadastro() {
     mostrarSecao('cadastro');
 }
 window.prepararNovoCadastro = prepararNovoCadastro;
-
-
+ 
+ 
 function mostrarSecao(id) {
   document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
@@ -193,10 +193,3 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnAdicionarNovo')?.addEventListener('click', prepararNovoCadastro);
   mostrarUsuarios();
 });
-
-// Expor funções para o escopo global (window) para que os botões no HTML possam chamá-las
-window.mostrarUsuarios = mostrarUsuarios;
-window.cadastrarUsuario = cadastrarUsuario;
-window.editarUsuario = editarUsuario;
-window.atualizarUsuario = atualizarUsuario;
-window.excluirUsuario = excluirUsuario;
