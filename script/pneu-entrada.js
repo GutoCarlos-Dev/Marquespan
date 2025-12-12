@@ -171,7 +171,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
 
     } catch (error) {
         console.error('Erro na geração de códigos de marca de fogo:', error);
-        alert('Aviso: A entrada foi registrada, mas houve um erro ao gerar os códigos de marca de fogo.');
+        alert('Aviso: Houve um erro ao gerar os códigos de marca de fogo. Verifique o console para detalhes.');
     }
 }
 
@@ -339,10 +339,14 @@ async function handleGerarCodigos(id) {
         return;
     }
 
-    const usuario = getCurrentUserName();
-    await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario);
-    alert('Códigos de marca de fogo gerados com sucesso!');
-    await carregarEntradas(); // Recarrega a tabela para atualizar o botão
+    try {
+        const usuario = getCurrentUserName();
+        await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario);
+        alert('Códigos de marca de fogo gerados com sucesso!');
+        await carregarEntradas(); // Recarrega a tabela para atualizar o botão
+    } catch (error) {
+        // O erro já é tratado dentro de gerarCodigosMarcaFogo, então não fazemos nada aqui para evitar alertas duplicados.
+    }
 }
 
 // 🗑️ Exclui uma entrada e suas marcas de fogo associadas
