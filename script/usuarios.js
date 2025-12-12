@@ -179,6 +179,31 @@ function mostrarSecao(id) {
 }
 window.mostrarSecao = mostrarSecao;
 
+/**
+ * Carrega os níveis de permissão do banco de dados e preenche o select.
+ */
+async function carregarNiveisDisponiveis() {
+  const nivelSelect = document.getElementById('nivel');
+  if (!nivelSelect) return;
+
+  const { data, error } = await supabaseClient
+    .from('nivel_permissoes')
+    .select('nivel')
+    .order('nivel', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao carregar níveis:', error);
+    return;
+  }
+
+  data.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.nivel;
+    option.textContent = item.nivel.charAt(0).toUpperCase() + item.nivel.slice(1); // Capitaliza para exibição
+    nivelSelect.appendChild(option);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnAtualizarLista')?.addEventListener('click', mostrarUsuarios);
   document.getElementById('termoBusca')?.addEventListener('input', mostrarUsuarios);
@@ -191,5 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   document.getElementById('btnAdicionarNovo')?.addEventListener('click', prepararNovoCadastro);
+  carregarNiveisDisponiveis();
   mostrarUsuarios();
 });
