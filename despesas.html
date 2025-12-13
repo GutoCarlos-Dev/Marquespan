@@ -11,95 +11,99 @@
 </head>
 <body>
   <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container" role="navigation">
+      <!-- O menu será injetado aqui pelo menu.js -->
+    </div>
     <div class="main-content">
       <header class="header"><i class="fas fa-dollar-sign"></i> Cadastro de Despesas</header>
 
       <section id="sectionCadastrarDespesa" class="section">
         <div class="form-container">
-          <h3>Formulário de Despesas</h3>
           <form id="formCadastrarDespesa">
-            <input type="hidden" id="despesaEditingId">
-            <div class="form-group">
-              <label for="despesaRotaInput">Número da Rota</label>
-              <input type="text" id="despesaRotaInput" list="rotasList" required>
-              <datalist id="rotasList"></datalist>
-            </div>
-            <div class="form-group">
-              <label for="despesaHotelInput">Nome do Hotel</label>
-              <input type="text" id="despesaHotelInput" list="hoteisList" required>
-              <datalist id="hoteisList"></datalist>
-            </div>
-            <div class="form-group">
-              <label for="despesaFuncionario1Input">Funcionário 1 (Motorista)</label>
-              <input type="text" id="despesaFuncionario1Input" list="funcionarios1List" required>
-              <datalist id="funcionarios1List"></datalist>
-            </div>
-            <div class="form-group">
-              <label for="despesaFuncionario2Input">Funcionário 2 (Auxiliar)</label>
-              <input type="text" id="despesaFuncionario2Input" list="funcionarios2List">
-              <datalist id="funcionarios2List"></datalist>
-            </div>
-            <div class="form-group">
-              <label for="despesaTipoQuarto">Tipo de Quarto</label>
-              <select id="despesaTipoQuarto" required disabled>
-                <option value="">-- Selecione um hotel primeiro --</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="despesaDiarias">Qtd. Diárias</label>
-              <input type="number" id="despesaDiarias" required min="1">
-            </div>
-            <div class="form-group">
-              <label for="despesaDataReserva">Data da Reserva</label>
-              <input type="date" id="despesaDataReserva">
-            </div>
-            <div class="form-group">
-              <label for="despesaNotaFiscal">Nota Fiscal</label>
-              <input type="text" id="despesaNotaFiscal">
-            </div>
-            <div class="form-group form-group-full-width">
-              <label for="despesaObservacao">Observação</label>
-              <textarea id="despesaObservacao" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label for="despesaCheckin">Data Check-in</label>
-              <input type="date" id="despesaCheckin" required>
-            </div>
-            <div class="form-group">
-              <label for="despesaCheckout">Data Check-out</label>
-              <input type="date" id="despesaCheckout" required>
-            </div>
-            <div class="form-group">
-              <label for="despesaValorDiaria">Valor da Diária (R$)</label>
-              <input type="number" id="despesaValorDiaria" step="0.01" required>
-            </div>
-            <div class="form-group">
-              <label for="despesaValorTotal">Valor Total (R$)</label>
-              <input type="text" id="despesaValorTotal" readonly>
-            </div>
-            <div class="form-buttons">
-              <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
-              <button type="button" id="btnClearDespesaForm">Limpar</button>
-            </div>
+            <fieldset>
+              <legend>Formulário de Despesas</legend>
+              <input type="hidden" id="despesaEditingId">
+              <div class="form-group">
+                <label for="despesaRotaInput">Número da Rota</label>
+                <input type="text" id="despesaRotaInput" list="rotasList" required autocomplete="off">
+                <datalist id="rotasList"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="despesaHotelInput">Nome do Hotel</label>
+                <input type="text" id="despesaHotelInput" list="hoteisList" required autocomplete="off">
+                <datalist id="hoteisList"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="despesaFuncionario1Input">Funcionário 1 (Motorista)</label>
+                <input type="text" id="despesaFuncionario1Input" list="funcionarios1List" required autocomplete="off">
+                <datalist id="funcionarios1List"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="despesaFuncionario2Input">Funcionário 2 (Auxiliar)</label>
+                <input type="text" id="despesaFuncionario2Input" list="funcionarios2List" autocomplete="off">
+                <datalist id="funcionarios2List"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="despesaTipoQuarto">Tipo de Quarto</label>
+                <select id="despesaTipoQuarto" required disabled>
+                  <option value="">-- Selecione um hotel primeiro --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="despesaDiarias">Qtd. Diárias</label>
+                <input type="number" id="despesaDiarias" required min="1" step="1">
+              </div>
+              <div class="form-group">
+                <label for="despesaDataReserva">Data da Reserva</label>
+                <input type="date" id="despesaDataReserva" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="despesaNotaFiscal">Nota Fiscal</label>
+                <input type="text" id="despesaNotaFiscal" autocomplete="off">
+              </div>
+              <div class="form-group form-group-full-width">
+                <label for="despesaObservacao">Observação</label>
+                <textarea id="despesaObservacao" rows="3" autocomplete="off"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="despesaCheckin">Data Check-in</label>
+                <input type="date" id="despesaCheckin" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="despesaCheckout">Data Check-out</label>
+                <input type="date" id="despesaCheckout" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="despesaValorDiaria">Valor da Diária (R$)</label>
+                <input type="number" id="despesaValorDiaria" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="despesaValorTotal">Valor Total (R$)</label>
+                <input type="text" id="despesaValorTotal" readonly aria-live="polite">
+              </div>
+              <div class="form-buttons">
+                <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
+                <button type="button" id="btnClearDespesaForm">Limpar</button>
+              </div>
+            </fieldset>
           </form>
         </div>
 
         <div class="card">
-          <h3>Despesas Cadastradas</h3>
           <div class="search-bar">
             <input type="text" id="searchDespesaInput" placeholder="Buscar por rota, hotel ou funcionário...">
           </div>
           <div class="table-scroll-container">
             <table class="data-grid" aria-label="Despesas Cadastradas">
+              <caption>Despesas Cadastradas</caption>
               <thead>
                 <tr>
-                  <th data-field="numero_rota">Rota</th>
-                  <th data-field="hotel.nome">Hotel</th>
-                  <th data-field="funcionario1.nome">Funcionário</th>
-                  <th data-field="valor_total">Valor Total</th>
-                  <th data-field="data_checkin">Check-in</th>
-                  <th>Ações</th>
+                  <th scope="col" data-field="numero_rota">Rota</th>
+                  <th scope="col" data-field="hotel.nome">Hotel</th>
+                  <th scope="col" data-field="funcionario1.nome">Funcionário</th>
+                  <th scope="col" data-field="valor_total">Valor Total</th>
+                  <th scope="col" data-field="data_checkin">Check-in</th>
+                  <th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody id="despesaTableBody"></tbody>
