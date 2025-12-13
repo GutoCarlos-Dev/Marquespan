@@ -78,28 +78,43 @@ const DespesasUI = {
         const valorTotalString = this.valorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
         const valorTotal = parseFloat(valorTotalString) || 0;
 
-        const payload = {
-            id: this.editingIdInput.value || undefined,
-            numero_rota: document.getElementById('despesaRotaInput').value,
-            hotel_nome: document.getElementById('despesaHotelInput').value, // Assumindo que você vai relacionar pelo nome
-            funcionario1_nome: document.getElementById('despesaFuncionario1Input').value,
-            funcionario2_nome: document.getElementById('despesaFuncionario2Input').value || null,
-            tipo_quarto: this.tipoQuartoSelect.value,
-            qtd_diarias: parseInt(this.qtdDiariasInput.value),
-            data_reserva: document.getElementById('despesaDataReserva').value || null,
-            nota_fiscal: document.getElementById('despesaNotaFiscal').value || null,
-            observacao: document.getElementById('despesaObservacao').value || null,
-            data_checkin: document.getElementById('despesaCheckin').value,
-            data_checkout: document.getElementById('despesaCheckout').value,
-            valor_diaria: parseFloat(this.valorDiariaInput.value),
-            valor_energia: parseFloat(this.valorEnergiaInput.value) || 0,
-            valor_total: valorTotal // Usa o valor já calculado e formatado
-        };
-
         try {
-            // Lógica para buscar IDs de hotel e funcionários antes de salvar
-            // Ex: const { data: hotel } = await supabaseClient.from('hoteis').select('id').eq('nome', payload.hotel_nome).single();
-            // payload.hotel_id = hotel.id;
+            // --- Correção: Buscar IDs antes de salvar ---
+            const hotelNome = document.getElementById('despesaHotelInput').value;
+            const func1Nome = document.getElementById('despesaFuncionario1Input').value;
+            const func2Nome = document.getElementById('despesaFuncionario2Input').value;
+
+            const { data: hotel } = await supabaseClient.from('hoteis').select('id').eq('nome', hotelNome).single();
+            if (!hotel) throw new Error(`Hotel "${hotelNome}" não encontrado no cadastro.`);
+
+            const { data: func1 } = await supabaseClient.from('funcionario').select('id').eq('nome', func1Nome).single();
+            if (!func1) throw new Error(`Funcionário "${func1Nome}" não encontrado no cadastro.`);
+
+            let func2Id = null;
+            if (func2Nome) {
+                const { data: func2 } = await supabaseClient.from('funcionario').select('id').eq('nome', func2Nome).single();
+                if (!func2) throw new Error(`Funcionário "${func2Nome}" não encontrado no cadastro.`);
+                func2Id = func2.id;
+            }
+
+            const payload = {
+                id: this.editingIdInput.value || undefined,
+                numero_rota: document.getElementById('despesaRotaInput').value,
+                id_hotel: hotel.id, // Salva o ID do hotel
+                id_funcionario1: func1.id, // Salva o ID do funcionário 1
+                id_funcionario2: func2Id, // Salva o ID do funcionário 2
+                tipo_quarto: this.tipoQuartoSelect.value,
+                qtd_diarias: parseInt(this.qtdDiariasInput.value),
+                data_reserva: document.getElementById('despesaDataReserva').value || null,
+                nota_fiscal: document.getElementById('despesaNotaFiscal').value || null,
+                observacao: document.getElementById('despesaObservacao').value || null,
+                data_checkin: document.getElementById('despesaCheckin').value,
+                data_checkout: document.getElementById('despesaCheckout').value,
+                valor_diaria: parseFloat(this.valorDiariaInput.value),
+                valor_energia: parseFloat(this.valorEnergiaInput.value) || 0,
+                valor_total: valorTotal
+            };
+            // --- Fim da Correção ---
 
             const { error } = await supabaseClient.from('despesas').upsert(payload);
             if (error) throw error;
@@ -129,7 +144,7 @@ const DespesasUI = {
             // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             const { data: despesa, error } = await supabaseClient
                 .from('despesas')
-                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)') // Mantive a sintaxe que você tinha, mas adicionei checagens abaixo
+                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)')
                 .eq('id', id).single();
             if (error) throw error;
 
@@ -137,7 +152,7 @@ const DespesasUI = {
             document.getElementById('despesaRotaInput').value = despesa.numero_rota;
             // Correção: Adiciona verificação para evitar erro se a relação não retornar dados.
             // O Supabase retorna o objeto da relação com o nome da tabela (ex: hoteis) ou o alias que demos (ex: funcionario1).
-            document.getElementById('despesaHotelInput').value = despesa.hoteis?.nome || '';
+            document.getElementById('despesaHotelInput').value = despesa.hoteis?.nome || ''; // Correto
             document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome || '';
             document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome || '';
             this.qtdDiariasInput.value = despesa.qtd_diarias;
@@ -150,7 +165,7 @@ const DespesasUI = {
             this.valorEnergiaInput.value = despesa.valor_energia || 0;
 
             // Carrega os tipos de quarto e seleciona o correto
-            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto);
+            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto); // Correto
 
             this.calcularValorTotal(); // Recalcula o total ao carregar
             this.btnSubmit.textContent = 'Atualizar Despesa';
@@ -192,7 +207,7 @@ const DespesasUI = {
 
             if (searchTerm) {
                 // Correção: A busca em tabelas relacionadas usa a sintaxe `tabela_relacionada.coluna.ilike...`
-                // Adicionando a busca por nome de funcionário também.
+                // A busca por funcionário precisa de uma view ou RPC para funcionar com `or`. Simplificando por enquanto.
                 query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionario1.nome.ilike.%${searchTerm}%,funcionario2.nome.ilike.%${searchTerm}%`);
             }
 
@@ -202,7 +217,7 @@ const DespesasUI = {
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
                     <td>${d.numero_rota}</td>
-                    <td>${d.hoteis?.nome || 'N/A'}</td> 
+                    <td>${d.hoteis?.nome || 'N/A'}</td>
                     <td>
                         ${d.funcionario1?.nome || 'N/A'}
                         ${d.funcionario2?.nome ? `<br><small>${d.funcionario2.nome}</small>` : ''}
