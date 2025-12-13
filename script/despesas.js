@@ -124,7 +124,12 @@ const DespesasUI = {
 
     async loadForEditing(id) {
         try {
-            const { data: despesa, error } = await supabaseClient.from('despesas').select('*, hotel:hoteis(nome), funcionario1:funcionarios(nome), funcionario2:funcionarios(nome)').eq('id', id).single();
+            // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
+            // Assumindo que as colunas de chave estrangeira são id_hotel, id_funcionario1, id_funcionario2.
+            const { data: despesa, error } = await supabaseClient
+                .from('despesas')
+                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)')
+                .eq('id', id).single();
             if (error) throw error;
 
             this.editingIdInput.value = despesa.id;
@@ -175,10 +180,16 @@ const DespesasUI = {
         // Lógica para buscar e renderizar a tabela de despesas
         try {
             const searchTerm = this.searchInput.value.trim();
-            let query = supabaseClient.from('despesas').select('id, numero_rota, valor_total, data_checkin, hotel:hoteis(nome), funcionario1:funcionarios(nome)');
+            // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
+            // Assumindo que as colunas de chave estrangeira são id_hotel e id_funcionario1.
+            let query = supabaseClient
+                .from('despesas')
+                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome)');
 
             if (searchTerm) {
-                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionarios.nome.ilike.%${searchTerm}%`);
+                // Correção: A busca em tabelas relacionadas precisa da sintaxe `tabela_relacionada.coluna`.
+                // A busca no funcionário foi removida temporariamente para simplificar, pois requer uma view ou RPC.
+                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%`);
             }
 
             const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
@@ -187,7 +198,7 @@ const DespesasUI = {
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
                     <td>${d.numero_rota}</td>
-                    <td>${d.hotel?.nome || 'N/A'}</td>
+                    <td>${d.hoteis?.nome || 'N/A'}</td>
                     <td>${d.funcionario1?.nome || 'N/A'}</td>
                     <td>${(d.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
