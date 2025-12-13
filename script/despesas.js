@@ -126,16 +126,19 @@ const DespesasUI = {
         try {
             // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
             // Assumindo que as colunas de chave estrangeira são id_hotel, id_funcionario1, id_funcionario2.
+            // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             const { data: despesa, error } = await supabaseClient
                 .from('despesas')
-                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)')
+                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)') // Mantive a sintaxe que você tinha, mas adicionei checagens abaixo
                 .eq('id', id).single();
             if (error) throw error;
 
             this.editingIdInput.value = despesa.id;
             document.getElementById('despesaRotaInput').value = despesa.numero_rota;
-            document.getElementById('despesaHotelInput').value = despesa.hotel.nome;
-            document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1.nome;
+            // Correção: Adiciona verificação para evitar erro se a relação não retornar dados.
+            // O Supabase retorna o objeto da relação com o nome da tabela (ex: hoteis) ou o alias que demos (ex: funcionario1).
+            document.getElementById('despesaHotelInput').value = despesa.hoteis?.nome || '';
+            document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome || '';
             document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome || '';
             this.qtdDiariasInput.value = despesa.qtd_diarias;
             document.getElementById('despesaDataReserva').value = despesa.data_reserva;
@@ -147,7 +150,7 @@ const DespesasUI = {
             this.valorEnergiaInput.value = despesa.valor_energia || 0;
 
             // Carrega os tipos de quarto e seleciona o correto
-            await this.loadTiposQuarto(despesa.hotel.nome, despesa.tipo_quarto);
+            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto);
 
             this.calcularValorTotal(); // Recalcula o total ao carregar
             this.btnSubmit.textContent = 'Atualizar Despesa';
@@ -182,14 +185,15 @@ const DespesasUI = {
             const searchTerm = this.searchInput.value.trim();
             // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
             // Assumindo que as colunas de chave estrangeira são id_hotel e id_funcionario1.
+            // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             let query = supabaseClient
                 .from('despesas')
-                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome)');
+                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)');
 
             if (searchTerm) {
-                // Correção: A busca em tabelas relacionadas precisa da sintaxe `tabela_relacionada.coluna`.
-                // A busca no funcionário foi removida temporariamente para simplificar, pois requer uma view ou RPC.
-                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%`);
+                // Correção: A busca em tabelas relacionadas usa a sintaxe `tabela_relacionada.coluna.ilike...`
+                // Adicionando a busca por nome de funcionário também.
+                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionario1.nome.ilike.%${searchTerm}%,funcionario2.nome.ilike.%${searchTerm}%`);
             }
 
             const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
@@ -198,8 +202,11 @@ const DespesasUI = {
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
                     <td>${d.numero_rota}</td>
-                    <td>${d.hoteis?.nome || 'N/A'}</td>
-                    <td>${d.funcionario1?.nome || 'N/A'}</td>
+                    <td>${d.hoteis?.nome || 'N/A'}</td> 
+                    <td>
+                        ${d.funcionario1?.nome || 'N/A'}
+                        ${d.funcionario2?.nome ? `<br><small>${d.funcionario2.nome}</small>` : ''}
+                    </td>
                     <td>${(d.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                     <td>
