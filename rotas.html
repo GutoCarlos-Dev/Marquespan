@@ -7,64 +7,66 @@
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/rotas.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
   <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container">
+      <!-- O menu será injetado aqui pelo menu.js -->
+    </div>
     <div class="main-content">
       <header class="header"><i class="fas fa-route"></i> Cadastro de Rotas</header>
 
       <section id="sectionCadastrarRotas" class="section">
         <div class="form-container">
-          <h3>Formulário de Rota</h3>
           <form id="formCadastrarRota">
-            <input type="hidden" id="rotaEditingId">
-            <div class="form-group">
-              <label for="rotaNumero">Número da Rota</label>
-              <input type="number" id="rotaNumero" required>
-            </div>
-            <div class="form-group">
-              <label for="rotaSemana">Semana</label>
-              <select id="rotaSemana" required>
-                <option value="" disabled selected>-- Selecione --</option>
-                <option value="SEGUNDA">SEGUNDA</option>
-                <option value="TERÇA">TERÇA</option>
-                <option value="QUARTA">QUARTA</option>
-                <option value="QUINTA">QUINTA</option>
-                <option value="SEXTA">SEXTA</option>
-                <option value="EXTRA">EXTRA</option>
-                <option value="AVULSA">AVULSA</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="rotaResponsavel">Responsável</label>
-              <input type="text" id="rotaResponsavel" required>
-            </div>
-            <div class="form-group">
-              <label for="rotaSupervisor">Supervisor</label>
-              <input type="text" id="rotaSupervisor">
-            </div>
-            <div class="form-group">
-              <label for="rotaCidades">Cidades</label>
-              <input type="text" id="rotaCidades" required>
-            </div>
-            <div class="form-group">
-              <label for="rotaDias">Dias</label>
-              <input type="number" id="rotaDias" required>
-            </div>
-            <div class="form-buttons">
-              <button type="submit" id="btnSubmitRota">Cadastrar Rota</button>
-              <button type="button" id="btnClearRotaForm">Limpar</button>
-              <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
-              <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
-            </div>
+            <fieldset>
+              <legend>Formulário de Rota</legend>
+              <input type="hidden" id="rotaEditingId">
+              <div class="form-group">
+                <label for="rotaNumero">Número da Rota</label>
+                <input type="text" id="rotaNumero" required>
+              </div>
+              <div class="form-group">
+                <label for="rotaSemana">Semana</label>
+                <select id="rotaSemana" required>
+                  <option value="" disabled selected>-- Selecione --</option>
+                  <option value="SEGUNDA">SEGUNDA</option>
+                  <option value="TERÇA">TERÇA</option>
+                  <option value="QUARTA">QUARTA</option>
+                  <option value="QUINTA">QUINTA</option>
+                  <option value="SEXTA">SEXTA</option>
+                  <option value="EXTRA">EXTRA</option>
+                  <option value="AVULSA">AVULSA</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="rotaResponsavel">Responsável</label>
+                <input type="text" id="rotaResponsavel" required>
+              </div>
+              <div class="form-group">
+                <label for="rotaSupervisor">Supervisor</label>
+                <input type="text" id="rotaSupervisor">
+              </div>
+              <div class="form-group">
+                <label for="rotaCidades">Cidades</label>
+                <input type="text" id="rotaCidades" required>
+              </div>
+              <div class="form-group">
+                <label for="rotaDias">Dias</label>
+                <input type="number" id="rotaDias" required>
+              </div>
+              <div class="form-buttons">
+                <button type="submit" id="btnSubmitRota">Cadastrar Rota</button>
+                <button type="button" id="btnClearRotaForm">Limpar</button>
+                <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
+                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
+              </div>
+            </fieldset>
           </form>
         </div>
 
         <div class="card">
-          <h3>Rotas Cadastradas</h3>
           <div class="search-bar">
             <input type="text" id="searchRotaInput" placeholder="Buscar por responsável ou cidades...">
           </div>
@@ -73,29 +75,32 @@
             <!-- A classe table-responsive pode ser mantida se tiver outros estilos,
                  mas a rolagem será controlada por table-scroll-container -->
             <table class="data-grid" aria-label="Rotas Cadastradas">
+              <caption>Rotas Cadastradas</caption>
               <thead>
                 <tr>
-                  <th data-field="numero">Número</th>
-                  <th data-field="semana">Semana</th>
-                  <th data-field="responsavel">Responsável</th>
-                  <th data-field="supervisor">Supervisor</th>
-                  <th data-field="cidades">Cidades</th>
-                  <th data-field="dias">Dias</th>
-                  <th>Ações</th>
+                  <th scope="col" data-field="numero">Número</th>
+                  <th scope="col" data-field="semana">Semana</th>
+                  <th scope="col" data-field="responsavel">Responsável</th>
+                  <th scope="col" data-field="supervisor">Supervisor</th>
+                  <th scope="col" data-field="cidades">Cidades</th>
+                  <th scope="col" data-field="dias">Dias</th>
+                  <th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody id="rotasTableBody"></tbody>
             </table>
           </div>
           <!-- Novo campo de resumo abaixo do grid -->
-          <div id="rotaSummary" class="rota-summary">
-            <h3>Resumo por Supervisor</h3>
+          <div id="rotaSummary" class="summary-container">
+            <p class="summary-title">Resumo por Supervisor</p>
+            <!-- O conteúdo do resumo será inserido aqui -->
           </div>
         </div>
       </section>
     </div>
   </div>
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
   <script type="module" src="./script/menu.js" defer></script>
   <!-- O script de rotas agora importa o supabase.js diretamente -->
   <script type="module" src="script/rotas.js"></script>

@@ -90,7 +90,7 @@ const RotasUI = {
         e.preventDefault();
 
         const payload = {
-            numero: parseInt(document.getElementById('rotaNumero').value),
+            numero: document.getElementById('rotaNumero').value,
             semana: document.getElementById('rotaSemana').value,
             responsavel: document.getElementById('rotaResponsavel').value,
             supervisor: document.getElementById('rotaSupervisor').value,
@@ -267,14 +267,11 @@ const RotasUI = {
 
             if (searchTerm) {
                 const searchConditions = [
-                    `semana.ilike.%${searchTerm}%`,
+                    `numero.ilike.%${searchTerm}%`, // Busca pelo número da rota como texto
                     `responsavel.ilike.%${searchTerm}%`,
                     `supervisor.ilike.%${searchTerm}%`,
+                    `cidades.ilike.%${searchTerm}%`
                 ];
-                // Se o termo de busca for um número, também busca no campo 'numero'
-                if (!isNaN(searchTerm)) {
-                    searchConditions.push(`numero.eq.${searchTerm}`);
-                }
                 queryOptions.or = searchConditions.join(',');
             }
 
