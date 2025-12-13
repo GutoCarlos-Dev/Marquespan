@@ -238,10 +238,56 @@ const DespesasUI = {
 
     async loadDatalists() {
         // Lógica para carregar as opções dos datalists (rotas, hoteis, funcionarios)
+        try {
+            // Carregar Rotas
+            const { data: rotas, error: rotasError } = await supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
+            if (rotasError) throw rotasError;
+            this.rotasList.innerHTML = rotas.map(r => `<option value="${r.numero}"></option>`).join('');
+
+            // Carregar Hotéis
+            const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('nome').order('nome', { ascending: true });
+            if (hoteisError) throw hoteisError;
+            this.hoteisList.innerHTML = hoteis.map(h => `<option value="${h.nome}"></option>`).join('');
+
+            // Carregar Funcionários
+            const { data: funcionarios, error: funcError } = await supabaseClient.from('funcionario').select('nome').order('nome', { ascending: true });
+            if (funcError) throw funcError;
+            const funcionarioOptions = funcionarios.map(f => `<option value="${f.nome}"></option>`).join('');
+            this.funcionarios1List.innerHTML = funcionarioOptions;
+            this.funcionarios2List.innerHTML = funcionarioOptions;
+
+        } catch (err) {
+            console.error('Erro ao carregar datalists:', err);
+            alert('❌ Não foi possível carregar as listas de sugestões. Verifique o console.');
+        }
     },
 
     async loadTiposQuarto(nomeHotel, selectedTipo) {
         // Lógica para carregar os tipos de quarto de um hotel específico
+        this.tipoQuartoSelect.disabled = true;
+        this.tipoQuartoSelect.innerHTML = '<option value="">Carregando...</option>';
+
+        if (!nomeHotel) {
+            this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
+            return;
+        }
+
+        try {
+            // Chama a função RPC criada no Supabase
+            const { data: quartos, error } = await supabaseClient.rpc('get_quartos_por_hotel_nome', { p_nome_hotel: nomeHotel });
+            if (error) throw error;
+
+            this.tipoQuartoSelect.innerHTML = '<option value="" disabled selected>-- Selecione o quarto --</option>';
+            quartos.forEach(q => {
+                this.tipoQuartoSelect.add(new Option(q.nome_quarto, q.nome_quarto));
+            });
+
+            if (selectedTipo) this.tipoQuartoSelect.value = selectedTipo;
+            this.tipoQuartoSelect.disabled = false;
+        } catch (err) {
+            console.error('Erro ao carregar tipos de quarto:', err);
+            this.tipoQuartoSelect.innerHTML = '<option value="">Erro ao carregar quartos</option>';
+        }
     }
 };
 
