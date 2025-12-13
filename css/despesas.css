@@ -207,3 +207,37 @@
     font-weight: bold;
     color: #495057;
 }
+
+/* Adicione este código ao final do seu arquivo css/despesas.css */
+
+/* Layout em grid para o formulário de despesas */
+.form-grid-layout fieldset {
+  display: grid;
+  /* Cria um layout responsivo com 2 colunas que se ajustam ao tamanho da tela */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px 25px; /* 15px de espaço vertical, 25px de espaço horizontal */
+  border: none; /* Remove a borda padrão do fieldset */
+  padding: 0;
+}
+
+.form-grid-layout legend {
+  grid-column: 1 / -1; /* Faz o título ocupar a largura total */
+  width: 100%;
+  padding-bottom: 15px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Faz o campo de observação ocupar a largura total */
+.form-group-full-width {
+  grid-column: 1 / -1;
+}
+
+/* Alinha os botões no final, ocupando a largura total */
+.form-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 15px;
+}
