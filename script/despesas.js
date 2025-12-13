@@ -249,12 +249,23 @@ const DespesasUI = {
             if (hoteisError) throw hoteisError;
             this.hoteisList.innerHTML = hoteis.map(h => `<option value="${h.nome}"></option>`).join('');
 
-            // Carregar Funcionários
-            const { data: funcionarios, error: funcError } = await supabaseClient.from('funcionario').select('nome').order('nome', { ascending: true });
-            if (funcError) throw funcError;
-            const funcionarioOptions = funcionarios.map(f => `<option value="${f.nome}"></option>`).join('');
-            this.funcionarios1List.innerHTML = funcionarioOptions;
-            this.funcionarios2List.innerHTML = funcionarioOptions;
+            // Carregar Funcionários (Motoristas) para o campo 1
+            const { data: motoristas, error: motoristasError } = await supabaseClient
+                .from('funcionario')
+                .select('nome')
+                .eq('funcao', 'Motorista') // Filtra apenas por motoristas
+                .order('nome', { ascending: true });
+            if (motoristasError) throw motoristasError;
+            this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome}"></option>`).join('');
+
+            // Carregar Funcionários (Auxiliares) para o campo 2
+            const { data: auxiliares, error: auxiliaresError } = await supabaseClient
+                .from('funcionario')
+                .select('nome')
+                .eq('funcao', 'Auxiliar') // Filtra apenas por auxiliares
+                .order('nome', { ascending: true });
+            if (auxiliaresError) throw auxiliaresError;
+            this.funcionarios2List.innerHTML = auxiliares.map(f => `<option value="${f.nome}"></option>`).join('');
 
         } catch (err) {
             console.error('Erro ao carregar datalists:', err);
