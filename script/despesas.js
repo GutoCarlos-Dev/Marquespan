@@ -61,8 +61,8 @@ const DespesasUI = {
         const valorDiaria = parseFloat(this.valorDiariaInput.value) || 0;
         const valorEnergia = parseFloat(this.valorEnergiaInput.value) || 0;
 
-        // Fórmula: (Valor da Diária + Valor da Energia) * Quantidade de Diárias
-        const valorTotal = (valorDiaria + valorEnergia) * qtdDiarias;
+        // Fórmula corrigida: (Valor da Diária * Quantidade de Diárias) + Valor da Energia
+        const valorTotal = (valorDiaria * qtdDiarias) + valorEnergia;
 
         // Formata o valor como moeda brasileira (BRL) e exibe no campo
         this.valorTotalInput.value = valorTotal.toLocaleString('pt-BR', {
@@ -93,7 +93,7 @@ const DespesasUI = {
             data_checkout: document.getElementById('despesaCheckout').value,
             valor_diaria: parseFloat(this.valorDiariaInput.value),
             valor_energia: parseFloat(this.valorEnergiaInput.value) || 0,
-            valor_total: valorTotal
+            valor_total: valorTotal // Usa o valor já calculado e formatado
         };
 
         try {
