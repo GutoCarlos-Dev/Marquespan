@@ -1,360 +1,217 @@
-// despesas.js - Lógica para o módulo de Cadastro de Despesas
+// script/despesas.js - Lógica para o módulo de Cadastro de Despesas
 import { supabaseClient } from './supabase.js';
 
-class SupabaseService {
-  static async list(table, cols = '*', opts = {}) {
-    let q = supabaseClient.from(table).select(cols).order(opts.orderBy || 'id', { ascending: !!opts.ascending });
-    if (opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
-    if (opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
-    if (opts.or) q = q.or(opts.or);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  }
-
-  static async insert(table, payload) {
-    const { data, error } = await supabaseClient.from(table).insert(payload).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async update(table, payload, key) {
-    const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
-    if (error) throw error;
-    return data;
-  }
-
-  static async remove(table, key) {
-    const { data, error } = await supabaseClient.from(table).delete().eq(key.field, key.value);
-    if (error) throw error;
-    return data;
-  }
-}
-
 const DespesasUI = {
-  init() {
-    this.SupabaseService = SupabaseService;
-    this.cache();
-    this.bind();
-    this.setupInitialState();
-    this.populateSelects();
-  },
+    init() {
+        this.cache();
+        this.bind();
+        this.loadInitialData();
+    },
 
-  cache() {
-    this.section = document.getElementById('sectionCadastrarDespesa');
-    this.form = document.getElementById('formCadastrarDespesa');
-    this.tableBody = document.getElementById('despesaTableBody');
-    this.btnSubmit = document.getElementById('btnSubmitDespesa');
-    this.btnClearForm = document.getElementById('btnClearDespesaForm');
-    this.searchInput = document.getElementById('searchDespesaInput');
-    this.editingIdInput = document.getElementById('despesaEditingId');
+    cache() {
+        // Formulário e campos
+        this.form = document.getElementById('formCadastrarDespesa');
+        this.editingIdInput = document.getElementById('despesaEditingId');
+        this.btnSubmit = document.getElementById('btnSubmitDespesa');
+        this.btnClearForm = document.getElementById('btnClearDespesaForm');
 
-    // Campos do formulário
-    this.diariasInput = document.getElementById('despesaDiarias');
-    this.valorDiariaInput = document.getElementById('despesaValorDiaria');
-    this.valorTotalInput = document.getElementById('despesaValorTotal');
-    this.hotelInput = document.getElementById('despesaHotelInput');
-    this.tipoQuartoSelect = document.getElementById('despesaTipoQuarto');
-  },
+        // Campos para cálculo
+        this.qtdDiariasInput = document.getElementById('despesaDiarias');
+        this.valorDiariaInput = document.getElementById('despesaValorDiaria');
+        this.valorEnergiaInput = document.getElementById('despesaValorEnergia');
+        this.valorTotalInput = document.getElementById('despesaValorTotal');
 
-  bind() {
-    this.form?.addEventListener('submit', (e) => this.handleFormSubmit(e));
-    this.btnClearForm?.addEventListener('click', () => this.clearForm());
-    this.tableBody?.addEventListener('click', (e) => this.handleTableClick(e));
-    this.searchInput?.addEventListener('input', () => this.renderGrid());
+        // Tabela e busca
+        this.tableBody = document.getElementById('despesaTableBody');
+        this.searchInput = document.getElementById('searchDespesaInput');
 
-    // Listeners para cálculo automático
-    this.diariasInput?.addEventListener('input', () => this.calculateTotal());
-    this.valorDiariaInput?.addEventListener('input', () => this.calculateTotal());
-    this.hotelInput?.addEventListener('change', () => this.populateTiposQuarto());
+        // Datalists
+        this.rotasList = document.getElementById('rotasList');
+        this.hoteisList = document.getElementById('hoteisList');
+        this.funcionarios1List = document.getElementById('funcionarios1List');
+        this.funcionarios2List = document.getElementById('funcionarios2List');
+        this.tipoQuartoSelect = document.getElementById('despesaTipoQuarto');
+    },
 
-    const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
-    ths?.forEach(th => {
-      const field = th.getAttribute('data-field');
-      th.addEventListener('click', () => { this.toggleSort(field) });
-    });
-  },
+    bind() {
+        this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        this.btnClearForm.addEventListener('click', () => this.clearForm());
+        this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
+        this.searchInput.addEventListener('input', () => this.renderGrid());
 
-  setupInitialState() {
-    this._sort = { field: 'data_checkin', ascending: false };
-  },
+        // ** Adiciona os listeners para o cálculo automático do valor total **
+        this.qtdDiariasInput.addEventListener('input', () => this.calcularValorTotal());
+        this.valorDiariaInput.addEventListener('input', () => this.calcularValorTotal());
+        this.valorEnergiaInput.addEventListener('input', () => this.calcularValorTotal());
 
-  async populateSelects() {
-    try {
-      const [rotas, hoteis, motoristas, auxiliares] = await Promise.all([
-        this.SupabaseService.list('rotas', 'id, numero', { orderBy: 'numero' }),
-        this.SupabaseService.list('hoteis', 'id, nome', { orderBy: 'nome' }),
-        this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome', eq: { field: 'funcao', value: 'Motorista' } }),
-        this.SupabaseService.list('funcionario', 'id, nome', { orderBy: 'nome', eq: { field: 'funcao', value: 'Auxiliar' } })
-      ]);
+        // Listener para carregar tipos de quarto quando um hotel é selecionado
+        document.getElementById('despesaHotelInput').addEventListener('change', (e) => this.loadTiposQuarto(e.target.value));
+    },
 
-      this.fillDatalist('rotasList', rotas, 'numero', 'numero');
-      this.fillDatalist('hoteisList', hoteis, 'id', 'nome');
-      this.fillDatalist('funcionarios1List', motoristas, 'id', 'nome');
-      this.fillDatalist('funcionarios2List', auxiliares, 'id', 'nome');
+    async loadInitialData() {
+        this.renderGrid();
+        this.loadDatalists();
+    },
 
-    } catch (error) {
-      console.error("Erro ao popular seletores:", error);
-      alert("Não foi possível carregar os dados para os formulários. Verifique a conexão e tente novamente.");
-    }
-  },
+    /**
+     * Calcula o valor total com base na diária, energia e quantidade de dias.
+     */
+    calcularValorTotal() {
+        const qtdDiarias = parseFloat(this.qtdDiariasInput.value) || 0;
+        const valorDiaria = parseFloat(this.valorDiariaInput.value) || 0;
+        const valorEnergia = parseFloat(this.valorEnergiaInput.value) || 0;
 
-  fillDatalist(datalistId, data, valueField, textField) {
-    const datalist = document.getElementById(datalistId);
-    if (!datalist) return;
-    datalist.innerHTML = '';
-    data.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item[textField];
-      option.dataset.value = item[valueField]; // Armazena o ID/valor real no dataset
-      datalist.appendChild(option);
-    });
-  },
+        // Fórmula: (Valor da Diária + Valor da Energia) * Quantidade de Diárias
+        const valorTotal = (valorDiaria + valorEnergia) * qtdDiarias;
 
-  // Função auxiliar para obter o ID de um datalist
-  getValueFromDatalist(inputId) {
-    const input = document.getElementById(inputId);
-    const datalistId = input.getAttribute('list');
-    const datalist = document.getElementById(datalistId);
-    const inputValue = input.value;
+        // Formata o valor como moeda brasileira (BRL) e exibe no campo
+        this.valorTotalInput.value = valorTotal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    },
 
-    for (const option of datalist.options) {
-      if (option.value === inputValue) {
-        return option.dataset.value; // Retorna o ID armazenado
-      }
-    }
-    return inputValue; // Retorna o próprio valor digitado se não encontrar correspondência
-  },
+    async handleFormSubmit(e) {
+        e.preventDefault();
 
-  async populateTiposQuarto() {
-    const hotelId = this.getValueFromDatalist('despesaHotelInput');
-    this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel --</option>';
-    this.tipoQuartoSelect.disabled = true;
+        // Pega o valor total calculado e converte de volta para número
+        const valorTotalString = this.valorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+        const valorTotal = parseFloat(valorTotalString) || 0;
 
-    // Verifica se o hotelId é um número válido (ID do hotel) e não apenas texto
-    if (!hotelId || isNaN(parseInt(hotelId))) {
-      return;
-    }
+        const payload = {
+            id: this.editingIdInput.value || undefined,
+            numero_rota: document.getElementById('despesaRotaInput').value,
+            hotel_nome: document.getElementById('despesaHotelInput').value, // Assumindo que você vai relacionar pelo nome
+            funcionario1_nome: document.getElementById('despesaFuncionario1Input').value,
+            funcionario2_nome: document.getElementById('despesaFuncionario2Input').value || null,
+            tipo_quarto: this.tipoQuartoSelect.value,
+            qtd_diarias: parseInt(this.qtdDiariasInput.value),
+            data_reserva: document.getElementById('despesaDataReserva').value || null,
+            nota_fiscal: document.getElementById('despesaNotaFiscal').value || null,
+            observacao: document.getElementById('despesaObservacao').value || null,
+            data_checkin: document.getElementById('despesaCheckin').value,
+            data_checkout: document.getElementById('despesaCheckout').value,
+            valor_diaria: parseFloat(this.valorDiariaInput.value),
+            valor_energia: parseFloat(this.valorEnergiaInput.value) || 0,
+            valor_total: valorTotal
+        };
 
-    try {
-      const { data, error } = await supabaseClient
-        .from('hotel_quartos')
-        .select('nome_quarto')
-        .eq('id_hotel', hotelId)
-        .order('nome_quarto');
-
-      if (error) throw error;
-
-      this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione o tipo --</option>';
-      data.forEach(quarto => {
-        this.tipoQuartoSelect.add(new Option(quarto.nome_quarto, quarto.nome_quarto));
-      });
-      this.tipoQuartoSelect.disabled = data.length === 0;
-      if (data.length === 0) this.tipoQuartoSelect.innerHTML = '<option value="">-- Nenhum quarto cadastrado --</option>';
-    } catch (e) { console.error("Erro ao buscar tipos de quarto:", e); }
-  },
-
-  calculateTotal() {
-    const diarias = parseFloat(this.diariasInput.value) || 0;
-    const valorDiaria = parseFloat(this.valorDiariaInput.value) || 0;
-    const total = diarias * valorDiaria;
-    this.valorTotalInput.value = total.toFixed(2);
-  },
-
-  async handleFormSubmit(e) {
-    e.preventDefault();
-    const editingId = this.editingIdInput.value;
-
-    const payload = {
-      numero_rota: this.getValueFromDatalist('despesaRotaInput'),
-      id_hotel: this.getValueFromDatalist('despesaHotelInput'),
-      id_funcionario1: this.getValueFromDatalist('despesaFuncionario1Input'),
-      id_funcionario2: this.getValueFromDatalist('despesaFuncionario2Input') || null,
-      tipo_quarto: document.getElementById('despesaTipoQuarto').value,
-      qtd_diarias: parseInt(document.getElementById('despesaDiarias').value),
-      data_reserva: document.getElementById('despesaDataReserva').value || null,
-      nota_fiscal: document.getElementById('despesaNotaFiscal').value,
-      observacao: document.getElementById('despesaObservacao').value,
-      data_checkin: document.getElementById('despesaCheckin').value,
-      data_checkout: document.getElementById('despesaCheckout').value,
-      valor_diaria: parseFloat(document.getElementById('despesaValorDiaria').value),
-      valor_total: parseFloat(document.getElementById('despesaValorTotal').value),
-    };
-
-    // Simples validação
-    if (!payload.numero_rota || !payload.id_hotel || !payload.id_funcionario1 || !payload.data_checkin || !payload.data_checkout) {
-      return alert('Por favor, preencha todos os campos obrigatórios.');
-    }
-
-    // Validação da quantidade de diárias vs. datas de check-in/checkout
-    if (payload.data_checkin && payload.data_checkout) {
-      // Adiciona 'T00:00:00' para evitar problemas de fuso horário ao criar o objeto Date
-      const checkin = new Date(payload.data_checkin + 'T00:00:00');
-      const checkout = new Date(payload.data_checkout + 'T00:00:00');
-      const diffTime = checkout - checkin;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays !== payload.qtd_diarias) {
-        return alert(`A quantidade de diárias (${payload.qtd_diarias}) não corresponde ao período entre o Check-in e o Check-out (${diffDays} dias). Por favor, ajuste os valores.`);
-      }
-    }
-
-    try {
-      if (editingId) {
-        await this.SupabaseService.update('despesas', payload, { field: 'id', value: editingId });
-        alert('✅ Despesa atualizada com sucesso!');
-      } else {
-        await this.SupabaseService.insert('despesas', payload);
-        alert('✅ Despesa cadastrada com sucesso!');
-      }
-      this.clearForm();
-      this.renderGrid();
-    } catch (err) {
-      console.error(err);
-      alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} despesa.`);
-    }
-  },
-
-  clearForm() {
-    this.form?.reset();
-    this.editingIdInput.value = '';
-    this.btnSubmit.textContent = 'Cadastrar Despesa';
-    this.valorTotalInput.value = '';
-    this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
-    this.tipoQuartoSelect.disabled = true;
-  },
-
-  async loadForEditing(id) {
-    try {
-      const [despesa] = await this.SupabaseService.list('despesas', '*', { eq: { field: 'id', value: id } });
-      if (!despesa) return alert('Despesa não encontrada.');
-
-      this.editingIdInput.value = id;
-
-      // Para preencher os inputs, precisamos buscar o texto correspondente ao ID
-      const [rota, hotel, func1, func2] = await Promise.all([
-        despesa.numero_rota ? this.SupabaseService.list('rotas', 'numero', { eq: { field: 'numero', value: despesa.numero_rota } }) : Promise.resolve([]),
-        despesa.id_hotel ? this.SupabaseService.list('hoteis', 'nome', { eq: { field: 'id', value: despesa.id_hotel } }) : Promise.resolve([]),
-        despesa.id_funcionario1 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario1 } }) : Promise.resolve([]),
-        despesa.id_funcionario2 ? this.SupabaseService.list('funcionario', 'nome', { eq: { field: 'id', value: despesa.id_funcionario2 } }) : Promise.resolve([])
-      ]);
-
-      document.getElementById('despesaRotaInput').value = rota[0]?.numero || '';
-      document.getElementById('despesaHotelInput').value = hotel[0]?.nome || '';
-      document.getElementById('despesaFuncionario1Input').value = func1[0]?.nome || '';
-      document.getElementById('despesaFuncionario2Input').value = func2[0]?.nome || '';
-
-      // Preenche o resto do formulário
-      document.getElementById('despesaTipoQuarto').value = despesa.tipo_quarto || '';
-      document.getElementById('despesaDiarias').value = despesa.qtd_diarias || '';
-      document.getElementById('despesaDataReserva').value = despesa.data_reserva || '';
-      document.getElementById('despesaNotaFiscal').value = despesa.nota_fiscal || '';
-      document.getElementById('despesaObservacao').value = despesa.observacao || '';
-      document.getElementById('despesaCheckin').value = despesa.data_checkin || '';
-      document.getElementById('despesaCheckout').value = despesa.data_checkout || '';
-      document.getElementById('despesaValorDiaria').value = despesa.valor_diaria || '';
-      document.getElementById('despesaValorTotal').value = despesa.valor_total || '';
-
-      // Popula os tipos de quarto e depois seleciona o valor salvo
-      await this.populateTiposQuarto();
-      this.tipoQuartoSelect.value = despesa.tipo_quarto || '';
-      this.btnSubmit.textContent = 'Atualizar Despesa';
-      this.form.scrollIntoView({ behavior: 'smooth' });
-    } catch (e) {
-      console.error('Erro ao carregar despesa para edição', e);
-    }
-  },
-
-  async handleTableClick(e) {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const id = btn.dataset.id;
-
-    if (btn.classList.contains('btn-delete')) {
-      if (confirm('Tem certeza que deseja excluir esta despesa?')) {
         try {
-          await this.SupabaseService.remove('despesas', { field: 'id', value: id });
-          this.renderGrid();
+            // Lógica para buscar IDs de hotel e funcionários antes de salvar
+            // Ex: const { data: hotel } = await supabaseClient.from('hoteis').select('id').eq('nome', payload.hotel_nome).single();
+            // payload.hotel_id = hotel.id;
+
+            const { error } = await supabaseClient.from('despesas').upsert(payload);
+            if (error) throw error;
+
+            alert('✅ Despesa salva com sucesso!');
+            this.clearForm();
+            this.renderGrid();
         } catch (err) {
-          console.error('Erro ao excluir despesa', err);
-          alert('❌ Não foi possível excluir a despesa.');
+            console.error('Erro ao salvar despesa:', err);
+            alert(`❌ Erro ao salvar despesa: ${err.message}`);
         }
-      }
-    } else if (btn.classList.contains('btn-edit')) {
-      this.loadForEditing(id);
-    }
-  },
+    },
 
-  toggleSort(field) {
-    if (this._sort.field === field) {
-      this._sort.ascending = !this._sort.ascending;
-    } else {
-      this._sort.field = field;
-      this._sort.ascending = true;
-    }
-    this.renderGrid();
-  },
+    clearForm() {
+        this.form.reset();
+        this.editingIdInput.value = '';
+        this.btnSubmit.textContent = 'Cadastrar Despesa';
+        this.valorTotalInput.value = ''; // Limpa o campo de valor total
+        this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
+        this.tipoQuartoSelect.disabled = true;
+    },
 
-  async renderGrid() {
-    if (!this.tableBody) return;
+    async loadForEditing(id) {
+        try {
+            const { data: despesa, error } = await supabaseClient.from('despesas').select('*, hotel:hoteis(nome), funcionario1:funcionarios(nome), funcionario2:funcionarios(nome)').eq('id', id).single();
+            if (error) throw error;
 
-    const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
-    ths?.forEach(th => {
-      th.classList.remove('sort-asc', 'sort-desc');
-      if (th.dataset.field === this._sort.field) {
-        th.classList.add(this._sort.ascending ? 'sort-asc' : 'sort-desc');
-      }
-    });
+            this.editingIdInput.value = despesa.id;
+            document.getElementById('despesaRotaInput').value = despesa.numero_rota;
+            document.getElementById('despesaHotelInput').value = despesa.hotel.nome;
+            document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1.nome;
+            document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome || '';
+            this.qtdDiariasInput.value = despesa.qtd_diarias;
+            document.getElementById('despesaDataReserva').value = despesa.data_reserva;
+            document.getElementById('despesaNotaFiscal').value = despesa.nota_fiscal;
+            document.getElementById('despesaObservacao').value = despesa.observacao;
+            document.getElementById('despesaCheckin').value = despesa.data_checkin;
+            document.getElementById('despesaCheckout').value = despesa.data_checkout;
+            this.valorDiariaInput.value = despesa.valor_diaria;
+            this.valorEnergiaInput.value = despesa.valor_energia || 0;
 
-    try {
-      const searchTerm = this.searchInput?.value.trim();
-      // Consulta complexa com joins
-      const selectQuery = `
-        id,
-        numero_rota,
-        hoteis!inner ( nome ),
-        funcionario1:funcionario!despesas_id_funcionario1_fkey ( nome ),
-        valor_total,
-        data_checkin
-      `;
+            // Carrega os tipos de quarto e seleciona o correto
+            await this.loadTiposQuarto(despesa.hotel.nome, despesa.tipo_quarto);
 
-      let query = supabaseClient.from('despesas').select(selectQuery).order(this._sort.field, { ascending: this._sort.ascending });
-      
-      if (searchTerm) {
-        const searchConditions = [
-          `hoteis.nome.ilike.%${searchTerm}%`,
-          `funcionario1.nome.ilike.%${searchTerm}%`
-        ];
-        if (!isNaN(searchTerm)) {
-          searchConditions.push(`numero_rota.eq.${searchTerm}`);
+            this.calcularValorTotal(); // Recalcula o total ao carregar
+            this.btnSubmit.textContent = 'Atualizar Despesa';
+            this.form.scrollIntoView({ behavior: 'smooth' });
+        } catch (err) {
+            console.error('Erro ao carregar despesa para edição:', err);
         }
-        query = query.or(searchConditions.join(','), { foreignTable: 'hoteis' });
-        query = query.or(searchConditions.join(','), { foreignTable: 'funcionario1' });
-      }
+    },
 
-      const { data: despesas, error } = await query;
-      if (error) throw error;
+    async handleTableClick(e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
 
-      this.tableBody.innerHTML = despesas.map(d => `
-        <tr>
-          <td>${d.numero_rota || ''}</td>
-          <td>${d.hoteis?.nome || 'N/A'}</td>
-          <td>${d.funcionario1?.nome || 'N/A'}</td>
-          <td>${d.valor_total ? `R$ ${d.valor_total.toFixed(2)}` : ''}</td>
-          <td>${d.data_checkin ? new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
-          <td>
-            <button class="btn-edit" data-id="${d.id}">Editar</button>
-            <button class="btn-delete" data-id="${d.id}">Excluir</button>
-          </td>
-        </tr>`).join('');
-    } catch (e) {
-      console.error('Erro ao carregar despesas', e);
-      this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar despesas.</td></tr>`;
+        if (btn.classList.contains('btn-delete')) {
+            if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                try {
+                    await supabaseClient.from('despesas').delete().eq('id', id);
+                    this.renderGrid();
+                } catch (err) {
+                    alert('❌ Não foi possível excluir a despesa.');
+                }
+            }
+        } else if (btn.classList.contains('btn-edit')) {
+            this.loadForEditing(id);
+        }
+    },
+
+    async renderGrid() {
+        // Lógica para buscar e renderizar a tabela de despesas
+        try {
+            const searchTerm = this.searchInput.value.trim();
+            let query = supabaseClient.from('despesas').select('id, numero_rota, valor_total, data_checkin, hotel:hoteis(nome), funcionario1:funcionarios(nome)');
+
+            if (searchTerm) {
+                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionarios.nome.ilike.%${searchTerm}%`);
+            }
+
+            const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
+            if (error) throw error;
+
+            this.tableBody.innerHTML = despesas.map(d => `
+                <tr>
+                    <td>${d.numero_rota}</td>
+                    <td>${d.hotel?.nome || 'N/A'}</td>
+                    <td>${d.funcionario1?.nome || 'N/A'}</td>
+                    <td>${(d.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                    <td>
+                        <button class="btn-edit" data-id="${d.id}">Editar</button>
+                        <button class="btn-delete" data-id="${d.id}">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            console.error('Erro ao renderizar grid de despesas:', err);
+            this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar dados.</td></tr>`;
+        }
+    },
+
+    async loadDatalists() {
+        // Lógica para carregar as opções dos datalists (rotas, hoteis, funcionarios)
+    },
+
+    async loadTiposQuarto(nomeHotel, selectedTipo) {
+        // Lógica para carregar os tipos de quarto de um hotel específico
     }
-  }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  DespesasUI.init();
-  DespesasUI.renderGrid();
+    DespesasUI.init();
 });
