@@ -13,11 +13,11 @@
   <div class="container">
     <!-- O menu será injetado aqui pelo menu.js -->
     <div class="main-content">
-      <header class="header"><i class="fas fa-hotel"></i> Cadastro de Hotel</header>
+      <header class="header"><h1><i class="fas fa-hotel"></i> Cadastro de Hotel</h1></header>
 
       <section id="sectionCadastrarHotel" class="section">
         <div class="form-container">
-          <h3>Formulário de Hotel</h3>
+          <h2>Formulário de Hotel</h2>
           <form id="formCadastrarHotel">
             <input type="hidden" id="hotelEditingId">
             <div class="form-group">
@@ -47,14 +47,16 @@
             <div class="form-buttons">
               <button type="submit" id="btnSubmitHotel" class="btn-submit">Cadastrar Hotel</button>
               <button type="button" id="btnClearHotelForm" class="btn-clear">Limpar</button>
-              <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
-              <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
+              <label>
+                <span id="btnImportarLista" class="btn-import" role="button" tabindex="0">Importar Lista</span>
+                <input type="file" id="importFile" accept=".xlsx, .xls" class="sr-only" />
+              </label>
             </div>
           </form>
         </div>
 
         <div class="card">
-          <h3>Hotéis Cadastrados</h3>
+          <h2>Hotéis Cadastrados</h2>
           <div class="search-bar">
             <input type="text" id="searchHotelInput" placeholder="Buscar por nome, CNPJ ou responsável...">
           </div>
@@ -82,7 +84,7 @@
         <div id="quartosPanel" class="panel">
           <div class="panel-header">
             <h3 id="quartosPanelTitle">Gerenciar Quartos</h3>
-            <button class="close-button">&times;</button>
+            <button class="close-button" aria-label="Fechar">&times;</button>
           </div>
           <div class="panel-body">
             <div class="form-container">
