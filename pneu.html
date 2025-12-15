@@ -10,12 +10,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
+  <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-
-
-  <main class="main-content">
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container"></div>
+    
+    <div class="main-content">
+      
+    <!-- O conteúdo principal da página começa aqui -->
     <header class="page-title-header"><i class="fas fa-dolly-flatbed"></i><span class="page-title-text">Entrada de Pneus (Nota Fiscal)</span></header>
     <section class="content-section">
       <!-- Card do Formulário de Cadastro -->
@@ -56,18 +60,18 @@
         </div>
 
         <div class="table-scroll-container">
-          <table class="data-grid">
+          <table class="data-grid" aria-label="Últimas Entradas de Pneus no Estoque">
             <thead>
               <tr>
-                <th><i class="fas fa-calendar"></i> Data</th>
-                <th><i class="fas fa-file-invoice"></i> Nota Fiscal</th>
-                <th><i class="fas fa-tag"></i> Marca</th>
-                <th><i class="fas fa-cog"></i> Modelo</th>
-                <th><i class="fas fa-shapes"></i> Tipo</th>
-                <th><i class="fas fa-recycle"></i> Vida</th>
-                <th><i class="fas fa-hashtag"></i> Qtd</th>
-                <th><i class="fas fa-fire"></i> Marca Fogo</th>
-                <th><i class="fas fa-tools"></i> Ações</th>
+                <th scope="col"><i class="fas fa-calendar"></i> Data</th>
+                <th scope="col"><i class="fas fa-file-invoice"></i> Nota Fiscal</th>
+                <th scope="col"><i class="fas fa-tag"></i> Marca</th>
+                <th scope="col"><i class="fas fa-cog"></i> Modelo</th>
+                <th scope="col"><i class="fas fa-shapes"></i> Tipo</th>
+                <th scope="col"><i class="fas fa-recycle"></i> Vida</th>
+                <th scope="col"><i class="fas fa-hashtag"></i> Qtd</th>
+                <th scope="col"><i class="fas fa-fire"></i> Marca Fogo</th>
+                <th scope="col"><i class="fas fa-tools"></i> Ações</th>
               </tr>
             </thead>
             <tbody id="grid-pneus-body">
@@ -77,15 +81,14 @@
         </div>
       </div>
     </section>
-  </main>
+    </div>
+  </div>
 
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
 
   <script type="module" src="./script/menu.js" defer></script>
-
-  <!-- O script pneu-updated.js precisará ser ajustado para esta nova estrutura -->
-  <script type="module" src="./script/pneu-entrada.js" defer></script>
+  <script type="module" src="./script/pneu-entrada.js"></script>
 </body>
 </html>
