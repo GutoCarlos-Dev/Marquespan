@@ -59,13 +59,20 @@ async function cadastrarUsuario(event) {
     return;
   }
 
+  // Modificação: Chamar a função RPC 'criar_novo_usuario' em vez de insert direto
   const { error } = await supabaseClient
-    .from('usuarios')
-    .insert([{ nome, nomecompleto, email, nivel, senha }]);
+    .rpc('criar_novo_usuario', {
+      p_nome: nome,
+      p_nomecompleto: nomecompleto,
+      p_email: email,
+      p_nivel: nivel,
+      p_senha: senha
+    });
 
   if (error) {
     console.error(error);
-    alert('❌ Erro ao cadastrar usuário.');
+    // Mensagem de erro mais detalhada para o desenvolvedor
+    alert(`❌ Erro ao cadastrar usuário: ${error.message}`);
     return;
   }
 
