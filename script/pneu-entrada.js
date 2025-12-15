@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectTipo = document.getElementById('tipo');
     const inputVida = document.getElementById('vida');
     // Campos para cálculo de valor
-    const inputQuantidade = document.getElementById('quantidade');
-    const inputValorUnitario = document.getElementById('valor_unitario');
+    const inputValorNota = document.getElementById('valor_nota');
+    const inputValorFrete = document.getElementById('valor_frete');
 
     // --- Event Listeners ---
     form.addEventListener('submit', handleSubmit);
@@ -32,8 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     // Listeners para recalcular o valor total
-    inputQuantidade?.addEventListener('input', calcularValorTotal);
-    inputValorUnitario?.addEventListener('input', calcularValorTotal);
+    inputValorNota?.addEventListener('input', calcularValorTotal);
+    inputValorFrete?.addEventListener('input', calcularValorTotal);
 
     // --- Inicialização da Página ---
     initializeSelects();
@@ -81,9 +81,9 @@ function clearForm() {
 
 // 💰 Calcula e exibe o valor total
 function calcularValorTotal() {
-    const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
-    const valorUnitario = parseFloat(document.getElementById('valor_unitario').value) || 0;
-    const total = quantidade * valorUnitario;
+    const valorNota = parseFloat(document.getElementById('valor_nota').value) || 0;
+    const valorFrete = parseFloat(document.getElementById('valor_frete').value) || 0;
+    const total = valorNota + valorFrete;
 
     const displayTotal = document.getElementById('valor_total_display');
     if (displayTotal) {
@@ -108,16 +108,16 @@ async function handleSubmit(e) {
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
-        valor_unitario: parseFloat(formData.get('valor_unitario') || 0),
-        valor_total: (parseFloat(formData.get('quantidade') || 0) * parseFloat(formData.get('valor_unitario') || 0)),
+        valor_nota: parseFloat(formData.get('valor_nota') || 0),
+        valor_frete: parseFloat(formData.get('valor_frete') || 0),
+        valor_total: (parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
         status: 'ENTRADA',
         descricao: 'ENTRADA ESTOQUE NF',
     };
-
-    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_unitario) {
+    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_nota) {
         alert('Por favor, preencha todos os campos obrigatórios (*).');
         return;
     }
@@ -343,7 +343,8 @@ function editarEntrada(id) {
         document.getElementById('vida').value = data.vida ?? 1; // Usa ?? para permitir 0
         document.getElementById('os').value = data.os || '';
         document.getElementById('quantidade').value = data.quantidade || 0;
-        document.getElementById('valor_unitario').value = data.valor_unitario || 0;
+        document.getElementById('valor_nota').value = data.valor_nota || 0;
+        document.getElementById('valor_frete').value = data.valor_frete || 0;
         document.getElementById('observacoes').value = data.observacoes || '';
 
         editMode = true;
