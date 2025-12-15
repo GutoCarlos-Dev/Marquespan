@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectTipo = document.getElementById('tipo');
     const inputVida = document.getElementById('vida');
     // Campos para cálculo de valor
+    const inputQuantidade = document.getElementById('quantidade');
     const inputValorNota = document.getElementById('valor_nota');
     const inputValorFrete = document.getElementById('valor_frete');
 
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     // Listeners para recalcular o valor total
+    inputQuantidade?.addEventListener('input', calcularValorTotal);
     inputValorNota?.addEventListener('input', calcularValorTotal);
     inputValorFrete?.addEventListener('input', calcularValorTotal);
 
@@ -81,9 +83,11 @@ function clearForm() {
 
 // 💰 Calcula e exibe o valor total
 function calcularValorTotal() {
+    const quantidade = parseFloat(document.getElementById('quantidade').value) || 1; // Evita divisão por zero
     const valorNota = parseFloat(document.getElementById('valor_nota').value) || 0;
     const valorFrete = parseFloat(document.getElementById('valor_frete').value) || 0;
-    const total = valorNota + valorFrete;
+    // O valor total é a soma da nota e do frete. O valor unitário é derivado disso.
+    const total = valorNota + valorFrete; 
 
     const displayTotal = document.getElementById('valor_total_display');
     if (displayTotal) {
@@ -108,9 +112,11 @@ async function handleSubmit(e) {
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
-        valor_nota: parseFloat(formData.get('valor_nota') || 0),
-        valor_frete: parseFloat(formData.get('valor_frete') || 0),
-        valor_total: (parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)),
+        valor_nota: parseFloat(formData.get('valor_nota') || 0), // Custo total da nota
+        valor_frete: parseFloat(formData.get('valor_frete') || 0), // Custo total do frete
+        valor_total: (parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)), // Custo total da entrada
+        // Novo campo calculado: Custo real por unidade
+        valor_unitario_real: ((parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)) / (parseInt(formData.get('quantidade')) || 1)),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
@@ -348,6 +354,7 @@ function editarEntrada(id) {
         document.getElementById('quantidade').value = data.quantidade || 0;
         document.getElementById('valor_nota').value = data.valor_nota || 0;
         document.getElementById('valor_frete').value = data.valor_frete || 0;
+        // O valor_unitario_real não precisa ser preenchido no form, pois é apenas para salvar
         document.getElementById('observacoes').value = data.observacoes || '';
 
         editMode = true;
