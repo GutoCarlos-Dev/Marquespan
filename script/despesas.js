@@ -30,6 +30,7 @@ const DespesasUI = {
         this.hoteisList = document.getElementById('hoteisList');
         this.funcionarios1List = document.getElementById('funcionarios1List');
         this.funcionarios2List = document.getElementById('funcionarios2List');
+        this.btnAdicionarHotel = document.getElementById('btnAdicionarHotel');
         this.tipoQuartoSelect = document.getElementById('despesaTipoQuarto');
     },
 
@@ -44,6 +45,9 @@ const DespesasUI = {
         this.valorDiariaInput.addEventListener('input', () => this.calcularValorTotal());
         this.valorEnergiaInput.addEventListener('input', () => this.calcularValorTotal());
 
+        // Listener para o novo botão de adicionar hotel
+        this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
+
         // Listener para carregar tipos de quarto quando um hotel é selecionado
         document.getElementById('despesaHotelInput').addEventListener('change', (e) => this.loadTiposQuarto(e.target.value));
     },
@@ -51,6 +55,11 @@ const DespesasUI = {
     async loadInitialData() {
         this.renderGrid();
         this.loadDatalists();
+    },
+
+    abrirCadastroHotel() {
+        // Redireciona para a página de hotéis, passando a página atual como parâmetro para retorno
+        window.location.href = `hotel.html?redirect=despesas.html`;
     },
 
     /**

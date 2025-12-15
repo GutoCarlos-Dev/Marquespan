@@ -111,6 +111,14 @@ class HotelManager {
         } else {
             alert(`Hotel ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
             this.clearHotelForm();
+
+            // Verifica se há um parâmetro de redirecionamento na URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectPage = urlParams.get('redirect');
+            if (redirectPage) {
+                window.location.href = redirectPage; // Volta para a página de origem
+                return; // Impede a continuação da execução
+            }
             this.renderHotels();
         }
     }

@@ -241,3 +241,28 @@
   justify-content: flex-start;
   margin-top: 15px;
 }
+
+/* Estilos para o input com ícone de ação */
+.input-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-with-icon input {
+    flex-grow: 1; /* Faz o input ocupar o espaço restante */
+}
+
+.btn-add-icon {
+    background: none;
+    border: none;
+    color: #28a745; /* Cor verde padrão do sistema */
+    font-size: 1.6rem; /* Tamanho do ícone */
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.2s ease-in-out;
+}
+
+.btn-add-icon:hover {
+    color: #218838; /* Verde mais escuro no hover */
+}
