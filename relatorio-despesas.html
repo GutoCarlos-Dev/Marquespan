@@ -114,6 +114,18 @@
                 <form id="filtro-despesas-form" class="form-grid-layout">
                     <fieldset>
                         <legend>Filtrar Despesas</legend>
+                        <!-- Linha 1: Período -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="data-inicial">Período Inicial</label>
+                                <input type="date" id="data-inicial" name="data-inicial" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="data-final">Período Final</label>
+                                <input type="date" id="data-final" name="data-final" required>
+                            </div>
+                        </div>
+                        <!-- Linha 2: Rotas e Hotel -->
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="rotas">Rotas (selecione uma ou mais)</label>
@@ -125,16 +137,6 @@
                                 <label for="hotel">Hotel</label>
                                 <input type="text" id="hotel" name="hotel" list="hoteisList" placeholder="Todos os hotéis">
                                 <datalist id="hoteisList"></datalist>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="data-inicial">Período Inicial</label>
-                                <input type="date" id="data-inicial" name="data-inicial" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="data-final">Período Final</label>
-                                <input type="date" id="data-final" name="data-final" required>
                             </div>
                         </div>
                         <div class="form-actions">
