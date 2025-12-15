@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancelForm = document.getElementById('btnCancelForm');
     const selectTipo = document.getElementById('tipo');
     const inputVida = document.getElementById('vida');
+    // Campos para cálculo de valor
+    const inputQuantidade = document.getElementById('quantidade');
+    const inputValorUnitario = document.getElementById('valor_unitario');
 
     // --- Event Listeners ---
     form.addEventListener('submit', handleSubmit);
@@ -28,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
             inputVida.value = 0;
         }
     });
+    // Listeners para recalcular o valor total
+    inputQuantidade?.addEventListener('input', calcularValorTotal);
+    inputValorUnitario?.addEventListener('input', calcularValorTotal);
 
     // --- Inicialização da Página ---
     initializeSelects();
@@ -66,8 +72,26 @@ function clearForm() {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('data').value = now.toISOString().slice(0, 10);
 
+    // Limpa o display de valor total
+    document.getElementById('valor_total_display').textContent = 'R$ 0,00';
+
     editMode = false;
     editingId = null;
+}
+
+// 💰 Calcula e exibe o valor total
+function calcularValorTotal() {
+    const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
+    const valorUnitario = parseFloat(document.getElementById('valor_unitario').value) || 0;
+    const total = quantidade * valorUnitario;
+
+    const displayTotal = document.getElementById('valor_total_display');
+    if (displayTotal) {
+        displayTotal.textContent = total.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    }
 }
 
 // 💾 Salva ou atualiza uma entrada de pneu
@@ -77,12 +101,15 @@ async function handleSubmit(e) {
     const formData = new FormData(e.target);
     const pneuData = {
         data: formData.get('data'),
+        os: formData.get('os')?.trim().toUpperCase(),
         nota_fiscal: formData.get('nota_fiscal')?.trim().toUpperCase(),
         marca: formData.get('marca'),
         modelo: formData.get('modelo'),
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
+        valor_unitario: parseFloat(formData.get('valor_unitario') || 0),
+        valor_total: (parseFloat(formData.get('quantidade') || 0) * parseFloat(formData.get('valor_unitario') || 0)),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
@@ -90,7 +117,7 @@ async function handleSubmit(e) {
         descricao: 'ENTRADA ESTOQUE NF',
     };
 
-    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0) {
+    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_unitario) {
         alert('Por favor, preencha todos os campos obrigatórios (*).');
         return;
     }
@@ -314,11 +341,15 @@ function editarEntrada(id) {
         document.getElementById('modelo').value = data.modelo;
         document.getElementById('tipo').value = data.tipo;
         document.getElementById('vida').value = data.vida ?? 1; // Usa ?? para permitir 0
+        document.getElementById('os').value = data.os || '';
         document.getElementById('quantidade').value = data.quantidade || 0;
+        document.getElementById('valor_unitario').value = data.valor_unitario || 0;
         document.getElementById('observacoes').value = data.observacoes || '';
 
         editMode = true;
         editingId = id;
+        
+        calcularValorTotal(); // Recalcula o total ao carregar para edição
 
         document.getElementById('formPneu').scrollIntoView({ behavior: 'smooth' });
     } catch (error) {

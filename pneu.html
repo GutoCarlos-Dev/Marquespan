@@ -28,13 +28,17 @@
           <h3><i class="fas fa-plus-circle"></i>Registrar Entrada de Pneus</h3>
         </div>
         <form id="formPneu">
+          <!-- Novos campos adicionados e reorganizados -->
           <div class="form-group-pneu"><label for="data">Data *</label><input type="date" name="data" id="data" required /></div>
+          <div class="form-group-pneu"><label for="os">OS</label><input type="text" name="os" id="os" placeholder="Ordem de Serviço" /></div>
           <div class="form-group-pneu"><label for="nota_fiscal">Nota Fiscal *</label><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF" required /></div>
           <div class="form-group-pneu"><label for="marca">Marca *</label><select name="marca" id="marca" required><option value="">Selecione</option></select></div>
           <div class="form-group-pneu"><label for="modelo">Modelo *</label><select name="modelo" id="modelo" required><option value="">Selecione</option></select></div>
           <div class="form-group-pneu"><label for="tipo">Tipo *</label><select name="tipo" id="tipo" required><option value="">Selecione</option></select></div>
-          <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="0" value="1" /></div>
-          <div class="form-group-pneu"><label for="quantidade">Quantidade *</label><input type="number" name="quantidade" id="quantidade" min="1" required /></div>
+          <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="0" value="0" /></div>
+          <div class="form-group-pneu"><label for="quantidade">Quantidade *</label><input type="number" name="quantidade" id="quantidade" min="1" value="1" required /></div>
+          <div class="form-group-pneu"><label for="valor_unitario">Valor Unitário *</label><input type="number" name="valor_unitario" id="valor_unitario" min="0" step="0.01" required /></div>
+          <div class="form-group-pneu form-group-total"><label>Valor Total:</label><strong id="valor_total_display">R$ 0,00</strong></div>
           <div class="form-group-pneu form-group-full-width"><label for="observacoes">Observações</label><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a entrada..."></textarea></div>
 
           <div class="form-actions-pneu">
