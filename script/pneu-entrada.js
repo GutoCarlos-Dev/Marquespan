@@ -61,10 +61,10 @@ function clearForm() {
     const form = document.getElementById('formPneu');
     form.reset();
     
-    // Ajuste para usar a data e hora local, corrigindo o fuso horário.
+    // Ajuste para usar apenas a data local.
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('data').value = now.toISOString().slice(0, 16);
+    document.getElementById('data').value = now.toISOString().slice(0, 10);
 
     editMode = false;
     editingId = null;
@@ -256,7 +256,7 @@ function renderizarGrid(lista) {
                </button>`;
 
         tr.innerHTML = `
-            <td>${pneu.data ? new Date(pneu.data).toLocaleString('pt-BR') : ''}</td>
+            <td>${pneu.data ? new Date(pneu.data + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
             <td class="uppercase">${pneu.nota_fiscal || ''}</td>
             <td>${pneu.marca}</td>
             <td>${pneu.modelo}</td>
@@ -308,7 +308,7 @@ function editarEntrada(id) {
         return;
     }
     try {
-        document.getElementById('data').value = data.data ? new Date(data.data).toISOString().slice(0, 16) : '';
+        document.getElementById('data').value = data.data ? new Date(data.data + 'T00:00:00').toISOString().slice(0, 10) : '';
         document.getElementById('nota_fiscal').value = data.nota_fiscal || '';
         document.getElementById('marca').value = data.marca;
         document.getElementById('modelo').value = data.modelo;
