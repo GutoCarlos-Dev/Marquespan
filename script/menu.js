@@ -1,10 +1,12 @@
+import { supabaseClient } from './supabase.js';
+
 document.addEventListener('DOMContentLoaded', function() {
   // Carregar o menu
   fetch('menu.html')
     .then(response => response.text())
     .then(data => {
       document.body.insertAdjacentHTML('afterbegin', data);
-
+ 
       // Inicializar funcionalidades do menu após carregamento
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
       const divUsuario = document.getElementById('usuario-logado');
@@ -13,9 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Controlar visibilidade do menu baseado no nível do usuário
-      if (usuario && usuario.nivel) {
-        controlarMenuPorNivel(usuario.nivel);
-      }
+      // A verificação de `usuario` já acontece dentro da função
+      controlarMenuPorNivel();
+
+      // Adiciona funcionalidade de toggle para os submenus
 
       document.querySelectorAll('.menu-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -53,61 +56,60 @@ function closeSidebarOnClickOutside(event) {
   }
 }
 
-function controlarMenuPorNivel(nivel) {
+async function controlarMenuPorNivel() {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
-
   const nav = sidebar.querySelector('nav');
   if (!nav) return;
 
-  const allLinks = nav.querySelectorAll('a, .menu-group');
-  allLinks.forEach(el => el.style.display = 'none'); // Esconde tudo por padrão
-
-  // Links que todos os usuários veem
-  const linksComuns = ['a[href="dashboard.html"]', 'a[href="index.html"]'];
-  linksComuns.forEach(sel => {
-    const el = nav.querySelector(sel);
-    if (el) el.style.display = 'block';
-  });
-
-  const nivelAtual = nivel.toLowerCase();
-
-  // Lógica de permissão hardcoded
-  switch (nivelAtual) {
-    case 'administrador':
-      // Mostra todos os links e grupos
-      allLinks.forEach(el => el.style.display = 'block');
-      break;
-
-    case 'estoque':
-      // Mostra os grupos de Estoque e Compras
-      const grupoEstoque = nav.querySelector('.menu-group:has(a[href="estoque_geral.html"])');
-      if (grupoEstoque) {
-        grupoEstoque.style.display = 'block';
-        grupoEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  if (!usuario || !usuario.nivel) {
+    // Se não houver usuário ou nível, esconde tudo exceto o link de login/logout
+    nav.querySelectorAll('a, .menu-group').forEach(el => {
+      if (el.getAttribute('href') !== 'index.html') {
+        el.style.display = 'none';
       }
-      const grupoComprasEstoque = nav.querySelector('.menu-group:has(a[href="compras.html"])');
-      if (grupoComprasEstoque) {
-        grupoComprasEstoque.style.display = 'block';
-        grupoComprasEstoque.querySelectorAll('a').forEach(link => link.style.display = 'block');
-      }
-      // Mostra o grupo de Pneus para o nível Estoque
-      const grupoPneus = nav.querySelector('.menu-group:has(a[href="pneu.html"])');
-      if (grupoPneus) {
-        grupoPneus.style.display = 'block';
-        grupoPneus.querySelectorAll('a').forEach(link => link.style.display = 'block');
-      }
-      break;
+    });
+    return;
+  }
 
-    case 'compras':
-      // Mostra apenas o grupo de Compras
-      const grupoCompras = nav.querySelector('.menu-group:has(a[href="compras.html"])');
-      if (grupoCompras) {
-        grupoCompras.style.display = 'block';
-        grupoCompras.querySelectorAll('a').forEach(link => link.style.display = 'block');
-      }
-      break;
+  const nivel = usuario.nivel.toLowerCase();
+  const allMenuItems = nav.querySelectorAll('a, .menu-group');
+  allMenuItems.forEach(el => el.style.display = 'none'); // Esconde tudo por padrão
 
-    // Outros níveis não veem menus específicos por padrão
+  // Administrador sempre vê tudo
+  if (nivel === 'administrador') {
+    allMenuItems.forEach(el => el.style.display = 'block');
+    return;
+  }
+
+  // Para outros níveis, busca as permissões no banco de dados
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .single();
+
+    if (error) throw error;
+
+    const paginasPermitidas = data ? data.paginas_permitidas || [] : [];
+    // Adiciona dashboard e index como páginas sempre permitidas
+    paginasPermitidas.push('dashboard.html', 'index.html');
+
+    nav.querySelectorAll('a').forEach(link => {
+      const href = link.getAttribute('href');
+      if (paginasPermitidas.includes(href)) {
+        link.style.display = 'block';
+        // Mostra o grupo pai do link, se houver
+        const parentGroup = link.closest('.menu-group');
+        if (parentGroup) parentGroup.style.display = 'block';
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar permissões do menu:', error);
+    // Em caso de erro, mostra apenas o link do dashboard para segurança
+    const dashboardLink = nav.querySelector('a[href="dashboard.html"]');
+    if (dashboardLink) dashboardLink.style.display = 'block';
   }
 }
