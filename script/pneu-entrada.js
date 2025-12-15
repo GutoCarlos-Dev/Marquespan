@@ -265,7 +265,7 @@ function renderizarGrid(lista) {
     gridBody.innerHTML = '';
 
     if (lista.length === 0) {
-        gridBody.innerHTML = `<tr><td colspan="9" class="no-results-message">Nenhuma entrada encontrada.</td></tr>`;
+        gridBody.innerHTML = `<tr><td colspan="12" class="no-results-message">Nenhuma entrada encontrada.</td></tr>`;
         return;
     }
 
@@ -290,6 +290,9 @@ function renderizarGrid(lista) {
             <td>${pneu.tipo}</td>
             <td>${pneu.vida || 0}</td>
             <td>${pneu.quantidade || 0}</td>
+            <td>${(pneu.valor_nota || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+            <td>${(pneu.valor_frete || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+            <td><strong>${(pneu.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
             <td>
                 ${botaoMarcaFogo}
             </td>
