@@ -11,6 +11,7 @@ class HotelManager {
     cache() {
         // Formulário e tabela de Hotéis
         this.formHotel = document.getElementById('formCadastrarHotel');
+        this.redirectUrlOnPanelClose = null; // Armazena a URL de redirecionamento
         this.hotelTableBody = document.getElementById('hotelTableBody');
         this.hotelEditingId = document.getElementById('hotelEditingId');
         this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
@@ -101,25 +102,36 @@ class HotelManager {
 
         let result;
         if (id) {
-            result = await supabaseClient.from('hoteis').update(hotelData).eq('id', id);
+            // Ao atualizar, retorna o dado para consistência
+            result = await supabaseClient.from('hoteis').update(hotelData).eq('id', id).select().single();
         } else {
-            result = await supabaseClient.from('hoteis').insert([hotelData]);
+            // Ao inserir, usa .select() para obter o hotel recém-criado
+            result = await supabaseClient.from('hoteis').insert([hotelData]).select().single();
         }
 
         if (result.error) {
             alert('Erro ao salvar hotel: ' + result.error.message);
         } else {
+            const savedHotel = result.data;
             alert(`Hotel ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
             this.clearHotelForm();
 
-            // Verifica se há um parâmetro de redirecionamento na URL
             const urlParams = new URLSearchParams(window.location.search);
             const redirectPage = urlParams.get('redirect');
-            if (redirectPage) {
-                window.location.href = redirectPage; // Volta para a página de origem
-                return; // Impede a continuação da execução
+
+            // Se for um NOVO hotel e houver uma página de redirecionamento
+            if (!id && redirectPage) {
+                if (confirm('Deseja cadastrar os tipos de quarto para este hotel agora?')) {
+                    this.redirectUrlOnPanelClose = redirectPage; // Armazena a URL para redirecionar ao fechar o painel
+                    this.openQuartosPanel(savedHotel.id, savedHotel.nome);
+                } else {
+                    window.location.href = redirectPage; // Redireciona imediatamente se o usuário não quiser
+                }
+            } else if (redirectPage) {
+                window.location.href = redirectPage; // Redireciona para atualizações ou se a lógica anterior não se aplicar
+            } else {
+                this.renderHotels(); // Comportamento padrão: apenas atualiza a lista
             }
-            this.renderHotels();
         }
     }
 
@@ -250,6 +262,12 @@ Atenção:
         this.quartosPanelBackdrop.classList.add('hidden');
         this.formQuarto.reset();
         this.listaQuartos.innerHTML = '';
+
+        // Se houver uma URL de redirecionamento pendente, executa agora
+        if (this.redirectUrlOnPanelClose) {
+            window.location.href = this.redirectUrlOnPanelClose;
+            this.redirectUrlOnPanelClose = null; // Limpa para evitar redirecionamentos futuros
+        }
     }
 
     async renderQuartos(hotelId) {
