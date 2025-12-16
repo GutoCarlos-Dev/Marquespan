@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Inicialização da Página ---
     carregarPlacas();
     carregarMovimentacoes();
+    carregarMarcasDeFogo();
     clearForm();
 });
 
@@ -58,6 +59,28 @@ async function carregarPlacas() {
         });
     } catch (error) {
         console.error('Erro ao carregar placas:', error);
+    }
+}
+
+// ⚙️ Carrega as marcas de fogo no campo de busca
+async function carregarMarcasDeFogo() {
+    const campoMarcaFogo = document.getElementById('codigo_marca_fogo');
+    if (!campoMarcaFogo) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('marcas_fogo_pneus')
+            .select('codigo_marca_fogo')
+            .order('codigo_marca_fogo', { ascending: true });
+
+        if (error) throw error;
+
+        campoMarcaFogo.innerHTML = '<option value="">Selecione</option>';
+        data.forEach(item => {
+            campoMarcaFogo.innerHTML += `<option value="${item.codigo_marca_fogo}">${item.codigo_marca_fogo}</option>`;
+        });
+    } catch (error) {
+        console.error('Erro ao carregar marcas de fogo:', error);
     }
 }
 
