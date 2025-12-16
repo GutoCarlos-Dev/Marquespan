@@ -36,3 +36,6 @@
 
 /* 🔑 Estilos específicos da página de permissões */
 @import url("permissoes.css");
+
+/*  टायर Estilos específicos da página de estoque de pneus */
+@import url("estoque-pneus.css");
