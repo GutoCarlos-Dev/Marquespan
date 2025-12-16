@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputVida = document.getElementById('vida');
     // Campos para cálculo de valor
     const inputQuantidade = document.getElementById('quantidade');
-    const inputValorNota = document.getElementById('valor_nota');
+    const inputValorNota = document.getElementById('vlr_nota');
     const inputValorFrete = document.getElementById('valor_frete');
 
     // --- Event Listeners ---
@@ -84,7 +84,7 @@ function clearForm() {
 // 💰 Calcula e exibe o valor total
 function calcularValorTotal() {
     const quantidade = parseFloat(document.getElementById('quantidade').value) || 1; // Evita divisão por zero
-    const valorNota = parseFloat(document.getElementById('valor_nota').value) || 0;
+    const valorNota = parseFloat(document.getElementById('vlr_nota').value) || 0;
     const valorFrete = parseFloat(document.getElementById('valor_frete').value) || 0;
     // O valor total é a soma da nota e do frete. O valor unitário é derivado disso.
     const total = valorNota + valorFrete; 
@@ -112,18 +112,18 @@ async function handleSubmit(e) {
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
-        valor_nota: parseFloat(formData.get('valor_nota') || 0), // Custo total da nota
+        valor_nota: parseFloat(formData.get('vlr_nota') || 0), // Custo total da nota
         valor_frete: parseFloat(formData.get('valor_frete') || 0), // Custo total do frete
-        valor_total: (parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)), // Custo total da entrada
+        valor_total: (parseFloat(formData.get('vlr_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)), // Custo total da entrada
         // Novo campo calculado: Custo real por unidade
-        valor_unitario_real: ((parseFloat(formData.get('valor_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)) / (parseInt(formData.get('quantidade')) || 1)),
+        valor_unitario_real: ((parseFloat(formData.get('vlr_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)) / (parseInt(formData.get('quantidade')) || 1)),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
         // Campos fixos para esta tela
         status: 'ENTRADA',
         descricao: 'ENTRADA ESTOQUE NF',
     };
-    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_nota) {
+    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_nota && pneuData.valor_nota !== 0) {
         alert('Por favor, preencha todos os campos obrigatórios (*).');
         return;
     }
@@ -352,7 +352,7 @@ function editarEntrada(id) {
         document.getElementById('vida').value = data.vida ?? 1; // Usa ?? para permitir 0
         document.getElementById('os').value = data.os || '';
         document.getElementById('quantidade').value = data.quantidade || 0;
-        document.getElementById('valor_nota').value = data.valor_nota || 0;
+        document.getElementById('vlr_nota').value = data.valor_nota || 0;
         document.getElementById('valor_frete').value = data.valor_frete || 0;
         // O valor_unitario_real não precisa ser preenchido no form, pois é apenas para salvar
         document.getElementById('observacoes').value = data.observacoes || '';

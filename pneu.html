@@ -98,24 +98,5 @@
 
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/pneu-entrada.js"></script>
-
-  <script>
-    // Adiciona a funcionalidade de cálculo automático do valor total
-    document.addEventListener('DOMContentLoaded', () => {
-      const vlrNotaInput = document.getElementById('vlr_nota');
-      const valorFreteInput = document.getElementById('valor_frete');
-      const valorTotalDisplay = document.getElementById('valor_total_display');
-
-      function calcularEAtualizarTotal() {
-        const vlrNota = parseFloat(vlrNotaInput.value) || 0;
-        const valorFrete = parseFloat(valorFreteInput.value) || 0;
-        const total = vlrNota + valorFrete;
-        valorTotalDisplay.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-      }
-
-      vlrNotaInput.addEventListener('input', calcularEAtualizarTotal);
-      valorFreteInput.addEventListener('input', calcularEAtualizarTotal);
-    });
-  </script>
 </body>
 </html>
