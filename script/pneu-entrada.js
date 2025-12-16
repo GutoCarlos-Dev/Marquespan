@@ -163,49 +163,25 @@ async function handleSubmit(e) {
 
 // 🔥 Gera códigos de marca de fogo sequenciais
 async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
+    // A lógica foi movida para uma função (Stored Procedure) no Supabase
+    // para garantir atomicidade e evitar race conditions.
+    // Agora, apenas chamamos a função RPC.
     try {
-        // 1. Buscar o último código gerado para saber onde continuar
-        const { data: ultimosCodigos, error: buscaError } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .select('codigo_marca_fogo')
-            .order('id', { ascending: false })
-            .limit(1);
+        const { error } = await supabaseClient.rpc('gerar_codigos_marca_fogo', {
+            p_lancamento_id: lancamentoId,
+            p_quantidade: quantidade,
+            p_usuario_criacao: usuario
+        });
 
-        if (buscaError) {
-            throw buscaError;
-        }
-
-        let proximoNumero = 1;
-        if (ultimosCodigos && ultimosCodigos.length > 0) {
-            const ultimoCodigo = ultimosCodigos[0];
-            const numero = parseInt(ultimoCodigo.codigo_marca_fogo.replace('MF', ''), 10);
-            proximoNumero = numero + 1;
-        }
-
-        // 2. Preparar os novos códigos para inserção
-        const codigosParaInserir = [];
-        for (let i = 0; i < quantidade; i++) {
-            const novoCodigo = `MF${(proximoNumero + i).toString().padStart(6, '0')}`;
-            codigosParaInserir.push({
-                lancamento_id: lancamentoId,
-                codigo_marca_fogo: novoCodigo,
-                status_pneu: 'ESTOQUE',
-                usuario_criacao: usuario
-            });
-        }
-
-        // 3. Inserir os novos códigos no banco de dados
-        if (codigosParaInserir.length > 0) {
-            const { error: insertError } = await supabaseClient
-                .from('marcas_fogo_pneus')
-                .insert(codigosParaInserir);
-
-            if (insertError) throw insertError;
+        if (error) {
+            // Lança o erro para ser capturado pelo bloco catch no handleSubmit
+            throw error;
         }
 
     } catch (error) {
+        // Loga o erro e relança para que a função que chamou (handleSubmit) possa tratá-lo.
         console.error('Erro na geração de códigos de marca de fogo:', error);
-        alert('Aviso: Houve um erro ao gerar os códigos de marca de fogo. Verifique o console para detalhes.');
+        throw new Error('Houve um erro ao gerar os códigos de marca de fogo. Verifique o console para detalhes.');
     }
 }
 
