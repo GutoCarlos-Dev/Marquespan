@@ -78,35 +78,32 @@ function renderizarEstoque(lista) {
   gridBody.innerHTML = '';
 
   if (lista.length === 0) {
-    gridBody.innerHTML = '<div class="grid-row" style="padding: 20px; text-align: center;">Nenhum item em estoque.</div>';
+    gridBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum item em estoque.</td></tr>';
     document.getElementById('total-quantidade').textContent = '0';
     return;
   }
 
   let total = 0;
+  let html = '';
 
   lista.forEach((item, index) => {
     total += item.quantidade;
-    const row = document.createElement('div');
-    row.classList.add('grid-row');
-    row.style.display = 'flex';
-    row.style.whiteSpace = 'nowrap';
-    row.style.borderBottom = '1px solid #eee';
-    row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
-    row.style.cursor = 'default';
+    // A placa será "ESTOQUE" se o pneu não estiver em um veículo.
+    const textoPlaca = item.placa || '<strong>ESTOQUE</strong>';
 
-    row.innerHTML = `
-      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.placa}</div>
-      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.marca}</div>
-      <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.modelo}</div>
-      <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;">${item.vida}</div>
-      <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">${item.tipo}</div>
-      <div style="flex: 1.5; min-width: 100px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee; font-weight: bold; color: ${item.quantidade > 0 ? '#28a745' : '#dc3545'};">${item.quantidade}</div>
+    html += `
+      <tr>
+        <td>${textoPlaca}</td>
+        <td>${item.marca}</td>
+        <td>${item.modelo}</td>
+        <td class="text-center">${item.vida}</td>
+        <td>${item.tipo}</td>
+        <td class="text-center" style="font-weight: bold; color: #28a745;">${item.quantidade}</td>
+      </tr>
     `;
-
-    gridBody.appendChild(row);
   });
 
+  gridBody.innerHTML = html;
   document.getElementById('total-quantidade').textContent = total;
 }
 
