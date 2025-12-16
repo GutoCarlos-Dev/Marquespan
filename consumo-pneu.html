@@ -105,24 +105,5 @@
   <script type="module" src="./script/menu.js" defer></script>
   <!-- O script pneu-updated.js precisará ser ajustado para esta nova estrutura -->
   <script type="module" src="./script/pneu-consumo.js" defer></script>
-
-  <script>
-    // Lógica para mostrar/ocultar campos de troca/rodízio
-    document.addEventListener('DOMContentLoaded', () => {
-      const tipoOperacaoSelect = document.getElementById('tipo_operacao');
-      const camposTrocaRodizio = document.getElementById('campos-troca-rodizio');
-
-      if (tipoOperacaoSelect && camposTrocaRodizio) {
-        tipoOperacaoSelect.addEventListener('change', (event) => {
-          const operacao = event.target.value;
-          if (operacao === 'RODIZIO' || operacao === 'TROCA') {
-            camposTrocaRodizio.classList.remove('hidden');
-          } else {
-            camposTrocaRodizio.classList.add('hidden');
-          }
-        });
-      }
-    });
-  </script>
 </body>
 </html>

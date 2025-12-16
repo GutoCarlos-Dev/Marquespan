@@ -9,12 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBuscar = document.getElementById('btn-buscar');
     const btnLimparBusca = document.getElementById('btn-limpar-busca');
     const btnCancelForm = document.getElementById('btnCancelForm');
+    const tipoOperacaoSelect = document.getElementById('tipo_operacao');
 
     // --- Event Listeners ---
     form.addEventListener('submit', handleSubmit);
     btnBuscar?.addEventListener('click', buscarMovimentacoes);
     btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
     btnCancelForm?.addEventListener('click', () => clearForm());
+
+    // Lógica para mostrar/ocultar campos de troca/rodízio
+    tipoOperacaoSelect?.addEventListener('change', (event) => {
+        const camposTrocaRodizio = document.getElementById('campos-troca-rodizio');
+        if (!camposTrocaRodizio) return;
+
+        const operacao = event.target.value;
+        if (operacao === 'RODIZIO' || operacao === 'TROCA') {
+            camposTrocaRodizio.classList.remove('hidden');
+        } else {
+            camposTrocaRodizio.classList.add('hidden');
+        }
+    });
 
     // --- Inicialização da Página ---
     carregarPlacas();
@@ -151,8 +165,8 @@ async function carregarMovimentacoes() {
 
 // 🔍 Busca movimentações com base nos filtros
 async function buscarMovimentacoes() {
-    const marcaFogo = document.getElementById('campo-marca-fogo')?.value.trim().toUpperCase();
-    const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
+    const marcaFogo = document.getElementById('campo-marca-fogo-busca')?.value.trim().toUpperCase();
+    const placa = document.getElementById('campo-placa-busca')?.value.trim().toUpperCase();
     const operacao = document.getElementById('campo-operacao')?.value;
 
     try {
@@ -177,8 +191,8 @@ async function buscarMovimentacoes() {
 
 // 🧹 Limpa os filtros de busca e recarrega a lista completa
 function limparFiltrosBusca() {
-    document.getElementById('campo-marca-fogo').value = '';
-    document.getElementById('campo-placa').value = '';
+    document.getElementById('campo-marca-fogo-busca').value = '';
+    document.getElementById('campo-placa-busca').value = '';
     document.getElementById('campo-operacao').value = '';
     carregarMovimentacoes();
 }
