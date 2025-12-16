@@ -265,20 +265,21 @@ function renderizarGrid(lista) {
                    <i class="fas fa-fire"></i> Gerar
                </button>`;
 
+        // A ordem das colunas foi ajustada para corresponder ao cabeçalho da tabela no HTML.
         tr.innerHTML = `
             <td>${pneu.data ? new Date(pneu.data + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
             <td class="uppercase">${pneu.nota_fiscal || ''}</td>
             <td>${pneu.marca}</td>
             <td>${pneu.modelo}</td>
             <td>${pneu.tipo}</td>
-            <td>${pneu.vida || 0}</td>
-            <td>${pneu.quantidade || 0}</td>
+            <td style="text-align: center;">${pneu.vida || 0}</td>
+            <td style="text-align: center;">${pneu.quantidade || 0}</td>
+            <td style="text-align: center;">
+                ${botaoMarcaFogo}
+            </td>
             <td>${(pneu.valor_nota || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
             <td>${(pneu.valor_frete || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
             <td><strong>${(pneu.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
-            <td>
-                ${botaoMarcaFogo}
-            </td>
             <td class="actions-cell">
                 <button class="btn-pneu-action edit" data-action="edit" data-id="${pneu.id}" title="Editar Lançamento">
                     <i class="fas fa-pen"></i>
