@@ -14,46 +14,39 @@
 </head>
 <body>
   <main class="main-content">
-    <header class="form-section-header" style="font-size: 2.2rem; font-weight: 700; text-align: center; padding: 30px 25px; background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,249,250,0.9)); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin-bottom: 35px; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4), 0 0 20px rgba(40, 167, 69, 0.1); border: 1px solid rgba(255,255,255,0.5); position: relative; overflow: hidden;"><i class="fas fa-tire" style="margin-right: 15px; color: #28a745; filter: drop-shadow(0 0 10px rgba(40, 167, 69, 0.7)); animation: pulse 2s infinite;"></i><span style="background: linear-gradient(45deg, #1a662c, #26c920, #a9ccd1, #28a745); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 0 20px rgba(40, 167, 69, 0.3);">Estoque de Pneus</span></header>
+    <header class="page-title-header">
+      <i class="fas fa-tire page-title-icon"></i>
+      <span class="page-title-text">Estoque de Pneus</span>
+    </header>
     <section class="content-section">
       <!-- Card do Filtro de Busca -->
-      <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
-        <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
-          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-search" style="margin-right: 8px;"></i>Filtros de Busca</h3>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-search"></i>Filtros de Busca</h3>
         </div>
-        <div class="filtro-table-wrapper" style="overflow-x: auto;">
-          <table class="filtro-table" style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid #57ee77; min-width: 600px;">
+        <div class="filter-table-wrapper">
+          <table class="filter-table">
             <thead>
-              <tr style="background-color: #d4f7dc;">
-                <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Placa</th>
-                <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Marca</th>
-                <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Modelo</th>
-                <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Vida</th>
-                <th style="padding: 12px; text-align: center; border-right: 1px solid #57ee77; font-weight: bold;">Tipo</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">Ações</th>
+              <tr>
+                <th>Placa</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Vida</th>
+                <th>Tipo</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
-                  <input type="text" id="campo-placa-estoque" placeholder="Placa" list="placas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
-                </td>
-                <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
-                  <input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
-                </td>
-                <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
-                  <input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
-                </td>
-                <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
-                  <input type="number" id="campo-vida-estoque" placeholder="Vida" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
-                </td>
-                <td style="padding: 12px; text-align: center; border-right: 1px solid #57ee77;">
-                  <input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;" />
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                  <button type="button" id="btn-buscar-estoque" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3); margin-right: 5px;"><i class="fas fa-search" style="margin-right: 5px;"></i>Buscar</button>
-                  <button type="button" id="btn-limpar-estoque" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3); margin-right: 5px;"><i class="fas fa-eraser" style="margin-right: 5px;"></i>Limpar</button>
-                  <button type="button" id="btn-exportar-estoque" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);"><i class="fas fa-file-excel" style="margin-right: 5px;"></i>Exportar XLSX</button>
+                <td><input type="text" id="campo-placa-estoque" placeholder="Placa" list="placas-list" /></td>
+                <td><input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" /></td>
+                <td><input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" /></td>
+                <td><input type="number" id="campo-vida-estoque" placeholder="Vida" /></td>
+                <td><input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" /></td>
+                <td class="actions-cell">
+                  <button type="button" id="btn-buscar-estoque" class="btn btn-success"><i class="fas fa-search"></i>Buscar</button>
+                  <button type="button" id="btn-limpar-estoque" class="btn btn-secondary"><i class="fas fa-eraser"></i>Limpar</button>
+                  <button type="button" id="btn-exportar-estoque" class="btn btn-success"><i class="fas fa-file-excel"></i>Exportar XLSX</button>
                 </td>
               </tr>
             </tbody>
@@ -65,53 +58,51 @@
         </div>
       </div>
       <!-- Card da Tabela de Estoque -->
-      <div class="table-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
-        <div class="table-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
-          <h2 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-list" style="margin-right: 8px;"></i>Estoque de Pneus</h2>
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-list"></i>Estoque de Pneus</h2>
         </div>
-        <div class="grid-wrapper" style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-          <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;">
-            <div class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #28a745, #20c997); color: white; font-weight: 600; border-bottom: 2px solid #1e7e34;">
-              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-car" style="margin-right: 5px;"></i>Placa</div>
-              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
-              <div style="flex: 1.5; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
-              <div style="flex: 0.5; min-width: 50px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
-              <div style="flex: 1; min-width: 80px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
-              <div style="flex: 1.5; min-width: 100px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Quantidade em Estoque</div>
+        <div class="grid-wrapper">
+          <section class="grid-pneus">
+            <div class="grid-header">
+              <div class="col-placa"><i class="fas fa-car"></i>Placa</div>
+              <div class="col-marca"><i class="fas fa-tag"></i>Marca</div>
+              <div class="col-modelo"><i class="fas fa-cog"></i>Modelo</div>
+              <div class="col-vida"><i class="fas fa-recycle"></i>Vida</div>
+              <div class="col-tipo"><i class="fas fa-shapes"></i>Tipo</div>
+              <div class="col-qtd"><i class="fas fa-hashtag"></i>Quantidade em Estoque</div>
             </div>
-            <div id="grid-estoque-body" class="grid-body" style="background: #f8f9fa;"></div>
-            <div id="total-estoque" class="grid-total" style="display: flex; white-space: nowrap; border-top: 2px solid #ddd; background-color: #e9ecef; font-weight: bold;">
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;">Total Geral</div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
-              <div style="flex: 1.5; min-width: 120px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
-              <div style="flex: 0.5; min-width: 50px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee;"></div>
-              <div style="flex: 1; min-width: 80px; padding: 12px 8px; text-align: left; border-right: 1px solid #eee;"></div>
-              <div id="total-quantidade" style="flex: 1.5; min-width: 100px; padding: 12px 8px; text-align: center; border-right: 1px solid #eee; color: #007bff;">0</div>
+            <div id="grid-estoque-body" class="grid-body"></div>
+            <div id="total-estoque" class="grid-total">
+              <div class="col-placa">Total Geral</div>
+              <div class="col-marca"></div>
+              <div class="col-modelo"></div>
+              <div class="col-vida"></div>
+              <div class="col-tipo"></div>
+              <div id="total-quantidade" class="col-qtd total-value">0</div>
             </div>
           </section>
         </div>
       </div>
 
       <!-- Dashboard de Gráficos -->
-      <section class="dashboard-section" style="margin-top: 40px;">
-        <h3 style="text-align: center; margin-bottom: 20px; color: #333;">Dashboard de Análise de Pneus</h3>
-        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 12px;">
-          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h4 style="text-align: center; margin-bottom: 8px; color: #495057; font-size: 13px;">Movimentação de Pneus (Entrada/Saída)</h4>
+      <section class="dashboard-section">
+        <h3 class="dashboard-title">Dashboard de Análise de Pneus</h3>
+        <div class="dashboard-grid">
+          <div class="chart-container">
+            <h4>Movimentação de Pneus (Entrada/Saída)</h4>
             <canvas id="chartMovimentacao" width="220" height="150"></canvas>
           </div>
-          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h4 style="text-align: center; margin-bottom: 8px; color: #495057; font-size: 13px;">Distribuição por Marca</h4>
+          <div class="chart-container">
+            <h4>Distribuição por Marca</h4>
             <canvas id="chartMarcas" width="220" height="150"></canvas>
           </div>
-        </div>
-        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
-          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h4 style="text-align: center; margin-bottom: 8px; color: #495057; font-size: 13px;">Fluxo por Modelo</h4>
+          <div class="chart-container">
+            <h4>Fluxo por Modelo</h4>
             <canvas id="chartModelos" width="220" height="150"></canvas>
           </div>
-          <div class="chart-container" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h4 style="text-align: center; margin-bottom: 8px; color: #495057; font-size: 13px;">Análise de Vida Útil</h4>
+          <div class="chart-container">
+            <h4>Análise de Vida Útil</h4>
             <canvas id="chartVida" width="220" height="150"></canvas>
           </div>
         </div>
