@@ -401,12 +401,34 @@ async function excluirEntrada(id) {
     }
 };
 
-// 👀 Visualiza os códigos de marca de fogo em um modal
+// 🗑️ Exclui uma marca de fogo específica
+async function excluirMarcaDeFogo(marcaFogoId, lancamentoId) {
+    if (!confirm('Tem certeza que deseja excluir esta marca de fogo? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('marcas_fogo_pneus')
+            .delete()
+            .eq('id', marcaFogoId);
+
+        if (error) throw error;
+
+        alert('Marca de fogo excluída com sucesso!');
+        await visualizarCodigosMarcaFogo(lancamentoId); // Recarrega o modal com a lista atualizada
+
+    } catch (error) {
+        console.error('Erro ao excluir marca de fogo:', error);
+        alert(`Erro ao excluir: ${error.message}`);
+    }
+}
+//  Visualiza os códigos de marca de fogo em um modal
 async function visualizarCodigosMarcaFogo(lancamentoId) {
     try {
         const { data: codigos, error } = await supabaseClient
             .from('marcas_fogo_pneus')
-            .select('codigo_marca_fogo, status_pneu')
+            .select('id, codigo_marca_fogo, status_pneu')
             .eq('lancamento_id', lancamentoId)
             .order('codigo_marca_fogo', { ascending: true });
 
@@ -414,21 +436,29 @@ async function visualizarCodigosMarcaFogo(lancamentoId) {
 
         if (!codigos || codigos.length === 0) {
             alert('Nenhum código de marca de fogo encontrado para este lançamento.');
+            // Se o último código foi excluído, fecha o modal e atualiza a grid principal
+            const existingModal = document.querySelector('.modal-pneu-viewer');
+            if (existingModal) document.body.removeChild(existingModal);
+            await carregarEntradas();
             return;
         }
 
+        // Garante que qualquer modal antigo seja removido antes de criar um novo
+        const existingModal = document.querySelector('.modal-pneu-viewer');
+        if (existingModal) document.body.removeChild(existingModal);
+
         // Criar e exibir o modal
-        const modal = createModal(codigos);
+        const modal = createModal(codigos, lancamentoId);
         document.body.appendChild(modal);
 
     } catch (error) {
         console.error('Erro ao visualizar códigos:', error);
         alert('Erro ao carregar os códigos de marca de fogo.');
     }
-};
+}
 
 // 🎨 Cria o HTML do modal para exibir os códigos
-function createModal(codigos) {
+function createModal(codigos, lancamentoId) {
     const modal = document.createElement('div');
     modal.className = 'modal-pneu-viewer';
     modal.onclick = (e) => {
@@ -451,7 +481,12 @@ function createModal(codigos) {
     `;
 
     codigos.forEach(item => {
-        contentHTML += `<div class="codigo-item">${item.codigo_marca_fogo}</div>`;
+        // Adiciona um contêiner para o código e o botão de excluir
+        contentHTML += `
+            <div class="codigo-item-container">
+                <span class="codigo-item-text">${item.codigo_marca_fogo}</span>
+                <button class="btn-delete-codigo" data-id="${item.id}" title="Excluir este código"><i class="fas fa-trash-alt"></i></button>
+            </div>`;
     });
 
     contentHTML += `
@@ -468,6 +503,13 @@ function createModal(codigos) {
     modalContent.querySelector('.modal-pneu-close').onclick = () => document.body.removeChild(modal);
     modalContent.querySelector('.btn-pneu-cancel').onclick = () => document.body.removeChild(modal);
 
+    // Adiciona evento de clique para os novos botões de exclusão
+    modalContent.querySelectorAll('.btn-delete-codigo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const marcaFogoId = e.currentTarget.dataset.id;
+            excluirMarcaDeFogo(marcaFogoId, lancamentoId);
+        });
+    });
     modal.appendChild(modalContent);
     return modal;
 }
@@ -483,7 +525,11 @@ if (!document.getElementById('pneu-modal-styles')) {
         .modal-pneu-header h3 { margin: 0; color: #28a745; }
         .modal-pneu-close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-pneu-close:hover { color: black; }
-        .codigos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 40vh; overflow-y: auto; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        .codigos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-height: 40vh; overflow-y: auto; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        .codigo-item-container { display: flex; align-items: center; justify-content: space-between; background: #28a745; color: white; padding: 8px; border-radius: 4px; font-weight: bold; }
+        .codigo-item-text { flex-grow: 1; text-align: center; }
+        .btn-delete-codigo { background: none; border: none; color: white; cursor: pointer; font-size: 0.9rem; opacity: 0.7; }
+        .btn-delete-codigo:hover { opacity: 1; }
         .codigo-item { background: #28a745; color: white; padding: 8px; border-radius: 4px; text-align: center; font-weight: bold; }
         .modal-pneu-footer { text-align: right; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
         .btn-pneu-action { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 5px; }
