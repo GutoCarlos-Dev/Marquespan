@@ -536,6 +536,7 @@ if (!document.getElementById('pneu-modal-styles')) {
         .btn-pneu-action.view { color: #17a2b8; }
         .btn-pneu-action.edit { color: #ffc107; }
         .btn-pneu-action.delete { color: #dc3545; }
+        .btn-pneu-action.generate { color: #fd7e14; }
         .uppercase { text-transform: uppercase; }
     `;
     document.head.appendChild(style);
