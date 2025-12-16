@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/filters.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Importa o cliente Supabase para que esteja disponível para outros scripts -->
+  <script type="module" src="./script/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 </head>
@@ -122,16 +124,6 @@
   </footer>
 
   <script type="module" src="./script/menu.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      carregarEstoque();
-      document.getElementById('btn-buscar-estoque').addEventListener('click', buscarEstoque);
-      document.getElementById('btn-limpar-estoque').addEventListener('click', limparFiltros);
-      document.getElementById('btn-exportar-estoque').addEventListener('click', exportarEstoqueXLSX);
-      gerarGraficos();
-    });
-  </script>
-
-  <script type="module" src="./script/estoque-pneus-updated.js" defer></script>
+  <script type="module" src="./script/estoque-pneus-updated.js"></script>
 </body>
 </html>
