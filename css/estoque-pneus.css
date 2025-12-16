@@ -110,69 +110,70 @@
   white-space: nowrap;
 }
 
-/* --- Grid de Pneus --- */
-.grid-wrapper {
+/* --- Tabela de Estoque de Pneus --- */
+.table-wrapper {
   overflow-x: auto;
+  max-height: 600px; /* Define uma altura máxima para a tabela */
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
 }
 
-.grid-pneus {
-  min-width: max-content;
-  display: flex;
-  flex-direction: column;
-  border-radius: 8px;
-  overflow: hidden;
+.data-table-estoque {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
 }
 
-.grid-pneus > div { /* Aplica a todos os filhos diretos: header, body, total */
-  display: flex;
-  white-space: nowrap;
+.data-table-estoque th,
+.data-table-estoque td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  vertical-align: middle;
 }
 
-.grid-header {
+.data-table-estoque thead th {
   background: linear-gradient(135deg, #28a745, #20c997);
   color: white;
   font-weight: 600;
-  border-bottom: 2px solid #1e7e34;
+  position: sticky; /* Faz o cabeçalho ficar fixo no topo */
+  top: 0;
+  z-index: 10;
 }
 
-.grid-header div {
-  padding: 15px 12px;
-  text-align: left;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
+.data-table-estoque thead th i {
+  margin-right: 8px;
 }
-.grid-header div:last-child { border-right: none; }
-.grid-header i { margin-right: 5px; }
 
-.grid-body {
+.data-table-estoque tbody tr:nth-child(even) {
   background: #f8f9fa;
-  flex-direction: column; /* As linhas serão empilhadas verticalmente */
 }
 
-.grid-total {
+.data-table-estoque tbody tr:hover {
+  background-color: #e9f5e9;
+}
+
+.data-table-estoque tfoot {
   border-top: 2px solid #ddd;
   background-color: #e9ecef;
   font-weight: bold;
 }
 
-.grid-total div {
-  padding: 12px 8px;
-  border-right: 1px solid #eee;
+.data-table-estoque tfoot th {
+  text-align: right;
+  color: #333;
 }
-.grid-total div:last-child { border-right: none; }
+
+.data-table-estoque .text-center {
+  text-align: center;
+}
 
 .total-value {
   color: #007bff;
+  font-size: 1.2rem;
+  text-align: center;
 }
-
-/* --- Layout das Colunas do Grid --- */
-.col-placa  { flex: 1; min-width: 80px; }
-.col-marca  { flex: 1; min-width: 80px; }
-.col-modelo { flex: 1.5; min-width: 120px; }
-.col-vida   { flex: 0.5; min-width: 50px; text-align: center; }
-.col-tipo   { flex: 1; min-width: 80px; }
-.col-qtd    { flex: 1.5; min-width: 100px; text-align: center; }
 
 
 /* --- Seção do Dashboard --- */

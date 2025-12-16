@@ -62,26 +62,28 @@
         <div class="card-header">
           <h2><i class="fas fa-list"></i>Estoque de Pneus</h2>
         </div>
-        <div class="grid-wrapper">
-          <section class="grid-pneus">
-            <div class="grid-header">
-              <div class="col-placa"><i class="fas fa-car"></i>Placa</div>
-              <div class="col-marca"><i class="fas fa-tag"></i>Marca</div>
-              <div class="col-modelo"><i class="fas fa-cog"></i>Modelo</div>
-              <div class="col-vida"><i class="fas fa-recycle"></i>Vida</div>
-              <div class="col-tipo"><i class="fas fa-shapes"></i>Tipo</div>
-              <div class="col-qtd"><i class="fas fa-hashtag"></i>Quantidade em Estoque</div>
-            </div>
-            <div id="grid-estoque-body" class="grid-body"></div>
-            <div id="total-estoque" class="grid-total">
-              <div class="col-placa">Total Geral</div>
-              <div class="col-marca"></div>
-              <div class="col-modelo"></div>
-              <div class="col-vida"></div>
-              <div class="col-tipo"></div>
-              <div id="total-quantidade" class="col-qtd total-value">0</div>
-            </div>
-          </section>
+        <div class="table-wrapper">
+          <table class="data-table-estoque">
+            <thead>
+              <tr>
+                <th><i class="fas fa-car"></i>Placa</th>
+                <th><i class="fas fa-tag"></i>Marca</th>
+                <th><i class="fas fa-cog"></i>Modelo</th>
+                <th class="text-center"><i class="fas fa-recycle"></i>Vida</th>
+                <th><i class="fas fa-shapes"></i>Tipo</th>
+                <th class="text-center"><i class="fas fa-hashtag"></i>Quantidade</th>
+              </tr>
+            </thead>
+            <tbody id="grid-estoque-body">
+              <!-- As linhas do estoque serão inseridas aqui pelo JavaScript -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="5">Total Geral em Estoque</th>
+                <td id="total-quantidade" class="total-value">0</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
