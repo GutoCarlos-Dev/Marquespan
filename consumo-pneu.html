@@ -27,17 +27,36 @@
           </div>
           <form id="formConsumoPneu">
             <div class="form-group-pneu"><label for="data">Data</label><input type="datetime-local" name="data" id="data" readonly /></div>
-            <div class="form-group-pneu"><label for="tipo_operacao">Tipo de Operação *</label><select name="tipo_operacao" id="tipo_operacao" required><option value="">Selecione</option><option value="INSTALACAO">Instalação</option><option value="RODIZIO">Rodízio</option><option value="TROCA">Troca</option><option value="REFORMA">Envio para Reforma</option><option value="DESCARTE">Descarte</option></select></div>
-            <div class="form-group-pneu"><label for="codigo_marca_fogo">Marca de Fogo *</label><input type="text" name="codigo_marca_fogo" id="codigo_marca_fogo" placeholder="Ex: MF12345" required /></div>
+            <div class="form-group-pneu"><label for="tipo_operacao">Tipo de Operação *</label><select name="tipo_operacao" id="tipo_operacao" required><option value="">Selecione</option><option value="INSTALACAO">Instalação Múltipla</option><option value="RODIZIO">Rodízio</option><option value="TROCA">Troca</option><option value="REFORMA">Envio para Reforma</option><option value="DESCARTE">Descarte</option></select></div>
             <div class="form-group-pneu"><label for="placa">Placa do Veículo *</label><select name="placa" id="placa" required><option value="">Selecione</option></select></div>
             <div class="form-group-pneu"><label for="quilometragem">Quilometragem do Veículo *</label><input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" required /></div>
-            <div class="form-group-pneu"><label for="aplicacao">Posição de Aplicação *</label><select name="aplicacao" id="aplicacao" required><option value="">Selecione</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO_INTERNO">Tração Esq. Interno</option><option value="TRACAO_ESQUERDO_EXTERNO">Tração Esq. Externo</option><option value="TRACAO_DIREITO_INTERNO">Tração Dir. Interno</option><option value="TRACAO_DIREITO_EXTERNO">Tração Dir. Externo</option><option value="TRUCK_ESQUERDO_INTERNO">Truck Esq. Interno</option><option value="TRUCK_ESQUERDO_EXTERNO">Truck Esq. Externo</option><option value="TRUCK_DIREITO_INTERNO">Truck Dir. Interno</option><option value="TRUCK_DIREITO_EXTERNO">Truck Dir. Externo</option><option value="ESTEPE">Estepe</option></select></div>
             
-            <!-- Campos específicos para rodízio/troca -->
-            <div id="campos-troca-rodizio" class="saida-details hidden">
-              <h4><i class="fas fa-sync-alt"></i>Detalhes da Troca/Rodízio</h4>
-              <div class="form-group-pneu"><label for="posicao_nova">Nova Posição do Pneu</label><select name="posicao_nova" id="posicao_nova"><option value="">Selecione a nova posição</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO_INTERNO">Tração Esq. Interno</option><option value="TRACAO_ESQUERDO_EXTERNO">Tração Esq. Externo</option><option value="TRACAO_DIREITO_INTERNO">Tração Dir. Interno</option><option value="TRACAO_DIREITO_EXTERNO">Tração Dir. Externo</option><option value="TRUCK_ESQUERDO_INTERNO">Truck Esq. Interno</option><option value="TRUCK_ESQUERDO_EXTERNO">Truck Esq. Externo</option><option value="TRUCK_DIREITO_INTERNO">Truck Dir. Interno</option><option value="TRUCK_DIREITO_EXTERNO">Truck Dir. Externo</option><option value="ESTEPE">Estepe</option></select></div>
-              <div class="form-group-pneu"><label for="codigo_marca_fogo_trocado">Marca de Fogo (Pneu Trocado)</label><input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Marca de Fogo do pneu que entra no lugar" /></div>
+            <!-- Container para campos que variam por operação -->
+            <div id="operacao-detalhes-container">
+
+              <!-- Campos para operações de pneu único (Rodízio, Troca, etc.) -->
+              <div id="campos-pneu-unico" class="hidden">
+                <div class="form-group-pneu"><label for="codigo_marca_fogo">Marca de Fogo *</label><input type="text" name="codigo_marca_fogo" id="codigo_marca_fogo" placeholder="Ex: MF12345" /></div>
+                <div class="form-group-pneu"><label for="aplicacao">Posição de Aplicação *</label><select name="aplicacao" id="aplicacao"><option value="">Selecione</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO_INTERNO">Tração Esq. Interno</option><option value="TRACAO_ESQUERDO_EXTERNO">Tração Esq. Externo</option><option value="TRACAO_DIREITO_INTERNO">Tração Dir. Interno</option><option value="TRACAO_DIREITO_EXTERNO">Tração Dir. Externo</option><option value="TRUCK_ESQUERDO_INTERNO">Truck Esq. Interno</option><option value="TRUCK_ESQUERDO_EXTERNO">Truck Esq. Externo</option><option value="TRUCK_DIREITO_INTERNO">Truck Dir. Interno</option><option value="TRUCK_DIREITO_EXTERNO">Truck Dir. Externo</option><option value="ESTEPE">Estepe</option></select></div>
+                
+                <!-- Detalhes específicos para rodízio/troca -->
+                <div id="campos-troca-rodizio" class="saida-details hidden">
+                  <h4><i class="fas fa-sync-alt"></i>Detalhes da Troca/Rodízio</h4>
+                  <div class="form-group-pneu"><label for="posicao_nova">Nova Posição do Pneu</label><select name="posicao_nova" id="posicao_nova"><option value="">Selecione a nova posição</option><option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option><option value="DIANTEIRO_DIREITO">Dianteiro Direito</option><option value="TRACAO_ESQUERDO_INTERNO">Tração Esq. Interno</option><option value="TRACAO_ESQUERDO_EXTERNO">Tração Esq. Externo</option><option value="TRACAO_DIREITO_INTERNO">Tração Dir. Interno</option><option value="TRACAO_DIREITO_EXTERNO">Tração Dir. Externo</option><option value="TRUCK_ESQUERDO_INTERNO">Truck Esq. Interno</option><option value="TRUCK_ESQUERDO_EXTERNO">Truck Esq. Externo</option><option value="TRUCK_DIREITO_INTERNO">Truck Dir. Interno</option><option value="TRUCK_DIREITO_EXTERNO">Truck Dir. Externo</option><option value="ESTEPE">Estepe</option></select></div>
+                  <div class="form-group-pneu"><label for="codigo_marca_fogo_trocado">Marca de Fogo (Pneu Trocado)</label><input type="text" name="codigo_marca_fogo_trocado" id="codigo_marca_fogo_trocado" placeholder="Marca de Fogo do pneu que entra no lugar" /></div>
+                </div>
+              </div>
+
+              <!-- Grid para Instalação Múltipla -->
+              <div id="campos-instalacao-multipla" class="hidden">
+                <div class="form-header">
+                  <h4><i class="fas fa-truck-loading"></i>Pneus a Instalar</h4>
+                  <button type="button" id="btn-adicionar-pneu" class="btn-pneu btn-add-item"><i class="fas fa-plus"></i>Adicionar Pneu</button>
+                </div>
+                <div id="grid-instalacao-pneus" class="instalacao-grid-container">
+                  <!-- Linhas de pneu serão adicionadas aqui pelo JavaScript -->
+                </div>
+              </div>
             </div>
 
             <div class="form-group-pneu form-group-full-width"><label for="observacoes">Observações</label><textarea name="observacoes" id="observacoes" rows="3" placeholder="Observações adicionais sobre a movimentação..."></textarea></div>
@@ -61,7 +80,7 @@
               <label for="campo-operacao">Operação</label>
               <select id="campo-operacao">
                 <option value="">Todas</option>
-                <option value="INSTALACAO">Instalação</option>
+                <option value="INSTALACAO">Instalação Múltipla</option>
                 <option value="RODIZIO">Rodízio</option>
                 <option value="TROCA">Troca</option>
                 <option value="REFORMA">Reforma</option>
