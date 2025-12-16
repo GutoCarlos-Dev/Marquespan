@@ -360,9 +360,8 @@ async function handleGerarCodigos(id) {
 
     try {
         const usuario = getCurrentUserName();
-        await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario);
+        await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario); // A lógica de geração foi movida para o Supabase
         alert('Códigos de marca de fogo gerados com sucesso!');
-        await carregarEntradas(); // Recarrega a tabela para atualizar o botão
     } catch (error) {
         // O erro já é tratado dentro de gerarCodigosMarcaFogo, então não fazemos nada aqui para evitar alertas duplicados.
     }
