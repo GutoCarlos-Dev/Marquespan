@@ -1,237 +1,383 @@
-import { supabaseClient } from './supabase.js';
+import { supabaseClient as supabase } from './supabase.js';
 
 let gridBody;
+let pneusEmEstoque = [];
 
 // 🚀 Inicialização
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Elementos do DOM
     gridBody = document.getElementById('grid-consumo-pneus-body');
-    const form = document.getElementById('formConsumoPneu');
-    const btnBuscar = document.getElementById('btn-buscar');
-    const btnLimparBusca = document.getElementById('btn-limpar-busca');
-    const btnCancelForm = document.getElementById('btnCancelForm');
-    const tipoOperacaoSelect = document.getElementById('tipo_operacao');
+  const form = document.getElementById('formConsumoPneu');
+  const tipoOperacaoSelect = document.getElementById('tipo_operacao');
+  const camposPneuUnico = document.getElementById('campos-pneu-unico');
+  const camposInstalacaoMultipla = document.getElementById('campos-instalacao-multipla');
+  const camposTrocaRodizio = document.getElementById('campos-troca-rodizio');
+  const btnAdicionarPneu = document.getElementById('btn-adicionar-pneu');
+  const gridInstalacaoPneus = document.getElementById('grid-instalacao-pneus');
+  const btnBuscar = document.getElementById('btn-buscar');
+  const btnLimparBusca = document.getElementById('btn-limpar-busca');
+  const btnCancelForm = document.getElementById('btnCancelForm');
 
-    // --- Event Listeners ---
-    form.addEventListener('submit', handleSubmit);
-    btnBuscar?.addEventListener('click', buscarMovimentacoes);
-    btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
-    btnCancelForm?.addEventListener('click', () => clearForm());
+  // --- EVENT LISTENERS ---
+  form.addEventListener('submit', handleSubmit);
+  btnBuscar?.addEventListener('click', buscarMovimentacoes);
+  btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
+  btnCancelForm?.addEventListener('click', () => clearForm());
+  tipoOperacaoSelect.addEventListener('change', handleTipoOperacaoChange);
+  btnAdicionarPneu.addEventListener('click', adicionarLinhaPneu);
 
-    // Lógica para mostrar/ocultar campos de troca/rodízio
-    tipoOperacaoSelect?.addEventListener('change', (event) => {
-        const camposTrocaRodizio = document.getElementById('campos-troca-rodizio');
-        if (!camposTrocaRodizio) return;
-
-        const operacao = event.target.value;
-        if (operacao === 'RODIZIO' || operacao === 'TROCA') {
-            camposTrocaRodizio.classList.remove('hidden');
-        } else {
-            camposTrocaRodizio.classList.add('hidden');
-        }
-    });
-
-    // --- Inicialização da Página ---
-    carregarPlacas();
-    carregarMovimentacoes();
-    carregarMarcasDeFogo();
-    clearForm();
+  // --- INICIALIZAÇÃO ---
+  await init();
 });
 
 // 📦 Carrega as placas dos veículos no select
 async function carregarPlacas() {
-    const selectPlaca = document.getElementById('placa');
-    if (!selectPlaca) return;
+  const selectPlaca = document.getElementById('placa');
+  if (!selectPlaca) return;
 
-    try {
-        const { data, error } = await supabaseClient
-            .from('veiculos')
-            .select('placa')
-            .order('placa', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('veiculos')
+      .select('placa')
+      .order('placa', { ascending: true });
 
-        if (error) throw error;
+    if (error) throw error;
 
-        selectPlaca.innerHTML = '<option value="">Selecione</option>';
-        data.forEach(veiculo => {
-            const option = document.createElement('option');
-            option.value = veiculo.placa;
-            option.textContent = veiculo.placa;
-            selectPlaca.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Erro ao carregar placas:', error);
-    }
+    selectPlaca.innerHTML = '<option value="">Selecione</option>';
+    data.forEach(veiculo => {
+      const option = document.createElement('option');
+      option.value = veiculo.placa;
+      option.textContent = veiculo.placa;
+      selectPlaca.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar placas:', error);
+  }
 }
 
-// ⚙️ Carrega as marcas de fogo no campo de busca
-async function carregarMarcasDeFogo() {
-    const campoMarcaFogo = document.getElementById('codigo_marca_fogo');
-    if (!campoMarcaFogo) return;
+/**
+ * Carrega os pneus disponíveis no estoque (status 'ESTOQUE').
+ */
+async function carregarPneusEstoque() {
+  const { data, error } = await supabase
+    .from('marcas_fogo_pneus')
+    .select('id, codigo_marca_fogo, pneus(marca, modelo)')
+    .eq('status_pneu', 'ESTOQUE')
+    .order('codigo_marca_fogo', { ascending: true });
 
-    try {
-        const { data, error } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .select('codigo_marca_fogo')
-            .order('codigo_marca_fogo', { ascending: true });
-
-        if (error) throw error;
-
-        campoMarcaFogo.innerHTML = '<option value="">Selecione</option>';
-        data.forEach(item => {
-            campoMarcaFogo.innerHTML += `<option value="${item.codigo_marca_fogo}">${item.codigo_marca_fogo}</option>`;
-        });
-    } catch (error) {
-        console.error('Erro ao carregar marcas de fogo:', error);
-    }
+  if (error) {
+    console.error('Erro ao carregar pneus do estoque:', error);
+    pneusEmEstoque = [];
+    return;
+  }
+  pneusEmEstoque = data;
 }
 
 // Obtém o nome do usuário logado do localStorage
 function getCurrentUserName() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-    return usuario ? usuario.nome : 'Usuário Anônimo';
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario ? usuario.nome : 'Usuário Anônimo';
 }
 
 // Limpa o formulário e redefine a data
 function clearForm() {
-    const form = document.getElementById('formConsumoPneu');
-    form.reset();
-    
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('data').value = now.toISOString().slice(0, 16);
+  const form = document.getElementById('formConsumoPneu');
+  form.reset();
+  document.getElementById('grid-instalacao-pneus').innerHTML = ''; // Limpa o grid
+  setDataAtual();
+  handleTipoOperacaoChange();
+}
+
+function setDataAtual() {
+  const dataInput = document.getElementById('data');
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  dataInput.value = now.toISOString().slice(0, 16);
+}
+
+/**
+ * Alterna a visibilidade dos campos do formulário com base na operação selecionada.
+ */
+function handleTipoOperacaoChange() {
+  const operacao = document.getElementById('tipo_operacao').value;
+  const camposPneuUnico = document.getElementById('campos-pneu-unico');
+  const camposInstalacaoMultipla = document.getElementById('campos-instalacao-multipla');
+  const camposTrocaRodizio = document.getElementById('campos-troca-rodizio');
+
+  // Esconde todos os painéis
+  camposPneuUnico.classList.add('hidden');
+  camposInstalacaoMultipla.classList.add('hidden');
+  camposTrocaRodizio.classList.add('hidden');
+
+  if (operacao === 'INSTALACAO') {
+    camposInstalacaoMultipla.classList.remove('hidden');
+  } else if (operacao) { // Qualquer outra operação selecionada
+    camposPneuUnico.classList.remove('hidden');
+    // Mostra campos específicos se for troca ou rodízio
+    if (operacao === 'TROCA' || operacao === 'RODIZIO') {
+      camposTrocaRodizio.classList.remove('hidden');
+    }
+  }
+}
+
+/**
+ * Adiciona uma nova linha ao grid de instalação de pneus.
+ */
+function adicionarLinhaPneu() {
+  const gridInstalacaoPneus = document.getElementById('grid-instalacao-pneus');
+  const pneuId = `pneu-row-${Date.now()}`;
+  const div = document.createElement('div');
+  div.className = 'instalacao-grid-row';
+  div.id = pneuId;
+
+  // Cria o seletor de posição
+  const selectPosicao = document.createElement('select');
+  selectPosicao.name = 'posicao_aplicacao[]';
+  selectPosicao.required = true;
+  selectPosicao.innerHTML = `
+    <option value="">Selecione a Posição</option>
+    <option value="DIANTEIRO_ESQUERDO">Dianteiro Esquerdo</option>
+    <option value="DIANTEIRO_DIREITO">Dianteiro Direito</option>
+    <option value="TRACAO_ESQUERDO_INTERNO">Tração Esq. Interno</option>
+    <option value="TRACAO_ESQUERDO_EXTERNO">Tração Esq. Externo</option>
+    <option value="TRACAO_DIREITO_INTERNO">Tração Dir. Interno</option>
+    <option value="TRACAO_DIREITO_EXTERNO">Tração Dir. Externo</option>
+    <option value="TRUCK_ESQUERDO_INTERNO">Truck Esq. Interno</option>
+    <option value="TRUCK_ESQUERDO_EXTERNO">Truck Esq. Externo</option>
+    <option value="TRUCK_DIREITO_INTERNO">Truck Dir. Interno</option>
+    <option value="TRUCK_DIREITO_EXTERNO">Truck Dir. Externo</option>
+    <option value="ESTEPE">Estepe</option>
+  `;
+
+  // Cria o seletor de marca de fogo
+  const selectMarcaFogo = document.createElement('select');
+  selectMarcaFogo.name = 'marca_fogo_id[]';
+  selectMarcaFogo.required = true;
+  selectMarcaFogo.innerHTML = '<option value="">Selecione a Marca de Fogo</option>';
+  pneusEmEstoque.forEach(pneu => {
+    const option = document.createElement('option');
+    option.value = pneu.id;
+    option.textContent = `${pneu.codigo_marca_fogo} (${pneu.pneus?.marca || 'N/A'} - ${pneu.pneus?.modelo || 'N/A'})`;
+    selectMarcaFogo.appendChild(option);
+  });
+
+  // Cria o botão de remover
+  const btnRemover = document.createElement('button');
+  btnRemover.type = 'button';
+  btnRemover.className = 'btn-pneu btn-pneu-danger';
+  btnRemover.innerHTML = '<i class="fas fa-trash"></i>';
+  btnRemover.onclick = () => {
+    document.getElementById(pneuId).remove();
+  };
+
+  // Adiciona os elementos à linha
+  div.appendChild(selectPosicao);
+  div.appendChild(selectMarcaFogo);
+  div.appendChild(btnRemover);
+
+  gridInstalacaoPneus.appendChild(div);
 }
 
 // 💾 Salva uma movimentação de pneu
 async function handleSubmit(e) {
-    e.preventDefault();
+  e.preventDefault();
+  const operacao = document.getElementById('tipo_operacao').value;
 
-    const formData = new FormData(e.target);
-    const marcaFogo = formData.get('codigo_marca_fogo')?.trim().toUpperCase();
+  if (operacao === 'INSTALACAO') {
+    await handleInstalacaoMultipla(e);
+  } else {
+    await handleOperacaoUnica(e);
+  }
+}
 
-    // 1. Verificar se o pneu existe e está em estoque
-    try {
-        const { data: pneu, error: pneuError } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .select('id, status_pneu')
-            .eq('codigo_marca_fogo', marcaFogo)
-            .single();
+async function handleInstalacaoMultipla(e) {
+  const form = e.target;
+  const placa = form.placa.value;
+  const quilometragem = form.quilometragem.value;
+  const observacoes = form.observacoes.value;
+  const usuario = getCurrentUserName();
+  const dataOperacao = form.data.value;
 
-        if (pneuError || !pneu) {
-            alert(`Erro: Pneu com a marca de fogo "${marcaFogo}" não encontrado.`);
-            return;
-        }
+  const linhasPneus = document.querySelectorAll('#grid-instalacao-pneus .instalacao-grid-row');
 
-        if (pneu.status_pneu !== 'ESTOQUE') {
-            alert(`Atenção: O pneu "${marcaFogo}" não está no estoque. Status atual: ${pneu.status_pneu}.`);
-            return;
-        }
+  if (linhasPneus.length === 0) {
+    alert('Adicione pelo menos um pneu para a instalação.');
+    return;
+  }
 
-        // 2. Preparar dados para a tabela de histórico de movimentações
-        const movimentacaoData = {
-            data: formData.get('data'),
-            codigo_marca_fogo: marcaFogo,
-            placa: formData.get('placa'),
-            quilometragem: parseInt(formData.get('quilometragem')),
-            tipo_operacao: formData.get('tipo_operacao'),
-            posicao_aplicacao: formData.get('aplicacao'),
-            observacoes: formData.get('observacoes')?.trim(),
-            usuario: getCurrentUserName(),
-        };
+  const movimentacoes = [];
+  const idsParaAtualizar = [];
 
-        // 3. Inserir na tabela de histórico
-        const { error: insertError } = await supabaseClient
-            .from('movimentacoes_pneus') // Você precisará criar esta tabela
-            .insert([movimentacaoData]);
+  for (const linha of linhasPneus) {
+    const marcaFogoId = linha.querySelector('select[name="marca_fogo_id[]"]').value;
+    const posicao = linha.querySelector('select[name="posicao_aplicacao[]"]').value;
 
-        if (insertError) throw insertError;
-
-        // 4. Atualizar o status do pneu na tabela 'marcas_fogo_pneus'
-        let novoStatus = 'EM USO';
-        if (movimentacaoData.tipo_operacao === 'REFORMA') novoStatus = 'EM REFORMA';
-        if (movimentacaoData.tipo_operacao === 'DESCARTE') novoStatus = 'DESCARTADO';
-
-        const { error: updateError } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .update({ status_pneu: novoStatus })
-            .eq('id', pneu.id);
-
-        if (updateError) throw updateError;
-
-        alert('Movimentação de pneu registrada com sucesso!');
-        clearForm();
-        await carregarMovimentacoes();
-
-    } catch (error) {
-        console.error('Erro ao salvar movimentação:', error);
-        alert(`Ocorreu um erro: ${error.message}`);
+    if (!marcaFogoId || !posicao) {
+      alert('Preencha a posição e a marca de fogo para todos os pneus adicionados.');
+      return;
     }
+
+    const pneuInfo = pneusEmEstoque.find(p => p.id == marcaFogoId);
+    if (!pneuInfo) continue;
+
+    movimentacoes.push({
+      data: dataOperacao,
+      codigo_marca_fogo: pneuInfo.codigo_marca_fogo,
+      placa: placa,
+      quilometragem: parseInt(quilometragem),
+      tipo_operacao: 'INSTALACAO',
+      posicao_aplicacao: posicao,
+      observacoes: observacoes,
+      usuario: usuario,
+    });
+    idsParaAtualizar.push(marcaFogoId);
+  }
+
+  try {
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes);
+    if (insertError) throw insertError;
+
+    const { error: updateError } = await supabase
+      .from('marcas_fogo_pneus')
+      .update({ status_pneu: 'EM USO' })
+      .in('id', idsParaAtualizar);
+    if (updateError) throw updateError;
+
+    alert(`${movimentacoes.length} pneu(s) instalado(s) com sucesso!`);
+    clearForm();
+    await carregarMovimentacoes();
+    await carregarPneusEstoque(); // Recarrega a lista de pneus em estoque
+
+  } catch (error) {
+    console.error('Erro ao salvar instalação múltipla:', error);
+    alert(`Ocorreu um erro: ${error.message}`);
+  }
+}
+
+async function handleOperacaoUnica(e) {
+  const formData = new FormData(e.target);
+  const marcaFogo = formData.get('codigo_marca_fogo')?.trim().toUpperCase();
+
+  try {
+    const { data: pneu, error: pneuError } = await supabase
+      .from('marcas_fogo_pneus')
+      .select('id, status_pneu')
+      .eq('codigo_marca_fogo', marcaFogo)
+      .single();
+
+    if (pneuError || !pneu) {
+      alert(`Erro: Pneu com a marca de fogo "${marcaFogo}" não encontrado.`);
+      return;
+    }
+
+    const tipoOperacao = formData.get('tipo_operacao');
+    if (tipoOperacao !== 'REFORMA' && tipoOperacao !== 'DESCARTE' && pneu.status_pneu !== 'ESTOQUE') {
+      alert(`Atenção: O pneu "${marcaFogo}" não está no estoque. Status atual: ${pneu.status_pneu}.`);
+      return;
+    }
+
+    const movimentacaoData = {
+      data: formData.get('data'),
+      codigo_marca_fogo: marcaFogo,
+      placa: formData.get('placa'),
+      quilometragem: parseInt(formData.get('quilometragem')),
+      tipo_operacao: tipoOperacao,
+      posicao_aplicacao: formData.get('aplicacao'),
+      observacoes: formData.get('observacoes')?.trim(),
+      usuario: getCurrentUserName(),
+    };
+
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]);
+    if (insertError) throw insertError;
+
+    let novoStatus = 'EM USO';
+    if (movimentacaoData.tipo_operacao === 'REFORMA') novoStatus = 'EM REFORMA';
+    if (movimentacaoData.tipo_operacao === 'DESCARTE') novoStatus = 'DESCARTADO';
+
+    const { error: updateError } = await supabase
+      .from('marcas_fogo_pneus')
+      .update({ status_pneu: novoStatus })
+      .eq('id', pneu.id);
+
+    if (updateError) throw updateError;
+
+    alert('Movimentação de pneu registrada com sucesso!');
+    clearForm();
+    await carregarMovimentacoes();
+    await carregarPneusEstoque();
+
+  } catch (error) {
+    console.error('Erro ao salvar movimentação:', error);
+    alert(`Ocorreu um erro: ${error.message}`);
+  }
 }
 
 // 📦 Carrega as últimas movimentações
 async function carregarMovimentacoes() {
-    if (!gridBody) return;
+  if (!gridBody) return;
 
-    try {
-        const { data, error } = await supabaseClient
-            .from('movimentacoes_pneus')
-            .select('*')
-            .order('data', { ascending: false })
-            .limit(100);
+  try {
+    const { data, error } = await supabase
+      .from('movimentacoes_pneus')
+      .select('*')
+      .order('data', { ascending: false })
+      .limit(100);
 
-        if (error) throw error;
+    if (error) throw error;
 
-        renderizarGrid(data || []);
-    } catch (error) {
-        console.error('Erro ao carregar movimentações:', error);
-        gridBody.innerHTML = `<tr><td colspan="8" class="error-message">Erro ao carregar dados.</td></tr>`;
-    }
+    renderizarGrid(data || []);
+  } catch (error) {
+    console.error('Erro ao carregar movimentações:', error);
+    gridBody.innerHTML = `<tr><td colspan="8" class="error-message">Erro ao carregar dados.</td></tr>`;
+  }
 }
 
 // 🔍 Busca movimentações com base nos filtros
 async function buscarMovimentacoes() {
-    const marcaFogo = document.getElementById('campo-marca-fogo-busca')?.value.trim().toUpperCase();
-    const placa = document.getElementById('campo-placa-busca')?.value.trim().toUpperCase();
-    const operacao = document.getElementById('campo-operacao')?.value;
+  const marcaFogo = document.getElementById('campo-marca-fogo-busca')?.value.trim().toUpperCase();
+  const placa = document.getElementById('campo-placa-busca')?.value.trim().toUpperCase();
+  const operacao = document.getElementById('campo-operacao')?.value;
 
-    try {
-        let query = supabaseClient
-            .from('movimentacoes_pneus')
-            .select('*')
-            .order('data', { ascending: false });
+  try {
+    let query = supabase
+      .from('movimentacoes_pneus')
+      .select('*')
+      .order('data', { ascending: false });
 
-        if (marcaFogo) query = query.ilike('codigo_marca_fogo', `%${marcaFogo}%`);
-        if (placa) query = query.ilike('placa', `%${placa}%`);
-        if (operacao) query = query.eq('tipo_operacao', operacao);
+    if (marcaFogo) query = query.ilike('codigo_marca_fogo', `%${marcaFogo}%`);
+    if (placa) query = query.ilike('placa', `%${placa}%`);
+    if (operacao) query = query.eq('tipo_operacao', operacao);
 
-        const { data, error } = await query;
+    const { data, error } = await query;
 
-        if (error) throw error;
+    if (error) throw error;
 
-        renderizarGrid(data || []);
-    } catch (error) {
-        console.error('Erro ao buscar movimentações:', error);
-    }
+    renderizarGrid(data || []);
+  } catch (error) {
+    console.error('Erro ao buscar movimentações:', error);
+  }
 }
 
 // 🧹 Limpa os filtros de busca e recarrega a lista completa
 function limparFiltrosBusca() {
-    document.getElementById('campo-marca-fogo-busca').value = '';
-    document.getElementById('campo-placa-busca').value = '';
-    document.getElementById('campo-operacao').value = '';
-    carregarMovimentacoes();
+  document.getElementById('campo-marca-fogo-busca').value = '';
+  document.getElementById('campo-placa-busca').value = '';
+  document.getElementById('campo-operacao').value = '';
+  carregarMovimentacoes();
 }
 
 // 🧱 Renderiza os dados na tabela
 function renderizarGrid(lista) {
-    gridBody.innerHTML = '';
+  gridBody.innerHTML = '';
 
-    if (lista.length === 0) {
-        gridBody.innerHTML = `<tr><td colspan="8" class="no-results-message">Nenhuma movimentação encontrada.</td></tr>`;
-        return;
-    }
+  if (lista.length === 0) {
+    gridBody.innerHTML = `<tr><td colspan="8" class="no-results-message">Nenhuma movimentação encontrada.</td></tr>`;
+    return;
+  }
 
-    lista.forEach(mov => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+  lista.forEach(mov => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
             <td>${mov.data ? new Date(mov.data).toLocaleString('pt-BR') : ''}</td>
             <td class="uppercase">${mov.codigo_marca_fogo}</td>
             <td>${mov.tipo_operacao || ''}</td>
@@ -245,38 +391,51 @@ function renderizarGrid(lista) {
                 </button>
             </td>
         `;
-        gridBody.appendChild(tr);
-    });
+    gridBody.appendChild(tr);
+  });
 }
 
 // 🗑️ Exclui uma movimentação (cancela a operação)
 window.excluirMovimentacao = async function(id, marcaFogo) {
-    if (!confirm(`Tem certeza que deseja cancelar esta movimentação? O pneu "${marcaFogo}" retornará ao status "ESTOQUE".`)) {
-        return;
-    }
+  if (!confirm(`Tem certeza que deseja cancelar esta movimentação? O pneu "${marcaFogo}" retornará ao status "ESTOQUE".`)) {
+    return;
+  }
 
-    try {
-        // 1. Excluir o registro da movimentação
-        const { error: deleteError } = await supabaseClient
-            .from('movimentacoes_pneus')
-            .delete()
-            .eq('id', id);
+  try {
+    const { error: deleteError } = await supabase
+      .from('movimentacoes_pneus')
+      .delete()
+      .eq('id', id);
 
-        if (deleteError) throw deleteError;
+    if (deleteError) throw deleteError;
 
-        // 2. Atualizar o status do pneu de volta para 'ESTOQUE'
-        const { error: updateError } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .update({ status_pneu: 'ESTOQUE' })
-            .eq('codigo_marca_fogo', marcaFogo);
+    const { error: updateError } = await supabase
+      .from('marcas_fogo_pneus')
+      .update({ status_pneu: 'ESTOQUE' })
+      .eq('codigo_marca_fogo', marcaFogo);
 
-        if (updateError) throw updateError;
+    if (updateError) throw updateError;
 
-        alert('Movimentação cancelada com sucesso!');
-        await carregarMovimentacoes();
+    alert('Movimentação cancelada com sucesso!');
+    await carregarMovimentacoes();
+    await carregarPneusEstoque();
 
-    } catch (error) {
-        console.error('Erro ao excluir movimentação:', error);
-        alert(`Erro ao cancelar: ${error.message}`);
-    }
+  } catch (error) {
+    console.error('Erro ao excluir movimentação:', error);
+    alert(`Erro ao cancelar: ${error.message}`);
+  }
 };
+
+/**
+ * Função principal para inicializar a página.
+ */
+async function init() {
+  setDataAtual();
+  await Promise.all([
+    carregarPlacas(),
+    carregarPneusEstoque(),
+    carregarMovimentacoes()
+  ]);
+  handleTipoOperacaoChange(); // Garante que o estado inicial do form está correto
+  clearForm();
+}
