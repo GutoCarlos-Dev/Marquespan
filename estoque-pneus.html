@@ -13,104 +13,109 @@
 
 </head>
 <body>
-  <main class="main-content">
-    <header class="page-title-header">
-      <i class="fas fa-tire page-title-icon"></i>
-      <span class="page-title-text">Estoque de Pneus</span>
-    </header>
-    <section class="content-section">
-      <!-- Card do Filtro de Busca -->
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-search"></i>Filtros de Busca</h3>
+  <div class="container">
+    <div id="menu-container">
+      <!-- O menu será injetado aqui pelo menu.js -->
+    </div>
+    <main class="main-content">
+      <header class="page-title-header">
+        <i class="fas fa-tire page-title-icon"></i>
+        <span class="page-title-text">Estoque de Pneus</span>
+      </header>
+      <section class="content-section">
+        <!-- Card do Filtro de Busca -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-search"></i>Filtros de Busca</h3>
+          </div>
+          <div class="filter-table-wrapper">
+            <table class="filter-table">
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Marca</th>
+                  <th>Modelo</th>
+                  <th>Vida</th>
+                  <th>Tipo</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="text" id="campo-placa-estoque" placeholder="Placa" list="placas-list" /></td>
+                  <td><input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" /></td>
+                  <td><input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" /></td>
+                  <td><input type="number" id="campo-vida-estoque" placeholder="Vida" /></td>
+                  <td><input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" /></td>
+                  <td class="actions-cell">
+                    <button type="button" id="btn-buscar-estoque" class="btn btn-success"><i class="fas fa-search"></i>Buscar</button>
+                    <button type="button" id="btn-limpar-estoque" class="btn btn-secondary"><i class="fas fa-eraser"></i>Limpar</button>
+                    <button type="button" id="btn-exportar-estoque" class="btn btn-success"><i class="fas fa-file-excel"></i>Exportar XLSX</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <datalist id="placas-list"></datalist>
+            <datalist id="marcas-list"></datalist>
+            <datalist id="modelos-list"></datalist>
+            <datalist id="tipos-list"></datalist>
+          </div>
         </div>
-        <div class="filter-table-wrapper">
-          <table class="filter-table">
-            <thead>
-              <tr>
-                <th>Placa</th>
-                <th>Marca</th>
-                <th>Modelo</th>
-                <th>Vida</th>
-                <th>Tipo</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><input type="text" id="campo-placa-estoque" placeholder="Placa" list="placas-list" /></td>
-                <td><input type="text" id="campo-marca-estoque" placeholder="Marca" list="marcas-list" /></td>
-                <td><input type="text" id="campo-modelo-estoque" placeholder="Modelo" list="modelos-list" /></td>
-                <td><input type="number" id="campo-vida-estoque" placeholder="Vida" /></td>
-                <td><input type="text" id="campo-tipo-estoque" placeholder="Tipo" list="tipos-list" /></td>
-                <td class="actions-cell">
-                  <button type="button" id="btn-buscar-estoque" class="btn btn-success"><i class="fas fa-search"></i>Buscar</button>
-                  <button type="button" id="btn-limpar-estoque" class="btn btn-secondary"><i class="fas fa-eraser"></i>Limpar</button>
-                  <button type="button" id="btn-exportar-estoque" class="btn btn-success"><i class="fas fa-file-excel"></i>Exportar XLSX</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <datalist id="placas-list"></datalist>
-          <datalist id="marcas-list"></datalist>
-          <datalist id="modelos-list"></datalist>
-          <datalist id="tipos-list"></datalist>
+        <!-- Card da Tabela de Estoque -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-list"></i>Estoque de Pneus</h2>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table-estoque">
+              <thead>
+                <tr>
+                  <th><i class="fas fa-car"></i>Placa</th>
+                  <th><i class="fas fa-tag"></i>Marca</th>
+                  <th><i class="fas fa-cog"></i>Modelo</th>
+                  <th class="text-center"><i class="fas fa-recycle"></i>Vida</th>
+                  <th><i class="fas fa-shapes"></i>Tipo</th>
+                  <th class="text-center"><i class="fas fa-hashtag"></i>Quantidade</th>
+                </tr>
+              </thead>
+              <tbody id="grid-estoque-body">
+                <!-- As linhas do estoque serão inseridas aqui pelo JavaScript -->
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="5">Total Geral em Estoque</th>
+                  <td id="total-quantidade" class="total-value">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-      </div>
-      <!-- Card da Tabela de Estoque -->
-      <div class="card">
-        <div class="card-header">
-          <h2><i class="fas fa-list"></i>Estoque de Pneus</h2>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table-estoque">
-            <thead>
-              <tr>
-                <th><i class="fas fa-car"></i>Placa</th>
-                <th><i class="fas fa-tag"></i>Marca</th>
-                <th><i class="fas fa-cog"></i>Modelo</th>
-                <th class="text-center"><i class="fas fa-recycle"></i>Vida</th>
-                <th><i class="fas fa-shapes"></i>Tipo</th>
-                <th class="text-center"><i class="fas fa-hashtag"></i>Quantidade</th>
-              </tr>
-            </thead>
-            <tbody id="grid-estoque-body">
-              <!-- As linhas do estoque serão inseridas aqui pelo JavaScript -->
-            </tbody>
-            <tfoot>
-              <tr>
-                <th colspan="5">Total Geral em Estoque</th>
-                <td id="total-quantidade" class="total-value">0</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
 
-      <!-- Dashboard de Gráficos -->
-      <section class="dashboard-section">
-        <h3 class="dashboard-title">Dashboard de Análise de Pneus</h3>
-        <div class="dashboard-grid">
-          <div class="chart-container">
-            <h4>Movimentação de Pneus (Entrada/Saída)</h4>
-            <canvas id="chartMovimentacao" width="220" height="150"></canvas>
+        <!-- Dashboard de Gráficos -->
+        <section class="dashboard-section">
+          <h3 class="dashboard-title">Dashboard de Análise de Pneus</h3>
+          <div class="dashboard-grid">
+            <div class="chart-container">
+              <h4>Movimentação de Pneus (Entrada/Saída)</h4>
+              <canvas id="chartMovimentacao" width="220" height="150"></canvas>
+            </div>
+            <div class="chart-container">
+              <h4>Distribuição por Marca</h4>
+              <canvas id="chartMarcas" width="220" height="150"></canvas>
+            </div>
+            <div class="chart-container">
+              <h4>Fluxo por Modelo</h4>
+              <canvas id="chartModelos" width="220" height="150"></canvas>
+            </div>
+            <div class="chart-container">
+              <h4>Análise de Vida Útil</h4>
+              <canvas id="chartVida" width="220" height="150"></canvas>
+            </div>
           </div>
-          <div class="chart-container">
-            <h4>Distribuição por Marca</h4>
-            <canvas id="chartMarcas" width="220" height="150"></canvas>
-          </div>
-          <div class="chart-container">
-            <h4>Fluxo por Modelo</h4>
-            <canvas id="chartModelos" width="220" height="150"></canvas>
-          </div>
-          <div class="chart-container">
-            <h4>Análise de Vida Útil</h4>
-            <canvas id="chartVida" width="220" height="150"></canvas>
-          </div>
-        </div>
+        </section>
       </section>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <footer class="footer">
     © 2025 Marquespan. Todos os direitos reservados.
