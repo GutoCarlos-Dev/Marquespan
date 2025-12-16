@@ -86,8 +86,8 @@ function calcularValorTotal() {
     const quantidade = parseFloat(document.getElementById('quantidade').value) || 1; // Evita divisão por zero
     const valorNota = parseFloat(document.getElementById('vlr_nota').value) || 0;
     const valorFrete = parseFloat(document.getElementById('valor_frete').value) || 0;
-    // O valor total é a soma da nota e do frete. O valor unitário é derivado disso.
-    const total = valorNota + valorFrete; 
+    // Lógica de cálculo atualizada: (Valor da Nota / Quantidade) + Valor do Frete
+    const total = (valorNota / quantidade) + valorFrete;
 
     const displayTotal = document.getElementById('valor_total_display');
     if (displayTotal) {
@@ -114,8 +114,9 @@ async function handleSubmit(e) {
         quantidade: parseInt(formData.get('quantidade') || 0),
         valor_nota: parseFloat(formData.get('vlr_nota') || 0), // Custo total da nota
         valor_frete: parseFloat(formData.get('valor_frete') || 0), // Custo total do frete
-        valor_total: (parseFloat(formData.get('vlr_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)), // Custo total da entrada
-        // Novo campo calculado: Custo real por unidade
+        // Lógica de cálculo do valor total atualizada
+        valor_total: ((parseFloat(formData.get('vlr_nota') || 0) / (parseInt(formData.get('quantidade')) || 1)) + parseFloat(formData.get('valor_frete') || 0)),
+        // A lógica do valor unitário real foi mantida, pois representa o custo total (nota+frete) dividido pela quantidade.
         valor_unitario_real: ((parseFloat(formData.get('vlr_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)) / (parseInt(formData.get('quantidade')) || 1)),
         observacoes: formData.get('observacoes')?.trim(),
         usuario: getCurrentUserName(),
