@@ -199,6 +199,12 @@ async function handleInstalacaoMultipla(e) {
   const usuario = getCurrentUser();
   const dataOperacao = form.data.value;
 
+  // Validação Crítica: Garante que o usuário está logado.
+  if (!usuario || !usuario.id) {
+    alert('Erro de autenticação: Usuário não identificado. Por favor, faça login novamente.');
+    return;
+  }
+
   const linhasPneus = document.querySelectorAll('#grid-instalacao-pneus .instalacao-grid-row');
 
   if (linhasPneus.length === 0) {
@@ -260,6 +266,13 @@ async function handleOperacaoUnica(e) {
   const formData = new FormData(e.target);
   const marcaFogo = formData.get('codigo_marca_fogo')?.trim().toUpperCase();
 
+  // Validação Crítica: Garante que o usuário está logado.
+  const currentUser = getCurrentUser();
+  if (!currentUser || !currentUser.id) {
+    alert('Erro de autenticação: Usuário não identificado. Por favor, faça login novamente.');
+    return;
+  }
+
   try {
     const { data: pneu, error: pneuError } = await supabase
       .from('marcas_fogo_pneus')
@@ -286,8 +299,8 @@ async function handleOperacaoUnica(e) {
       tipo_operacao: tipoOperacao,
       posicao_aplicacao: formData.get('aplicacao'),
       observacoes: formData.get('observacoes')?.trim(),
-      usuario: getCurrentUser().nome, // Mantém o nome do usuário
-      user_id: getCurrentUser().id,   // Adiciona o ID do usuário para a política de segurança (RLS)
+      usuario: currentUser.nome, // Usa o nome do usuário já obtido
+      user_id: currentUser.id,   // Usa o ID do usuário já obtido
     };
 
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select();
