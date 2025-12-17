@@ -236,7 +236,7 @@ async function handleInstalacaoMultipla(e) {
   }
 
   try {
-    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes);
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes).select();
     if (insertError) throw insertError;
 
     const { error: updateError } = await supabase
@@ -290,7 +290,7 @@ async function handleOperacaoUnica(e) {
       user_id: getCurrentUser().id,   // Adiciona o ID do usuário para a política de segurança (RLS)
     };
 
-    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]);
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select();
     if (insertError) throw insertError;
 
     let novoStatus = 'EM USO';
