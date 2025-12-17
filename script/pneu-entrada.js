@@ -1,30 +1,32 @@
 import { supabaseClient } from './supabase.js';
 
 let listaDeEntradas = []; // Cache local para evitar múltiplas buscas
+let lancamentoAtual = []; // "Carrinho" para os itens do lançamento atual
 let gridBody;
-let editMode = false;
-let editingId = null;
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     gridBody = document.getElementById('grid-pneus-body');
-    const form = document.getElementById('formPneu');
+    const formCabecalho = document.getElementById('formCabecalhoPneu');
+    const formAddItem = document.getElementById('formAddItem');
     const btnBuscar = document.getElementById('btn-buscar');
     const btnLimparBusca = document.getElementById('btn-limpar-busca');
-    const btnCancelForm = document.getElementById('btnCancelForm');
+    const btnSalvarLancamento = document.getElementById('btnSalvarLancamento');
+    const btnCancelarLancamento = document.getElementById('btnCancelarLancamento');
     const selectTipo = document.getElementById('tipo');
     const inputVida = document.getElementById('vida');
     // Campos para cálculo de valor
-    const inputQuantidade = document.getElementById('quantidade');
     const inputValorNota = document.getElementById('vlr_nota');
     const inputValorFrete = document.getElementById('valor_frete');
 
     // --- Event Listeners ---
-    form.addEventListener('submit', handleSubmit);
+    formAddItem.addEventListener('submit', handleAddItem);
     btnBuscar?.addEventListener('click', buscarEntradas);
     btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
-    btnCancelForm?.addEventListener('click', () => clearForm());
+    btnSalvarLancamento?.addEventListener('click', handleSalvarLancamento);
+    btnCancelarLancamento?.addEventListener('click', () => clearFormCompleto());
     gridBody?.addEventListener('click', handleGridActions);
+    document.getElementById('grid-lancamento-atual')?.addEventListener('click', handleCarrinhoActions);
 
     // Adiciona a lógica para o campo 'Vida' quando 'Tipo' for 'NOVO'
     selectTipo?.addEventListener('change', (event) => {
@@ -32,15 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
             inputVida.value = 0;
         }
     });
-    // Listeners para recalcular o valor total
-    inputQuantidade?.addEventListener('input', calcularValorTotal);
+
+    // Listeners para recalcular o valor total do lançamento
     inputValorNota?.addEventListener('input', calcularValorTotal);
     inputValorFrete?.addEventListener('input', calcularValorTotal);
 
     // --- Inicialização da Página ---
     initializeSelects();
     carregarEntradas();
-    clearForm(); // Garante que o campo de data seja preenchido na carga inicial
+    clearFormCompleto(); // Garante que o campo de data seja preenchido na carga inicial
 });
 
 // Preenche os selects com opções pré-definidas
@@ -65,99 +67,157 @@ function getCurrentUserName() {
 }
 
 // Limpa o formulário e redefine a data
-function clearForm() {
-    const form = document.getElementById('formPneu');
-    form.reset();
+function clearFormCompleto() {
+    document.getElementById('formCabecalhoPneu').reset();
+    document.getElementById('formAddItem').reset();
     
     // Ajuste para usar apenas a data local.
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('data').value = now.toISOString().slice(0, 10);
 
-    // Limpa o display de valor total
-    document.getElementById('valor_total_display').textContent = 'R$ 0,00';
-
-    editMode = false;
-    editingId = null;
+    lancamentoAtual = [];
+    renderizarCarrinho();
+    calcularValorTotal();
 }
 
 // 💰 Calcula e exibe o valor total
 function calcularValorTotal() {
-    const quantidade = parseFloat(document.getElementById('quantidade').value) || 1; // Evita divisão por zero
     const valorNota = parseFloat(document.getElementById('vlr_nota').value) || 0;
     const valorFrete = parseFloat(document.getElementById('valor_frete').value) || 0;
-    // Lógica de cálculo atualizada: (Valor da Nota / Quantidade) + Valor do Frete
-    const total = (valorNota / quantidade) + valorFrete;
+    const total = valorNota + valorFrete;
 
-    const displayTotal = document.getElementById('valor_total_display');
+    const displayTotal = document.getElementById('valor_total_lancamento');
     if (displayTotal) {
         displayTotal.textContent = total.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL'
         });
     }
+    return total;
 }
 
-// 💾 Salva ou atualiza uma entrada de pneu
-async function handleSubmit(e) {
+// 🛒 Adiciona um item ao carrinho de lançamento
+function handleAddItem(e) {
     e.preventDefault();
+    const formAddItem = document.getElementById('formAddItem');
+    const formData = new FormData(formAddItem);
 
-    const formData = new FormData(e.target);
-    const pneuData = {
-        data: formData.get('data'),
-        os: formData.get('os')?.trim().toUpperCase(),
-        nota_fiscal: formData.get('nota_fiscal')?.trim().toUpperCase(),
+    const item = {
         marca: formData.get('marca'),
         modelo: formData.get('modelo'),
         tipo: formData.get('tipo'),
         vida: parseInt(formData.get('vida') || 0),
         quantidade: parseInt(formData.get('quantidade') || 0),
-        valor_nota: parseFloat(formData.get('vlr_nota') || 0), // Custo total da nota
-        valor_frete: parseFloat(formData.get('valor_frete') || 0), // Custo total do frete
-        // Lógica de cálculo do valor total atualizada
-        valor_total: ((parseFloat(formData.get('vlr_nota') || 0) / (parseInt(formData.get('quantidade')) || 1)) + parseFloat(formData.get('valor_frete') || 0)),
-        // A lógica do valor unitário real foi mantida, pois representa o custo total (nota+frete) dividido pela quantidade.
-        valor_unitario_real: ((parseFloat(formData.get('vlr_nota') || 0) + parseFloat(formData.get('valor_frete') || 0)) / (parseInt(formData.get('quantidade')) || 1)),
-        observacoes: formData.get('observacoes')?.trim(),
-        usuario: getCurrentUserName(),
-        // Campos fixos para esta tela
-        status: 'ENTRADA',
-        descricao: 'ENTRADA ESTOQUE NF',
     };
-    if (!pneuData.nota_fiscal || !pneuData.marca || !pneuData.modelo || !pneuData.tipo || pneuData.quantidade <= 0 || !pneuData.valor_nota && pneuData.valor_nota !== 0) {
-        alert('Por favor, preencha todos os campos obrigatórios (*).');
+
+    if (!item.marca || !item.modelo || !item.tipo || item.quantidade <= 0) {
+        alert('Preencha Marca, Modelo, Tipo e Quantidade do item.');
         return;
     }
 
+    lancamentoAtual.push(item);
+    renderizarCarrinho();
+    formAddItem.reset();
+    document.getElementById('marca').focus();
+}
+
+// 🎨 Renderiza o carrinho de lançamento
+function renderizarCarrinho() {
+    const gridCarrinho = document.getElementById('grid-lancamento-atual');
+    gridCarrinho.innerHTML = '';
+
+    if (lancamentoAtual.length === 0) {
+        gridCarrinho.innerHTML = `<tr><td colspan="6" class="no-results-message">Nenhum item adicionado.</td></tr>`;
+        return;
+    }
+
+    lancamentoAtual.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.marca}</td>
+            <td>${item.modelo}</td>
+            <td>${item.tipo}</td>
+            <td style="text-align: center;">${item.vida}</td>
+            <td style="text-align: center;">${item.quantidade}</td>
+            <td class="actions-cell">
+                <button class="btn-pneu-action delete" data-action="remove-item" data-index="${index}" title="Remover Item">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        gridCarrinho.appendChild(tr);
+    });
+}
+
+// 🎬 Ações do carrinho (remover item)
+function handleCarrinhoActions(event) {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    const action = button.dataset.action;
+    const index = button.dataset.index;
+
+    if (action === 'remove-item') {
+        lancamentoAtual.splice(index, 1);
+        renderizarCarrinho();
+    }
+}
+
+// 💾 Salva o lançamento completo (cabeçalho + todos os itens do carrinho)
+async function handleSalvarLancamento() {
+    const formCabecalho = document.getElementById('formCabecalhoPneu');
+    const formDataCabecalho = new FormData(formCabecalho);
+
+    const cabecalho = {
+        data: formDataCabecalho.get('data'),
+        os: formDataCabecalho.get('os')?.trim().toUpperCase(),
+        nota_fiscal: formDataCabecalho.get('nota_fiscal')?.trim().toUpperCase(),
+        valor_nota: parseFloat(formDataCabecalho.get('vlr_nota') || 0),
+        valor_frete: parseFloat(formDataCabecalho.get('valor_frete') || 0),
+        observacoes: formDataCabecalho.get('observacoes')?.trim(),
+    };
+
+    if (!cabecalho.nota_fiscal || !cabecalho.data) {
+        alert('Preencha a Data e a Nota Fiscal do lançamento.');
+        return;
+    }
+
+    if (lancamentoAtual.length === 0) {
+        alert('Adicione pelo menos um item ao lançamento.');
+        return;
+    }
+
+    const valorTotalLancamento = cabecalho.valor_nota + cabecalho.valor_frete;
+    const quantidadeTotalItens = lancamentoAtual.reduce((sum, item) => sum + item.quantidade, 0);
+
+    const registrosParaSalvar = lancamentoAtual.map(item => ({
+        ...cabecalho,
+        ...item,
+        valor_total: valorTotalLancamento,
+        valor_unitario_real: valorTotalLancamento / quantidadeTotalItens,
+        usuario: getCurrentUserName(),
+        status: 'ENTRADA',
+        descricao: 'ENTRADA ESTOQUE NF',
+    }));
+
     try {
-        if (editMode && editingId) {
-            // --- MODO DE EDIÇÃO ---
-            const { error } = await supabaseClient
-                .from('pneus')
-                .update(pneuData)
-                .eq('id', editingId);
+        const { data: insertedData, error } = await supabaseClient
+            .from('pneus')
+            .insert(registrosParaSalvar)
+            .select();
 
-            if (error) throw error;
-            alert('Entrada de pneu atualizada com sucesso!');
+        if (error) throw error;
 
-        } else {
-            // --- MODO DE INSERÇÃO ---
-            const { data: insertedData, error } = await supabaseClient
-                .from('pneus')
-                .insert([pneuData])
-                .select()
-                .single();
-
-            if (error) throw error;            
-            // Pergunta ao usuário se deseja gerar os códigos agora
-            if (confirm('Entrada registrada com sucesso! Deseja gerar os códigos de marca de fogo agora?')) {
-                await handleGerarCodigos(insertedData.id);
-            } else {
-                alert('Ok! Você pode gerar os códigos mais tarde clicando no botão "Gerar" na tabela.');
+        if (confirm('Lançamento salvo com sucesso! Deseja gerar os códigos de marca de fogo para todos os itens agora?')) {
+            // Itera sobre cada registro salvo para gerar os códigos
+            for (const registro of insertedData) {
+                await handleGerarCodigos(registro.id, registro.quantidade);
             }
+            alert('Todos os códigos foram gerados!');
         }
 
-        clearForm();
+        clearFormCompleto();
         await carregarEntradas();
 
     } catch (error) {
@@ -166,8 +226,8 @@ async function handleSubmit(e) {
     }
 }
 
-// 🔥 Gera códigos de marca de fogo sequenciais
-async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
+// 🔥 Chama a Stored Procedure para gerar códigos de marca de fogo
+async function gerarCodigosMarcaFogo(lancamentoId, quantidade) {
     // A lógica foi movida para uma função (Stored Procedure) no Supabase
     // para garantir atomicidade e evitar race conditions.
     // Agora, apenas chamamos a função RPC.
@@ -175,7 +235,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
         const { error } = await supabaseClient.rpc('gerar_codigos_marca_fogo', {
             p_lancamento_id: lancamentoId,
             p_quantidade: quantidade,
-            p_usuario_criacao: usuario
+            p_usuario_criacao: getCurrentUserName()
         });
 
         if (error) {
@@ -185,7 +245,7 @@ async function gerarCodigosMarcaFogo(lancamentoId, quantidade, usuario) {
 
     } catch (error) {
         // Loga o erro e relança para que a função que chamou (handleSubmit) possa tratá-lo.
-        console.error('Erro na geração de códigos de marca de fogo:', error);
+        console.error(`Erro na geração de códigos para o lançamento ID ${lancamentoId}:`, error);
         throw new Error('Houve um erro ao gerar os códigos de marca de fogo. Verifique o console para detalhes.');
     }
 }
@@ -307,10 +367,10 @@ function handleGridActions(event) {
     const id = button.dataset.id;
 
     if (!action || !id) return;
-
-    if (action === 'edit') {
-        editarEntrada(id);
-    } else if (action === 'delete') {
+    
+    // A edição de múltiplos itens foi removida para simplificar o fluxo do carrinho.
+    // A exclusão agora é por lançamento completo.
+    if (action === 'delete') {
         excluirEntrada(id);
     } else if (action === 'view') {
         visualizarCodigosMarcaFogo(id);
@@ -318,39 +378,6 @@ function handleGridActions(event) {
         handleGerarCodigos(id);
     }
 }
-
-// ✏️ Preenche o formulário para edição
-function editarEntrada(id) {
-    const data = listaDeEntradas.find(p => p.id == id);
-    if (!data) {
-        alert('Erro: Entrada não encontrada para edição.');
-        return;
-    }
-    try {
-        document.getElementById('data').value = data.data ? new Date(data.data + 'T00:00:00').toISOString().slice(0, 10) : '';
-        document.getElementById('nota_fiscal').value = data.nota_fiscal || '';
-        document.getElementById('marca').value = data.marca;
-        document.getElementById('modelo').value = data.modelo;
-        document.getElementById('tipo').value = data.tipo;
-        document.getElementById('vida').value = data.vida ?? 1; // Usa ?? para permitir 0
-        document.getElementById('os').value = data.os || '';
-        document.getElementById('quantidade').value = data.quantidade || 0;
-        document.getElementById('vlr_nota').value = data.valor_nota || 0;
-        document.getElementById('valor_frete').value = data.valor_frete || 0;
-        // O valor_unitario_real não precisa ser preenchido no form, pois é apenas para salvar
-        document.getElementById('observacoes').value = data.observacoes || '';
-
-        editMode = true;
-        editingId = id;
-        
-        calcularValorTotal(); // Recalcula o total ao carregar para edição
-
-        document.getElementById('formPneu').scrollIntoView({ behavior: 'smooth' });
-    } catch (error) {
-        console.error('Erro ao carregar dados para edição:', error);
-        alert('Erro ao carregar dados para edição.');
-    }
-};
 
 // 🎬 Lida com o clique no botão "Gerar"
 async function handleGerarCodigos(id) {
@@ -365,8 +392,7 @@ async function handleGerarCodigos(id) {
     }
 
     try {
-        const usuario = getCurrentUserName();
-        await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade, usuario); // A lógica de geração foi movida para o Supabase
+        await gerarCodigosMarcaFogo(entrada.id, entrada.quantidade); // A lógica de geração foi movida para o Supabase
         alert('Códigos de marca de fogo gerados com sucesso!');
         await carregarEntradas(); // Recarrega a tabela para atualizar o botão para "Visualizar"
     } catch (error) {
