@@ -285,20 +285,20 @@ async function handleOperacaoUnica(e) {
       return;
     }
 
-    const tipoOperacao = formData.get('tipo_operacao');
+    const tipoOperacao = form.tipo_operacao.value;
     if (tipoOperacao !== 'REFORMA' && tipoOperacao !== 'DESCARTE' && pneu.status_pneu !== 'ESTOQUE') {
       alert(`Atenção: O pneu "${marcaFogo}" não está no estoque. Status atual: ${pneu.status_pneu}.`);
       return;
     }
 
     const movimentacaoData = {
-      data: formData.get('data'),
+      data: form.data.value.split('T')[0], // Envia apenas a data (YYYY-MM-DD)
       codigo_marca_fogo: marcaFogo,
-      placa: formData.get('placa'),
-      quilometragem: parseInt(formData.get('quilometragem')),
+      placa: form.placa.value,
+      quilometragem: parseInt(form.quilometragem.value),
       tipo_operacao: tipoOperacao,
-      posicao_aplicacao: formData.get('aplicacao'),
-      observacoes: formData.get('observacoes')?.trim(),
+      posicao_aplicacao: form.aplicacao.value,
+      observacoes: form.observacoes.value?.trim(),
       usuario: currentUser.nome, // Usa o nome do usuário já obtido
       user_id: currentUser.id   // Usa o ID do usuário já obtido
     };
