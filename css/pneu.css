@@ -1,64 +1,81 @@
-/* Estilos para o container do formulário de cabeçalho que simula uma tabela */
-.form-table-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Cria 3 colunas de largura igual */
-    gap: 1rem; /* Espaçamento entre os campos */
-    padding: 1rem;
+/* Centraliza a seção de conteúdo e define uma largura máxima */
+.content-section {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Container principal do formulário de entrada */
+.form-entrada-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Estilo para os blocos de formulário (Fieldset) */
+.form-fieldset {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
+    padding: 1.5rem;
     background-color: #fdfdfd;
-    margin-bottom: 1.5rem;
 }
 
-/* Faz um item do grid (como o campo de observações) ocupar 3 colunas */
-.form-group-span-3 {
-    grid-column: span 3;
+.fieldset-legend {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #0056b3; /* Azul escuro para destaque */
+    padding: 0 0.5rem;
+    margin-left: 1rem;
 }
 
-/* Estilos para o grid de adição de itens, para que pareça uma linha de tabela */
+/* Grid para os dados da Nota Fiscal */
+.form-grid-nf {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.2rem;
+}
+
+/* Faz o campo de observações ocupar a largura total no grid */
+.form-grid-nf .obs-field {
+    grid-column: 1 / -1;
+}
+
+/* Grid para adicionar um novo item */
 .add-item-grid {
     display: grid;
-    /* Define 6 colunas com larguras proporcionais para cada campo e o botão */
-    grid-template-columns: 2fr 2fr 1.5fr 1fr 1fr auto;
-    gap: 1rem; /* Espaçamento entre os campos */
-    align-items: end; /* Alinha os itens na parte inferior para um visual limpo */
-    margin-bottom: 1.5rem;
-    padding-top: 1rem;
+    grid-template-columns: 2fr 2fr 1.5fr 0.5fr 0.5fr 1fr;
+    gap: 1.2rem;
+    align-items: flex-end; /* Alinha os itens na base */
 }
 
-.add-item-grid .grid-header {
-    font-weight: bold;
-    font-size: 0.85rem;
-    color: #555;
-    margin-bottom: 0.25rem;
+/* Grupo do botão de ação no grid de adição */
+.action-button-group {
+    display: flex;
+    height: 38px; /* Alinha com a altura dos inputs */
 }
 
-/* Ajustes gerais para os grupos de formulário dentro dos grids */
-.form-table-container .form-group-pneu,
-.add-item-grid .form-group-pneu {
+.action-button-group .btn-pneu-add {
+    width: 100%;
+}
+
+/* Estilos gerais para os grupos de formulário */
+.form-group-pneu {
     display: flex;
     flex-direction: column;
 }
 
-.form-table-container .form-group-pneu label,
-.add-item-grid .form-group-pneu label {
+.form-group-pneu label {
     margin-bottom: 0.5rem;
     font-weight: 600;
     font-size: 0.9rem;
     color: #333;
 }
 
-/* Estilo para o botão de adicionar no grid de itens */
-.add-item-grid .btn-pneu-add {
-    height: 38px; /* Altura padrão para inputs */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap; /* Evita que o texto quebre */
+/* Remove os cabeçalhos de texto que não são mais necessários */
+.add-item-grid .grid-header {
+    display: none;
 }
 
-/* Garante que os inputs e selects dentro do grid de adição não tenham label visível */
-.add-item-grid input,
-.add-item-grid select {
-    width: 100%;
+/* Ajuste para o botão de adicionar no grid de itens */
+.add-item-grid .btn-pneu-add {
+    white-space: nowrap; /* Evita que o texto quebre */
 }
