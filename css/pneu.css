@@ -147,3 +147,10 @@
 .data-grid tbody tr:hover {
     background-color: #e9f5ff;
 }
+
+/* Define um tamanho fixo para o campo de observações e impede o redimensionamento */
+#observacoes {
+    width: 736px;
+    height: 90px;
+    resize: none; /* Impede que o usuário redimensione o campo */
+}
