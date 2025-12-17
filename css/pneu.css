@@ -163,17 +163,18 @@
 
 @media print {
     /* Esconde tudo, exceto o container do relatório */
-    body * {
-        visibility: hidden;
+    body > *:not(#print-report-container) {
+        display: none;
     }
-    #print-report-container, #print-report-container * {
-        visibility: visible;
-    }
+
     #print-report-container {
-        position: absolute;
+        display: block; /* Garante que ele seja visível */
+        position: static; /* Remove o posicionamento absoluto que pode causar páginas em branco */
         left: 0;
         top: 0;
         width: 100%;
+        margin: 0;
+        padding: 0;
     }
 
     .report-header {
