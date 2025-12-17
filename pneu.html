@@ -22,66 +22,68 @@
     <!-- O conteúdo principal da página começa aqui -->
     <header class="page-title-header"><i class="fas fa-dolly-flatbed"></i><span class="page-title-text">Entrada de Pneus (Nota Fiscal)</span></header>
     <section class="content-section">
-      <!-- Card do Formulário de Cadastro -->
-      <div class="form-card">
-        <div class="form-header">
-          <h3><i class="fas fa-plus-circle"></i>Registrar Entrada de Pneus</h3>
-        </div>
-        <form id="form-entrada-pneus" class="form-entrada-container">
-          <!-- Seção de Dados da Nota Fiscal -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">Dados da Nota Fiscal</legend>
-            <div class="form-grid-nf">
-              <div class="form-group-pneu"><label for="data">Data *</label><input type="date" name="data" id="data" required /></div>
-              <div class="form-group-pneu"><label for="nota_fiscal">Nota Fiscal *</label><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF" required /></div>
-              <div class="form-group-pneu"><label for="os">OS</label><input type="text" name="os" id="os" placeholder="Ordem de Serviço" /></div>
-              <div class="form-group-pneu"><label for="vlr_nota">Valor da Nota *</label><input type="number" name="vlr_nota" id="vlr_nota" min="0" step="0.01" required /></div>
-              <div class="form-group-pneu"><label for="valor_frete">Valor do Frete</label><input type="number" name="valor_frete" id="valor_frete" min="0" step="0.01" value="0" /></div>
-              <div class="form-group-pneu obs-field">
-                <label for="observacoes">Observações</label>
-                <textarea name="observacoes" id="observacoes" rows="2" placeholder="Observações sobre a entrada..."></textarea>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- Seção de Adicionar Itens -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">Adicionar Item ao Lançamento</legend>
-            <div class="add-item-grid">
-              <div class="form-group-pneu"><label for="marca">Marca *</label><select name="marca" id="marca" required><option value="">Selecione</option></select></div>
-              <div class="form-group-pneu"><label for="modelo">Modelo *</label><select name="modelo" id="modelo" required><option value="">Selecione</option></select></div>
-              <div class="form-group-pneu"><label for="tipo">Tipo *</label><select name="tipo" id="tipo" required><option value="">Selecione</option></select></div>
-              <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="0" value="0" /></div>
-              <div class="form-group-pneu"><label for="quantidade">Qtd *</label><input type="number" name="quantidade" id="quantidade" min="1" value="1" required /></div>
-              <div class="form-group-pneu action-button-group">
-                <button type="button" id="btnAdicionarItem" class="btn-pneu btn-pneu-add" title="Adicionar Item ao Carrinho"><i class="fas fa-plus"></i>Adicionar</button>
-              </div>
-            </div>
-          </fieldset>
-        </div>
-      </div>
-
-      <!-- Card do Carrinho de Lançamento -->
-      <div class="table-card">
-        <div class="form-header">
-          <h3><i class="fas fa-shopping-cart"></i>Itens do Lançamento</h3>
-          <div class="total-display">
-            Valor Total do Lançamento: <strong id="valor_total_lancamento">R$ 0,00</strong>
+      <div class="top-section-grid">
+        <!-- Card do Formulário de Cadastro -->
+        <div class="form-card">
+          <div class="form-header">
+            <h3><i class="fas fa-plus-circle"></i>Registrar Entrada de Pneus</h3>
           </div>
+          <form id="form-entrada-pneus" class="form-entrada-container">
+            <!-- Seção de Dados da Nota Fiscal -->
+            <fieldset class="form-fieldset">
+              <legend class="fieldset-legend">Dados da Nota Fiscal</legend>
+              <div class="form-grid-nf">
+                <div class="form-group-pneu"><label for="data">Data *</label><input type="date" name="data" id="data" required /></div>
+                <div class="form-group-pneu"><label for="nota_fiscal">Nota Fiscal *</label><input type="text" name="nota_fiscal" id="nota_fiscal" placeholder="Número da NF" required /></div>
+                <div class="form-group-pneu"><label for="os">OS</label><input type="text" name="os" id="os" placeholder="Ordem de Serviço" /></div>
+                <div class="form-group-pneu"><label for="vlr_nota">Valor da Nota *</label><input type="number" name="vlr_nota" id="vlr_nota" min="0" step="0.01" required /></div>
+                <div class="form-group-pneu"><label for="valor_frete">Valor do Frete</label><input type="number" name="valor_frete" id="valor_frete" min="0" step="0.01" value="0" /></div>
+                <div class="form-group-pneu obs-field">
+                  <label for="observacoes">Observações</label>
+                  <textarea name="observacoes" id="observacoes" rows="2" placeholder="Observações sobre a entrada..."></textarea>
+                </div>
+              </div>
+            </fieldset>
+  
+            <!-- Seção de Adicionar Itens -->
+            <fieldset class="form-fieldset">
+              <legend class="fieldset-legend">Adicionar Item ao Lançamento</legend>
+              <div class="add-item-grid">
+                <div class="form-group-pneu"><label for="marca">Marca *</label><select name="marca" id="marca" required><option value="">Selecione</option></select></div>
+                <div class="form-group-pneu"><label for="modelo">Modelo *</label><select name="modelo" id="modelo" required><option value="">Selecione</option></select></div>
+                <div class="form-group-pneu"><label for="tipo">Tipo *</label><select name="tipo" id="tipo" required><option value="">Selecione</option></select></div>
+                <div class="form-group-pneu"><label for="vida">Vida</label><input type="number" name="vida" id="vida" min="0" value="0" /></div>
+                <div class="form-group-pneu"><label for="quantidade">Qtd *</label><input type="number" name="quantidade" id="quantidade" min="1" value="1" required /></div>
+                <div class="form-group-pneu action-button-group">
+                  <button type="button" id="btnAdicionarItem" class="btn-pneu btn-pneu-add" title="Adicionar Item ao Carrinho"><i class="fas fa-plus"></i>Adicionar</button>
+                </div>
+              </div>
+            </fieldset>
+          </form>
         </div>
-        <div class="table-scroll-container">
-          <table class="data-grid">
-            <thead>
-              <tr><th>Marca</th><th>Modelo</th><th>Tipo</th><th>Vida</th><th>Qtd</th><th>Ações</th></tr>
-            </thead>
-            <tbody id="grid-lancamento-atual">
-              <!-- Itens adicionados via JS -->
-            </tbody>
-          </table>
-        </div>
-        <div class="form-actions-pneu">
-          <button type="button" id="btnSalvarLancamento" class="btn-pneu btn-pneu-save"><i class="fas fa-save"></i>Salvar Lançamento Completo</button>
-          <button type="button" id="btnCancelarLancamento" class="btn-pneu btn-pneu-cancel"><i class="fas fa-times"></i>Cancelar Lançamento</button>
+  
+        <!-- Card do Carrinho de Lançamento -->
+        <div class="table-card">
+          <div class="form-header">
+            <h3><i class="fas fa-shopping-cart"></i>Itens do Lançamento</h3>
+            <div class="total-display">
+              Valor Total do Lançamento: <strong id="valor_total_lancamento">R$ 0,00</strong>
+            </div>
+          </div>
+          <div class="table-scroll-container">
+            <table class="data-grid">
+              <thead>
+                <tr><th>Marca</th><th>Modelo</th><th>Tipo</th><th>Vida</th><th>Qtd</th><th>Ações</th></tr>
+              </thead>
+              <tbody id="grid-lancamento-atual">
+                <!-- Itens adicionados via JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="form-actions-pneu">
+            <button type="button" id="btnSalvarLancamento" class="btn-pneu btn-pneu-save"><i class="fas fa-save"></i>Salvar Lançamento Completo</button>
+            <button type="button" id="btnCancelarLancamento" class="btn-pneu btn-pneu-cancel"><i class="fas fa-times"></i>Cancelar Lançamento</button>
+          </div>
         </div>
       </div>
 

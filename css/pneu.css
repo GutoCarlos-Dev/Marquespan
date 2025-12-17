@@ -147,3 +147,16 @@
 .data-grid tbody tr:hover {
     background-color: #e9f5ff;
 }
+
+/* --- Layout em Grid para a Seção Superior --- */
+.top-section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas de largura igual */
+    gap: 30px; /* Espaçamento entre os cards */
+    align-items: start; /* Alinha os cards no topo */
+}
+
+/* Ajusta a altura máxima do carrinho para não ficar muito grande */
+.top-section-grid .table-scroll-container {
+    max-height: 450px;
+}
