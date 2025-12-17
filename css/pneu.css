@@ -73,7 +73,7 @@
 .fieldset-legend {
     font-weight: 600;
     font-size: 1.1rem;
-    color: #0056b3;
+    color: #850101;
     padding: 0 0.5rem;
     margin-left: 1rem;
 }
@@ -128,7 +128,7 @@
 }
 
 .data-grid thead th {
-    background: linear-gradient(135deg, #0056b3, #007bff);
+    background: linear-gradient(135deg, #33b300, #5eff00);
     color: white;
     font-weight: 600;
     position: sticky;
