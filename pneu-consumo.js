@@ -228,7 +228,7 @@ async function handleInstalacaoMultipla(e) {
     if (!pneuInfo) continue;
 
     movimentacoes.push({
-      data: dataOperacao.split('T')[0], // Envia apenas a data (YYYY-MM-DD)
+      data: dataOperacao, // Envia data e hora completas
       codigo_marca_fogo: pneuInfo.codigo_marca_fogo,
       placa: placa,
       quilometragem: parseInt(quilometragem),
@@ -292,7 +292,7 @@ async function handleOperacaoUnica(e) {
     }
 
     const movimentacaoData = {
-      data: form.data.value.split('T')[0], // Envia apenas a data (YYYY-MM-DD)
+      data: form.data.value, // Envia data e hora completas
       codigo_marca_fogo: marcaFogo,
       placa: form.placa.value,
       quilometragem: parseInt(form.quilometragem.value),
