@@ -552,6 +552,7 @@ function createModal(lancamento, codigos) {
     btnImprimir.className = 'btn-pneu btn-pneu-primary';
     btnImprimir.innerHTML = '<i class="fas fa-print"></i> Imprimir Relatório';
     btnImprimir.onclick = () => {
+        document.getElementById('print-report-container').style.display = 'block'; // Garante que o container esteja visível
         gerarRelatorioImpressao(lancamento, codigos);
         window.print();
     };
