@@ -7,8 +7,7 @@ let gridBody;
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     gridBody = document.getElementById('grid-pneus-body');
-    const formCabecalho = document.getElementById('formCabecalhoPneu');
-    const formAddItem = document.getElementById('formAddItem');
+    const btnAdicionarItem = document.getElementById('btnAdicionarItem');
     const btnBuscar = document.getElementById('btn-buscar');
     const btnLimparBusca = document.getElementById('btn-limpar-busca');
     const btnSalvarLancamento = document.getElementById('btnSalvarLancamento');
@@ -20,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputValorFrete = document.getElementById('valor_frete');
 
     // --- Event Listeners ---
-    formAddItem.addEventListener('submit', handleAddItem);
+    btnAdicionarItem.addEventListener('click', handleAddItem);
     btnBuscar?.addEventListener('click', buscarEntradas);
     btnLimparBusca?.addEventListener('click', limparFiltrosBusca);
     btnSalvarLancamento?.addEventListener('click', handleSalvarLancamento);
@@ -68,8 +67,12 @@ function getCurrentUserName() {
 
 // Limpa o formulário e redefine a data
 function clearFormCompleto() {
-    document.getElementById('formCabecalhoPneu').reset();
-    document.getElementById('formAddItem').reset();
+    // Limpa campos do cabeçalho
+    ['os', 'nota_fiscal', 'vlr_nota', 'valor_frete', 'observacoes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('valor_frete').value = 0;
+
+    // Limpa campos de adicionar item
+    ['marca', 'modelo', 'tipo', 'vida', 'quantidade'].forEach(id => document.getElementById(id).value = '');
     
     // Ajuste para usar apenas a data local.
     const now = new Date();
@@ -99,26 +102,26 @@ function calcularValorTotal() {
 
 // 🛒 Adiciona um item ao carrinho de lançamento
 function handleAddItem(e) {
-    e.preventDefault();
-    const formAddItem = document.getElementById('formAddItem');
-    const formData = new FormData(formAddItem);
-
     const item = {
-        marca: formData.get('marca'),
-        modelo: formData.get('modelo'),
-        tipo: formData.get('tipo'),
-        vida: parseInt(formData.get('vida') || 0),
-        quantidade: parseInt(formData.get('quantidade') || 0),
+        marca: document.getElementById('marca').value,
+        modelo: document.getElementById('modelo').value,
+        tipo: document.getElementById('tipo').value,
+        vida: parseInt(document.getElementById('vida').value || 0),
+        quantidade: parseInt(document.getElementById('quantidade').value || 0),
     };
 
     if (!item.marca || !item.modelo || !item.tipo || item.quantidade <= 0) {
-        alert('Preencha Marca, Modelo, Tipo e Quantidade do item.');
+        alert('Preencha os campos obrigatórios (*): Marca, Modelo, Tipo e Quantidade.');
         return;
     }
 
     lancamentoAtual.push(item);
     renderizarCarrinho();
-    formAddItem.reset();
+
+    // Limpa apenas os campos de adição de item para o próximo
+    document.getElementById('marca').value = '';
+    document.getElementById('modelo').value = '';
+    document.getElementById('quantidade').value = 1;
     document.getElementById('marca').focus();
 }
 
@@ -166,16 +169,13 @@ function handleCarrinhoActions(event) {
 
 // 💾 Salva o lançamento completo (cabeçalho + todos os itens do carrinho)
 async function handleSalvarLancamento() {
-    const formCabecalho = document.getElementById('formCabecalhoPneu');
-    const formDataCabecalho = new FormData(formCabecalho);
-
     const cabecalho = {
-        data: formDataCabecalho.get('data'),
-        os: formDataCabecalho.get('os')?.trim().toUpperCase(),
-        nota_fiscal: formDataCabecalho.get('nota_fiscal')?.trim().toUpperCase(),
-        valor_nota: parseFloat(formDataCabecalho.get('vlr_nota') || 0),
-        valor_frete: parseFloat(formDataCabecalho.get('valor_frete') || 0),
-        observacoes: formDataCabecalho.get('observacoes')?.trim(),
+        data: document.getElementById('data').value,
+        os: document.getElementById('os').value?.trim().toUpperCase(),
+        nota_fiscal: document.getElementById('nota_fiscal').value?.trim().toUpperCase(),
+        valor_nota: parseFloat(document.getElementById('vlr_nota').value || 0),
+        valor_frete: parseFloat(document.getElementById('valor_frete').value || 0),
+        observacoes: document.getElementById('observacoes').value?.trim(),
     };
 
     if (!cabecalho.nota_fiscal || !cabecalho.data) {
