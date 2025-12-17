@@ -242,7 +242,7 @@ async function handleInstalacaoMultipla(e) {
   }
 
   try {
-    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes);
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes).select();
     if (insertError) throw insertError;
 
     const { error: updateError } = await supabase
