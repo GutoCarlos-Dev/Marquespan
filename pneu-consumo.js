@@ -303,7 +303,7 @@ async function handleOperacaoUnica(e) {
       user_id: currentUser.id   // Usa o ID do usuário já obtido
     };
 
-    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]);
+    const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select();
     if (insertError) throw insertError;
 
     let novoStatus = 'EM USO';
