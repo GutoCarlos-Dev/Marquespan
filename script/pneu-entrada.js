@@ -450,15 +450,25 @@ async function excluirMarcaDeFogo(marcaFogoId, lancamentoId) {
 //  Visualiza os códigos de marca de fogo em um modal
 async function visualizarCodigosMarcaFogo(lancamentoId) {
     try {
-        const { data: codigos, error } = await supabaseClient
-            .from('marcas_fogo_pneus')
-            .select('id, codigo_marca_fogo, status_pneu')
-            .eq('lancamento_id', lancamentoId)
-            .order('codigo_marca_fogo', { ascending: true });
+        // Busca os dados do lançamento e os códigos de fogo associados em uma única consulta
+        const { data: lancamento, error } = await supabaseClient
+            .from('pneus')
+            .select(`
+                *,
+                marcas_fogo_pneus (
+                    id,
+                    codigo_marca_fogo,
+                    status_pneu
+                )
+            `)
+            .eq('id', lancamentoId)
+            .single();
 
         if (error) throw error;
 
-        if (!codigos || codigos.length === 0) {
+        const codigos = lancamento.marcas_fogo_pneus.sort((a, b) => a.codigo_marca_fogo.localeCompare(b.codigo_marca_fogo));
+
+        if (!lancamento || !codigos || codigos.length === 0) {
             alert('Nenhum código de marca de fogo encontrado para este lançamento.');
             // Se o último código foi excluído, fecha o modal e atualiza a grid principal
             const existingModal = document.querySelector('.modal-pneu-viewer');
@@ -472,7 +482,7 @@ async function visualizarCodigosMarcaFogo(lancamentoId) {
         if (existingModal) document.body.removeChild(existingModal);
 
         // Criar e exibir o modal
-        const modal = createModal(codigos, lancamentoId);
+        const modal = createModal(lancamento, codigos);
         document.body.appendChild(modal);
 
     } catch (error) {
@@ -482,7 +492,7 @@ async function visualizarCodigosMarcaFogo(lancamentoId) {
 }
 
 // 🎨 Cria o HTML do modal para exibir os códigos
-function createModal(codigos, lancamentoId) {
+function createModal(lancamento, codigos) {
     const modal = document.createElement('div');
     modal.className = 'modal-pneu-viewer';
     modal.onclick = (e) => {
@@ -516,6 +526,7 @@ function createModal(codigos, lancamentoId) {
     contentHTML += `
             </div>
         </div>
+        <div id="print-report-container" class="print-only"></div>
         <div class="modal-pneu-footer">
             <button class="btn-pneu btn-pneu-cancel">Fechar</button>
         </div>
@@ -531,11 +542,70 @@ function createModal(codigos, lancamentoId) {
     modalContent.querySelectorAll('.btn-delete-codigo').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const marcaFogoId = e.currentTarget.dataset.id;
-            excluirMarcaDeFogo(marcaFogoId, lancamentoId);
+            excluirMarcaDeFogo(marcaFogoId, lancamento.id);
         });
     });
+
+    // Adiciona o botão de imprimir e seu evento
+    const btnImprimir = document.createElement('button');
+    btnImprimir.id = 'btnPrintReport';
+    btnImprimir.className = 'btn-pneu btn-pneu-primary';
+    btnImprimir.innerHTML = '<i class="fas fa-print"></i> Imprimir Relatório';
+    btnImprimir.onclick = () => {
+        gerarRelatorioImpressao(lancamento, codigos);
+        window.print();
+    };
+    modalContent.querySelector('.modal-pneu-footer').prepend(btnImprimir);
+
     modal.appendChild(modalContent);
     return modal;
+}
+
+// 🖨️ Gera o HTML para o relatório de impressão
+function gerarRelatorioImpressao(lancamento, codigos) {
+    const container = document.getElementById('print-report-container');
+    if (!container) return;
+
+    let reportHTML = `
+        <div class="report-header">
+            <h1>Relatório de Queima de Pneus</h1>
+            <img src="logo.png" alt="Logo" class="report-logo">
+        </div>
+        <div class="report-details">
+            <p><strong>Nota Fiscal:</strong> ${lancamento.nota_fiscal}</p>
+            <p><strong>Data Lançamento:</strong> ${new Date(lancamento.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+            <p><strong>Marca:</strong> ${lancamento.marca}</p>
+            <p><strong>Modelo:</strong> ${lancamento.modelo}</p>
+            <p><strong>Tipo:</strong> ${lancamento.tipo}</p>
+            <p><strong>Quantidade Total:</strong> ${lancamento.quantidade}</p>
+        </div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Código</th><th>Situação</th>
+                    <th>Código</th><th>Situação</th>
+                    <th>Código</th><th>Situação</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Organiza os códigos em 3 colunas
+    for (let i = 0; i < codigos.length; i += 3) {
+        reportHTML += '<tr>';
+        for (let j = 0; j < 3; j++) {
+            const codigo = codigos[i + j];
+            if (codigo) {
+                reportHTML += `<td>${codigo.codigo_marca_fogo}</td><td class="situacao-col"></td>`;
+            } else {
+                reportHTML += '<td></td><td></td>'; // Células vazias para manter a estrutura
+            }
+        }
+        reportHTML += '</tr>';
+    }
+
+    reportHTML += '</tbody></table>';
+    container.innerHTML = reportHTML;
 }
 
 // Adicionar estilos para o novo modal no CSS ou aqui diretamente
