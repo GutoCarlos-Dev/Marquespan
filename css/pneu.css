@@ -90,7 +90,7 @@
 
 .add-item-grid {
     display: grid;
-    grid-template-columns: 2fr 2fr 1.5fr 0.5fr 0.5fr 1fr;
+    grid-template-columns: 2fr 2fr 1.5fr 0.8fr 0.8fr 1fr;
     gap: 1.2rem;
     align-items: flex-end;
 }
