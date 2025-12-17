@@ -73,10 +73,11 @@ async function carregarPneusEstoque() {
   pneusEmEstoque = data;
 }
 
-// Obtém o nome do usuário logado do localStorage
-function getCurrentUserName() {
+// Obtém o ID e o nome do usuário logado do localStorage
+function getCurrentUser() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-  return usuario ? usuario.nome : 'Usuário Anônimo';
+  // Retorna um objeto com id e nome para maior flexibilidade
+  return usuario ? { id: usuario.id, nome: usuario.nome } : { id: null, nome: 'Usuário Anônimo' };
 }
 
 // Limpa o formulário e redefine a data
@@ -195,7 +196,7 @@ async function handleInstalacaoMultipla(e) {
   const placa = form.placa.value;
   const quilometragem = form.quilometragem.value;
   const observacoes = form.observacoes.value;
-  const usuario = getCurrentUserName();
+  const usuario = getCurrentUser();
   const dataOperacao = form.data.value;
 
   const linhasPneus = document.querySelectorAll('#grid-instalacao-pneus .instalacao-grid-row');
@@ -228,7 +229,8 @@ async function handleInstalacaoMultipla(e) {
       tipo_operacao: 'INSTALACAO',
       posicao_aplicacao: posicao,
       observacoes: observacoes,
-      usuario: usuario,
+      usuario: usuario.nome, // Mantém o nome do usuário na coluna 'usuario'
+      user_id: usuario.id,   // Adiciona o ID do usuário para a política de segurança (RLS)
     });
     idsParaAtualizar.push(marcaFogoId);
   }
@@ -284,7 +286,8 @@ async function handleOperacaoUnica(e) {
       tipo_operacao: tipoOperacao,
       posicao_aplicacao: formData.get('aplicacao'),
       observacoes: formData.get('observacoes')?.trim(),
-      usuario: getCurrentUserName(),
+      usuario: getCurrentUser().nome, // Mantém o nome do usuário
+      user_id: getCurrentUser().id,   // Adiciona o ID do usuário para a política de segurança (RLS)
     };
 
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]);
@@ -439,4 +442,3 @@ async function init() {
   handleTipoOperacaoChange(); // Garante que o estado inicial do form está correto
   clearForm();
 }
-
