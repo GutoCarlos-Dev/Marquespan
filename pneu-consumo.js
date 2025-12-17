@@ -440,5 +440,4 @@ async function init() {
     carregarMovimentacoes()
   ]);
   handleTipoOperacaoChange(); // Garante que o estado inicial do form está correto
-  clearForm();
 }
