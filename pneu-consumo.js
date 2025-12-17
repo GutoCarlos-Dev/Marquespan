@@ -299,8 +299,8 @@ async function handleOperacaoUnica(e) {
       tipo_operacao: tipoOperacao,
       posicao_aplicacao: formData.get('aplicacao'),
       observacoes: formData.get('observacoes')?.trim(),
-      usuario: currentUser.nome,
-      user_id: currentUser.id // Garante que o user_id seja incluído no objeto
+      usuario: currentUser.nome, // Usa o nome do usuário já obtido
+      user_id: currentUser.id   // Usa o ID do usuário já obtido
     };
 
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select('*');
