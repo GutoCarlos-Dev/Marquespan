@@ -149,7 +149,12 @@ async function handleSubmit(e) {
                 .single();
 
             if (error) throw error;            
-            alert('Entrada de pneu registrada com sucesso! Agora você pode gerar as marcas de fogo na tabela.');
+            // Pergunta ao usuário se deseja gerar os códigos agora
+            if (confirm('Entrada registrada com sucesso! Deseja gerar os códigos de marca de fogo agora?')) {
+                await handleGerarCodigos(insertedData.id);
+            } else {
+                alert('Ok! Você pode gerar os códigos mais tarde clicando no botão "Gerar" na tabela.');
+            }
         }
 
         clearForm();
