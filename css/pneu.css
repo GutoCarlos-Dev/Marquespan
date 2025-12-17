@@ -79,3 +79,9 @@
 .add-item-grid .btn-pneu-add {
     white-space: nowrap; /* Evita que o texto quebre */
 }
+
+/* Garante que as tabelas não quebrem o layout em telas menores */
+.table-scroll-container {
+    overflow-x: auto; /* Adiciona rolagem horizontal quando necessário */
+    width: 100%;
+}
