@@ -228,7 +228,7 @@ async function handleInstalacaoMultipla(e) {
     if (!pneuInfo) continue;
 
     movimentacoes.push({
-      data: dataOperacao,
+      data: dataOperacao.split('T')[0], // Envia apenas a data (YYYY-MM-DD)
       codigo_marca_fogo: pneuInfo.codigo_marca_fogo,
       placa: placa,
       quilometragem: parseInt(quilometragem),
@@ -263,8 +263,8 @@ async function handleInstalacaoMultipla(e) {
 }
 
 async function handleOperacaoUnica(e) {
-  const formData = new FormData(e.target);
-  const marcaFogo = formData.get('codigo_marca_fogo')?.trim().toUpperCase();
+  const form = e.target;
+  const marcaFogo = form.codigo_marca_fogo.value?.trim().toUpperCase();
 
   // Validação Crítica: Garante que o usuário está logado.
   const currentUser = getCurrentUser();
