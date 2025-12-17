@@ -209,14 +209,7 @@ async function handleSalvarLancamento() {
 
         if (error) throw error;
 
-        if (confirm('Lançamento salvo com sucesso! Deseja gerar os códigos de marca de fogo para todos os itens agora?')) {
-            // Itera sobre cada registro salvo para gerar os códigos
-            for (const registro of insertedData) {
-                await handleGerarCodigos(registro.id, registro.quantidade);
-            }
-            alert('Todos os códigos foram gerados!');
-        }
-
+        alert('Lançamento salvo com sucesso!');
         clearFormCompleto();
         await carregarEntradas();
 
