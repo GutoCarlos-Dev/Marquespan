@@ -150,7 +150,8 @@
 
 /* Define um tamanho fixo para o campo de observações e impede o redimensionamento */
 #observacoes {
-    width: 736px;
+    width: 100%; /* Faz o campo ocupar a largura disponível do seu contêiner */
+    max-width: 736px; /* Define a largura máxima em telas grandes */
     height: 90px;
     resize: none; /* Impede que o usuário redimensione o campo */
 }
