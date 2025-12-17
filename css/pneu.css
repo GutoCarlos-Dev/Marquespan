@@ -1,160 +1,64 @@
-/* css/pneu.css */
-
-/* --- Estilos Gerais da Página de Pneus --- */
-.page-title-header {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 25px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.content-section {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-/* --- Card do Formulário --- */
-.form-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    border: 1px solid #e9ecef;
-}
-
-.form-header {
-    border-bottom: 2px solid #28a745;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-}
-
-.form-header h3 {
-    color: #28a745;
-    margin: 0;
-    font-size: 1.4rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* --- Layout do Formulário com Grid --- */
-#formPneu {
+/* Estilos para o container do formulário de cabeçalho que simula uma tabela */
+.form-table-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr); /* Cria 3 colunas de largura igual */
+    gap: 1rem; /* Espaçamento entre os campos */
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fdfdfd;
+    margin-bottom: 1.5rem;
 }
 
-.form-group-pneu {
-    display: flex;
-    flex-direction: column;
+/* Faz um item do grid (como o campo de observações) ocupar 3 colunas */
+.form-group-span-3 {
+    grid-column: span 3;
 }
 
-.form-group-pneu label {
-    margin-bottom: 5px;
-    font-weight: 600;
+/* Estilos para o grid de adição de itens, para que pareça uma linha de tabela */
+.add-item-grid {
+    display: grid;
+    /* Define 6 colunas com larguras proporcionais para cada campo e o botão */
+    grid-template-columns: 2fr 2fr 1.5fr 1fr 1fr auto;
+    gap: 1rem; /* Espaçamento entre os campos */
+    align-items: end; /* Alinha os itens na parte inferior para um visual limpo */
+    margin-bottom: 1.5rem;
+    padding-top: 1rem;
+}
+
+.add-item-grid .grid-header {
+    font-weight: bold;
+    font-size: 0.85rem;
     color: #555;
+    margin-bottom: 0.25rem;
 }
 
-.form-group-pneu input,
-.form-group-pneu select,
-.form-group-pneu textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.form-group-full-width {
-    grid-column: 1 / -1;
-}
-
-/* --- Detalhes da Saída (Condicional) --- */
-.saida-details {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-}
-
-.saida-details h4 {
-    color: #495057;
-    margin-bottom: 0;
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* --- Botões do Formulário --- */
-.form-actions-pneu {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: flex-start;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-}
-
-.btn-pneu {
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-pneu-save { background-color: #28a745; color: white; }
-.btn-pneu-save:hover { background-color: #218838; }
-
-.btn-pneu-stock { background-color: #17a2b8; color: white; }
-.btn-pneu-stock:hover { background-color: #138496; }
-
-.btn-pneu-report { background-color: #fd7e14; color: white; }
-.btn-pneu-report:hover { background-color: #e8680f; }
-
-.btn-pneu-cancel { background-color: #dc3545; color: white; }
-.btn-pneu-cancel:hover { background-color: #c82333; }
-
-/* --- Tabela de Lançamentos --- */
-.table-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    border: 1px solid #e9ecef;
-}
-
-.modal-content .form-actions-pneu {
-    justify-content: flex-end;
-}
-
-/* Ajustes para alinhamento dos filtros */
-.filtros-pneus {
-    display: flex;
-    flex-wrap: wrap; /* Permite que os itens quebrem a linha em telas menores */
-    gap: 15px;
-    align-items: flex-end; /* Alinha os itens pela base, incluindo o botão */
-    margin-bottom: 20px;
-}
-
-.filtro-pneu-item {
+/* Ajustes gerais para os grupos de formulário dentro dos grids */
+.form-table-container .form-group-pneu,
+.add-item-grid .form-group-pneu {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Permite que os itens cresçam para ocupar o espaço */
-    min-width: 150px; /* Largura mínima para evitar que fiquem muito pequenos */
 }
 
+.form-table-container .form-group-pneu label,
+.add-item-grid .form-group-pneu label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Estilo para o botão de adicionar no grid de itens */
+.add-item-grid .btn-pneu-add {
+    height: 38px; /* Altura padrão para inputs */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap; /* Evita que o texto quebre */
+}
+
+/* Garante que os inputs e selects dentro do grid de adição não tenham label visível */
+.add-item-grid input,
+.add-item-grid select {
+    width: 100%;
+}
