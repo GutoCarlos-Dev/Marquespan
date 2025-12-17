@@ -22,8 +22,8 @@
 
 .page-title-header .fa-dolly-flatbed {
     margin-right: 15px;
-    color: #0056b3;
-    filter: drop-shadow(0 0 10px rgba(0, 86, 179, 0.5));
+    color: #b30000;
+    filter: drop-shadow(0 0 10px rgba(179, 6, 0, 0.5));
     animation: pulse-blue 2.5s infinite;
 }
 
