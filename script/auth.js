@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // O correto é migrar o cadastro de usuários para usar `supabase.auth.signUp()`.
         const { data: userData, error: userError } = await supabaseClient
           .from('usuarios')
-          .select('nome, nivel, senha') // Seleciona a senha para verificação
+          .select('id, nome, nivel, senha') // Seleciona o ID, nome, nível e senha
           .eq('nome', usuario)
           .single();
 
@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Se a verificação for bem-sucedida, armazena os dados do perfil do usuário.
         const perfilUsuario = {
+          id: userData.id, // Adiciona o ID do usuário
           nome: userData.nome,
           nivel: userData.nivel,
         };
