@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 let gridBody;
 
 // 🚀 Inicialização
@@ -515,3 +517,18 @@ window.buscarEstoque = buscarEstoque;
 window.limparFiltros = limparFiltros;
 window.exportarEstoqueXLSX = exportarEstoqueXLSX;
 window.gerarGraficos = gerarGraficos;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializa a página
+    carregarEstoque();
+    gerarGraficos();
+
+    // Adiciona os event listeners para os botões
+    const btnBuscar = document.getElementById('btn-buscar-estoque');
+    const btnLimpar = document.getElementById('btn-limpar-estoque');
+    const btnExportar = document.getElementById('btn-exportar-estoque');
+
+    if (btnBuscar) btnBuscar.addEventListener('click', buscarEstoque);
+    if (btnLimpar) btnLimpar.addEventListener('click', limparFiltros);
+    if (btnExportar) btnExportar.addEventListener('click', exportarEstoqueXLSX);
+});
