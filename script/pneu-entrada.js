@@ -656,8 +656,16 @@ async function gerarRelatorioPDF(lancamento, codigos) {
     doc.text(`Quantidade Total: ${lancamento.quantidade}`, 14, 60);
 
     // Tabela de Códigos
-    const tableColumn = ["Código Marca de Fogo"];
-    const tableRows = codigos.map(item => [item.codigo_marca_fogo]);
+    const tableColumn = ["Código Marca de Fogo", "Código Marca de Fogo", "Código Marca de Fogo"];
+    const tableRows = [];
+
+    for (let i = 0; i < codigos.length; i += 3) {
+        tableRows.push([
+            codigos[i] ? codigos[i].codigo_marca_fogo : '',
+            codigos[i + 1] ? codigos[i + 1].codigo_marca_fogo : '',
+            codigos[i + 2] ? codigos[i + 2].codigo_marca_fogo : ''
+        ]);
+    }
 
     // Gera a tabela usando autoTable
     doc.autoTable({
@@ -665,6 +673,7 @@ async function gerarRelatorioPDF(lancamento, codigos) {
         body: tableRows,
         startY: 70,
         theme: 'grid',
+        styles: { halign: 'center' },
     });
 
     doc.save(`Relatorio_Pneus_${lancamento.nota_fiscal}.pdf`);
