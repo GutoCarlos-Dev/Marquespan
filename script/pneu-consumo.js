@@ -2,6 +2,7 @@ import { supabaseClient as supabase } from './supabase.js';
 
 let gridBody;
 let pneusEmEstoque = [];
+let todosPneusAtivos = [];
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -72,6 +73,25 @@ async function carregarPneusEstoque() {
   }
   pneusEmEstoque = data;
 }
+
+/**
+ * Carrega todos os pneus ativos (em estoque ou em uso) para operações de pneu único.
+ */
+async function carregarTodosPneusAtivos() {
+  const { data, error } = await supabase
+    .from('marcas_fogo_pneus')
+    .select('id, codigo_marca_fogo, pneus(marca, modelo)')
+    .in('status_pneu', ['ESTOQUE', 'EM USO']) // Carrega pneus em estoque E em uso
+    .order('codigo_marca_fogo', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao carregar todos os pneus ativos:', error);
+    todosPneusAtivos = [];
+    return;
+  }
+  todosPneusAtivos = data;
+}
+
 
 // Obtém o ID e o nome do usuário logado do localStorage
 function getCurrentUser() {
@@ -179,6 +199,23 @@ function adicionarLinhaPneu() {
   gridInstalacaoPneus.appendChild(div);
 }
 
+/**
+ * Popula o dropdown de seleção de pneu para operações únicas.
+ */
+function popularSelectPneuUnico() {
+  const selectPneu = document.getElementById('codigo_marca_fogo_select');
+  if (!selectPneu) return;
+
+  selectPneu.innerHTML = '<option value="">Selecione a Marca de Fogo</option>';
+  // Usa a lista de todos os pneus ativos (em estoque ou em uso)
+  todosPneusAtivos.forEach(pneu => {
+    const option = document.createElement('option');
+    option.value = pneu.codigo_marca_fogo;
+    option.textContent = `${pneu.codigo_marca_fogo} (${pneu.pneus?.marca || 'N/A'} - ${pneu.pneus?.modelo || 'N/A'})`;
+    selectPneu.appendChild(option);
+  });
+}
+
 // 💾 Salva uma movimentação de pneu
 async function handleSubmit(e) {
   e.preventDefault();
@@ -253,6 +290,8 @@ async function handleInstalacaoMultipla(e) {
     alert(`${movimentacoes.length} pneu(s) instalado(s) com sucesso!`);
     clearForm();
     await carregarMovimentacoes();
+    await carregarTodosPneusAtivos(); // Recarrega todos os pneus ativos
+    popularSelectPneuUnico(); // Repopula o dropdown de pneu único
     await carregarPneusEstoque(); // Recarrega a lista de pneus em estoque
 
   } catch (error) {
@@ -318,6 +357,8 @@ async function handleOperacaoUnica(e) {
     alert('Movimentação de pneu registrada com sucesso!');
     clearForm();
     await carregarMovimentacoes();
+    await carregarTodosPneusAtivos(); // Recarrega todos os pneus ativos
+    popularSelectPneuUnico(); // Repopula o dropdown de pneu único
     await carregarPneusEstoque();
 
   } catch (error) {
@@ -432,6 +473,8 @@ window.excluirMovimentacao = async function(id, marcaFogo) {
 
     alert('Movimentação cancelada com sucesso!');
     await carregarMovimentacoes();
+    await carregarTodosPneusAtivos(); // Recarrega todos os pneus ativos
+    popularSelectPneuUnico(); // Repopula o dropdown de pneu único
     await carregarPneusEstoque();
 
   } catch (error) {
@@ -447,8 +490,10 @@ async function init() {
   setDataAtual();
   await Promise.all([
     carregarPlacas(),
+    carregarTodosPneusAtivos(),
     carregarPneusEstoque(),
     carregarMovimentacoes()
   ]);
+  popularSelectPneuUnico(); // Garante que o dropdown de pneu único seja populado
   handleTipoOperacaoChange(); // Garante que o estado inicial do form está correto
 }
