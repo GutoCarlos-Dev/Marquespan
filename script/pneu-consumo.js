@@ -235,8 +235,7 @@ async function handleInstalacaoMultipla(e) {
       tipo_operacao: 'INSTALACAO',
       posicao_aplicacao: posicao,
       observacoes: observacoes,
-      usuario: usuario.nome, // Mantém o nome do usuário na coluna 'usuario'
-      user_id: usuario.id,   // Adiciona o ID do usuário para a política de segurança (RLS)
+      usuario: usuario.nome // Mantém o nome do usuário na coluna 'usuario'
     });
     idsParaAtualizar.push(marcaFogoId);
   }
@@ -299,8 +298,7 @@ async function handleOperacaoUnica(e) {
       tipo_operacao: tipoOperacao,
       posicao_aplicacao: form.aplicacao.value,
       observacoes: form.observacoes.value?.trim(),
-      usuario: currentUser.nome, // Usa o nome do usuário já obtido
-      user_id: currentUser.id   // Usa o ID do usuário já obtido
+      usuario: currentUser.nome // Usa o nome do usuário já obtido
     };
 
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select();
