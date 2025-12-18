@@ -526,7 +526,6 @@ function createModal(lancamento, codigos) {
     contentHTML += `
             </div>
         </div>
-        <div id="print-report-container" class="print-section"></div>
         <div class="modal-pneu-footer">
             <button class="btn-pneu btn-pneu-cancel">Fechar</button>
         </div>
@@ -546,66 +545,59 @@ function createModal(lancamento, codigos) {
         });
     });
 
-    // Adiciona o botão de imprimir e seu evento
-    const btnImprimir = document.createElement('button');
-    btnImprimir.id = 'btnPrintReport';
-    btnImprimir.className = 'btn-pneu btn-pneu-primary';
-    btnImprimir.innerHTML = '<i class="fas fa-print"></i> Imprimir Relatório';
-    btnImprimir.onclick = () => {
-        gerarRelatorioImpressao(lancamento, codigos);
-        window.print();
+    // Adiciona o botão de gerar XLSX e seu evento
+    const btnGerarXLSX = document.createElement('button');
+    btnGerarXLSX.id = 'btnGerarXLSX';
+    btnGerarXLSX.className = 'btn-pneu btn-pneu-primary';
+    btnGerarXLSX.innerHTML = '<i class="fas fa-file-excel"></i> Gerar em XLSX';
+    btnGerarXLSX.onclick = () => {
+        gerarRelatorioXLSX(lancamento, codigos);
     };
-    modalContent.querySelector('.modal-pneu-footer').prepend(btnImprimir);
+    modalContent.querySelector('.modal-pneu-footer').prepend(btnGerarXLSX);
 
     modal.appendChild(modalContent);
     return modal;
 }
 
-// 🖨️ Gera o HTML para o relatório de impressão
-function gerarRelatorioImpressao(lancamento, codigos) {
-    const container = document.getElementById('print-report-container');
-    if (!container) return;
-
-    let reportHTML = `
-        <div class="report-header">
-            <h1>Relatório de Queima de Pneus</h1>
-            <img src="logo.png" alt="Logo" class="report-logo">
-        </div>
-        <div class="report-details">
-            <p><strong>Nota Fiscal:</strong> ${lancamento.nota_fiscal}</p>
-            <p><strong>Data Lançamento:</strong> ${new Date(lancamento.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
-            <p><strong>Marca:</strong> ${lancamento.marca}</p>
-            <p><strong>Modelo:</strong> ${lancamento.modelo}</p>
-            <p><strong>Tipo:</strong> ${lancamento.tipo}</p>
-            <p><strong>Quantidade Total:</strong> ${lancamento.quantidade}</p>
-        </div>
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Código</th><th>Situação</th>
-                    <th>Código</th><th>Situação</th>
-                    <th>Código</th><th>Situação</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    // Organiza os códigos em 3 colunas
-    for (let i = 0; i < codigos.length; i += 3) {
-        reportHTML += '<tr>';
-        for (let j = 0; j < 3; j++) {
-            const codigo = codigos[i + j];
-            if (codigo) {
-                reportHTML += `<td>${codigo.codigo_marca_fogo}</td><td class="situacao-col"></td>`;
-            } else {
-                reportHTML += '<td></td><td></td>'; // Células vazias para manter a estrutura
-            }
-        }
-        reportHTML += '</tr>';
+//  Gera o arquivo XLSX para download
+function gerarRelatorioXLSX(lancamento, codigos) {
+    if (typeof XLSX === 'undefined') {
+        alert('A biblioteca SheetJS (XLSX) não está carregada. Verifique se o script foi incluído no HTML.');
+        return;
     }
 
-    reportHTML += '</tbody></table>';
-    container.innerHTML = reportHTML;
+    const wb = XLSX.utils.book_new();
+    
+    // Prepara os dados para a planilha
+    const dados = [
+        ['RELATÓRIO DE QUEIMA DE PNEUS'],
+        [''],
+        ['Nota Fiscal:', lancamento.nota_fiscal],
+        ['Data Lançamento:', new Date(lancamento.data + 'T00:00:00').toLocaleDateString('pt-BR')],
+        ['Marca:', lancamento.marca],
+        ['Modelo:', lancamento.modelo],
+        ['Tipo:', lancamento.tipo],
+        ['Quantidade Total:', lancamento.quantidade],
+        [''],
+        ['CÓDIGOS DE MARCA DE FOGO']
+    ];
+
+    // Adiciona os códigos
+    codigos.forEach(item => {
+        dados.push([item.codigo_marca_fogo]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(dados);
+
+    // Ajusta largura das colunas
+    ws['!cols'] = [{wch: 25}, {wch: 30}];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Códigos");
+
+    // Gera o nome do arquivo
+    const fileName = `Relatorio_Pneus_${lancamento.nota_fiscal}.xlsx`;
+    
+    XLSX.writeFile(wb, fileName);
 }
 
 // Adicionar estilos para o novo modal no CSS ou aqui diretamente
