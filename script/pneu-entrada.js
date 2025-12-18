@@ -555,6 +555,17 @@ function createModal(lancamento, codigos) {
     };
     modalContent.querySelector('.modal-pneu-footer').prepend(btnGerarXLSX);
 
+    // Adiciona o botão de gerar PDF e seu evento
+    const btnGerarPDF = document.createElement('button');
+    btnGerarPDF.id = 'btnGerarPDF';
+    btnGerarPDF.className = 'btn-pneu btn-pneu-danger';
+    btnGerarPDF.style.marginRight = '10px';
+    btnGerarPDF.innerHTML = '<i class="fas fa-file-pdf"></i> Gerar PDF';
+    btnGerarPDF.onclick = () => {
+        gerarRelatorioPDF(lancamento, codigos);
+    };
+    modalContent.querySelector('.modal-pneu-footer').prepend(btnGerarPDF);
+
     modal.appendChild(modalContent);
     return modal;
 }
@@ -598,6 +609,44 @@ function gerarRelatorioXLSX(lancamento, codigos) {
     const fileName = `Relatorio_Pneus_${lancamento.nota_fiscal}.xlsx`;
     
     XLSX.writeFile(wb, fileName);
+}
+
+// 📄 Gera o arquivo PDF para download
+function gerarRelatorioPDF(lancamento, codigos) {
+    if (!window.jspdf) {
+        alert('A biblioteca jsPDF não está carregada. Verifique se o script foi incluído no HTML.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Título
+    doc.setFontSize(18);
+    doc.text('Relatório de Queima de Pneus', 14, 20);
+
+    // Detalhes do Lançamento
+    doc.setFontSize(12);
+    doc.text(`Nota Fiscal: ${lancamento.nota_fiscal}`, 14, 30);
+    doc.text(`Data Lançamento: ${new Date(lancamento.data + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 36);
+    doc.text(`Marca: ${lancamento.marca}`, 14, 42);
+    doc.text(`Modelo: ${lancamento.modelo}`, 14, 48);
+    doc.text(`Tipo: ${lancamento.tipo}`, 14, 54);
+    doc.text(`Quantidade Total: ${lancamento.quantidade}`, 14, 60);
+
+    // Tabela de Códigos
+    const tableColumn = ["Código Marca de Fogo"];
+    const tableRows = codigos.map(item => [item.codigo_marca_fogo]);
+
+    // Gera a tabela usando autoTable
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 70,
+        theme: 'grid',
+    });
+
+    doc.save(`Relatorio_Pneus_${lancamento.nota_fiscal}.pdf`);
 }
 
 // Adicionar estilos para o novo modal no CSS ou aqui diretamente
