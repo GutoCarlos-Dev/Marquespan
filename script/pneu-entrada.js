@@ -612,7 +612,7 @@ function gerarRelatorioXLSX(lancamento, codigos) {
 }
 
 // 📄 Gera o arquivo PDF para download
-function gerarRelatorioPDF(lancamento, codigos) {
+async function gerarRelatorioPDF(lancamento, codigos) {
     if (!window.jspdf) {
         alert('A biblioteca jsPDF não está carregada. Verifique se o script foi incluído no HTML.');
         return;
@@ -620,6 +620,27 @@ function gerarRelatorioPDF(lancamento, codigos) {
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+
+    // --- Logo da Empresa ---
+    try {
+        // Função para carregar a imagem e converter para Base64
+        const getLogoBase64 = async () => {
+            // O caminho 'logo.png' deve ser relativo à página HTML que executa o script
+            const response = await fetch('logo.png');
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        };
+
+        const logoBase64 = await getLogoBase64();
+        doc.addImage(logoBase64, 'PNG', 150, 12, 45, 15);
+    } catch (e) {
+        console.warn('Não foi possível carregar o logo.png. O PDF será gerado sem ele.', e);
+    }
 
     // Título
     doc.setFontSize(18);
