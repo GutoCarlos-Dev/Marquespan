@@ -373,7 +373,7 @@ function exportarEstoqueXLSX() {
     console.error('Erro ao carregar estoque:', error);
     gridBody.innerHTML = '<div class="grid-row" style="padding: 20px; text-align: center;">Erro ao carregar dados.</div>';
   }
-}
+
 
 async function buscarEstoque() {
   const placa = document.getElementById('campo-placa-estoque')?.value.trim().toUpperCase();
