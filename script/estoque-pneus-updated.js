@@ -185,7 +185,7 @@ function gerarDadosMovimentacao() {
 async function gerarGraficos() {
   try {
     // Buscar dados do estoque para gráficos
-    const { data: estoque, error: estoqueError } = await supabase
+    const { data: estoque, error: estoqueError } = await supabaseClient
       .from('estoque_pneus')
       .select('*');
 
