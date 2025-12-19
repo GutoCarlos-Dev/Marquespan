@@ -357,6 +357,7 @@ async function handleSubmitSaida(e) {
   }
 
   const formData = new FormData(e.target);
+  const tipoOperacao = formData.get('tipo_operacao');
   const saida = {
     data: new Date().toISOString(),
     placa: placaSelecionada,
@@ -365,7 +366,7 @@ async function handleSubmitSaida(e) {
     vida: parseInt(formData.get('vida') || 0),
     tipo: formData.get('tipo'),
     status: 'SAIDA',
-    descricao: 'SAIDA_PARA_VEICULO',
+    descricao: `${tipoOperacao} - PLACA ${placaSelecionada}`,
     quantidade: parseInt(formData.get('quantidade') || 1),
     usuario: getCurrentUserName(),
   };
@@ -383,23 +384,30 @@ async function handleSubmitSaida(e) {
   }
 
   try {
-    // Inserir registro de saída na tabela pneus
-    const { data: insertedData, error: insertError } = await supabaseClient
-      .from('pneus')
-      .insert([saida])
-      .select()
-      .single();
+    let lancamentoId = null;
 
-    if (insertError) {
-      console.error('Erro ao registrar saída:', insertError);
-      alert(`Erro ao registrar saída: ${insertError.message}`);
-      return;
+    // Apenas registra uma SAÍDA na tabela 'pneus' se a operação consumir um item do estoque.
+    // Um 'RODIZIO' apenas move um pneu que já está em uso, não baixa o estoque.
+    if (tipoOperacao !== 'RODIZIO') {
+      const { data: insertedData, error: insertError } = await supabaseClient
+        .from('pneus')
+        .insert([saida])
+        .select('id')
+        .single();
+
+      if (insertError) {
+        console.error('Erro ao registrar saída no livro razão de pneus:', insertError);
+        alert(`Erro ao registrar baixa no estoque: ${insertError.message}`);
+        return;
+      }
+      lancamentoId = insertedData.id;
     }
 
     // Registrar detalhes na tabela saidas_detalhadas
+    const codigoMarcaFogo = formData.get('codigo_marca_fogo_instalado') || null;
     const saidaDetalhada = {
-      lancamento_id: insertedData.id,
-      codigo_marca_fogo: formData.get('codigo_marca_fogo_instalado') || null,
+      lancamento_id: lancamentoId, // Pode ser nulo para rodízio
+      codigo_marca_fogo: codigoMarcaFogo,
       data_saida: new Date().toISOString(),
       placa: placaSelecionada,
       quilometragem: parseInt(formData.get('quilometragem') || 0),
@@ -411,6 +419,27 @@ async function handleSubmitSaida(e) {
       observacoes: formData.get('observacoes')?.trim() || null,
       usuario: saida.usuario
     };
+
+    // ** PONTO CRÍTICO: Atualizar o status do pneu individual na tabela 'marcas_fogo_pneus' **
+    if (codigoMarcaFogo) {
+      let novoStatus = 'EM USO'; // Padrão para Instalação/Troca
+      if (tipoOperacao === 'DESCARTE') {
+        novoStatus = 'DESCARTADO';
+      } else if (tipoOperacao === 'BORRACHARIA_TERCERIZADA') {
+        novoStatus = 'EM REFORMA';
+      }
+      // Para 'RODIZIO', o status já deve ser 'EM USO', então a atualização não causa problemas.
+
+      const { error: updateStatusError } = await supabaseClient
+        .from('marcas_fogo_pneus')
+        .update({ status_pneu: novoStatus })
+        .eq('codigo_marca_fogo', codigoMarcaFogo);
+
+      if (updateStatusError) {
+        // Não interrompe o fluxo, mas avisa sobre a inconsistência.
+        console.error('Aviso: Não foi possível atualizar o status do pneu individual:', updateStatusError);
+      }
+    }
 
     console.log('Tentando inserir saida detalhada:', saidaDetalhada);
 
@@ -725,6 +754,21 @@ async function excluirSaida(saida) {
         .delete()
         .eq('placa', placaSelecionada)
         .eq('posicao', saida.posicao_nova);
+    }
+
+    // ** PONTO CRÍTICO: Reverter o status do pneu individual para 'ESTOQUE' **
+    // Usa o 'codigo_marca_fogo_trocado' que é o código do pneu que saiu.
+    const codigoMarcaFogo = saida.codigo_marca_fogo_trocado;
+    if (codigoMarcaFogo) {
+      const { error: updateStatusError } = await supabaseClient
+        .from('marcas_fogo_pneus')
+        .update({ status_pneu: 'ESTOQUE' })
+        .eq('codigo_marca_fogo', codigoMarcaFogo);
+
+      if (updateStatusError) {
+        // Não interrompe o fluxo, mas avisa sobre a inconsistência.
+        console.warn('Aviso: Não foi possível reverter o status do pneu individual para estoque:', updateStatusError);
+      }
     }
 
     alert('✅ Saída excluída com sucesso! O pneu foi retornado ao estoque.');
