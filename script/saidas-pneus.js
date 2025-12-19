@@ -243,6 +243,11 @@ function filtrarEstoque() {
     renderizarEstoque(filtrados);
 }
 
+function getCurrentUser() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? usuario.nome : 'Usuário Anônimo';
+}
+
 async function handleFormSubmit(e) {
     e.preventDefault();
     const tipoSaida = document.getElementById('tipo_saida').value;
@@ -253,14 +258,64 @@ async function handleFormSubmit(e) {
             return;
         }
         
-        // TODO: Implementar a gravação no Supabase aqui
-        // Exemplo: Atualizar status para 'EM_BORRACHARIA' e criar log em 'movimentacoes_pneus'
-        
-        console.log('Enviando para borracharia:', pneusSelecionados);
-        alert('Envio para borracharia registrado com sucesso! (Simulação)');
-        
-        // Limpar formulário
-        limparFormulario();
+        const usuario = getCurrentUser();
+        const dataOperacao = document.getElementById('data_operacao').value;
+        const observacoes = document.getElementById('observacoes').value;
+
+        try {
+            // 1. Prepara registros para movimentacoes_pneus (Histórico que aparece em consumo-pneu.html)
+            const movimentacoes = pneusSelecionados.map(pneu => ({
+                data: dataOperacao,
+                codigo_marca_fogo: pneu.codigo_marca_fogo,
+                tipo_operacao: 'ENVIO_BORRACHARIA',
+                placa: 'BORRACHARIA', // Destino
+                quilometragem: 0,
+                observacoes: observacoes,
+                usuario: usuario
+            }));
+
+            // 2. Prepara registros para tabela pneus (Baixa de Estoque Contábil)
+            const saidasEstoque = pneusSelecionados.map(pneu => ({
+                data: dataOperacao,
+                nota_fiscal: 'SAIDA',
+                marca: pneu.pneus?.marca,
+                modelo: pneu.pneus?.modelo,
+                tipo: pneu.pneus?.tipo,
+                vida: pneu.pneus?.vida,
+                quantidade: 1,
+                valor_unitario_real: 0, 
+                valor_total: 0,
+                status: 'SAIDA',
+                descricao: 'ENVIO PARA BORRACHARIA',
+                placa: 'BORRACHARIA',
+                usuario: usuario
+            }));
+
+            const idsPneus = pneusSelecionados.map(p => p.id);
+
+            // Executa as operações no Supabase
+            const { error: movError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes);
+            if (movError) throw movError;
+
+            const { error: stockError } = await supabase.from('pneus').insert(saidasEstoque);
+            if (stockError) throw stockError;
+
+            const { error: updateError } = await supabase
+                .from('marcas_fogo_pneus')
+                .update({ status_pneu: 'EM_BORRACHARIA' })
+                .in('id', idsPneus);
+            if (updateError) throw updateError;
+
+            alert('Envio para borracharia registrado com sucesso!');
+            
+            // Limpar formulário e recarregar estoque
+            limparFormulario();
+            await carregarPneusEstoque();
+
+        } catch (error) {
+            console.error('Erro ao salvar envio:', error);
+            alert('Erro ao registrar envio: ' + (error.message || error));
+        }
     } else {
         alert('Funcionalidade em desenvolvimento para este tipo de saída.');
     }
