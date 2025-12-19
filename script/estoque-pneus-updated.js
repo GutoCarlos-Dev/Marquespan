@@ -349,3 +349,5 @@ function exportarEstoqueXLSX() {
     XLSX.utils.book_append_sheet(wb, wsUtilizada, 'Em Uso');
 
     XLSX.writeFile(wb, `Relatorio_Estoque_Pneus_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+    
