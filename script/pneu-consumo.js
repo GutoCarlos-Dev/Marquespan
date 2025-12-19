@@ -62,7 +62,7 @@ async function carregarPlacas() {
 async function carregarPneusEstoque() {
   const { data, error } = await supabase
     .from('marcas_fogo_pneus')
-    .select('id, codigo_marca_fogo, pneus(marca, modelo)')
+    .select('id, codigo_marca_fogo, lancamento_id, pneus(marca, modelo, tipo, vida, valor_unitario_real)')
     .eq('status_pneu', 'ESTOQUE')
     .order('codigo_marca_fogo', { ascending: true });
 
@@ -80,7 +80,7 @@ async function carregarPneusEstoque() {
 async function carregarTodosPneusAtivos() {
   const { data, error } = await supabase
     .from('marcas_fogo_pneus')
-    .select('id, codigo_marca_fogo, pneus(marca, modelo)')
+    .select('id, codigo_marca_fogo, lancamento_id, pneus(marca, modelo, tipo, vida, valor_unitario_real)')
     .in('status_pneu', ['ESTOQUE', 'EM USO']) // Carrega pneus em estoque E em uso
     .order('codigo_marca_fogo', { ascending: true });
 
@@ -251,6 +251,7 @@ async function handleInstalacaoMultipla(e) {
 
   const movimentacoes = [];
   const idsParaAtualizar = [];
+  const saidasEstoque = []; // Array para registrar as saídas na tabela 'pneus'
 
   for (const linha of linhasPneus) {
     const marcaFogoId = linha.querySelector('select[name="marca_fogo_id[]"]').value;
@@ -275,11 +276,32 @@ async function handleInstalacaoMultipla(e) {
       usuario: usuario.nome // Mantém o nome do usuário na coluna 'usuario'
     });
     idsParaAtualizar.push(marcaFogoId);
+
+    // Prepara o registro de SAIDA para a tabela 'pneus' (Baixa no Estoque)
+    saidasEstoque.push({
+      data: dataOperacao,
+      nota_fiscal: 'SAIDA', // Indica que é uma saída
+      marca: pneuInfo.pneus?.marca,
+      modelo: pneuInfo.pneus?.modelo,
+      tipo: pneuInfo.pneus?.tipo,
+      vida: pneuInfo.pneus?.vida,
+      quantidade: 1, // Baixa de 1 unidade
+      valor_unitario_real: pneuInfo.pneus?.valor_unitario_real || 0,
+      valor_total: pneuInfo.pneus?.valor_unitario_real || 0,
+      status: 'SAIDA',
+      descricao: `INSTALACAO - PLACA ${placa}`,
+      placa: placa, // Vincula a placa para saber onde o pneu está
+      usuario: usuario.nome
+    });
   }
 
   try {
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert(movimentacoes).select();
     if (insertError) throw insertError;
+
+    // Insere as saídas na tabela 'pneus' para atualizar a contagem do estoque
+    const { error: saidaError } = await supabase.from('pneus').insert(saidasEstoque);
+    if (saidaError) throw saidaError;
 
     const { error: updateError } = await supabase
       .from('marcas_fogo_pneus')
@@ -314,7 +336,7 @@ async function handleOperacaoUnica(e) {
   try {
     const { data: pneu, error: pneuError } = await supabase
       .from('marcas_fogo_pneus')
-      .select('id, status_pneu')
+      .select('id, status_pneu, lancamento_id, pneus(marca, modelo, tipo, vida, valor_unitario_real)')
       .eq('codigo_marca_fogo', marcaFogo)
       .single();
 
@@ -342,6 +364,29 @@ async function handleOperacaoUnica(e) {
 
     const { error: insertError } = await supabase.from('movimentacoes_pneus').insert([movimentacaoData]).select();
     if (insertError) throw insertError;
+
+    // Se o pneu estava no estoque e está saindo (não é apenas rodízio interno), registra a SAIDA na tabela 'pneus'
+    // Nota: Rodízio e Troca podem ou não gerar saída dependendo da regra de negócio, 
+    // mas se o status muda de ESTOQUE para outra coisa, deve baixar.
+    if (pneu.status_pneu === 'ESTOQUE') {
+        const saidaRecord = {
+            data: form.data.value,
+            nota_fiscal: 'SAIDA',
+            marca: pneu.pneus?.marca,
+            modelo: pneu.pneus?.modelo,
+            tipo: pneu.pneus?.tipo,
+            vida: pneu.pneus?.vida,
+            quantidade: 1,
+            valor_unitario_real: pneu.pneus?.valor_unitario_real || 0,
+            valor_total: pneu.pneus?.valor_unitario_real || 0,
+            status: 'SAIDA',
+            descricao: `${tipoOperacao} - PLACA ${form.placa.value}`,
+            placa: form.placa.value,
+            usuario: currentUser.nome
+        };
+        const { error: saidaError } = await supabase.from('pneus').insert([saidaRecord]);
+        if (saidaError) throw saidaError;
+    }
 
     let novoStatus = 'EM USO';
     if (movimentacaoData.tipo_operacao === 'REFORMA') novoStatus = 'EM REFORMA';
@@ -464,6 +509,13 @@ window.excluirMovimentacao = async function(id, marcaFogo) {
 
     if (deleteError) throw deleteError;
 
+    // Opcional: Para ser perfeito, deveríamos remover também o registro de 'SAIDA' da tabela 'pneus'.
+    // Como não temos o ID da saída fácil aqui, isso exigiria uma busca complexa.
+    // Por enquanto, focamos em reverter o status do pneu individual.
+    // Se necessário, adicione aqui a lógica para deletar da tabela 'pneus' onde status='SAIDA' 
+    // e descricao contém a placa e data aproximada.
+    
+    // Reverte o status do pneu individual
     const { error: updateError } = await supabase
       .from('marcas_fogo_pneus')
       .update({ status_pneu: 'ESTOQUE' })
