@@ -497,11 +497,36 @@ function renderizarGrid(lista) {
 
 // 🗑️ Exclui uma movimentação (cancela a operação)
 window.excluirMovimentacao = async function(id, marcaFogo) {
-  if (!confirm(`Tem certeza que deseja cancelar esta movimentação? O pneu "${marcaFogo}" retornará ao status "ESTOQUE".`)) {
+  if (!confirm(`Tem certeza que deseja cancelar esta movimentação? O pneu "${marcaFogo}" retornará ao status "ESTOQUE" e a quantidade será ajustada.`)) {
     return;
   }
 
   try {
+    // 1. Buscar informações do pneu para criar o registro de estorno.
+    // Usamos a marca de fogo para encontrar o pneu e, através da relação, seus detalhes originais.
+    const { data: pneuInfo, error: pneuError } = await supabase
+      .from('marcas_fogo_pneus')
+      .select('id, pneus(marca, modelo, tipo, vida, valor_unitario_real)')
+      .eq('codigo_marca_fogo', marcaFogo)
+      .single();
+
+    if (pneuError || !pneuInfo) {
+      throw new Error(`Não foi possível encontrar os dados do pneu ${marcaFogo} para realizar o estorno.`);
+    }
+    
+    // 2. Buscar a movimentação original para obter a placa para a descrição do estorno
+    const { data: movInfo, error: movError } = await supabase
+      .from('movimentacoes_pneus')
+      .select('placa')
+      .eq('id', id)
+      .single();
+    
+    // Não é um erro fatal se não encontrar, mas é bom para o log.
+    if (movError) {
+        console.warn(`Não foi possível obter a placa da movimentação ${id} para o log de estorno.`);
+    }
+
+    // 3. Deletar a movimentação da tabela de histórico de movimentações.
     const { error: deleteError } = await supabase
       .from('movimentacoes_pneus')
       .delete()
@@ -509,13 +534,29 @@ window.excluirMovimentacao = async function(id, marcaFogo) {
 
     if (deleteError) throw deleteError;
 
-    // Opcional: Para ser perfeito, deveríamos remover também o registro de 'SAIDA' da tabela 'pneus'.
-    // Como não temos o ID da saída fácil aqui, isso exigiria uma busca complexa.
-    // Por enquanto, focamos em reverter o status do pneu individual.
-    // Se necessário, adicione aqui a lógica para deletar da tabela 'pneus' onde status='SAIDA' 
-    // e descricao contém a placa e data aproximada.
-    
-    // Reverte o status do pneu individual
+    // 4. Criar um registro de ENTRADA compensatório na tabela 'pneus' para estornar a SAÍDA.
+    const estornoRecord = {
+      data: new Date().toISOString(),
+      nota_fiscal: 'ESTORNO', // Identifica a operação como um estorno de cancelamento
+      marca: pneuInfo.pneus?.marca,
+      modelo: pneuInfo.pneus?.modelo,
+      tipo: pneuInfo.pneus?.tipo,
+      vida: pneuInfo.pneus?.vida,
+      quantidade: 1, // Retornando 1 unidade ao estoque
+      valor_unitario_real: pneuInfo.pneus?.valor_unitario_real || 0,
+      valor_total: pneuInfo.pneus?.valor_unitario_real || 0, // Valor total para 1 unidade
+      status: 'ENTRADA',
+      descricao: `ESTORNO CANCELAMENTO MOV. ID ${id} (PLACA: ${movInfo?.placa || 'N/A'})`,
+      placa: null, // O pneu está voltando para o estoque geral, não está mais em um veículo.
+      usuario: getCurrentUser().nome
+    };
+
+    const { error: estornoError } = await supabase.from('pneus').insert([estornoRecord]);
+    if (estornoError) {
+      throw new Error(`A movimentação foi deletada, mas falhou ao estornar o pneu para o estoque: ${estornoError.message}`);
+    }
+
+    // 5. Reverter o status do pneu individual para 'ESTOQUE' na tabela de controle.
     const { error: updateError } = await supabase
       .from('marcas_fogo_pneus')
       .update({ status_pneu: 'ESTOQUE' })
@@ -523,14 +564,16 @@ window.excluirMovimentacao = async function(id, marcaFogo) {
 
     if (updateError) throw updateError;
 
-    alert('Movimentação cancelada com sucesso!');
+    alert('Movimentação cancelada e pneu estornado ao estoque com sucesso!');
+    
+    // 6. Recarregar todos os dados da página para refletir as mudanças.
     await carregarMovimentacoes();
-    await carregarTodosPneusAtivos(); // Recarrega todos os pneus ativos
-    popularSelectPneuUnico(); // Repopula o dropdown de pneu único
+    await carregarTodosPneusAtivos();
+    popularSelectPneuUnico();
     await carregarPneusEstoque();
 
   } catch (error) {
-    console.error('Erro ao excluir movimentação:', error);
+    console.error('Erro ao cancelar movimentação:', error);
     alert(`Erro ao cancelar: ${error.message}`);
   }
 };
