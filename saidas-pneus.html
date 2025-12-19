@@ -16,15 +16,19 @@
     <header class="page-title-header"><i class="fas fa-arrow-right page-title-icon"></i><span class="page-title-text">Saídas e Rodízio de Pneus</span></header>
     <section class="content-section">
 
-      <!-- Seção de Seleção de Veículo -->
+      <!-- Seção de Tipo de Saída -->
       <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
         <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
-          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-truck" style="margin-right: 8px;"></i>Seleção de Veículo</h3>
+          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Tipo de Saída</h3>
         </div>
         <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-          <label>Placa do Veículo *</label>
-          <select name="placa_veiculo" id="placa_veiculo" required style="height: 45px; font-size: 1.1rem;">
-            <option value="">Selecione o veículo</option>
+          <label>Tipo de Saída *</label>
+          <select name="tipo_saida" id="tipo_saida" required style="height: 45px; font-size: 1.1rem;">
+            <option value="">Selecione o Tipo</option>
+            <option value="VEICULO">Aplicação em Veículo</option>
+            <option value="VENDA">Venda</option>
+            <option value="DESCARTE">Descarte</option>
+            <option value="AJUSTE">Ajuste de Estoque</option>
           </select>
         </div>
       </div>
