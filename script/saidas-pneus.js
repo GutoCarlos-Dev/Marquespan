@@ -267,8 +267,8 @@ async function handleFormSubmit(e) {
             const movimentacoes = pneusSelecionados.map(pneu => ({
                 data: dataOperacao,
                 codigo_marca_fogo: pneu.codigo_marca_fogo,
-                tipo_operacao: 'ENVIO_BORRACHARIA',
-                placa: 'BORRACHARIA', // Destino
+                tipo_operacao: 'BORRACHA', // Valor < 10 caracteres para caber no BD
+                placa: 'BORRACHA', // Valor < 10 caracteres para caber no BD
                 quilometragem: 0,
                 observacoes: observacoes,
                 usuario: usuario
@@ -287,7 +287,7 @@ async function handleFormSubmit(e) {
                 valor_total: 0,
                 status: 'SAIDA',
                 descricao: 'ENVIO PARA BORRACHARIA',
-                placa: 'BORRACHARIA',
+                placa: 'BORRACHA',
                 usuario: usuario
             }));
 
