@@ -356,7 +356,7 @@ const DespesasUI = {
 
             this.currentHotelId = hotel.id;
             this.tituloHotelQuartos.textContent = `Gerenciar Quartos: ${hotel.nome}`;
-            this.modalQuartos.style.display = 'block';
+            this.modalQuartos.style.display = 'flex';
             this.listarQuartosNoModal();
         } catch (err) {
             console.error(err);
