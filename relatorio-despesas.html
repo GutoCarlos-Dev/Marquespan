@@ -56,6 +56,17 @@
             border-bottom: 1px solid #dddddd;
         }
 
+        /* Melhorias de alinhamento e organização do Grid */
+        .data-table th:nth-child(1), .data-table td:nth-child(1) { text-align: center; width: 100px; } /* Data */
+        .data-table th:nth-child(2), .data-table td:nth-child(2) { text-align: center; width: 80px; } /* Rota */
+        .data-table th:nth-child(4), .data-table td:nth-child(4) { text-align: center; width: 80px; } /* Qtd Diárias */
+        .data-table th:nth-child(5), .data-table td:nth-child(5), /* Valor Diária */
+        .data-table th:nth-child(6), .data-table td:nth-child(6), /* Valor Energia */
+        .data-table th:nth-child(7), .data-table td:nth-child(7) { /* Valor Total */
+            text-align: right;
+            white-space: nowrap;
+        }
+
         .data-table tbody tr {
             background-color: #ffffff;
             transition: background-color 0.2s ease;
@@ -163,6 +174,7 @@
                             <th>Nome do Hotel</th>
                             <th>Qtd. Diárias</th>
                             <th>Valor Diária</th>
+                            <th>Valor Energia</th>
                             <th>Valor Total</th>
                             <th>Funcionários</th>
                             <th>Nota Fiscal</th>
