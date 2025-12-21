@@ -20,6 +20,7 @@ const DespesasUI = {
         this.valorDiariaInput = document.getElementById('despesaValorDiaria');
         this.valorEnergiaInput = document.getElementById('despesaValorEnergia');
         this.valorTotalInput = document.getElementById('despesaValorTotal');
+        this.formaPagamentoSelect = document.getElementById('despesaFormaPagamento');
 
         // Tabela e busca
         this.tableBody = document.getElementById('despesaTableBody');
@@ -32,6 +33,15 @@ const DespesasUI = {
         this.funcionarios2List = document.getElementById('funcionarios2List');
         this.btnAdicionarHotel = document.getElementById('btnAdicionarHotel');
         this.tipoQuartoSelect = document.getElementById('despesaTipoQuarto');
+
+        // Modal Gerenciar Quartos
+        this.btnGerenciarQuartos = document.getElementById('btnGerenciarQuartos');
+        this.modalQuartos = document.getElementById('modalGerenciarQuartos');
+        this.btnCloseModalQuartos = document.getElementById('closeModalQuartos');
+        this.tituloHotelQuartos = document.getElementById('tituloHotelQuartos');
+        this.novoTipoQuartoInput = document.getElementById('novoTipoQuartoInput');
+        this.btnSalvarNovoQuarto = document.getElementById('btnSalvarNovoQuarto');
+        this.listaQuartosEdicao = document.getElementById('listaQuartosEdicao');
     },
 
     bind() {
@@ -49,7 +59,24 @@ const DespesasUI = {
         this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
 
         // Listener para carregar tipos de quarto quando um hotel é selecionado
-        document.getElementById('despesaHotelInput').addEventListener('change', (e) => this.loadTiposQuarto(e.target.value));
+        document.getElementById('despesaHotelInput').addEventListener('change', (e) => {
+            this.loadTiposQuarto(e.target.value);
+            this.btnGerenciarQuartos.disabled = !e.target.value;
+        });
+
+        // Listeners do Modal de Quartos
+        this.btnGerenciarQuartos.addEventListener('click', () => this.abrirModalQuartos());
+        this.btnCloseModalQuartos.addEventListener('click', () => this.fecharModalQuartos());
+        this.btnSalvarNovoQuarto.addEventListener('click', () => this.salvarNovoQuarto());
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === this.modalQuartos) this.fecharModalQuartos();
+        });
+
+        this.listaQuartosEdicao.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-delete-quarto');
+            if (btn) this.excluirQuarto(btn.dataset.id);
+        });
     },
 
     async loadInitialData() {
@@ -121,7 +148,8 @@ const DespesasUI = {
                 data_checkout: document.getElementById('despesaCheckout').value,
                 valor_diaria: parseFloat(this.valorDiariaInput.value),
                 valor_energia: parseFloat(this.valorEnergiaInput.value) || 0,
-                valor_total: valorTotal
+                valor_total: valorTotal,
+                forma_pagamento: this.formaPagamentoSelect.value
             };
             // --- Fim da Correção ---
 
@@ -144,6 +172,8 @@ const DespesasUI = {
         this.valorTotalInput.value = ''; // Limpa o campo de valor total
         this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
         this.tipoQuartoSelect.disabled = true;
+        this.btnGerenciarQuartos.disabled = true;
+        this.formaPagamentoSelect.value = "";
     },
 
     async loadForEditing(id) {
@@ -172,6 +202,7 @@ const DespesasUI = {
             document.getElementById('despesaCheckout').value = despesa.data_checkout;
             this.valorDiariaInput.value = despesa.valor_diaria;
             this.valorEnergiaInput.value = despesa.valor_energia || 0;
+            this.formaPagamentoSelect.value = despesa.forma_pagamento || "";
 
             // Carrega os tipos de quarto e seleciona o correto
             await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto); // Correto
@@ -307,6 +338,104 @@ const DespesasUI = {
         } catch (err) {
             console.error('Erro ao carregar tipos de quarto:', err);
             this.tipoQuartoSelect.innerHTML = '<option value="">Erro ao carregar quartos</option>';
+        }
+    },
+
+    // --- Funções do Modal de Gerenciamento de Quartos ---
+
+    async abrirModalQuartos() {
+        const hotelNome = document.getElementById('despesaHotelInput').value;
+        if (!hotelNome) {
+            alert('Selecione um hotel primeiro.');
+            return;
+        }
+
+        try {
+            const { data: hotel, error } = await supabaseClient.from('hoteis').select('id, nome').eq('nome', hotelNome).single();
+            if (error || !hotel) throw new Error('Hotel não encontrado.');
+
+            this.currentHotelId = hotel.id;
+            this.tituloHotelQuartos.textContent = `Gerenciar Quartos: ${hotel.nome}`;
+            this.modalQuartos.style.display = 'block';
+            this.listarQuartosNoModal();
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao carregar dados do hotel.');
+        }
+    },
+
+    fecharModalQuartos() {
+        this.modalQuartos.style.display = 'none';
+        this.novoTipoQuartoInput.value = '';
+    },
+
+    async listarQuartosNoModal() {
+        if (!this.currentHotelId) return;
+        this.listaQuartosEdicao.innerHTML = '<li>Carregando...</li>';
+
+        try {
+            const { data: quartos, error } = await supabaseClient
+                .from('quartos')
+                .select('*')
+                .eq('id_hotel', this.currentHotelId)
+                .order('nome_quarto');
+
+            if (error) throw error;
+
+            this.listaQuartosEdicao.innerHTML = '';
+            if (quartos.length === 0) {
+                this.listaQuartosEdicao.innerHTML = '<li>Nenhum quarto cadastrado.</li>';
+                return;
+            }
+
+            quartos.forEach(q => {
+                const li = document.createElement('li');
+                li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;';
+                li.innerHTML = `
+                    <span>${q.nome_quarto}</span>
+                    <button type="button" class="btn-delete-quarto" data-id="${q.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                `;
+                this.listaQuartosEdicao.appendChild(li);
+            });
+        } catch (err) {
+            console.error(err);
+            this.listaQuartosEdicao.innerHTML = '<li>Erro ao listar quartos.</li>';
+        }
+    },
+
+    async salvarNovoQuarto() {
+        const nomeQuarto = this.novoTipoQuartoInput.value.trim();
+        if (!nomeQuarto || !this.currentHotelId) return;
+
+        try {
+            const { error } = await supabaseClient.from('quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
+            if (error) throw error;
+
+            this.novoTipoQuartoInput.value = '';
+            await this.listarQuartosNoModal();
+            // Atualiza o select principal
+            const hotelNome = document.getElementById('despesaHotelInput').value;
+            this.loadTiposQuarto(hotelNome, nomeQuarto);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao salvar quarto.');
+        }
+    },
+
+    async excluirQuarto(id) {
+        if (!confirm('Tem certeza que deseja excluir este tipo de quarto?')) return;
+
+        try {
+            const { error } = await supabaseClient.from('quartos').delete().eq('id', id);
+            if (error) throw error;
+
+            await this.listarQuartosNoModal();
+            // Atualiza o select principal
+            const hotelNome = document.getElementById('despesaHotelInput').value;
+            this.loadTiposQuarto(hotelNome);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao excluir quarto.');
         }
     }
 };
