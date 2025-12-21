@@ -1,63 +1,94 @@
-/* Estilos específicos para a página de Relatório de Despesas */
-
-#sectionRelatorioDespesa .card {
-    margin-bottom: 20px;
+/* Estilos para uma tabela de dados mais profissional */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-#formFiltroRelatorio .filter-group {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-#formFiltroRelatorio .form-group {
-    flex: 1;
-    min-width: 200px;
-}
-
-.report-summary {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-left: 4px solid #218838;
+.card-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
-
-.report-summary p {
+.card-header h2 {
     margin: 0;
-    font-size: 1.1em;
 }
-
 .report-actions {
-    margin-bottom: 20px;
     display: flex;
     gap: 10px;
 }
 
-.report-actions button {
-    padding: 8px 12px;
-}
 
-/* Layout em Grid para o Formulário de Filtros */
-.form-grid-layout fieldset {
-    border: none;
-    padding: 0;
-    margin: 0;
-}
-
-.form-grid-layout legend {
-    font-size: 1.2rem;
+.data-table thead tr {
+    background-color: #015201; /* Verde mais escuro para o cabeçalho */
+    color: #ffffff;
+    text-align: left;
     font-weight: bold;
-    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dddddd;
+}
+
+/* Melhorias de alinhamento e organização do Grid */
+.data-table th:nth-child(1), .data-table td:nth-child(1) { text-align: center; width: 100px; } /* Data */
+.data-table th:nth-child(2), .data-table td:nth-child(2) { text-align: center; width: 80px; } /* Rota */
+.data-table th:nth-child(4), .data-table td:nth-child(4) { text-align: center; width: 80px; } /* Qtd Diárias */
+.data-table th:nth-child(5), .data-table td:nth-child(5), /* Valor Diária */
+.data-table th:nth-child(6), .data-table td:nth-child(6), /* Valor Energia */
+.data-table th:nth-child(7), .data-table td:nth-child(7) { /* Valor Total */
+    text-align: right;
+    white-space: nowrap;
+}
+
+.data-table tbody tr {
+    background-color: #ffffff;
+    transition: background-color 0.2s ease;
+}
+
+.data-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+.data-table tbody tr:hover {
+    background-color: #e8f4fd; /* Um azul claro no hover */
+}
+
+.data-table tbody td {
     color: #333;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+.data-table tfoot tr {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #343a40;
+}
+
+.data-table tfoot td {
+    padding: 15px;
+    font-size: 1.1rem;
+}
+
+/* Estilos para o grid de gráficos */
+.charts-grid {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os gráficos quebrem para a linha de baixo em telas pequenas */
+    gap: 2rem; /* Espaçamento entre os gráficos */
+    justify-content: center; /* Centraliza os gráficos no container */
+}
+
+.chart-card {
+    flex: 1; /* Permite que os cards cresçam */
+    min-width: 300px; /* Largura mínima */
+    max-width: 450px; /* Largura máxima para não ficarem muito grandes */
+    padding: 1rem;
 }
