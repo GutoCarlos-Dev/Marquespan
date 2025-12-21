@@ -328,7 +328,8 @@ const DespesasUI = {
             const { data: hotel, error: hotelError } = await supabaseClient
                 .from('hoteis')
                 .select('id')
-                .eq('nome', nomeHotel.trim())
+                .eq('nome', nomeHotel.trim()) // Busca pelo nome exato
+                .limit(1) // Garante que apenas um resultado seja retornado para evitar erro 406
                 .single();
 
             if (hotelError || !hotel) {
@@ -368,7 +369,7 @@ const DespesasUI = {
         }
 
         try {
-            const { data: hotel, error } = await supabaseClient.from('hoteis').select('id, nome').eq('nome', hotelNome).single();
+            const { data: hotel, error } = await supabaseClient.from('hoteis').select('id, nome').eq('nome', hotelNome).limit(1).single();
             if (error || !hotel) throw new Error('Hotel não encontrado.');
 
             this.currentHotelId = hotel.id;
