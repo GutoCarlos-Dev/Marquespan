@@ -338,7 +338,7 @@ const DespesasUI = {
 
             // 2. Busca os quartos vinculados a esse ID (Mesma lógica usada no modal e na página de hotéis)
             const { data: quartos, error: quartosError } = await supabaseClient
-                .from('quartos')
+                .from('hotel_quartos')
                 .select('nome_quarto')
                 .eq('id_hotel', hotel.id)
                 .order('nome_quarto');
@@ -392,7 +392,7 @@ const DespesasUI = {
 
         try {
             const { data: quartos, error } = await supabaseClient
-                .from('quartos')
+                .from('hotel_quartos')
                 .select('*')
                 .eq('id_hotel', this.currentHotelId)
                 .order('nome_quarto');
@@ -425,7 +425,7 @@ const DespesasUI = {
         if (!nomeQuarto || !this.currentHotelId) return;
 
         try {
-            const { error } = await supabaseClient.from('quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
+            const { error } = await supabaseClient.from('hotel_quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
             if (error) throw error;
 
             this.novoTipoQuartoInput.value = '';
@@ -443,7 +443,7 @@ const DespesasUI = {
         if (!confirm('Tem certeza que deseja excluir este tipo de quarto?')) return;
 
         try {
-            const { error } = await supabaseClient.from('quartos').delete().eq('id', id);
+            const { error } = await supabaseClient.from('hotel_quartos').delete().eq('id', id);
             if (error) throw error;
 
             await this.listarQuartosNoModal();
