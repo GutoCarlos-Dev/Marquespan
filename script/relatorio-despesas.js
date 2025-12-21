@@ -23,7 +23,7 @@ class SupabaseService {
         let query = supabaseClient
             .from('despesas')
             .select(`
-                data_checkin, numero_rota, hoteis:hoteis(nome), qtd_diarias, valor_diaria, valor_total,
+                data_checkin, numero_rota, hoteis:hoteis(nome), qtd_diarias, valor_diaria, valor_energia, valor_total,
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
                 funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
                 nota_fiscal
@@ -152,7 +152,7 @@ const ReportUI = {
         this.graficosContainer.style.display = 'none';
 
         if (dados.length === 0) {
-            this.tabelaResultadosBody.innerHTML = '<tr><td colspan="8">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
+            this.tabelaResultadosBody.innerHTML = '<tr><td colspan="9">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
             if (tfoot) tfoot.style.display = 'none';
             return;
         }
@@ -171,6 +171,7 @@ const ReportUI = {
                 <td>${item.hoteis?.nome || 'N/A'}</td>
                 <td>${item.qtd_diarias || 'N/A'}</td>
                 <td>${this.formatCurrency(item.valor_diaria)}</td>
+                <td>${this.formatCurrency(item.valor_energia)}</td>
                 <td>${this.formatCurrency(item.valor_total)}</td>
                 <td>${funcionariosDisplay}</td>
                 <td>${item.nota_fiscal || ''}</td>
@@ -182,7 +183,7 @@ const ReportUI = {
             tfoot.style.display = 'table-footer-group';
             tfoot.innerHTML = `
                 <tr>
-                    <td colspan="5"><strong>Total Geral</strong></td>
+                    <td colspan="6"><strong>Total Geral</strong></td>
                     <td><strong>${this.formatCurrency(totalGeral)}</strong></td>
                     <td colspan="2"></td>
                 </tr>
@@ -255,6 +256,7 @@ const ReportUI = {
                 'Hotel': item.hoteis?.nome || 'N/A',
                 'Qtd Diarias': item.qtd_diarias,
                 'Valor Diaria': item.valor_diaria,
+                'Valor Energia': item.valor_energia || 0,
                 'Valor Total': item.valor_total,
                 'Funcionários': funcionarios,
                 'Nota Fiscal': item.nota_fiscal || ''
@@ -270,15 +272,15 @@ const ReportUI = {
 
         dataToExport.push({
             'Data': 'TOTAL GERAL', 'Rota': '', 'Hotel': '', 'Qtd Diarias': '',
-            'Valor Diaria': '', 'Valor Total': totalGeral, 'Funcionários': '', 'Nota Fiscal': ''
+            'Valor Diaria': '', 'Valor Energia': '', 'Valor Total': totalGeral, 'Funcionários': '', 'Nota Fiscal': ''
         });
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 20 }];
+        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 20 }];
 
         // Aplica formatação de moeda
         dataToExport.forEach((row, index) => {
-            ['E', 'F'].forEach(col => { // Colunas Valor Diaria e Valor Total
+            ['E', 'F', 'G'].forEach(col => { // Colunas Valor Diaria, Energia e Valor Total
                 const cellRef = `${col}${index + 2}`;
                 if (worksheet[cellRef] && typeof worksheet[cellRef].v === 'number') {
                     worksheet[cellRef].t = 'n';
@@ -325,9 +327,9 @@ const ReportUI = {
         doc.text("Relatório de Despesas", 14, 28); // Ajusta a posição Y do título para baixo do logo
 
         doc.autoTable({
-            head: [['Data', 'Rota', 'Hotel', 'Qtd Diárias', 'Valor Diária', 'Valor Total', 'Funcionários', 'Nota Fiscal']],
-            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], this.formatCurrency(item['Valor Diaria']), this.formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
-            foot: [['Total Geral', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
+            head: [['Data', 'Rota', 'Hotel', 'Qtd Diárias', 'Valor Diária', 'Valor Energia', 'Valor Total', 'Funcionários', 'Nota Fiscal']],
+            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], this.formatCurrency(item['Valor Diaria']), this.formatCurrency(item['Valor Energia']), this.formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
+            foot: [['Total Geral', '', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
             startY: 35, // Ajusta o início da tabela
             headStyles: { fillColor: [0, 105, 55] }, // Cor verde da Marquespan
             footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
