@@ -19,91 +19,144 @@
 
       <section id="sectionCadastrarDespesa" class="section">
         <div class="form-container">
-          <form id="formCadastrarDespesa" class="form-grid-layout">
+          <form id="formCadastrarDespesa">
             <fieldset>
               <legend>Formulário de Despesas</legend>
               <input type="hidden" id="despesaEditingId">
-              <div class="form-group">
-                <label for="despesaRotaInput">Número da Rota</label>
-                <input type="text" id="despesaRotaInput" list="rotasList" required autocomplete="off">
-                <datalist id="rotasList"></datalist>
-              </div>
-              <div class="form-group">
-                  <label for="despesaHotelInput">Nome do Hotel</label>
-                  <div class="input-with-icon">
-                      <input type="text" id="despesaHotelInput" list="hoteisList" required autocomplete="off">
-                      <datalist id="hoteisList"></datalist>
-                      <!-- Ícone para adicionar novo hotel -->
-                      <button type="button" id="btnAdicionarHotel" class="btn-add-icon" title="Cadastrar Novo Hotel"><i class="fas fa-plus-circle"></i></button>
-                  </div>
-              </div>
-              <div class="form-group">
-                <label for="despesaFuncionario1Input">Funcionário 1 (Motorista)</label>
-                <input type="text" id="despesaFuncionario1Input" list="funcionarios1List" required autocomplete="off">
-                <datalist id="funcionarios1List"></datalist>
-              </div>
-              <div class="form-group">
-                <label for="despesaFuncionario2Input">Funcionário 2 (Auxiliar)</label>
-                <input type="text" id="despesaFuncionario2Input" list="funcionarios2List" autocomplete="off">
-                <datalist id="funcionarios2List"></datalist>
-              </div>
-              <div class="form-group">
-                <label for="despesaTipoQuarto">Tipo de Quarto</label>
-                <div class="input-with-icon">
-                  <select id="despesaTipoQuarto" required disabled>
-                    <option value="">-- Selecione um hotel primeiro --</option>
-                  </select>
-                  <button type="button" id="btnGerenciarQuartos" class="btn-add-icon" title="Gerenciar Quartos" disabled><i class="fas fa-edit"></i></button>
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="despesaDiarias">Qtd. Diárias</label>
-                <input type="number" id="despesaDiarias" required min="1" step="1">
-              </div>
-              <div class="form-group">
-                <label for="despesaDataReserva">Data da Reserva</label>
-                <input type="date" id="despesaDataReserva" autocomplete="off">
-              </div>
-              <div class="form-group">
-                <label for="despesaNotaFiscal">Nota Fiscal</label>
-                <input type="text" id="despesaNotaFiscal" autocomplete="off">
-              </div>
-              <div class="form-group form-group-full-width">
-                <label for="despesaObservacao">Observação</label>
-                <textarea id="despesaObservacao" rows="3" autocomplete="off"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="despesaCheckin">Data Check-in</label>
-                <input type="date" id="despesaCheckin" required autocomplete="off">
-              </div>
-              <div class="form-group">
-                <label for="despesaCheckout">Data Check-out</label>
-                <input type="date" id="despesaCheckout" required autocomplete="off">
-              </div>
-              <div class="form-group">
-                <label for="despesaValorDiaria">Valor da Diária (R$)</label>
-                <input type="number" id="despesaValorDiaria" step="0.01" required>
-              </div>
-              <div class="form-group">
-                <label for="despesaValorEnergia">Valor da Energia (R$)</label>
-                <input type="number" id="despesaValorEnergia" step="0.01" value="0">
-              </div>
-              <div class="form-group">
-                <label for="despesaValorTotal">Valor Total (R$)</label>
-                <input type="text" id="despesaValorTotal" readonly aria-live="polite">
-              </div>
-              <div class="form-group">
-                <label for="despesaFormaPagamento">Forma de Pagamento</label>
-                <select id="despesaFormaPagamento" required>
-                  <option value="" disabled selected>-- Selecione --</option>
-                  <option value="VISTA">Pagamento a Vista</option>
-                  <option value="PRAZO">Pagamento a Prazo</option>
-                </select>
-              </div>
-              <div class="form-buttons">
-                <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
-                <button type="button" id="btnClearDespesaForm">Limpar</button>
-              </div>
+              <table class="filter-layout-table">
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaRotaInput">Número da Rota</label>
+                        <input type="text" id="despesaRotaInput" list="rotasList" required autocomplete="off">
+                        <datalist id="rotasList"></datalist>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaHotelInput">Nome do Hotel</label>
+                        <div class="input-with-icon">
+                          <input type="text" id="despesaHotelInput" list="hoteisList" required autocomplete="off">
+                          <datalist id="hoteisList"></datalist>
+                          <button type="button" id="btnAdicionarHotel" class="btn-add-icon" title="Cadastrar Novo Hotel"><i class="fas fa-plus-circle"></i></button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaFuncionario1Input">Funcionário 1 (Motorista)</label>
+                        <input type="text" id="despesaFuncionario1Input" list="funcionarios1List" required autocomplete="off">
+                        <datalist id="funcionarios1List"></datalist>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaFuncionario2Input">Funcionário 2 (Auxiliar)</label>
+                        <input type="text" id="despesaFuncionario2Input" list="funcionarios2List" autocomplete="off">
+                        <datalist id="funcionarios2List"></datalist>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaTipoQuarto">Tipo de Quarto</label>
+                        <div class="input-with-icon">
+                          <select id="despesaTipoQuarto" required disabled>
+                            <option value="">-- Selecione um hotel primeiro --</option>
+                          </select>
+                          <button type="button" id="btnGerenciarQuartos" class="btn-add-icon" title="Gerenciar Quartos" disabled><i class="fas fa-edit"></i></button>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaDiarias">Qtd. Diárias</label>
+                        <input type="number" id="despesaDiarias" required min="1" step="1">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaDataReserva">Data da Reserva</label>
+                        <input type="date" id="despesaDataReserva" autocomplete="off">
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaNotaFiscal">Nota Fiscal</label>
+                        <input type="text" id="despesaNotaFiscal" autocomplete="off">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaCheckin">Data Check-in</label>
+                        <input type="date" id="despesaCheckin" required autocomplete="off">
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaCheckout">Data Check-out</label>
+                        <input type="date" id="despesaCheckout" required autocomplete="off">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaValorDiaria">Valor da Diária (R$)</label>
+                        <input type="number" id="despesaValorDiaria" step="0.01" required>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaValorEnergia">Valor da Energia (R$)</label>
+                        <input type="number" id="despesaValorEnergia" step="0.01" value="0">
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaValorTotal">Valor Total (R$)</label>
+                        <input type="text" id="despesaValorTotal" readonly aria-live="polite">
+                      </div>
+                    </td>
+                    <td>
+                      <div class="form-group">
+                        <label for="despesaFormaPagamento">Forma de Pagamento</label>
+                        <select id="despesaFormaPagamento" required>
+                          <option value="" disabled selected>-- Selecione --</option>
+                          <option value="VISTA">Pagamento a Vista</option>
+                          <option value="PRAZO">Pagamento a Prazo</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">
+                      <div class="form-group form-group-full-width">
+                        <label for="despesaObservacao">Observação</label>
+                        <textarea id="despesaObservacao" rows="3" autocomplete="off"></textarea>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">
+                      <div class="form-buttons">
+                        <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
+                        <button type="button" id="btnClearDespesaForm">Limpar</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </fieldset>
           </form>
         </div>
@@ -135,7 +188,7 @@
 
   <!-- Modal para Gerenciar Quartos -->
   <div id="modalGerenciarQuartos" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
-    <div class="modal-content" style="background-color: #fefefe; position: absolute; top: 110%; left: 110%; transform: translate(-50%, -50%); margin: 0; padding: 20px; border: 1px solid #888; width: 100%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;">
+    <div class="modal-content" style="background-color: #fefefe; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; padding: 20px; border: 1px solid #888; width: 100%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
         <h3 style="margin: 0;">Gerenciar Quartos</h3>
         <span id="closeModalQuartos" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>

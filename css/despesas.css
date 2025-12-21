@@ -266,3 +266,20 @@
 .btn-add-icon:hover {
     color: #218838; /* Verde mais escuro no hover */
 }
+
+/* Estilos para a tabela de layout do formulário */
+.filter-layout-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.filter-layout-table td {
+    vertical-align: top;
+    padding: 8px;
+}
+.filter-layout-table .form-group {
+    margin-bottom: 0; /* Remove margem inferior padrão para alinhar melhor na tabela */
+}
+.filter-layout-table input, .filter-layout-table select, .filter-layout-table textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
