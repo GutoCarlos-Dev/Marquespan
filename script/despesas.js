@@ -324,9 +324,26 @@ const DespesasUI = {
         }
 
         try {
-            // Chama a função RPC criada no Supabase
-            const { data: quartos, error } = await supabaseClient.rpc('get_quartos_por_hotel_nome', { p_nome_hotel: nomeHotel });
-            if (error) throw error;
+            // 1. Busca o ID do hotel pelo nome para garantir a referência correta (Padrão do Hotel)
+            const { data: hotel, error: hotelError } = await supabaseClient
+                .from('hoteis')
+                .select('id')
+                .eq('nome', nomeHotel)
+                .single();
+
+            if (hotelError || !hotel) {
+                this.tipoQuartoSelect.innerHTML = '<option value="">Hotel não encontrado</option>';
+                return;
+            }
+
+            // 2. Busca os quartos vinculados a esse ID (Mesma lógica usada no modal e na página de hotéis)
+            const { data: quartos, error: quartosError } = await supabaseClient
+                .from('quartos')
+                .select('nome_quarto')
+                .eq('id_hotel', hotel.id)
+                .order('nome_quarto');
+
+            if (quartosError) throw quartosError;
 
             this.tipoQuartoSelect.innerHTML = '<option value="" disabled selected>-- Selecione o quarto --</option>';
             quartos.forEach(q => {
