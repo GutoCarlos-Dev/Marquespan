@@ -89,6 +89,14 @@
                 <label for="despesaValorTotal">Valor Total (R$)</label>
                 <input type="text" id="despesaValorTotal" readonly aria-live="polite">
               </div>
+              <div class="form-group">
+                <label for="despesaFormaPagamento">Forma de Pagamento</label>
+                <select id="despesaFormaPagamento" required>
+                  <option value="" disabled selected>-- Selecione --</option>
+                  <option value="VISTA">Pagamento a Vista</option>
+                  <option value="PRAZO">Pagamento a Prazo</option>
+                </select>
+              </div>
               <div class="form-buttons">
                 <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
                 <button type="button" id="btnClearDespesaForm">Limpar</button>
