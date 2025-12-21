@@ -60,7 +60,7 @@ const DespesasUI = {
 
         // Listener para carregar tipos de quarto quando um hotel é selecionado
         document.getElementById('despesaHotelInput').addEventListener('change', (e) => {
-            this.loadTiposQuarto(e.target.value.trim());
+            this.loadTiposQuarto(e.target.value);
             this.btnGerenciarQuartos.disabled = !e.target.value;
         });
 
