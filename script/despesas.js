@@ -60,7 +60,7 @@ const DespesasUI = {
 
         // Listener para carregar tipos de quarto quando um hotel é selecionado
         document.getElementById('despesaHotelInput').addEventListener('change', (e) => {
-            this.loadTiposQuarto(e.target.value);
+            this.loadTiposQuarto(e.target.value.trim());
             this.btnGerenciarQuartos.disabled = !e.target.value;
         });
 
@@ -328,7 +328,7 @@ const DespesasUI = {
             const { data: hotel, error: hotelError } = await supabaseClient
                 .from('hoteis')
                 .select('id')
-                .eq('nome', nomeHotel)
+                .eq('nome', nomeHotel.trim())
                 .single();
 
             if (hotelError || !hotel) {
@@ -361,7 +361,7 @@ const DespesasUI = {
     // --- Funções do Modal de Gerenciamento de Quartos ---
 
     async abrirModalQuartos() {
-        const hotelNome = document.getElementById('despesaHotelInput').value;
+        const hotelNome = document.getElementById('despesaHotelInput').value.trim();
         if (!hotelNome) {
             alert('Selecione um hotel primeiro.');
             return;
