@@ -254,7 +254,15 @@ Atenção:
             };
         }).filter(Boolean); // Remove as entradas nulas que foram retornadas na validação.
 
-        if (upsertPayload.length === 0) {
+        // Remove duplicatas de CNPJ para evitar erro no banco de dados
+        // (ON CONFLICT DO UPDATE command cannot affect row a second time)
+        const uniquePayloadMap = new Map();
+        upsertPayload.forEach(item => {
+            uniquePayloadMap.set(item.cnpj, item);
+        });
+        const uniquePayload = Array.from(uniquePayloadMap.values());
+
+        if (uniquePayload.length === 0) {
             return alert('Nenhum hotel com os dados obrigatórios (CNPJ, Nome Fantasia, Endereço) foi encontrado na planilha para importar.');
         }
 
@@ -263,12 +271,15 @@ Atenção:
             this.btnImportarLista.disabled = true;
             this.btnImportarLista.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
 
-            const { error } = await supabaseClient.from('hoteis').upsert(upsertPayload, { onConflict: 'cnpj' });
+            const { error } = await supabaseClient.from('hoteis').upsert(uniquePayload, { onConflict: 'cnpj' });
             if (error) throw error;
 
-            let successMessage = `Importação concluída! ${upsertPayload.length} registros de hotéis foram processados.`;
+            let successMessage = `Importação concluída! ${uniquePayload.length} registros de hotéis foram processados.`;
             if (linhasIgnoradas > 0) {
                 successMessage += `\n${linhasIgnoradas} linha(s) foram ignoradas por não conterem CNPJ, Nome Fantasia ou Endereço.`;
+            }
+            if (upsertPayload.length > uniquePayload.length) {
+                successMessage += `\n${upsertPayload.length - uniquePayload.length} registro(s) duplicado(s) na planilha foram unificados.`;
             }
             alert(successMessage);
             this.renderHotels(); // Atualiza a tabela na tela
