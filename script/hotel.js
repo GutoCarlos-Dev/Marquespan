@@ -217,35 +217,56 @@ Atenção:
             return;
         }
 
+        let linhasIgnoradas = 0;
+
         // Mapeia os dados da planilha para o formato do banco de dados
         // e filtra registros que não possuem CNPJ, que é a chave de conflito.
         const upsertPayload = importedRows.map(row => {
             const cnpj = String(row.CNPJ || '').trim();
-            if (!cnpj) return null; // Ignora linhas sem CNPJ
+            const nome = row['Nome Fantasia'];
+            const endereco = row.Endereço;
+
+            // Validação: Ignora a linha se campos essenciais estiverem faltando
+            if (!cnpj || !nome || !endereco) {
+                linhasIgnoradas++;
+                return null;
+            }
 
             return {
                 razao_social: row['Razão Social'],
-                nome: row['Nome Fantasia'],
+                nome: nome,
                 cnpj: cnpj,
-                endereco: row.Endereço,
+                endereco: endereco,
                 telefone: String(row.Telefone || ''),
                 responsavel: row.Responsável || null // Campo opcional
             };
         }).filter(Boolean); // Remove as entradas nulas (sem CNPJ)
 
         if (upsertPayload.length === 0) {
-            return alert('Nenhum hotel com CNPJ válido encontrado na planilha para importar.');
+            return alert('Nenhum hotel com os dados obrigatórios (CNPJ, Nome Fantasia, Endereço) foi encontrado na planilha para importar.');
         }
 
         try {
+            // Fornece feedback visual durante a importação
+            this.btnImportarLista.disabled = true;
+            this.btnImportarLista.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+
             const { error } = await supabaseClient.from('hoteis').upsert(upsertPayload, { onConflict: 'cnpj' });
             if (error) throw error;
 
-            alert(`Importação concluída! ${upsertPayload.length} registros de hotéis foram processados.`);
+            let successMessage = `Importação concluída! ${upsertPayload.length} registros de hotéis foram processados.`;
+            if (linhasIgnoradas > 0) {
+                successMessage += `\n${linhasIgnoradas} linha(s) foram ignoradas por não conterem CNPJ, Nome Fantasia ou Endereço.`;
+            }
+            alert(successMessage);
             this.renderHotels(); // Atualiza a tabela na tela
         } catch (error) {
             console.error('Erro detalhado no processamento:', error);
             alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+        } finally {
+            // Restaura o botão após a operação
+            this.btnImportarLista.disabled = false;
+            this.btnImportarLista.innerHTML = 'Importar Lista';
         }
     }
 
