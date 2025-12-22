@@ -219,12 +219,24 @@ Atenção:
 
         let linhasIgnoradas = 0;
 
-        // Mapeia os dados da planilha para o formato do banco de dados
-        // e filtra registros que não possuem CNPJ, que é a chave de conflito.
         const upsertPayload = importedRows.map(row => {
-            const cnpj = String(row.CNPJ || '').trim();
-            const nome = row['Nome Fantasia'];
-            const endereco = row.Endereço;
+            // Helper para encontrar a chave no objeto da linha, ignorando maiúsculas/minúsculas.
+            const findKey = (obj, keyToFind) => {
+                return Object.keys(obj).find(k => k.toLowerCase() === keyToFind.toLowerCase());
+            };
+
+            // Encontra as chaves corretas no objeto 'row', pois podem variar no arquivo Excel.
+            const keyRazaoSocial = findKey(row, 'Razão Social');
+            const keyNomeFantasia = findKey(row, 'Nome Fantasia');
+            const keyCnpj = findKey(row, 'CNPJ');
+            const keyEndereco = findKey(row, 'Endereço');
+            const keyTelefone = findKey(row, 'Telefone');
+            const keyResponsavel = findKey(row, 'Responsável');
+
+            // Extrai e limpa os dados, tratando valores nulos ou indefinidos e removendo espaços.
+            const cnpj = String(row[keyCnpj] || '').trim();
+            const nome = String(row[keyNomeFantasia] || '').trim();
+            const endereco = String(row[keyEndereco] || '').trim();
 
             // Validação: Ignora a linha se campos essenciais estiverem faltando
             if (!cnpj || !nome || !endereco) {
@@ -233,14 +245,14 @@ Atenção:
             }
 
             return {
-                razao_social: row['Razão Social'],
+                razao_social: String(row[keyRazaoSocial] || ''),
                 nome: nome,
                 cnpj: cnpj,
                 endereco: endereco,
-                telefone: String(row.Telefone || ''),
-                responsavel: row.Responsável || null // Campo opcional
+                telefone: String(row[keyTelefone] || ''),
+                responsavel: String(row[keyResponsavel] || '') || null
             };
-        }).filter(Boolean); // Remove as entradas nulas (sem CNPJ)
+        }).filter(Boolean); // Remove as entradas nulas que foram retornadas na validação.
 
         if (upsertPayload.length === 0) {
             return alert('Nenhum hotel com os dados obrigatórios (CNPJ, Nome Fantasia, Endereço) foi encontrado na planilha para importar.');
