@@ -78,6 +78,53 @@ async function carregarPecasServicos() {
   data?.forEach(item => item.descricao && lista.appendChild(new Option(item.descricao)));
 }
 
+// 📝 Carregar dados da manutenção para edição
+async function carregarManutencaoParaEdicao(id) {
+  try {
+    // 1. Buscar dados principais da manutenção
+    const { data: manutencao, error: manutencaoError } = await supabaseClient
+      .from('manutencao')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (manutencaoError || !manutencao) {
+      throw new Error('Manutenção não encontrada ou erro ao carregar.');
+    }
+
+    // 2. Preencher os campos do formulário
+    document.getElementById('idManutencao').value = manutencao.id;
+    document.getElementById('usuarioLogado').value = manutencao.usuario;
+    document.getElementById('status').value = manutencao.status;
+    document.getElementById('filial').value = manutencao.filial;
+    document.getElementById('titulo').value = manutencao.titulo;
+    document.getElementById('tipoManutencao').value = manutencao.tipoManutencao || '';
+    document.getElementById('data').value = manutencao.data;
+    document.getElementById('veiculo').value = manutencao.veiculo;
+    document.getElementById('km').value = manutencao.km;
+    document.getElementById('motorista').value = manutencao.motorista;
+    document.getElementById('fornecedor').value = manutencao.fornecedor;
+    document.getElementById('notaFiscal').value = manutencao.notaFiscal;
+    document.getElementById('notaServico').value = manutencao.notaServico;
+    document.getElementById('numeroOS').value = manutencao.numeroOS;
+    document.getElementById('descricao').value = manutencao.descricao;
+
+    // 3. Buscar e preencher os itens da manutenção
+    const { data: itens, error: itensError } = await supabaseClient.from('manutencao_itens').select('*').eq('id_manutencao', id);
+
+    if (itensError) console.error('Erro ao carregar itens da manutenção:', itensError);
+    else if (itens && itens.length > 0) {
+      const tabelaItens = document.getElementById('tabelaItens');
+      tabelaItens.innerHTML = ''; // Limpa a tabela antes de preencher
+      itens.forEach(item => { const valorTotal = (item.quantidade || 0) * (item.valor || 0); const linha = document.createElement('tr'); linha.innerHTML = `<td>${item.quantidade}</td><td>${item.descricao}</td><td>R$ ${parseFloat(item.valor || 0).toFixed(2)}</td><td>R$ ${valorTotal.toFixed(2)}</td><td><button class="btn-remover-item">🗑️</button></td>`; tabelaItens.appendChild(linha); });
+      atualizarTotal(); // Recalcula o total
+    }
+
+    // 4. Mudar o texto do botão para "Atualizar"
+    document.getElementById('btnSalvarManutencao').textContent = '🔄 Atualizar Manutenção';
+  } catch (error) { console.error('Erro ao carregar manutenção para edição:', error); alert('Não foi possível carregar os dados da manutenção. Você será redirecionado.'); window.location.href = 'buscar-manutencao.html'; }
+}
+
 // 🧰 Adicionar item à tabela
 function adicionarItem() {
   const qtd = parseInt(document.getElementById('itemQuantidade').value);
@@ -128,12 +175,15 @@ function adicionarArquivo() {
 
 // 💾 Salvar manutenção principal
 async function salvarManutencao() {
+  const idManutencao = document.getElementById('idManutencao').value;
+
   const dados = {
     usuario: document.getElementById('usuarioLogado').value,
     status: document.getElementById('status').value,
     filial: document.getElementById('filial').value,
     titulo: document.getElementById('titulo').value,
     data: document.getElementById('data').value,
+    tipoManutencao: document.getElementById('tipoManutencao').value,
     veiculo: document.getElementById('veiculo').value,
     km: document.getElementById('km').value,
     motorista: document.getElementById('motorista').value,
@@ -145,24 +195,40 @@ async function salvarManutencao() {
   };
 
   if (!dados.status || !dados.veiculo || !dados.data) {
-    alert('⚠️ Preencha os campos obrigatórios.');
+    alert('⚠️ Preencha os campos obrigatórios: Status, Placa e Data.');
     return;
   }
 
-  const { data, error } = await supabaseClient.from('manutencao').insert([dados]).select();
+  let resultado;
+  if (idManutencao) {
+    // Modo de atualização
+    resultado = await supabaseClient.from('manutencao').update(dados).eq('id', idManutencao).select();
+  } else {
+    // Modo de inserção
+    resultado = await supabaseClient.from('manutencao').insert([dados]).select();
+  }
+
+  const { data, error } = resultado;
+
   if (error) {
     console.error('Erro ao salvar manutenção:', error);
-    alert('❌ Erro ao salvar manutenção.');
+    alert(`❌ Erro ao ${idManutencao ? 'atualizar' : 'salvar'} manutenção.`);
     return;
   }
 
-  const idManutencao = data[0].id;
-  document.getElementById('idManutencao').value = idManutencao;
+  const novoIdManutencao = data[0].id;
+  document.getElementById('idManutencao').value = novoIdManutencao;
 
-  await salvarItensManutencao(idManutencao);
-  await salvarArquivosManutencao(idManutencao);
+  // Se estiver atualizando, apaga os itens antigos para reinserir os novos
+  if (idManutencao) {
+    await supabaseClient.from('manutencao_itens').delete().eq('id_manutencao', idManutencao);
+    await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
+  }
 
-  alert(`✅ Manutenção salva com sucesso! ID: ${idManutencao}`);
+  await salvarItensManutencao(novoIdManutencao);
+  await salvarArquivosManutencao(novoIdManutencao);
+
+  alert(`✅ Manutenção ${idManutencao ? 'atualizada' : 'salva'} com sucesso! ID: ${novoIdManutencao}`);
 }
 
 // 💾 Salvar itens vinculados
@@ -290,7 +356,14 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarTitulosManutencao();
   carregarFornecedores();
   carregarPecasServicos();
-  mostrarPainelInterno('cadastroInterno');
+
+  const params = new URLSearchParams(window.location.search);
+  const idManutencao = params.get('id');
+
+  if (idManutencao) {
+    carregarManutencaoParaEdicao(idManutencao);
+  }
+  mostrarPainelInterno('cadastroInterno'); // Garante que a aba de cadastro seja exibida
 
   document.querySelectorAll('.painel-btn').forEach(btn => {
     btn.addEventListener('click', () => {
