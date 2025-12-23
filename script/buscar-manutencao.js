@@ -67,7 +67,7 @@ async function buscarManutencao() {
   if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
 
   // Executar a query
-  const { data, error } = await query;
+  const { data: manutencoes, error } = await query;
 
   if (error) {
     console.error('❌ Erro ao buscar manutenções:', error);
@@ -76,7 +76,7 @@ async function buscarManutencao() {
   }
 
   // Verificar se há dados
-  if (!data || data.length === 0) {
+  if (!manutencoes || manutencoes.length === 0) {
     alert('Nenhuma manutenção encontrada com os filtros aplicados.');
     document.getElementById('tabelaResultados').innerHTML = '';
     document.getElementById('totalRegistros').textContent = '0';
@@ -84,8 +84,35 @@ async function buscarManutencao() {
     return;
   }
 
-  // Preencher a tabela com os dados
-  preencherTabela(data);
+  // Buscar os valores dos itens para todas as manutenções encontradas
+  const manutencaoIds = manutencoes.map(m => m.id);
+  const { data: itens, error: itensError } = await supabaseClient
+    .from('manutencao_itens')
+    .select('id_manutencao, quantidade, valor')
+    .in('id_manutencao', manutencaoIds);
+
+  if (itensError) {
+    console.error('❌ Erro ao buscar itens da manutenção:', itensError);
+    // Continua a execução, mas os valores serão 0
+  }
+
+  // Calcular o valor total para cada manutenção
+  const valorPorManutencao = {};
+  if (itens) {
+    itens.forEach(item => {
+      const totalItem = (item.quantidade || 0) * (item.valor || 0);
+      valorPorManutencao[item.id_manutencao] = (valorPorManutencao[item.id_manutencao] || 0) + totalItem;
+    });
+  }
+
+  // Adicionar o valor calculado a cada objeto de manutenção
+  const manutencoesComValor = manutencoes.map(m => ({
+    ...m,
+    valor: valorPorManutencao[m.id] || 0
+  }));
+
+  // Preencher a tabela com os dados enriquecidos
+  preencherTabela(manutencoesComValor);
 }
 
 // 📋 Preencher tabela de resultados
