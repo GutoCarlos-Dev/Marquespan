@@ -29,8 +29,11 @@ function mostrarPainelInterno(id) {
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   if (usuario?.nome) {
-    document.getElementById('usuarioLogado').value = usuario.nome;
-    document.getElementById('usuario-logado').textContent = `👤 Olá, ${usuario.nome}`;
+    const inputUsuario = document.getElementById('usuarioLogado');
+    if (inputUsuario) inputUsuario.value = usuario.nome;
+
+    const divUsuario = document.getElementById('usuario-logado');
+    if (divUsuario) divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
   }
 }
 
