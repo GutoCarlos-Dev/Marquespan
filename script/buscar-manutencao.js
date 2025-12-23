@@ -47,7 +47,7 @@ async function buscarManutencao() {
     os: document.getElementById('os').value,
     veiculo: document.getElementById('veiculo').value,
     filial: document.getElementById('filial').value,
-    tipo: document.getElementById('tipoManutencao').value,
+    // tipo: document.getElementById('tipoManutencao').value, // Coluna não existe no banco
     fornecedor: document.getElementById('fornecedor').value,
     usuario: document.getElementById('usuarioBusca').value
   };
@@ -62,7 +62,7 @@ async function buscarManutencao() {
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
   if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
   if (filtros.filial) query = query.eq('filial', filtros.filial);
-  if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
+  // if (filtros.tipo) query = query.eq('tipo', filtros.tipo); // Coluna não existe no banco
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
   if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
 

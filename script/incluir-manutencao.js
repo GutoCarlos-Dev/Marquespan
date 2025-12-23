@@ -98,7 +98,7 @@ async function carregarManutencaoParaEdicao(id) {
     document.getElementById('status').value = manutencao.status;
     document.getElementById('filial').value = manutencao.filial;
     document.getElementById('titulo').value = manutencao.titulo;
-    document.getElementById('tipoManutencao').value = manutencao.tipo || '';
+    // document.getElementById('tipoManutencao').value = manutencao.tipo || ''; // Coluna não existe no banco
     document.getElementById('data').value = manutencao.data ? manutencao.data.split('T')[0] : '';
     document.getElementById('veiculo').value = manutencao.veiculo;
     document.getElementById('km').value = manutencao.km;
@@ -183,7 +183,7 @@ async function salvarManutencao() {
     filial: document.getElementById('filial').value,
     titulo: document.getElementById('titulo').value,
     data: document.getElementById('data').value,
-    tipo: document.getElementById('tipoManutencao').value,
+    // tipo: document.getElementById('tipoManutencao').value, // Coluna não existe no banco
     veiculo: document.getElementById('veiculo').value,
     km: parseInt(document.getElementById('km').value.replace(/\D/g, '')) || null,
     motorista: document.getElementById('motorista').value,
