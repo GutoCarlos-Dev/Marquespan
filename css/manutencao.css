@@ -375,3 +375,13 @@
   flex: 0 0 auto; /* Impede que o campo estique */
   width: 80px;    /* Largura fixa para aprox. 5 caracteres + setas */
 }
+
+#itemValor {
+  flex: 0 0 auto;
+  width: 130px; /* Ajustado para aprox. 12 caracteres */
+}
+
+#itemDescricao {
+  flex: 0 0 auto;
+  width: 500px; /* Ajustado para caber nomes de peças/serviços */
+}
