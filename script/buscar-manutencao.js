@@ -48,7 +48,8 @@ async function buscarManutencao() {
     veiculo: document.getElementById('veiculo').value,
     filial: document.getElementById('filial').value,
     tipo: document.getElementById('tipoManutencao').value,
-    fornecedor: document.getElementById('fornecedor').value
+    fornecedor: document.getElementById('fornecedor').value,
+    usuario: document.getElementById('usuarioBusca').value
   };
 
   let query = supabaseClient.from('manutencao').select('*');
@@ -63,6 +64,7 @@ async function buscarManutencao() {
   if (filtros.filial) query = query.eq('filial', filtros.filial);
   if (filtros.tipo) query = query.eq('tipoManutencao', filtros.tipo);
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
+  if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
 
   // Executar a query
   const { data, error } = await query;
@@ -95,7 +97,11 @@ function preencherTabela(registros) {
   registros.forEach(m => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td><button onclick="abrirManutencao(${m.id})">🔎</button></td>
+      <td style="display: flex; gap: 5px;">
+        <button class="btn-acao editar" onclick="abrirManutencao(${m.id})" title="Abrir"><i class="fas fa-search"></i></button>
+        <button class="btn-acao excluir" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+      </td>
+      <td>${m.usuario || ''}</td>
       <td>${m.titulo || ''}</td>
       <td>${m.veiculo || ''}</td>
       <td>${m.descricao || ''}</td>
@@ -124,6 +130,21 @@ function formatarValor(valor) {
 // 🔗 Abrir manutenção
 window.abrirManutencao = function(id) {
   window.location.href = `incluir-manutencao.html?id=${id}`;
+}
+
+// 🗑️ Excluir manutenção
+window.excluirManutencao = async function(id) {
+  if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
+
+  const { error } = await supabaseClient.from('manutencao').delete().eq('id', id);
+
+  if (error) {
+    console.error('Erro ao excluir manutenção:', error);
+    alert('❌ Erro ao excluir manutenção.');
+  } else {
+    alert('✅ Manutenção excluída com sucesso!');
+    buscarManutencao(); // Atualiza a tabela
+  }
 }
 
 // 🚀 Inicialização
