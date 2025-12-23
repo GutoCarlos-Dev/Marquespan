@@ -246,7 +246,7 @@
 }
 
 /* Tabelas */
-.tabela-itens, .tabela-arquivos {
+.tabela-itens, .tabela-arquivos, .tabela-resultados {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -259,13 +259,14 @@
 }
 
 .tabela-itens th, .tabela-itens td,
-.tabela-arquivos th, .tabela-arquivos td {
+.tabela-arquivos th, .tabela-arquivos td,
+.tabela-resultados th, .tabela-resultados td {
   padding: 12px 15px;
   text-align: left;
   border-bottom: 1px solid #dee2e6;
 }
 
-.tabela-itens th {
+.tabela-itens th, .tabela-resultados th {
   background-color: #f8f9fa;
   font-weight: 600;
   color: #495057;
@@ -274,7 +275,8 @@
   letter-spacing: 0.5px;
 }
 
-.tabela-itens tr:last-child td {
+.tabela-itens tr:last-child td,
+.tabela-resultados tr:last-child td {
   border-bottom: none;
 }
 
@@ -384,4 +386,83 @@
 #itemDescricao {
   flex: 0 0 auto;
   width: 500px; /* Ajustado para caber nomes de peças/serviços */
+}
+
+/* 🔍 Estilos Específicos da Busca */
+.painel-busca {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 25px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  margin-bottom: 20px;
+}
+
+.painel-busca legend {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #495057;
+  padding: 0 10px;
+  margin-bottom: 15px;
+}
+
+#btnBuscarManutencao {
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 15px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#btnBuscarManutencao:hover {
+  background-color: #0b5ed7;
+}
+
+/* Resumo e Exportação */
+.resumo-manutencao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fff;
+  padding: 15px 20px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.resumo-valores {
+  font-size: 1.1rem;
+  color: #495057;
+}
+
+.resumo-valores span {
+  font-weight: 700;
+  color: #198754;
+}
+
+#btnExportarPDF, #btnExportarXLS {
+  padding: 8px 16px;
+  border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  color: #495057;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-right: 10px;
+}
+
+#btnExportarPDF:hover, #btnExportarXLS:hover {
+  background-color: #e9ecef;
+  color: #212529;
+  border-color: #ced4da;
 }
