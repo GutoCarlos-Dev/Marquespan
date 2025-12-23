@@ -93,30 +93,39 @@
             </fieldset>
           </div>
 
-          <fieldset>
-            <legend>Dados Fiscais</legend>
-            <div class="form-linha">
-              <label for="fornecedor">Fornecedor:</label>
-              <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Digite ou selecione">
-              <datalist id="listaFornecedores"></datalist>
-              <button type="button" class="btn-icone" onclick="abrirModalFornecedor()">
-                <i class="fas fa-plus-circle"></i>
-              </button>
-            </div>
-            <div class="form-linha">
-              <label for="notaFiscal">NF-E:</label>
-              <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
-            </div>
-            <div class="form-linha">
-              <label for="notaServico">NFS-E:</label>
-              <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Outras Informações</legend>
-            <input type="text" id="numeroOS" placeholder="Número da OS">
-            <textarea id="descricao" placeholder="Descrição"></textarea>
-          </fieldset>
+          <div class="form-duplo">
+            <fieldset class="form-bloco">
+              <legend>Dados Fiscais</legend>
+              <div class="form-linha">
+                <label for="fornecedor">Fornecedor:</label>
+                <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Digite ou selecione">
+                <datalist id="listaFornecedores"></datalist>
+                <button type="button" class="btn-icone" onclick="abrirModalFornecedor()">
+                  <i class="fas fa-plus-circle"></i>
+                </button>
+              </div>
+              <div class="form-linha">
+                <label for="notaFiscal">NF-E:</label>
+                <input type="text" id="notaFiscal" placeholder="Nota Fiscal">
+              </div>
+              <div class="form-linha">
+                <label for="notaServico">NFS-E:</label>
+                <input type="text" id="notaServico" placeholder="Nota Fiscal de Serviço">
+              </div>
+            </fieldset>
+
+            <fieldset class="form-bloco">
+              <legend>Outras Informações</legend>
+              <div class="form-linha">
+                <label for="numeroOS">Número da OS:</label>
+                <input type="text" id="numeroOS" placeholder="Número da OS">
+              </div>
+              <div class="form-linha">
+                <label for="descricao">Descrição:</label>
+                <textarea id="descricao" placeholder="Descrição"></textarea>
+              </div>
+            </fieldset>
+          </div>
         </form>
       </div>
 
