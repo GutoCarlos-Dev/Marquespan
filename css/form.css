@@ -1,241 +1,29 @@
-/* 🚚 Formulário de veículos */
-.form-section {
-  margin-bottom: 40px;
-  display: flex;
-  justify-content: flex-start;
-}
+/* css/form.css */
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
-  background-color: #fff;
-  padding: 20px;
+/*
+  Estilo Padrão para Contêineres de Formulário
+  Remove a "linha feia" do <fieldset> e o transforma em um card moderno.
+*/
+
+.form-container fieldset,
+.card fieldset {
+  border: 1px solid #dee2e6; /* Borda suave em vez da padrão do browser */
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  max-width: 800px;
-  margin-left: 0;
-}
-
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #2e7d32;
+  padding: 25px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   margin-bottom: 20px;
-  border-bottom: 2px solid #c8e6c9;
-  padding-bottom: 5px;
-  text-align: center;
 }
 
-/* 🔠 Letras maiúsculas nos campos do formulário */
-.form-grid input,
-.form-grid select,
-.form-grid textarea {
-  text-transform: uppercase;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-/* 🟢 Botões do formulário */
-.form-grid button {
-  padding: 10px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.form-grid button:hover {
-  background-color: #45a049;
-}
-
-.form-grid button i {
-  margin-right: 6px;
-}
-
-/* 🔹 Blocos de formulário */
-.form-bloco {
-  margin-bottom: 30px;
-}
-
-.form-bloco h3 {
-  font-size: 18px;
-  color: #2e7d32;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #c8e6c9;
-  padding-bottom: 5px;
-}
-
-/* 🔹 Seções de formulário */
-.form-section h3 {
-  font-size: 18px;
-  color: #2e7d32;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #c8e6c9;
-  padding-bottom: 5px;
-}
-
-/* 🔹 Grid de campos */
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-/* 📱 Responsividade para formulários no mobile */
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr !important;
-    gap: 15px !important;
-    padding: 15px !important;
-  }
-
-  .form-container {
-    padding: 10px !important;
-    margin: 0 5px !important;
-  }
-
-  .form-bloco h3 {
-    font-size: 16px !important;
-  }
-
-  .section-title {
-    font-size: 18px !important;
-  }
-
-  /* Campos de formulário no mobile */
-  .form-grid input,
-  .form-grid select,
-  .form-grid textarea {
-    font-size: 16px !important; /* Evita zoom no iOS */
-    padding: 12px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Descrição com largura maior no mobile */
-  #descricao {
-    width: 100% !important;
-    height: 60px !important;
-  }
-
-  /* Botões do modal no mobile */
-  .modal-actions {
-    flex-direction: column !important;
-    gap: 10px !important;
-  }
-
-  .modal-actions button {
-    width: 100% !important;
-    padding: 12px !important;
-    font-size: 16px !important;
-  }
-
-  /* Ajustes para containers de select com botões */
-  .marca-container, .modelo-container, .tipo-container {
-    flex-direction: column !important;
-    gap: 10px !important;
-  }
-
-  .marca-container button, .modelo-container button, .tipo-container button {
-    width: 100% !important;
-    padding: 10px !important;
-  }
-}
-
-/* 🛠️ Containers para select com botões */
-.marca-container, .modelo-container, .tipo-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.marca-container select, .modelo-container select, .tipo-container select {
-  flex: 1;
-}
-
-.marca-container button, .modelo-container button, .tipo-container button {
-  padding: 8px 12px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.marca-container button:hover, .modelo-container button:hover, .tipo-container button:hover {
-  background-color: #45a049;
-}
-
-.marca-container button:last-child, .modelo-container button:last-child, .tipo-container button:last-child {
-  background-color: #f44336;
-}
-
-.marca-container button:last-child:hover, .modelo-container button:last-child:hover, .tipo-container button:last-child:hover {
-  background-color: #d32f2f;
-}
-
-/* ✏️ Campos */
-input, select {
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 🔧 Container centralizado */
-.form-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* 🖱️ Botões padrão Marquespan */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.modal-actions button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  font-weight: bold;
-  font-size: 14px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.modal-actions button[type="submit"] {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.modal-actions button[type="submit"]:hover {
-  background-color: #f10303;
-}
-
-.modal-actions button[type="button"] {
-  background-color: #e0e0e0;
-  color: #333;
-}
-
-.modal-actions button[type="button"]:hover {
-  background-color: #bdbdbd;
-}
-
-.sucesso {
-  border: 2px solid green;
+/*
+  Estiliza a legenda <legend> para parecer um título de card.
+*/
+.form-container fieldset legend,
+.card fieldset legend {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #495057;
+  padding: 0 10px; /* Espaçamento lateral para não colar na borda */
+  margin-left: 15px; /* Alinha com o padding do fieldset */
+  background-color: #fff; /* Garante que a linha da borda não passe por trás do texto */
 }
