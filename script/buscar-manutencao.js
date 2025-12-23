@@ -1,7 +1,8 @@
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-  if (usuario?.nome) {
-    document.getElementById('usuario-logado').textContent = `👤 Olá, ${usuario.nome}`;
+  const divUsuario = document.getElementById('usuario-logado');
+  if (usuario?.nome && divUsuario) {
+    divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
   }
 }
 
@@ -128,7 +129,6 @@ window.abrirManutencao = function(id) {
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
-  ativarSubmenu();
   carregarFiltros();
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
@@ -139,11 +139,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btnExportarXLS').addEventListener('click', () => {
     alert('📊 Exportar XLS ainda não implementado.');
-  });
-});
-
-  document.querySelectorAll('.menu-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-    btn.parentElement.classList.toggle('active');
   });
 });
