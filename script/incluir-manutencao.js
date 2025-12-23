@@ -97,7 +97,7 @@ function adicionarItem() {
   document.getElementById('tabelaItens').appendChild(linha);
   atualizarTotal();
 
-  document.getElementById('itemQuantidade').value = '';
+  document.getElementById('itemQuantidade').value = '1';
   document.getElementById('itemDescricao').value = '';
   document.getElementById('itemValor').value = '';
 }

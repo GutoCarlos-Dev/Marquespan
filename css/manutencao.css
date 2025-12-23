@@ -369,3 +369,9 @@
 #btnAdicionarArquivo:hover {
   background-color: #5c636a;
 }
+
+/* Campo Quantidade Compacto */
+#itemQuantidade {
+  flex: 0 0 auto; /* Impede que o campo estique */
+  width: 80px;    /* Largura fixa para aprox. 5 caracteres + setas */
+}
