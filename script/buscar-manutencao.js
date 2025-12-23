@@ -62,7 +62,7 @@ async function buscarManutencao() {
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
   if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
   if (filtros.filial) query = query.eq('filial', filtros.filial);
-  if (filtros.tipo) query = query.eq('tipo_manutencao', filtros.tipo);
+  if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
   if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
 
