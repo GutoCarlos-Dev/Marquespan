@@ -392,18 +392,25 @@
 .painel-busca {
   border: 1px solid #dee2e6;
   border-radius: 8px;
-  padding: 25px;
+  padding: 20px;
   background-color: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.painel-busca legend {
-  font-size: 1.1rem;
+.painel-busca-header h3 {
+  font-size: 1.2rem;
   font-weight: 600;
   color: #495057;
-  padding: 0 10px;
-  margin-bottom: 15px;
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 #btnBuscarManutencao {
@@ -415,7 +422,8 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
-  margin-top: 15px;
+  margin-top: 5px;
+  align-self: flex-start; /* Alinha o botão à esquerda */
   transition: background-color 0.2s;
   display: inline-flex;
   align-items: center;
