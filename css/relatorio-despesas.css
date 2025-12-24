@@ -82,6 +82,7 @@
 .data-table tfoot td {
     padding: 15px;
     font-size: 1.1rem;
+    white-space: nowrap; /* Evita quebra de linha no Total Geral ao exportar */
 }
 
 /* Estilos para o grid de gráficos */
