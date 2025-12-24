@@ -125,3 +125,14 @@ fieldset legend {
     font-weight: bold;
     padding: 0 10px;
 }
+
+/* Mantém o padrão do formulário */
+.form-main-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    max-width: 600px; /* Define uma largura máxima para deixar o formulário menor */
+    margin: 0 auto;   /* Centraliza o formulário na página */
+}
