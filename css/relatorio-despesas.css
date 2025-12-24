@@ -1,3 +1,9 @@
+/* Estilo para centralizar e limitar a largura do formulário de filtro */
+#card-filtro-despesas {
+    max-width: 600px;       /* Define a largura máxima igual ao de rotas */
+    margin: 0 auto 20px auto; /* Centraliza horizontalmente e mantém margem inferior */
+}
+
 /* Estilos para uma tabela de dados mais profissional */
 .data-table {
     width: 100%;
@@ -124,15 +130,4 @@ fieldset legend {
     font-size: 1.5rem;
     font-weight: bold;
     padding: 0 10px;
-}
-
-/* Mantém o padrão do formulário */
-.form-main-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    max-width: 600px; /* Define uma largura máxima para deixar o formulário menor */
-    margin: 0 auto;   /* Centraliza o formulário na página */
 }
