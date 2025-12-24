@@ -273,3 +273,8 @@
 .form-grid-modal {
     grid-template-columns: 1fr;
 }
+
+.form-container {
+  max-width: 600px; /* Define uma largura máxima para deixar o formulário menor */
+  margin: 0 auto;   /* Centraliza o formulário na página */
+}
