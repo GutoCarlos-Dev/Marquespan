@@ -60,6 +60,7 @@ const ReportUI = {
         this.tabelaResultadosBody = document.getElementById('tabela-resultados');
         this.rotasSelect = document.getElementById('rotas');
         this.hoteisList = document.getElementById('hoteisList');
+        this.valorAcimaDeInput = document.getElementById('valor-acima-de');
         this.btnExportarXLSX = document.getElementById('btnExportarXLSX');
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
 
@@ -70,6 +71,9 @@ const ReportUI = {
 
     bindEvents() {
         this.formFiltro.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        this.valorAcimaDeInput.addEventListener('input', (e) => {
+            this.formatCurrencyInput(e.target);
+        });
         this.btnExportarXLSX.addEventListener('click', () => this.exportarXLSX());
         this.btnExportarPDF.addEventListener('click', () => this.exportarPDF());
     },
@@ -86,6 +90,18 @@ const ReportUI = {
 
     formatCurrency(value) {
         return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+
+    formatCurrencyInput(input) {
+        let value = input.value.replace(/\D/g, '');
+        if (value === '') {
+            input.value = '';
+            return;
+        }
+        const numberValue = parseFloat(value) / 100;
+        input.value = numberValue.toLocaleString('pt-BR', {
+            style: 'currency', currency: 'BRL'
+        });
     },
 
     async popularFiltros() {
@@ -133,7 +149,12 @@ const ReportUI = {
         const hotelId = this.getValueFromDatalist('hotel');
         const dataInicial = document.getElementById('data-inicial').value;
         const dataFinal = document.getElementById('data-final').value;
-        const valorAcimaDe = document.getElementById('valor-acima-de').value;
+
+        const valorAcimaDeString = this.valorAcimaDeInput.value;
+        let valorAcimaDe = null;
+        if (valorAcimaDeString) {
+            valorAcimaDe = parseFloat(valorAcimaDeString.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || null;
+        }
 
         if (!dataInicial || !dataFinal) {
             alert('Por favor, selecione as datas de início e fim.');
