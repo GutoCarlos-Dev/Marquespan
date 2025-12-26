@@ -95,6 +95,10 @@ const ReportUI = {
         ]);
 
         this.rotasSelect.innerHTML = '';
+        // Ordena as rotas numericamente, pois o banco de dados pode retornar uma ordenação de texto (ex: 1, 10, 2).
+        rotas.sort((a, b) => {
+            return Number(a.numero) - Number(b.numero);
+        });
         rotas.forEach(rota => {
             const option = new Option(rota.numero, rota.numero);
             this.rotasSelect.appendChild(option);
