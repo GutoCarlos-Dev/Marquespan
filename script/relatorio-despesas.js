@@ -19,7 +19,7 @@ class SupabaseService {
         return data;
     }
 
-    static async fetchDespesas(startDate, endDate, rotas, hotelId) {
+    static async fetchDespesas(startDate, endDate, rotas, hotelId, valorMinimo) {
         let query = supabaseClient
             .from('despesas')
             .select(`
@@ -34,6 +34,7 @@ class SupabaseService {
 
         if (rotas && rotas.length > 0) query = query.in('numero_rota', rotas);
         if (hotelId) query = query.eq('id_hotel', hotelId);
+        if (valorMinimo) query = query.gte('valor_diaria', valorMinimo);
 
         const { data, error } = await query;
         if (error) {
@@ -95,7 +96,7 @@ const ReportUI = {
 
         this.rotasSelect.innerHTML = '';
         rotas.forEach(rota => {
-            const option = new Option(`Rota ${rota.numero}`, rota.numero);
+            const option = new Option(rota.numero, rota.numero);
             this.rotasSelect.appendChild(option);
         });
 
@@ -128,6 +129,7 @@ const ReportUI = {
         const hotelId = this.getValueFromDatalist('hotel');
         const dataInicial = document.getElementById('data-inicial').value;
         const dataFinal = document.getElementById('data-final').value;
+        const valorAcimaDe = document.getElementById('valor-acima-de').value;
 
         if (!dataInicial || !dataFinal) {
             alert('Por favor, selecione as datas de início e fim.');
@@ -139,7 +141,7 @@ const ReportUI = {
         this.graficosContainer.style.display = 'none';
         this.resultadosContainer.style.display = 'block';
 
-        this.reportData = await SupabaseService.fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId);
+        this.reportData = await SupabaseService.fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId, valorAcimaDe);
         this.renderizarTabela(this.reportData);
         this.setLoading(this.btnBuscar, false);
     },
