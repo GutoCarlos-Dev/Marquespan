@@ -238,17 +238,54 @@ const DespesasUI = {
         // Lógica para buscar e renderizar a tabela de despesas
         try {
             const searchTerm = this.searchInput.value.trim();
-            // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
-            // Assumindo que as colunas de chave estrangeira são id_hotel e id_funcionario1.
-            // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
-            let query = supabaseClient
-                .from('despesas')
-                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
+            let query; // Mover a declaração da query para cá
 
             if (searchTerm) {
-                // Correção: A busca em tabelas relacionadas usa a sintaxe `tabela_relacionada.coluna.ilike...`
-                // A busca por funcionário precisa de uma view ou RPC para funcionar com `or`. Simplificando por enquanto.
-                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionario1.nome_completo.ilike.%${searchTerm}%,funcionario2.nome_completo.ilike.%${searchTerm}%`);
+                // Solução para a busca com 'OR' em múltiplas tabelas relacionadas
+                // 1. Busca os IDs de cada condição separadamente
+                const [
+                    { data: rotaData, error: rotaError },
+                    { data: hotelData, error: hotelError },
+                    { data: func1Data, error: func1Error },
+                    { data: func2Data, error: func2Error }
+                ] = await Promise.all([
+                    supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${searchTerm}%`),
+                    supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${searchTerm}%`),
+                    supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${searchTerm}%`),
+                    supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${searchTerm}%`)
+                ]);
+
+                if (rotaError || hotelError || func1Error || func2Error) {
+                    console.error('Erro em uma das buscas parciais:', { rotaError, hotelError, func1Error, func2Error });
+                    throw new Error('Ocorreu um erro durante a busca.');
+                }
+
+                // 2. Junta todos os IDs encontrados, sem duplicatas
+                const ids = new Set([
+                    ...(rotaData || []).map(d => d.id),
+                    ...(hotelData || []).map(d => d.id),
+                    ...(func1Data || []).map(d => d.id),
+                    ...(func2Data || []).map(d => d.id)
+                ]);
+
+                const matchingIds = Array.from(ids);
+
+                if (matchingIds.length === 0) {
+                    this.tableBody.innerHTML = `<tr><td colspan="6">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
+                    return;
+                }
+
+                // 3. Busca os dados completos usando os IDs encontrados
+                query = supabaseClient
+                    .from('despesas')
+                    .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
+                    .in('id', matchingIds);
+
+            } else {
+                // Query original quando não há busca
+                query = supabaseClient
+                    .from('despesas')
+                    .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
             const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
