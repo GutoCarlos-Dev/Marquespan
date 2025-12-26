@@ -117,19 +117,19 @@ const DespesasUI = {
         try {
             // --- Correção: Buscar IDs antes de salvar ---
             const hotelNome = document.getElementById('despesaHotelInput').value;
-            const func1Nome = document.getElementById('despesaFuncionario1Input').value;
-            const func2Nome = document.getElementById('despesaFuncionario2Input').value;
+            const func1NomeCompleto = document.getElementById('despesaFuncionario1Input').value;
+            const func2NomeCompleto = document.getElementById('despesaFuncionario2Input').value;
 
             const { data: hotel } = await supabaseClient.from('hoteis').select('id').eq('nome', hotelNome).single();
             if (!hotel) throw new Error(`Hotel "${hotelNome}" não encontrado no cadastro.`);
 
-            const { data: func1 } = await supabaseClient.from('funcionario').select('id').eq('nome', func1Nome).single();
-            if (!func1) throw new Error(`Funcionário "${func1Nome}" não encontrado no cadastro.`);
+            const { data: func1 } = await supabaseClient.from('funcionario').select('id').eq('nome_completo', func1NomeCompleto).single();
+            if (!func1) throw new Error(`Funcionário "${func1NomeCompleto}" não encontrado no cadastro.`);
 
             let func2Id = null;
-            if (func2Nome) {
-                const { data: func2 } = await supabaseClient.from('funcionario').select('id').eq('nome', func2Nome).single();
-                if (!func2) throw new Error(`Funcionário "${func2Nome}" não encontrado no cadastro.`);
+            if (func2NomeCompleto) {
+                const { data: func2 } = await supabaseClient.from('funcionario').select('id').eq('nome_completo', func2NomeCompleto).single();
+                if (!func2) throw new Error(`Funcionário "${func2NomeCompleto}" não encontrado no cadastro.`);
                 func2Id = func2.id;
             }
 
@@ -183,7 +183,7 @@ const DespesasUI = {
             // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             const { data: despesa, error } = await supabaseClient
                 .from('despesas')
-                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)')
+                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                 .eq('id', id).single();
             if (error) throw error;
 
@@ -192,8 +192,8 @@ const DespesasUI = {
             // Correção: Adiciona verificação para evitar erro se a relação não retornar dados.
             // O Supabase retorna o objeto da relação com o nome da tabela (ex: hoteis) ou o alias que demos (ex: funcionario1).
             document.getElementById('despesaHotelInput').value = despesa.hoteis?.nome || ''; // Correto
-            document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome || '';
-            document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome || '';
+            document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome_completo || '';
+            document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome_completo || '';
             this.qtdDiariasInput.value = despesa.qtd_diarias;
             document.getElementById('despesaDataReserva').value = despesa.data_reserva;
             document.getElementById('despesaNotaFiscal').value = despesa.nota_fiscal;
@@ -243,12 +243,12 @@ const DespesasUI = {
             // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             let query = supabaseClient
                 .from('despesas')
-                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome), funcionario2:id_funcionario2(nome)');
+                .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
 
             if (searchTerm) {
                 // Correção: A busca em tabelas relacionadas usa a sintaxe `tabela_relacionada.coluna.ilike...`
                 // A busca por funcionário precisa de uma view ou RPC para funcionar com `or`. Simplificando por enquanto.
-                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionario1.nome.ilike.%${searchTerm}%,funcionario2.nome.ilike.%${searchTerm}%`);
+                query = query.or(`numero_rota.ilike.%${searchTerm}%,hoteis.nome.ilike.%${searchTerm}%,funcionario1.nome_completo.ilike.%${searchTerm}%,funcionario2.nome_completo.ilike.%${searchTerm}%`);
             }
 
             const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
@@ -259,8 +259,8 @@ const DespesasUI = {
                     <td>${d.numero_rota}</td>
                     <td>${d.hoteis?.nome || 'N/A'}</td>
                     <td>
-                        ${d.funcionario1?.nome || 'N/A'}
-                        ${d.funcionario2?.nome ? `<br><small>${d.funcionario2.nome}</small>` : ''}
+                        ${d.funcionario1?.nome_completo || 'N/A'}
+                        ${d.funcionario2?.nome_completo ? `<br><small>${d.funcionario2.nome_completo}</small>` : ''}
                     </td>
                     <td>${(d.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
@@ -292,20 +292,20 @@ const DespesasUI = {
             // Carregar Funcionários (Motoristas) para o campo 1
             const { data: motoristas, error: motoristasError } = await supabaseClient
                 .from('funcionario')
-                .select('nome')
+                .select('nome_completo')
                 .eq('funcao', 'Motorista') // Filtra apenas por motoristas
-                .order('nome', { ascending: true });
+                .order('nome_completo', { ascending: true });
             if (motoristasError) throw motoristasError;
-            this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome}"></option>`).join('');
+            this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome_completo}"></option>`).join('');
 
             // Carregar Funcionários (Auxiliares) para o campo 2
             const { data: auxiliares, error: auxiliaresError } = await supabaseClient
                 .from('funcionario')
-                .select('nome')
+                .select('nome_completo')
                 .eq('funcao', 'Auxiliar') // Filtra apenas por auxiliares
-                .order('nome', { ascending: true });
+                .order('nome_completo', { ascending: true });
             if (auxiliaresError) throw auxiliaresError;
-            this.funcionarios2List.innerHTML = auxiliares.map(f => `<option value="${f.nome}"></option>`).join('');
+            this.funcionarios2List.innerHTML = auxiliares.map(f => `<option value="${f.nome_completo}"></option>`).join('');
 
         } catch (err) {
             console.error('Erro ao carregar datalists:', err);
