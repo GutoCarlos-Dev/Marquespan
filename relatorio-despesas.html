@@ -18,6 +18,95 @@
         .data-table th {
             cursor: pointer;
         }
+
+        /* Estilização profissional do formulário mantendo layout de tabela */
+        .filter-layout-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 15px; /* Espaçamento vertical entre linhas */
+        }
+
+        .filter-layout-table td {
+            padding: 0 10px;
+            vertical-align: bottom; /* Alinha os campos pela base */
+        }
+
+        .form-group {
+            margin-bottom: 0; /* Remove margem inferior padrão pois a tabela já espaça */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .form-group input[type="date"],
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            box-sizing: border-box;
+        }
+
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #b3b3b3;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            color: #495057;
+            background-color: #fff;
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* Estilo específico para o select múltiplo de rotas */
+        #rotas {
+            height: auto;
+            min-height: 120px;
+            background-image: none;
+        }
+
+        /* Botão de busca */
+        .form-actions .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .form-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #34ce57 0%, #28a745 100%);
+        }
+
+        .form-actions .btn:active {
+            transform: translateY(0);
+        }
     </style>
   </head>
 <body>
