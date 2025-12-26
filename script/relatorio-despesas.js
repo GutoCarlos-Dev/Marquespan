@@ -67,6 +67,7 @@ const ReportUI = {
         this.graficoRotasInstance = null;
         this.graficoHoteisInstance = null;
         this.reportData = [];
+        this.currentSort = { key: null, direction: 'asc' };
     },
 
     bindEvents() {
@@ -76,6 +77,17 @@ const ReportUI = {
         });
         this.btnExportarXLSX.addEventListener('click', () => this.exportarXLSX());
         this.btnExportarPDF.addEventListener('click', () => this.exportarPDF());
+
+        // Event listener para ordenação da tabela
+        const thead = document.querySelector('.data-table thead');
+        if (thead) {
+            thead.addEventListener('click', (e) => {
+                const th = e.target.closest('th');
+                if (th && th.dataset.key) {
+                    this.handleSort(th.dataset.key);
+                }
+            });
+        }
     },
 
     setLoading(button, isLoading) {
@@ -169,6 +181,59 @@ const ReportUI = {
         this.reportData = await SupabaseService.fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId, valorAcimaDe);
         this.renderizarTabela(this.reportData);
         this.setLoading(this.btnBuscar, false);
+    },
+
+    handleSort(key) {
+        if (this.currentSort.key === key) {
+            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentSort.key = key;
+            this.currentSort.direction = 'asc';
+        }
+        this.sortData();
+        this.updateHeaderIcons();
+        this.renderizarTabela(this.reportData);
+    },
+
+    sortData() {
+        const key = this.currentSort.key;
+        const direction = this.currentSort.direction === 'asc' ? 1 : -1;
+
+        this.reportData.sort((a, b) => {
+            let valA = this.getValueByKey(a, key);
+            let valB = this.getValueByKey(b, key);
+
+            if (valA === null || valA === undefined) valA = '';
+            if (valB === null || valB === undefined) valB = '';
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return -1 * direction;
+            if (valA > valB) return 1 * direction;
+            return 0;
+        });
+    },
+
+    getValueByKey(item, key) {
+        switch (key) {
+            case 'hotel': return item.hoteis?.nome;
+            case 'funcionarios': return item.funcionario1?.nome;
+            default: return item[key];
+        }
+    },
+
+    updateHeaderIcons() {
+        const ths = document.querySelectorAll('.data-table th');
+        ths.forEach(th => {
+            const icon = th.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-sort'; // Reset
+                if (th.dataset.key === this.currentSort.key) {
+                    icon.className = this.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                }
+            }
+        });
     },
 
     renderizarTabela(dados) {

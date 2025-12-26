@@ -14,6 +14,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
+    <style>
+        .data-table th {
+            cursor: pointer;
+        }
+    </style>
   </head>
 <body>
 
@@ -96,15 +101,15 @@
                     <thead>
                         <!-- Cabecalho da tabela -->
                         <tr>
-                            <th>Data</th>
-                            <th>Rota</th>
-                            <th>Nome do Hotel</th>
-                            <th>Qtd. Diárias</th>
-                            <th>Valor Diária</th>
-                            <th>Valor Energia</th>
-                            <th>Valor Total</th>
-                            <th>Funcionários</th>
-                            <th>Nota Fiscal</th>
+                            <th data-key="data_checkin">Data <i class="fas fa-sort"></i></th>
+                            <th data-key="numero_rota">Rota <i class="fas fa-sort"></i></th>
+                            <th data-key="hotel">Nome do Hotel <i class="fas fa-sort"></i></th>
+                            <th data-key="qtd_diarias">Qtd. Diárias <i class="fas fa-sort"></i></th>
+                            <th data-key="valor_diaria">Valor Diária <i class="fas fa-sort"></i></th>
+                            <th data-key="valor_energia">Valor Energia <i class="fas fa-sort"></i></th>
+                            <th data-key="valor_total">Valor Total <i class="fas fa-sort"></i></th>
+                            <th data-key="funcionarios">Funcionários <i class="fas fa-sort"></i></th>
+                            <th data-key="nota_fiscal">Nota Fiscal <i class="fas fa-sort"></i></th>
                         </tr>
                     </thead>
                     <tbody id="tabela-resultados">
