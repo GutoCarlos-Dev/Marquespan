@@ -125,7 +125,8 @@ const ReportUI = {
         this.rotasSelect.innerHTML = '';
         // Ordena as rotas numericamente, pois o banco de dados pode retornar uma ordenação de texto (ex: 1, 10, 2).
         rotas.sort((a, b) => {
-            return Number(a.numero) - Number(b.numero);
+            // Usa localeCompare com numeric: true para ordenar corretamente misturas de números e letras (ex: 3, 30, 283B)
+            return String(a.numero).localeCompare(String(b.numero), 'pt-BR', { numeric: true });
         });
         rotas.forEach(rota => {
             const option = new Option(rota.numero, rota.numero);
