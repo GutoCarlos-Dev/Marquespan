@@ -500,9 +500,16 @@ window.deleteLaunch = function(id) {
     const lancamento = historico[lancamentoIndex];
     let estoque = getEstoque();
 
-    // Não permite reverter uma contagem
+    // Trata a exclusão de uma "Contagem" de forma especial
     if (lancamento.operacao === 'CONTAGEM') {
-        alert('Não é possível reverter uma operação de "Contagem" automaticamente. Por favor, faça uma nova contagem para corrigir o estoque.');
+        if (confirm('Operações de "Contagem" não podem ter o estoque revertido automaticamente.\n\nDeseja apenas remover este lançamento do histórico? O estoque NÃO será alterado.')) {
+            // Apenas remove o registro do histórico, sem alterar o estoque
+            historico.splice(lancamentoIndex, 1);
+            localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
+
+            alert('Lançamento de contagem removido do histórico. O estoque não foi modificado.');
+            loadStockHistory(); // Recarrega apenas o histórico
+        }
         return;
     }
 
