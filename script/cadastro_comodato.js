@@ -47,12 +47,10 @@ function getEquipamentos() {
 function saveEquipamento(e) {
   e.preventDefault();
   const nome = document.getElementById('equipNome').value;
-  const status = document.getElementById('equipStatus').value;
 
   const novoEquip = {
     id: Date.now(),
-    nome,
-    status
+    nome
   };
 
   const lista = getEquipamentos();
@@ -73,7 +71,6 @@ function loadEquipamentos() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${item.nome}</td>
-      <td><span class="badge ${item.status === 'NOVO' ? 'badge-success' : 'badge-warning'}">${item.status}</span></td>
       <td>
         <button onclick="deleteEquipamento(${item.id})" class="btn-icon-small text-danger" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
