@@ -37,3 +37,19 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Badges de Status para Histórico */
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+    min-width: 80px;
+}
+.status-entrada { background-color: #28a745; }
+.status-saida { background-color: #dc3545; }
+.status-contagem { background-color: #ffc107; color: #212529; }

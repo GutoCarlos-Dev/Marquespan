@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initOperationSelection();
     loadProductsDropdown();
     loadStockSummary();
+    loadStockHistory();
 
     // Listeners
     document.getElementById('btnAdicionarItem').addEventListener('click', handleAddItem);
@@ -30,6 +31,12 @@ function initTabs() {
             document.getElementById(targetId).classList.remove('hidden');
         });
     });
+}
+
+// --- Funções de Utilidade ---
+function getCurrentUserName() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario ? usuario.nome : 'Sistema';
 }
 
 // --- Lógica do Formulário de Lançamento ---
@@ -136,6 +143,7 @@ function clearFullForm() {
 
 const KEY_EQUIPAMENTOS = 'marquespan_comodato_equipamentos';
 const KEY_ESTOQUE = 'marquespan_comodato_estoque';
+const KEY_HISTORICO = 'marquespan_comodato_estoque_historico';
 
 function getEquipamentos() {
     return JSON.parse(localStorage.getItem(KEY_EQUIPAMENTOS)) || [];
@@ -191,7 +199,7 @@ function handleSalvarLancamento() {
 
     let estoque = getEstoque();
 
-    // Validação prévia para saídas
+    // Validação prévia para saídas e contagem
     if (operation === 'SAIDA') {
         for (const item of lancamentoCarrinho) {
             const currentStock = estoque[item.id] || 0;
@@ -202,7 +210,7 @@ function handleSalvarLancamento() {
         }
     }
 
-    // Processamento
+    // 1. Processamento do estoque
     lancamentoCarrinho.forEach(item => {
         const productId = item.id;
         const quantity = item.quantidade;
@@ -222,10 +230,26 @@ function handleSalvarLancamento() {
     });
 
     saveEstoque(estoque);
+
+    // 2. Salva o registro no histórico
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    const novoLancamento = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        usuario: getCurrentUserName(),
+        operacao: operation,
+        data_nota: document.getElementById('entradaDataNota').value,
+        numero_nota: document.getElementById('entradaNf').value,
+        itens: [...lancamentoCarrinho] // Cria uma cópia do carrinho
+    };
+    historico.push(novoLancamento);
+    localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
+
     alert('Lançamento de estoque salvo com sucesso!');
     
     clearFullForm();
     loadStockSummary();
+    loadStockHistory();
 }
 
 // --- Lógica do Resumo de Estoque ---
@@ -266,4 +290,61 @@ function loadStockSummary() {
             tbody.appendChild(tr);
         }
     }
+}
+
+// --- Lógica do Histórico de Lançamentos ---
+
+function loadStockHistory() {
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    const tbody = document.getElementById('grid-historico-lancamentos');
+    
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (historico.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum lançamento registrado.</td></tr>';
+        return;
+    }
+
+    // Ordena do mais recente para o mais antigo
+    historico.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    historico.forEach(lancamento => {
+        const tr = document.createElement('tr');
+        const dataHora = new Date(lancamento.timestamp).toLocaleString('pt-BR');
+        const dataNota = lancamento.data_nota ? new Date(lancamento.data_nota + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+        
+        tr.innerHTML = `
+            <td>${dataHora}</td>
+            <td>${lancamento.usuario || 'N/A'}</td>
+            <td>${dataNota}</td>
+            <td>${lancamento.numero_nota || 'N/A'}</td>
+            <td><span class="badge status-${lancamento.operacao.toLowerCase()}">${lancamento.operacao}</span></td>
+            <td class="text-center">${lancamento.itens.length}</td>
+            <td class="actions-cell">
+                <button class="btn-pneu-action view" onclick="viewLaunchDetails(${lancamento.id})" title="Ver Detalhes">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.viewLaunchDetails = function(id) {
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    const lancamento = historico.find(l => l.id === id);
+
+    if (!lancamento) {
+        alert('Detalhes do lançamento não encontrados.');
+        return;
+    }
+
+    let detalhes = `Operação: ${lancamento.operacao}\nUsuário: ${lancamento.usuario}\nData/Hora: ${new Date(lancamento.timestamp).toLocaleString('pt-BR')}\n\nItens:\n`;
+    lancamento.itens.forEach(item => {
+        detalhes += `- ${item.quantidade}x ${item.nome} (Tipo: ${item.tipo})\n`;
+    });
+
+    alert(detalhes);
 }
