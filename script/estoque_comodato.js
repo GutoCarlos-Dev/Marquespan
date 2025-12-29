@@ -62,7 +62,7 @@ function calculateCurrentWeek() {
     const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
     const weekNumber = Math.floor(diffInDays / 7) + 1;
 
-    return `Semana ${String(weekNumber).padStart(2, '0')}`;
+    return String(weekNumber).padStart(2, '0');
 }
 
 // --- Lógica do Formulário de Lançamento ---
