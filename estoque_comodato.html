@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque Comodato - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/comodato.css" />
+  <link rel="stylesheet" href="css/estoque_comodato.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    
+    <div class="main-content">
+      <header class="header">📦 Estoque de Comodato</header>
+
+      <!-- Navegação por abas -->
+      <div class="painel-navegacao" role="tablist" id="menu-estoque-comodato">
+        <button class="painel-btn active" data-secao="sectionLancamento" aria-selected="true">
+          <i class="fas fa-exchange-alt"></i> Lançamento de Estoque
+        </button>
+        <button class="painel-btn" data-secao="sectionResumo" aria-selected="false">
+          <i class="fas fa-chart-pie"></i> Resumo do Estoque
+        </button>
+      </div>
+
+      <!-- SEÇÃO: LANÇAMENTO DE ESTOQUE -->
+      <section id="sectionLancamento" class="section">
+        <div class="card card-header">
+          <h2>Realizar Lançamento</h2>
+        </div>
+
+        <div class="card">
+          <form id="formLancamentoEstoque" class="form-compact">
+            
+            <!-- Seleção do Tipo de Operação -->
+            <div class="form-group">
+                <label for="tipoOperacao">Tipo de Operação</label>
+                <select id="tipoOperacao" required>
+                    <option value="">-- Selecione --</option>
+                    <option value="ENTRADA">Entrada de Produto</option>
+                    <option value="SAIDA">Saída de Produto</option>
+                    <option value="CONTAGEM">Contagem (Ajuste)</option>
+                </select>
+            </div>
+
+            <!-- Campos que mudam dinamicamente -->
+            <div id="camposDinamicos">
+                <!-- Campos de ENTRADA -->
+                <div id="camposEntrada" class="campos-operacao hidden">
+                    <div class="form-group"><label>Data da Nota</label><input type="date" id="entradaDataNota" /></div>
+                    <div class="form-group"><label>Nº da Nota Fiscal</label><input type="text" id="entradaNf" placeholder="Número da NF" /></div>
+                </div>
+
+                <!-- Campos Comuns -->
+                <div class="form-group"><label for="lancamentoProduto">Produto</label><select id="lancamentoProduto" required></select></div>
+                <div class="form-group"><label for="lancamentoTipoProduto">Tipo</label><input type="text" id="lancamentoTipoProduto" readonly placeholder="Tipo do produto selecionado" /></div>
+                <div class="form-group"><label for="lancamentoQtd" id="labelQtd">Quantidade</label><input type="number" id="lancamentoQtd" min="0" required /></div>
+            </div>
+
+            <div class="row-actions">
+              <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Lançamento</button>
+              <button type="button" id="btnLimparLancamento" class="btn-muted">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- SEÇÃO: RESUMO DO ESTOQUE -->
+      <section id="sectionResumo" class="section hidden">
+        <div class="card card-header">
+          <h2>Resumo do Estoque Atual</h2>
+        </div>
+
+        <div class="card">
+            <div class="table-responsive">
+              <table class="data-grid">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Tipo</th>
+                    <th>Quantidade em Estoque</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyResumoEstoque">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/estoque_comodato.js"></script>
+</body>
+</html>

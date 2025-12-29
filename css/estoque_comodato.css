@@ -1,0 +1,16 @@
+/* Estilos específicos para a página de estoque de comodato */
+
+.campos-operacao {
+    border-left: 3px solid #007bff;
+    padding-left: 15px;
+    margin: 15px 0;
+    animation: fadeIn 0.5s;
+}
+
+.hidden {
+    display: none;
+}
+
+#labelQtd {
+    font-weight: bold;
+}
