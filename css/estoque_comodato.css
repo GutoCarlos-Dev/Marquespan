@@ -2,7 +2,8 @@
 
 /* Tabela para layout do formulário de cabeçalho */
 .form-grid-table {
-    width: 100%;
+    max-width: 900px; /* Define uma largura máxima para o formulário */
+    margin: 0 auto;   /* Centraliza o formulário na tela */
     border-collapse: separate;
     border-spacing: 0 15px; /* Espaçamento vertical entre as linhas da tabela */
 }
@@ -28,6 +29,8 @@
 .add-item-grid {
     display: grid; /* Adicionado Status */
     grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    max-width: 900px; /* Alinha com o formulário de cabeçalho */
+    margin: 0 auto;   /* Centraliza */
     gap: 15px;
     align-items: flex-end;
 }
