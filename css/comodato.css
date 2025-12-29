@@ -68,3 +68,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Adiciona barra de rolagem para as tabelas da página */
+#sectionEquipamentos .table-responsive,
+#sectionClientes .table-responsive {
+  max-height: 350px; /* Altura máxima antes de a rolagem aparecer */
+  overflow-y: auto; /* Adiciona a barra de rolagem vertical quando necessário */
+  border: 1px solid #e9ecef; /* Borda sutil para delimitar a área */
+  border-radius: 5px;
+  padding: 5px;
+}
