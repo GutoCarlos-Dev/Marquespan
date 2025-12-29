@@ -485,10 +485,6 @@ window.editLaunch = function(id) {
 };
 
 window.deleteLaunch = function(id) {
-    if (!confirm('Tem certeza que deseja excluir este lançamento? Esta ação tentará reverter as alterações no estoque.')) {
-        return;
-    }
-
     const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
     const lancamentoIndex = historico.findIndex(l => l.id === id);
 
@@ -500,43 +496,94 @@ window.deleteLaunch = function(id) {
     const lancamento = historico[lancamentoIndex];
     let estoque = getEstoque();
 
-    // Trata a exclusão de uma "Contagem" de forma especial
     if (lancamento.operacao === 'CONTAGEM') {
-        if (confirm('Operações de "Contagem" não podem ter o estoque revertido automaticamente.\n\nDeseja apenas remover este lançamento do histórico? O estoque NÃO será alterado.')) {
-            // Apenas remove o registro do histórico, sem alterar o estoque
-            historico.splice(lancamentoIndex, 1);
-            localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
-
-            alert('Lançamento de contagem removido do histórico. O estoque não foi modificado.');
-            loadStockHistory(); // Recarrega apenas o histórico
+        if (!confirm('Deseja excluir este lançamento de CONTAGEM? O sistema tentará recalcular o estoque para o estado anterior a esta contagem.')) {
+            return;
         }
-        return;
-    }
 
-    // Tenta reverter as alterações no estoque
-    for (const item of lancamento.itens) {
-        const productId = item.id;
-        const quantity = item.quantidade;
-        const currentStock = estoque[productId] || 0;
+        const produtosAfetados = lancamento.itens.map(i => i.id);
+        const timestampDelecao = new Date(lancamento.timestamp);
 
-        if (lancamento.operacao === 'ENTRADA') {
-            if (currentStock < quantity) {
-                alert(`Não é possível excluir este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
-                return; // Aborta a exclusão
+        // Filtra o histórico para operações ANTERIORES à contagem que está sendo deletada
+        // e ordena por data para garantir a ordem correta de cálculo
+        const historicoAnterior = historico
+            .filter(l => l.id !== id && new Date(l.timestamp) < timestampDelecao)
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        // Cria um estoque temporário para recalcular
+        const estoqueRecalculado = {};
+
+        // Itera sobre o histórico anterior para recalcular o estado dos produtos afetados
+        historicoAnterior.forEach(op => {
+            op.itens.forEach(item => {
+                // Processa apenas os produtos que foram afetados pela contagem deletada
+                if (produtosAfetados.includes(item.id)) {
+                    const productId = item.id;
+                    const quantity = item.quantidade;
+                    const currentStock = estoqueRecalculado[productId] || 0;
+
+                    switch (op.operacao) {
+                        case 'ENTRADA':
+                            estoqueRecalculado[productId] = currentStock + quantity;
+                            break;
+                        case 'SAIDA':
+                            estoqueRecalculado[productId] = currentStock - quantity;
+                            break;
+                        case 'CONTAGEM':
+                            // Uma contagem anterior define o valor absoluto, sobrescrevendo o cálculo
+                            estoqueRecalculado[productId] = quantity;
+                            break;
+                    }
+                }
+            });
+        });
+
+        // Atualiza o estoque principal com os valores recalculados.
+        // Para cada produto afetado pela contagem deletada, seu valor no estoque principal
+        // será o valor recalculado, ou 0 se não houver histórico anterior.
+        produtosAfetados.forEach(productId => {
+            estoque[productId] = estoqueRecalculado[productId] || 0;
+        });
+
+        // Salva o estoque recalculado
+        saveEstoque(estoque);
+
+        // Remove o lançamento do histórico
+        historico.splice(lancamentoIndex, 1);
+        localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
+
+        alert('Lançamento de contagem excluído e estoque recalculado para o estado anterior.');
+
+    } else { // Lógica para ENTRADA e SAIDA
+        if (!confirm('Tem certeza que deseja excluir este lançamento? Esta ação tentará reverter as alterações no estoque.')) {
+            return;
+        }
+
+        // Tenta reverter as alterações no estoque
+        for (const item of lancamento.itens) {
+            const productId = item.id;
+            const quantity = item.quantidade;
+            const currentStock = estoque[productId] || 0;
+
+            if (lancamento.operacao === 'ENTRADA') {
+                if (currentStock < quantity) {
+                    alert(`Não é possível excluir este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
+                    return; // Aborta a exclusão
+                }
+                estoque[productId] = currentStock - quantity;
+            } else if (lancamento.operacao === 'SAIDA') {
+                estoque[productId] = currentStock + quantity;
             }
-            estoque[productId] = currentStock - quantity;
-        } else if (lancamento.operacao === 'SAIDA') {
-            estoque[productId] = currentStock + quantity;
         }
+
+        // Se a reversão foi bem-sucedida, salva o novo estoque e remove do histórico
+        saveEstoque(estoque);
+        historico.splice(lancamentoIndex, 1);
+        localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
+
+        alert('Lançamento excluído e estoque revertido com sucesso!');
     }
-
-    // Se a reversão foi bem-sucedida, salva o novo estoque e remove do histórico
-    saveEstoque(estoque);
-    historico.splice(lancamentoIndex, 1);
-    localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
-
-    alert('Lançamento excluído e estoque revertido com sucesso!');
-
+    
     // Recarrega as visualizações
     loadStockSummary();
     loadStockHistory();
