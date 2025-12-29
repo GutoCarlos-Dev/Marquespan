@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAdicionarItem').addEventListener('click', handleAddItem);
     document.getElementById('btnSalvarLancamento').addEventListener('click', handleSalvarLancamento);
     document.getElementById('btnCancelarLancamento').addEventListener('click', clearFullForm);
-    document.getElementById('lancamentoProduto').addEventListener('change', updateProductType);
+    document.getElementById('lancamentoProdutoInput').addEventListener('input', updateProductType);
     
     handleOperationChange(); // Garante o estado inicial correto do formulário
 });
@@ -129,12 +129,16 @@ function handleOperationChange() {
 
 function handleAddItem() {
     const operation = document.getElementById('tipoOperacao').value;
-    const produtoSelect = document.getElementById('lancamentoProduto');
-    const produtoId = produtoSelect.value;
-    const produtoNome = produtoSelect.options[produtoSelect.selectedIndex].text;
+    const produtoInput = document.getElementById('lancamentoProdutoInput');
+    const produtoNome = produtoInput.value;
     const tipoProduto = document.getElementById('lancamentoTipoProduto').value;
     const status = document.getElementById('lancamentoStatus').value;
     const quantidade = parseInt(document.getElementById('lancamentoQtd').value);
+
+    // Busca o produto na lista completa para obter o ID
+    const equipamentos = getEquipamentos();
+    const equip = equipamentos.find(e => e.nome === produtoNome);
+    const produtoId = equip ? equip.id : null;
 
     if (!produtoId || isNaN(quantidade)) {
         alert('Selecione um produto e informe uma quantidade válida.');
@@ -164,10 +168,10 @@ function handleAddItem() {
     renderCarrinho();
 
     // Limpa campos para o próximo item
-    produtoSelect.value = '';
+    produtoInput.value = '';
     document.getElementById('lancamentoTipoProduto').value = '';
     document.getElementById('lancamentoQtd').value = '';
-    produtoSelect.focus();
+    produtoInput.focus();
 }
 
 function renderCarrinho() {
@@ -277,13 +281,14 @@ function saveEstoque(estoque) {
 
 function loadProductsDropdown(onlyInStock = false) {
     let equipamentos = getEquipamentos();
-    const select = document.getElementById('lancamentoProduto');
-    select.innerHTML = '<option value="">-- Selecione um Produto --</option>';
+    const datalist = document.getElementById('listaProdutos');
+    datalist.innerHTML = '';
 
     if (onlyInStock) {
         const estoque = getEstoque();
         // Filtra para pegar apenas IDs de produtos que existem no estoque e tem quantidade > 0
-        const inStockIds = Object.keys(estoque).filter(id => estoque[id] > 0);
+        // Ajuste: Verifica se a soma de Novo + Usado é maior que 0
+        const inStockIds = Object.keys(estoque).filter(id => (estoque[id].Novo || 0) + (estoque[id].Usado || 0) > 0);
         equipamentos = equipamentos.filter(equip => inStockIds.includes(String(equip.id)));
     }
 
@@ -291,20 +296,21 @@ function loadProductsDropdown(onlyInStock = false) {
 
     equipamentos.forEach(equip => {
         const option = document.createElement('option');
-        option.value = equip.id;
-        option.textContent = equip.nome;
-        option.dataset.tipo = equip.tipo || 'NORMAL';
-        select.appendChild(option);
+        option.value = equip.nome;
+        datalist.appendChild(option);
     });
 }
 
 function updateProductType() {
-    const select = document.getElementById('lancamentoProduto');
-    const selectedOption = select.options[select.selectedIndex];
+    const input = document.getElementById('lancamentoProdutoInput');
     const tipoInput = document.getElementById('lancamentoTipoProduto');
+    const nome = input.value;
     
-    if (selectedOption && selectedOption.value) {
-        tipoInput.value = selectedOption.dataset.tipo;
+    const equipamentos = getEquipamentos();
+    const equip = equipamentos.find(e => e.nome === nome);
+
+    if (equip) {
+        tipoInput.value = equip.tipo || 'NORMAL';
     } else {
         tipoInput.value = '';
     }

@@ -79,7 +79,11 @@
                 <fieldset class="form-fieldset" style="border: none; padding: 0;">
                     <legend class="fieldset-legend">Adicionar Item ao Lançamento</legend>
                     <div class="add-item-grid">
-                        <div class="form-group"><label for="lancamentoProduto">Produto</label><select id="lancamentoProduto" required></select></div>
+                        <div class="form-group">
+                            <label for="lancamentoProdutoInput">Produto</label>
+                            <input type="text" id="lancamentoProdutoInput" list="listaProdutos" placeholder="Digite para buscar..." required autocomplete="off">
+                            <datalist id="listaProdutos"></datalist>
+                        </div>
                         <div class="form-group"><label for="lancamentoStatus">Status</label>
                             <select id="lancamentoStatus" required>
                                 <option value="Novo">Novo</option>
