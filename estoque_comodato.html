@@ -36,24 +36,40 @@
         <!-- Card do Formulário de Cabeçalho -->
         <div class="card">
           <form id="formCabecalhoLancamento">
-            <div class="form-group">
-                <label for="lancamentoSemana">Semana do Lançamento</label>
-                <input type="text" id="lancamentoSemana" required />
-            </div>
-            <div class="form-group">
-                <label for="tipoOperacao">Tipo de Operação</label>
-                <select id="tipoOperacao" required>
-                    <option value="">-- Selecione --</option>
-                    <option value="ENTRADA">Entrada de Produto</option>
-                    <option value="SAIDA">Saída de Produto</option>
-                    <option value="CONTAGEM">Contagem (Ajuste)</option>
-                </select>
-            </div>
-            <!-- Campos de ENTRADA (agora com grid) -->
-            <div id="camposEntrada" class="campos-operacao hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="form-group" id="groupDataNota"><label for="entradaDataNota">Data</label><input type="date" id="entradaDataNota" /></div>
-                <div class="form-group" id="groupNf"><label>Nº da Nota Fiscal</label><input type="text" id="entradaNf" placeholder="Número da NF" /></div>
-            </div>
+            <table class="form-grid-table">
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="form-group">
+                      <label for="lancamentoSemana">Semana do Lançamento</label>
+                      <input type="text" id="lancamentoSemana" required />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group" id="groupDataNota">
+                      <label for="entradaDataNota">Data</label>
+                      <input type="date" id="entradaDataNota" />
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="form-group">
+                      <label for="tipoOperacao">Tipo de Operação</label>
+                      <select id="tipoOperacao" required>
+                          <option value="">-- Selecione --</option>
+                          <option value="ENTRADA">Entrada de Produto</option>
+                          <option value="SAIDA">Saída de Produto</option>
+                          <option value="CONTAGEM">Contagem (Ajuste)</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group" id="groupNf"><label>Nº da Nota Fiscal</label><input type="text" id="entradaNf" placeholder="Número da NF" /></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </form>
         </div>
 

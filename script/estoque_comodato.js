@@ -74,7 +74,6 @@ function initOperationSelection() {
 
 function handleOperationChange() {
     const operation = document.getElementById('tipoOperacao').value;
-    const camposEntrada = document.getElementById('camposEntrada');
     const groupDataNota = document.getElementById('groupDataNota'); // Container do campo de data
     const entradaDataInput = document.getElementById('entradaDataNota'); // O input de data
     const groupNf = document.getElementById('groupNf'); // Container do campo de NF
@@ -83,9 +82,8 @@ function handleOperationChange() {
     const addItemForm = document.getElementById('formAddItemEstoque');
 
     // Reset state first
-    camposEntrada.classList.add('hidden');
-    groupDataNota.style.display = 'block';
-    groupNf.style.display = 'block'; // Garante que o campo de NF seja visível por padrão dentro do container
+    // O campo de data agora está sempre visível
+    groupNf.style.display = 'block'; // Mostra por padrão, esconde se necessário
     entradaNf.value = '';
     entradaNf.readOnly = false;
     entradaNf.placeholder = 'Número da NF';
@@ -98,11 +96,6 @@ function handleOperationChange() {
 
     let showOnlyInStock = false;
 
-    // Apply logic based on operation
-    if (operation) {
-        camposEntrada.classList.remove('hidden'); // Mostra o container para qualquer operação selecionada
-    }
-
     if (operation === 'ENTRADA') {
         labelQtd.textContent = 'Quantidade a Adicionar';
     } else if (operation === 'SAIDA') {
@@ -110,6 +103,8 @@ function handleOperationChange() {
         labelQtd.textContent = 'Quantidade a Retirar';
         showOnlyInStock = true;
     } else if (operation === 'CONTAGEM') {
+        // Mostra o campo NF, mas o customiza
+        groupNf.style.display = 'block';
         entradaNf.value = 'Contagem';
         entradaNf.readOnly = true;
         entradaNf.placeholder = '';
@@ -122,6 +117,7 @@ function handleOperationChange() {
         showOnlyInStock = false; // Alterado: Mostrar todos os produtos para contagem, permitindo adicionar itens novos ao estoque.
     } else {
         labelQtd.textContent = 'Quantidade';
+        groupNf.style.display = 'none'; // Esconde o campo NF se nenhuma operação for selecionada
     }
 
     // Habilita/desabilita o formulário de adicionar item

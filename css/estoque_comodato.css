@@ -1,10 +1,19 @@
 /* Estilos específicos para a página de estoque de comodato */
 
-.campos-operacao {
-    border-left: 3px solid #007bff;
-    padding-left: 15px;
-    margin: 15px 0;
-    animation: fadeIn 0.5s;
+/* Tabela para layout do formulário de cabeçalho */
+.form-grid-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 15px; /* Espaçamento vertical entre as linhas da tabela */
+}
+
+.form-grid-table td {
+    padding-right: 15px;
+    vertical-align: top;
+}
+
+.form-grid-table td:last-child {
+    padding-right: 0;
 }
 
 .hidden {
