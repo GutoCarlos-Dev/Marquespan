@@ -78,23 +78,43 @@
             <form id="formAddItemEstoque" class="form-compact" onsubmit="return false;">
                 <fieldset class="form-fieldset" style="border: none; padding: 0;">
                     <legend class="fieldset-legend">Adicionar Item ao Lançamento</legend>
-                    <div class="add-item-grid">
-                        <div class="form-group">
-                            <label for="lancamentoProdutoInput">Produto</label>
-                            <input type="text" id="lancamentoProdutoInput" list="listaProdutos" placeholder="Digite para buscar..." required autocomplete="off">
-                            <datalist id="listaProdutos"></datalist>
-                        </div>
-                        <div class="form-group"><label for="lancamentoStatus">Status</label>
-                            <select id="lancamentoStatus" required>
-                                <option value="Novo">Novo</option>
-                                <option value="Usado">Usado</option>
-                            </select></div>
-                        <div class="form-group"><label for="lancamentoTipoProduto">Tipo</label><input type="text" id="lancamentoTipoProduto" readonly /></div>
-                        <div class="form-group"><label for="lancamentoQtd" id="labelQtd">Quantidade</label><input type="number" id="lancamentoQtd" min="0" /></div>
-                        <div class="form-group action-button-group">
-                            <button type="button" id="btnAdicionarItem" class="btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
-                        </div>
-                    </div>
+                    <table class="add-item-table">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="form-group">
+                                        <label for="lancamentoProdutoInput">Produto</label>
+                                        <input type="text" id="lancamentoProdutoInput" list="listaProdutos" placeholder="Digite para buscar..." required autocomplete="off">
+                                        <datalist id="listaProdutos"></datalist>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <label for="lancamentoStatus">Status</label>
+                                        <select id="lancamentoStatus" required>
+                                            <option value="Novo">Novo</option>
+                                            <option value="Usado">Usado</option>
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <label for="lancamentoTipoProduto">Tipo</label><input type="text" id="lancamentoTipoProduto" readonly />
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <label for="lancamentoQtd" id="labelQtd">Quantidade</label><input type="number" id="lancamentoQtd" min="0" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group action-button-group">
+                                        <button type="button" id="btnAdicionarItem" class="btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </fieldset>
             </form>
         </div>

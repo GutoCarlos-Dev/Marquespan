@@ -25,14 +25,17 @@
     font-weight: bold;
 }
 
-/* Grid para adicionar itens ao carrinho */
-.add-item-grid {
-    display: grid; /* Adicionado Status */
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+/* Tabela para adicionar itens ao carrinho */
+.add-item-table {
+    width: 100%;
     max-width: 900px; /* Alinha com o formulário de cabeçalho */
     margin: 0 auto;   /* Centraliza */
-    gap: 15px;
-    align-items: flex-end;
+    border-collapse: separate;
+    border-spacing: 15px 0; /* Espaçamento horizontal entre as colunas */
+}
+
+.add-item-table td {
+    vertical-align: bottom; /* Alinha os elementos na parte inferior */
 }
 
 .action-button-group {
@@ -43,10 +46,16 @@
     text-align: center;
 }
 
-/* Responsividade para o grid de adicionar item */
+/* Responsividade para a tabela de adicionar item */
 @media (max-width: 768px) {
-    .add-item-grid {
-        grid-template-columns: 1fr;
+    .add-item-table, .add-item-table tbody, .add-item-table tr, .add-item-table td {
+        display: block;
+        width: 100%;
+        border-spacing: 0;
+    }
+    .add-item-table td {
+        padding-right: 0;
+        padding-bottom: 15px;
     }
 }
 
