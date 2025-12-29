@@ -2,6 +2,9 @@
 let isEditingEquipamento = false;
 let editingEquipamentoId = null;
 
+// Array para armazenar as fotos temporariamente (Base64)
+let clienteFotosBase64 = [];
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   loadEquipamentos();
@@ -10,8 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event Listeners Formulários
   document.getElementById('formEquipamento').addEventListener('submit', saveEquipamento);
   document.getElementById('formCliente').addEventListener('submit', saveCliente);
+  document.getElementById('cliFotos').addEventListener('change', handlePhotoSelect);
   document.getElementById('btnLimparCliente').addEventListener('click', () => {
     document.getElementById('formCliente').reset();
+    clearFotos();
   });
 });
 
@@ -146,6 +151,59 @@ function getClientes() {
   return JSON.parse(localStorage.getItem(KEY_CLIENTES)) || [];
 }
 
+// --- Lógica de Fotos ---
+function handlePhotoSelect(event) {
+  const files = event.target.files;
+  if (!files) return;
+
+  // Verifica limite
+  if (files.length + clienteFotosBase64.length > 3) {
+    alert('Você pode adicionar no máximo 3 fotos.');
+    event.target.value = ''; // Limpa o input para permitir nova seleção
+    return;
+  }
+
+  Array.from(files).forEach(file => {
+    if (clienteFotosBase64.length >= 3) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      clienteFotosBase64.push(e.target.result);
+      renderPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  event.target.value = ''; // Limpa input para permitir selecionar a mesma foto se necessário
+}
+
+function renderPreviews() {
+  const container = document.getElementById('previewFotos');
+  container.innerHTML = '';
+  
+  clienteFotosBase64.forEach((foto, index) => {
+    const div = document.createElement('div');
+    div.className = 'preview-card';
+    div.innerHTML = `
+      <img src="${foto}" alt="Foto ${index + 1}">
+      <button type="button" class="btn-remove-foto" onclick="removePhoto(${index})" title="Remover">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+window.removePhoto = function(index) {
+  clienteFotosBase64.splice(index, 1);
+  renderPreviews();
+};
+
+function clearFotos() {
+  clienteFotosBase64 = [];
+  renderPreviews();
+}
+
 function saveCliente(e) {
   e.preventDefault();
   
@@ -163,7 +221,8 @@ function saveCliente(e) {
     contato: document.getElementById('cliContato').value,
     email: document.getElementById('cliEmail').value,
     municipio: document.getElementById('cliMunicipio').value,
-    endereco: document.getElementById('cliEndereco').value
+    endereco: document.getElementById('cliEndereco').value,
+    fotos: clienteFotosBase64 // Salva as fotos no objeto
   };
 
   const lista = getClientes();
@@ -171,6 +230,7 @@ function saveCliente(e) {
   localStorage.setItem(KEY_CLIENTES, JSON.stringify(lista));
 
   document.getElementById('formCliente').reset();
+  clearFotos(); // Limpa as fotos após salvar
   loadClientes();
   alert('Cliente salvo com sucesso!');
 }
@@ -222,6 +282,10 @@ window.viewCliente = function(id) {
   const lista = getClientes();
   const item = lista.find(c => c.id === id);
   if(item) {
-    alert(`Detalhes:\n\nSupervisor: ${item.supervisor}\nEndereço: ${item.endereco}\nMunicípio: ${item.municipio}\nContato: ${item.contato}\nEmail: ${item.email}`);
+    let info = `Detalhes:\n\nSupervisor: ${item.supervisor}\nEndereço: ${item.endereco}\nMunicípio: ${item.municipio}\nContato: ${item.contato}\nEmail: ${item.email}`;
+    if (item.fotos && item.fotos.length > 0) {
+      info += `\n\n(Este cliente possui ${item.fotos.length} foto(s) anexada(s))`;
+    }
+    alert(info);
   }
 };
