@@ -1,5 +1,9 @@
 let lancamentoCarrinho = []; // Carrinho para os itens do lançamento
 
+// Variáveis de estado para controlar a edição de lançamentos
+let isEditingLaunch = false;
+let editingLaunchId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initOperationSelection();
@@ -167,6 +171,12 @@ function clearFullForm() {
     lancamentoCarrinho = [];
     renderCarrinho();
     handleOperationChange(); // Reseta a visibilidade dos campos
+
+    // Reseta o estado de edição
+    isEditingLaunch = false;
+    editingLaunchId = null;
+    document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamento';
+
 }
 
 // --- Lógica de Produtos e Estoque (LocalStorage) ---
@@ -235,19 +245,58 @@ function handleSalvarLancamento() {
     }
 
     let estoque = getEstoque();
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    let lancamentoOriginal = null;
 
-    // Validação prévia para saídas e contagem
+    // --- LÓGICA DE EDIÇÃO: Encontra o lançamento original e prepara a reversão do estoque ---
+    if (isEditingLaunch && editingLaunchId) {
+        const lancamentoOriginalIndex = historico.findIndex(l => l.id === editingLaunchId);
+        if (lancamentoOriginalIndex === -1) {
+            alert('Erro: Lançamento original não encontrado para atualizar.');
+            clearFullForm(); // Reseta o estado
+            return;
+        }
+        lancamentoOriginal = historico[lancamentoOriginalIndex];
+
+        // Verifica se podemos reverter a operação original
+        if (lancamentoOriginal.operacao === 'CONTAGEM') {
+            alert('Não é possível editar uma operação de "Contagem". Por favor, exclua este lançamento e crie um novo se necessário.');
+            return;
+        }
+
+        // 1. Reverte as alterações de estoque originais
+        for (const item of lancamentoOriginal.itens) {
+            const productId = item.id;
+            const quantity = item.quantidade;
+            const currentStock = estoque[productId] || 0;
+
+            switch (lancamentoOriginal.operacao) {
+                case 'ENTRADA':
+                    if (currentStock < quantity) {
+                        alert(`Não é possível editar este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
+                        return; // Aborta a edição
+                    }
+                    estoque[productId] = currentStock - quantity;
+                    break;
+                case 'SAIDA':
+                    estoque[productId] = currentStock + quantity;
+                    break;
+            }
+        }
+    }
+
+    // --- VALIDAÇÃO para a NOVA operação ---
     if (operation === 'SAIDA') {
         for (const item of lancamentoCarrinho) {
-            const currentStock = estoque[item.id] || 0;
-            if (item.quantidade > currentStock) {
-                alert(`Erro de estoque para o produto "${item.nome}":\nNão é possível retirar ${item.quantidade} unidades. Estoque atual: ${currentStock}.`);
+            const currentStockAfterRevert = estoque[item.id] || 0;
+            if (item.quantidade > currentStockAfterRevert) {
+                alert(`Erro de estoque para o produto "${item.nome}":\nNão é possível retirar ${item.quantidade} unidades. Estoque disponível (após reverter a operação original, se aplicável): ${currentStockAfterRevert}.`);
                 return; // Aborta a operação
             }
         }
     }
 
-    // 1. Processamento do estoque
+    // --- APLICA NOVAS ALTERAÇÕES ---
     lancamentoCarrinho.forEach(item => {
         const productId = item.id;
         const quantity = item.quantidade;
@@ -268,21 +317,35 @@ function handleSalvarLancamento() {
 
     saveEstoque(estoque);
 
-    // 2. Salva o registro no histórico
-    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
-    const novoLancamento = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        usuario: getCurrentUserName(),
-        operacao: operation,
-        data_nota: document.getElementById('entradaDataNota').value,
-        numero_nota: operation === 'CONTAGEM' ? 'Contagem' : document.getElementById('entradaNf').value,
-        itens: [...lancamentoCarrinho] // Cria uma cópia do carrinho
-    };
-    historico.push(novoLancamento);
+    // --- SALVA NO HISTÓRICO (ATUALIZA OU INSERE) ---
+    if (isEditingLaunch && editingLaunchId) {
+        const lancamentoOriginalIndex = historico.findIndex(l => l.id === editingLaunchId);
+        const lancamentoAtualizado = {
+            id: editingLaunchId, // Mantém o ID original
+            timestamp: new Date().toISOString(), // Atualiza o timestamp
+            usuario: getCurrentUserName(),
+            operacao: operation,
+            data_nota: document.getElementById('entradaDataNota').value,
+            numero_nota: operation === 'CONTAGEM' ? 'Contagem' : document.getElementById('entradaNf').value,
+            itens: [...lancamentoCarrinho]
+        };
+        historico[lancamentoOriginalIndex] = lancamentoAtualizado;
+    } else {
+        const novoLancamento = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            usuario: getCurrentUserName(),
+            operacao: operation,
+            data_nota: document.getElementById('entradaDataNota').value,
+            numero_nota: operation === 'CONTAGEM' ? 'Contagem' : document.getElementById('entradaNf').value,
+            itens: [...lancamentoCarrinho]
+        };
+        historico.push(novoLancamento);
+    }
+    
     localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
 
-    alert('Lançamento de estoque salvo com sucesso!');
+    alert(`Lançamento ${isEditingLaunch ? 'atualizado' : 'salvo'} com sucesso!`);
     
     clearFullForm();
     loadStockSummary();
@@ -363,6 +426,12 @@ function loadStockHistory() {
                 <button class="btn-pneu-action view" onclick="viewLaunchDetails(${lancamento.id})" title="Ver Detalhes">
                     <i class="fas fa-eye"></i>
                 </button>
+                <button class="btn-pneu-action edit" onclick="editLaunch(${lancamento.id})" title="Editar Lançamento">
+                    <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn-pneu-action delete" onclick="deleteLaunch(${lancamento.id})" title="Excluir Lançamento">
+                    <i class="fas fa-trash"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -385,3 +454,83 @@ window.viewLaunchDetails = function(id) {
 
     alert(detalhes);
 }
+
+window.editLaunch = function(id) {
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    const lancamento = historico.find(l => l.id === id);
+
+    if (!lancamento) {
+        alert('Lançamento não encontrado para edição.');
+        return;
+    }
+
+    // Define o estado de edição
+    isEditingLaunch = true;
+    editingLaunchId = id;
+
+    // Preenche o cabeçalho do formulário
+    document.getElementById('tipoOperacao').value = lancamento.operacao;
+    document.getElementById('entradaDataNota').value = lancamento.data_nota;
+    document.getElementById('entradaNf').value = lancamento.numero_nota;
+    
+    // Preenche o carrinho com os itens do lançamento
+    lancamentoCarrinho = [...lancamento.itens];
+    renderCarrinho();
+
+    // Atualiza a UI
+    handleOperationChange(); // Atualiza a visibilidade dos campos com base na operação
+    document.getElementById('btnSalvarLancamento').textContent = 'Atualizar Lançamento';
+    document.querySelector('.painel-btn[data-secao="lancamento"]').click(); // Muda para a aba de lançamento
+    document.getElementById('formCabecalhoLancamento').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.deleteLaunch = function(id) {
+    if (!confirm('Tem certeza que deseja excluir este lançamento? Esta ação tentará reverter as alterações no estoque.')) {
+        return;
+    }
+
+    const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
+    const lancamentoIndex = historico.findIndex(l => l.id === id);
+
+    if (lancamentoIndex === -1) {
+        alert('Lançamento não encontrado para exclusão.');
+        return;
+    }
+
+    const lancamento = historico[lancamentoIndex];
+    let estoque = getEstoque();
+
+    // Não permite reverter uma contagem
+    if (lancamento.operacao === 'CONTAGEM') {
+        alert('Não é possível reverter uma operação de "Contagem" automaticamente. Por favor, faça uma nova contagem para corrigir o estoque.');
+        return;
+    }
+
+    // Tenta reverter as alterações no estoque
+    for (const item of lancamento.itens) {
+        const productId = item.id;
+        const quantity = item.quantidade;
+        const currentStock = estoque[productId] || 0;
+
+        if (lancamento.operacao === 'ENTRADA') {
+            if (currentStock < quantity) {
+                alert(`Não é possível excluir este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
+                return; // Aborta a exclusão
+            }
+            estoque[productId] = currentStock - quantity;
+        } else if (lancamento.operacao === 'SAIDA') {
+            estoque[productId] = currentStock + quantity;
+        }
+    }
+
+    // Se a reversão foi bem-sucedida, salva o novo estoque e remove do histórico
+    saveEstoque(estoque);
+    historico.splice(lancamentoIndex, 1);
+    localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
+
+    alert('Lançamento excluído e estoque revertido com sucesso!');
+
+    // Recarrega as visualizações
+    loadStockSummary();
+    loadStockHistory();
+};
