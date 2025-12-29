@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro Comodato - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/comodato.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    
+    <div class="main-content">
+      <header class="header">🤝 Cadastro de Comodato</header>
+
+      <!-- Navegação por abas -->
+      <div class="painel-navegacao" role="tablist" id="menu-comodato">
+        <button class="painel-btn active" data-secao="sectionEquipamentos" aria-selected="true">
+          <i class="fas fa-tools"></i> Cadastro de Equipamento
+        </button>
+        <button class="painel-btn" data-secao="sectionClientes" aria-selected="false">
+          <i class="fas fa-users"></i> Cadastro de Clientes
+        </button>
+      </div>
+
+      <!-- SEÇÃO: CADASTRO DE EQUIPAMENTO -->
+      <section id="sectionEquipamentos" class="section">
+        <div class="card card-header">
+          <h2>Novo Equipamento</h2>
+        </div>
+
+        <div class="card grid-2-comodato">
+          <!-- Formulário -->
+          <div>
+            <h3>Dados do Equipamento</h3>
+            <form id="formEquipamento" class="form-compact">
+              <label for="equipNome">Nome do Equipamento</label>
+              <input type="text" id="equipNome" placeholder="Ex: Forno Industrial, Masseira..." required />
+              
+              <label for="equipStatus">Status</label>
+              <select id="equipStatus" required>
+                <option value="NOVO">NOVO</option>
+                <option value="USADO">USADO</option>
+              </select>
+
+              <div class="row-actions">
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Equipamento</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tabela -->
+          <div>
+            <h3>Equipamentos Cadastrados</h3>
+            <div class="table-responsive">
+              <table class="data-grid">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyEquipamentos">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO: CADASTRO DE CLIENTES -->
+      <section id="sectionClientes" class="section hidden">
+        <div class="card card-header">
+          <h2>Novo Cliente (Comodato)</h2>
+        </div>
+
+        <div class="card">
+          <form id="formCliente" class="form-grid-layout">
+            <!-- Linha 1 -->
+            <div class="form-group"><label>Data</label><input type="date" id="cliData" required /></div>
+            <div class="form-group"><label>Rota</label><input type="text" id="cliRota" placeholder="Nº Rota" required /></div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="cliStatus" required>
+                <option value="PENDENTE">PENDENTE</option>
+                <option value="APROVADO">APROVADO</option>
+                <option value="NEGADO">NEGADO</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Supervisor</label><input type="text" id="cliSupervisor" /></div>
+
+            <!-- Linha 2 -->
+            <div class="form-group"><label>Razão Social</label><input type="text" id="cliRazao" required /></div>
+            <div class="form-group"><label>Nome Fantasia</label><input type="text" id="cliFantasia" required /></div>
+            <div class="form-group"><label>CNPJ</label><input type="text" id="cliCnpj" placeholder="00.000.000/0000-00" /></div>
+            <div class="form-group"><label>Inscrição Estadual (IE)</label><input type="text" id="cliIe" /></div>
+
+            <!-- Linha 3 -->
+            <div class="form-group"><label>CNAE</label><input type="text" id="cliCnae" /></div>
+            <div class="form-group"><label>Contato</label><input type="text" id="cliContato" /></div>
+            <div class="form-group"><label>E-mail</label><input type="email" id="cliEmail" /></div>
+            <div class="form-group"><label>Município</label><input type="text" id="cliMunicipio" /></div>
+
+            <!-- Linha 4 (Full width) -->
+            <div class="form-group full-width"><label>Endereço Completo</label><input type="text" id="cliEndereco" /></div>
+
+            <div class="form-actions full-width">
+              <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Cliente</button>
+              <button type="button" id="btnLimparCliente" class="btn-muted">Limpar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Clientes Cadastrados</h3>
+          <div class="table-responsive">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Razão Social</th>
+                  <th>Fantasia</th>
+                  <th>CNPJ</th>
+                  <th>Rota</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodyClientes">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/cadastro_comodato.js"></script>
+</body>
+</html>
