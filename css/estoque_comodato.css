@@ -14,3 +14,26 @@
 #labelQtd {
     font-weight: bold;
 }
+
+/* Grid para adicionar itens ao carrinho */
+.add-item-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.action-button-group {
+    padding-bottom: 2px; /* Alinha o botão com os inputs que têm borda */
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Responsividade para o grid de adicionar item */
+@media (max-width: 768px) {
+    .add-item-grid {
+        grid-template-columns: 1fr;
+    }
+}

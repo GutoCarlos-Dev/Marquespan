@@ -1,15 +1,18 @@
+let lancamentoCarrinho = []; // Carrinho para os itens do lançamento
+
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initOperationSelection();
     loadProductsDropdown();
     loadStockSummary();
 
-    document.getElementById('formLancamentoEstoque').addEventListener('submit', handleStockSubmit);
+    // Listeners
+    document.getElementById('btnAdicionarItem').addEventListener('click', handleAddItem);
+    document.getElementById('btnSalvarLancamento').addEventListener('click', handleSalvarLancamento);
+    document.getElementById('btnCancelarLancamento').addEventListener('click', clearFullForm);
     document.getElementById('lancamentoProduto').addEventListener('change', updateProductType);
-    document.getElementById('btnLimparLancamento').addEventListener('click', () => {
-        document.getElementById('formLancamentoEstoque').reset();
-        handleOperationChange(); // Reseta a visibilidade dos campos
-    });
+    
+    handleOperationChange(); // Garante o estado inicial correto do formulário
 });
 
 // --- Lógica de Abas (reutilizada de cadastro_comodato.js) ---
@@ -40,11 +43,12 @@ function handleOperationChange() {
     const operation = document.getElementById('tipoOperacao').value;
     const camposEntrada = document.getElementById('camposEntrada');
     const labelQtd = document.getElementById('labelQtd');
+    const addItemForm = document.getElementById('formAddItemEstoque');
 
     // Esconde todos os campos específicos primeiro
     camposEntrada.classList.add('hidden');
 
-    // Mostra os campos com base na operação
+    // Mostra os campos e ajusta labels com base na operação
     if (operation === 'ENTRADA') {
         camposEntrada.classList.remove('hidden');
         labelQtd.textContent = 'Quantidade a Adicionar';
@@ -55,6 +59,77 @@ function handleOperationChange() {
     } else {
         labelQtd.textContent = 'Quantidade';
     }
+
+    // Habilita/desabilita o formulário de adicionar item
+    addItemForm.style.display = operation ? 'block' : 'none';
+}
+
+function handleAddItem() {
+    const produtoSelect = document.getElementById('lancamentoProduto');
+    const produtoId = produtoSelect.value;
+    const produtoNome = produtoSelect.options[produtoSelect.selectedIndex].text;
+    const tipoProduto = document.getElementById('lancamentoTipoProduto').value;
+    const quantidade = parseInt(document.getElementById('lancamentoQtd').value);
+
+    if (!produtoId || isNaN(quantidade) || quantidade <= 0) {
+        alert('Selecione um produto e informe uma quantidade válida.');
+        return;
+    }
+
+    // Adiciona ao carrinho
+    lancamentoCarrinho.push({
+        id: produtoId,
+        nome: produtoNome,
+        tipo: tipoProduto,
+        quantidade: quantidade
+    });
+
+    renderCarrinho();
+
+    // Limpa campos para o próximo item
+    produtoSelect.value = '';
+    document.getElementById('lancamentoTipoProduto').value = '';
+    document.getElementById('lancamentoQtd').value = '';
+    produtoSelect.focus();
+}
+
+function renderCarrinho() {
+    const gridCarrinho = document.getElementById('grid-lancamento-atual');
+    gridCarrinho.innerHTML = '';
+
+    if (lancamentoCarrinho.length === 0) {
+        gridCarrinho.innerHTML = `<tr><td colspan="4" class="text-center">Nenhum item adicionado.</td></tr>`;
+        return;
+    }
+
+    lancamentoCarrinho.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.nome}</td>
+            <td>${item.tipo}</td>
+            <td>${item.quantidade}</td>
+            <td class="actions-cell">
+                <button class="btn-pneu-action delete" onclick="removerItemDoCarrinho(${index})" title="Remover Item">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        gridCarrinho.appendChild(tr);
+    });
+}
+
+// Expor a função para o onclick
+window.removerItemDoCarrinho = function(index) {
+    lancamentoCarrinho.splice(index, 1);
+    renderCarrinho();
+}
+
+function clearFullForm() {
+    document.getElementById('formCabecalhoLancamento').reset();
+    document.getElementById('formAddItemEstoque').reset();
+    lancamentoCarrinho = [];
+    renderCarrinho();
+    handleOperationChange(); // Reseta a visibilidade dos campos
 }
 
 // --- Lógica de Produtos e Estoque (LocalStorage) ---
@@ -102,49 +177,54 @@ function updateProductType() {
     }
 }
 
-function handleStockSubmit(e) {
-    e.preventDefault();
-
+function handleSalvarLancamento() {
     const operation = document.getElementById('tipoOperacao').value;
-    const productId = document.getElementById('lancamentoProduto').value;
-    const quantity = parseInt(document.getElementById('lancamentoQtd').value);
 
-    if (!operation || !productId || isNaN(quantity)) {
-        alert('Por favor, preencha todos os campos da operação.');
+    if (!operation) {
+        alert('Por favor, selecione o Tipo de Operação.');
+        return;
+    }
+    if (lancamentoCarrinho.length === 0) {
+        alert('Adicione pelo menos um item ao lançamento.');
         return;
     }
 
     let estoque = getEstoque();
-    const currentStock = estoque[productId] || 0;
 
-    switch (operation) {
-        case 'ENTRADA':
-            estoque[productId] = currentStock + quantity;
-            break;
-        case 'SAIDA':
-            if (quantity > currentStock) {
-                alert(`Erro: Não é possível retirar ${quantity} unidades. Estoque atual: ${currentStock}.`);
-                return;
+    // Validação prévia para saídas
+    if (operation === 'SAIDA') {
+        for (const item of lancamentoCarrinho) {
+            const currentStock = estoque[item.id] || 0;
+            if (item.quantidade > currentStock) {
+                alert(`Erro de estoque para o produto "${item.nome}":\nNão é possível retirar ${item.quantidade} unidades. Estoque atual: ${currentStock}.`);
+                return; // Aborta a operação
             }
-            estoque[productId] = currentStock - quantity;
-            break;
-        case 'CONTAGEM':
-            if (quantity < 0) {
-                alert('A quantidade da contagem não pode ser negativa.');
-                return;
-            }
-            estoque[productId] = quantity;
-            break;
-        default:
-            alert('Operação inválida.');
-            return;
+        }
     }
+
+    // Processamento
+    lancamentoCarrinho.forEach(item => {
+        const productId = item.id;
+        const quantity = item.quantidade;
+        const currentStock = estoque[productId] || 0;
+
+        switch (operation) {
+            case 'ENTRADA':
+                estoque[productId] = currentStock + quantity;
+                break;
+            case 'SAIDA':
+                estoque[productId] = currentStock - quantity;
+                break;
+            case 'CONTAGEM':
+                estoque[productId] = quantity;
+                break;
+        }
+    });
 
     saveEstoque(estoque);
     alert('Lançamento de estoque salvo com sucesso!');
     
-    document.getElementById('formLancamentoEstoque').reset();
-    handleOperationChange();
+    clearFullForm();
     loadStockSummary();
 }
 
@@ -160,7 +240,7 @@ function loadStockSummary() {
     const equipMap = new Map(equipamentos.map(e => [String(e.id), e]));
 
     if (Object.keys(estoque).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">Nenhum item em estoque.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum item em estoque.</td></tr>';
         return;
     }
     

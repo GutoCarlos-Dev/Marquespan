@@ -33,10 +33,9 @@
           <h2>Realizar Lançamento</h2>
         </div>
 
+        <!-- Card do Formulário de Cabeçalho -->
         <div class="card">
-          <form id="formLancamentoEstoque" class="form-compact">
-            
-            <!-- Seleção do Tipo de Operação -->
+          <form id="formCabecalhoLancamento">
             <div class="form-group">
                 <label for="tipoOperacao">Tipo de Operação</label>
                 <select id="tipoOperacao" required>
@@ -46,26 +45,46 @@
                     <option value="CONTAGEM">Contagem (Ajuste)</option>
                 </select>
             </div>
-
-            <!-- Campos que mudam dinamicamente -->
-            <div id="camposDinamicos">
-                <!-- Campos de ENTRADA -->
-                <div id="camposEntrada" class="campos-operacao hidden">
-                    <div class="form-group"><label>Data da Nota</label><input type="date" id="entradaDataNota" /></div>
-                    <div class="form-group"><label>Nº da Nota Fiscal</label><input type="text" id="entradaNf" placeholder="Número da NF" /></div>
-                </div>
-
-                <!-- Campos Comuns -->
-                <div class="form-group"><label for="lancamentoProduto">Produto</label><select id="lancamentoProduto" required></select></div>
-                <div class="form-group"><label for="lancamentoTipoProduto">Tipo</label><input type="text" id="lancamentoTipoProduto" readonly placeholder="Tipo do produto selecionado" /></div>
-                <div class="form-group"><label for="lancamentoQtd" id="labelQtd">Quantidade</label><input type="number" id="lancamentoQtd" min="0" required /></div>
-            </div>
-
-            <div class="row-actions">
-              <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Lançamento</button>
-              <button type="button" id="btnLimparLancamento" class="btn-muted">Limpar</button>
+            <!-- Campos de ENTRADA (agora com grid) -->
+            <div id="camposEntrada" class="campos-operacao hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group"><label>Data da Nota</label><input type="date" id="entradaDataNota" /></div>
+                <div class="form-group"><label>Nº da Nota Fiscal</label><input type="text" id="entradaNf" placeholder="Número da NF" /></div>
             </div>
           </form>
+        </div>
+
+        <!-- Card de Adicionar Itens -->
+        <div class="card">
+            <form id="formAddItemEstoque" class="form-compact" onsubmit="return false;">
+                <fieldset class="form-fieldset" style="border: none; padding: 0;">
+                    <legend class="fieldset-legend">Adicionar Item ao Lançamento</legend>
+                    <div class="add-item-grid">
+                        <div class="form-group"><label for="lancamentoProduto">Produto</label><select id="lancamentoProduto"></select></div>
+                        <div class.form-group"><label for="lancamentoTipoProduto">Tipo</label><input type="text" id="lancamentoTipoProduto" readonly /></div>
+                        <div class="form-group"><label for="lancamentoQtd" id="labelQtd">Quantidade</label><input type="number" id="lancamentoQtd" min="1" /></div>
+                        <div class="form-group action-button-group">
+                            <button type="button" id="btnAdicionarItem" class="btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+
+        <!-- Card do Carrinho de Lançamento -->
+        <div class="card">
+            <div class="form-header">
+                <h3><i class="fas fa-shopping-cart"></i> Itens do Lançamento</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-grid">
+                    <thead><tr><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Ações</th></tr></thead>
+                    <tbody id="grid-lancamento-atual"><!-- Itens adicionados via JS --></tbody>
+                </table>
+            </div>
+            <div class="form-actions-pneu" style="margin-top: 15px;">
+                <button type="button" id="btnSalvarLancamento" class="btn-primary"><i class="fas fa-save"></i> Salvar Lançamento</button>
+                <button type="button" id="btnCancelarLancamento" class="btn-muted"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
         </div>
       </section>
 
