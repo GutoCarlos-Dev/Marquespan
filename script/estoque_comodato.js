@@ -49,26 +49,44 @@ function initOperationSelection() {
 function handleOperationChange() {
     const operation = document.getElementById('tipoOperacao').value;
     const camposEntrada = document.getElementById('camposEntrada');
+    const groupDataNota = document.getElementById('groupDataNota');
+    const entradaNf = document.getElementById('entradaNf');
     const labelQtd = document.getElementById('labelQtd');
     const addItemForm = document.getElementById('formAddItemEstoque');
 
-    // Esconde todos os campos específicos primeiro
+    // Reset state first
     camposEntrada.classList.add('hidden');
+    groupDataNota.style.display = 'block';
+    entradaNf.value = '';
+    entradaNf.readOnly = false;
+    entradaNf.placeholder = 'Número da NF';
 
-    // Mostra os campos e ajusta labels com base na operação
+    let showOnlyInStock = false;
+
+    // Apply logic based on operation
     if (operation === 'ENTRADA') {
         camposEntrada.classList.remove('hidden');
         labelQtd.textContent = 'Quantidade a Adicionar';
     } else if (operation === 'SAIDA') {
         labelQtd.textContent = 'Quantidade a Retirar';
+        showOnlyInStock = true;
     } else if (operation === 'CONTAGEM') {
+        camposEntrada.classList.remove('hidden');
+        groupDataNota.style.display = 'none';
+        entradaNf.value = 'Contagem';
+        entradaNf.readOnly = true;
+        entradaNf.placeholder = '';
         labelQtd.textContent = 'Nova Quantidade (Ajuste)';
+        showOnlyInStock = true; // Conforme solicitado, mostra apenas itens em estoque para contagem
     } else {
         labelQtd.textContent = 'Quantidade';
     }
 
     // Habilita/desabilita o formulário de adicionar item
     addItemForm.style.display = operation ? 'block' : 'none';
+
+    // Recarrega o dropdown de produtos com o filtro correto
+    loadProductsDropdown(showOnlyInStock);
 }
 
 function handleAddItem() {
@@ -157,10 +175,17 @@ function saveEstoque(estoque) {
     localStorage.setItem(KEY_ESTOQUE, JSON.stringify(estoque));
 }
 
-function loadProductsDropdown() {
-    const equipamentos = getEquipamentos();
+function loadProductsDropdown(onlyInStock = false) {
+    let equipamentos = getEquipamentos();
     const select = document.getElementById('lancamentoProduto');
     select.innerHTML = '<option value="">-- Selecione um Produto --</option>';
+
+    if (onlyInStock) {
+        const estoque = getEstoque();
+        // Filtra para pegar apenas IDs de produtos que existem no estoque e tem quantidade > 0
+        const inStockIds = Object.keys(estoque).filter(id => estoque[id] > 0);
+        equipamentos = equipamentos.filter(equip => inStockIds.includes(String(equip.id)));
+    }
 
     equipamentos.sort((a, b) => a.nome.localeCompare(b.nome));
 
@@ -239,7 +264,7 @@ function handleSalvarLancamento() {
         usuario: getCurrentUserName(),
         operacao: operation,
         data_nota: document.getElementById('entradaDataNota').value,
-        numero_nota: document.getElementById('entradaNf').value,
+        numero_nota: operation === 'CONTAGEM' ? 'Contagem' : document.getElementById('entradaNf').value,
         itens: [...lancamentoCarrinho] // Cria uma cópia do carrinho
     };
     historico.push(novoLancamento);
