@@ -81,7 +81,7 @@ function handleOperationChange() {
         entradaNf.readOnly = true;
         entradaNf.placeholder = '';
         labelQtd.textContent = 'Nova Quantidade (Ajuste)';
-        showOnlyInStock = true; // Conforme solicitado, mostra apenas itens em estoque para contagem
+        showOnlyInStock = false; // Alterado: Mostrar todos os produtos para contagem, permitindo adicionar itens novos ao estoque.
     } else {
         labelQtd.textContent = 'Quantidade';
     }
