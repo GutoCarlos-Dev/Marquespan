@@ -75,7 +75,9 @@ function initOperationSelection() {
 function handleOperationChange() {
     const operation = document.getElementById('tipoOperacao').value;
     const camposEntrada = document.getElementById('camposEntrada');
-    const groupDataNota = document.getElementById('groupDataNota');
+    const groupDataNota = document.getElementById('groupDataNota'); // Container do campo de data
+    const entradaDataInput = document.getElementById('entradaDataNota'); // O input de data
+    const groupNf = document.getElementById('groupNf'); // Container do campo de NF
     const entradaNf = document.getElementById('entradaNf');
     const labelQtd = document.getElementById('labelQtd');
     const addItemForm = document.getElementById('formAddItemEstoque');
@@ -83,25 +85,39 @@ function handleOperationChange() {
     // Reset state first
     camposEntrada.classList.add('hidden');
     groupDataNota.style.display = 'block';
+    groupNf.style.display = 'block'; // Garante que o campo de NF seja visível por padrão dentro do container
     entradaNf.value = '';
     entradaNf.readOnly = false;
     entradaNf.placeholder = 'Número da NF';
 
+    entradaDataInput.readOnly = false; // Data é editável por padrão
+    // Define a data atual se o campo estiver vazio
+    if (!entradaDataInput.value) {
+        entradaDataInput.value = new Date().toISOString().split('T')[0];
+    }
+
     let showOnlyInStock = false;
 
     // Apply logic based on operation
+    if (operation) {
+        camposEntrada.classList.remove('hidden'); // Mostra o container para qualquer operação selecionada
+    }
+
     if (operation === 'ENTRADA') {
-        camposEntrada.classList.remove('hidden');
         labelQtd.textContent = 'Quantidade a Adicionar';
     } else if (operation === 'SAIDA') {
+        groupNf.style.display = 'none'; // Esconde apenas o campo de NF para saídas
         labelQtd.textContent = 'Quantidade a Retirar';
         showOnlyInStock = true;
     } else if (operation === 'CONTAGEM') {
-        camposEntrada.classList.remove('hidden');
-        groupDataNota.style.display = 'none';
         entradaNf.value = 'Contagem';
         entradaNf.readOnly = true;
         entradaNf.placeholder = '';
+
+        // Para contagem, define a data atual e a torna não editável
+        entradaDataInput.value = new Date().toISOString().split('T')[0];
+        entradaDataInput.readOnly = true;
+
         labelQtd.textContent = 'Nova Quantidade (Ajuste)';
         showOnlyInStock = false; // Alterado: Mostrar todos os produtos para contagem, permitindo adicionar itens novos ao estoque.
     } else {
