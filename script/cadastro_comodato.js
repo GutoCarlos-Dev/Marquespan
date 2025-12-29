@@ -2,6 +2,10 @@
 let isEditingEquipamento = false;
 let editingEquipamentoId = null;
 
+// Variáveis de estado para controlar a edição de clientes
+let isEditingCliente = false;
+let editingClienteId = null;
+
 // Array para armazenar as fotos temporariamente (Base64)
 let clienteFotosBase64 = [];
 
@@ -14,10 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('formEquipamento').addEventListener('submit', saveEquipamento);
   document.getElementById('formCliente').addEventListener('submit', saveCliente);
   document.getElementById('cliFotos').addEventListener('change', handlePhotoSelect);
-  document.getElementById('btnLimparCliente').addEventListener('click', () => {
-    document.getElementById('formCliente').reset();
-    clearFotos();
-  });
+  document.getElementById('btnLimparCliente').addEventListener('click', clearFormCliente);
 });
 
 // --- Lógica de Abas ---
@@ -44,6 +45,12 @@ function initTabs() {
       document.getElementById(targetId).classList.remove('hidden');
     });
   });
+}
+
+// --- Funções de Utilidade ---
+function getCurrentUserName() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario ? usuario.nome : 'Sistema';
 }
 
 // --- Lógica de Equipamentos (Local Storage) ---
@@ -157,14 +164,14 @@ function handlePhotoSelect(event) {
   if (!files) return;
 
   // Verifica limite
-  if (files.length + clienteFotosBase64.length > 3) {
-    alert('Você pode adicionar no máximo 3 fotos.');
+  if (files.length + clienteFotosBase64.length > 5) {
+    alert('Você pode adicionar no máximo 5 fotos.');
     event.target.value = ''; // Limpa o input para permitir nova seleção
     return;
   }
 
   Array.from(files).forEach(file => {
-    if (clienteFotosBase64.length >= 3) return;
+    if (clienteFotosBase64.length >= 5) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -204,11 +211,19 @@ function clearFotos() {
   renderPreviews();
 }
 
+function clearFormCliente() {
+  document.getElementById('formCliente').reset();
+  clearFotos();
+  isEditingCliente = false;
+  editingClienteId = null;
+  const submitButton = document.querySelector('#formCliente button[type="submit"]');
+  submitButton.innerHTML = '<i class="fas fa-save"></i> Salvar Cliente';
+}
+
 function saveCliente(e) {
   e.preventDefault();
   
-  const novoCliente = {
-    id: Date.now(),
+  const clienteData = {
     data: document.getElementById('cliData').value,
     rota: document.getElementById('cliRota').value,
     status: document.getElementById('cliStatus').value,
@@ -222,21 +237,35 @@ function saveCliente(e) {
     email: document.getElementById('cliEmail').value,
     municipio: document.getElementById('cliMunicipio').value,
     endereco: document.getElementById('cliEndereco').value,
-    fotos: clienteFotosBase64 // Salva as fotos no objeto
+    fotos: clienteFotosBase64, // Salva as fotos no objeto
+    usuario: getCurrentUserName(),
+    dataAtualizacao: new Date().toISOString()
   };
 
-  const lista = getClientes();
-  lista.push(novoCliente);
+  let lista = getClientes();
+
+  if (isEditingCliente) {
+    const index = lista.findIndex(c => c.id === editingClienteId);
+    if (index !== -1) {
+      // Mantém o ID original e a data de criação, mas atualiza o resto
+      lista[index] = { ...lista[index], ...clienteData };
+    }
+    alert('Cliente atualizado com sucesso!');
+  } else {
+    clienteData.id = Date.now();
+    lista.push(clienteData);
+    alert('Cliente salvo com sucesso!');
+  }
+
   localStorage.setItem(KEY_CLIENTES, JSON.stringify(lista));
 
-  document.getElementById('formCliente').reset();
-  clearFotos(); // Limpa as fotos após salvar
+  clearFormCliente();
   loadClientes();
-  alert('Cliente salvo com sucesso!');
 }
 
 function loadClientes() {
   const lista = getClientes();
+  lista.sort((a, b) => new Date(b.dataAtualizacao || b.data) - new Date(a.dataAtualizacao || a.data)); // Ordena pelos mais recentes
   const tbody = document.getElementById('tableBodyClientes');
   tbody.innerHTML = '';
 
@@ -252,10 +281,15 @@ function loadClientes() {
     }
 
     // Formatação de Data
-    const dataFormatada = item.data ? new Date(item.data).toLocaleDateString('pt-BR') : '-';
+    const dataFormatada = item.dataAtualizacao 
+      ? new Date(item.dataAtualizacao).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) 
+      : (item.data ? new Date(item.data).toLocaleDateString('pt-BR') : '-');
+
+    const usuarioCadastro = item.usuario || 'N/A';
 
     tr.innerHTML = `
       <td>${dataFormatada}</td>
+      <td>${usuarioCadastro}</td>
       <td>${item.razao}</td>
       <td>${item.fantasia}</td>
       <td>${item.cnpj}</td>
@@ -263,6 +297,7 @@ function loadClientes() {
       <td><span class="badge ${statusClass}">${item.status}</span></td>
       <td>
         <button onclick="viewCliente(${item.id})" class="btn-icon-small text-primary" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
+        <button onclick="editCliente(${item.id})" class="btn-icon-small text-warning" title="Editar"><i class="fas fa-edit"></i></button>
         <button onclick="deleteCliente(${item.id})" class="btn-icon-small text-danger" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
@@ -276,6 +311,38 @@ window.deleteCliente = function(id) {
   lista = lista.filter(item => item.id !== id);
   localStorage.setItem(KEY_CLIENTES, JSON.stringify(lista));
   loadClientes();
+};
+
+window.editCliente = function(id) {
+  const lista = getClientes();
+  const item = lista.find(c => c.id === id);
+  if (!item) return;
+
+  // Preenche o formulário
+  document.getElementById('cliData').value = item.data || '';
+  document.getElementById('cliRota').value = item.rota || '';
+  document.getElementById('cliStatus').value = item.status || 'PENDENTE';
+  document.getElementById('cliSupervisor').value = item.supervisor || '';
+  document.getElementById('cliRazao').value = item.razao || '';
+  document.getElementById('cliFantasia').value = item.fantasia || '';
+  document.getElementById('cliCnpj').value = item.cnpj || '';
+  document.getElementById('cliIe').value = item.ie || '';
+  document.getElementById('cliCnae').value = item.cnae || '';
+  document.getElementById('cliContato').value = item.contato || '';
+  document.getElementById('cliEmail').value = item.email || '';
+  document.getElementById('cliMunicipio').value = item.municipio || '';
+  document.getElementById('cliEndereco').value = item.endereco || '';
+
+  // Carrega as fotos
+  clienteFotosBase64 = item.fotos || [];
+  renderPreviews();
+
+  // Define o estado de edição
+  isEditingCliente = true;
+  editingClienteId = id;
+  const submitButton = document.querySelector('#formCliente button[type="submit"]');
+  submitButton.innerHTML = '<i class="fas fa-save"></i> Atualizar Cliente';
+  document.getElementById('formCliente').scrollIntoView({ behavior: 'smooth' });
 };
 
 window.viewCliente = function(id) {
