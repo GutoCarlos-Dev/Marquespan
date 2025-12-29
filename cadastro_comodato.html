@@ -40,6 +40,12 @@
               <label for="equipNome">Nome do Equipamento</label>
               <input type="text" id="equipNome" placeholder="Ex: Forno Industrial, Masseira..." required />
               
+              <label for="equipTipo">Tipo</label>
+              <select id="equipTipo" required>
+                <option value="NORMAL">NORMAL</option>
+                <option value="INOX">INOX</option>
+              </select>
+
               <div class="row-actions">
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Equipamento</button>
               </div>
@@ -54,6 +60,7 @@
                 <thead>
                   <tr>
                     <th>Nome</th>
+                    <th>Tipo</th>
                     <th>Ações</th>
                   </tr>
                 </thead>

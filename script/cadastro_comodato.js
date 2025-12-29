@@ -1,3 +1,7 @@
+// Variáveis de estado para controlar a edição de equipamentos
+let isEditingEquipamento = false;
+let editingEquipamentoId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   loadEquipamentos();
@@ -47,19 +51,39 @@ function getEquipamentos() {
 function saveEquipamento(e) {
   e.preventDefault();
   const nome = document.getElementById('equipNome').value;
+  const tipo = document.getElementById('equipTipo').value;
 
-  const novoEquip = {
-    id: Date.now(),
-    nome
-  };
+  let lista = getEquipamentos();
 
-  const lista = getEquipamentos();
-  lista.push(novoEquip);
+  if (isEditingEquipamento) {
+    // Atualiza um equipamento existente
+    const index = lista.findIndex(item => item.id === editingEquipamentoId);
+    if (index !== -1) {
+      lista[index].nome = nome;
+      lista[index].tipo = tipo;
+    }
+    alert('Equipamento atualizado com sucesso!');
+  } else {
+    // Adiciona um novo equipamento
+    const novoEquip = {
+      id: Date.now(),
+      nome,
+      tipo
+    };
+    lista.push(novoEquip);
+    alert('Equipamento salvo com sucesso!');
+  }
+
   localStorage.setItem(KEY_EQUIPAMENTOS, JSON.stringify(lista));
 
+  // Reseta o formulário e o estado de edição
   document.getElementById('formEquipamento').reset();
+  const submitButton = document.querySelector('#formEquipamento button[type="submit"]');
+  submitButton.innerHTML = '<i class="fas fa-save"></i> Salvar Equipamento';
+  isEditingEquipamento = false;
+  editingEquipamentoId = null;
+  
   loadEquipamentos();
-  alert('Equipamento salvo com sucesso!');
 }
 
 function loadEquipamentos() {
@@ -67,11 +91,16 @@ function loadEquipamentos() {
   const tbody = document.getElementById('tableBodyEquipamentos');
   tbody.innerHTML = '';
 
+  // Ordena a lista em ordem alfabética pelo nome
+  lista.sort((a, b) => a.nome.localeCompare(b.nome));
+
   lista.forEach(item => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${item.nome}</td>
+      <td>${item.tipo || 'NORMAL'}</td>
       <td>
+        <button onclick="editEquipamento(${item.id})" class="btn-icon-small text-primary" title="Editar"><i class="fas fa-edit"></i></button>
         <button onclick="deleteEquipamento(${item.id})" class="btn-icon-small text-danger" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
@@ -79,7 +108,7 @@ function loadEquipamentos() {
   });
 }
 
-// Expor função globalmente para o onclick
+// Expor função de exclusão globalmente para o onclick
 window.deleteEquipamento = function(id) {
   if(!confirm('Deseja excluir este equipamento?')) return;
   let lista = getEquipamentos();
@@ -88,6 +117,27 @@ window.deleteEquipamento = function(id) {
   loadEquipamentos();
 };
 
+// Expor função de edição globalmente para o onclick
+window.editEquipamento = function(id) {
+  const lista = getEquipamentos();
+  const item = lista.find(equip => equip.id === id);
+
+  if (item) {
+    // Preenche o formulário com os dados do item
+    document.getElementById('equipNome').value = item.nome;
+    document.getElementById('equipTipo').value = item.tipo || 'NORMAL';
+
+    // Define o estado de edição
+    isEditingEquipamento = true;
+    editingEquipamentoId = id;
+
+    // Altera o texto do botão para "Atualizar"
+    const submitButton = document.querySelector('#formEquipamento button[type="submit"]');
+    submitButton.innerHTML = '<i class="fas fa-save"></i> Atualizar Equipamento';
+
+    document.getElementById('formEquipamento').scrollIntoView({ behavior: 'smooth' });
+  }
+};
 
 // --- Lógica de Clientes (Local Storage) ---
 const KEY_CLIENTES = 'marquespan_comodato_clientes';
