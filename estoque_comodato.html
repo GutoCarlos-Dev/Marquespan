@@ -37,6 +37,10 @@
         <div class="card">
           <form id="formCabecalhoLancamento">
             <div class="form-group">
+                <label for="lancamentoSemana">Semana do Lançamento</label>
+                <input type="text" id="lancamentoSemana" required />
+            </div>
+            <div class="form-group">
                 <label for="tipoOperacao">Tipo de Operação</label>
                 <select id="tipoOperacao" required>
                     <option value="">-- Selecione --</option>
@@ -106,6 +110,7 @@
                 <table class="data-grid">
                     <thead>
                         <tr>
+                            <th>Semana</th>
                             <th>Data/Hora</th>
                             <th>Usuário</th>
                             <th>Data da Nota</th>

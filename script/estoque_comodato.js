@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProductsDropdown();
     loadStockSummary();
     loadStockHistory();
+    setInitialWeek();
 
     // Listeners
     document.getElementById('btnAdicionarItem').addEventListener('click', handleAddItem);
@@ -41,6 +42,27 @@ function initTabs() {
 function getCurrentUserName() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   return usuario ? usuario.nome : 'Sistema';
+}
+
+/**
+ * Calcula a semana atual com base em uma data de início.
+ * A semana 1 começa em 29/12/2025.
+ * @returns {string} A string formatada da semana, ex: "Semana 01".
+ */
+function calculateCurrentWeek() {
+    const startDate = new Date('2025-12-29T00:00:00');
+    const today = new Date();
+
+    // Se a data atual for anterior à data de início, retorna um placeholder.
+    if (today < startDate) {
+        return 'Semana (pré-início)';
+    }
+
+    const diffInMs = today.getTime() - startDate.getTime();
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+    const weekNumber = Math.floor(diffInDays / 7) + 1;
+
+    return `Semana ${String(weekNumber).padStart(2, '0')}`;
 }
 
 // --- Lógica do Formulário de Lançamento ---
@@ -179,6 +201,8 @@ function clearFullForm() {
     isEditingLaunch = false;
     editingLaunchId = null;
     document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamento';
+
+    setInitialWeek(); // Recalcula e define a semana atual ao limpar
 
 }
 
@@ -346,6 +370,7 @@ function handleSalvarLancamento() {
         const lancamentoAtualizado = {
             id: editingLaunchId, // Mantém o ID original
             timestamp: new Date().toISOString(), // Atualiza o timestamp
+            semana: document.getElementById('lancamentoSemana').value,
             usuario: getCurrentUserName(),
             operacao: operation,
             data_nota: document.getElementById('entradaDataNota').value,
@@ -357,6 +382,7 @@ function handleSalvarLancamento() {
         const novoLancamento = {
             id: Date.now(),
             timestamp: new Date().toISOString(),
+            semana: document.getElementById('lancamentoSemana').value,
             usuario: getCurrentUserName(),
             operacao: operation,
             data_nota: document.getElementById('entradaDataNota').value,
@@ -435,7 +461,7 @@ function loadStockHistory() {
     tbody.innerHTML = '';
 
     if (historico.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum lançamento registrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum lançamento registrado.</td></tr>';
         return;
     }
 
@@ -448,6 +474,7 @@ function loadStockHistory() {
         const dataNota = lancamento.data_nota ? new Date(lancamento.data_nota + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
         
         tr.innerHTML = `
+            <td>${lancamento.semana || 'N/A'}</td>
             <td>${dataHora}</td>
             <td>${lancamento.usuario || 'N/A'}</td>
             <td>${dataNota}</td>
@@ -479,7 +506,7 @@ window.viewLaunchDetails = function(id) {
         return;
     }
 
-    let detalhes = `Operação: ${lancamento.operacao}\nUsuário: ${lancamento.usuario}\nData/Hora: ${new Date(lancamento.timestamp).toLocaleString('pt-BR')}\n\nItens:\n`;
+    let detalhes = `Semana: ${lancamento.semana || 'N/A'}\nOperação: ${lancamento.operacao}\nUsuário: ${lancamento.usuario}\nData/Hora: ${new Date(lancamento.timestamp).toLocaleString('pt-BR')}\n\nItens:\n`;
     lancamento.itens.forEach(item => {
         detalhes += `- ${item.quantidade}x ${item.nome} (Tipo: ${item.tipo}, Status: ${item.status || 'Novo'})\n`;
     });
@@ -501,6 +528,7 @@ window.editLaunch = function(id) {
     editingLaunchId = id;
 
     // Preenche o cabeçalho do formulário
+    document.getElementById('lancamentoSemana').value = lancamento.semana || calculateCurrentWeek();
     document.getElementById('tipoOperacao').value = lancamento.operacao;
     document.getElementById('entradaDataNota').value = lancamento.data_nota;
     document.getElementById('entradaNf').value = lancamento.numero_nota;
@@ -515,6 +543,13 @@ window.editLaunch = function(id) {
     document.querySelector('.painel-btn[data-secao="lancamento"]').click(); // Muda para a aba de lançamento
     document.getElementById('formCabecalhoLancamento').scrollIntoView({ behavior: 'smooth' });
 };
+
+function setInitialWeek() {
+    const semanaInput = document.getElementById('lancamentoSemana');
+    if (semanaInput) {
+        semanaInput.value = calculateCurrentWeek();
+    }
+}
 
 window.deleteLaunch = function(id) {
     const historico = JSON.parse(localStorage.getItem(KEY_HISTORICO)) || [];
