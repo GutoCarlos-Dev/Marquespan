@@ -90,14 +90,26 @@ function handleOperationChange() {
 }
 
 function handleAddItem() {
+    const operation = document.getElementById('tipoOperacao').value;
     const produtoSelect = document.getElementById('lancamentoProduto');
     const produtoId = produtoSelect.value;
     const produtoNome = produtoSelect.options[produtoSelect.selectedIndex].text;
     const tipoProduto = document.getElementById('lancamentoTipoProduto').value;
     const quantidade = parseInt(document.getElementById('lancamentoQtd').value);
 
-    if (!produtoId || isNaN(quantidade) || quantidade <= 0) {
+    if (!produtoId || isNaN(quantidade)) {
         alert('Selecione um produto e informe uma quantidade válida.');
+        return;
+    }
+
+    // Permite 0 para Contagem, mas não para outras operações
+    if (operation === 'CONTAGEM') {
+        if (quantidade < 0) {
+            alert('A quantidade para contagem não pode ser negativa.');
+            return;
+        }
+    } else if (quantidade <= 0) { // Para ENTRADA e SAIDA
+        alert('A quantidade para Entrada ou Saída deve ser maior que zero.');
         return;
     }
 
