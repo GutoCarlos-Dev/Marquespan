@@ -17,8 +17,8 @@
 
 /* Grid para adicionar itens ao carrinho */
 .add-item-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
+    display: grid; /* Adicionado Status */
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
     gap: 15px;
     align-items: flex-end;
 }

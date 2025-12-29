@@ -99,6 +99,7 @@ function handleAddItem() {
     const produtoId = produtoSelect.value;
     const produtoNome = produtoSelect.options[produtoSelect.selectedIndex].text;
     const tipoProduto = document.getElementById('lancamentoTipoProduto').value;
+    const status = document.getElementById('lancamentoStatus').value;
     const quantidade = parseInt(document.getElementById('lancamentoQtd').value);
 
     if (!produtoId || isNaN(quantidade)) {
@@ -122,6 +123,7 @@ function handleAddItem() {
         id: produtoId,
         nome: produtoNome,
         tipo: tipoProduto,
+        status: status,
         quantidade: quantidade
     });
 
@@ -139,7 +141,7 @@ function renderCarrinho() {
     gridCarrinho.innerHTML = '';
 
     if (lancamentoCarrinho.length === 0) {
-        gridCarrinho.innerHTML = `<tr><td colspan="4" class="text-center">Nenhum item adicionado.</td></tr>`;
+        gridCarrinho.innerHTML = `<tr><td colspan="5" class="text-center">Nenhum item adicionado.</td></tr>`;
         return;
     }
 
@@ -148,6 +150,7 @@ function renderCarrinho() {
         tr.innerHTML = `
             <td>${item.nome}</td>
             <td>${item.tipo}</td>
+            <td>${item.status}</td>
             <td>${item.quantidade}</td>
             <td class="actions-cell">
                 <button class="btn-pneu-action delete" onclick="removerItemDoCarrinho(${index})" title="Remover Item">
@@ -196,25 +199,29 @@ function calculateStockFromHistory() {
     historico.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
     const estoqueCalculado = {};
+    // { productId: { Novo: qty, Usado: qty } }
 
     historico.forEach(lancamento => {
         lancamento.itens.forEach(item => {
             const productId = item.id;
+            const status = item.status || 'Novo'; // Default to 'Novo' for old data
             const quantity = parseInt(item.quantidade) || 0;
             
             if (estoqueCalculado[productId] === undefined) {
-                estoqueCalculado[productId] = 0;
+                estoqueCalculado[productId] = { Novo: 0, Usado: 0 };
             }
 
             switch (lancamento.operacao) {
                 case 'ENTRADA':
-                    estoqueCalculado[productId] += quantity;
+                    estoqueCalculado[productId][status] += quantity;
                     break;
                 case 'SAIDA':
-                    estoqueCalculado[productId] -= quantity;
+                    estoqueCalculado[productId][status] -= quantity;
                     break;
                 case 'CONTAGEM':
-                    estoqueCalculado[productId] = quantity;
+                    // Define a quantidade para o status específico, não afeta o outro.
+                    // Para zerar um status, o usuário deve adicioná-lo com quantidade 0.
+                    estoqueCalculado[productId][status] = quantity;
                     break;
             }
         });
@@ -302,19 +309,20 @@ function handleSalvarLancamento() {
         // 1. Reverte as alterações de estoque originais
         for (const item of lancamentoOriginal.itens) {
             const productId = item.id;
+            const status = item.status || 'Novo';
             const quantity = item.quantidade;
-            const currentStock = estoque[productId] || 0;
+            const stockForProduct = estoque[productId] || { Novo: 0, Usado: 0 };
 
             switch (lancamentoOriginal.operacao) {
                 case 'ENTRADA':
-                    if (currentStock < quantity) {
-                        alert(`Não é possível editar este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
+                    if (stockForProduct[status] < quantity) {
+                        alert(`Não é possível editar este lançamento. A tentativa de reverter a entrada de "${item.nome}" (Status: ${status}) falhou porque o estoque atual (${stockForProduct[status]}) é menor que a quantidade da entrada (${quantity}).`);
                         return; // Aborta a edição
                     }
-                    estoque[productId] = currentStock - quantity;
+                    stockForProduct[status] -= quantity;
                     break;
                 case 'SAIDA':
-                    estoque[productId] = currentStock + quantity;
+                    stockForProduct[status] += quantity;
                     break;
             }
         }
@@ -323,34 +331,14 @@ function handleSalvarLancamento() {
     // --- VALIDAÇÃO para a NOVA operação ---
     if (operation === 'SAIDA') {
         for (const item of lancamentoCarrinho) {
-            const currentStockAfterRevert = estoque[item.id] || 0;
-            if (item.quantidade > currentStockAfterRevert) {
-                alert(`Erro de estoque para o produto "${item.nome}":\nNão é possível retirar ${item.quantidade} unidades. Estoque disponível (após reverter a operação original, se aplicável): ${currentStockAfterRevert}.`);
+            const stockForProduct = estoque[item.id] || { Novo: 0, Usado: 0 };
+            const stockForStatus = stockForProduct[item.status] || 0;
+            if (item.quantidade > stockForStatus) {
+                alert(`Erro de estoque para o produto "${item.nome}" (Status: ${item.status}):\nNão é possível retirar ${item.quantidade} unidades. Estoque disponível: ${stockForStatus}.`);
                 return; // Aborta a operação
             }
         }
     }
-
-    // --- APLICA NOVAS ALTERAÇÕES ---
-    lancamentoCarrinho.forEach(item => {
-        const productId = item.id;
-        const quantity = item.quantidade;
-        const currentStock = estoque[productId] || 0;
-
-        switch (operation) {
-            case 'ENTRADA':
-                estoque[productId] = currentStock + quantity;
-                break;
-            case 'SAIDA':
-                estoque[productId] = currentStock - quantity;
-                break;
-            case 'CONTAGEM':
-                estoque[productId] = quantity;
-                break;
-        }
-    });
-
-    saveEstoque(estoque);
 
     // --- SALVA NO HISTÓRICO (ATUALIZA OU INSERE) ---
     if (isEditingLaunch && editingLaunchId) {
@@ -399,12 +387,12 @@ function loadStockSummary() {
     const equipMap = new Map(equipamentos.map(e => [String(e.id), e]));
 
     if (Object.keys(estoque).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum item em estoque.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum item em estoque.</td></tr>';
         return;
     }
     
     // Ordenar pelo nome do produto
-    const sortedStock = Object.entries(estoque).sort((a, b) => {
+    const sortedStockIds = Object.keys(estoque).sort((a, b) => {
         const equipA = equipMap.get(a[0]);
         const equipB = equipMap.get(b[0]);
         if (equipA && equipB) {
@@ -413,16 +401,25 @@ function loadStockSummary() {
         return 0;
     });
 
-    for (const [productId, quantity] of sortedStock) {
+    for (const productId of sortedStockIds) {
+        const stockData = estoque[productId];
         const equip = equipMap.get(productId);
         if (equip) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${equip.nome}</td>
-                <td>${equip.tipo || 'NORMAL'}</td>
-                <td>${quantity}</td>
-            `;
-            tbody.appendChild(tr);
+            const qtdNovo = stockData.Novo || 0;
+            const qtdUsado = stockData.Usado || 0;
+            const totalGeral = qtdNovo + qtdUsado;
+
+            if (totalGeral > 0 || qtdNovo > 0 || qtdUsado > 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${equip.nome}</td>
+                    <td class="text-center">${equip.tipo || 'NORMAL'}</td>
+                    <td class="text-center">${qtdNovo}</td>
+                    <td class="text-center">${qtdUsado}</td>
+                    <td class="text-center">${totalGeral}</td>
+                `;
+                tbody.appendChild(tr);
+            }
         }
     }
 }
@@ -484,7 +481,7 @@ window.viewLaunchDetails = function(id) {
 
     let detalhes = `Operação: ${lancamento.operacao}\nUsuário: ${lancamento.usuario}\nData/Hora: ${new Date(lancamento.timestamp).toLocaleString('pt-BR')}\n\nItens:\n`;
     lancamento.itens.forEach(item => {
-        detalhes += `- ${item.quantidade}x ${item.nome} (Tipo: ${item.tipo})\n`;
+        detalhes += `- ${item.quantidade}x ${item.nome} (Tipo: ${item.tipo}, Status: ${item.status || 'Novo'})\n`;
     });
 
     alert(detalhes);
@@ -509,7 +506,7 @@ window.editLaunch = function(id) {
     document.getElementById('entradaNf').value = lancamento.numero_nota;
     
     // Preenche o carrinho com os itens do lançamento
-    lancamentoCarrinho = [...lancamento.itens];
+    lancamentoCarrinho = lancamento.itens.map(item => ({ ...item, status: item.status || 'Novo' }));
     renderCarrinho();
 
     // Atualiza a UI
@@ -535,11 +532,13 @@ window.deleteLaunch = function(id) {
     if (lancamento.operacao === 'ENTRADA') {
         for (const item of lancamento.itens) {
             const productId = item.id;
+            const status = item.status || 'Novo';
             const quantity = item.quantidade;
-            const currentStock = estoque[productId] || 0; // Estoque atual calculado do histórico
+            const stockForProduct = estoque[productId] || { Novo: 0, Usado: 0 };
+            const stockForStatus = stockForProduct[status] || 0;
 
-            if (currentStock < quantity) {
-                alert(`Não é possível excluir este lançamento. A tentativa de reverter a entrada de "${item.nome}" falhou porque o estoque atual (${currentStock}) é menor que a quantidade da entrada (${quantity}).`);
+            if (stockForStatus < quantity) {
+                alert(`Não é possível excluir este lançamento. A reversão da entrada de "${item.nome}" (Status: ${status}) falhou porque o estoque atual (${stockForStatus}) é menor que a quantidade da entrada (${quantity}).`);
                 return; // Aborta a exclusão
             }
         }
@@ -548,9 +547,6 @@ window.deleteLaunch = function(id) {
     // Remove o lançamento do histórico
     historico.splice(lancamentoIndex, 1);
     localStorage.setItem(KEY_HISTORICO, JSON.stringify(historico));
-
-    // Atualiza o cache de estoque (opcional, pois getEstoque agora lê do histórico)
-    saveEstoque(calculateStockFromHistory());
 
     alert('Lançamento excluído e estoque atualizado com sucesso!');
     
