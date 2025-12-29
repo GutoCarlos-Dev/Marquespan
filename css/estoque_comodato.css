@@ -31,7 +31,7 @@
     max-width: 900px; /* Alinha com o formulário de cabeçalho */
     margin: 0 auto;   /* Centraliza */
     border-collapse: separate;
-    border-spacing: 15px 0; /* Espaçamento horizontal entre as colunas */
+    border-spacing: 15px 10px; /* Espaçamento horizontal e vertical */
 }
 
 .add-item-table td {
