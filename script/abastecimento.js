@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadTanques();
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
+            this.renderSaidasTable();
             
             // Define a data de hoje como padrão
             this.dataInput.valueAsDate = new Date();
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Elementos da Aba Saída
             this.formSaida = document.getElementById('formSaidaCombustivel');
+            this.saidaEditingId = document.getElementById('saidaEditingId');
             this.saidaDataHora = document.getElementById('saidaDataHora');
             this.saidaBico = document.getElementById('saidaBico');
             this.saidaVeiculo = document.getElementById('saidaVeiculo');
@@ -56,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.listaMotoristas = document.getElementById('listaMotoristas');
             this.saidaKm = document.getElementById('saidaKm');
             this.saidaLitros = document.getElementById('saidaLitros');
+            this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
+            this.tableBodySaidas = document.getElementById('tableBodySaidas');
         },
 
         bind() {
@@ -72,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.distribuicaoContainer.addEventListener('click', this.handleDistribuicaoClick.bind(this));
 
             this.formSaida.addEventListener('submit', this.handleSaidaSubmit.bind(this));
+            this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
         },
 
         calculateTotal() {
@@ -379,6 +384,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.adicionarLinhaTanque(); // Adiciona a primeira linha de volta
         },
 
+        clearSaidaForm() {
+            this.formSaida.reset();
+            this.saidaEditingId.value = '';
+            this.btnSalvarSaida.innerHTML = '<i class="fas fa-gas-pump"></i> CONFIRMAR ABASTECIMENTO';
+            // Reseta a data para o momento atual
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            this.saidaDataHora.value = now.toISOString().slice(0, 16);
+        },
+
         async handleSaidaSubmit(e) {
             e.preventDefault();
             
@@ -391,23 +406,115 @@ document.addEventListener('DOMContentLoaded', () => {
                 qtd_litros: parseFloat(this.saidaLitros.value)
             };
 
-            if (!payload.bico_id || !payload.qtd_litros) {
+            if (this.saidaEditingId.value) {
+                payload.id = parseInt(this.saidaEditingId.value);
+            }
+
+            if (!payload.bico_id || !payload.qtd_litros || payload.qtd_litros <= 0) {
                 alert('Preencha os campos obrigatórios.');
                 return;
             }
 
             try {
-                const { error } = await supabaseClient.from('saidas_combustivel').insert(payload);
+                const { error } = await supabaseClient.from('saidas_combustivel').upsert(payload);
                 if (error) throw error;
 
-                alert('Abastecimento registrado com sucesso!');
-                this.formSaida.reset();
-                this.initSaida(); // Reseta data
+                alert(`Abastecimento ${this.saidaEditingId.value ? 'atualizado' : 'registrado'} com sucesso!`);
+                this.clearSaidaForm();
+                this.renderSaidasTable();
             } catch (error) {
                 console.error('Erro ao salvar saída:', error);
                 alert('Erro ao registrar saída: ' + error.message);
             }
-        }
+        },
+
+        async renderSaidasTable() {
+            if (!this.tableBodySaidas) return;
+            this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('saidas_combustivel')
+                    .select('*')
+                    .order('data_hora', { ascending: false })
+                    .limit(50); // Limita aos 50 mais recentes para performance
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma saída registrada.</td></tr>';
+                    return;
+                }
+
+                this.tableBodySaidas.innerHTML = data.map(saida => `
+                    <tr>
+                        <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
+                        <td>${saida.veiculo_placa || ''}</td>
+                        <td>${saida.motorista_nome || ''}</td>
+                        <td>${saida.qtd_litros.toLocaleString('pt-BR')} L</td>
+                        <td>${saida.km_atual || ''}</td>
+                        <td class="actions-cell">
+                            <button class="btn-edit" data-id="${saida.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                            <button class="btn-delete" data-id="${saida.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar histórico de saídas:', error);
+                this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
+            }
+        },
+
+        async handleSaidaTableClick(e) {
+            const button = e.target.closest('button');
+            if (!button || !button.dataset.id) return;
+
+            const id = button.dataset.id;
+
+            if (button.classList.contains('btn-edit')) {
+                this.loadSaidaForEditing(id);
+            } else if (button.classList.contains('btn-delete')) {
+                if (confirm('Tem certeza que deseja excluir este registro de saída?')) {
+                    this.deleteSaida(id);
+                }
+            }
+        },
+
+        async loadSaidaForEditing(id) {
+            try {
+                const { data, error } = await supabaseClient.from('saidas_combustivel').select('*').eq('id', id).single();
+                if (error) throw error;
+
+                this.saidaEditingId.value = data.id;
+                const date = new Date(data.data_hora);
+                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                this.saidaDataHora.value = date.toISOString().slice(0, 16);
+                this.saidaBico.value = data.bico_id;
+                this.saidaVeiculo.value = data.veiculo_placa;
+                this.saidaMotorista.value = data.motorista_nome;
+                this.saidaKm.value = data.km_atual;
+                this.saidaLitros.value = data.qtd_litros;
+
+                this.btnSalvarSaida.innerHTML = '<i class="fas fa-save"></i> ATUALIZAR SAÍDA';
+                this.formSaida.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Erro ao carregar saída para edição:', error);
+                alert('Não foi possível carregar os dados para edição.');
+            }
+        },
+
+        async deleteSaida(id) {
+            try {
+                const { error } = await supabaseClient.from('saidas_combustivel').delete().eq('id', id);
+                if (error) throw error;
+                alert('Registro de saída excluído com sucesso!');
+                this.renderSaidasTable();
+            } catch (error) {
+                console.error('Erro ao excluir saída:', error);
+                alert('Erro ao excluir o registro.');
+            }
+        },
     };
 
     AbastecimentoUI.init();
