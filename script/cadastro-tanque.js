@@ -45,9 +45,20 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleFormSubmit(e) {
             e.preventDefault();
 
+            // Converte o valor para um formato numérico padrão, removendo pontos e trocando vírgula por ponto.
+            const capacidadeString = this.capacidadeInput.value.replace(/\./g, '').replace(',', '.');
+            const capacidadeValue = parseFloat(capacidadeString);
+
+            // Validação para garantir que a capacidade é um número válido e positivo.
+            if (isNaN(capacidadeValue) || capacidadeValue <= 0) {
+                alert('Por favor, insira uma capacidade válida e maior que zero.');
+                this.capacidadeInput.focus();
+                return;
+            }
+
             const payload = {
                 nome: this.nomeInput.value,
-                capacidade: parseFloat(this.capacidadeInput.value),
+                capacidade: capacidadeValue,
                 tipo_combustivel: this.tipoCombustivelSelect.value
             };
 
@@ -123,7 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.editingIdInput.value = tanque.id;
                 this.nomeInput.value = tanque.nome;
-                this.capacidadeInput.value = tanque.capacidade;
+                // Formata o número para o padrão brasileiro (ex: 7500.5 vira "7.500,5") para exibição.
+                this.capacidadeInput.value = (tanque.capacidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
                 this.tipoCombustivelSelect.value = tanque.tipo_combustivel || "";
                 this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Tanque';
                 this.form.scrollIntoView({ behavior: 'smooth' });
