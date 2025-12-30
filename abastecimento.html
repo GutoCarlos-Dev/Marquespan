@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Abastecimento - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/comodato.css" /> <!-- Reutilizando layout de grid -->
+  <link rel="stylesheet" href="css/abastecimento.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    
+    <div class="main-content">
+      <header class="header"><i class="fas fa-gas-pump"></i> Registro de Abastecimento (Entrada)</header>
+
+      <section id="sectionAbastecimento" class="section">
+        <div class="card card-header">
+          <h2>Novo Abastecimento</h2>
+        </div>
+
+        <div class="card grid-2-comodato">
+          <!-- Formulário -->
+          <div>
+            <h3>Dados da Nota Fiscal</h3>
+            <form id="formAbastecimento" class="form-compact">
+              <input type="hidden" id="abastecimentoEditingId">
+
+              <label for="absData">Data</label>
+              <input type="date" id="absData" required />
+
+              <label for="absNota">Nº Nota Fiscal</label>
+              <input type="text" id="absNota" placeholder="Ex: 123456" required />
+
+              <label for="absTanque">Tanque de Destino</label>
+              <select id="absTanque" required>
+                <option value="">Carregando tanques...</option>
+              </select>
+
+              <div class="form-row-duplo">
+                <div class="form-group">
+                    <label for="absQtd">Qtd. Litros</label>
+                    <input type="number" id="absQtd" step="0.01" min="0.01" placeholder="0,00" required />
+                </div>
+                <div class="form-group">
+                    <label for="absVlrLitro">Valor por Litro (R$)</label>
+                    <input type="number" id="absVlrLitro" step="0.001" min="0.001" placeholder="0,000" required />
+                </div>
+              </div>
+
+              <label for="absTotal">Valor Total (Calculado)</label>
+              <input type="text" id="absTotal" readonly style="background-color: #f0f0f0; font-weight: bold;" />
+
+              <div class="row-actions">
+                <button type="submit" id="btnSalvarAbs" class="btn-primary"><i class="fas fa-save"></i> Registrar Entrada</button>
+                <button type="button" id="btnLimparAbs" class="btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tabela -->
+          <div>
+            <h3>Histórico de Abastecimentos</h3>
+            <div class="table-responsive">
+              <table class="data-grid">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tanque</th>
+                    <th>Litros</th>
+                    <th>Vlr. Litro</th>
+                    <th>Total</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyAbastecimentos">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/abastecimento.js"></script>
+</body>
+</html>
