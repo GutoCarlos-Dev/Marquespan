@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.tableBodyResumo || !this.tableBodyHistorico) return;
 
             this.tableBodyResumo.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
-            this.tableBodyHistorico.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+            this.tableBodyHistorico.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
 
             try {
                 // 1. Buscar todos os tanques
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao carregar estoque:', error);
                 this.tableBodyResumo.innerHTML = '<tr><td colspan="5" class="text-center" style="color:red;">Erro ao carregar dados.</td></tr>';
-                this.tableBodyHistorico.innerHTML = '<tr><td colspan="4" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
+                this.tableBodyHistorico.innerHTML = '<tr><td colspan="5" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
             }
         },
 
