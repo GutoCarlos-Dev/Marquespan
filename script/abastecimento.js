@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.bind();
             this.loadTanques();
             this.renderTable();
+            this.initSaida(); // Inicializa a aba de saída
             
             // Define a data de hoje como padrão
             this.dataInput.valueAsDate = new Date();
@@ -44,6 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
             this.distribuicaoContainer = document.getElementById('distribuicao-container');
             this.btnAdicionarTanque = document.getElementById('btnAdicionarTanque');
             this.litrosRestantesValor = document.getElementById('litros-restantes-valor');
+
+            // Elementos da Aba Saída
+            this.formSaida = document.getElementById('formSaidaCombustivel');
+            this.saidaDataHora = document.getElementById('saidaDataHora');
+            this.saidaTanque = document.getElementById('saidaTanque');
+            this.saidaVeiculo = document.getElementById('saidaVeiculo');
+            this.listaVeiculos = document.getElementById('listaVeiculos');
+            this.saidaMotorista = document.getElementById('saidaMotorista');
+            this.listaMotoristas = document.getElementById('listaMotoristas');
+            this.saidaKm = document.getElementById('saidaKm');
+            this.saidaLitros = document.getElementById('saidaLitros');
         },
 
         bind() {
@@ -58,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnAdicionarTanque.addEventListener('click', () => this.adicionarLinhaTanque());
             this.distribuicaoContainer.addEventListener('input', this.updateLitrosRestantes.bind(this));
             this.distribuicaoContainer.addEventListener('click', this.handleDistribuicaoClick.bind(this));
+
+            this.formSaida.addEventListener('submit', this.handleSaidaSubmit.bind(this));
         },
 
         calculateTotal() {
@@ -78,10 +92,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) throw error;
 
                 this.tanquesDisponiveis = data || [];
-                this.adicionarLinhaTanque(); // Adiciona a primeira linha automaticamente
+
+                // Limpa e popula o select da aba de SAÍDA
+                if (this.saidaTanque) {
+                    this.saidaTanque.innerHTML = '<option value="">Selecione o Tanque</option>';
+                    this.tanquesDisponiveis.forEach(tanque => {
+                        const option = new Option(`${tanque.nome} (${tanque.tipo_combustivel})`, tanque.id);
+                        this.saidaTanque.appendChild(option);
+                    });
+                }
+
+                this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
                 console.error('Erro ao carregar tanques:', error);
+                if (this.saidaTanque) this.saidaTanque.innerHTML = '<option value="">Erro ao carregar</option>';
             }
+        },
+
+        async initSaida() {
+            // Define data/hora atual para saída
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            this.saidaDataHora.value = now.toISOString().slice(0, 16);
+
+            // Carregar Veículos
+            try {
+                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
+                if (veiculos) {
+                    this.listaVeiculos.innerHTML = veiculos.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
+                }
+            } catch (e) { console.error('Erro ao carregar veículos', e); }
+
+            // Carregar Motoristas
+            try {
+                const { data: motoristas } = await supabaseClient.from('funcionario').select('nome').eq('status', 'Ativo');
+                if (motoristas) {
+                    this.listaMotoristas.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
+                }
+            } catch (e) { console.error('Erro ao carregar motoristas', e); }
         },
 
         adicionarLinhaTanque(tanqueId = '', qtd = '') {
@@ -313,6 +361,36 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Registrar Entrada';
             this.distribuicaoContainer.innerHTML = '';
             this.adicionarLinhaTanque(); // Adiciona a primeira linha de volta
+        },
+
+        async handleSaidaSubmit(e) {
+            e.preventDefault();
+            
+            const payload = {
+                data_hora: this.saidaDataHora.value,
+                tanque_id: parseInt(this.saidaTanque.value),
+                veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
+                motorista_nome: this.saidaMotorista.value,
+                km_atual: parseFloat(this.saidaKm.value),
+                qtd_litros: parseFloat(this.saidaLitros.value)
+            };
+
+            if (!payload.tanque_id || !payload.qtd_litros) {
+                alert('Preencha os campos obrigatórios.');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.from('saidas_combustivel').insert(payload);
+                if (error) throw error;
+
+                alert('Abastecimento registrado com sucesso!');
+                this.formSaida.reset();
+                this.initSaida(); // Reseta data
+            } catch (error) {
+                console.error('Erro ao salvar saída:', error);
+                alert('Erro ao registrar saída: ' + error.message);
+            }
         }
     };
 

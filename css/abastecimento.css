@@ -63,3 +63,42 @@
     font-size: 1.2rem;
     padding: 5px;
 }
+
+/* Estilos Mobile para Saída de Combustível */
+.form-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 600px; /* Limita largura em desktop */
+    margin: 0 auto;
+}
+
+.input-large {
+    height: 50px; /* Inputs mais altos para toque */
+    font-size: 1.1rem;
+    padding: 10px;
+}
+
+.highlight-input {
+    border-color: #28a745;
+    background-color: #f0fff4;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.form-row-mobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.btn-large {
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.btn-block {
+    width: 100%;
+}
