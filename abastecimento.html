@@ -35,15 +35,10 @@
               <label for="absNota">Nº Nota Fiscal</label>
               <input type="text" id="absNota" placeholder="Ex: 123456" required />
 
-              <label for="absTanque">Tanque de Destino</label>
-              <select id="absTanque" required>
-                <option value="">Carregando tanques...</option>
-              </select>
-
               <div class="form-row-duplo">
                 <div class="form-group">
-                    <label for="absQtd">Qtd. Litros</label>
-                    <input type="number" id="absQtd" step="0.01" min="0.01" placeholder="0,00" required />
+                    <label for="absQtdTotalNota">Qtd. Total da Nota (Litros)</label>
+                    <input type="number" id="absQtdTotalNota" step="0.01" min="0.01" placeholder="0,00" required />
                 </div>
                 <div class="form-group">
                     <label for="absVlrLitro">Valor por Litro (R$)</label>
@@ -51,8 +46,18 @@
                 </div>
               </div>
 
-              <label for="absTotal">Valor Total (Calculado)</label>
+              <label for="absTotal">Valor Total da Nota (Calculado)</label>
               <input type="text" id="absTotal" readonly style="background-color: #f0f0f0; font-weight: bold;" />
+
+              <hr class="form-divider">
+
+              <h4>Distribuição nos Tanques <span id="litros-restantes-display" class="litros-restantes">(A distribuir: <span id="litros-restantes-valor">0.00</span> L)</span></h4>
+              <div id="distribuicao-container">
+                <!-- Linhas de tanque serão adicionadas aqui via JS -->
+              </div>
+              <div class="distribuicao-actions">
+                  <button type="button" id="btnAdicionarTanque" class="btn-secondary-outline"><i class="fas fa-plus"></i> Adicionar Tanque</button>
+              </div>
 
               <div class="row-actions">
                 <button type="submit" id="btnSalvarAbs" class="btn-primary"><i class="fas fa-save"></i> Registrar Entrada</button>
@@ -69,6 +74,7 @@
                 <thead>
                   <tr>
                     <th>Data</th>
+                    <th>Nº Nota</th>
                     <th>Tanque</th>
                     <th>Litros</th>
                     <th>Vlr. Litro</th>
