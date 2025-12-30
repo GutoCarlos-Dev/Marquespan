@@ -102,3 +102,16 @@
 .btn-block {
     width: 100%;
 }
+
+.form-alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+    color: #856404;
+    text-align: center;
+}
+
+.form-alert a { color: #856404; font-weight: bold; text-decoration: underline; }

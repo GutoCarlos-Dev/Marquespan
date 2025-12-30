@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
         init() {
             this.tanquesDisponiveis = [];
+            this.bicosDisponiveis = [];
             this.initTabs();
             this.cache();
             this.bind();
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.distribuicaoContainer.addEventListener('click', this.handleDistribuicaoClick.bind(this));
 
             this.formSaida.addEventListener('submit', this.handleSaidaSubmit.bind(this));
+            this.saidaBico.addEventListener('change', this.verificarLeituraBomba.bind(this));
             this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
         },
 
@@ -110,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
 
+            this.toggleSaidaForm(false); // Bloqueia o formulário inicialmente
             // Carregar Bicos
             this.loadBicos();
 
@@ -140,16 +143,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                this.bicosDisponiveis = data || [];
                 this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
-                data.forEach(bico => {
+                this.bicosDisponiveis.forEach(bico => {
                     const tanqueInfo = bico.bombas?.tanques?.nome || 'Tanque desconhecido';
                     const bombaInfo = bico.bombas?.nome || 'Bomba desconhecida';
                     const option = new Option(`${bico.nome} (Bomba: ${bombaInfo} - Tanque: ${tanqueInfo})`, bico.id);
+                    option.dataset.bombaId = bico.bombas?.id; // Armazena o ID da bomba
                     this.saidaBico.appendChild(option);
                 });
             } catch (error) {
                 console.error('Erro ao carregar bicos:', error);
                 this.saidaBico.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        },
+
+        toggleSaidaForm(enabled, mensagem = '') {
+            const campos = [this.saidaVeiculo, this.saidaMotorista, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
+            campos.forEach(campo => campo.disabled = !enabled);
+
+            let alertDiv = document.getElementById('saida-form-alert');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'saida-form-alert';
+                alertDiv.className = 'form-alert';
+                this.formSaida.insertAdjacentElement('afterbegin', alertDiv);
+            }
+
+            if (mensagem) {
+                alertDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${mensagem}`;
+                alertDiv.style.display = 'block';
+            } else {
+                alertDiv.style.display = 'none';
+            }
+        },
+
+        async verificarLeituraBomba() {
+            const selectedOption = this.saidaBico.options[this.saidaBico.selectedIndex];
+            const bombaId = selectedOption?.dataset.bombaId;
+
+            if (!bombaId) {
+                this.toggleSaidaForm(false);
+                return;
+            }
+
+            const hoje = new Date().toISOString().slice(0, 10);
+            const { data, error } = await supabaseClient.from('leituras_bomba').select('id').eq('bomba_id', bombaId).eq('data', hoje).single();
+
+            if (error || !data) {
+                this.toggleSaidaForm(false, `É necessário registrar a leitura inicial da bomba para hoje. <a href="leituras-bomba.html" target="_blank">Registrar agora</a>.`);
+            } else {
+                this.toggleSaidaForm(true);
             }
         },
 
