@@ -36,13 +36,18 @@
               <label for="tanqueCapacidade">Capacidade Máxima (Litros)</label>
               <input type="number" id="tanqueCapacidade" placeholder="Ex: 15000" min="1" required />
 
-              <label for="tanqueQtdBicos">Quantidade de Bicos</label>
-              <input type="number" id="tanqueQtdBicos" placeholder="Ex: 2" min="1" required />
-
-              <!-- Container para os campos de nome dos bicos -->
-              <div id="bicosContainer" class="bicos-container">
-                <!-- Campos de bico serão gerados aqui via JS -->
-              </div>
+              <label for="tanqueTipoCombustivel">Tipo de Combustível</label>
+              <select id="tanqueTipoCombustivel" required>
+                <option value="">-- Selecione --</option>
+                <option value="ARLA">ARLA</option>
+                <option value="GASOLINA COMUM">GASOLINA COMUM</option>
+                <option value="ETANOL">ETANOL</option>
+                <option value="DIESEL S10">DIESEL S10</option>
+                <option value="DIESEL S500">DIESEL S500</option>
+                <option value="RT10">RT10</option>
+                <option value="LUBRIFICANTE">LUBRIFICANTE</option>
+                <option value="P20">P20</option>
+              </select>
 
               <div class="row-actions">
                 <button type="submit" id="btnSalvarTanque" class="btn-primary"><i class="fas fa-save"></i> Salvar Tanque</button>
@@ -60,7 +65,7 @@
                   <tr>
                     <th>Nome</th>
                     <th>Capacidade (L)</th>
-                    <th>Bicos</th>
+                    <th>Tipo de Combustível</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
