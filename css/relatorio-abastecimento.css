@@ -1,0 +1,50 @@
+/* Layout do Grid de Filtros */
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: end; /* Alinha os botões com os inputs */
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-actions button {
+    flex: 1;
+}
+
+/* Cabeçalho do Card de Resultados com Botões */
+.card-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.card-header-actions h3 {
+    margin: 0;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.total-row {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
