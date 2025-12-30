@@ -13,8 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.editingIdInput = document.getElementById('tanqueEditingId');
             this.nomeInput = document.getElementById('tanqueNome');
             this.capacidadeInput = document.getElementById('tanqueCapacidade');
-            this.qtdBicosInput = document.getElementById('tanqueQtdBicos');
-            this.bicosContainer = document.getElementById('bicosContainer');
+            this.tipoCombustivelSelect = document.getElementById('tanqueTipoCombustivel');
             this.tableBody = document.getElementById('tableBodyTanques');
             this.btnSalvar = document.getElementById('btnSalvarTanque');
             this.btnLimpar = document.getElementById('btnLimparForm');
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bind() {
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
-            this.qtdBicosInput.addEventListener('input', this.generateBicoFields.bind(this));
             this.tableBody.addEventListener('click', this.handleTableClick.bind(this));
             this.btnLimpar.addEventListener('click', this.clearForm.bind(this));
         },
@@ -35,55 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(this.KEY_TANQUES, JSON.stringify(tanques));
         },
 
-        generateBicoFields() {
-            const qtd = parseInt(this.qtdBicosInput.value, 10);
-            this.bicosContainer.innerHTML = '';
-
-            if (isNaN(qtd) || qtd <= 0) {
-                return;
-            }
-
-            const header = document.createElement('h4');
-            header.textContent = 'Nome dos Bicos';
-            this.bicosContainer.appendChild(header);
-
-            for (let i = 1; i <= qtd; i++) {
-                const group = document.createElement('div');
-                group.className = 'bico-input-group';
-                
-                const label = document.createElement('label');
-                label.setAttribute('for', `bicoNome${i}`);
-                label.textContent = `Bico ${i}`;
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = `bicoNome${i}`;
-                input.className = 'bico-nome-input';
-                input.placeholder = `Nome do Bico ${i}`;
-                input.required = true;
-
-                group.appendChild(label);
-                group.appendChild(input);
-                this.bicosContainer.appendChild(group);
-            }
-        },
-
         handleFormSubmit(e) {
             e.preventDefault();
-
-            const bicosInputs = this.bicosContainer.querySelectorAll('.bico-nome-input');
-            const bicos = Array.from(bicosInputs).map(input => ({ nome: input.value }));
-
-            if (bicos.length !== parseInt(this.qtdBicosInput.value, 10)) {
-                alert('A quantidade de bicos informada não corresponde aos campos preenchidos.');
-                return;
-            }
 
             const tanque = {
                 id: this.editingIdInput.value ? parseInt(this.editingIdInput.value, 10) : Date.now(),
                 nome: this.nomeInput.value,
                 capacidade: parseFloat(this.capacidadeInput.value),
-                bicos: bicos
+                tipoCombustivel: this.tipoCombustivelSelect.value
             };
 
             let tanques = this.getTanques();
@@ -113,12 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tanques.forEach(tanque => {
                 const tr = document.createElement('tr');
-                const bicosNomes = tanque.bicos.map(b => b.nome).join(', ');
 
                 tr.innerHTML = `
                     <td>${tanque.nome}</td>
                     <td>${tanque.capacidade.toLocaleString('pt-BR')} L</td>
-                    <td>${bicosNomes}</td>
+                    <td>${tanque.tipoCombustivel || '-'}</td>
                     <td class="actions-cell">
                         <button class="btn-edit" data-id="${tanque.id}" title="Editar"><i class="fas fa-pen"></i></button>
                         <button class="btn-delete" data-id="${tanque.id}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -152,17 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.editingIdInput.value = tanque.id;
             this.nomeInput.value = tanque.nome;
             this.capacidadeInput.value = tanque.capacidade;
-            this.qtdBicosInput.value = tanque.bicos.length;
-
-            this.generateBicoFields(); // Gera os campos
-
-            const bicosInputs = this.bicosContainer.querySelectorAll('.bico-nome-input');
-            tanque.bicos.forEach((bico, index) => {
-                if (bicosInputs[index]) {
-                    bicosInputs[index].value = bico.nome;
-                }
-            });
-
+            this.tipoCombustivelSelect.value = tanque.tipoCombustivel || "";
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Tanque';
             this.form.scrollIntoView({ behavior: 'smooth' });
         },
@@ -177,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clearForm() {
             this.form.reset();
             this.editingIdInput.value = '';
-            this.bicosContainer.innerHTML = '';
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Tanque';
             this.nomeInput.focus();
         }
