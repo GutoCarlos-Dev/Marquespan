@@ -15,9 +15,20 @@
     <!-- O menu será injetado aqui pelo menu.js -->
     
     <div class="main-content">
-      <header class="header"><i class="fas fa-gas-pump"></i> Registro de Abastecimento (Entrada)</header>
+      <header class="header"><i class="fas fa-gas-pump"></i> Movimentação de Combustível</header>
 
-      <section id="sectionAbastecimento" class="section">
+      <!-- Navegação por abas -->
+      <div class="painel-navegacao" role="tablist" id="menu-abastecimento">
+        <button class="painel-btn active" data-secao="sectionEntrada" aria-selected="true">
+          <i class="fas fa-arrow-down"></i> Entrada de Combustível
+        </button>
+        <button class="painel-btn" data-secao="sectionSaida" aria-selected="false">
+          <i class="fas fa-arrow-up"></i> Saída de Combustível
+        </button>
+      </div>
+
+      <!-- SEÇÃO: ENTRADA -->
+      <section id="sectionEntrada" class="section">
         <div class="card card-header">
           <h2>Novo Abastecimento</h2>
         </div>
@@ -25,7 +36,7 @@
         <div class="card grid-2-comodato">
           <!-- Formulário -->
           <div>
-            <h3>Dados da Nota Fiscal</h3>
+            <h3>Dados da Entrada</h3>
             <form id="formAbastecimento" class="form-compact">
               <input type="hidden" id="abastecimentoEditingId">
 
@@ -88,6 +99,17 @@
               </table>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO: SAÍDA -->
+      <section id="sectionSaida" class="section hidden">
+        <div class="card">
+            <div class="card-header">
+                <h2>Registrar Saída de Combustível</h2>
+            </div>
+            <p>A funcionalidade de registro de saída será implementada em breve, conforme as especificações que serão fornecidas.</p>
+            <!-- O formulário de saída será adicionado aqui -->
         </div>
       </section>
     </div>

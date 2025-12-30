@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
         init() {
             this.tanquesDisponiveis = [];
+            this.initTabs();
             this.cache();
             this.bind();
             this.loadTanques();
@@ -11,6 +12,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Define a data de hoje como padrão
             this.dataInput.valueAsDate = new Date();
+        },
+
+        initTabs() {
+            const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
+            const sections = document.querySelectorAll('.main-content .section');
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    sections.forEach(s => s.classList.add('hidden'));
+
+                    btn.classList.add('active');
+                    const targetId = btn.getAttribute('data-secao');
+                    document.getElementById(targetId)?.classList.remove('hidden');
+                });
+            });
         },
 
         cache() {
