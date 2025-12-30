@@ -1,6 +1,7 @@
+import { supabaseClient } from './supabase.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const TanqueUI = {
-        KEY_TANQUES: 'marquespan_tanques',
         
         init() {
             this.cache();
@@ -25,42 +26,52 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar.addEventListener('click', this.clearForm.bind(this));
         },
 
-        getTanques() {
-            return JSON.parse(localStorage.getItem(this.KEY_TANQUES)) || [];
+        async getTanques() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('tanques')
+                    .select('*')
+                    .order('nome', { ascending: true });
+                
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Erro ao buscar tanques:', error);
+                alert('Erro ao carregar a lista de tanques.');
+                return [];
+            }
         },
 
-        saveTanques(tanques) {
-            localStorage.setItem(this.KEY_TANQUES, JSON.stringify(tanques));
-        },
-
-        handleFormSubmit(e) {
+        async handleFormSubmit(e) {
             e.preventDefault();
 
-            const tanque = {
-                id: this.editingIdInput.value ? parseInt(this.editingIdInput.value, 10) : Date.now(),
+            const payload = {
                 nome: this.nomeInput.value,
                 capacidade: parseFloat(this.capacidadeInput.value),
-                tipoCombustivel: this.tipoCombustivelSelect.value
+                tipo_combustivel: this.tipoCombustivelSelect.value
             };
 
-            let tanques = this.getTanques();
+            // Se estiver editando, adiciona o ID ao payload
             if (this.editingIdInput.value) {
-                const index = tanques.findIndex(t => t.id === tanque.id);
-                if (index > -1) {
-                    tanques[index] = tanque;
-                }
-            } else {
-                tanques.push(tanque);
+                payload.id = parseInt(this.editingIdInput.value, 10);
             }
 
-            this.saveTanques(tanques);
-            alert(`Tanque ${this.editingIdInput.value ? 'atualizado' : 'salvo'} com sucesso!`);
-            this.clearForm();
-            this.renderTable();
+            try {
+                const { error } = await supabaseClient.from('tanques').upsert(payload);
+                if (error) throw error;
+
+                alert(`Tanque ${this.editingIdInput.value ? 'atualizado' : 'salvo'} com sucesso!`);
+                this.clearForm();
+                this.renderTable();
+            } catch (error) {
+                console.error('Erro ao salvar tanque:', error);
+                alert('Erro ao salvar tanque: ' + error.message);
+            }
         },
 
-        renderTable() {
-            const tanques = this.getTanques();
+        async renderTable() {
+            this.tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>';
+            const tanques = await this.getTanques();
             this.tableBody.innerHTML = '';
 
             if (tanques.length === 0) {
@@ -74,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.innerHTML = `
                     <td>${tanque.nome}</td>
                     <td>${tanque.capacidade.toLocaleString('pt-BR')} L</td>
-                    <td>${tanque.tipoCombustivel || '-'}</td>
+                    <td>${tanque.tipo_combustivel || '-'}</td>
                     <td class="actions-cell">
                         <button class="btn-edit" data-id="${tanque.id}" title="Editar"><i class="fas fa-pen"></i></button>
                         <button class="btn-delete" data-id="${tanque.id}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -99,25 +110,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        loadForEditing(id) {
-            const tanques = this.getTanques();
-            const tanque = tanques.find(t => t.id === id);
+        async loadForEditing(id) {
+            try {
+                const { data: tanque, error } = await supabaseClient
+                    .from('tanques')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
 
-            if (!tanque) return;
+                if (error) throw error;
+                if (!tanque) return;
 
-            this.editingIdInput.value = tanque.id;
-            this.nomeInput.value = tanque.nome;
-            this.capacidadeInput.value = tanque.capacidade;
-            this.tipoCombustivelSelect.value = tanque.tipoCombustivel || "";
-            this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Tanque';
-            this.form.scrollIntoView({ behavior: 'smooth' });
+                this.editingIdInput.value = tanque.id;
+                this.nomeInput.value = tanque.nome;
+                this.capacidadeInput.value = tanque.capacidade;
+                this.tipoCombustivelSelect.value = tanque.tipo_combustivel || "";
+                this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Tanque';
+                this.form.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Erro ao carregar tanque para edição:', error);
+                alert('Erro ao carregar dados do tanque.');
+            }
         },
 
-        deleteTanque(id) {
-            let tanques = this.getTanques();
-            tanques = tanques.filter(t => t.id !== id);
-            this.saveTanques(tanques);
-            this.renderTable();
+        async deleteTanque(id) {
+            try {
+                const { error } = await supabaseClient.from('tanques').delete().eq('id', id);
+                if (error) throw error;
+                this.renderTable();
+            } catch (error) {
+                console.error('Erro ao excluir tanque:', error);
+                alert('Erro ao excluir tanque.');
+            }
         },
 
         clearForm() {
