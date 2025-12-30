@@ -32,16 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     .order('data', { ascending: false });
                 if (entradasError) throw entradasError;
 
-                // 3. Buscar todas as saídas (a ser implementado)
-                // const { data: saidas, error: saidasError } = await supabaseClient.from('saidas_combustivel').select('*');
-                const saidas = []; // Placeholder
+                // 3. Buscar todas as saídas
+                const { data: saidas, error: saidasError } = await supabaseClient
+                    .from('saidas_combustivel')
+                    .select('*, bicos(bombas(tanque_id))');
+                if (saidasError) throw saidasError;
 
                 // 4. Calcular o estoque atual
                 const estoqueCalculado = this.calculateCurrentStock(tanques, entradas, saidas);
 
                 // 5. Renderizar as tabelas
                 this.renderResumo(estoqueCalculado);
-                this.renderHistorico(entradas, tanques);
+                this.renderHistorico(entradas, saidas, tanques);
 
             } catch (error) {
                 console.error('Erro ao carregar estoque:', error);
@@ -68,10 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Subtrai as saídas (quando implementado)
+            // Subtrai as saídas
             saidas.forEach(s => {
-                if (estoque.has(s.tanque_id)) {
-                    estoque.get(s.tanque_id).estoque_atual -= s.qtd_litros;
+                // Navega pela relação para encontrar o tanque_id
+                const tanqueId = s.bicos?.bombas?.tanque_id;
+                if (tanqueId && estoque.has(tanqueId)) {
+                    const tanque = estoque.get(tanqueId);
+                    tanque.estoque_atual -= s.qtd_litros;
                 }
             });
 
@@ -110,17 +115,54 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         },
 
-        renderHistorico(entradas, tanques) {
+        renderHistorico(entradas, saidas, tanques) {
             this.tableBodyHistorico.innerHTML = '';
             const tanquesMap = new Map(tanques.map(t => [t.id, t.nome]));
 
+            const historicoCombinado = [];
+
+            // Mapeia as entradas
             entradas.forEach(e => {
+                historicoCombinado.push({
+                    data: e.data,
+                    tipo: 'ENTRADA',
+                    tanqueId: e.tanque_id,
+                    litros: e.qtd_litros,
+                    detalhe: `NF: ${e.numero_nota}`
+                });
+            });
+
+            // Mapeia as saídas
+            saidas.forEach(s => {
+                const tanqueId = s.bicos?.bombas?.tanque_id;
+                if (tanqueId) {
+                    historicoCombinado.push({
+                        data: s.data_hora,
+                        tipo: 'SAÍDA',
+                        tanqueId: tanqueId,
+                        litros: s.qtd_litros,
+                        detalhe: `Placa: ${s.veiculo_placa}`
+                    });
+                }
+            });
+
+            // Ordena do mais recente para o mais antigo
+            historicoCombinado.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            if (historicoCombinado.length === 0) {
+                this.tableBodyHistorico.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum histórico de movimentação.</td></tr>';
+                return;
+            }
+
+            historicoCombinado.forEach(mov => {
                 const tr = document.createElement('tr');
+                const tipoClasse = mov.tipo.toLowerCase();
                 tr.innerHTML = `
-                    <td>${new Date(e.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                    <td>${tanquesMap.get(e.tanque_id) || 'Tanque Desconhecido'}</td>
-                    <td class="text-right">${e.qtd_litros.toLocaleString('pt-BR')} L</td>
-                    <td>${e.numero_nota}</td>
+                    <td>${new Date(mov.data).toLocaleString('pt-BR')}</td>
+                    <td><span class="badge-movimentacao ${tipoClasse}">${mov.tipo}</span></td>
+                    <td>${tanquesMap.get(mov.tanqueId) || 'Tanque Desconhecido'}</td>
+                    <td class="text-right ${tipoClasse}">${mov.tipo === 'ENTRADA' ? '+' : '-'}${mov.litros.toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
+                    <td>${mov.detalhe}</td>
                 `;
                 this.tableBodyHistorico.appendChild(tr);
             });

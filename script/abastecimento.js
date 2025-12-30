@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Elementos da Aba Saída
             this.formSaida = document.getElementById('formSaidaCombustivel');
             this.saidaDataHora = document.getElementById('saidaDataHora');
-            this.saidaTanque = document.getElementById('saidaTanque');
+            this.saidaBico = document.getElementById('saidaBico');
             this.saidaVeiculo = document.getElementById('saidaVeiculo');
             this.listaVeiculos = document.getElementById('listaVeiculos');
             this.saidaMotorista = document.getElementById('saidaMotorista');
@@ -91,21 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
-                this.tanquesDisponiveis = data || [];
-
-                // Limpa e popula o select da aba de SAÍDA
-                if (this.saidaTanque) {
-                    this.saidaTanque.innerHTML = '<option value="">Selecione o Tanque</option>';
-                    this.tanquesDisponiveis.forEach(tanque => {
-                        const option = new Option(`${tanque.nome} (${tanque.tipo_combustivel})`, tanque.id);
-                        this.saidaTanque.appendChild(option);
-                    });
-                }
+                this.tanquesDisponiveis = data || [];                
 
                 this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
                 console.error('Erro ao carregar tanques:', error);
-                if (this.saidaTanque) this.saidaTanque.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         },
 
@@ -114,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
+
+            // Carregar Bicos
+            this.loadBicos();
 
             // Carregar Veículos
             try {
@@ -130,6 +123,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.listaMotoristas.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar motoristas', e); }
+        },
+
+        async loadBicos() {
+            if (!this.saidaBico) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('bicos')
+                    .select('id, nome, bombas(nome, tanques(nome))')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
+                data.forEach(bico => {
+                    const tanqueInfo = bico.bombas?.tanques?.nome || 'Tanque desconhecido';
+                    const bombaInfo = bico.bombas?.nome || 'Bomba desconhecida';
+                    const option = new Option(`${bico.nome} (Bomba: ${bombaInfo} - Tanque: ${tanqueInfo})`, bico.id);
+                    this.saidaBico.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar bicos:', error);
+                this.saidaBico.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
         },
 
         adicionarLinhaTanque(tanqueId = '', qtd = '') {
@@ -368,14 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const payload = {
                 data_hora: this.saidaDataHora.value,
-                tanque_id: parseInt(this.saidaTanque.value),
+                bico_id: parseInt(this.saidaBico.value),
                 veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
                 motorista_nome: this.saidaMotorista.value,
                 km_atual: parseFloat(this.saidaKm.value),
                 qtd_litros: parseFloat(this.saidaLitros.value)
             };
 
-            if (!payload.tanque_id || !payload.qtd_litros) {
+            if (!payload.bico_id || !payload.qtd_litros) {
                 alert('Preencha os campos obrigatórios.');
                 return;
             }

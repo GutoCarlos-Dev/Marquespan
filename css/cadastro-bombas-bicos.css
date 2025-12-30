@@ -1,0 +1,6 @@
+/* Adiciona um espaço e uma linha divisória entre as seções de Bombas e Bicos */
+.section-divider {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}

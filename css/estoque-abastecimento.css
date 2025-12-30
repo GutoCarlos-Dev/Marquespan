@@ -30,3 +30,21 @@
 
 .progress-bar.warning { background-color: #ffc107; color: black; } /* Amarelo para aviso */
 .progress-bar.danger { background-color: #dc3545; } /* Vermelho para perigo */
+
+/* Estilos para o histórico de movimentações */
+.badge-movimentacao {
+    padding: 3px 8px;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.badge-movimentacao.entrada {
+    background-color: #28a745;
+}
+.badge-movimentacao.saida {
+    background-color: #dc3545;
+}
+.text-right.entrada { color: #28a745; font-weight: bold; }
+.text-right.saida { color: #dc3545; font-weight: bold; }

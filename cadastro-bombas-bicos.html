@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Bombas e Bicos - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/comodato.css" />
+  <link rel="stylesheet" href="css/cadastro-bombas-bicos.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    
+    <div class="main-content">
+      <header class="header"><i class="fas fa-cogs"></i> Cadastro de Bombas e Bicos</header>
+
+      <!-- SEÇÃO: CADASTRO DE BOMBAS -->
+      <section id="sectionBombas" class="section">
+        <div class="card card-header">
+          <h2><i class="fas fa-gas-pump"></i> Bombas de Combustível</h2>
+        </div>
+
+        <div class="card grid-2-comodato">
+          <!-- Formulário Bombas -->
+          <div>
+            <h3>Nova Bomba</h3>
+            <form id="formBomba" class="form-compact">
+              <input type="hidden" id="bombaEditingId">
+              <label for="bombaTanque">Associar ao Tanque</label>
+              <select id="bombaTanque" required>
+                <option value="">Carregando tanques...</option>
+              </select>
+              <label for="bombaNome">Nome da Bomba</label>
+              <input type="text" id="bombaNome" placeholder="Ex: Bomba 01" required />
+              <div class="row-actions">
+                <button type="submit" id="btnSalvarBomba" class="btn-primary"><i class="fas fa-save"></i> Salvar Bomba</button>
+                <button type="button" id="btnLimparBomba" class="btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
+              </div>
+            </form>
+          </div>
+          <!-- Tabela Bombas -->
+          <div>
+            <h3>Bombas Cadastradas</h3>
+            <div class="table-responsive">
+              <table class="data-grid">
+                <thead>
+                  <tr>
+                    <th>Nome da Bomba</th>
+                    <th>Tanque Associado</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyBombas">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO: CADASTRO DE BICOS -->
+      <section id="sectionBicos" class="section section-divider">
+        <div class="card card-header">
+          <h2><i class="fas-solid fa-faucet"></i> Bicos de Abastecimento</h2>
+        </div>
+
+        <div class="card grid-2-comodato">
+          <!-- Formulário Bicos -->
+          <div>
+            <h3>Novo Bico</h3>
+            <form id="formBico" class="form-compact">
+              <input type="hidden" id="bicoEditingId">
+              <label for="bicoBomba">Associar à Bomba</label>
+              <select id="bicoBomba" required>
+                <option value="">Carregando bombas...</option>
+              </select>
+              <label for="bicoNome">Nome do Bico</label>
+              <input type="text" id="bicoNome" placeholder="Ex: Bico A" required />
+              <div class="row-actions">
+                <button type="submit" id="btnSalvarBico" class="btn-primary"><i class="fas fa-save"></i> Salvar Bico</button>
+                <button type="button" id="btnLimparBico" class="btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
+              </div>
+            </form>
+          </div>
+          <!-- Tabela Bicos -->
+          <div>
+            <h3>Bicos Cadastrados</h3>
+            <div class="table-responsive">
+              <table class="data-grid">
+                <thead>
+                  <tr>
+                    <th>Nome do Bico</th>
+                    <th>Bomba Associada</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyBicos">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/cadastro-bombas-bicos.js"></script>
+</body>
+</html>
