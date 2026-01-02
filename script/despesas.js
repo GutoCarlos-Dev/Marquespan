@@ -87,8 +87,8 @@ const DespesasUI = {
         });
 
         // Evento de clique para ordenação das colunas
-        document.querySelectorAll('th[data-field]').forEach(th => {
-            th.addEventListener('click', () => this.handleSort(th.dataset.field));
+        document.querySelectorAll('th[data-key]').forEach(th => {
+            th.addEventListener('click', () => this.handleSort(th.dataset.key));
         });
     },
 
@@ -383,10 +383,10 @@ const DespesasUI = {
     },
 
     updateSortIcons() {
-        document.querySelectorAll('th[data-field] i').forEach(icon => {
+        document.querySelectorAll('th[data-key] i').forEach(icon => {
             icon.className = 'fas fa-sort'; // Ícone neutro
             const th = icon.closest('th');
-            if (th.dataset.field === this.sortField) {
+            if (th.dataset.key === this.sortField) {
                 icon.className = this.sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
             }
         });
