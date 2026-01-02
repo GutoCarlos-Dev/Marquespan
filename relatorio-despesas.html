@@ -15,7 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        .data-table th {
+        .data-grid th {
             cursor: pointer;
         }
 
@@ -109,13 +109,13 @@
         }
 
         /* Container com scroll para a tabela */
-        .table-scroll-wrapper {
+        .table-scroll-container {
             max-height: 600px; /* Altura máxima antes de rolar */
             overflow-y: auto;
             border: 1px solid #dee2e6;
             border-radius: 4px;
         }
-        .table-scroll-wrapper thead th {
+        .table-scroll-container thead th {
             position: sticky;
             top: 0;
             background-color: #28a745; /* Cor verde padrão Marquespan */
@@ -201,21 +201,21 @@
                         <button id="btnExportarPDF" class="btn btn-secondary"><i class="fas fa-file-pdf"></i> Exportar para PDF</button>
                     </div>
                 </div>
-                <h3>Resultados da Busca </h3>
-                <div class="table-scroll-wrapper">
-                <table class="data-table">
+                <div class="table-scroll-container">
+                <table class="data-grid" aria-label="Resultados da Busca">
+                    <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Resultados da Busca</caption>
                     <thead>
                         <!-- Cabecalho da tabela -->
                         <tr>
-                            <th data-key="data_checkin">Data <i class="fas fa-sort"></i></th>
-                            <th data-key="numero_rota">Rota <i class="fas fa-sort"></i></th>
-                            <th data-key="hotel">Nome do Hotel <i class="fas fa-sort"></i></th>
-                            <th data-key="qtd_diarias">Qtd. Diárias <i class="fas fa-sort"></i></th>
-                            <th data-key="valor_diaria">Valor Diária <i class="fas fa-sort"></i></th>
-                            <th data-key="valor_energia">Valor Energia <i class="fas fa-sort"></i></th>
-                            <th data-key="valor_total">Valor Total <i class="fas fa-sort"></i></th>
-                            <th data-key="funcionarios">Funcionários <i class="fas fa-sort"></i></th>
-                            <th data-key="nota_fiscal">Nota Fiscal <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="data_checkin">Data <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="numero_rota">Rota <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="hotel">Nome do Hotel <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="qtd_diarias">Qtd. Diárias <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="valor_diaria">Valor Diária <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="valor_energia">Valor Energia <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="valor_total">Valor Total <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="funcionarios">Funcionários <i class="fas fa-sort"></i></th>
+                            <th scope="col" data-key="nota_fiscal">Nota Fiscal <i class="fas fa-sort"></i></th>
                         </tr>
                     </thead>
                     <tbody id="tabela-resultados">
