@@ -56,6 +56,15 @@
 
   <!-- 🚀 Scripts -->
   <script>
+    // Função global para alternar o menu lateral no mobile
+    // Necessária porque o menu.js é um módulo e não expõe funções globalmente por padrão
+    window.toggleSidebar = function() {
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) {
+        sidebar.classList.toggle('mobile-open');
+      }
+    };
+
     // Verificação de login
     const usuarioLogado = localStorage.getItem('usuarioLogado');
     if (!usuarioLogado) {
