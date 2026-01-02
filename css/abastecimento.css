@@ -210,3 +210,36 @@
         font-size: 16px; /* Evita zoom automático em iPhones */
     }
 }
+
+/* Estilos para o Relatório de Abastecimento (Filtros) */
+#formFiltroAbastecimento {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+#formFiltroAbastecimento .form-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+#formFiltroAbastecimento .form-group label {
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+#formFiltroAbastecimento .form-group input,
+#formFiltroAbastecimento .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
