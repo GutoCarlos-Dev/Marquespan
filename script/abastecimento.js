@@ -587,11 +587,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.form.scrollIntoView({ behavior: 'smooth' });
 
             } else if (button.classList.contains('btn-delete')) {
-                const { data: registroClicado } = await supabaseClient.from('abastecimentos').select('numero_nota').eq('id', id).single();
-                if (confirm(`Deseja excluir TODOS os lançamentos da nota fiscal "${registroClicado.numero_nota}"?`)) {
-                    await supabaseClient.from('abastecimentos').delete().eq('numero_nota', registroClicado.numero_nota);
-                    this.calculateTotal();
-                    this.renderTable();
+                if (confirm('Tem certeza que deseja excluir este lançamento?')) {
+                    try {
+                        const { error } = await supabaseClient.from('abastecimentos').delete().eq('id', id);
+                        if (error) throw error;
+                        this.renderTable();
+                    } catch (error) {
+                        console.error('Erro ao excluir:', error);
+                        alert('Erro ao excluir lançamento: ' + error.message);
+                    }
                 }
             }
         },
