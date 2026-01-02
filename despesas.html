@@ -14,6 +14,10 @@
       opacity: 0.6;
       cursor: not-allowed;
     }
+    th[data-field] {
+      cursor: pointer;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -177,11 +181,11 @@
               <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Despesas Cadastradas</caption>
               <thead>
                 <tr>
-                  <th scope="col" data-field="numero_rota">Rota</th>
-                  <th scope="col" data-field="hotel.nome">Hotel</th>
-                  <th scope="col" data-field="funcionario1.nome">Funcionário</th>
-                  <th scope="col" data-field="valor_total">Valor Total</th>
-                  <th scope="col" data-field="data_checkin">Check-in</th>
+                  <th scope="col" data-field="numero_rota">Rota <i class="fas fa-sort"></i></th>
+                  <th scope="col" data-field="hotel.nome">Hotel <i class="fas fa-sort"></i></th>
+                  <th scope="col" data-field="funcionario1.nome">Funcionário <i class="fas fa-sort"></i></th>
+                  <th scope="col" data-field="valor_total">Valor Total <i class="fas fa-sort"></i></th>
+                  <th scope="col" data-field="data_checkin">Check-in <i class="fas fa-sort"></i></th>
                   <th scope="col">Ações</th>
                 </tr>
               </thead>

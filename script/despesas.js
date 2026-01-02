@@ -4,6 +4,8 @@ import { supabaseClient } from './supabase.js';
 const DespesasUI = {
     init() {
         this.cache();
+        this.sortField = 'data_checkin'; // Campo padrão
+        this.sortAsc = false; // Ordem padrão (descendente)
         this.bind();
         this.loadInitialData();
     },
@@ -82,6 +84,11 @@ const DespesasUI = {
         this.listaQuartosEdicao.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-delete-quarto');
             if (btn) this.excluirQuarto(btn.dataset.id);
+        });
+
+        // Evento de clique para ordenação das colunas
+        document.querySelectorAll('th[data-field]').forEach(th => {
+            th.addEventListener('click', () => this.handleSort(th.dataset.field));
         });
     },
 
@@ -273,6 +280,16 @@ const DespesasUI = {
         }
     },
 
+    handleSort(field) {
+        if (this.sortField === field) {
+            this.sortAsc = !this.sortAsc; // Inverte a ordem se for o mesmo campo
+        } else {
+            this.sortField = field;
+            this.sortAsc = true; // Padrão ascendente para novo campo
+        }
+        this.renderGrid();
+    },
+
     async renderGrid() {
         // Lógica para buscar e renderizar a tabela de despesas
         try {
@@ -327,7 +344,20 @@ const DespesasUI = {
                     .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
-            const { data: despesas, error } = await query.order('data_checkin', { ascending: false });
+            // Aplica a ordenação dinâmica baseada no estado atual
+            if (this.sortField === 'hotel.nome') {
+                query = query.order('nome', { foreignTable: 'hoteis', ascending: this.sortAsc });
+            } else if (this.sortField === 'funcionario1.nome') {
+                query = query.order('nome_completo', { foreignTable: 'funcionario1', ascending: this.sortAsc });
+            } else {
+                query = query.order(this.sortField, { ascending: this.sortAsc });
+            }
+
+            const { data: despesas, error } = await query;
+            
+            // Atualiza os ícones visuais na tabela
+            this.updateSortIcons();
+
             if (error) throw error;
 
             this.tableBody.innerHTML = despesas.map(d => `
@@ -350,6 +380,16 @@ const DespesasUI = {
             console.error('Erro ao renderizar grid de despesas:', err);
             this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar dados.</td></tr>`;
         }
+    },
+
+    updateSortIcons() {
+        document.querySelectorAll('th[data-field] i').forEach(icon => {
+            icon.className = 'fas fa-sort'; // Ícone neutro
+            const th = icon.closest('th');
+            if (th.dataset.field === this.sortField) {
+                icon.className = this.sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        });
     },
 
     async loadDatalists() {
