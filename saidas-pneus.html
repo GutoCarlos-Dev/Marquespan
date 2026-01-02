@@ -17,13 +17,13 @@
     <section class="content-section">
 
       <!-- Seção de Tipo de Saída -->
-      <div class="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
-        <div class="form-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
-          <h3 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Tipo de Saída</h3>
+      <div class="form-card card-saida">
+        <div class="form-header header-section header-green">
+          <h3><i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Tipo de Saída</h3>
         </div>
-        <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+        <div class="form-grid grid-form">
           <label>Tipo de Saída *</label>
-          <select name="tipo_saida" id="tipo_saida" required style="height: 45px; font-size: 1.1rem;">
+          <select name="tipo_saida" id="tipo_saida" required class="select-lg">
             <option value="">Selecione o Tipo</option>
             <option value="BORRACHARIA">Envio para Borracharia</option>
             <option value="VEICULO">Aplicação em Veículo</option>
@@ -35,30 +35,30 @@
       </div>
 
       <!-- Visualização das Posições Atuais -->
-      <div class="form-card" id="posicoes-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
-        <div class="form-header" style="border-bottom: 2px solid #17a2b8; padding-bottom: 15px; margin-bottom: 20px;">
-          <h3 style="color: #17a2b8; margin: 0; font-size: 1.4rem;"><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>Posições Atuais dos Pneus</h3>
+      <div class="form-card card-saida" id="posicoes-card" style="display: none;">
+        <div class="form-header header-section header-blue">
+          <h3><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>Posições Atuais dos Pneus</h3>
         </div>
-        <div id="posicoes-veiculo" class="posicoes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div id="posicoes-veiculo" class="posicoes-grid grid-posicoes">
           <!-- Posições serão carregadas dinamicamente -->
         </div>
       </div>
 
       <!-- Card do Formulário de Saída -->
-      <div class="form-card" id="form-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
-        <div class="form-header" style="border-bottom: 2px solid #dc3545; padding-bottom: 15px; margin-bottom: 20px;">
-          <h3 style="color: #dc3545; margin: 0; font-size: 1.4rem;"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registro de Saída</h3>
+      <div class="form-card card-saida" id="form-card" style="display: none;">
+        <div class="form-header header-section header-red">
+          <h3><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registro de Saída</h3>
         </div>
         <form id="formSaida">
           <div class="form-bloco">
-            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="form-grid grid-registro">
               <label>Data da Operação</label>
               <input type="datetime-local" name="data_operacao" id="data_operacao" readonly />
             </div>
 
             <!-- Campos Específicos para Veículo/Aplicação -->
-            <div id="campos-veiculo-especificos" class="campos-grupo" style="display: none; margin-top: 15px;">
-              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div id="campos-veiculo-especificos" class="campos-grupo" style="display: none;">
+              <div class="form-grid grid-registro">
                 <div>
                   <label>Quilometragem do Veículo *</label>
                   <input type="number" name="quilometragem" id="quilometragem" min="0" placeholder="Ex: 150000" />
@@ -85,9 +85,9 @@
             </div>
 
             <!-- Campos Específicos para Borracharia -->
-            <div id="campos-borracharia-especificos" class="campos-grupo" style="display: none; margin-top: 15px; background-color: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #90caf9;">
-              <h4 style="color: #0d47a1; margin-bottom: 10px;"><i class="fas fa-tools"></i> Dados do Envio</h4>
-              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div id="campos-borracharia-especificos" class="campos-grupo section-borracharia" style="display: none;">
+              <h4><i class="fas fa-tools"></i> Dados do Envio</h4>
+              <div class="form-grid grid-registro">
                 <div>
                   <label>Tipo de Pneu (Lote) *</label>
                   <select name="tipo_pneu_borracharia" id="tipo_pneu_borracharia">
@@ -109,9 +109,9 @@
             </div>
 
             <!-- Campos específicos para rodízio -->
-            <div id="campos-rodizio" style="display: none; margin-top: 25px; background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7;">
-              <h4 style="color: #856404; margin-bottom: 15px;"><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h4>
-              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <div id="campos-rodizio" class="section-rodizio" style="display: none;">
+              <h4><i class="fas fa-sync-alt" style="margin-right: 8px;"></i>Configuração do Rodízio</h4>
+              <div class="form-grid grid-registro">
 
                 <label>Posição Atual do Pneu</label>
                 <select name="posicao_anterior" id="posicao_anterior">
@@ -144,8 +144,8 @@
             </div>
 
             <!-- Seleção de Pneu do Estoque -->
-            <div style="margin-top: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-              <h4 style="color: #495057; margin-bottom: 15px;"><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu do Estoque</h4>
+            <div class="section-selecao">
+              <h4><i class="fas fa-boxes" style="margin-right: 8px;"></i>Seleção do Pneu do Estoque</h4>
 
               <!-- Filtros para busca -->
               <table style="border: none; border-collapse: collapse; width: 100%; margin-bottom: 15px;">
@@ -189,7 +189,7 @@
                 </tr>
                 <tr>
                   <td style="border: none; padding: 5px;" colspan="2" style="text-align: right;">
-                    <button type="button" id="btn-filtrar-estoque" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <button type="button" id="btn-filtrar-estoque" class="btn-filtrar">
                       <i class="fas fa-search" style="margin-right: 5px;"></i>Filtrar
                     </button>
                   </td>
@@ -197,15 +197,15 @@
               </table>
 
               <!-- Grid de Pneus em Estoque -->
-              <div class="estoque-grid-wrapper" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px;">
-                <div id="estoque-grid-header" class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #28a745, #20c997); color: white; font-weight: 600; border-bottom: 2px solid #1e7e34; position: sticky; top: 0; z-index: 10;">
-                  <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"></div>
-                  <div style="flex: 1; min-width: 100px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
-                  <div style="flex: 1.5; min-width: 140px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
-                  <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
-                  <div style="flex: 0.5; min-width: 50px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
-                  <div style="flex: 0.8; min-width: 80px; padding: 10px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Qtd</div>
-                  <div style="flex: 1; min-width: 120px; padding: 10px 8px; text-align: center;"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
+              <div class="estoque-grid-wrapper estoque-wrapper">
+                <div id="estoque-grid-header" class="grid-header grid-header-sticky header-estoque">
+                  <div class="grid-cell-header" style="flex: 0.5; min-width: 50px; text-align: center;"></div>
+                  <div class="grid-cell-header" style="flex: 1; min-width: 100px; text-align: left;"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+                  <div class="grid-cell-header" style="flex: 1.5; min-width: 140px; text-align: left;"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+                  <div class="grid-cell-header" style="flex: 0.8; min-width: 80px; text-align: left;"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+                  <div class="grid-cell-header" style="flex: 0.5; min-width: 50px; text-align: center;"><i class="fas fa-recycle" style="margin-right: 5px;"></i>Vida</div>
+                  <div class="grid-cell-header" style="flex: 0.8; min-width: 80px; text-align: center;"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Qtd</div>
+                  <div class="grid-cell-header" style="flex: 1; min-width: 120px; text-align: center; border-right: none;"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
                 </div>
                 <div id="estoque-grid-body" class="grid-body" style="background: #f8f9fa;">
                   <!-- Pneus serão carregados dinamicamente -->
@@ -213,9 +213,9 @@
               </div>
 
               <!-- Pneu Selecionado -->
-              <div id="pneu-selecionado" style="background: #e9ecef; padding: 15px; border-radius: 6px; border: 1px solid #ced4da; display: none;">
-                <h5 style="color: #495057; margin-bottom: 10px;"><i class="fas fa-check-circle" style="margin-right: 8px;"></i>Pneu Selecionado</h5>
-                <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+              <div id="pneu-selecionado" class="box-pneu-selecionado" style="display: none;">
+                <h5><i class="fas fa-check-circle" style="margin-right: 8px;"></i>Pneu Selecionado</h5>
+                <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
                   <div><strong>Marca:</strong> <span id="selecionado-marca"></span></div>
                   <div><strong>Modelo:</strong> <span id="selecionado-modelo"></span></div>
                   <div><strong>Tipo:</strong> <span id="selecionado-tipo"></span></div>
@@ -233,7 +233,7 @@
                   <input type="number" name="quantidade" id="quantidade" min="1" value="1" style="width: 80px; padding: 4px;" />
                   
                   <!-- Botão para adicionar à lista (Borracharia) -->
-                  <button type="button" id="btn-add-lista-borracharia" style="display: none; margin-left: 10px; padding: 5px 10px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                  <button type="button" id="btn-add-lista-borracharia" class="btn-add-lista" style="display: none; margin-left: 10px;">
                     <i class="fas fa-plus"></i> Adicionar à Lista
                   </button>
                 </div>
@@ -266,30 +266,30 @@
           </div>
 
           <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-            <button type="submit" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registrar Saída</button>
-            <button type="button" onclick="limparFormulario()" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>Limpar</button>
+            <button type="submit" class="btn-registrar"><i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Registrar Saída</button>
+            <button type="button" onclick="limparFormulario()" class="btn-limpar"><i class="fas fa-times" style="margin-right: 8px;"></i>Limpar</button>
           </div>
         </form>
       </div>
 
       <!-- Histórico de Saídas -->
-      <div class="table-card" id="historico-card" style="background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; display: none;">
-        <div class="table-header" style="border-bottom: 2px solid #28a745; padding-bottom: 15px; margin-bottom: 20px;">
-          <h2 style="color: #28a745; margin: 0; font-size: 1.4rem;"><i class="fas fa-history" style="margin-right: 8px;"></i>Histórico de Saídas</h2>
+      <div class="table-card card-saida" id="historico-card" style="display: none;">
+        <div class="table-header header-section header-green">
+          <h2><i class="fas fa-history" style="margin-right: 8px;"></i>Histórico de Saídas</h2>
         </div>
 
         <div class="grid-wrapper" style="overflow-x: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
           <section class="grid-pneus" style="min-width: max-content; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;">
-            <div class="grid-header" style="display: flex; white-space: nowrap; background: linear-gradient(135deg, #dc3545, #c82333); color: white; font-weight: 600; border-bottom: 2px solid #bd2130;">
-              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-calendar" style="margin-right: 5px;"></i>Data</div>
-              <div style="flex: 1; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cogs" style="margin-right: 5px;"></i>Operação</div>
-              <div style="flex: 1; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-road" style="margin-right: 5px;"></i>Km</div>
-              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
-              <div style="flex: 1.2; min-width: 140px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
-              <div style="flex: 0.8; min-width: 100px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
-              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
-              <div style="flex: 1; min-width: 120px; padding: 15px 12px; text-align: left; border-right: 1px solid rgba(255,255,255,0.2);"><i class="fas fa-user" style="margin-right: 5px;"></i>Usuário</div>
-              <div style="flex: 0.8; min-width: 100px; padding: 15px 12px; text-align: center;"><i class="fas fa-cogs" style="margin-right: 5px;"></i>Ações</div>
+            <div class="grid-header header-historico-grid" style="display: flex; white-space: nowrap; font-weight: 600;">
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 120px; text-align: left;"><i class="fas fa-calendar" style="margin-right: 5px;"></i>Data</div>
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 100px; text-align: left;"><i class="fas fa-cogs" style="margin-right: 5px;"></i>Operação</div>
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 100px; text-align: left;"><i class="fas fa-road" style="margin-right: 5px;"></i>Km</div>
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 120px; text-align: left;"><i class="fas fa-tag" style="margin-right: 5px;"></i>Marca</div>
+              <div class="grid-cell-header-lg" style="flex: 1.2; min-width: 140px; text-align: left;"><i class="fas fa-cog" style="margin-right: 5px;"></i>Modelo</div>
+              <div class="grid-cell-header-lg" style="flex: 0.8; min-width: 100px; text-align: left;"><i class="fas fa-shapes" style="margin-right: 5px;"></i>Tipo</div>
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 120px; text-align: center;"><i class="fas fa-fire" style="margin-right: 5px;"></i>Marca Fogo</div>
+              <div class="grid-cell-header-lg" style="flex: 1; min-width: 120px; text-align: left;"><i class="fas fa-user" style="margin-right: 5px;"></i>Usuário</div>
+              <div class="grid-cell-header-lg" style="flex: 0.8; min-width: 100px; text-align: center; border-right: none;"><i class="fas fa-cogs" style="margin-right: 5px;"></i>Ações</div>
             </div>
             <div id="grid-historico-body" class="grid-body" style="background: #f8f9fa;"></div>
           </section>

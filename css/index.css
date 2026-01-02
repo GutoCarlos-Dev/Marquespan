@@ -39,3 +39,6 @@
 
 /*  टायर Estilos específicos da página de estoque de pneus */
 @import url("estoque-pneus.css");
+
+/* 📤 Estilos específicos da página de saídas de pneus */
+@import url("saidas-pneus.css");
