@@ -115,3 +115,38 @@
 }
 
 .form-alert a { color: #856404; font-weight: bold; text-decoration: underline; }
+
+/* Estilos para garantir acessibilidade mobile */
+@media (max-width: 768px) {
+    .grid-2-comodato {
+        display: block !important; /* Empilha as colunas (Formulário e Tabela) */
+    }
+    .grid-2-comodato > div {
+        width: 100% !important;
+        margin-bottom: 20px;
+    }
+    
+    .form-row-duplo, 
+    .form-row-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .painel-navegacao {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .painel-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 15px;
+    }
+
+    /* Aumenta a área de toque para facilitar o uso no celular */
+    input, select, button {
+        min-height: 45px;
+        font-size: 16px; /* Evita zoom automático em iPhones */
+    }
+}
