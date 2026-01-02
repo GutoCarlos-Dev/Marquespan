@@ -59,6 +59,15 @@
       </section>
     </div>
   </div>
+  <script>
+    // Função global para alternar o menu lateral no mobile
+    window.toggleSidebar = function() {
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) {
+        sidebar.classList.toggle('mobile-open');
+      }
+    };
+  </script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/leituras-bomba.js"></script>
 </body>
