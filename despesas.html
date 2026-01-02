@@ -8,6 +8,13 @@
   <link rel="stylesheet" href="css/despesas.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Estilo para feedback visual quando o botão estiver processando */
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -150,7 +157,7 @@
                   <tr>
                     <td colspan="2">
                       <div class="form-buttons">
-                        <button type="submit" id="btnSubmitDespesa">Cadastrar Despesa</button>
+                        <button type="submit" id="btnSubmitDespesa"><i class="fas fa-spinner fa-spin" style="display:none; margin-right: 8px;"></i>Cadastrar Despesa</button>
                         <button type="button" id="btnClearDespesaForm">Limpar</button>
                       </div>
                     </td>

@@ -138,6 +138,12 @@ const DespesasUI = {
     async handleFormSubmit(e) {
         e.preventDefault();
 
+        // Bloqueia o botão para evitar duplo clique
+        if (this.btnSubmit.disabled) return;
+        this.btnSubmit.disabled = true;
+        const spinner = this.btnSubmit.querySelector('.fa-spinner');
+        if (spinner) spinner.style.display = 'inline-block';
+
         // Pega o valor total calculado e converte de volta para número
         const valorTotalString = this.valorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
         const valorTotal = parseFloat(valorTotalString) || 0;
@@ -190,13 +196,18 @@ const DespesasUI = {
         } catch (err) {
             console.error('Erro ao salvar despesa:', err);
             alert(`❌ Erro ao salvar despesa: ${err.message}`);
+        } finally {
+            this.btnSubmit.disabled = false;
+            const spinner = this.btnSubmit.querySelector('.fa-spinner');
+            if (spinner) spinner.style.display = 'none';
         }
     },
 
     clearForm() {
         this.form.reset();
         this.editingIdInput.value = '';
-        this.btnSubmit.textContent = 'Cadastrar Despesa';
+        // Restaura o botão com o ícone de spinner oculto
+        this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin" style="display:none; margin-right: 8px;"></i>Cadastrar Despesa';
         this.valorTotalInput.value = ''; // Limpa o campo de valor total
         this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
         this.tipoQuartoSelect.disabled = true;
@@ -236,7 +247,7 @@ const DespesasUI = {
             await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto); // Correto
 
             this.calcularValorTotal(); // Recalcula o total ao carregar
-            this.btnSubmit.textContent = 'Atualizar Despesa';
+            this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin" style="display:none; margin-right: 8px;"></i>Atualizar Despesa';
             this.form.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
             console.error('Erro ao carregar despesa para edição:', err);
