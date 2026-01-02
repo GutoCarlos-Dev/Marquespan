@@ -48,6 +48,7 @@ async function carregarEstoque() {
                 codigo_marca_fogo,
                 status_pneu,
                 placa,
+                lancamento_id,
                 pneus (
                     marca,
                     modelo,
