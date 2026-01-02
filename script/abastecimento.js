@@ -81,6 +81,17 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
         },
 
+        getUsuarioLogado() {
+            try {
+                const usuarioLogado = localStorage.getItem('usuarioLogado');
+                if (usuarioLogado) {
+                    const usuario = JSON.parse(usuarioLogado);
+                    return usuario.nome || 'Desconhecido';
+                }
+            } catch (e) { console.error(e); }
+            return 'Desconhecido';
+        },
+
         calculateTotal() {
             const qtd = parseFloat(this.qtdTotalNotaInput.value) || 0;
             const vlr = parseFloat(this.vlrLitroInput.value) || 0;
@@ -304,7 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     tanque_id: parseInt(tanqueId),
                     qtd_litros: qtd,
                     valor_litro: vlr,
-                    valor_total: qtd * vlr
+                    valor_total: qtd * vlr,
+                    usuario: this.getUsuarioLogado()
                 });
             }
 
@@ -356,9 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${reg.qtd_litros.toLocaleString('pt-BR')} L</td>
                     <td>${vlrLitroFormatado}</td>
                     <td>${totalFormatado}</td>
+                    <td>${reg.usuario || '-'}</td>
                     <td class="actions-cell">
-                        <button class="btn-edit" data-id="${reg.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-delete" data-id="${reg.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        <button class="btn-action btn-edit" data-id="${reg.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="btn-action btn-delete" data-id="${reg.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 this.tableBody.appendChild(tr);
@@ -447,7 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
                 motorista_nome: this.saidaMotorista.value,
                 km_atual: parseFloat(this.saidaKm.value),
-                qtd_litros: parseFloat(this.saidaLitros.value)
+                qtd_litros: parseFloat(this.saidaLitros.value),
+                usuario: this.getUsuarioLogado()
             };
 
             if (this.saidaEditingId.value) {
@@ -497,9 +511,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${saida.motorista_nome || ''}</td>
                         <td>${saida.qtd_litros.toLocaleString('pt-BR')} L</td>
                         <td>${saida.km_atual || ''}</td>
+                        <td>${saida.usuario || '-'}</td>
                         <td class="actions-cell">
-                            <button class="btn-edit" data-id="${saida.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                            <button class="btn-delete" data-id="${saida.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                            <button class="btn-action btn-edit" data-id="${saida.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                            <button class="btn-action btn-delete" data-id="${saida.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                 `).join('');

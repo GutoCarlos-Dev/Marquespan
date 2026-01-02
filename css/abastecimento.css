@@ -64,6 +64,12 @@
     padding: 5px;
 }
 
+/* Container do botão "Adicionar Tanque" para alinhamento */
+.distribuicao-actions {
+    text-align: right; /* Alinha o botão à direita */
+    margin-top: 10px;
+}
+
 /* Estilos Mobile para Saída de Combustível */
 .form-mobile {
     display: flex;
@@ -115,6 +121,60 @@
 }
 
 .form-alert a { color: #856404; font-weight: bold; text-decoration: underline; }
+
+/* Estilos para Botões de Ação no Grid (Padrão do Sistema) */
+.btn-action {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #6c757d; /* cinza */
+    padding: 5px 8px;
+    margin: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-action:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.btn-action.btn-edit {
+    color: #007bff; /* azul */
+}
+.btn-action.btn-edit:hover {
+    background-color: #e7f1ff;
+    border-color: #b8d6fb;
+}
+
+.btn-action.btn-delete {
+    color: #dc3545; /* vermelho */
+}
+.btn-action.btn-delete:hover {
+    background-color: #fbebed;
+    border-color: #f5c6cb;
+}
+
+/* Estilo para o botão "Adicionar Tanque" (Padrão Secundário Outline) */
+.btn-secondary-outline {
+    background-color: transparent;
+    border: 1px solid #6c757d; /* Borda cinza */
+    color: #6c757d; /* Texto cinza */
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary-outline i {
+    margin-right: 5px;
+}
+
+.btn-secondary-outline:hover {
+    background-color: #6c757d; /* Fundo cinza no hover */
+    color: #fff; /* Texto branco no hover */
+}
 
 /* Estilos para garantir acessibilidade mobile */
 @media (max-width: 768px) {
