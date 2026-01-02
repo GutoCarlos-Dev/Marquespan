@@ -47,13 +47,13 @@ async function carregarEstoque() {
                 id,
                 codigo_marca_fogo,
                 status_pneu,
-                placa,
                 lancamento_id,
                 pneus (
                     marca,
                     modelo,
                     tipo,
-                    vida
+                    vida,
+                    placa
                 )
             `)
             .neq('status_pneu', 'DESCARTADO') // Não mostrar pneus descartados
@@ -136,13 +136,13 @@ function renderizarTabelas(listaPneus) {
             countUtilizada++;
             const row = document.createElement('tr');
             
-            let localizacao = item.placa || 'Sem Placa';
+            let localizacao = item.pneus?.placa || 'Sem Placa';
             let badgeStyle = 'background:#007bff; color:white;';
             
-            if (item.status_pneu === 'EM_BORRACHARIA' || item.placa === 'BORRACHA') {
+            if (item.status_pneu === 'EM_BORRACHARIA' || item.pneus?.placa === 'BORRACHA') {
                 localizacao = 'EM BORRACHARIA';
                 badgeStyle = 'background:#ffc107; color:black;';
-            } else if (!item.placa) {
+            } else if (!item.pneus?.placa) {
                 localizacao = item.status_pneu; 
             }
 
