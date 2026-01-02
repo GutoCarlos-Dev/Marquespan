@@ -1,3 +1,9 @@
+/* Ajuste do container do formulário para centralizar e limitar largura */
+#filtro-despesas-form {
+    max-width: 850px; /* Limita a largura para não ficar esticado */
+    margin: 0 auto;   /* Centraliza horizontalmente */
+}
+
 .data-grid th {
     cursor: pointer;
 }
@@ -6,7 +12,7 @@
 .filter-layout-table {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0 15px; /* Espaçamento vertical entre linhas */
+    border-spacing: 0 10px; /* Espaçamento vertical reduzido */
 }
 
 .filter-layout-table td {
@@ -32,8 +38,8 @@
 .form-group input[type="number"],
 .form-group select {
     width: 100%;
-    padding: 10px 12px;
-    font-size: 1rem;
+    padding: 8px 10px; /* Padding reduzido para visual mais compacto */
+    font-size: 0.95rem;
     line-height: 1.5;
     color: #495057;
     background-color: #fff;
@@ -67,9 +73,11 @@
 
 /* Botão de busca */
 .form-actions .btn {
-    width: 100%;
-    padding: 12px;
-    font-size: 1.1rem;
+    width: 50%; /* Botão menor */
+    display: block;
+    margin: 10px auto 0; /* Centraliza o botão */
+    padding: 10px;
+    font-size: 1rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
