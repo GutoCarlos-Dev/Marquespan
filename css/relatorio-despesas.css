@@ -1,134 +1,108 @@
-/* Estilo para centralizar e limitar a largura do formulário de filtro */
-#card-filtro-despesas {
-    max-width: 600px;       /* Define a largura máxima igual ao de rotas */
-    margin: 0 auto 20px auto; /* Centraliza horizontalmente e mantém margem inferior */
+.data-grid th {
+    cursor: pointer;
 }
 
-/* Estilos para uma tabela de dados mais profissional */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 0.9rem;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-.card-header h2 {
-    margin: 0;
-}
-.report-actions {
-    display: flex;
-    gap: 10px;
-}
-
-
-.data-table thead tr {
-    background-color: #015201; /* Verde mais escuro para o cabeçalho */
-    color: #ffffff;
-    text-align: left;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.data-table th, .data-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #dddddd;
-}
-
-/* Melhorias de alinhamento e organização do Grid */
-.data-table th:nth-child(1), .data-table td:nth-child(1) { text-align: center; width: 100px; } /* Data */
-.data-table th:nth-child(2), .data-table td:nth-child(2) { text-align: center; width: 80px; } /* Rota */
-.data-table th:nth-child(4), .data-table td:nth-child(4) { text-align: center; width: 80px; } /* Qtd Diárias */
-.data-table th:nth-child(5), .data-table td:nth-child(5), /* Valor Diária */
-.data-table th:nth-child(6), .data-table td:nth-child(6), /* Valor Energia */
-.data-table th:nth-child(7), .data-table td:nth-child(7) { /* Valor Total */
-    text-align: right;
-    white-space: nowrap;
-}
-
-.data-table tbody tr {
-    background-color: #ffffff;
-    transition: background-color 0.2s ease;
-}
-
-.data-table tbody tr:nth-of-type(even) {
-    background-color: #f3f3f3;
-}
-
-.data-table tbody tr:hover {
-    background-color: #e8f4fd; /* Um azul claro no hover */
-}
-
-.data-table tbody td {
-    color: #333;
-}
-
-.data-table tfoot tr {
-    background-color: #e9ecef;
-    font-weight: bold;
-    color: #343a40;
-}
-
-.data-table tfoot td {
-    padding: 15px;
-    font-size: 1.1rem;
-    white-space: nowrap; /* Evita quebra de linha no Total Geral ao exportar */
-}
-
-/* Estilos para o grid de gráficos */
-.charts-grid {
-    display: flex;
-    flex-wrap: wrap; /* Permite que os gráficos quebrem para a linha de baixo em telas pequenas */
-    gap: 2rem; /* Espaçamento entre os gráficos */
-    justify-content: center; /* Centraliza os gráficos no container */
-}
-
-.chart-card {
-    flex: 1; /* Permite que os cards cresçam */
-    min-width: 300px; /* Largura mínima */
-    max-width: 450px; /* Largura máxima para não ficarem muito grandes */
-    padding: 1rem;
-}
-
-/* Estilos para a tabela de filtros */
+/* Estilização profissional do formulário mantendo layout de tabela */
 .filter-layout-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0 15px; /* Espaçamento vertical entre linhas */
 }
 
 .filter-layout-table td {
-    width: 50%;
-    vertical-align: top;
-    padding: 8px;
+    padding: 0 10px;
+    vertical-align: bottom; /* Alinha os campos pela base */
 }
 
-.filter-layout-table .form-group {
+.form-group {
+    margin-bottom: 0; /* Remove margem inferior padrão pois a tabela já espaça */
     display: flex;
     flex-direction: column;
 }
 
-.filter-layout-table .form-group input,
-.filter-layout-table .form-group select {
+.form-group label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.form-group input[type="date"],
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
     width: 100%;
-    box-sizing: border-box; /* Garante que padding não afete a largura total */
+    padding: 10px 12px;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-sizing: border-box;
 }
 
-.filter-layout-table .form-actions {
-    padding-top: 10px;
+.form-group input:hover,
+.form-group select:hover {
+    border-color: #b3b3b3;
 }
 
-fieldset legend {
-    font-size: 1.5rem;
-    font-weight: bold;
-    padding: 0 10px;
+.form-group input:focus,
+.form-group select:focus {
+    color: #495057;
+    background-color: #fff;
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Estilo específico para o select múltiplo de rotas */
+#rotas {
+    height: auto;
+    min-height: 120px;
+    background-image: none;
+}
+
+/* Botão de busca */
+.form-actions .btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    border: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.form-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    background: linear-gradient(135deg, #34ce57 0%, #28a745 100%);
+}
+
+.form-actions .btn:active {
+    transform: translateY(0);
+}
+
+/* Container com scroll para a tabela */
+.table-scroll-container {
+    max-height: 600px; /* Altura máxima antes de rolar */
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+.table-scroll-container thead th {
+    position: sticky;
+    top: 0;
+    background-color: #e9ecef;
+    color: #155724; /* Verde escuro */
+    z-index: 1;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
