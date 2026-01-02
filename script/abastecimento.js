@@ -125,130 +125,129 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async loadEstoqueAtual() {
-             if (!this.tbodyEstoque) return;
-             this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
- 
-             try {
-                 // 1. Buscar todos os tanques
-                 const { data: tanques, error: tanquesError } = await supabaseClient
-                     .from('tanques')
-                     .select('id, nome, capacidade, tipo_combustivel');
-                 if (tanquesError) throw tanquesError;
- 
-                 // 2. Buscar todas as entradas (abastecimentos)
-                 const { data: entradas, error: entradasError } = await supabaseClient
-                     .from('abastecimentos')
-                     .select('tanque_id, qtd_litros');
-                 if (entradasError) throw entradasError;
- 
-                 // 3. Buscar todas as saídas
-                 const { data: saidas, error: saidasError } = await supabaseClient
-                     .from('saidas_combustivel')
-                     .select('qtd_litros, bicos(bombas(tanque_id))');
-                 if (saidasError) throw saidasError;
- 
-                 // 4. Calcular o estoque atual
-                 const estoqueMap = new Map();
-                 tanques.forEach(t => {
-                     estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
-                 });
-                 entradas.forEach(e => {
-                     if (estoqueMap.has(e.tanque_id)) {
-                         estoqueMap.get(e.tanque_id).estoque_atual += e.qtd_litros;
-                     }
-                 });
-                 saidas.forEach(s => {
-                     const tanqueId = s.bicos?.bombas?.tanque_id;
-                     if (tanqueId && estoqueMap.has(tanqueId)) {
-                         estoqueMap.get(tanqueId).estoque_atual -= s.qtd_litros;
-                     }
-                 });
-                 const estoqueCalculado = Array.from(estoqueMap.values());
- 
- 
-                 // 5. Renderizar a tabela
-                 this.tbodyEstoque.innerHTML = '';
-                 if (estoqueCalculado.length === 0) {
-                     this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum tanque cadastrado.</td></tr>';
-                     return;
-                 }
- 
-                 estoqueCalculado.forEach(tanque => {
-                     const tr = document.createElement('tr');
-                     // Armazena o estoque calculado em um atributo de dados para comparação posterior
-                     tr.dataset.calculatedStock = tanque.estoque_atual;
-                     tr.innerHTML = `
-                         <td>${tanque.nome}</td>
-                         <td>${tanque.tipo_combustivel}</td>
-                         <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
-                         <td>
-                             <input type="number" class="input-estoque-atual" data-id="${tanque.id}" 
-                                    value="${tanque.estoque_atual.toFixed(2)}" step="0.01" min="0" 
-                                    style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
-                         </td>
-                     `;
-                     this.tbodyEstoque.appendChild(tr);
-                 });
- 
-             } catch (error) {
-                 console.error('Erro ao carregar estoque:', error);
-                 this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
-             }
+            if (!this.tbodyEstoque) return;
+            this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+
+            try {
+                // 1. Buscar todos os tanques
+                const { data: tanques, error: tanquesError } = await supabaseClient
+                    .from('tanques')
+                    .select('id, nome, capacidade, tipo_combustivel');
+                if (tanquesError) throw tanquesError;
+
+                // 2. Buscar todas as entradas (abastecimentos)
+                const { data: entradas, error: entradasError } = await supabaseClient
+                    .from('abastecimentos')
+                    .select('tanque_id, qtd_litros');
+                if (entradasError) throw entradasError;
+
+                // 3. Buscar todas as saídas
+                const { data: saidas, error: saidasError } = await supabaseClient
+                    .from('saidas_combustivel')
+                    .select('qtd_litros, bicos(bombas(tanque_id))');
+                if (saidasError) throw saidasError;
+
+                // 4. Calcular o estoque atual
+                const estoqueMap = new Map();
+                tanques.forEach(t => {
+                    estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
+                });
+                entradas.forEach(e => {
+                    if (estoqueMap.has(e.tanque_id)) {
+                        estoqueMap.get(e.tanque_id).estoque_atual += e.qtd_litros;
+                    }
+                });
+                saidas.forEach(s => {
+                    const tanqueId = s.bicos?.bombas?.tanque_id;
+                    if (tanqueId && estoqueMap.has(tanqueId)) {
+                        estoqueMap.get(tanqueId).estoque_atual -= s.qtd_litros;
+                    }
+                });
+                const estoqueCalculado = Array.from(estoqueMap.values());
+
+                // 5. Renderizar a tabela
+                this.tbodyEstoque.innerHTML = '';
+                if (estoqueCalculado.length === 0) {
+                    this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum tanque cadastrado.</td></tr>';
+                    return;
+                }
+
+                estoqueCalculado.forEach(tanque => {
+                    const tr = document.createElement('tr');
+                    // Armazena o estoque calculado em um atributo de dados para comparação posterior
+                    tr.dataset.calculatedStock = tanque.estoque_atual;
+                    tr.innerHTML = `
+                        <td>${tanque.nome}</td>
+                        <td>${tanque.tipo_combustivel}</td>
+                        <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
+                        <td>
+                            <input type="number" class="input-estoque-atual" data-id="${tanque.id}" 
+                                   value="${tanque.estoque_atual.toFixed(2)}" step="0.01" min="0" 
+                                   style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                        </td>
+                    `;
+                    this.tbodyEstoque.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar estoque:', error);
+                this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            }
         },
 
         async handleSalvarEstoque() {
-             const dataAjuste = new Date().toISOString().slice(0, 10);
-             const usuario = this.getUsuarioLogado();
-             const ajustes = [];
- 
-             this.tbodyEstoque.querySelectorAll('tr').forEach(tr => {
-                 const input = tr.querySelector('.input-estoque-atual');
-                 if (!input) return;
- 
-                 const tanqueId = input.dataset.id;
-                 const estoqueCalculado = parseFloat(tr.dataset.calculatedStock);
-                 const novoEstoque = parseFloat(input.value);
- 
-                 if (isNaN(estoqueCalculado) || isNaN(novoEstoque)) return;
- 
-                 const delta = novoEstoque - estoqueCalculado;
- 
-                 // Cria uma transação apenas se houver diferença
-                 if (Math.abs(delta) > 0.001) {
-                     ajustes.push({
-                         data: dataAjuste,
-                         numero_nota: 'AJUSTE DE ESTOQUE',
-                         tanque_id: parseInt(tanqueId),
-                         qtd_litros: delta, // Pode ser positivo ou negativo
-                         valor_litro: 0,
-                         valor_total: 0,
-                         usuario: usuario
-                     });
-                 }
-             });
- 
-             if (ajustes.length === 0) {
-                 alert('Nenhum ajuste de estoque a ser salvo.');
-                 return;
-             }
- 
-             try {
-                 this.btnSalvarEstoque.disabled = true;
-                 this.btnSalvarEstoque.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
- 
-                 const { error } = await supabaseClient.from('abastecimentos').insert(ajustes);
-                 if (error) throw error;
- 
-                 alert('Ajuste(s) de estoque salvo(s) com sucesso!');
-                 await this.loadEstoqueAtual(); // Recarrega para mostrar os novos valores calculados
- 
-             } catch (error) {
-                 console.error('Erro ao salvar ajuste de estoque:', error);
-                 alert('Erro ao salvar ajuste: ' + error.message);
-             } finally {
-                 this.btnSalvarEstoque.disabled = false;
-                 this.btnSalvarEstoque.innerHTML = '<i class="fas fa-save"></i> Atualizar Estoque';
-             }
+            const dataAjuste = new Date().toISOString().slice(0, 10);
+            const usuario = this.getUsuarioLogado();
+            const ajustes = [];
+
+            this.tbodyEstoque.querySelectorAll('tr').forEach(tr => {
+                const input = tr.querySelector('.input-estoque-atual');
+                if (!input) return;
+
+                const tanqueId = input.dataset.id;
+                const estoqueCalculado = parseFloat(tr.dataset.calculatedStock);
+                const novoEstoque = parseFloat(input.value);
+
+                if (isNaN(estoqueCalculado) || isNaN(novoEstoque)) return;
+
+                const delta = novoEstoque - estoqueCalculado;
+
+                // Cria uma transação apenas se houver diferença
+                if (Math.abs(delta) > 0.001) {
+                    ajustes.push({
+                        data: dataAjuste,
+                        numero_nota: 'AJUSTE DE ESTOQUE',
+                        tanque_id: parseInt(tanqueId),
+                        qtd_litros: delta, // Pode ser positivo ou negativo
+                        valor_litro: 0,
+                        valor_total: 0,
+                        usuario: usuario
+                    });
+                }
+            });
+
+            if (ajustes.length === 0) {
+                alert('Nenhum ajuste de estoque a ser salvo.');
+                return;
+            }
+
+            try {
+                this.btnSalvarEstoque.disabled = true;
+                this.btnSalvarEstoque.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+                const { error } = await supabaseClient.from('abastecimentos').insert(ajustes);
+                if (error) throw error;
+
+                alert('Ajuste(s) de estoque salvo(s) com sucesso!');
+                await this.loadEstoqueAtual(); // Recarrega para mostrar os novos valores calculados
+
+            } catch (error) {
+                console.error('Erro ao salvar ajuste de estoque:', error);
+                alert('Erro ao salvar ajuste: ' + error.message);
+            } finally {
+                this.btnSalvarEstoque.disabled = false;
+                this.btnSalvarEstoque.innerHTML = '<i class="fas fa-save"></i> Atualizar Estoque';
+            }
         },
 
         async initSaida() {
