@@ -1,5 +1,6 @@
 /* 🔘 Botões de ação reutilizáveis */
-.btn-acao {
+.btn-acao,
+.btn-edit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -18,12 +19,14 @@
 }
 
 /* ✏️ Botão Editar */
-.btn-acao.editar {
+.btn-acao.editar,
+.btn-edit {
   background-color: #007bff;
   color: white;
 }
 
-.btn-acao.editar:hover {
+.btn-acao.editar:hover,
+.btn-edit:hover {
   background-color: #0056b3;
   transform: translateY(-1px);
 }
@@ -85,7 +88,7 @@
 
 /* 🗑️ Botão de exclusão individual */
 .btn-excluir {
-  background-color: #e74c3c;
+  background-color: #dc3545;
   color: white;
   margin-left: 10px;
   border: none;
@@ -93,9 +96,10 @@
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.2s ease;
 }
 
 .btn-excluir:hover {
-  background-color: #c0392b;
+  background-color: #c82333;
+  transform: translateY(-1px);
 }

@@ -221,3 +221,34 @@
 }
 
 /* O restante dos estilos (tabela, busca, etc.) são herdados do index.css */
+
+/* === Estilos para Botões da Grid de Hotéis === */
+
+/* Garante formatação padrão para qualquer botão na tabela */
+#hotelTableBody button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 5px;
+}
+
+/* Botão Gerenciar Quartos (Cyan/Info) */
+.btn-quartos,
+#hotelTableBody button[title="Gerenciar Quartos"] {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-quartos:hover,
+#hotelTableBody button[title="Gerenciar Quartos"]:hover {
+    background-color: #138496;
+    transform: translateY(-1px);
+}
