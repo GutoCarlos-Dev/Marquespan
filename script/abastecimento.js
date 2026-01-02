@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
+            if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
         },
 
         getUsuarioLogado() {
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
                         <td>
                             <input type="text" class="input-estoque-atual" data-id="${tanque.id}" 
+                                   data-capacidade="${tanque.capacidade || 0}"
                                    value="${tanque.estoque_atual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}" 
                                    oninput="this.value = this.value.replace(/[^0-9,.]/g, '')"
                                    style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
@@ -196,12 +198,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        handleEstoqueChange(e) {
+            if (!e.target.classList.contains('input-estoque-atual')) return;
+            const input = e.target;
+            const rawValue = input.value;
+            const normalizedValue = parseFloat(rawValue.replace(/\./g, '').replace(',', '.'));
+            const capacidade = parseFloat(input.dataset.capacidade);
+
+            if (!isNaN(normalizedValue) && !isNaN(capacidade) && normalizedValue > capacidade) {
+                alert(`O valor informado excede a capacidade máxima do tanque (${capacidade.toLocaleString('pt-BR')} L).`);
+                input.value = capacidade.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        },
+
         async handleSalvarEstoque() {
             const dataAjuste = new Date().toISOString().slice(0, 10);
             const usuario = this.getUsuarioLogado();
             const ajustes = [];
+            let erroCapacidade = false;
 
             this.tbodyEstoque.querySelectorAll('tr').forEach(tr => {
+                if (erroCapacidade) return;
                 const input = tr.querySelector('.input-estoque-atual');
                 if (!input) return;
 
@@ -212,8 +229,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rawValue = input.value;
                 const normalizedValue = rawValue.replace(/\./g, '').replace(',', '.');
                 const novoEstoque = parseFloat(normalizedValue);
+                const capacidade = parseFloat(input.dataset.capacidade);
 
                 if (isNaN(estoqueCalculado) || isNaN(novoEstoque)) return;
+
+                if (!isNaN(capacidade) && novoEstoque > capacidade) {
+                    alert(`O valor informado para o tanque excede a capacidade máxima (${capacidade.toLocaleString('pt-BR')} L).`);
+                    erroCapacidade = true;
+                    return;
+                }
 
                 const delta = novoEstoque - estoqueCalculado;
 
@@ -230,6 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             });
+
+            if (erroCapacidade) return;
 
             if (ajustes.length === 0) {
                 alert('Nenhum ajuste de estoque a ser salvo.');
