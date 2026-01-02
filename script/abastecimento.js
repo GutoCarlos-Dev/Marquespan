@@ -181,8 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${tanque.tipo_combustivel}</td>
                         <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
                         <td>
-                            <input type="number" class="input-estoque-atual" data-id="${tanque.id}" 
-                                   value="${tanque.estoque_atual.toFixed(2)}" step="0.01" min="0" 
+                            <input type="text" class="input-estoque-atual" data-id="${tanque.id}" 
+                                   value="${tanque.estoque_atual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}" 
+                                   oninput="this.value = this.value.replace(/[^0-9,.]/g, '')"
                                    style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
                         </td>
                     `;
@@ -206,7 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tanqueId = input.dataset.id;
                 const estoqueCalculado = parseFloat(tr.dataset.calculatedStock);
-                const novoEstoque = parseFloat(input.value);
+                
+                // Converte o valor do input (formato PT-BR) para float
+                const rawValue = input.value;
+                const normalizedValue = rawValue.replace(/\./g, '').replace(',', '.');
+                const novoEstoque = parseFloat(normalizedValue);
 
                 if (isNaN(estoqueCalculado) || isNaN(novoEstoque)) return;
 
