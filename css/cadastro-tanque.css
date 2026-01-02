@@ -10,19 +10,23 @@
 }
 
 /* Estilos para o botão Editar (Azul) */
-.btn-action.btn-edit {
+.btn-action.btn-edit,
+.btn-acao.editar {
     background-color: #007bff;
     color: white;
 }
-.btn-action.btn-edit:hover {
+.btn-action.btn-edit:hover,
+.btn-acao.editar:hover {
     background-color: #0056b3;
 }
 
 /* Estilos para o botão Excluir (Vermelho) */
-.btn-action.btn-delete {
+.btn-action.btn-delete,
+.btn-acao.excluir {
     background-color: #dc3545;
     color: white;
 }
-.btn-action.btn-delete:hover {
+.btn-action.btn-delete:hover,
+.btn-acao.excluir:hover {
     background-color: #c82333;
 }
