@@ -107,6 +107,21 @@
         .form-actions .btn:active {
             transform: translateY(0);
         }
+
+        /* Container com scroll para a tabela */
+        .table-scroll-wrapper {
+            max-height: 600px; /* Altura máxima antes de rolar */
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .table-scroll-wrapper thead th {
+            position: sticky;
+            top: 0;
+            background-color: #e9ecef; /* Garante que o cabeçalho cubra o conteúdo ao rolar */
+            z-index: 1;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
     </style>
   </head>
 <body>
@@ -186,6 +201,7 @@
                     </div>
                 </div>
                 <h3>Resultados da Busca </h3>
+                <div class="table-scroll-wrapper">
                 <table class="data-table">
                     <thead>
                         <!-- Cabecalho da tabela -->
@@ -208,6 +224,7 @@
                         <!-- O total geral será inserido aqui -->
                     </tfoot>
                 </table>
+                </div>
             </div>
 
             <!-- Seção de Gráficos -->
