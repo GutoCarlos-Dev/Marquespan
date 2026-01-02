@@ -20,6 +20,8 @@ const DespesasUI = {
         this.valorDiariaInput = document.getElementById('despesaValorDiaria');
         this.valorEnergiaInput = document.getElementById('despesaValorEnergia');
         this.valorTotalInput = document.getElementById('despesaValorTotal');
+        this.checkinInput = document.getElementById('despesaCheckin');
+        this.checkoutInput = document.getElementById('despesaCheckout');
         this.formaPagamentoSelect = document.getElementById('despesaFormaPagamento');
 
         // Tabela e busca
@@ -51,9 +53,13 @@ const DespesasUI = {
         this.searchInput.addEventListener('input', () => this.renderGrid());
 
         // ** Adiciona os listeners para o cálculo automático do valor total **
-        this.qtdDiariasInput.addEventListener('input', () => this.calcularValorTotal());
+        this.qtdDiariasInput.addEventListener('input', () => {
+            this.calcularValorTotal();
+            this.calcularCheckout();
+        });
         this.valorDiariaInput.addEventListener('input', () => this.calcularValorTotal());
         this.valorEnergiaInput.addEventListener('input', () => this.calcularValorTotal());
+        this.checkinInput.addEventListener('input', () => this.calcularCheckout());
 
         // Listener para o novo botão de adicionar hotel
         this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
@@ -105,6 +111,28 @@ const DespesasUI = {
             style: 'currency',
             currency: 'BRL'
         });
+    },
+
+    /**
+     * Calcula a data de checkout com base na data de check-in e na quantidade de diárias.
+     */
+    calcularCheckout() {
+        const checkinDate = this.checkinInput.value;
+        const diarias = parseInt(this.qtdDiariasInput.value);
+
+        // Verifica se a data de check-in é válida e se a quantidade de diárias é um número positivo
+        if (checkinDate && !isNaN(diarias) && diarias > 0) {
+            // Cria um objeto Date a partir da string 'YYYY-MM-DD' para evitar problemas de fuso horário
+            const data = new Date(checkinDate + 'T00:00:00');
+            
+            // Adiciona o número de diárias à data de check-in
+            data.setDate(data.getDate() + diarias);
+            
+            // Formata a data de volta para 'YYYY-MM-DD' e a define no campo de checkout
+            this.checkoutInput.value = data.toISOString().split('T')[0];
+        } else {
+            this.checkoutInput.value = ''; // Limpa o campo se os dados forem inválidos
+        }
     },
 
     async handleFormSubmit(e) {
