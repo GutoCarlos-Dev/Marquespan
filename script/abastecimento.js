@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
             this.renderSaidasTable();
+            this.loadEstoqueAtual(); // Carrega a aba de estoque
             
             // Define a data de hoje como padrão
             this.dataInput.valueAsDate = new Date();
@@ -61,6 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidaLitros = document.getElementById('saidaLitros');
             this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
             this.tableBodySaidas = document.getElementById('tableBodySaidas');
+
+            // Elementos da Aba Estoque
+            this.tbodyEstoque = document.getElementById('tbodyEstoqueAtual');
+            this.btnSalvarEstoque = document.getElementById('btnSalvarEstoque');
         },
 
         bind() {
@@ -79,6 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.formSaida.addEventListener('submit', this.handleSaidaSubmit.bind(this));
             this.saidaBico.addEventListener('change', this.verificarLeituraBomba.bind(this));
             this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
+
+            if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
         },
 
         getUsuarioLogado() {
@@ -114,6 +121,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
                 console.error('Erro ao carregar tanques:', error);
+            }
+        },
+
+        async loadEstoqueAtual() {
+            if (!this.tbodyEstoque) return;
+            this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+
+            try {
+                // Busca tanques incluindo a coluna estoque_atual e capacidade
+                const { data, error } = await supabaseClient
+                    .from('tanques')
+                    .select('id, nome, tipo_combustivel, capacidade, estoque_atual')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.tbodyEstoque.innerHTML = '';
+                if (!data || data.length === 0) {
+                    this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum tanque cadastrado.</td></tr>';
+                    return;
+                }
+
+                data.forEach(tanque => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${tanque.nome}</td>
+                        <td>${tanque.tipo_combustivel}</td>
+                        <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
+                        <td>
+                            <input type="number" class="input-estoque-atual" data-id="${tanque.id}" 
+                                   value="${tanque.estoque_atual || 0}" step="0.01" min="0" 
+                                   style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                        </td>
+                    `;
+                    this.tbodyEstoque.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar estoque:', error);
+                this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            }
+        },
+
+        async handleSalvarEstoque() {
+            const inputs = this.tbodyEstoque.querySelectorAll('.input-estoque-atual');
+            const updates = [];
+
+            inputs.forEach(input => {
+                const id = input.dataset.id;
+                const novoEstoque = parseFloat(input.value);
+                if (id && !isNaN(novoEstoque)) {
+                    updates.push(supabaseClient.from('tanques').update({ estoque_atual: novoEstoque }).eq('id', id));
+                }
+            });
+
+            try {
+                this.btnSalvarEstoque.disabled = true;
+                this.btnSalvarEstoque.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+                await Promise.all(updates);
+
+                alert('Estoque atualizado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao atualizar estoque:', error);
+                alert('Erro ao atualizar estoque.');
+            } finally {
+                this.btnSalvarEstoque.disabled = false;
+                this.btnSalvarEstoque.innerHTML = '<i class="fas fa-save"></i> Atualizar Estoque';
             }
         },
 

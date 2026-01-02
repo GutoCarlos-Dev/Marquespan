@@ -19,7 +19,10 @@
 
       <!-- Navegação por abas -->
       <div class="painel-navegacao" role="tablist" id="menu-abastecimento">
-        <button class="painel-btn active" data-secao="sectionEntrada" aria-selected="true">
+        <button class="painel-btn active" data-secao="sectionEstoque" aria-selected="true">
+          <i class="fas fa-tachometer-alt"></i> Estoque Atual
+        </button>
+        <button class="painel-btn" data-secao="sectionEntrada" aria-selected="false">
           <i class="fas fa-arrow-down"></i> Entrada de Combustível
         </button>
         <button class="painel-btn" data-secao="sectionSaida" aria-selected="false">
@@ -27,8 +30,37 @@
         </button>
       </div>
 
+      <!-- SEÇÃO: ESTOQUE ATUAL (PRIMEIRA ABA) -->
+      <section id="sectionEstoque" class="section">
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-ruler-vertical"></i> Atualização de Estoque</h2>
+          </div>
+          <p style="color: #666; margin-bottom: 15px;">Informe a litragem física atual dos tanques antes de realizar movimentações, caso necessário (Ajuste de Inventário).</p>
+          
+          <div class="table-responsive">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Tanque</th>
+                  <th>Combustível</th>
+                  <th>Capacidade Máx.</th>
+                  <th>Estoque Atual (Litros)</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyEstoqueAtual">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="form-actions" style="margin-top: 20px; justify-content: flex-end; display: flex;">
+            <button type="button" id="btnSalvarEstoque" class="btn-primary"><i class="fas fa-save"></i> Atualizar Estoque</button>
+          </div>
+        </div>
+      </section>
+
       <!-- SEÇÃO: ENTRADA -->
-      <section id="sectionEntrada" class="section">
+      <section id="sectionEntrada" class="section hidden">
         <div class="card card-header">
           <h2>Novo Abastecimento</h2>
         </div>
