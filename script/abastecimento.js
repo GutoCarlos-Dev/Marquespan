@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadEstoqueAtual(); // Carrega a aba de estoque
             
             // Define a data de hoje como padrão
-            this.dataInput.valueAsDate = new Date();
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            this.dataInput.value = now.toISOString().slice(0, 16);
 
             // Validação: Verifica se o estoque do dia já foi lançado para liberar as abas
             this.checkEstoqueLancado();
@@ -576,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             registros.forEach(reg => {
                 const tr = document.createElement('tr');
-                const dataFormatada = new Date(reg.data + 'T00:00:00').toLocaleDateString('pt-BR');
+                const dataFormatada = new Date(reg.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
                 const totalFormatado = (reg.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 const vlrLitroFormatado = (reg.valor_litro || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 const tanqueNome = reg.tanques ? reg.tanques.nome : 'Tanque excluído';
@@ -628,7 +630,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const qtdTotal = todosRegistrosDaNota.reduce((sum, reg) => sum + reg.qtd_litros, 0);
 
                 this.editingIdInput.value = primeiroRegistro.numero_nota; // Armazena a nota fiscal para a lógica de update
-                this.dataInput.value = primeiroRegistro.data;
+                // Formata a data para o input datetime-local
+                const date = new Date(primeiroRegistro.data);
+                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                this.dataInput.value = date.toISOString().slice(0, 16);
                 this.notaInput.value = primeiroRegistro.numero_nota;
                 this.vlrLitroInput.value = primeiroRegistro.valor_litro;
                 this.qtdTotalNotaInput.value = qtdTotal;
@@ -659,7 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearForm(resetDate = true) {
             this.form.reset();
             this.editingIdInput.value = '';
-            if (resetDate) this.dataInput.valueAsDate = new Date();
+            if (resetDate) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                this.dataInput.value = now.toISOString().slice(0, 16);
+            }
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Registrar Entrada';
             this.distribuicaoContainer.innerHTML = '';
             this.adicionarLinhaTanque(); // Adiciona a primeira linha de volta
