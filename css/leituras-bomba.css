@@ -22,3 +22,13 @@
 }
 
 .total-litros-cell { font-weight: bold; }
+
+/* Melhoria visual dos ícones */
+    .header i {
+      margin-right: 12px;
+    }
+    .card-header h2 i {
+      margin-right: 10px;
+      color: #007bff; /* Azul destaque para dar vida ao ícone */
+      font-size: 1.1em;
+    }
