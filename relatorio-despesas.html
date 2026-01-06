@@ -13,7 +13,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
+    <style>
+      /* Layout para os gráficos ficarem lado a lado e com aparência de card */
+      .charts-grid {
+          display: grid;
+          /* Cria colunas responsivas. Cada gráfico terá no mínimo 400px e no máximo 1 fração do espaço. */
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 25px; /* Espaçamento entre os gráficos */
+          margin-top: 20px;
+      }
+  
+      .chart-card {
+          background-color: #ffffff;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+          border: 1px solid #e9ecef;
+      }
+  
+      .chart-card h3 {
+          text-align: center;
+          margin-top: 0;
+      }
+    </style>
   </head>
 <body>
 
