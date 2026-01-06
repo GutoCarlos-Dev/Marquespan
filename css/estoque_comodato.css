@@ -74,3 +74,39 @@
 .status-entrada { background-color: #28a745; }
 .status-saida { background-color: #dc3545; }
 .status-contagem { background-color: #ffc107; color: #212529; }
+
+/* === Estilos para Botões de Ação no Grid (Padrão Abastecimento) === */
+.btn-action {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #6c757d; /* cinza */
+    padding: 5px 8px;
+    margin: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-action:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.btn-action.btn-edit {
+    color: #007bff; /* azul */
+}
+.btn-action.btn-edit:hover {
+    background-color: #e7f1ff;
+    border-color: #b8d6fb;
+}
+
+.btn-action.btn-delete {
+    color: #dc3545; /* Vermelho */
+}
+.btn-action.btn-delete:hover {
+    background-color: #fbebed;
+    border-color: #f5c6cb;
+}
