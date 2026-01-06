@@ -1,29 +1,30 @@
 /* Estilos para os botões de ação na tabela */
-    .data-grid button {
-        padding: 6px 12px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-right: 5px;
-        transition: background-color 0.2s, transform 0.1s;
-        color: white;
-        font-size: 0.9rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-    }
-    .data-grid button:hover { transform: translateY(-1px); }
+.data-grid button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: background-color 0.2s, transform 0.1s;
+    color: white;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background-color: #6c757d; /* Cor padrão (cinza escuro) para evitar botões sem cor */
+}
+.data-grid button:hover { transform: translateY(-1px); background-color: #5a6268; }
 
-    /* Cores específicas para os botões */
-    .data-grid button.btn-edit, .data-grid button.btn-editar { background-color: #ffc107; color: #212529; } /* Amarelo */
-    .data-grid button.btn-edit:hover, .data-grid button.btn-editar:hover { background-color: #e0a800; }
+/* Cores específicas para os botões - Adicionado aliases comuns */
+.data-grid button.btn-edit, .data-grid button.btn-editar, .data-grid button.btn-warning { background-color: #ffc107; color: #212529; } /* Amarelo */
+.data-grid button.btn-edit:hover, .data-grid button.btn-editar:hover, .data-grid button.btn-warning:hover { background-color: #e0a800; }
 
-    .data-grid button.btn-delete, .data-grid button.btn-excluir { background-color: #dc3545; } /* Vermelho */
-    .data-grid button.btn-delete:hover, .data-grid button.btn-excluir:hover { background-color: #c82333; }
-    
-    .data-grid button.btn-view, .data-grid button.btn-detalhes { background-color: #17a2b8; } /* Azul Ciano */
-    .data-grid button.btn-view:hover, .data-grid button.btn-detalhes:hover { background-color: #138496; }
+.data-grid button.btn-delete, .data-grid button.btn-excluir, .data-grid button.btn-danger { background-color: #dc3545; color: white; } /* Vermelho */
+.data-grid button.btn-delete:hover, .data-grid button.btn-excluir:hover, .data-grid button.btn-danger:hover { background-color: #c82333; }
+
+.data-grid button.btn-view, .data-grid button.btn-detalhes, .data-grid button.btn-info { background-color: #17a2b8; color: white; } /* Azul Ciano */
+.data-grid button.btn-view:hover, .data-grid button.btn-detalhes:hover, .data-grid button.btn-info:hover { background-color: #138496; }
 
 /* Layout específico para Comodato */
 
