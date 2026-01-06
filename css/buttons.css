@@ -1,6 +1,8 @@
 /* 🔘 Botões de ação reutilizáveis */
 .btn-acao,
-.btn-edit {
+.btn-edit,
+.btn-delete,
+.btn-view {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +42,18 @@
 .btn-acao.excluir:hover,
 .btn-delete:hover {
   background-color: #c82333;
+  transform: translateY(-1px);
+}
+
+/* 👁️ Botão Visualizar */
+.btn-acao.visualizar,
+.btn-view {
+  background-color: #17a2b8; /* Cyan */
+  color: white;
+}
+.btn-acao.visualizar:hover,
+.btn-view:hover {
+  background-color: #138496;
   transform: translateY(-1px);
 }
 
