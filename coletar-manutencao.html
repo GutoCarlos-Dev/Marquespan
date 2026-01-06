@@ -35,7 +35,9 @@
           <div class="card-header">
             <h2>Coleta de Informações da Manutenção</h2>
           </div>
-          <p>A interface para coleta de dados da manutenção será implementada aqui.</p>
+          <div class="card-body" style="padding: 20px;">
+            <button type="button" id="btnAdicionarLancamento" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Lançamento</button>
+          </div>
         </div>
       </section>
 
@@ -61,6 +63,79 @@
 
     </div>
   </div>
+
+  <!-- Modal para Lançamento de Manutenção -->
+  <div id="modalLancamento" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 800px;">
+        <div class="panel-header">
+            <h3><i class="fas fa-wrench"></i> Novo Lançamento de Coleta</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="panel-body">
+            <form id="formLancamentoColeta">
+                <fieldset class="form-fieldset">
+                    <legend>Dados Gerais</legend>
+                    <div class="form-grid-coleta">
+                        <div class="form-group">
+                            <label for="coletaSemana">Semana</label>
+                            <input type="text" id="coletaSemana" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaDataHora">Data/Hora</label>
+                            <input type="datetime-local" id="coletaDataHora" required readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaUsuario">Usuário</label>
+                            <input type="text" id="coletaUsuario" required readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaPlaca">Placa</label>
+                            <input type="text" id="coletaPlaca" list="veiculosList" required>
+                            <datalist id="veiculosList"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaModelo">Modelo</label>
+                            <input type="text" id="coletaModelo" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaKm">Km</label>
+                            <input type="number" id="coletaKm" required>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-fieldset">
+                    <legend>Checklist de Manutenção</legend>
+                    <div class="checklist-container">
+                        <!-- ACESSORIOS -->
+                        <div class="checklist-item" data-item="ACESSORIOS">
+                            <label class="checklist-label">ACESSORIOS</label>
+                            <input type="text" class="checklist-details" placeholder="Detalhes...">
+                            <select class="checklist-status"><option value="OK">OK</option><option value="NAO OK">NÃO OK</option><option value="N/A">N/A</option></select>
+                        </div>
+                        <!-- ALINHAMENTO/BALANCEAMENTO -->
+                        <div class="checklist-item" data-item="ALINHAMENTO/BALANCEAMENTO">
+                            <label class="checklist-label">ALINHAMENTO/BALANCEAMENTO</label>
+                            <input type="text" class="checklist-details" placeholder="Detalhes...">
+                            <select class="checklist-status"><option value="OK">OK</option><option value="NAO OK">NÃO OK</option><option value="N/A">N/A</option></select>
+                        </div>
+                        <!-- AR-CONDICIONADO -->
+                        <div class="checklist-item" data-item="AR-CONDICIONADO">
+                            <label class="checklist-label">AR-CONDICIONADO</label>
+                            <input type="text" class="checklist-details" placeholder="Detalhes...">
+                            <select class="checklist-status"><option value="OK">OK</option><option value="NAO OK">NÃO OK</option><option value="N/A">N/A</option></select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions" style="justify-content: flex-end; margin-top: 20px;">
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/coletar-manutencao.js"></script>

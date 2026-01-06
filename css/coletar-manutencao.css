@@ -1,1 +1,116 @@
 /* Estilos específicos para a página de Coleta de Manutenção */
+
+/* --- Estilos para o Modal de Lançamento (baseado no hotel.css) --- */
+
+/* Fundo do modal (Backdrop) */
+.panel-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.panel-backdrop:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Conteúdo do Modal (Painel) */
+.panel {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.panel-backdrop:not(.hidden) .panel {
+    transform: scale(1);
+}
+
+/* Cabeçalho do Modal */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #343a40;
+}
+
+.panel-header .close-button {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+}
+
+.panel-header .close-button:hover {
+    color: #343a40;
+}
+
+/* Corpo do Modal */
+.panel-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+/* Grid para o formulário dentro do modal */
+.form-grid-coleta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.checklist-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.checklist-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+.checklist-label {
+    font-weight: 500;
+}
+
+.checklist-details, .checklist-status {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
