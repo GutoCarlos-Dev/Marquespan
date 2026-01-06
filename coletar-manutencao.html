@@ -87,10 +87,62 @@
                     <input type="date" id="filtroDataFim">
                 </div>
                 <div class="form-group">
-                    <button type="submit" class="btn-primary" style="width: 100%; height: 42px;"><i class="fas fa-file-excel"></i> Baixar Relatório Excel</button>
+                    <label for="filtroItem">Item Verificado</label>
+                    <select id="filtroItem">
+                        <option value="">Todos</option>
+                        <option value="ACESSORIOS">ACESSORIOS</option>
+                        <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
+                        <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
+                        <option value="BORRACHARIA">BORRACHARIA</option>
+                        <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
+                        <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
+                        <option value="MOLEIRO">MOLEIRO</option>
+                        <option value="TACOGRAFO">TACOGRAFO</option>
+                        <option value="TAPEÇARIA">TAPEÇARIA</option>
+                        <option value="THERMO KING">THERMO KING</option>
+                        <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
+                        <option value="SERVIÇOS_GERAIS">SERVIÇOS_GERAIS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filtroStatus">Status</label>
+                    <select id="filtroStatus">
+                        <option value="">Todos</option>
+                        <option value="NAO REALIZADO">NÃO REALIZADO</option>
+                        <option value="OK">OK</option>
+                        <option value="INTERNADO">INTERNADO</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <button type="button" id="btnBuscarRelatorio" class="btn-primary" style="flex: 1;"><i class="fas fa-search"></i> Buscar</button>
+                    <button type="submit" class="btn-success" style="flex: 1;"><i class="fas fa-file-excel"></i> Excel</button>
                 </div>
             </form>
           </div>
+        </div>
+
+        <!-- Grid de Resultados do Relatório -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h3>Resultados da Busca</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Semana</th>
+                            <th>Placa</th>
+                            <th>Item</th>
+                            <th>Status</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyRelatorio">
+                        <tr><td colspan="6" class="text-center">Utilize os filtros acima para buscar.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
       </section>
 

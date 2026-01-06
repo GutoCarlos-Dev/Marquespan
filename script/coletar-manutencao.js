@@ -31,6 +31,10 @@ const ColetarManutencaoUI = {
         this.filtroSemana = document.getElementById('filtroSemana');
         this.filtroDataIni = document.getElementById('filtroDataIni');
         this.filtroDataFim = document.getElementById('filtroDataFim');
+        this.filtroItem = document.getElementById('filtroItem');
+        this.filtroStatus = document.getElementById('filtroStatus');
+        this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
+        this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
     },
 
     bindEvents() {
@@ -53,6 +57,7 @@ const ColetarManutencaoUI = {
         }
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
+        if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
     },
 
     initTabs() {
@@ -355,6 +360,57 @@ const ColetarManutencaoUI = {
         }
     },
 
+    async buscarRelatorio() {
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center">Buscando...</td></tr>';
+        
+        try {
+            // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
+            // O !inner força que o registro pai exista e obedeça aos filtros aplicados nele
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('*, coletas_manutencao!inner(*)');
+
+            // Filtros do Checklist
+            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            
+            // Filtros da Coleta (Pai)
+            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
+            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            this.tableBodyRelatorio.innerHTML = '';
+            if (!data || data.length === 0) {
+                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum registro encontrado.</td></tr>';
+                return;
+            }
+
+            // Ordenação local por data (decrescente)
+            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+
+            data.forEach(item => {
+                const coleta = item.coletas_manutencao;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
+                    <td>${coleta.semana}</td>
+                    <td>${coleta.placa}</td>
+                    <td>${item.item}</td>
+                    <td>${item.status}</td>
+                    <td>${item.detalhes || '-'}</td>
+                `;
+                this.tableBodyRelatorio.appendChild(tr);
+            });
+
+        } catch (err) {
+            console.error('Erro ao buscar relatório:', err);
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+        }
+    },
+
     async gerarRelatorioExcel(e) {
         e.preventDefault();
         const btn = this.formExportacao.querySelector('button');
@@ -363,20 +419,17 @@ const ColetarManutencaoUI = {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
         try {
+            // Mesma lógica de query do buscarRelatorio para consistência
             let query = supabaseClient
-                .from('coletas_manutencao')
-                .select('*, coletas_manutencao_checklist(*)')
-                .order('data_hora', { ascending: false });
+                .from('coletas_manutencao_checklist')
+                .select('*, coletas_manutencao!inner(*)');
 
-            if (this.filtroSemana.value) {
-                query = query.eq('semana', this.filtroSemana.value);
-            }
-            if (this.filtroDataIni.value) {
-                query = query.gte('data_hora', this.filtroDataIni.value + 'T00:00:00');
-            }
-            if (this.filtroDataFim.value) {
-                query = query.lte('data_hora', this.filtroDataFim.value + 'T23:59:59');
-            }
+            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            
+            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
+            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
 
             const { data, error } = await query;
             if (error) throw error;
@@ -386,24 +439,23 @@ const ColetarManutencaoUI = {
                 return;
             }
 
-            // Achatar os dados para o Excel (1 linha por item do checklist)
+            // Ordenação
+            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+
             const dadosPlanilha = [];
-            data.forEach(coleta => {
-                if (coleta.coletas_manutencao_checklist && coleta.coletas_manutencao_checklist.length > 0) {
-                    coleta.coletas_manutencao_checklist.forEach(item => {
-                        dadosPlanilha.push({
-                            'Data/Hora': new Date(coleta.data_hora).toLocaleString('pt-BR'),
-                            'Semana': coleta.semana,
-                            'Placa': coleta.placa,
-                            'Modelo': coleta.modelo,
-                            'KM': coleta.km,
-                            'Usuário': coleta.usuario,
-                            'Item Verificado': item.item,
-                            'Status': item.status,
-                            'Detalhes': item.detalhes
-                        });
-                    });
-                }
+            data.forEach(item => {
+                const coleta = item.coletas_manutencao;
+                dadosPlanilha.push({
+                    'Data/Hora': new Date(coleta.data_hora).toLocaleString('pt-BR'),
+                    'Semana': coleta.semana,
+                    'Placa': coleta.placa,
+                    'Modelo': coleta.modelo,
+                    'KM': coleta.km,
+                    'Usuário': coleta.usuario,
+                    'Item Verificado': item.item,
+                    'Status': item.status,
+                    'Detalhes': item.detalhes
+                });
             });
 
             const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
