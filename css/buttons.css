@@ -32,12 +32,13 @@
 }
 
 /* 🗑️ Botão Excluir */
-.btn-acao.excluir {
+.btn-acao.excluir,
+.btn-delete {
   background-color: #dc3545;
   color: white;
 }
-
-.btn-acao.excluir:hover {
+.btn-acao.excluir:hover,
+.btn-delete:hover {
   background-color: #c82333;
   transform: translateY(-1px);
 }
