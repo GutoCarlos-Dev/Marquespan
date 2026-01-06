@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dataInicial = document.getElementById('dataInicial');
             this.dataFinal = document.getElementById('dataFinal');
             this.filtroTanque = document.getElementById('filtroTanque');
+            this.incluirAjusteCheckbox = document.getElementById('incluirAjusteEstoque');
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
             this.cardResultados = document.getElementById('cardResultados');
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
+            const incluirAjuste = this.incluirAjusteCheckbox.checked;
 
             if (!dtIni || !dtFim) {
                 alert('Por favor, selecione o período.');
@@ -84,6 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (tanqueId) {
                     query = query.eq('tanque_id', tanqueId);
+                }
+
+                // Adiciona o filtro para excluir ajustes de estoque se o checkbox não estiver marcado
+                if (!incluirAjuste) {
+                    query = query.neq('numero_nota', 'AJUSTE DE ESTOQUE');
                 }
 
                 const { data, error } = await query;
@@ -195,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clearFilters() {
             this.form.reset();
+            this.incluirAjusteCheckbox.checked = true;
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
