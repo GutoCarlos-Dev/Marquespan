@@ -85,7 +85,7 @@ const LeiturasBomba = {
             // 1. Busca as leituras do dia (sem join para evitar erro de FK inexistente)
             const { data: leituras, error: errorLeituras } = await supabaseClient
                 .from('leituras_bomba')
-                .select('id, leitura_inicial, leitura_final, litros_total, bico_id')
+                .select('id, leitura_inicial, leitura_final, bico_id')
                 .eq('data_leitura', dataSelecionada);
 
             if (errorLeituras) throw errorLeituras;
@@ -114,21 +114,23 @@ const LeiturasBomba = {
             return;
         }
 
-        this.tbody.innerHTML = dados.map(item => `
+        this.tbody.innerHTML = dados.map(item => {
+            const totalLitros = (parseFloat(item.leitura_final) || 0) - (parseFloat(item.leitura_inicial) || 0);
+            return `
             <tr>
                 <td>${item.bicos?.nome || '-'}</td>
                 <td>${item.bicos?.bombas?.nome || '-'}</td>
                 <td>${item.bicos?.bombas?.tanques?.nome || '-'}</td>
                 <td>${parseFloat(item.leitura_inicial).toFixed(2)}</td>
                 <td>${parseFloat(item.leitura_final).toFixed(2)}</td>
-                <td class="total-litros-cell">${parseFloat(item.litros_total).toFixed(2)} L</td>
+                <td class="total-litros-cell">${totalLitros.toFixed(2)} L</td>
                 <td>
                     <button class="btn-acao excluir" onclick="LeiturasBomba.excluirLeitura(${item.id})" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
     },
 
     abrirModal() {
@@ -197,7 +199,6 @@ const LeiturasBomba = {
                     bico_id: bicoId,
                     leitura_inicial: inicial,
                     leitura_final: final,
-                    litros_total: total
                 });
 
             if (error) throw error;
