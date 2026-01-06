@@ -148,16 +148,26 @@
   transform: translateY(-1px);
 }
 
-/* Botão Editar (Azul) */
+/* Botão Editar (Amarelo) */
 .data-grid .btn-edit,
 .data-grid .btn-editar {
-  background-color: #007bff;
+  background-color: #ffc107;
+  color: #212529; /* Texto escuro para contraste */
 }
-.data-grid .btn-edit:hover, .data-grid .btn-editar:hover { background-color: #0056b3; }
+.data-grid .btn-edit:hover, .data-grid .btn-editar:hover { background-color: #e0a800; }
 
 /* Botão Excluir (Vermelho) */
 .data-grid .btn-delete,
 .data-grid .btn-excluir {
   background-color: #dc3545;
+  color: white;
 }
 .data-grid .btn-delete:hover, .data-grid .btn-excluir:hover { background-color: #c82333; }
+
+/* Botão Visualizar (Azul) */
+.data-grid .btn-view,
+.data-grid .btn-visualizar {
+  background-color: #17a2b8;
+  color: white;
+}
+.data-grid .btn-view:hover, .data-grid .btn-visualizar:hover { background-color: #138496; }
