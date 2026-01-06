@@ -76,13 +76,16 @@ const ColetarManutencaoUI = {
             const { data, error } = await supabaseClient
                 .from('veiculos')
                 .select('placa, modelo')
-                .eq('situacao', 'ativo');
+                .order('placa');
             if (error) throw error;
 
             this.veiculosList.innerHTML = '';
             this.veiculosData = data; // Armazena para uso posterior
             data.forEach(veiculo => {
-                this.veiculosList.innerHTML += `<option value="${veiculo.placa}">`;
+                const option = document.createElement('option');
+                option.value = veiculo.placa;
+                option.textContent = veiculo.modelo;
+                this.veiculosList.appendChild(option);
             });
         } catch (error) {
             console.error('Erro ao carregar veículos:', error);
