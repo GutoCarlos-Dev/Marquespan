@@ -60,23 +60,21 @@ const LeiturasBomba = {
             // Substituímos a chamada RPC por um loop para maior robustez e para testar o nome da coluna.
             const encerrantesMap = new Map();
             for (const bico of bicos) {
-                const { data: ultimaLeitura, error: ultimaLeituraError } = await supabaseClient
+                // Usamos .limit(1) e pegamos o primeiro resultado em vez de .single()
+                // para evitar o erro 406 quando nenhuma linha é encontrada (o que é um cenário esperado).
+                const { data: ultimasLeituras, error: ultimaLeituraError } = await supabaseClient
                     .from('leituras_bomba')
                     .select('leitura_final')
                     .eq('bomba_id', bico.id) // Usando 'bomba_id' como tentativa
                     .lt('data', dataSelecionada)
                     .order('data', { ascending: false })
                     .order('created_at', { ascending: false }) // Adicionado para desempate
-                    .limit(1)
-                    .single();
+                    .limit(1);
 
-                // Ignora o erro "nenhuma linha encontrada", que é esperado se não houver leitura anterior
-                if (ultimaLeituraError && ultimaLeituraError.code !== 'PGRST116') {
-                    throw ultimaLeituraError;
-                }
+                if (ultimaLeituraError) throw ultimaLeituraError;
 
-                if (ultimaLeitura) {
-                    encerrantesMap.set(bico.id, ultimaLeitura.leitura_final);
+                if (ultimasLeituras && ultimasLeituras.length > 0) {
+                    encerrantesMap.set(bico.id, ultimasLeituras[0].leitura_final);
                 }
             }
 
