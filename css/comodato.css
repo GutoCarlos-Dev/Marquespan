@@ -1,4 +1,4 @@
-/* Estilos para os botões de ação na tabela 
+/* Estilos para os botões de ação na tabela */
 .data-grid button {
     padding: 6px 12px;
     border: none;
@@ -12,9 +12,9 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    background-color: #6c757d; /* Cor padrão (cinza escuro) para evitar botões sem cor 
+    background-color: #6c757d; /* Cor padrão (cinza escuro) para evitar botões sem cor */
 }
-.data-grid button:hover { transform: translateY(-1px); background-color: #5a6268; } */
+.data-grid button:hover { transform: translateY(-1px); background-color: #5a6268; }
 
 /* Cores específicas para os botões - Adicionado aliases comuns */
 .data-grid button.btn-edit, .data-grid button.btn-editar, .data-grid button.btn-warning { background-color: #ffc107; color: #212529; } /* Amarelo */
