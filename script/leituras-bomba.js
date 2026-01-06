@@ -52,7 +52,7 @@ const LeiturasBomba = {
             const { data: leiturasSalvas, error: leiturasError } = await supabaseClient
                 .from('leituras_bomba')
                 .select('id, bomba_id, leitura_inicial, leitura_final') // Usando 'bomba_id' como tentativa
-                .eq('data_leitura', dataSelecionada);
+                .eq('data', dataSelecionada);
             if (leiturasError) throw leiturasError;
             const leiturasMap = new Map(leiturasSalvas.map(l => [l.bomba_id, l]));
 
@@ -64,8 +64,8 @@ const LeiturasBomba = {
                     .from('leituras_bomba')
                     .select('leitura_final')
                     .eq('bomba_id', bico.id) // Usando 'bomba_id' como tentativa
-                    .lt('data_leitura', dataSelecionada)
-                    .order('data_leitura', { ascending: false })
+                    .lt('data', dataSelecionada)
+                    .order('data', { ascending: false })
                     .order('created_at', { ascending: false }) // Adicionado para desempate
                     .limit(1)
                     .single();
@@ -195,7 +195,7 @@ const LeiturasBomba = {
             const { error } = await supabaseClient
                 .from('leituras_bomba')
                 .insert({
-                    data_leitura: dataLeitura,
+                    data: dataLeitura,
                     bomba_id: bicoId, // Usando 'bomba_id' como tentativa
                     leitura_inicial: inicial,
                     leitura_final: final,
