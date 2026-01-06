@@ -23,6 +23,12 @@ const ColetarManutencaoUI = {
         this.coletaModeloInput = document.getElementById('coletaModelo');
         this.veiculosList = document.getElementById('veiculosList');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
+
+        // Exportação
+        this.formExportacao = document.getElementById('formExportacao');
+        this.filtroSemana = document.getElementById('filtroSemana');
+        this.filtroDataIni = document.getElementById('filtroDataIni');
+        this.filtroDataFim = document.getElementById('filtroDataFim');
     },
 
     bindEvents() {
@@ -37,6 +43,8 @@ const ColetarManutencaoUI = {
             const btn = e.target.closest('.btn-delete');
             if (btn) this.excluirColeta(btn.dataset.id);
         });
+
+        if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
     },
 
     initTabs() {
@@ -250,6 +258,71 @@ const ColetarManutencaoUI = {
             this.carregarLancamentos();
         } catch (err) {
             alert('Erro ao excluir: ' + err.message);
+        }
+    },
+
+    async gerarRelatorioExcel(e) {
+        e.preventDefault();
+        const btn = this.formExportacao.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+        try {
+            let query = supabaseClient
+                .from('coletas_manutencao')
+                .select('*, coletas_manutencao_checklist(*)')
+                .order('data_hora', { ascending: false });
+
+            if (this.filtroSemana.value) {
+                query = query.eq('semana', this.filtroSemana.value);
+            }
+            if (this.filtroDataIni.value) {
+                query = query.gte('data_hora', this.filtroDataIni.value + 'T00:00:00');
+            }
+            if (this.filtroDataFim.value) {
+                query = query.lte('data_hora', this.filtroDataFim.value + 'T23:59:59');
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                alert('Nenhum dado encontrado para os filtros selecionados.');
+                return;
+            }
+
+            // Achatar os dados para o Excel (1 linha por item do checklist)
+            const dadosPlanilha = [];
+            data.forEach(coleta => {
+                if (coleta.coletas_manutencao_checklist && coleta.coletas_manutencao_checklist.length > 0) {
+                    coleta.coletas_manutencao_checklist.forEach(item => {
+                        dadosPlanilha.push({
+                            'Data/Hora': new Date(coleta.data_hora).toLocaleString('pt-BR'),
+                            'Semana': coleta.semana,
+                            'Placa': coleta.placa,
+                            'Modelo': coleta.modelo,
+                            'KM': coleta.km,
+                            'Usuário': coleta.usuario,
+                            'Item Verificado': item.item,
+                            'Status': item.status,
+                            'Detalhes': item.detalhes
+                        });
+                    });
+                }
+            });
+
+            const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Manutencao");
+            XLSX.writeFile(wb, `Coleta_Manutencao_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+        } catch (err) {
+            console.error('Erro ao exportar:', err);
+            alert('Erro ao gerar arquivo: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
     }
 };

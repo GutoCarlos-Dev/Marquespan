@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="css/buttons.css" />
   <link rel="stylesheet" href="css/coletar-manutencao.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Biblioteca para Exportação Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -67,7 +69,25 @@
           <div class="card-header">
             <h2>Gerar Arquivo de Manutenção</h2>
           </div>
-          <p>A interface para gerar o arquivo será implementada aqui.</p>
+          <div class="card-body" style="padding: 20px;">
+            <form id="formExportacao" class="form-grid-coleta" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end;">
+                <div class="form-group">
+                    <label for="filtroSemana">Semana</label>
+                    <input type="text" id="filtroSemana" placeholder="Ex: 01">
+                </div>
+                <div class="form-group">
+                    <label for="filtroDataIni">Data Inicial</label>
+                    <input type="date" id="filtroDataIni">
+                </div>
+                <div class="form-group">
+                    <label for="filtroDataFim">Data Final</label>
+                    <input type="date" id="filtroDataFim">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-primary" style="width: 100%; height: 42px;"><i class="fas fa-file-excel"></i> Baixar Relatório Excel</button>
+                </div>
+            </form>
+          </div>
         </div>
       </section>
 
