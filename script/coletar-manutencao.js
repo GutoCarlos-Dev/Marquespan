@@ -8,6 +8,7 @@ const ColetarManutencaoUI = {
         this.initTabs();
         this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.veiculosData = [];
+        this.editingId = null; // Variável para controlar o estado de edição
     },
 
     cacheDOM() {
@@ -40,8 +41,10 @@ const ColetarManutencaoUI = {
         
         // Event delegation para botões da tabela
         this.tableBodyLancamentos.addEventListener('click', (e) => {
-            const btn = e.target.closest('.btn-delete');
-            if (btn) this.excluirColeta(btn.dataset.id);
+            const btnDelete = e.target.closest('.btn-delete');
+            const btnEdit = e.target.closest('.btn-edit');
+            if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
+            if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
@@ -64,6 +67,7 @@ const ColetarManutencaoUI = {
     },
 
     abrirModal() {
+        this.editingId = null; // Reseta o ID de edição para criar um novo
         this.formColeta.reset();
         this.preencherDadosPadrao();
         this.carregarVeiculos();
@@ -147,12 +151,14 @@ const ColetarManutencaoUI = {
         const km = document.getElementById('coletaKm').value;
 
         // Validação de duplicidade visual na grid atual
-        const duplicado = Array.from(this.tableBodyLancamentos.querySelectorAll('tr td:nth-child(3)'))
-            .some(td => td.textContent === placa);
-            
-        if (duplicado) {
-            if (!confirm(`⚠️ ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja registrar novamente?`)) {
-                return;
+        if (!this.editingId) { // Só valida duplicidade se for novo registro
+            const duplicado = Array.from(this.tableBodyLancamentos.querySelectorAll('tr td:nth-child(3)'))
+                .some(td => td.textContent === placa);
+                
+            if (duplicado) {
+                if (!confirm(`⚠️ ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja registrar novamente?`)) {
+                    return;
+                }
             }
         }
 
@@ -170,25 +176,45 @@ const ColetarManutencaoUI = {
         });
 
         try {
-            // 1. Salvar cabeçalho
-            const { data: coleta, error: coletaError } = await supabaseClient
-                .from('coletas_manutencao')
-                .insert([{
-                    semana,
-                    data_hora: dataHora,
-                    usuario,
-                    placa,
-                    modelo,
-                    km: parseInt(km)
-                }])
-                .select()
-                .single();
+            let coletaId;
 
-            if (coletaError) throw coletaError;
+            if (this.editingId) {
+                // --- MODO EDIÇÃO ---
+                const { error: updateError } = await supabaseClient
+                    .from('coletas_manutencao')
+                    .update({
+                        semana,
+                        data_hora: dataHora,
+                        usuario,
+                        placa,
+                        modelo,
+                        km: parseInt(km)
+                    })
+                    .eq('id', this.editingId);
+
+                if (updateError) throw updateError;
+                coletaId = this.editingId;
+
+                // Remove itens antigos do checklist para inserir os novos
+                await supabaseClient.from('coletas_manutencao_checklist').delete().eq('coleta_id', coletaId);
+
+            } else {
+                // --- MODO INSERÇÃO ---
+                const { data: coleta, error: coletaError } = await supabaseClient
+                    .from('coletas_manutencao')
+                    .insert([{
+                        semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km)
+                    }])
+                    .select()
+                    .single();
+
+                if (coletaError) throw coletaError;
+                coletaId = coleta.id;
+            }
 
             // 2. Salvar itens do checklist
             const checklistPayload = checklistItems.map(i => ({
-                coleta_id: coleta.id,
+                coleta_id: coletaId,
                 item: i.item,
                 detalhes: i.detalhes,
                 status: i.status
@@ -200,7 +226,7 @@ const ColetarManutencaoUI = {
 
             if (checklistError) throw checklistError;
 
-            alert('✅ Coleta registrada com sucesso!');
+            alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
             this.carregarLancamentos(); // Atualiza a grid
 
@@ -235,6 +261,7 @@ const ColetarManutencaoUI = {
                     <td>${item.placa}</td>
                     <td>${item.usuario}</td>
                     <td>
+                        <button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>
                         <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
@@ -243,6 +270,62 @@ const ColetarManutencaoUI = {
         } catch (err) {
             console.error('Erro ao carregar lançamentos:', err);
             this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+        }
+    },
+
+    async editarColeta(id) {
+        try {
+            // 1. Buscar dados do cabeçalho
+            const { data: coleta, error: coletaError } = await supabaseClient
+                .from('coletas_manutencao')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (coletaError) throw coletaError;
+
+            // 2. Buscar itens do checklist
+            const { data: checklist, error: checklistError } = await supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('*')
+                .eq('coleta_id', id);
+
+            if (checklistError) throw checklistError;
+
+            // 3. Preencher o formulário
+            this.editingId = id;
+            document.getElementById('coletaSemana').value = coleta.semana;
+            
+            // Ajuste de fuso horário para o input datetime-local
+            const date = new Date(coleta.data_hora);
+            date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+            document.getElementById('coletaDataHora').value = date.toISOString().slice(0, 16);
+            
+            document.getElementById('coletaUsuario').value = coleta.usuario;
+            document.getElementById('coletaPlaca').value = coleta.placa;
+            document.getElementById('coletaModelo').value = coleta.modelo;
+            document.getElementById('coletaKm').value = coleta.km;
+
+            // 4. Preencher o checklist
+            // Primeiro limpa tudo
+            document.querySelectorAll('.checklist-item').forEach(div => {
+                div.querySelector('.checklist-details').value = '';
+                div.querySelector('.checklist-status').value = 'NAO REALIZADO';
+            });
+
+            // Depois preenche com o que veio do banco
+            checklist.forEach(item => {
+                const div = document.querySelector(`.checklist-item[data-item="${item.item}"]`);
+                if (div) {
+                    div.querySelector('.checklist-details').value = item.detalhes || '';
+                    div.querySelector('.checklist-status').value = item.status || 'NAO REALIZADO';
+                }
+            });
+
+            this.modal.classList.remove('hidden');
+        } catch (err) {
+            console.error('Erro ao carregar para edição:', err);
+            alert('Erro ao carregar dados: ' + err.message);
         }
     },
 
