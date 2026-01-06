@@ -51,20 +51,34 @@ const LeiturasBomba = {
             // 2. Buscar as leituras já salvas para a data selecionada
             const { data: leiturasSalvas, error: leiturasError } = await supabaseClient
                 .from('leituras_bomba')
-                .select('id, bico_id, leitura_inicial, leitura_final')
+                .select('id, bomba_id, leitura_inicial, leitura_final') // Usando 'bomba_id' como tentativa
                 .eq('data_leitura', dataSelecionada);
             if (leiturasError) throw leiturasError;
-            const leiturasMap = new Map(leiturasSalvas.map(l => [l.bico_id, l]));
+            const leiturasMap = new Map(leiturasSalvas.map(l => [l.bomba_id, l]));
 
             // 3. Buscar a última leitura final (encerrante) para CADA bico ANTES da data selecionada
-            // Usamos uma função RPC para fazer isso de forma eficiente em uma única chamada
-            const bicoIds = bicos.map(b => b.id);
-            const { data: encerrantes, error: encerrantesError } = await supabaseClient.rpc('get_ultimos_encerrantes', {
-                p_bico_ids: bicoIds,
-                p_data_limite: dataSelecionada
-            });
-            if (encerrantesError) throw encerrantesError;
-            const encerrantesMap = new Map(encerrantes.map(e => [e.bico_id, e.leitura_final]));
+            // Substituímos a chamada RPC por um loop para maior robustez e para testar o nome da coluna.
+            const encerrantesMap = new Map();
+            for (const bico of bicos) {
+                const { data: ultimaLeitura, error: ultimaLeituraError } = await supabaseClient
+                    .from('leituras_bomba')
+                    .select('leitura_final')
+                    .eq('bomba_id', bico.id) // Usando 'bomba_id' como tentativa
+                    .lt('data_leitura', dataSelecionada)
+                    .order('data_leitura', { ascending: false })
+                    .order('created_at', { ascending: false }) // Adicionado para desempate
+                    .limit(1)
+                    .single();
+
+                // Ignora o erro "nenhuma linha encontrada", que é esperado se não houver leitura anterior
+                if (ultimaLeituraError && ultimaLeituraError.code !== 'PGRST116') {
+                    throw ultimaLeituraError;
+                }
+
+                if (ultimaLeitura) {
+                    encerrantesMap.set(bico.id, ultimaLeitura.leitura_final);
+                }
+            }
 
             // 4. Montar os dados para renderização
             const dadosParaTabela = bicos.map(bico => {
@@ -182,7 +196,7 @@ const LeiturasBomba = {
                 .from('leituras_bomba')
                 .insert({
                     data_leitura: dataLeitura,
-                    bico_id: bicoId,
+                    bomba_id: bicoId, // Usando 'bomba_id' como tentativa
                     leitura_inicial: inicial,
                     leitura_final: final,
                 });
