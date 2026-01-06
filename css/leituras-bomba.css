@@ -36,6 +36,11 @@
     border-color: #dc3545;
     background-color: #f8d7da;
 }
+
+.leitura-final-input:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
 /* Melhoria visual dos ícones */
     .header i {
       margin-right: 12px;

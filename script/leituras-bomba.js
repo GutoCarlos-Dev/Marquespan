@@ -12,10 +12,12 @@ const LeiturasBomba = {
         // Filtros e Tabela
         this.dateInput = document.getElementById('leituraData');
         this.tbody = document.getElementById('tableBodyLeituras');
+        this.btnPreencher = document.getElementById('btnPreencherIniciais');
     },
 
     bindEvents() {
         this.dateInput.addEventListener('change', () => this.carregarLeituras());
+        this.btnPreencher.addEventListener('click', () => this.preencherLeiturasIniciais());
         // Adiciona um único listener na tabela para delegar eventos de clique
         this.tbody.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-salvar-leitura')) {
@@ -39,6 +41,10 @@ const LeiturasBomba = {
     async carregarLeituras() {
         const dataSelecionada = this.dateInput.value;
         this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+        // Mostra o botão novamente ao carregar/recarregar a data
+        this.btnPreencher.style.display = 'inline-block';
+        this.btnPreencher.disabled = false;
+        this.btnPreencher.innerHTML = '<i class="fas fa-magic"></i> Preencher Iniciais';
 
         try {
             // 1. Buscar todos os bicos cadastrados
@@ -56,37 +62,14 @@ const LeiturasBomba = {
             if (leiturasError) throw leiturasError;
             const leiturasMap = new Map(leiturasSalvas.map(l => [l.bomba_id, l]));
 
-            // 3. Buscar a última leitura final (encerrante) para CADA bico ANTES da data selecionada
-            // Substituímos a chamada RPC por um loop para maior robustez e para testar o nome da coluna.
-            const encerrantesMap = new Map();
-            for (const bico of bicos) {
-                // Usamos .limit(1) e pegamos o primeiro resultado em vez de .single()
-                // para evitar o erro 406 quando nenhuma linha é encontrada (o que é um cenário esperado).
-                const { data: ultimasLeituras, error: ultimaLeituraError } = await supabaseClient
-                    .from('leituras_bomba')
-                    .select('leitura_final')
-                    .eq('bomba_id', bico.id) // Usando 'bomba_id' como tentativa
-                    .lt('data', dataSelecionada)
-                    .order('data', { ascending: false })
-                    .order('created_at', { ascending: false }) // Adicionado para desempate
-                    .limit(1);
-
-                if (ultimaLeituraError) throw ultimaLeituraError;
-
-                if (ultimasLeituras && ultimasLeituras.length > 0) {
-                    encerrantesMap.set(bico.id, ultimasLeituras[0].leitura_final);
-                }
-            }
-
             // 4. Montar os dados para renderização
             const dadosParaTabela = bicos.map(bico => {
                 const leituraDoDia = leiturasMap.get(bico.id);
-                const encerranteAnterior = encerrantesMap.get(bico.id) || 0;
                 
                 return {
                     bico: bico,
                     leituraSalva: leituraDoDia, // undefined se não houver leitura
-                    leituraInicial: leituraDoDia ? leituraDoDia.leitura_inicial : encerranteAnterior,
+                    leituraInicial: leituraDoDia ? leituraDoDia.leitura_inicial : null, // Nulo se não houver leitura salva
                 };
             });
 
@@ -95,6 +78,64 @@ const LeiturasBomba = {
         } catch (err) {
             console.error('Erro ao carregar leituras:', err);
             this.tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados: ${err.message}</td></tr>`;
+        }
+    },
+
+    async preencherLeiturasIniciais() {
+        this.btnPreencher.disabled = true;
+        this.btnPreencher.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+
+        const dataSelecionada = this.dateInput.value;
+        const bicosParaBuscar = [];
+        // Encontra todas as linhas que ainda não foram salvas
+        this.tbody.querySelectorAll('tr[data-bico-id]').forEach(row => {
+            if (!row.querySelector('.btn-acao.salvo')) {
+                bicosParaBuscar.push(row.dataset.bicoId);
+            }
+        });
+
+        if (bicosParaBuscar.length === 0) {
+            this.btnPreencher.innerHTML = '<i class="fas fa-check"></i> Tudo preenchido';
+            this.btnPreencher.style.display = 'none';
+            return;
+        }
+
+        try {
+            const encerrantesMap = new Map();
+            for (const bicoId of bicosParaBuscar) {
+                const { data: ultimasLeituras, error: ultimaLeituraError } = await supabaseClient
+                    .from('leituras_bomba')
+                    .select('leitura_final')
+                    .eq('bomba_id', bicoId)
+                    .lt('data', dataSelecionada)
+                    .order('data', { ascending: false })
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (ultimaLeituraError) throw ultimaLeituraError;
+
+                if (ultimasLeituras && ultimasLeituras.length > 0) {
+                    encerrantesMap.set(bicoId, ultimasLeituras[0].leitura_final);
+                }
+            }
+
+            // Atualiza a tabela com os valores encontrados
+            bicosParaBuscar.forEach(bicoId => {
+                const encerranteAnterior = encerrantesMap.get(bicoId) || 0;
+                const linha = document.getElementById(`row-bico-${bicoId}`);
+                if (linha) {
+                    linha.querySelector('.leitura-inicial-cell').textContent = parseFloat(encerranteAnterior).toFixed(2);
+                    linha.querySelector('.leitura-final-input').disabled = false;
+                }
+            });
+
+            this.btnPreencher.style.display = 'none'; // Esconde o botão após o sucesso
+
+        } catch (err) {
+            console.error('Erro ao preencher leituras iniciais:', err);
+            alert('Erro ao buscar os encerrantes anteriores: ' + err.message);
+            this.btnPreencher.disabled = false;
+            this.btnPreencher.innerHTML = '<i class="fas fa-magic"></i> Preencher Iniciais';
         }
     },
 
@@ -107,7 +148,7 @@ const LeiturasBomba = {
         this.tbody.innerHTML = dados.map(item => {
             const bico = item.bico;
             const leituraSalva = item.leituraSalva;
-            const leituraInicial = parseFloat(item.leituraInicial).toFixed(2);
+            const leituraInicial = item.leituraInicial !== null ? parseFloat(item.leituraInicial).toFixed(2) : '-';
 
             let inputFinalHtml;
             let totalLitrosHtml;
@@ -116,19 +157,19 @@ const LeiturasBomba = {
             if (leituraSalva) {
                 // Se já existe leitura, mostra os dados e desabilita
                 const leituraFinal = parseFloat(leituraSalva.leitura_final).toFixed(2);
-                const totalLitros = (leituraFinal - leituraInicial).toFixed(2);
+                const totalLitros = (leituraFinal - parseFloat(leituraInicial)).toFixed(2);
                 inputFinalHtml = `<input type="number" class="leitura-final-input" value="${leituraFinal}" disabled style="background-color: #e9ecef;" />`;
                 totalLitrosHtml = `<td class="total-litros-cell">${totalLitros} L</td>`;
                 acoesHtml = `<td><button class="btn-acao salvo" disabled><i class="fas fa-check-circle"></i> Salvo</button></td>`;
             } else {
-                // Se não existe, mostra input para preenchimento
-                inputFinalHtml = `<input type="number" step="0.01" inputmode="decimal" class="leitura-final-input" data-bico-id="${bico.id}" placeholder="0.00" required />`;
+                // Se não existe, mostra input desabilitado esperando o preenchimento
+                inputFinalHtml = `<input type="number" step="0.01" inputmode="decimal" class="leitura-final-input" data-bico-id="${bico.id}" placeholder="0.00" required disabled />`;
                 totalLitrosHtml = `<td class="total-litros-cell" data-bico-id="${bico.id}">0.00 L</td>`;
                 acoesHtml = `<td><button class="btn-acao salvar btn-salvar-leitura" data-bico-id="${bico.id}"><i class="fas fa-save"></i> Salvar</button></td>`;
             }
 
             return `
-            <tr id="row-bico-${bico.id}">
+            <tr id="row-bico-${bico.id}" data-bico-id="${bico.id}">
                 <td>${bico.nome || '-'}</td>
                 <td>${bico.bombas?.nome || '-'}</td>
                 <td>${bico.bombas?.tanques?.nome || '-'}</td>
