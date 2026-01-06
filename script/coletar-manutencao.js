@@ -58,6 +58,16 @@ const ColetarManutencaoUI = {
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
         if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
+
+        // Automação do status ao digitar detalhes
+        document.querySelectorAll('.checklist-details').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
+                if (statusSelect && statusSelect.value === "") {
+                    statusSelect.value = "NAO REALIZADO";
+                }
+            });
+        });
     },
 
     initTabs() {
@@ -326,7 +336,7 @@ const ColetarManutencaoUI = {
             // Primeiro limpa tudo
             document.querySelectorAll('.checklist-item').forEach(div => {
                 div.querySelector('.checklist-details').value = '';
-                div.querySelector('.checklist-status').value = 'NAO REALIZADO';
+                div.querySelector('.checklist-status').value = '';
             });
 
             // Depois preenche com o que veio do banco
@@ -334,7 +344,7 @@ const ColetarManutencaoUI = {
                 const div = document.querySelector(`.checklist-item[data-item="${item.item}"]`);
                 if (div) {
                     div.querySelector('.checklist-details').value = item.detalhes || '';
-                    div.querySelector('.checklist-status').value = item.status || 'NAO REALIZADO';
+                    div.querySelector('.checklist-status').value = item.status || '';
                 }
             });
 
