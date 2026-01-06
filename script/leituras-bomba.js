@@ -82,26 +82,26 @@ const LeiturasBomba = {
         this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
 
         try {
-            const { data, error } = await supabaseClient
+            // 1. Busca as leituras do dia (sem join para evitar erro de FK inexistente)
+            const { data: leituras, error: errorLeituras } = await supabaseClient
                 .from('leituras_bomba')
-                .select(`
-                    id,
-                    leitura_inicial,
-                    leitura_final,
-                    litros_total,
-                    bicos!bico_id (
-                        nome,
-                        bombas (
-                            nome,
-                            tanques (nome)
-                        )
-                    )
-                `)
+                .select('id, leitura_inicial, leitura_final, litros_total, bico_id')
                 .eq('data_leitura', dataSelecionada);
 
-            if (error) throw error;
+            if (errorLeituras) throw errorLeituras;
 
-            this.renderTabela(data);
+            // 2. Busca os dados completos dos bicos (Bico -> Bomba -> Tanque)
+            const { data: bicos, error: errorBicos } = await supabaseClient
+                .from('bicos')
+                .select('id, nome, bombas(nome, tanques(nome))');
+
+            if (errorBicos) throw errorBicos;
+
+            // 3. Cruza as informações manualmente
+            const bicosMap = new Map((bicos || []).map(b => [b.id, b]));
+            const dadosCompletos = (leituras || []).map(l => ({ ...l, bicos: bicosMap.get(l.bico_id) }));
+
+            this.renderTabela(dadosCompletos);
         } catch (err) {
             console.error('Erro ao carregar leituras:', err);
             this.tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
