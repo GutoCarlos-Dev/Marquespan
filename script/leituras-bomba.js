@@ -5,38 +5,29 @@ const LeiturasBomba = {
         this.cacheDOM();
         this.bindEvents();
         this.setDefaultDate();
-        this.carregarBicos(); // Carrega os bicos para o select do modal
-        this.carregarLeituras(); // Carrega a lista do dia
+        this.carregarLeituras(); // A única função de carregamento agora
     },
 
     cacheDOM() {
         // Filtros e Tabela
         this.dateInput = document.getElementById('leituraData');
         this.tbody = document.getElementById('tableBodyLeituras');
-        this.btnNova = document.getElementById('btnNovaLeitura');
-        
-        // Modal e Formulário
-        this.modal = document.getElementById('modalLeitura');
-        this.formModal = document.getElementById('formNovaLeitura');
-        this.modalData = document.getElementById('modalData');
-        this.selectBico = document.getElementById('modalBomba'); // ID mantido do HTML, mas refere-se ao Bico
-        this.inputInicial = document.getElementById('modalLeituraInicial');
-        this.inputFinal = document.getElementById('modalLeituraFinal');
-        this.btnClose = document.querySelector('.close');
     },
 
     bindEvents() {
         this.dateInput.addEventListener('change', () => this.carregarLeituras());
-        this.btnNova.addEventListener('click', () => this.abrirModal());
-        this.btnClose.addEventListener('click', () => this.fecharModal());
-        this.formModal.addEventListener('submit', (e) => this.salvarLeitura(e));
-        
-        // Ao selecionar um bico, busca o encerrante anterior
-        this.selectBico.addEventListener('change', (e) => this.buscarUltimaLeitura(e.target.value));
-        
-        // Fechar modal clicando fora
-        window.addEventListener('click', (e) => {
-            if (e.target == this.modal) this.fecharModal();
+        // Adiciona um único listener na tabela para delegar eventos de clique
+        this.tbody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-salvar-leitura')) {
+                const bicoId = e.target.dataset.bicoId;
+                this.salvarLeitura(bicoId);
+            }
+        });
+        // Listener para cálculo dinâmico do total de litros
+        this.tbody.addEventListener('input', (e) => {
+            if (e.target.classList.contains('leitura-final-input')) {
+                this.calcularTotalLitros(e.target);
+            }
         });
     },
 
@@ -45,151 +36,146 @@ const LeiturasBomba = {
         this.dateInput.value = today;
     },
 
-    async carregarBicos() {
-        // Busca bicos com as relações: Bico -> Bomba -> Tanque
-        try {
-            const { data, error } = await supabaseClient
-                .from('bicos')
-                .select(`
-                    id,
-                    nome,
-                    bombas (
-                        nome,
-                        tanques (nome)
-                    )
-                `)
-                .order('nome');
-
-            if (error) throw error;
-
-            this.selectBico.innerHTML = '<option value="">Selecione o Bico...</option>';
-            data.forEach(bico => {
-                const bombaNome = bico.bombas?.nome || 'S/ Bomba';
-                const tanqueNome = bico.bombas?.tanques?.nome || 'S/ Tanque';
-                // Exibe: Bico 01 - Bomba Diesel (Tanque 1)
-                const option = document.createElement('option');
-                option.value = bico.id;
-                option.textContent = `${bico.nome} - ${bombaNome} (${tanqueNome})`;
-                this.selectBico.appendChild(option);
-            });
-        } catch (err) {
-            console.error('Erro ao carregar bicos:', err);
-        }
-    },
-
     async carregarLeituras() {
         const dataSelecionada = this.dateInput.value;
         this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
 
         try {
-            // 1. Busca as leituras do dia (sem join para evitar erro de FK inexistente)
-            const { data: leituras, error: errorLeituras } = await supabaseClient
-                .from('leituras_bomba')
-                .select('id, leitura_inicial, leitura_final, bico_id')
-                .eq('data_leitura', dataSelecionada);
-
-            if (errorLeituras) throw errorLeituras;
-
-            // 2. Busca os dados completos dos bicos (Bico -> Bomba -> Tanque)
-            const { data: bicos, error: errorBicos } = await supabaseClient
+            // 1. Buscar todos os bicos cadastrados
+            const { data: bicos, error: bicosError } = await supabaseClient
                 .from('bicos')
-                .select('id, nome, bombas(nome, tanques(nome))');
+                .select('id, nome, bombas (nome, tanques (nome))')
+                .order('nome');
+            if (bicosError) throw bicosError;
 
-            if (errorBicos) throw errorBicos;
+            // 2. Buscar as leituras já salvas para a data selecionada
+            const { data: leiturasSalvas, error: leiturasError } = await supabaseClient
+                .from('leituras_bomba')
+                .select('id, bico_id, leitura_inicial, leitura_final')
+                .eq('data_leitura', dataSelecionada);
+            if (leiturasError) throw leiturasError;
+            const leiturasMap = new Map(leiturasSalvas.map(l => [l.bico_id, l]));
 
-            // 3. Cruza as informações manualmente
-            const bicosMap = new Map((bicos || []).map(b => [b.id, b]));
-            const dadosCompletos = (leituras || []).map(l => ({ ...l, bicos: bicosMap.get(l.bico_id) }));
+            // 3. Buscar a última leitura final (encerrante) para CADA bico ANTES da data selecionada
+            // Usamos uma função RPC para fazer isso de forma eficiente em uma única chamada
+            const bicoIds = bicos.map(b => b.id);
+            const { data: encerrantes, error: encerrantesError } = await supabaseClient.rpc('get_ultimos_encerrantes', {
+                p_bico_ids: bicoIds,
+                p_data_limite: dataSelecionada
+            });
+            if (encerrantesError) throw encerrantesError;
+            const encerrantesMap = new Map(encerrantes.map(e => [e.bico_id, e.leitura_final]));
 
-            this.renderTabela(dadosCompletos);
+            // 4. Montar os dados para renderização
+            const dadosParaTabela = bicos.map(bico => {
+                const leituraDoDia = leiturasMap.get(bico.id);
+                const encerranteAnterior = encerrantesMap.get(bico.id) || 0;
+                
+                return {
+                    bico: bico,
+                    leituraSalva: leituraDoDia, // undefined se não houver leitura
+                    leituraInicial: leituraDoDia ? leituraDoDia.leitura_inicial : encerranteAnterior,
+                };
+            });
+
+            this.renderTabela(dadosParaTabela);
+
         } catch (err) {
             console.error('Erro ao carregar leituras:', err);
-            this.tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados: ${err.message}</td></tr>`;
         }
     },
 
     renderTabela(dados) {
         if (!dados || dados.length === 0) {
-            this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhuma leitura registrada para esta data.</td></tr>';
+            this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum bico cadastrado.</td></tr>';
             return;
         }
 
         this.tbody.innerHTML = dados.map(item => {
-            const totalLitros = (parseFloat(item.leitura_final) || 0) - (parseFloat(item.leitura_inicial) || 0);
+            const bico = item.bico;
+            const leituraSalva = item.leituraSalva;
+            const leituraInicial = parseFloat(item.leituraInicial).toFixed(2);
+
+            let inputFinalHtml;
+            let totalLitrosHtml;
+            let acoesHtml;
+
+            if (leituraSalva) {
+                // Se já existe leitura, mostra os dados e desabilita
+                const leituraFinal = parseFloat(leituraSalva.leitura_final).toFixed(2);
+                const totalLitros = (leituraFinal - leituraInicial).toFixed(2);
+                inputFinalHtml = `<input type="number" class="leitura-final-input" value="${leituraFinal}" disabled style="background-color: #e9ecef;" />`;
+                totalLitrosHtml = `<td class="total-litros-cell">${totalLitros} L</td>`;
+                acoesHtml = `<td><button class="btn-acao salvo" disabled><i class="fas fa-check-circle"></i> Salvo</button></td>`;
+            } else {
+                // Se não existe, mostra input para preenchimento
+                inputFinalHtml = `<input type="number" step="0.01" inputmode="decimal" class="leitura-final-input" data-bico-id="${bico.id}" placeholder="0.00" required />`;
+                totalLitrosHtml = `<td class="total-litros-cell" data-bico-id="${bico.id}">0.00 L</td>`;
+                acoesHtml = `<td><button class="btn-acao salvar btn-salvar-leitura" data-bico-id="${bico.id}"><i class="fas fa-save"></i> Salvar</button></td>`;
+            }
+
             return `
-            <tr>
-                <td>${item.bicos?.nome || '-'}</td>
-                <td>${item.bicos?.bombas?.nome || '-'}</td>
-                <td>${item.bicos?.bombas?.tanques?.nome || '-'}</td>
-                <td>${parseFloat(item.leitura_inicial).toFixed(2)}</td>
-                <td>${parseFloat(item.leitura_final).toFixed(2)}</td>
-                <td class="total-litros-cell">${totalLitros.toFixed(2)} L</td>
-                <td>
-                    <button class="btn-acao excluir" onclick="LeiturasBomba.excluirLeitura(${item.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
+            <tr id="row-bico-${bico.id}">
+                <td>${bico.nome || '-'}</td>
+                <td>${bico.bombas?.nome || '-'}</td>
+                <td>${bico.bombas?.tanques?.nome || '-'}</td>
+                <td class="leitura-inicial-cell">${leituraInicial}</td>
+                <td>${inputFinalHtml}</td>
+                ${totalLitrosHtml}
+                ${acoesHtml}
             </tr>
-        `}).join('');
+            `;
+        }).join('');
     },
 
-    abrirModal() {
-        this.modal.style.display = 'flex';
-        this.modalData.value = this.dateInput.value;
-        this.selectBico.value = '';
-        this.inputInicial.value = '';
-        this.inputFinal.value = '';
+    calcularTotalLitros(inputFinal) {
+        const bicoId = inputFinal.dataset.bicoId;
+        const linha = document.getElementById(`row-bico-${bicoId}`);
+        if (!linha) return;
+
+        const celulaInicial = linha.querySelector('.leitura-inicial-cell');
+        const celulaTotal = linha.querySelector('.total-litros-cell');
+
+        const inicial = parseFloat(celulaInicial.textContent) || 0;
+        const final = parseFloat(inputFinal.value) || 0;
+
+        const total = final - inicial;
+
+        celulaTotal.textContent = total.toFixed(2) + ' L';
+        // Adiciona classe de erro se o valor for negativo
+        if (total < 0) {
+            inputFinal.classList.add('input-error');
+        } else {
+            inputFinal.classList.remove('input-error');
+        }
     },
 
-    fecharModal() {
-        this.modal.style.display = 'none';
-    },
+    async salvarLeitura(bicoId) {
+        const linha = document.getElementById(`row-bico-${bicoId}`);
+        const inputFinal = linha.querySelector('.leitura-final-input');
+        const celulaInicial = linha.querySelector('.leitura-inicial-cell');
+        const btnSalvar = linha.querySelector('.btn-salvar-leitura');
 
-    async buscarUltimaLeitura(bicoId) {
-        if (!bicoId) {
-            this.inputInicial.value = '';
+        const dataLeitura = this.dateInput.value;
+        const inicial = parseFloat(celulaInicial.textContent);
+        const final = parseFloat(inputFinal.value);
+
+        if (isNaN(final) || final <= 0) {
+            alert('Por favor, insira um valor válido para a Leitura Final.');
+            inputFinal.focus();
             return;
         }
-
-        try {
-            // Busca a última leitura registrada para este bico (independente da data, mas idealmente a mais recente anterior)
-            const { data, error } = await supabaseClient
-                .from('leituras_bomba')
-                .select('leitura_final')
-                .eq('bico_id', bicoId)
-                .lt('data_leitura', this.modalData.value) // Busca leituras anteriores à data selecionada
-                .order('data_leitura', { ascending: false })
-                .limit(1);
-
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                this.inputInicial.value = data[0].leitura_final;
-            } else {
-                // Se não houver leitura anterior, tenta buscar a última inserida no geral ou define como 0
-                // Aqui definimos como 0, permitindo ajuste manual se necessário (embora o campo seja readonly, pode-se remover o readonly via JS se for a primeira vez)
-                this.inputInicial.value = '0.00';
-            }
-        } catch (err) {
-            console.error('Erro ao buscar última leitura:', err);
-            this.inputInicial.value = '0.00';
-        }
-    },
-
-    async salvarLeitura(e) {
-        e.preventDefault();
-        
-        const bicoId = this.selectBico.value;
-        const dataLeitura = this.modalData.value;
-        const inicial = parseFloat(this.inputInicial.value);
-        const final = parseFloat(this.inputFinal.value);
 
         if (final < inicial) {
             alert('A leitura final não pode ser menor que a leitura inicial (Encerrante Anterior)!');
+            inputFinal.focus();
             return;
         }
-
-        const total = final - inicial;
+        
+        // Desabilita o botão para evitar cliques duplos
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
         try {
             const { error } = await supabaseClient
@@ -203,33 +189,24 @@ const LeiturasBomba = {
 
             if (error) throw error;
 
-            alert('Leitura salva com sucesso!');
-            this.fecharModal();
-            this.carregarLeituras();
+            // Atualiza a UI da linha para o estado "Salvo"
+            inputFinal.disabled = true;
+            inputFinal.style.backgroundColor = '#e9ecef';
+            btnSalvar.className = 'btn-acao salvo';
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="fas fa-check-circle"></i> Salvo';
+
         } catch (err) {
             console.error('Erro ao salvar:', err);
             alert('Erro ao salvar leitura: ' + err.message);
-        }
-    },
-    
-    async excluirLeitura(id) {
-        if(!confirm('Deseja realmente excluir esta leitura?')) return;
-        
-        try {
-            const { error } = await supabaseClient
-                .from('leituras_bomba')
-                .delete()
-                .eq('id', id);
-                
-            if (error) throw error;
-            this.carregarLeituras();
-        } catch (err) {
-            alert('Erro ao excluir: ' + err.message);
+            // Reabilita o botão em caso de erro
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
         }
     }
 };
 
-// Expõe o objeto para o escopo global para que os botões onclick funcionem
+// Expõe o objeto para o escopo global para que os botões onclick funcionem (embora não estejamos mais usando onclick)
 window.LeiturasBomba = LeiturasBomba;
 
 document.addEventListener('DOMContentLoaded', () => {

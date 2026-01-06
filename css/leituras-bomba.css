@@ -23,6 +23,19 @@
 
 .total-litros-cell { font-weight: bold; }
 
+.leitura-final-input {
+    width: 120px;
+    text-align: right;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.leitura-final-input.input-error {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
 /* Melhoria visual dos ícones */
     .header i {
       margin-right: 12px;
@@ -76,49 +89,11 @@
     background-color: #218838;
 }
 
-/* Estilos do Modal de Leitura */
-.modal {
-    display: none; 
-    position: fixed; 
-    z-index: 2000; 
-    left: 0;
-    top: 0;
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.5); 
-    align-items: center;
-    justify-content: center;
+.btn-acao.salvo {
+    background-color: #17a2b8; /* Ciano */
+    cursor: default;
 }
-
-.modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 90%;
-    max-width: 500px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close:hover,
-.close:focus {
-    color: #000;
-    text-decoration: none;
-    cursor: pointer;
+.btn-acao.salvo:hover {
+    background-color: #17a2b8;
+    transform: none;
 }

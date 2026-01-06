@@ -36,9 +36,6 @@
         <div class="card" id="cardResultados">
           <div class="card-header-actions">
             <h3>Lançamentos do Dia</h3>
-            <button type="button" id="btnNovaLeitura" class="btn-primary">
-              <i class="fas fa-plus-circle"></i> Registrar Leitura
-            </button>
           </div>
 
           <div class="table-responsive">
@@ -61,40 +58,6 @@
           </div>
         </div>
       </section>
-    </div>
-  </div>
-
-  <!-- Modal de Registro de Leitura (Mobile Friendly) -->
-  <div id="modalLeitura" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <div class="modal-header">
-        <h2><i class="fas fa-tachometer-alt"></i> Nova Leitura</h2>
-      </div>
-      <form id="formNovaLeitura" class="form-mobile">
-        <div class="form-group">
-          <label for="modalData">Data</label>
-          <input type="date" id="modalData" required readonly style="background-color: #e9ecef;">
-        </div>
-        <div class="form-group">
-          <label for="modalBomba">Bico</label>
-          <select id="modalBomba" required class="input-large">
-            <option value="">Selecione o Bico...</option>
-            <!-- Preenchido via JS -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="modalLeituraInicial">Encerrante Anterior (Inicial)</label>
-          <input type="number" id="modalLeituraInicial" step="0.01" readonly style="background-color: #e9ecef; font-weight: bold;" />
-        </div>
-        <div class="form-group">
-          <label for="modalLeituraFinal">Encerrante Atual (Final)</label>
-          <input type="number" id="modalLeituraFinal" step="0.01" inputmode="decimal" required class="input-large highlight-input" placeholder="0.00" />
-        </div>
-        <div class="form-actions-mobile">
-          <button type="submit" class="btn-primary btn-large btn-block"><i class="fas fa-save"></i> SALVAR LEITURA</button>
-        </div>
-      </form>
     </div>
   </div>
 
