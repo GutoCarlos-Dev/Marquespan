@@ -225,8 +225,6 @@ const ColetarManutencaoUI = {
                     <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${item.semana}</td>
                     <td>${item.placa}</td>
-                    <td>${item.modelo || '-'}</td>
-                    <td>${item.km}</td>
                     <td>${item.usuario}</td>
                     <td>
                         <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
