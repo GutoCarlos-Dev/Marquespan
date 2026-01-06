@@ -16,12 +16,33 @@
     <div class="main-content">
       <header class="header"><i class="fas fa-wrench"></i> Coletar Manutenção</header>
 
-      <section class="section">
+      <!-- Navegação por abas -->
+      <div class="painel-navegacao" role="tablist" id="menu-coletar-manutencao">
+        <button class="painel-btn active" data-secao="sectionLancamento" aria-selected="true">
+          <i class="fas fa-edit"></i> Lançamento
+        </button>
+        <button class="painel-btn" data-secao="sectionLancados" aria-selected="false">
+          <i class="fas fa-list"></i> Lançados
+        </button>
+      </div>
+
+      <!-- SEÇÃO: LANÇAMENTO -->
+      <section id="sectionLancamento" class="section">
         <div class="card">
           <div class="card-header">
             <h2>Coleta de Informações da Manutenção</h2>
           </div>
           <p>A interface para coleta de dados da manutenção será implementada aqui.</p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO: LANÇADOS -->
+      <section id="sectionLancados" class="section hidden">
+        <div class="card">
+          <div class="card-header">
+            <h2>Manutenções Lançadas</h2>
+          </div>
+          <p>Lista de manutenções coletadas.</p>
         </div>
       </section>
 
