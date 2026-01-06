@@ -85,7 +85,7 @@ const LeiturasBomba = {
             // 1. Busca as leituras do dia (sem join para evitar erro de FK inexistente)
             const { data: leituras, error: errorLeituras } = await supabaseClient
                 .from('leituras_bomba')
-                .select('id, leitura_inicial, leitura_final, id_bomba')
+                .select('id, leitura_inicial, leitura_final, id_bico')
                 .eq('data_leitura', dataSelecionada);
 
             if (errorLeituras) throw errorLeituras;
@@ -99,7 +99,7 @@ const LeiturasBomba = {
 
             // 3. Cruza as informações manualmente
             const bicosMap = new Map((bicos || []).map(b => [b.id, b]));
-            const dadosCompletos = (leituras || []).map(l => ({ ...l, bicos: bicosMap.get(l.id_bomba) }));
+            const dadosCompletos = (leituras || []).map(l => ({ ...l, bicos: bicosMap.get(l.id_bico) }));
 
             this.renderTabela(dadosCompletos);
         } catch (err) {
@@ -156,7 +156,7 @@ const LeiturasBomba = {
             const { data, error } = await supabaseClient
                 .from('leituras_bomba')
                 .select('leitura_final')
-                .eq('id_bomba', bicoId)
+                .eq('id_bico', bicoId)
                 .lt('data_leitura', this.modalData.value) // Busca leituras anteriores à data selecionada
                 .order('data_leitura', { ascending: false })
                 .limit(1);
@@ -196,7 +196,7 @@ const LeiturasBomba = {
                 .from('leituras_bomba')
                 .insert({
                     data_leitura: dataLeitura,
-                    id_bomba: bicoId,
+                    id_bico: bicoId,
                     leitura_inicial: inicial,
                     leitura_final: final,
                 });
