@@ -9,6 +9,20 @@
   <link rel="stylesheet" href="css/abastecimento.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Estilos para fixar o cabeçalho e adicionar scroll na tabela de histórico */
+    #containerHistoricoEntrada {
+      max-height: 400px; /* Define a altura fixa da área visível */
+      overflow-y: auto;  /* Adiciona a barra de rolagem vertical */
+    }
+    #containerHistoricoEntrada thead th {
+      position: sticky;
+      top: 0;
+      background-color: #f1f1f1; /* Cor de fundo para o cabeçalho não ficar transparente */
+      z-index: 5;
+      box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Sombra suave para destacar o cabeçalho */
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -112,7 +126,7 @@
           <!-- Tabela -->
           <div>
             <h3>Histórico de Abastecimentos</h3>
-            <div class="table-responsive">
+            <div class="table-responsive" id="containerHistoricoEntrada">
               <table class="data-grid">
                 <thead>
                   <tr>
