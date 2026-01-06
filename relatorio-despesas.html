@@ -18,22 +18,29 @@
       .charts-grid {
           display: grid;
           /* Cria colunas responsivas. Cada gráfico terá no mínimo 400px e no máximo 1 fração do espaço. */
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 25px; /* Espaçamento entre os gráficos */
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px; /* Espaçamento entre os gráficos */
           margin-top: 20px;
       }
   
       .chart-card {
           background-color: #ffffff;
-          padding: 20px;
+          padding: 15px;
           border-radius: 8px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           border: 1px solid #e9ecef;
+          min-width: 0; /* Importante para o grid não quebrar com canvas */
       }
   
       .chart-card h3 {
           text-align: center;
           margin-top: 0;
+          font-size: 1.1rem;
+          margin-bottom: 10px;
+      }
+      .chart-card canvas {
+          max-height: 300px; /* Limita a altura dos gráficos */
+          width: 100% !important;
       }
     </style>
   </head>
