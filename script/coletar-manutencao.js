@@ -69,6 +69,24 @@ const ColetarManutencaoUI = {
         if (usuario && usuario.nome) {
             this.coletaUsuarioInput.value = usuario.nome;
         }
+
+        // Preenche Semana (Calculada a partir de 28/12/2025)
+        const semana = this.calculateCurrentWeek();
+        const semanaInput = document.getElementById('coletaSemana');
+        if (semanaInput) {
+            semanaInput.value = semana;
+        }
+    },
+
+    calculateCurrentWeek() {
+        const startDate = new Date('2025-12-28T00:00:00');
+        const today = new Date();
+        const diffInMs = today.getTime() - startDate.getTime();
+        const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+        
+        let weekNumber = Math.floor(diffInDays / 7) + 1;
+        if (weekNumber < 1) weekNumber = 1; // Garante que não seja menor que 1
+        return String(weekNumber).padStart(2, '0');
     },
 
     async carregarVeiculos() {
