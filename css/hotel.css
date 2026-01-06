@@ -220,6 +220,23 @@
     border-bottom: 1px solid #eee;
 }
 
+/* Estilo para o botão de excluir dentro da lista de quartos no modal */
+.quarto-item button {
+    background-color: #dc3545; /* Vermelho (Cor padrão de exclusão) */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px; /* Padding para um botão compacto */
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.quarto-item button:hover {
+    background-color: #c82333; /* Vermelho mais escuro */
+    transform: translateY(-1px);
+}
+
 /* O restante dos estilos (tabela, busca, etc.) são herdados do index.css */
 
 /* === Estilos para Botões da Grid de Hotéis === */
