@@ -1,22 +1,5 @@
 /* Estilos específicos para Comodato */
 
-/* Sobrescreve/Reforça estilos dos botões dentro da grid de Comodato */
-.data-grid .btn-edit, 
-.data-grid .btn-editar { 
-    background-color: #ffc107 !important; /* Amarelo */
-    color: #212529 !important; 
-}
-.data-grid .btn-edit:hover, 
-.data-grid .btn-editar:hover { 
-    background-color: #e0a800 !important; 
-}
-
-.data-grid .btn-delete, 
-.data-grid .btn-excluir { 
-    background-color: #dc3545; /* Vermelho */
-    color: white; 
-}
-
 /* Layout específico para Comodato */
 
 .grid-2-comodato {
