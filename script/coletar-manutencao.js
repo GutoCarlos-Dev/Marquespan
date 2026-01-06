@@ -70,6 +70,21 @@ const ColetarManutencaoUI = {
                 }
             });
         });
+
+        // Lógica específica para ELETRICA INTERNA
+        const eletricaItem = document.querySelector('.checklist-item[data-item="ELETRICA INTERNA"]');
+        if (eletricaItem) {
+            const statusSelect = eletricaItem.querySelector('.checklist-status');
+            statusSelect.addEventListener('change', (e) => {
+                const extraField = document.getElementById('extra-eletrica-interna');
+                if (e.target.value === 'OK') {
+                    extraField.classList.remove('hidden');
+                } else {
+                    extraField.classList.add('hidden');
+                    extraField.querySelector('input').value = ''; // Limpa se não for OK
+                }
+            });
+        }
     },
 
     initTabs() {
@@ -189,11 +204,18 @@ const ColetarManutencaoUI = {
             const nomeItem = item.dataset.item;
             const detalhes = item.querySelector('.checklist-details').value;
             const status = item.querySelector('.checklist-status').value;
+            let pecasUsadas = null;
+
+            // Captura peças usadas se for Elétrica Interna e estiver visível
+            if (nomeItem === 'ELETRICA INTERNA') {
+                const extraInput = document.getElementById('extra-eletrica-interna').querySelector('input');
+                if (!document.getElementById('extra-eletrica-interna').classList.contains('hidden')) {
+                    pecasUsadas = extraInput.value;
+                }
+            }
             
             checklistItems.push({
-                item: nomeItem,
-                detalhes: detalhes,
-                status: status
+                item: nomeItem, detalhes, status, pecas_usadas: pecasUsadas
             });
         });
 
@@ -239,7 +261,8 @@ const ColetarManutencaoUI = {
                 coleta_id: coletaId,
                 item: i.item,
                 detalhes: i.detalhes,
-                status: i.status
+                status: i.status,
+                pecas_usadas: i.pecas_usadas
             }));
 
             const { error: checklistError } = await supabaseClient
@@ -340,6 +363,10 @@ const ColetarManutencaoUI = {
                 div.querySelector('.checklist-details').value = '';
                 div.querySelector('.checklist-status').value = '';
             });
+            // Limpa campo extra
+            const extraField = document.getElementById('extra-eletrica-interna');
+            extraField.classList.add('hidden');
+            extraField.querySelector('input').value = '';
 
             // Depois preenche com o que veio do banco
             checklist.forEach(item => {
@@ -347,6 +374,12 @@ const ColetarManutencaoUI = {
                 if (div) {
                     div.querySelector('.checklist-details').value = item.detalhes || '';
                     div.querySelector('.checklist-status').value = item.status || '';
+
+                    // Lógica específica para preencher Elétrica Interna
+                    if (item.item === 'ELETRICA INTERNA' && item.status === 'OK') {
+                        extraField.classList.remove('hidden');
+                        extraField.querySelector('input').value = item.pecas_usadas || '';
+                    }
                 }
             });
 
@@ -413,6 +446,7 @@ const ColetarManutencaoUI = {
                     <td>${item.item}</td>
                     <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
+                    <!-- Opcional: Adicionar coluna de peças usadas no grid se desejar -->
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
             });
@@ -559,18 +593,20 @@ const ColetarManutencaoUI = {
                     coleta.usuario,
                     item.item,
                     item.status,
-                    item.detalhes || ''
+                    item.detalhes || '',
+                    item.pecas_usadas || ''
                 ];
             });
 
             doc.autoTable({
-                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Item', 'Status', 'Detalhes']],
+                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Item', 'Status', 'Detalhes', 'Peças']],
                 body: tableBody,
                 startY: 40,
                 headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    8: { cellWidth: 50 } // Coluna Detalhes mais larga
+                    8: { cellWidth: 40 }, // Detalhes
+                    9: { cellWidth: 30 }  // Peças
                 }
             });
 
