@@ -35,6 +35,7 @@ const ColetarManutencaoUI = {
         this.filtroStatus = document.getElementById('filtroStatus');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
+        this.btnExportarPDF = document.getElementById('btnExportarPDF');
     },
 
     bindEvents() {
@@ -58,6 +59,7 @@ const ColetarManutencaoUI = {
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
         if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
+        if(this.btnExportarPDF) this.btnExportarPDF.addEventListener('click', (e) => this.gerarRelatorioPDF(e));
 
         // Automação do status ao digitar detalhes
         document.querySelectorAll('.checklist-details').forEach(input => {
@@ -476,6 +478,107 @@ const ColetarManutencaoUI = {
         } catch (err) {
             console.error('Erro ao exportar:', err);
             alert('Erro ao gerar arquivo: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    },
+
+    async gerarRelatorioPDF(e) {
+        e.preventDefault();
+        const btn = this.btnExportarPDF;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+        try {
+            // Mesma lógica de query para consistência
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('*, coletas_manutencao!inner(*)');
+
+            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            
+            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
+            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                alert('Nenhum dado encontrado para os filtros selecionados.');
+                return;
+            }
+
+            // Ordenação
+            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+
+            // 1. Carregar a imagem do logo
+            const getLogoBase64 = async () => {
+                try {
+                    const response = await fetch('logo.png');
+                    const blob = await response.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    console.warn('Logo não encontrado');
+                    return null;
+                }
+            };
+
+            const logoBase64 = await getLogoBase64();
+
+            // 2. Cabeçalho com Logo
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10);
+            }
+
+            doc.setFontSize(18);
+            doc.text("Relatório de Coleta de Manutenção", 14, 28);
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 34);
+
+            // 3. Tabela
+            const tableBody = data.map(item => {
+                const coleta = item.coletas_manutencao;
+                return [
+                    new Date(coleta.data_hora).toLocaleString('pt-BR'),
+                    coleta.semana,
+                    coleta.placa,
+                    coleta.modelo || '-',
+                    coleta.km,
+                    coleta.usuario,
+                    item.item,
+                    item.status,
+                    item.detalhes || ''
+                ];
+            });
+
+            doc.autoTable({
+                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Item', 'Status', 'Detalhes']],
+                body: tableBody,
+                startY: 40,
+                headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    8: { cellWidth: 50 } // Coluna Detalhes mais larga
+                }
+            });
+
+            doc.save(`Relatorio_Manutencao_${new Date().toISOString().slice(0,10)}.pdf`);
+
+        } catch (err) {
+            console.error('Erro ao exportar PDF:', err);
+            alert('Erro ao gerar PDF: ' + err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
