@@ -89,7 +89,7 @@ const LeiturasBomba = {
                     leitura_inicial,
                     leitura_final,
                     litros_total,
-                    bicos (
+                    bicos:bico_id(
                         nome,
                         bombas (
                             nome,
