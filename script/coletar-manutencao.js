@@ -24,6 +24,7 @@ const ColetarManutencaoUI = {
         this.coletaModeloInput = document.getElementById('coletaModelo');
         this.veiculosList = document.getElementById('veiculosList');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
+        this.searchPlacaInput = document.getElementById('searchPlaca');
 
         // Exportação
         this.formExportacao = document.getElementById('formExportacao');
@@ -46,6 +47,10 @@ const ColetarManutencaoUI = {
             if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
             if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
+
+        if (this.searchPlacaInput) {
+            this.searchPlacaInput.addEventListener('input', () => this.carregarLancamentos());
+        }
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
     },
@@ -237,19 +242,25 @@ const ColetarManutencaoUI = {
     },
 
     async carregarLancamentos() {
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
         try {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('coletas_manutencao')
                 .select('*')
                 .order('data_hora', { ascending: false })
                 .limit(50);
 
+            const searchTerm = this.searchPlacaInput?.value.trim().toUpperCase();
+            if (searchTerm) {
+                query = query.ilike('placa', `%${searchTerm}%`);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
 
             this.tableBodyLancamentos.innerHTML = '';
             if (!data || data.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum lançamento encontrado nesta semana.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
@@ -269,7 +280,7 @@ const ColetarManutencaoUI = {
             });
         } catch (err) {
             console.error('Erro ao carregar lançamentos:', err);
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
 
