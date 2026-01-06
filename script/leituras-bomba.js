@@ -1,143 +1,236 @@
 import { supabaseClient } from './supabase.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const LeiturasUI = {
-        bombas: [],
-        leiturasDoDia: new Map(),
+const LeiturasBomba = {
+    init() {
+        this.cacheDOM();
+        this.bindEvents();
+        this.setDefaultDate();
+        this.carregarBicos(); // Carrega os bicos para o select do modal
+        this.carregarLeituras(); // Carrega a lista do dia
+    },
 
-        init() {
-            this.cache();
-            this.bind();
-            this.dataInput.valueAsDate = new Date();
-            this.loadData();
-        },
+    cacheDOM() {
+        // Filtros e Tabela
+        this.dateInput = document.getElementById('leituraData');
+        this.tbody = document.getElementById('tableBodyLeituras');
+        this.btnNova = document.getElementById('btnNovaLeitura');
+        
+        // Modal e Formulário
+        this.modal = document.getElementById('modalLeitura');
+        this.formModal = document.getElementById('formNovaLeitura');
+        this.modalData = document.getElementById('modalData');
+        this.selectBico = document.getElementById('modalBomba'); // ID mantido do HTML, mas refere-se ao Bico
+        this.inputInicial = document.getElementById('modalLeituraInicial');
+        this.inputFinal = document.getElementById('modalLeituraFinal');
+        this.btnClose = document.querySelector('.close');
+    },
 
-        cache() {
-            this.dataInput = document.getElementById('leituraData');
-            this.tableBody = document.getElementById('tableBodyLeituras');
-        },
+    bindEvents() {
+        this.dateInput.addEventListener('change', () => this.carregarLeituras());
+        this.btnNova.addEventListener('click', () => this.abrirModal());
+        this.btnClose.addEventListener('click', () => this.fecharModal());
+        this.formModal.addEventListener('submit', (e) => this.salvarLeitura(e));
+        
+        // Ao selecionar um bico, busca o encerrante anterior
+        this.selectBico.addEventListener('change', (e) => this.buscarUltimaLeitura(e.target.value));
+        
+        // Fechar modal clicando fora
+        window.addEventListener('click', (e) => {
+            if (e.target == this.modal) this.fecharModal();
+        });
+    },
 
-        bind() {
-            this.dataInput.addEventListener('change', () => this.loadData());
-            this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
-            this.tableBody.addEventListener('change', (e) => this.handleInputChange(e));
-        },
+    setDefaultDate() {
+        const today = new Date().toISOString().split('T')[0];
+        this.dateInput.value = today;
+    },
 
-        async loadData() {
-            this.tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
-            const dataSelecionada = this.dataInput.value;
+    async carregarBicos() {
+        // Busca bicos com as relações: Bico -> Bomba -> Tanque
+        try {
+            const { data, error } = await supabaseClient
+                .from('bicos')
+                .select(`
+                    id,
+                    nome,
+                    bombas (
+                        nome,
+                        tanques (nome)
+                    )
+                `)
+                .order('nome');
 
-            try {
-                // 1. Carregar todas as bombas
-                const { data: bombasData, error: bombasError } = await supabaseClient
-                    .from('bombas')
-                    .select('id, nome, tanques(nome)')
-                    .order('nome');
-                if (bombasError) throw bombasError;
-                this.bombas = bombasData;
+            if (error) throw error;
 
-                // 2. Carregar leituras para a data selecionada
-                const { data: leiturasData, error: leiturasError } = await supabaseClient
-                    .from('leituras_bomba')
-                    .select('*')
-                    .eq('data', dataSelecionada);
-                if (leiturasError) throw leiturasError;
-
-                this.leiturasDoDia = new Map(leiturasData.map(l => [l.bomba_id, l]));
-
-                this.renderTable();
-
-            } catch (error) {
-                console.error('Erro ao carregar dados:', error);
-                this.tableBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:red;">Erro ao carregar.</td></tr>';
-            }
-        },
-
-        renderTable() {
-            this.tableBody.innerHTML = '';
-            if (this.bombas.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma bomba cadastrada.</td></tr>';
-                return;
-            }
-
-            this.bombas.forEach(bomba => {
-                const leitura = this.leiturasDoDia.get(bomba.id);
-                const leituraInicial = leitura?.leitura_inicial ?? '';
-                const leituraFinal = leitura?.leitura_final ?? '';
-                const totalLitros = (leituraFinal && leituraInicial) ? (leituraFinal - leituraInicial).toFixed(2) : '0.00';
-
-                const tr = document.createElement('tr');
-                tr.dataset.bombaId = bomba.id;
-                tr.innerHTML = `
-                    <td>${bomba.nome}</td>
-                    <td>${bomba.tanques.nome}</td>
-                    <td><input type="number" class="leitura-input" data-field="leitura_inicial" value="${leituraInicial}" placeholder="0.00"></td>
-                    <td><input type="number" class="leitura-input" data-field="leitura_final" value="${leituraFinal}" placeholder="0.00"></td>
-                    <td class="total-litros-cell">${totalLitros} L</td>
-                    <td class="actions-cell">
-                        <button class="btn-action btn-save" title="Salvar Leitura desta Bomba"><i class="fas fa-save"></i></button>
-                    </td>
-                `;
-                this.tableBody.appendChild(tr);
+            this.selectBico.innerHTML = '<option value="">Selecione o Bico...</option>';
+            data.forEach(bico => {
+                const bombaNome = bico.bombas?.nome || 'S/ Bomba';
+                const tanqueNome = bico.bombas?.tanques?.nome || 'S/ Tanque';
+                // Exibe: Bico 01 - Bomba Diesel (Tanque 1)
+                const option = document.createElement('option');
+                option.value = bico.id;
+                option.textContent = `${bico.nome} - ${bombaNome} (${tanqueNome})`;
+                this.selectBico.appendChild(option);
             });
-        },
-
-        handleInputChange(e) {
-            if (!e.target.classList.contains('leitura-input')) return;
-
-            const tr = e.target.closest('tr');
-            const inicialInput = tr.querySelector('[data-field="leitura_inicial"]');
-            const finalInput = tr.querySelector('[data-field="leitura_final"]');
-            const totalCell = tr.querySelector('.total-litros-cell');
-
-            const inicial = parseFloat(inicialInput.value) || 0;
-            const final = parseFloat(finalInput.value) || 0;
-
-            if (final > 0 && inicial > 0 && final >= inicial) {
-                totalCell.textContent = (final - inicial).toFixed(2) + ' L';
-            } else {
-                totalCell.textContent = '0.00 L';
-            }
-        },
-
-        async handleTableClick(e) {
-            const saveBtn = e.target.closest('.btn-save');
-            if (!saveBtn) return;
-
-            const tr = saveBtn.closest('tr');
-            const bombaId = tr.dataset.bombaId;
-            const inicial = tr.querySelector('[data-field="leitura_inicial"]').value;
-            const final = tr.querySelector('[data-field="leitura_final"]').value;
-
-            if (!inicial) {
-                alert('A Leitura Inicial (Encerrante Anterior) é obrigatória.');
-                return;
-            }
-
-            const payload = {
-                bomba_id: bombaId,
-                data: this.dataInput.value,
-                leitura_inicial: parseFloat(inicial),
-                leitura_final: final ? parseFloat(final) : null
-            };
-
-            try {
-                const { error } = await supabaseClient
-                    .from('leituras_bomba')
-                    .upsert(payload, { onConflict: 'bomba_id, data' });
-
-                if (error) throw error;
-
-                alert('Leitura salva com sucesso!');
-                saveBtn.innerHTML = '<i class="fas fa-check" style="color:green;"></i>';
-                setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i>'; }, 2000);
-
-            } catch (error) {
-                console.error('Erro ao salvar leitura:', error);
-                alert('Erro ao salvar: ' + error.message);
-            }
+        } catch (err) {
+            console.error('Erro ao carregar bicos:', err);
         }
-    };
+    },
 
-    LeiturasUI.init();
+    async carregarLeituras() {
+        const dataSelecionada = this.dateInput.value;
+        this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('leituras_bomba')
+                .select(`
+                    id,
+                    leitura_inicial,
+                    leitura_final,
+                    litros_total,
+                    bicos (
+                        nome,
+                        bombas (
+                            nome,
+                            tanques (nome)
+                        )
+                    )
+                `)
+                .eq('data_leitura', dataSelecionada);
+
+            if (error) throw error;
+
+            this.renderTabela(data);
+        } catch (err) {
+            console.error('Erro ao carregar leituras:', err);
+            this.tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+        }
+    },
+
+    renderTabela(dados) {
+        if (!dados || dados.length === 0) {
+            this.tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhuma leitura registrada para esta data.</td></tr>';
+            return;
+        }
+
+        this.tbody.innerHTML = dados.map(item => `
+            <tr>
+                <td>${item.bicos?.nome || '-'}</td>
+                <td>${item.bicos?.bombas?.nome || '-'}</td>
+                <td>${item.bicos?.bombas?.tanques?.nome || '-'}</td>
+                <td>${parseFloat(item.leitura_inicial).toFixed(2)}</td>
+                <td>${parseFloat(item.leitura_final).toFixed(2)}</td>
+                <td class="total-litros-cell">${parseFloat(item.litros_total).toFixed(2)} L</td>
+                <td>
+                    <button class="btn-acao excluir" onclick="LeiturasBomba.excluirLeitura(${item.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    abrirModal() {
+        this.modal.style.display = 'flex';
+        this.modalData.value = this.dateInput.value;
+        this.selectBico.value = '';
+        this.inputInicial.value = '';
+        this.inputFinal.value = '';
+    },
+
+    fecharModal() {
+        this.modal.style.display = 'none';
+    },
+
+    async buscarUltimaLeitura(bicoId) {
+        if (!bicoId) {
+            this.inputInicial.value = '';
+            return;
+        }
+
+        try {
+            // Busca a última leitura registrada para este bico (independente da data, mas idealmente a mais recente anterior)
+            const { data, error } = await supabaseClient
+                .from('leituras_bomba')
+                .select('leitura_final')
+                .eq('bico_id', bicoId)
+                .lt('data_leitura', this.modalData.value) // Busca leituras anteriores à data selecionada
+                .order('data_leitura', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                this.inputInicial.value = data[0].leitura_final;
+            } else {
+                // Se não houver leitura anterior, tenta buscar a última inserida no geral ou define como 0
+                // Aqui definimos como 0, permitindo ajuste manual se necessário (embora o campo seja readonly, pode-se remover o readonly via JS se for a primeira vez)
+                this.inputInicial.value = '0.00';
+            }
+        } catch (err) {
+            console.error('Erro ao buscar última leitura:', err);
+            this.inputInicial.value = '0.00';
+        }
+    },
+
+    async salvarLeitura(e) {
+        e.preventDefault();
+        
+        const bicoId = this.selectBico.value;
+        const dataLeitura = this.modalData.value;
+        const inicial = parseFloat(this.inputInicial.value);
+        const final = parseFloat(this.inputFinal.value);
+
+        if (final < inicial) {
+            alert('A leitura final não pode ser menor que a leitura inicial (Encerrante Anterior)!');
+            return;
+        }
+
+        const total = final - inicial;
+
+        try {
+            const { error } = await supabaseClient
+                .from('leituras_bomba')
+                .insert({
+                    data_leitura: dataLeitura,
+                    bico_id: bicoId,
+                    leitura_inicial: inicial,
+                    leitura_final: final,
+                    litros_total: total
+                });
+
+            if (error) throw error;
+
+            alert('Leitura salva com sucesso!');
+            this.fecharModal();
+            this.carregarLeituras();
+        } catch (err) {
+            console.error('Erro ao salvar:', err);
+            alert('Erro ao salvar leitura: ' + err.message);
+        }
+    },
+    
+    async excluirLeitura(id) {
+        if(!confirm('Deseja realmente excluir esta leitura?')) return;
+        
+        try {
+            const { error } = await supabaseClient
+                .from('leituras_bomba')
+                .delete()
+                .eq('id', id);
+                
+            if (error) throw error;
+            this.carregarLeituras();
+        } catch (err) {
+            alert('Erro ao excluir: ' + err.message);
+        }
+    }
+};
+
+// Expõe o objeto para o escopo global para que os botões onclick funcionem
+window.LeiturasBomba = LeiturasBomba;
+
+document.addEventListener('DOMContentLoaded', () => {
+    LeiturasBomba.init();
 });
