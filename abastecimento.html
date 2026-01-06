@@ -33,10 +33,10 @@
 
       <!-- Navegação por abas -->
       <div class="painel-navegacao" role="tablist" id="menu-abastecimento">
-        <button class="painel-btn active" data-secao="sectionEstoque" aria-selected="true">
+        <button class="painel-btn" data-secao="sectionEstoque" aria-selected="false">
           <i class="fas fa-tachometer-alt"></i> Estoque Atual
         </button>
-        <button class="painel-btn" data-secao="sectionEntrada" aria-selected="false">
+        <button class="painel-btn active" data-secao="sectionEntrada" aria-selected="true">
           <i class="fas fa-arrow-down"></i> Entrada de Combustível
         </button>
         <button class="painel-btn" data-secao="sectionSaida" aria-selected="false">
@@ -45,7 +45,7 @@
       </div>
 
       <!-- SEÇÃO: ESTOQUE ATUAL (PRIMEIRA ABA) -->
-      <section id="sectionEstoque" class="section">
+      <section id="sectionEstoque" class="section hidden">
         <div class="card">
           <div class="card-header">
             <h2><i class="fas fa-ruler-vertical"></i> Atualização de Estoque</h2>
@@ -74,7 +74,7 @@
       </section>
 
       <!-- SEÇÃO: ENTRADA -->
-      <section id="sectionEntrada" class="section hidden">
+      <section id="sectionEntrada" class="section">
         <div class="card card-header">
           <h2>Novo Abastecimento</h2>
         </div>

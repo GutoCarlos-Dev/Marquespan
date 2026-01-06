@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.dataInput.value = now.toISOString().slice(0, 16);
 
-            // Validação: Verifica se o estoque do dia já foi lançado para liberar as abas
-            this.checkEstoqueLancado();
         },
 
         initTabs() {
@@ -29,12 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Validação: Impede troca de aba se estiver bloqueada
-                    if (btn.classList.contains('disabled')) {
-                        alert('⚠️ É necessário realizar a conferência do Estoque Atual (botão "Atualizar Estoque") para o dia de hoje antes de realizar movimentações.');
-                        return;
-                    }
-
                     buttons.forEach(b => b.classList.remove('active'));
                     sections.forEach(s => s.classList.add('hidden'));
 
@@ -98,51 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
             if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
-        },
-
-        async checkEstoqueLancado() {
-            const hoje = new Date().toISOString().slice(0, 10);
-            try {
-                // Verifica se existe algum ajuste de estoque registrado hoje
-                const { data, error } = await supabaseClient
-                    .from('abastecimentos')
-                    .select('id')
-                    .eq('numero_nota', 'AJUSTE DE ESTOQUE')
-                    .eq('data', hoje)
-                    .limit(1);
-
-                if (data && data.length > 0) {
-                    this.unlockTabs();
-                } else {
-                    this.lockTabs();
-                }
-            } catch (error) {
-                console.error('Erro ao verificar estoque:', error);
-                this.lockTabs(); // Bloqueia por segurança em caso de erro
-            }
-        },
-
-        lockTabs() {
-            const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
-            buttons.forEach(btn => {
-                const secao = btn.getAttribute('data-secao');
-                if (secao !== 'sectionEstoque') {
-                    btn.classList.add('disabled');
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                    btn.setAttribute('title', 'Realize o Ajuste de Estoque primeiro');
-                }
-            });
-        },
-
-        unlockTabs() {
-            const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
-            buttons.forEach(btn => {
-                btn.classList.remove('disabled');
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-                btn.removeAttribute('title');
-            });
         },
 
         getUsuarioLogado() {
@@ -328,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 alert('Ajuste(s) de estoque salvo(s) com sucesso!');
                 await this.loadEstoqueAtual(); // Recarrega para mostrar os novos valores calculados
-                this.unlockTabs(); // Libera as abas após salvar com sucesso
 
             } catch (error) {
                 console.error('Erro ao salvar ajuste de estoque:', error);
