@@ -581,8 +581,8 @@ const ColetarManutencaoUI = {
         const checklistItems = [];
         document.querySelectorAll('.checklist-item').forEach(item => {
             const nomeItem = item.dataset.item;
-            const detalhes = item.querySelector('.checklist-details').value;
-            const status = item.querySelector('.checklist-status').value;
+            const detalhes = item.querySelector('.checklist-details').value.trim();
+            let status = item.querySelector('.checklist-status').value;
             let pecasUsadas = null;
 
             // Captura peças usadas se for Elétrica Interna e estiver visível
@@ -591,6 +591,12 @@ const ColetarManutencaoUI = {
                 if (!document.getElementById('extra-eletrica-interna').classList.contains('hidden')) {
                     pecasUsadas = extraInput.value;
                 }
+            }
+
+            // Regra: Se a descrição estiver vazia, força o status para vazio.
+            // Isso garante que o item seja filtrado abaixo e removido do banco (não aparecerá na busca).
+            if (detalhes === "") {
+                status = "";
             }
             
             checklistItems.push({
