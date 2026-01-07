@@ -711,7 +711,11 @@ const ColetarManutencaoUI = {
             }
 
             // Ordenação
-            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+            data.sort((a, b) => {
+                const itemCompare = a.item.localeCompare(b.item);
+                if (itemCompare !== 0) return itemCompare;
+                return new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora);
+            });
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape' });
@@ -745,32 +749,68 @@ const ColetarManutencaoUI = {
             doc.setFontSize(10);
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 34);
 
-            // 3. Tabela
-            const tableBody = data.map(item => {
-                const coleta = item.coletas_manutencao;
-                return [
+            // Helper para cores dos itens
+            const getItemColor = (item) => {
+                const colors = {
+                    'ACESSORIOS': [255, 205, 210], // Red
+                    'ALINHAMENTO/BALANCEAMENTO': [200, 230, 201], // Green
+                    'AR-CONDICIONADO': [187, 222, 251], // Blue
+                    'BORRACHARIA': [255, 249, 196], // Amber
+                    'ELETRICA INTERNA': [225, 190, 231], // Purple
+                    'MECANICA EXTERNA': [178, 235, 242], // Cyan
+                    'MOLEIRO': [255, 224, 178], // Deep Orange
+                    'TACOGRAFO': [209, 196, 233], // Deep Purple
+                    'TAPEÇARIA': [197, 202, 233], // Indigo
+                    'THERMO KING': [248, 187, 208], // Pink
+                    'VIDROS / FECHADURAS': [220, 220, 220], // Grey
+                    'SERVIÇOS_GERAIS': [207, 216, 220] // Blue Grey
+                };
+                return colors[item] || [238, 238, 238];
+            };
+
+            const tableBody = [];
+            let currentItem = null;
+
+            data.forEach(row => {
+                if (row.item !== currentItem) {
+                    currentItem = row.item;
+                    // Adiciona linha de título destacada
+                    tableBody.push([{
+                        content: currentItem,
+                        colSpan: 9,
+                        styles: { 
+                            fillColor: getItemColor(currentItem), 
+                            textColor: [0, 0, 0], 
+                            fontStyle: 'bold', 
+                            halign: 'center',
+                            fontSize: 10
+                        }
+                    }]);
+                }
+
+                const coleta = row.coletas_manutencao;
+                tableBody.push([
                     new Date(coleta.data_hora).toLocaleString('pt-BR'),
                     coleta.semana,
                     coleta.placa,
                     coleta.modelo || '-',
                     coleta.km,
                     coleta.usuario,
-                    item.item,
-                    item.status,
-                    item.detalhes || '',
-                    item.pecas_usadas || ''
-                ];
+                    row.status,
+                    row.detalhes || '',
+                    row.pecas_usadas || ''
+                ]);
             });
 
             doc.autoTable({
-                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Item', 'Status', 'Detalhes', 'Peças']],
+                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Status', 'Detalhes', 'Peças']],
                 body: tableBody,
                 startY: 40,
                 headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    8: { cellWidth: 40 }, // Detalhes
-                    9: { cellWidth: 30 }  // Peças
+                    7: { cellWidth: 50 }, // Detalhes
+                    8: { cellWidth: 40 }  // Peças
                 }
             });
 
