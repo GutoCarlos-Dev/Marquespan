@@ -144,13 +144,116 @@ const ColetarManutencaoUI = {
         this.modalImportacao.classList.add('hidden');
     },
 
-    handleImportacao(e) {
+    async handleImportacao(e) {
         e.preventDefault();
         const tipo = document.getElementById('tipoImportacao').value;
         const arquivo = document.getElementById('arquivoImportacao').files[0];
+        const btnSubmit = this.formImportacao.querySelector('button[type="submit"]');
         
-        console.log(`Arquivo selecionado: ${arquivo?.name}, Tipo: ${tipo}`);
-        alert(`Aguardando instruções sobre a estrutura do arquivo ${tipo} para implementar o processamento.`);
+        if (!arquivo) return;
+
+        if (tipo === 'MOLEIRO') {
+            try {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+                await this.processarArquivoMoleiro(arquivo);
+                alert('Importação concluída com sucesso!');
+                this.fecharModalImportacao();
+                this.carregarLancamentos();
+            } catch (error) {
+                console.error('Erro na importação:', error);
+                alert('Erro ao processar arquivo: ' + error.message);
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fas fa-check"></i> Processar Arquivo';
+            }
+        } else {
+            alert(`A importação para o tipo ${tipo} ainda não está implementada.`);
+        }
+    },
+
+    async processarArquivoMoleiro(arquivo) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
+
+                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+                    
+                    // Processamento sequencial para garantir integridade
+                    for (const row of jsonData) {
+                        // Normaliza as chaves para maiúsculo para evitar erros de case sensitive
+                        const rowNormalized = {};
+                        Object.keys(row).forEach(key => {
+                            rowNormalized[key.toUpperCase().trim()] = row[key];
+                        });
+
+                        // Campos: ID_MEC, DATA, PLACA, MODELO, DESCRICAO
+                        const dataRaw = rowNormalized['DATA'];
+                        let dataHora;
+                        
+                        // Tratamento de data
+                        if (dataRaw instanceof Date) {
+                            dataHora = dataRaw;
+                        } else if (typeof dataRaw === 'string') {
+                            // Tenta converter string DD/MM/YYYY
+                            const parts = dataRaw.split('/');
+                            if (parts.length === 3) {
+                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
+                            } else {
+                                dataHora = new Date(); // Fallback
+                            }
+                        } else {
+                            dataHora = new Date();
+                        }
+
+                        const semana = this.calculateCurrentWeek(dataHora);
+                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
+                        const modelo = rowNormalized['MODELO'] || '';
+                        const descricao = (rowNormalized['DESCRICAO'] || '').toUpperCase(); // Descrição em MAIÚSCULAS
+
+                        // 1. Inserir Cabeçalho (Coleta)
+                        const { data: coleta, error: errColeta } = await supabaseClient
+                            .from('coletas_manutencao')
+                            .insert([{
+                                semana: semana,
+                                data_hora: dataHora.toISOString(),
+                                usuario: usuarioLogado,
+                                placa: placa,
+                                modelo: modelo,
+                                km: 0 // Valor padrão pois não vem no arquivo
+                            }])
+                            .select()
+                            .single();
+
+                        if (errColeta) throw errColeta;
+
+                        // 2. Inserir Item (Checklist) - MOLEIRO
+                        const { error: errItem } = await supabaseClient
+                            .from('coletas_manutencao_checklist')
+                            .insert([{
+                                coleta_id: coleta.id,
+                                item: 'MOLEIRO',
+                                status: 'NAO REALIZADO', // Status fixo conforme solicitado
+                                detalhes: descricao
+                            }]);
+
+                        if (errItem) throw errItem;
+                    }
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(arquivo);
+        });
     },
 
     preencherDadosPadrao() {
@@ -173,10 +276,9 @@ const ColetarManutencaoUI = {
         }
     },
 
-    calculateCurrentWeek() {
+    calculateCurrentWeek(dateObj = new Date()) {
         const startDate = new Date('2025-12-28T00:00:00');
-        const today = new Date();
-        const diffInMs = today.getTime() - startDate.getTime();
+        const diffInMs = dateObj.getTime() - startDate.getTime();
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
         
         let weekNumber = Math.floor(diffInDays / 7) + 1;
