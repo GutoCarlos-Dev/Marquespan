@@ -45,3 +45,6 @@
 
 /* 📤 Estilos específicos da página de saídas de pneus */
 @import url("saidas-pneus.css");
+
+/* 🧾 Estilos gerais para painéis/modais */
+@import url("panel.css");
