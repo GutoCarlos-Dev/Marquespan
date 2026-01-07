@@ -5,121 +5,48 @@ let gridBody;
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   gridBody = document.getElementById('grid-veiculos-body');
-  const btnAdd = document.getElementById('btnAddVeiculo');
-  const btnCancel = document.getElementById('btnCancelar');
-  const btnClear = document.getElementById('btnClear');
   const btnBuscar = document.getElementById('btn-buscar');
-  const modal = document.getElementById('modalVeiculo');
-  const form = document.getElementById('formVeiculo');
-
-
-      document.querySelectorAll('.menu-toggle').forEach(btn => {
-   btn.addEventListener('click', () => {
-    btn.parentElement.classList.toggle('active');
-  });
-});
-
-
-  // 🟢 Abrir modal
-  btnAdd?.addEventListener('click', () => {
-    modal.style.display = 'block';
-  });
-
-  // 🔴 Cancelar e limpar
-  btnCancel?.addEventListener('click', () => {
-    modal.style.display = 'none';
-    limparFormulario(form);
-  });
-
-  // 🧼 Limpar formulário
-  btnClear?.addEventListener('click', (e) => {
-    e.preventDefault();
-    limparFormulario(form);
-  });
+  const btnNovoVeiculo = document.getElementById('btn-novo-veiculo');
 
   // 🔍 Buscar veículos
   btnBuscar?.addEventListener('click', () => {
     buscarVeiculos();
   });
 
-  // 💾 Submeter dados
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const veiculo = {
-      filial: getValorUpper('filial'),
-      placa: getValorUpper('placa'),
-      marca: getValorUpper('marca'),
-      modelo: getValorUpper('modelo'),
-      tipo: getValorUpper('tipo'),
-      situacao: getValorUpper('situacao'),
-      chassi: getValorUpper('chassi'),
-      renavan: getValorUpper('renavan'),
-      anofab: getValorUpper('anofab'),
-      anomod: getValorUpper('anomod'),
-      qtdtanque: getValorUpper('qtdtanque')
-    };
-
-    if (!veiculo.filial || !veiculo.placa || !veiculo.tipo || !veiculo.situacao) {
-      alert('⚠️ Preencha todos os campos obrigatórios: Filial, Placa, Tipo e Situação.');
-      return;
-    }
-
-    const { error } = await supabaseClient.from('veiculos').insert([veiculo]);
-
-    if (error) {
-      alert('❌ Erro ao salvar veículo.');
-    } else {
-      alert('✅ Veículo salvo com sucesso!');
-      limparFormulario(form);
-      modal.style.display = 'none';
-      carregarVeiculos();
-    }
-  });
-
-  // 🔠 Força maiúsculas em tempo real
-  const camposTexto = form?.querySelectorAll('input[type="text"], textarea');
-  camposTexto?.forEach(campo => {
-    campo.addEventListener('input', () => {
-      campo.value = campo.value.toUpperCase();
-    });
+  // ➕ Abrir modal de cadastro
+  btnNovoVeiculo?.addEventListener('click', () => {
+    abrirCadastroVeiculo();
   });
 
   // 🚚 Carrega veículos ao iniciar
   carregarVeiculos();
-
-  // Expor a função globalmente
-  window.abrirCadastroVeiculo = function () {
-    const largura = 900;
-    const altura = 700;
-    const esquerda = (window.screen.width - largura) / 2;
-    const topo = (window.screen.height - altura) / 2;
-
-    window.open(
-      'cadastro-veiculo.html',
-      'CadastroVeiculo',
-      `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
-    );
-  }
 });
 
+// 🔄 Expõe a função de atualização para a janela filha (cadastro-veiculo.html)
+window.refreshGrid = function() {
+  console.log('Grid de veículos será atualizada...');
+  carregarVeiculos();
+};
 
-// 🔧 Utilitários
-function getValorUpper(id) {
-  const el = document.getElementById(id);
-  return el?.value.trim().toUpperCase() || '';
-}
+// ➕ Abre a janela para um novo cadastro
+function abrirCadastroVeiculo() {
+  const largura = 900;
+  const altura = 700;
+  const esquerda = (window.screen.width - largura) / 2;
+  const topo = (window.screen.height - altura) / 2;
 
-function limparFormulario(form) {
-  form.querySelectorAll('input').forEach(input => input.value = '');
-  form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-  form.querySelectorAll('textarea').forEach(textarea => textarea.value = '');
+  window.open(
+    'cadastro-veiculo.html',
+    'CadastroVeiculo',
+    `width=${largura},height=${altura},left=${esquerda},top=${topo},resizable=yes,scrollbars=yes`
+  );
 }
 
 
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
   if (!gridBody) return;
+  gridBody.innerHTML = '<div class="grid-row-loading">Carregando veículos...</div>';
 
   const { data, error } = await supabaseClient
     .from('veiculos')
@@ -128,7 +55,7 @@ async function carregarVeiculos() {
 
   if (error) {
     console.error('Erro ao carregar veículos:', error);
-    gridBody.innerHTML = '<div class="grid-row">Erro ao carregar dados.</div>';
+    gridBody.innerHTML = '<div class="grid-row-error">Erro ao carregar dados.</div>';
     return;
   }
 
@@ -139,27 +66,27 @@ async function carregarVeiculos() {
 // 🔍 Buscar veículos por placa
 async function buscarVeiculos() {
   if (!gridBody) return;
+  gridBody.innerHTML = '<div class="grid-row-loading">Buscando...</div>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
-  let query = supabaseClient.from('veiculos').select('*');
+  let query = supabaseClient.from('veiculos').select('*').order('placa', { ascending: true });
 
   if (placa) {
     query = query.ilike('placa', `%${placa}%`);
   } else {
-    const confirmar = confirm("⚠️ Nenhum filtro foi preenchido.\nDeseja buscar todos os veículos?");
-    if (!confirmar) return;
+    // Se a busca for vazia, carrega todos, sem confirmação.
   }
 
   const { data, error } = await query;
 
   if (error) {
     console.error('Erro ao buscar veículos:', error);
-    gridBody.innerHTML = '<div class="grid-row">Erro ao buscar dados.</div>';
+    gridBody.innerHTML = '<div class="grid-row-error">Erro ao buscar dados.</div>';
     return;
   }
 
   if (data.length === 0) {
-    gridBody.innerHTML = '<div class="grid-row">Nenhum veículo encontrado.</div>';
+    gridBody.innerHTML = '<div class="grid-row-empty">Nenhum veículo encontrado.</div>';
     return;
   }
 
@@ -171,12 +98,17 @@ async function buscarVeiculos() {
 function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
 
+  if (!lista || lista.length === 0) {
+    gridBody.innerHTML = '<div class="grid-row-empty">Nenhum veículo cadastrado.</div>';
+    return;
+  }
+
   lista.forEach(veiculo => {
     const row = document.createElement('div');
     row.classList.add('grid-row');
 
     row.innerHTML = `
-  <div>${veiculo.filial}</div>
+  <div>${veiculo.filial || '-'}</div>
   <div>${veiculo.placa}</div>
   <div>${veiculo.modelo || '-'}</div>
   <div>${veiculo.renavan || '-'}</div>
@@ -185,11 +117,11 @@ function renderizarVeiculos(lista) {
   <div>${veiculo.qrcode || '-'}</div>
 
   <div class="acoes">
-    <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')">
-      <i class="fas fa-pen"></i> Editar
+    <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')" title="Editar">
+      <i class="fas fa-pen"></i>
     </button>
-    <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')">
-      <i class="fas fa-trash"></i> Excluir
+    <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')" title="Excluir">
+      <i class="fas fa-trash"></i>
     </button>
   </div>
 `;
@@ -200,32 +132,21 @@ function renderizarVeiculos(lista) {
 
 
 // ✏️ Editar veículo
-window.editarVeiculo = async function (id) {
-  const { data, error } = await supabaseClient
-    .from('veiculos')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) {
-    alert('❌ Veículo não encontrado.');
-    return;
-  }
+window.editarVeiculo = function (id) {
+  if (!id) return;
 
   const largura = 900;
   const altura = 700;
   const esquerda = (window.screen.width - largura) / 2;
   const topo = (window.screen.height - altura) / 2;
 
-  const params = new URLSearchParams(data).toString();
-
+  // Passa apenas o ID, que é o que a página de cadastro espera
   window.open(
-    `cadastro-veiculo.html?${params}`,
+    `cadastro-veiculo.html?id=${id}`,
     'EditarVeiculo',
     `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
   );
 };
-
 
 // 🗑️ Excluir veículo
 window.excluirVeiculo = async function (id) {
@@ -242,6 +163,6 @@ window.excluirVeiculo = async function (id) {
     alert("❌ Erro ao excluir. Tente novamente.");
   } else {
     alert("✅ Veículo excluído com sucesso!");
-    carregarVeiculos();
+    carregarVeiculos(); // Atualiza a grid
   }
 };

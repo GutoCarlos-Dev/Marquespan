@@ -51,6 +51,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else {
           console.log("Veículo excluído com sucesso.");
           alert("Veículo excluído com sucesso!");
+          // Notifica a janela pai para recarregar a grid
+          if (window.opener && typeof window.opener.refreshGrid === 'function') {
+            window.opener.refreshGrid();
+          }
           window.close();
         }
       });
@@ -109,6 +113,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         alert("Veículo atualizado com sucesso!");
         form.reset();
+        // Notifica a janela pai para recarregar a grid
+        if (window.opener && typeof window.opener.refreshGrid === 'function') {
+          window.opener.refreshGrid();
+        }
         window.close();
       } else {
         console.log("Modo cadastro. Verificando placa duplicada...");
@@ -146,6 +154,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         alert("Veículo cadastrado com sucesso!");
         form.reset();
+        // Notifica a janela pai para recarregar a grid
+        if (window.opener && typeof window.opener.refreshGrid === 'function') {
+          window.opener.refreshGrid();
+        }
         window.close();
       }
     } catch (err) {
