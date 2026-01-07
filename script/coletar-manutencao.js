@@ -6,10 +6,10 @@ const ColetarManutencaoUI = {
         this.cacheDOM();
         this.bindEvents();
         this.initTabs();
-        this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
+        this.carregarLancamentos(); // Carrega a lista ao iniciar
     },
 
     cacheDOM() {
