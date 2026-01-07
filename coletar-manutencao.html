@@ -13,6 +13,8 @@
   <!-- Bibliotecas para Exportação PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Biblioteca para Gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -148,6 +150,25 @@
                         <tr><td colspan="7" class="text-center">Utilize os filtros acima para buscar.</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Seção de Gráficos -->
+        <div class="card" id="graficos-container" style="margin-top: 20px; display: none;">
+            <div class="card-header">
+                <h3>Análise Gráfica dos Resultados</h3>
+            </div>
+            <div class="card-body" style="padding: 20px;">
+                <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                    <div class="chart-card" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 15px;">Status das Manutenções</h4>
+                        <canvas id="grafico-status"></canvas>
+                    </div>
+                    <div class="chart-card" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 15px;">Itens Verificados</h4>
+                        <canvas id="grafico-itens"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
       </section>

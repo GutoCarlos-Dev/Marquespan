@@ -11,6 +11,8 @@ const ColetarManutencaoUI = {
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
         this.currentReportSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação do relatório
         this.reportData = []; // Cache dos dados do relatório
+        this.chartStatus = null; // Instância do gráfico de status
+        this.chartItems = null; // Instância do gráfico de itens
         this.carregarLancamentos(); // Carrega a lista ao iniciar
     },
 
@@ -45,6 +47,7 @@ const ColetarManutencaoUI = {
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
+        this.graficosContainer = document.getElementById('graficos-container');
     },
 
     bindEvents() {
@@ -953,11 +956,13 @@ const ColetarManutencaoUI = {
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
                 this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum registro encontrado.</td></tr>';
+                if (this.graficosContainer) this.graficosContainer.style.display = 'none';
                 return;
             }
 
             this.reportData = data;
             this.renderRelatorio();
+            this.renderizarGraficos();
 
         } catch (err) {
             console.error('Erro ao buscar relatório:', err);
@@ -1008,6 +1013,78 @@ const ColetarManutencaoUI = {
             });
         
         this.updateReportSortIcons();
+    },
+
+    renderizarGraficos() {
+        if (!this.reportData || this.reportData.length === 0) {
+            if (this.graficosContainer) this.graficosContainer.style.display = 'none';
+            return;
+        }
+
+        if (this.graficosContainer) this.graficosContainer.style.display = 'block';
+
+        // 1. Preparar dados para Gráfico de Status
+        const statusCounts = {};
+        this.reportData.forEach(row => {
+            const status = row.status || 'N/A';
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+
+        // Cores para os status
+        const statusColors = {
+            'OK': '#28a745',
+            'NAO REALIZADO': '#dc3545',
+            'INTERNADO': '#ffc107',
+            'N/A': '#6c757d'
+        };
+        const bgColorsStatus = Object.keys(statusCounts).map(s => statusColors[s] || '#17a2b8');
+
+        // 2. Preparar dados para Gráfico de Itens
+        const itemCounts = {};
+        this.reportData.forEach(row => {
+            const item = row.item || 'Outros';
+            itemCounts[item] = (itemCounts[item] || 0) + 1;
+        });
+
+        // Destruir gráficos existentes se houver
+        if (this.chartStatus) this.chartStatus.destroy();
+        if (this.chartItems) this.chartItems.destroy();
+
+        // Renderizar Gráfico de Status (Pizza)
+        const ctxStatus = document.getElementById('grafico-status').getContext('2d');
+        this.chartStatus = new Chart(ctxStatus, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(statusCounts),
+                datasets: [{
+                    data: Object.values(statusCounts),
+                    backgroundColor: bgColorsStatus,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // Renderizar Gráfico de Itens (Barras)
+        const ctxItems = document.getElementById('grafico-itens').getContext('2d');
+        this.chartItems = new Chart(ctxItems, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(itemCounts),
+                datasets: [{
+                    label: 'Quantidade',
+                    data: Object.values(itemCounts),
+                    backgroundColor: '#007bff'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
     },
 
     handleReportSort(column) {
