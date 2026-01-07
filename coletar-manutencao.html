@@ -50,14 +50,14 @@
           <div class="search-bar" style="padding: 15px; border-bottom: 1px solid #eee;">
             <input type="text" id="searchPlaca" placeholder="🔍 Buscar por Placa..." style="width: 100%; max-width: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
           </div>
-          <div class="table-responsive">
+          <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="data-grid">
-              <thead>
+              <thead style="position: sticky; top: 0; background-color: #fff; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);">
                 <tr>
-                  <th>Data/Hora</th>
-                  <th>Semana</th>
-                  <th>Placa</th>
-                  <th>Usuário</th>
+                  <th data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
+                  <th data-sort="semana" style="cursor: pointer;">Semana <i class="fas fa-sort"></i></th>
+                  <th data-sort="placa" style="cursor: pointer;">Placa <i class="fas fa-sort"></i></th>
+                  <th data-sort="usuario" style="cursor: pointer;">Usuário <i class="fas fa-sort"></i></th>
                   <th>Ações</th>
                 </tr>
               </thead>

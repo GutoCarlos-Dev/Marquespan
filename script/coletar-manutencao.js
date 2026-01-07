@@ -9,6 +9,7 @@ const ColetarManutencaoUI = {
         this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
+        this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
     },
 
     cacheDOM() {
@@ -85,6 +86,11 @@ const ColetarManutencaoUI = {
                 }
             });
         }
+
+        // Eventos de ordenação da grid
+        document.querySelectorAll('#sectionLancamento th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
     },
 
     initTabs() {
@@ -286,9 +292,11 @@ const ColetarManutencaoUI = {
         try {
             let query = supabaseClient
                 .from('coletas_manutencao')
-                .select('*')
-                .order('data_hora', { ascending: false })
-                .limit(50);
+                .select('*');
+
+            // Ordenação dinâmica
+            query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
+            query = query.limit(50);
 
             const searchTerm = this.searchPlacaInput?.value.trim().toUpperCase();
             if (searchTerm) {
@@ -322,6 +330,27 @@ const ColetarManutencaoUI = {
             console.error('Erro ao carregar lançamentos:', err);
             this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
+    },
+
+    handleSort(column) {
+        if (this.currentSort.column === column) {
+            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentSort.column = column;
+            this.currentSort.direction = 'asc';
+        }
+        this.updateSortIcons();
+        this.carregarLancamentos();
+    },
+
+    updateSortIcons() {
+        document.querySelectorAll('#sectionLancamento th[data-sort] i').forEach(icon => {
+            icon.className = 'fas fa-sort'; // Reset
+            const th = icon.closest('th');
+            if (th.dataset.sort === this.currentSort.column) {
+                icon.className = this.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        });
     },
 
     async editarColeta(id) {
