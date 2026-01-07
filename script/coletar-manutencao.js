@@ -406,7 +406,7 @@ const ColetarManutencaoUI = {
     },
 
     async buscarRelatorio() {
-        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center">Buscando...</td></tr>';
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center">Buscando...</td></tr>';
         
         try {
             // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
@@ -429,7 +429,7 @@ const ColetarManutencaoUI = {
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
-                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum registro encontrado.</td></tr>';
+                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum registro encontrado.</td></tr>';
                 return;
             }
 
@@ -446,13 +446,14 @@ const ColetarManutencaoUI = {
                     <td>${item.item}</td>
                     <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
+                    <td>${item.pecas_usadas || '-'}</td>
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
             });
 
         } catch (err) {
             console.error('Erro ao buscar relatório:', err);
-            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
         }
     },
 
