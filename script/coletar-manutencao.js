@@ -1063,6 +1063,7 @@ const ColetarManutencaoUI = {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom' } }
             }
         });
@@ -1081,6 +1082,7 @@ const ColetarManutencaoUI = {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true } },
                 plugins: { legend: { display: false } }
             }
