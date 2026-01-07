@@ -133,7 +133,13 @@ async function handleImport(e) {
             if (existingPlates.has(placa)) {
                 duplicados++;
             } else {
-                veiculosParaInserir.push({ placa, modelo, filial, situacao: 'ativo' });
+                veiculosParaInserir.push({ 
+                    placa, 
+                    modelo, 
+                    filial, 
+                    situacao: 'ativo',
+                    marca: 'NÃO INFORMADA' // Valor padrão para evitar erro de constraint
+                });
                 existingPlates.add(placa); // Evita duplicatas dentro do mesmo arquivo
             }
         }

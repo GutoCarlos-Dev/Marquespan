@@ -1,0 +1,23 @@
+/* 🚚 Estilos específicos da página de veículos */
+
+.gestao-veiculos {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.filtros-veiculos {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.filtros-veiculos input {
+    padding: 10px 15px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 350px;
+}
