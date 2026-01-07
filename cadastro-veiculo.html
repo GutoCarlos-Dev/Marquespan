@@ -19,14 +19,16 @@
           <div class="form-bloco">
             <h3>Localização</h3>
             <div class="form-grid">
-              <label>Filial *</label>
-              <select name="filial" id="filial" required>
-                <option value="">Selecione</option>
-                <option value="SP">SP</option>
-                <option value="MG">MG</option>
-                <option value="MS">MS</option>
-                <option value="PR">PR</option>
-              </select>
+              <div class="form-group">
+                <label for="filial">Filial *</label>
+                <select name="filial" id="filial" required>
+                  <option value="">Selecione</option>
+                  <option value="SP">SP</option>
+                  <option value="MG">MG</option>
+                  <option value="MS">MS</option>
+                  <option value="PR">PR</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -34,48 +36,71 @@
           <div class="form-bloco">
             <h3>Identificação do Veículo</h3>
             <div class="form-grid">
-              <label>Placa *</label>
-              <input type="text" name="placa" id="placa" placeholder="AAA-0000" required />
+              <div class="form-group">
+                <label for="placa">Placa *</label>
+                <input type="text" name="placa" id="placa" placeholder="AAA-0000" required />
+              </div>
 
-              <label>Marca</label>
-              <input type="text" name="marca" id="marca" />
+              <div class="form-group">
+                <label for="marca">Marca</label>
+                <input type="text" name="marca" id="marca" />
+              </div>
 
-              <label>Modelo</label>
-              <input type="text" name="modelo" id="modelo" />
+              <div class="form-group">
+                <label for="modelo">Modelo</label>
+                <input type="text" name="modelo" id="modelo" />
+              </div>
 
-              <label>Renavan</label>
-              <input type="text" name="renavan" id="renavan" />
+              <div class="form-group">
+                <label for="renavan">Renavan</label>
+                <input type="text" name="renavan" id="renavan" />
+              </div>
 
-              <label>Chassi</label>
-              <input type="text" name="chassi" id="chassi" />
+              <div class="form-group">
+                <label for="chassi">Chassi</label>
+                <input type="text" name="chassi" id="chassi" />
+              </div>
 
-              <label>Ano Fabricação</label>
-              <input type="number" name="anofab" id="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
-              <label>Ano Modelo</label>
-              <input type="number" name="anomod" id="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              <div class="form-group">
+                <label for="anofab">Ano Fabricação</label>
+                <input type="number" name="anofab" id="anofab" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              </div>
 
-              <label>QTD de Tanques</label>
-              <input type="number" name="qtdtanque" id="qtdtanque" min="1" max="2" step="1" required />
+              <div class="form-group">
+                <label for="anomod">Ano Modelo</label>
+                <input type="number" name="anomod" id="anomod" min="1900" max="2099" step="1" placeholder="AAAA" required />
+              </div>
 
-              <label>Tipo</label>
-              <select name="tipo" id="tipo">
-                <option value="">Selecione</option>
-                <option value="vuc-t">VUC T</option>
-                <option value="vuc">VUC</option>
-                <option value="cavalo">CAVALO</option>
-                <option value="truck">TRUCK</option>
-                <option value="bitruck">BITRUCK</option>
-              </select>
+              <div class="form-group">
+                <label for="qtdtanque">QTD de Tanques</label>
+                <input type="number" name="qtdtanque" id="qtdtanque" min="1" max="2" step="1" required />
+              </div>
 
-              <label>Situação *</label>
-              <select name="situacao" id="situacao" required>
-                <option value="">Selecione</option>
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-              </select>
+              <div class="form-group">
+                <label for="tipo">Tipo</label>
+                <select name="tipo" id="tipo">
+                  <option value="">Selecione</option>
+                  <option value="vuc-t">VUC T</option>
+                  <option value="vuc">VUC</option>
+                  <option value="cavalo">CAVALO</option>
+                  <option value="truck">TRUCK</option>
+                  <option value="bitruck">BITRUCK</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="situacao">Situação *</label>
+                <select name="situacao" id="situacao" required>
+                  <option value="">Selecione</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </div>
               
-              <label>QR Code</label>
-              <input type="text" name="qrcode" id="qrcode" placeholder="Código QR" />
+              <div class="form-group full-width">
+                <label for="qrcode">QR Code</label>
+                <input type="text" name="qrcode" id="qrcode" placeholder="Código QR" />
+              </div>
             </div>
           </div>
 
