@@ -9,6 +9,8 @@ const ColetarManutencaoUI = {
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
+        this.currentReportSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação do relatório
+        this.reportData = []; // Cache dos dados do relatório
         this.carregarLancamentos(); // Carrega a lista ao iniciar
     },
 
@@ -104,6 +106,11 @@ const ColetarManutencaoUI = {
         // Eventos de ordenação da grid
         document.querySelectorAll('#sectionLancamento th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
+
+        // Eventos de ordenação da grid de relatório
+        document.querySelectorAll('#sectionGerarArquivo th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => this.handleReportSort(th.dataset.sort));
         });
     },
 
@@ -949,10 +956,43 @@ const ColetarManutencaoUI = {
                 return;
             }
 
-            // Ordenação local por data (decrescente)
-            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+            this.reportData = data;
+            this.renderRelatorio();
 
-            data.forEach(item => {
+        } catch (err) {
+            console.error('Erro ao buscar relatório:', err);
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+        }
+    },
+
+    renderRelatorio() {
+        this.tableBodyRelatorio.innerHTML = '';
+        
+        // Ordenação
+        const col = this.currentReportSort.column;
+        const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
+
+        this.reportData.sort((a, b) => {
+            let valA, valB;
+
+            // Mapeamento de campos (alguns estão no objeto pai 'coletas_manutencao')
+            if (col === 'data_hora') {
+                valA = new Date(a.coletas_manutencao.data_hora);
+                valB = new Date(b.coletas_manutencao.data_hora);
+            } else if (['semana', 'placa'].includes(col)) {
+                valA = a.coletas_manutencao[col];
+                valB = b.coletas_manutencao[col];
+            } else {
+                valA = a[col] || '';
+                valB = b[col] || '';
+            }
+
+            if (valA < valB) return -1 * dir;
+            if (valA > valB) return 1 * dir;
+            return 0;
+        });
+
+        this.reportData.forEach(item => {
                 const coleta = item.coletas_manutencao;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -966,11 +1006,28 @@ const ColetarManutencaoUI = {
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
             });
+        
+        this.updateReportSortIcons();
+    },
 
-        } catch (err) {
-            console.error('Erro ao buscar relatório:', err);
-            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+    handleReportSort(column) {
+        if (this.currentReportSort.column === column) {
+            this.currentReportSort.direction = this.currentReportSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentReportSort.column = column;
+            this.currentReportSort.direction = 'asc';
         }
+        this.renderRelatorio();
+    },
+
+    updateReportSortIcons() {
+        document.querySelectorAll('#sectionGerarArquivo th[data-sort] i').forEach(icon => {
+            icon.className = 'fas fa-sort'; // Reset
+            const th = icon.closest('th');
+            if (th.dataset.sort === this.currentReportSort.column) {
+                icon.className = this.currentReportSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        });
     },
 
     async gerarRelatorioExcel(e) {

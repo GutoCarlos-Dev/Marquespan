@@ -131,17 +131,17 @@
             <div class="card-header">
                 <h3>Resultados da Busca</h3>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="data-grid">
-                    <thead>
+                    <thead style="position: sticky; top: 0; background-color: #fff; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);">
                         <tr>
-                            <th>Data/Hora</th>
-                            <th>Semana</th>
-                            <th>Placa</th>
-                            <th>Item</th>
-                            <th>Status</th>
-                            <th>Detalhes</th>
-                            <th>Peças Usadas</th>
+                            <th data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
+                            <th data-sort="semana" style="cursor: pointer;">Semana <i class="fas fa-sort"></i></th>
+                            <th data-sort="placa" style="cursor: pointer;">Placa <i class="fas fa-sort"></i></th>
+                            <th data-sort="item" style="cursor: pointer;">Item <i class="fas fa-sort"></i></th>
+                            <th data-sort="status" style="cursor: pointer;">Status <i class="fas fa-sort"></i></th>
+                            <th data-sort="detalhes" style="cursor: pointer;">Detalhes <i class="fas fa-sort"></i></th>
+                            <th data-sort="pecas_usadas" style="cursor: pointer;">Peças Usadas <i class="fas fa-sort"></i></th>
                         </tr>
                     </thead>
                     <tbody id="tableBodyRelatorio">
