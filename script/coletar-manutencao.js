@@ -73,6 +73,14 @@ const ColetarManutencaoUI = {
             if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
 
+        // Event delegation para botões da tabela de relatório (Resultados da Busca)
+        this.tableBodyRelatorio.addEventListener('click', (e) => {
+            const btnDelete = e.target.closest('.btn-delete');
+            const btnEdit = e.target.closest('.btn-edit');
+            if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
+            if (btnEdit) this.editarColeta(btnEdit.dataset.id);
+        });
+
         if (this.searchPlacaInput) {
             this.searchPlacaInput.addEventListener('input', () => this.carregarLancamentos());
         }
@@ -777,6 +785,11 @@ const ColetarManutencaoUI = {
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
             this.carregarLancamentos(); // Atualiza a grid
+            
+            // Se a aba de relatório estiver visível, atualiza ela também
+            if (!document.getElementById('sectionGerarArquivo').classList.contains('hidden')) {
+                this.buscarRelatorio();
+            }
 
         } catch (err) {
             console.error('Erro ao salvar coleta:', err);
@@ -926,13 +939,18 @@ const ColetarManutencaoUI = {
             if (error) throw error;
             
             this.carregarLancamentos();
+
+            // Se a aba de relatório estiver visível, atualiza ela também
+            if (!document.getElementById('sectionGerarArquivo').classList.contains('hidden')) {
+                this.buscarRelatorio();
+            }
         } catch (err) {
             alert('Erro ao excluir: ' + err.message);
         }
     },
 
     async buscarRelatorio() {
-        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center">Buscando...</td></tr>';
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center">Buscando...</td></tr>';
         
         try {
             // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
@@ -955,7 +973,7 @@ const ColetarManutencaoUI = {
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
-                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum registro encontrado.</td></tr>';
+                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum registro encontrado.</td></tr>';
                 if (this.graficosContainer) this.graficosContainer.style.display = 'none';
                 return;
             }
@@ -966,7 +984,7 @@ const ColetarManutencaoUI = {
 
         } catch (err) {
             console.error('Erro ao buscar relatório:', err);
-            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
         }
     },
 
@@ -1008,6 +1026,10 @@ const ColetarManutencaoUI = {
                     <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
+                    <td>
+                        <button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="btn-action btn-delete" data-id="${coleta.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
             });
