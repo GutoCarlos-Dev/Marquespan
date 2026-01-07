@@ -21,3 +21,54 @@
     width: 100%;
     max-width: 350px;
 }
+
+/* Estilos do Grid com Rolagem e Cabeçalho Fixo */
+.grid-veiculos {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.grid-header, .grid-row {
+    display: grid;
+    grid-template-columns: 0.8fr 1fr 1.2fr 1fr 1fr 0.8fr 1fr 100px; /* Ajuste das larguras das colunas */
+    gap: 10px;
+    align-items: center;
+    padding: 10px 15px;
+}
+
+.grid-header {
+    font-weight: bold;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    color: #495057;
+}
+
+.grid-header div[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.grid-header div[data-sort]:hover {
+    color: #007bff;
+}
+
+.grid-body {
+    max-height: 600px; /* Altura máxima para ativar a rolagem */
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-top: none;
+}
+
+.grid-row {
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.grid-row:hover {
+    background-color: #f1f3f5;
+}

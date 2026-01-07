@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
 let gridBody;
+let currentSort = { column: 'placa', direction: 'asc' };
 
 // 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,6 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // � Carrega veículos ao iniciar
   carregarVeiculos();
+
+  // Eventos de ordenação
+  document.querySelectorAll('.grid-header div[data-sort]').forEach(div => {
+    div.addEventListener('click', () => handleSort(div.dataset.sort));
+  });
 });
 
 // 🔄 Expõe a função de atualização para a janela filha (cadastro-veiculo.html)
@@ -167,6 +173,31 @@ async function handleImport(e) {
     }
 }
 
+function handleSort(column) {
+  if (currentSort.column === column) {
+    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSort.column = column;
+    currentSort.direction = 'asc';
+  }
+  updateSortIcons();
+  
+  // Recarrega os dados com a nova ordenação
+  const placa = document.getElementById('campo-placa')?.value.trim();
+  if (placa) buscarVeiculos();
+  else carregarVeiculos();
+}
+
+function updateSortIcons() {
+  document.querySelectorAll('.grid-header div[data-sort] i').forEach(icon => {
+    icon.className = 'fas fa-sort'; // Reset
+    const div = icon.parentElement;
+    if (div.dataset.sort === currentSort.column) {
+      icon.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
+  });
+}
+
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
   if (!gridBody) return;
@@ -175,7 +206,7 @@ async function carregarVeiculos() {
   const { data, error } = await supabaseClient
     .from('veiculos')
     .select('*')
-    .order('placa', { ascending: true });
+    .order(currentSort.column, { ascending: currentSort.direction === 'asc' });
 
   if (error) {
     console.error('Erro ao carregar veículos:', error);
@@ -193,7 +224,7 @@ async function buscarVeiculos() {
   gridBody.innerHTML = '<div class="grid-row-loading">Buscando...</div>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
-  let query = supabaseClient.from('veiculos').select('*').order('placa', { ascending: true });
+  let query = supabaseClient.from('veiculos').select('*').order(currentSort.column, { ascending: currentSort.direction === 'asc' });
 
   if (placa) {
     query = query.ilike('placa', `%${placa}%`);
