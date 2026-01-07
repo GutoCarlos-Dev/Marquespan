@@ -442,8 +442,8 @@ const ColetarManutencaoUI = {
                                 coleta_id: coleta.id,
                                 item: 'ELETRICA INTERNA',
                                 status: statusEletrica,
-                                detalhes: descEletrica || '',
-                                pecas_usadas: pecaEletrica || null
+                                detalhes: String(descEletrica || '').toUpperCase(),
+                                pecas_usadas: pecaEletrica ? String(pecaEletrica).toUpperCase() : null
                             });
                         }
 
