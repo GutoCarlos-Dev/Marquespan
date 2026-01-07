@@ -138,7 +138,11 @@ async function handleImport(e) {
                     modelo, 
                     filial, 
                     situacao: 'ativo',
-                    marca: 'NÃO INFORMADA' // Valor padrão para evitar erro de constraint
+                    marca: 'NÃO INFORMADA', // Valor padrão para evitar erro de constraint
+                    tipo: 'OUTROS',         // Valor padrão para evitar erro de constraint em 'tipo'
+                    anofab: new Date().getFullYear(), // Valor padrão (ano atual)
+                    anomod: new Date().getFullYear(), // Valor padrão (ano atual)
+                    qtdtanque: 1            // Valor padrão mínimo
                 });
                 existingPlates.add(placa); // Evita duplicatas dentro do mesmo arquivo
             }
