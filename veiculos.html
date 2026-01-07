@@ -37,21 +37,29 @@
     </div>
 
     <!-- ✅ Grid com rolagem horizontal -->
-    <div class="grid-wrapper">
-      <section class="grid-veiculos">
-        <h2 class="section-title">Veículos Cadastrados</h2>
-        <div class="grid-header">
-          <div data-sort="filial">FILIAL <i class="fas fa-sort"></i></div>
-          <div data-sort="placa">PLACA <i class="fas fa-sort"></i></div>
-          <div data-sort="modelo">MODELO <i class="fas fa-sort"></i></div>
-          <div data-sort="renavan">RENAVAN <i class="fas fa-sort"></i></div>
-          <div data-sort="tipo">TIPO <i class="fas fa-sort"></i></div>
-          <div data-sort="situacao">SITUAÇÃO <i class="fas fa-sort"></i></div>
-          <div data-sort="qrcode">QRCODE <i class="fas fa-sort"></i></div>
-          <div class="no-sort">AÇÕES</div>
-        </div>
-        <div id="grid-veiculos-body" class="grid-body"></div>
-      </section>
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-header" style="margin-bottom: 15px;">
+        <h2 style="margin: 0; font-size: 1.25rem; color: #333;"><i class="fas fa-car"></i> Veículos Cadastrados</h2>
+      </div>
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table class="data-grid" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background-color: #fff; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);">
+            <tr>
+              <th data-sort="filial" style="cursor: pointer; padding: 12px; text-align: left;">FILIAL <i class="fas fa-sort"></i></th>
+              <th data-sort="placa" style="cursor: pointer; padding: 12px; text-align: left;">PLACA <i class="fas fa-sort"></i></th>
+              <th data-sort="modelo" style="cursor: pointer; padding: 12px; text-align: left;">MODELO <i class="fas fa-sort"></i></th>
+              <th data-sort="renavan" style="cursor: pointer; padding: 12px; text-align: left;">RENAVAN <i class="fas fa-sort"></i></th>
+              <th data-sort="tipo" style="cursor: pointer; padding: 12px; text-align: left;">TIPO <i class="fas fa-sort"></i></th>
+              <th data-sort="situacao" style="cursor: pointer; padding: 12px; text-align: left;">SITUAÇÃO <i class="fas fa-sort"></i></th>
+              <th data-sort="qrcode" style="cursor: pointer; padding: 12px; text-align: left;">QRCODE <i class="fas fa-sort"></i></th>
+              <th style="padding: 12px; text-align: left;">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="grid-veiculos-body">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 

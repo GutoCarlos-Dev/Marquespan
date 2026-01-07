@@ -38,8 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarVeiculos();
 
   // Eventos de ordenação
-  document.querySelectorAll('.grid-header div[data-sort]').forEach(div => {
-    div.addEventListener('click', () => handleSort(div.dataset.sort));
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => handleSort(th.dataset.sort));
   });
 });
 
@@ -189,10 +189,10 @@ function handleSort(column) {
 }
 
 function updateSortIcons() {
-  document.querySelectorAll('.grid-header div[data-sort] i').forEach(icon => {
+  document.querySelectorAll('th[data-sort] i').forEach(icon => {
     icon.className = 'fas fa-sort'; // Reset
-    const div = icon.parentElement;
-    if (div.dataset.sort === currentSort.column) {
+    const th = icon.parentElement;
+    if (th.dataset.sort === currentSort.column) {
       icon.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
     }
   });
@@ -201,7 +201,7 @@ function updateSortIcons() {
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
   if (!gridBody) return;
-  gridBody.innerHTML = '<div class="grid-row-loading">Carregando veículos...</div>';
+  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Carregando veículos...</td></tr>';
 
   const { data, error } = await supabaseClient
     .from('veiculos')
@@ -210,7 +210,7 @@ async function carregarVeiculos() {
 
   if (error) {
     console.error('Erro ao carregar veículos:', error);
-    gridBody.innerHTML = '<div class="grid-row-error">Erro ao carregar dados.</div>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao carregar dados.</td></tr>';
     return;
   }
 
@@ -221,7 +221,7 @@ async function carregarVeiculos() {
 // 🔍 Buscar veículos por placa
 async function buscarVeiculos() {
   if (!gridBody) return;
-  gridBody.innerHTML = '<div class="grid-row-loading">Buscando...</div>';
+  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Buscando...</td></tr>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
   let query = supabaseClient.from('veiculos').select('*').order(currentSort.column, { ascending: currentSort.direction === 'asc' });
@@ -236,12 +236,12 @@ async function buscarVeiculos() {
 
   if (error) {
     console.error('Erro ao buscar veículos:', error);
-    gridBody.innerHTML = '<div class="grid-row-error">Erro ao buscar dados.</div>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao buscar dados.</td></tr>';
     return;
   }
 
   if (data.length === 0) {
-    gridBody.innerHTML = '<div class="grid-row-empty">Nenhum veículo encontrado.</div>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Nenhum veículo encontrado.</td></tr>';
     return;
   }
 
@@ -254,34 +254,32 @@ function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
 
   if (!lista || lista.length === 0) {
-    gridBody.innerHTML = '<div class="grid-row-empty">Nenhum veículo cadastrado.</div>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Nenhum veículo cadastrado.</td></tr>';
     return;
   }
 
   lista.forEach(veiculo => {
-    const row = document.createElement('div');
-    row.classList.add('grid-row');
-
-    row.innerHTML = `
-  <div>${veiculo.filial || '-'}</div>
-  <div>${veiculo.placa}</div>
-  <div>${veiculo.modelo || '-'}</div>
-  <div>${veiculo.renavan || '-'}</div>
-  <div>${veiculo.tipo || '-'}</div>
-  <div>${veiculo.situacao || '-'}</div>
-  <div>${veiculo.qrcode || '-'}</div>
-
-  <div class="acoes">
-    <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')" title="Editar">
-      <i class="fas fa-pen"></i>
-    </button>
-    <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')" title="Excluir">
-      <i class="fas fa-trash"></i>
-    </button>
-  </div>
-`;
-
-    gridBody.appendChild(row);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.filial || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.placa}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.modelo || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.renavan || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.tipo || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.situacao || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.qrcode || '-'}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        <div class="acoes" style="display: flex; gap: 5px;">
+          <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')" title="Editar">
+            <i class="fas fa-pen"></i>
+          </button>
+          <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')" title="Excluir">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    gridBody.appendChild(tr);
   });
 }
 
