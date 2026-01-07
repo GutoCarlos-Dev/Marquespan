@@ -14,6 +14,7 @@ const ColetarManutencaoUI = {
 
     cacheDOM() {
         this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
+        this.btnImportarMassa = document.getElementById('btnImportarMassa');
         
         // Modal
         this.modal = document.getElementById('modalLancamento');
@@ -26,6 +27,11 @@ const ColetarManutencaoUI = {
         this.veiculosList = document.getElementById('veiculosList');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
         this.searchPlacaInput = document.getElementById('searchPlaca');
+
+        // Modal Importação
+        this.modalImportacao = document.getElementById('modalImportacaoMassa');
+        this.btnCloseModalImportacao = this.modalImportacao?.querySelector('.close-button');
+        this.formImportacao = document.getElementById('formImportacaoMassa');
 
         // Exportação
         this.formExportacao = document.getElementById('formExportacao');
@@ -41,6 +47,14 @@ const ColetarManutencaoUI = {
 
     bindEvents() {
         this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
+        if (this.btnImportarMassa) this.btnImportarMassa.addEventListener('click', () => this.abrirModalImportacao());
+
+        if (this.modalImportacao) {
+            this.btnCloseModalImportacao.addEventListener('click', () => this.fecharModalImportacao());
+            this.modalImportacao.addEventListener('click', (e) => { if (e.target === this.modalImportacao) this.fecharModalImportacao(); });
+            this.formImportacao.addEventListener('submit', (e) => this.handleImportacao(e));
+        }
+
         this.btnCloseModal.addEventListener('click', () => this.fecharModal());
         this.modal.addEventListener('click', (e) => { if (e.target === this.modal) this.fecharModal(); });
         this.coletaPlacaInput.addEventListener('change', () => this.preencherModeloVeiculo());
@@ -119,6 +133,24 @@ const ColetarManutencaoUI = {
 
     fecharModal() {
         this.modal.classList.add('hidden');
+    },
+
+    abrirModalImportacao() {
+        this.formImportacao.reset();
+        this.modalImportacao.classList.remove('hidden');
+    },
+
+    fecharModalImportacao() {
+        this.modalImportacao.classList.add('hidden');
+    },
+
+    handleImportacao(e) {
+        e.preventDefault();
+        const tipo = document.getElementById('tipoImportacao').value;
+        const arquivo = document.getElementById('arquivoImportacao').files[0];
+        
+        console.log(`Arquivo selecionado: ${arquivo?.name}, Tipo: ${tipo}`);
+        alert(`Aguardando instruções sobre a estrutura do arquivo ${tipo} para implementar o processamento.`);
     },
 
     preencherDadosPadrao() {

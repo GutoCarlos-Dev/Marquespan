@@ -39,6 +39,7 @@
           </div>
           <div class="card-body" style="padding: 20px;">
             <button type="button" id="btnAdicionarLancamento" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Lançamento</button>
+            <button type="button" id="btnImportarMassa" class="btn-success" style="margin-left: 10px;"><i class="fas fa-file-import"></i> Importar em Massa</button>
           </div>
         </div>
         
@@ -278,6 +279,36 @@
 
                 <div class="form-actions" style="justify-content: flex-end; margin-top: 20px;">
                     <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- Modal para Importação em Massa -->
+  <div id="modalImportacaoMassa" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 500px;">
+        <div class="panel-header">
+            <h3><i class="fas fa-file-import"></i> Importação em Massa</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="panel-body">
+            <form id="formImportacaoMassa">
+                <div class="form-group">
+                    <label for="tipoImportacao">Tipo de Arquivo</label>
+                    <select id="tipoImportacao" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">Selecione...</option>
+                        <option value="MOLEIRO">MOLEIRO</option>
+                        <option value="MECANICA_EXTERNA">MECANICA EXTERNA</option>
+                        <option value="GERAL">GERAL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="arquivoImportacao">Selecione o Arquivo (.xlsx)</label>
+                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-actions" style="justify-content: flex-end; margin-top: 20px;">
+                    <button type="submit" class="btn-success"><i class="fas fa-check"></i> Processar Arquivo</button>
                 </div>
             </form>
         </div>
