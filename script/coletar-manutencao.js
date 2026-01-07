@@ -446,7 +446,6 @@ const ColetarManutencaoUI = {
                     <td>${item.item}</td>
                     <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
-                    <!-- Opcional: Adicionar coluna de peças usadas no grid se desejar -->
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
             });
@@ -500,7 +499,8 @@ const ColetarManutencaoUI = {
                     'Usuário': coleta.usuario,
                     'Item Verificado': item.item,
                     'Status': item.status,
-                    'Detalhes': item.detalhes
+                    'Detalhes': item.detalhes,
+                    'Peças Usadas': item.pecas_usadas || ''
                 });
             });
 
