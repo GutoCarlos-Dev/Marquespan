@@ -152,23 +152,27 @@ const ColetarManutencaoUI = {
         
         if (!arquivo) return;
 
-        if (tipo === 'MOLEIRO') {
-            try {
-                btnSubmit.disabled = true;
-                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        try {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            if (tipo === 'MOLEIRO') {
                 await this.processarArquivoMoleiro(arquivo);
-                alert('Importação concluída com sucesso!');
-                this.fecharModalImportacao();
-                this.carregarLancamentos();
-            } catch (error) {
-                console.error('Erro na importação:', error);
-                alert('Erro ao processar arquivo: ' + error.message);
-            } finally {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-check"></i> Processar Arquivo';
+            } else if (tipo === 'MECANICA_EXTERNA') {
+                await this.processarArquivoMecanicaExterna(arquivo);
+            } else {
+                throw new Error(`A importação para o tipo ${tipo} ainda não está implementada.`);
             }
-        } else {
-            alert(`A importação para o tipo ${tipo} ainda não está implementada.`);
+            
+            alert('Importação concluída com sucesso!');
+            this.fecharModalImportacao();
+            this.carregarLancamentos();
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            alert('Erro ao processar arquivo: ' + error.message);
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fas fa-check"></i> Processar Arquivo';
         }
     },
 
@@ -242,6 +246,94 @@ const ColetarManutencaoUI = {
                                 item: 'MOLEIRO',
                                 status: 'NAO REALIZADO', // Status fixo conforme solicitado
                                 detalhes: descricao
+                            }]);
+
+                        if (errItem) throw errItem;
+                    }
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(arquivo);
+        });
+    },
+
+    async processarArquivoMecanicaExterna(arquivo) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
+
+                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+                    
+                    for (const row of jsonData) {
+                        const rowNormalized = {};
+                        Object.keys(row).forEach(key => {
+                            rowNormalized[key.toUpperCase().trim()] = row[key];
+                        });
+
+                        // Campos: ID_MEC, DATA, PLACA, MODELO, DESCRICAO, OBSERVACAO
+                        const dataRaw = rowNormalized['DATA'];
+                        let dataHora;
+                        
+                        if (dataRaw instanceof Date) {
+                            dataHora = dataRaw;
+                        } else if (typeof dataRaw === 'string') {
+                            const parts = dataRaw.split('/');
+                            if (parts.length === 3) {
+                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
+                            } else {
+                                dataHora = new Date();
+                            }
+                        } else {
+                            dataHora = new Date();
+                        }
+
+                        const semana = this.calculateCurrentWeek(dataHora);
+                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
+                        const modelo = rowNormalized['MODELO'] || '';
+                        
+                        const descricao = (rowNormalized['DESCRICAO'] || '').toUpperCase();
+                        const observacao = (rowNormalized['OBSERVACAO'] || '').toUpperCase();
+                        
+                        // Concatena Descrição e Observação
+                        let detalhes = descricao;
+                        if (observacao) {
+                            detalhes += `, ${observacao}`;
+                        }
+
+                        // 1. Inserir Cabeçalho (Coleta)
+                        const { data: coleta, error: errColeta } = await supabaseClient
+                            .from('coletas_manutencao')
+                            .insert([{
+                                semana: semana,
+                                data_hora: dataHora.toISOString(),
+                                usuario: usuarioLogado,
+                                placa: placa,
+                                modelo: modelo,
+                                km: 0
+                            }])
+                            .select()
+                            .single();
+
+                        if (errColeta) throw errColeta;
+
+                        // 2. Inserir Item (Checklist) - MECANICA EXTERNA
+                        const { error: errItem } = await supabaseClient
+                            .from('coletas_manutencao_checklist')
+                            .insert([{
+                                coleta_id: coleta.id,
+                                item: 'MECANICA EXTERNA',
+                                status: 'NAO REALIZADO',
+                                detalhes: detalhes
                             }]);
 
                         if (errItem) throw errItem;
