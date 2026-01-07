@@ -451,11 +451,17 @@ const ColetarManutencaoUI = {
             });
         });
 
-        try {
-            let coletaId;
+        // Filtra apenas itens que foram preenchidos (status ou detalhes)
+        const itemsToProcess = checklistItems.filter(i => i.status !== "" || i.detalhes !== "");
 
+        if (itemsToProcess.length === 0 && !this.editingId) {
+            alert('Preencha pelo menos um item do checklist.');
+            return;
+        }
+
+        try {
             if (this.editingId) {
-                // --- MODO EDIÇÃO ---
+                // --- MODO EDIÇÃO (Mantido igual) ---
                 const { error: updateError } = await supabaseClient
                     .from('coletas_manutencao')
                     .update({
@@ -469,39 +475,165 @@ const ColetarManutencaoUI = {
                     .eq('id', this.editingId);
 
                 if (updateError) throw updateError;
-                coletaId = this.editingId;
-
+                
                 // Remove itens antigos do checklist para inserir os novos
-                await supabaseClient.from('coletas_manutencao_checklist').delete().eq('coleta_id', coletaId);
+                await supabaseClient.from('coletas_manutencao_checklist').delete().eq('coleta_id', this.editingId);
+                
+                const checklistPayload = checklistItems.map(i => ({
+                    coleta_id: this.editingId,
+                    item: i.item,
+                    detalhes: i.detalhes,
+                    status: i.status || 'NAO REALIZADO', // Default se vazio na edição
+                    pecas_usadas: i.pecas_usadas
+                })).filter(i => i.status !== "" || i.detalhes !== ""); // Salva apenas preenchidos
+
+                if (checklistPayload.length > 0) {
+                    const { error: checklistError } = await supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .insert(checklistPayload);
+                    if (checklistError) throw checklistError;
+                }
 
             } else {
-                // --- MODO INSERÇÃO ---
-                const { data: coleta, error: coletaError } = await supabaseClient
+                // --- MODO INSERÇÃO INTELIGENTE ---
+                
+                // 1. Buscar cabeçalhos existentes para essa Placa e Semana
+                const { data: existingHeaders, error: fetchError } = await supabaseClient
                     .from('coletas_manutencao')
-                    .insert([{
-                        semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km)
-                    }])
-                    .select()
-                    .single();
+                    .select('*, coletas_manutencao_checklist(*)')
+                    .eq('placa', placa)
+                    .eq('semana', semana)
+                    .order('data_hora', { ascending: false });
 
-                if (coletaError) throw coletaError;
-                coletaId = coleta.id;
-            }
+                if (fetchError) throw fetchError;
 
-            // 2. Salvar itens do checklist
-            const checklistPayload = checklistItems.map(i => ({
-                coleta_id: coletaId,
-                item: i.item,
-                detalhes: i.detalhes,
-                status: i.status,
-                pecas_usadas: i.pecas_usadas
-            }));
+                if (!existingHeaders || existingHeaders.length === 0) {
+                    // NENHUM REGISTRO EXISTENTE: Cria novo cabeçalho e insere itens
+                    const { data: coleta, error: coletaError } = await supabaseClient
+                        .from('coletas_manutencao')
+                        .insert([{
+                            semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km)
+                        }])
+                        .select()
+                        .single();
 
-            const { error: checklistError } = await supabaseClient
-                .from('coletas_manutencao_checklist')
-                .insert(checklistPayload);
+                    if (coletaError) throw coletaError;
 
-            if (checklistError) throw checklistError;
+                    const checklistPayload = itemsToProcess.map(i => ({
+                        coleta_id: coleta.id,
+                        item: i.item,
+                        detalhes: i.detalhes,
+                        status: i.status || 'NAO REALIZADO',
+                        pecas_usadas: i.pecas_usadas
+                    }));
+
+                    const { error: checklistError } = await supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .insert(checklistPayload);
+
+                    if (checklistError) throw checklistError;
+
+                } else {
+                    // REGISTROS EXISTENTES: Lógica de Merge/Novo
+                    const latestHeader = existingHeaders[0];
+                    const headersToUpdate = new Set();
+                    const itemsToInsertInLatest = [];
+                    const itemsForNewHeader = [];
+                    const updatesToPerform = [];
+
+                    for (const formItem of itemsToProcess) {
+                        const statusItem = formItem.status || 'NAO REALIZADO';
+                        
+                        // 1. Tenta encontrar item 'NAO REALIZADO' em qualquer header existente da semana
+                        let match = null;
+                        let matchHeaderId = null;
+
+                        for (const h of existingHeaders) {
+                            const found = h.coletas_manutencao_checklist.find(i => i.item === formItem.item && i.status === 'NAO REALIZADO');
+                            if (found) {
+                                match = found;
+                                matchHeaderId = h.id;
+                                break;
+                            }
+                        }
+
+                        if (match) {
+                            // ATUALIZAR EXISTENTE
+                            let newDetails = match.detalhes || '';
+                            if (formItem.detalhes) {
+                                newDetails = newDetails ? `${newDetails}, ${formItem.detalhes}` : formItem.detalhes;
+                            }
+                            
+                            updatesToPerform.push({
+                                id: match.id,
+                                detalhes: newDetails,
+                                status: statusItem, // Atualiza status (ex: para OK)
+                                pecas_usadas: formItem.pecas_usadas || match.pecas_usadas
+                            });
+                            headersToUpdate.add(matchHeaderId);
+                        } else {
+                            // 2. Se não achou 'NAO REALIZADO', verifica conflito no header mais recente
+                            const conflict = latestHeader.coletas_manutencao_checklist.find(i => i.item === formItem.item);
+                            
+                            if (conflict) {
+                                // Já existe (e é OK/INTERNADO) -> NOVO HEADER necessário para este item
+                                itemsForNewHeader.push({ ...formItem, status: statusItem });
+                            } else {
+                                // Não existe no header recente -> INSERIR no header recente
+                                itemsToInsertInLatest.push({ ...formItem, status: statusItem });
+                                headersToUpdate.add(latestHeader.id);
+                            }
+                        }
+                    }
+
+                    // Executar Operações
+                    
+                    // A. Updates de Itens
+                    for (const up of updatesToPerform) {
+                        await supabaseClient.from('coletas_manutencao_checklist')
+                            .update({ detalhes: up.detalhes, status: up.status, pecas_usadas: up.pecas_usadas })
+                            .eq('id', up.id);
+                    }
+
+                    // B. Inserts no Header Recente
+                    if (itemsToInsertInLatest.length > 0) {
+                        const payload = itemsToInsertInLatest.map(i => ({
+                            coleta_id: latestHeader.id,
+                            item: i.item,
+                            detalhes: i.detalhes,
+                            status: i.status,
+                            pecas_usadas: i.pecas_usadas
+                        }));
+                        await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
+                    }
+
+                    // C. Atualizar Headers (Data/Usuário)
+                    if (headersToUpdate.size > 0) {
+                        await supabaseClient.from('coletas_manutencao')
+                            .update({ data_hora: dataHora, usuario: usuario })
+                            .in('id', Array.from(headersToUpdate));
+                    }
+
+                    // D. Criar Novo Header (se necessário)
+                    if (itemsForNewHeader.length > 0) {
+                        const { data: newH, error: newHErr } = await supabaseClient
+                            .from('coletas_manutencao')
+                            .insert([{ semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km) }])
+                            .select().single();
+                        
+                        if (newHErr) throw newHErr;
+
+                        const payload = itemsForNewHeader.map(i => ({
+                            coleta_id: newH.id,
+                            item: i.item,
+                            detalhes: i.detalhes,
+                            status: i.status,
+                            pecas_usadas: i.pecas_usadas
+                        }));
+                        await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
+                    }
+                }
+            });
 
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
