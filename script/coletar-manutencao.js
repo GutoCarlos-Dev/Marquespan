@@ -630,7 +630,7 @@ const ColetarManutencaoUI = {
                     coleta_id: this.editingId,
                     item: i.item,
                     detalhes: i.detalhes,
-                    status: i.status || 'NAO REALIZADO', // Default se vazio na edição
+                    status: i.status, // Permite salvar vazio se selecionado
                     pecas_usadas: i.pecas_usadas
                 })).filter(i => i.status !== "" || i.detalhes !== ""); // Salva apenas preenchidos
 
@@ -670,7 +670,7 @@ const ColetarManutencaoUI = {
                         coleta_id: coleta.id,
                         item: i.item,
                         detalhes: i.detalhes,
-                        status: i.status || 'NAO REALIZADO',
+                        status: i.status, // Permite salvar vazio
                         pecas_usadas: i.pecas_usadas
                     }));
 
@@ -689,7 +689,7 @@ const ColetarManutencaoUI = {
                     const updatesToPerform = [];
 
                     for (const formItem of itemsToProcess) {
-                        const statusItem = formItem.status || 'NAO REALIZADO';
+                        const statusItem = formItem.status; // Permite salvar vazio
                         
                         // 1. Tenta encontrar item 'NAO REALIZADO' em qualquer header existente da semana
                         let match = null;
