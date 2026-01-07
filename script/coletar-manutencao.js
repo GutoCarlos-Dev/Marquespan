@@ -1272,7 +1272,14 @@ const ColetarManutencaoUI = {
             doc.setFontSize(18);
             doc.text("Relatório de Coleta de Manutenção", 14, 28);
             doc.setFontSize(10);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 34);
+            
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+            doc.text(`Exportado por: ${usuarioLogado}`, 14, 34);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
+            
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+            doc.text(`Exportado por: ${usuarioLogado}`, 14, 34);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
 
             // Helper para cores dos itens
             const getItemColor = (item) => {
@@ -1320,17 +1327,42 @@ const ColetarManutencaoUI = {
                     coleta.placa,
                     coleta.modelo || '-',
                     coleta.km,
-                    coleta.usuario,
-                    row.status,
+                   
+            });
+
+            // Adiciona linha de totalizador
+            tableBody.push([{
+                content: `Total de Registros: ${data.length}`,
+                colSpan: 9,
+                styles: {  coleta.usuario,
+                    fillColor: [220, 220, 220], 
+                    textColor: [0, 0, 0], 
+                    fontStyle: 'bold', 
+                    halign: 'right'
+                }
+             ]       row.status,
                     row.detalhes || '',
                     row.pecas_usadas || ''
                 ]);
             });
+5
+            // Adiciona linha de totalizador
+            tableBody.push([{
+                content: `Total de Registros: ${data.length}`,
+                colSpan: 9,
+                styles: { 
+                    fillColor: [220, 220, 220], 
+                    textColor: [0, 0, 0], 
+                    fontStyle: 'bold', 
+                    halign: 'right'
+                }
+            }]);
 
             doc.autoTable({
                 head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Status', 'Detalhes', 'Peças']],
                 body: tableBody,
                 startY: 40,
+                startY: 45,
                 headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                 styles: { fontSize: 8 },
                 columnStyles: {
