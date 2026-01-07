@@ -633,7 +633,7 @@ const ColetarManutencaoUI = {
                         await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
                     }
                 }
-            });
+            };
 
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
