@@ -10,6 +10,9 @@
 
   <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Biblioteca para ler arquivos Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -27,6 +30,7 @@
       <div class="acoes-veiculos">
         <button type="button" id="btn-buscar"><i class="fas fa-search"></i> Buscar</button>
         <button type="button" id="btn-novo-veiculo"><i class="fas fa-plus"></i> Novo Veículo</button>
+        <button type="button" id="btn-importar-massa"><i class="fas fa-file-import"></i> Importar em Massa</button>
         <button><i class="fas fa-file-excel"></i> Exportar XLS</button>
         <button><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       </div>
@@ -56,6 +60,39 @@
     © 2025 Marquespan. Todos os direitos reservados.
   </footer>
   <!-- 🚀 Scripts -->
+
+  <!-- Modal para Importação em Massa -->
+  <div id="modalImportacao" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 500px;">
+        <div class="panel-header">
+            <h3><i class="fas fa-file-import"></i> Importação em Massa de Veículos</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="panel-body">
+            <form id="formImportacao">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="importFilial" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Filial para todos os veículos *</label>
+                    <select id="importFilial" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px;">
+                      <option value="">Selecione a Filial</option>
+                      <option value="SP">SP</option>
+                      <option value="MG">MG</option>
+                      <option value="MS">MS</option>
+                      <option value="PR">PR</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="arquivoImportacao" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Selecione o Arquivo (.xlsx)</label>
+                    <p style="font-size: 0.85rem; color: #6c757d; margin-top: 0; margin-bottom: 5px;">O arquivo deve conter as colunas: PLACA, MODELO.</p>
+                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-actions" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                    <button type="submit" class="btn-success"><i class="fas fa-check"></i> Processar Arquivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/veiculos.js" defer></script>
 </body>

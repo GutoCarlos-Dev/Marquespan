@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
   gridBody = document.getElementById('grid-veiculos-body');
   const btnBuscar = document.getElementById('btn-buscar');
   const btnNovoVeiculo = document.getElementById('btn-novo-veiculo');
+  const btnImportarMassa = document.getElementById('btn-importar-massa');
+  const modalImportacao = document.getElementById('modalImportacao');
+  const formImportacao = document.getElementById('formImportacao');
+  const btnCloseModalImportacao = modalImportacao?.querySelector('.close-button');
+
 
   // 🔍 Buscar veículos
   btnBuscar?.addEventListener('click', () => {
@@ -18,7 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
     abrirCadastroVeiculo();
   });
 
-  // 🚚 Carrega veículos ao iniciar
+  // 📥 Eventos de Importação
+  btnImportarMassa?.addEventListener('click', () => abrirModalImportacao());
+  btnCloseModalImportacao?.addEventListener('click', () => fecharModalImportacao());
+  modalImportacao?.addEventListener('click', (e) => {
+      if (e.target === modalImportacao) {
+          fecharModalImportacao();
+      }
+  });
+  formImportacao?.addEventListener('submit', (e) => handleImport(e));
+
+  // � Carrega veículos ao iniciar
   carregarVeiculos();
 });
 
@@ -42,6 +57,105 @@ function abrirCadastroVeiculo() {
   );
 }
 
+function abrirModalImportacao() {
+    const modal = document.getElementById('modalImportacao');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('formImportacao').reset();
+    }
+}
+
+function fecharModalImportacao() {
+    const modal = document.getElementById('modalImportacao');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+async function handleImport(e) {
+    e.preventDefault();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const originalText = btnSubmit.innerHTML;
+    
+    const filial = document.getElementById('importFilial').value;
+    const arquivo = document.getElementById('arquivoImportacao').files[0];
+
+    if (!filial) {
+        alert('Por favor, selecione uma filial.');
+        return;
+    }
+    if (!arquivo) {
+        alert('Por favor, selecione um arquivo .xlsx.');
+        return;
+    }
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+    try {
+        const data = await arquivo.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        if (json.length === 0) {
+            throw new Error("O arquivo está vazio ou em um formato inválido.");
+        }
+
+        // 1. Buscar todas as placas existentes de uma vez para otimizar
+        const { data: existingVehicles, error: fetchError } = await supabaseClient
+            .from('veiculos')
+            .select('placa');
+        
+        if (fetchError) throw fetchError;
+
+        const existingPlates = new Set(existingVehicles.map(v => v.placa));
+        
+        const veiculosParaInserir = [];
+        let duplicados = 0;
+
+        // 2. Processar cada linha do Excel
+        for (const row of json) {
+            const normalizedRow = {};
+            for (const key in row) {
+                normalizedRow[key.toUpperCase()] = row[key];
+            }
+
+            const placa = normalizedRow['PLACA']?.toString().trim().toUpperCase();
+            const modelo = normalizedRow['MODELO']?.toString().trim();
+
+            if (!placa || !modelo) {
+                console.warn('Linha ignorada por falta de PLACA ou MODELO:', row);
+                continue;
+            }
+
+            if (existingPlates.has(placa)) {
+                duplicados++;
+            } else {
+                veiculosParaInserir.push({ placa, modelo, filial, situacao: 'ativo' });
+                existingPlates.add(placa); // Evita duplicatas dentro do mesmo arquivo
+            }
+        }
+
+        // 3. Inserir os novos veículos em lote
+        if (veiculosParaInserir.length > 0) {
+            const { error: insertError } = await supabaseClient.from('veiculos').insert(veiculosParaInserir);
+            if (insertError) throw insertError;
+        }
+
+        alert(`Importação concluída!\n\n- ${veiculosParaInserir.length} veículos novos importados.\n- ${duplicados} placas duplicadas foram ignoradas.`);
+        
+        fecharModalImportacao();
+        carregarVeiculos(); // Atualiza a grid
+    } catch (error) {
+        console.error('Erro durante a importação:', error);
+        alert(`Ocorreu um erro: ${error.message}`);
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalText;
+    }
+}
 
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
