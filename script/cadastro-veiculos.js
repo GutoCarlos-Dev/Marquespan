@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("formVeiculo");
   const btnExcluir = document.getElementById("btnExcluir");
