@@ -160,6 +160,8 @@ const ColetarManutencaoUI = {
                 await this.processarArquivoMoleiro(arquivo);
             } else if (tipo === 'MECANICA_EXTERNA') {
                 await this.processarArquivoMecanicaExterna(arquivo);
+            } else if (tipo === 'GERAL') {
+                await this.processarArquivoGeral(arquivo);
             } else {
                 throw new Error(`A importação para o tipo ${tipo} ainda não está implementada.`);
             }
@@ -337,6 +339,133 @@ const ColetarManutencaoUI = {
                             }]);
 
                         if (errItem) throw errItem;
+                    }
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(arquivo);
+        });
+    },
+
+    async processarArquivoGeral(arquivo) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
+
+                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+
+                    // Mapeamento de colunas do Excel para Itens do Banco de Dados
+                    // Chave: Nome da coluna no Excel (normalizado upper/trim), Valor: Nome do item no Banco
+                    const mapItens = {
+                        'ACESSORIOS': 'ACESSORIOS',
+                        'ALINHAMENTO / BALANCEAMENTO': 'ALINHAMENTO/BALANCEAMENTO',
+                        'AR-CONDICIONADO': 'AR-CONDICIONADO',
+                        'BORRACHARIA': 'BORRACHARIA',
+                        'MECANICA EXTERNA': 'MECANICA EXTERNA',
+                        'MOLEIRO': 'MOLEIRO',
+                        'TACOGRAFO': 'TACOGRAFO',
+                        'TAPEÇARIA': 'TAPEÇARIA',
+                        'THERMO KING': 'THERMO KING',
+                        'VIDROS / FECHADURAS': 'VIDROS / FECHADURAS',
+                        'SERVIÇOS_GERAIS': 'SERVIÇOS_GERAIS'
+                    };
+
+                    for (const row of jsonData) {
+                        const rowNormalized = {};
+                        Object.keys(row).forEach(key => {
+                            rowNormalized[key.toUpperCase().trim()] = row[key];
+                        });
+
+                        // 1. Dados do Cabeçalho
+                        const dataRaw = rowNormalized['DATA'];
+                        let dataHora;
+                        if (dataRaw instanceof Date) {
+                            dataHora = dataRaw;
+                        } else if (typeof dataRaw === 'string') {
+                            const parts = dataRaw.split('/');
+                            if (parts.length === 3) {
+                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
+                            } else {
+                                dataHora = new Date();
+                            }
+                        } else {
+                            dataHora = new Date();
+                        }
+
+                        const semana = rowNormalized['SEMANA'] || this.calculateCurrentWeek(dataHora);
+                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
+                        const modelo = rowNormalized['MODELO'] || '';
+                        const km = parseInt(rowNormalized['KM']) || 0;
+
+                        // Inserir Cabeçalho (Coleta)
+                        const { data: coleta, error: errColeta } = await supabaseClient
+                            .from('coletas_manutencao')
+                            .insert([{
+                                semana: semana,
+                                data_hora: dataHora.toISOString(),
+                                usuario: usuarioLogado,
+                                placa: placa,
+                                modelo: modelo,
+                                km: km
+                            }])
+                            .select()
+                            .single();
+
+                        if (errColeta) throw errColeta;
+
+                        const checklistItems = [];
+
+                        // 2. Processar Item Especial: ELETRICA INTERNA
+                        // Colunas: ELETRICA INTERNA (desc), STATUS (bool/string), PECA
+                        const descEletrica = rowNormalized['ELETRICA INTERNA'];
+                        const statusEletricaRaw = rowNormalized['STATUS'];
+                        const pecaEletrica = rowNormalized['PECA'];
+
+                        if (descEletrica || statusEletricaRaw !== undefined || pecaEletrica) {
+                            let statusEletrica = 'NAO REALIZADO';
+                            // Verifica se é TRUE (Excel bool) ou string "TRUE"/"OK"
+                            if (statusEletricaRaw === true || String(statusEletricaRaw).toUpperCase() === 'TRUE' || String(statusEletricaRaw).toUpperCase() === 'OK') {
+                                statusEletrica = 'OK';
+                            }
+
+                            checklistItems.push({
+                                coleta_id: coleta.id,
+                                item: 'ELETRICA INTERNA',
+                                status: statusEletrica,
+                                detalhes: descEletrica || '',
+                                pecas_usadas: pecaEletrica || null
+                            });
+                        }
+
+                        // 3. Processar Outros Itens (Padrão: Se tem texto, é NAO REALIZADO com detalhes)
+                        for (const [colExcel, itemDb] of Object.entries(mapItens)) {
+                            const valorCelula = rowNormalized[colExcel];
+                            if (valorCelula) {
+                                checklistItems.push({
+                                    coleta_id: coleta.id,
+                                    item: itemDb,
+                                    status: 'NAO REALIZADO',
+                                    detalhes: String(valorCelula).toUpperCase()
+                                });
+                            }
+                        }
+
+                        if (checklistItems.length > 0) {
+                            const { error: errItems } = await supabaseClient
+                                .from('coletas_manutencao_checklist')
+                                .insert(checklistItems);
+                            if (errItems) throw errItems;
+                        }
                     }
                     resolve();
                 } catch (error) {
