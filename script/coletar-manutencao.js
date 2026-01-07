@@ -40,6 +40,7 @@ const ColetarManutencaoUI = {
         // Exportação
         this.formExportacao = document.getElementById('formExportacao');
         this.filtroSemana = document.getElementById('filtroSemana');
+        this.filtroPlaca = document.getElementById('filtroPlaca');
         this.filtroDataIni = document.getElementById('filtroDataIni');
         this.filtroDataFim = document.getElementById('filtroDataFim');
         this.filtroItem = document.getElementById('filtroItem');
@@ -48,6 +49,7 @@ const ColetarManutencaoUI = {
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
         this.graficosContainer = document.getElementById('graficos-container');
+        this.contadorResultados = document.getElementById('contadorResultados');
     },
 
     bindEvents() {
@@ -971,11 +973,15 @@ const ColetarManutencaoUI = {
             
             // Filtros da Coleta (Pai)
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
             if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
             if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
 
             const { data, error } = await query;
             if (error) throw error;
+
+            // Atualiza contador
+            if (this.contadorResultados) this.contadorResultados.textContent = `(${data ? data.length : 0})`;
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
@@ -1154,6 +1160,7 @@ const ColetarManutencaoUI = {
             if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
             if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
             if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
 
@@ -1216,6 +1223,7 @@ const ColetarManutencaoUI = {
             if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
+            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
             if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
             if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
 
