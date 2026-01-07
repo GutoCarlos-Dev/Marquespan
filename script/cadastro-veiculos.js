@@ -1,6 +1,13 @@
 import { supabaseClient } from './supabase.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Verificação de segurança para garantir que a importação funcionou
+  if (typeof supabaseClient === 'undefined') {
+    console.error("Erro crítico: supabaseClient não definido. Verifique a importação no topo do arquivo.");
+    alert("Erro no sistema: Conexão com banco de dados não inicializada.");
+    return;
+  }
+
   const form = document.getElementById("formVeiculo");
   const btnExcluir = document.getElementById("btnExcluir");
   const params = new URLSearchParams(window.location.search);
