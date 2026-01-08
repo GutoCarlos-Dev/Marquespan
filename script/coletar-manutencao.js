@@ -6,6 +6,7 @@ const ColetarManutencaoUI = {
         this.cacheDOM();
         this.bindEvents();
         this.initTabs();
+        this.renderLegend();
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
@@ -141,6 +142,28 @@ const ColetarManutencaoUI = {
                 document.getElementById(targetId)?.classList.remove('hidden');
             });
         });
+    },
+
+    renderLegend() {
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        for (const h of headings) {
+            if (h.textContent.includes('Manutenções Lançadas (Semana Atual)')) {
+                if (h.querySelector('.status-legend')) return;
+
+                const legend = document.createElement('span');
+                legend.className = 'status-legend';
+                legend.style.cssText = 'font-size: 0.65em; margin-left: 15px; font-weight: normal; vertical-align: middle; display: inline-flex; align-items: center;';
+                
+                legend.innerHTML = `
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724; margin-right: 12px;">OK</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24; margin-right: 12px;">NÃO REALIZADO</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span>
+                `;
+                
+                h.appendChild(legend);
+                break;
+            }
+        }
     },
 
     abrirModal() {
