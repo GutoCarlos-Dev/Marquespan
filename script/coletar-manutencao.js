@@ -100,6 +100,7 @@ const ColetarManutencaoUI = {
         // Automação do status ao digitar detalhes
         document.querySelectorAll('.checklist-details').forEach(input => {
             input.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase();
                 const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
                 if (statusSelect && statusSelect.value === "") {
                     statusSelect.value = "NAO REALIZADO";                    this.updateStatusColor(statusSelect); // Adicionado para atualizar a cor
@@ -629,7 +630,7 @@ const ColetarManutencaoUI = {
         const checklistItems = [];
         document.querySelectorAll('.checklist-item').forEach(item => {
             const nomeItem = item.dataset.item;
-            const detalhes = item.querySelector('.checklist-details').value.trim();
+            const detalhes = item.querySelector('.checklist-details').value.trim().toUpperCase();
             let status = item.querySelector('.checklist-status').value;
             let pecasUsadas = null;
 
