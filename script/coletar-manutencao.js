@@ -584,7 +584,8 @@ const ColetarManutencaoUI = {
         e.preventDefault();
         
         const semana = document.getElementById('coletaSemana').value;
-        const dataHora = document.getElementById('coletaDataHora').value;
+        const dataHoraInput = document.getElementById('coletaDataHora').value;
+        const dataHora = new Date(dataHoraInput).toISOString();
         const usuario = document.getElementById('coletaUsuario').value;
         const placa = document.getElementById('coletaPlaca').value.trim().toUpperCase();
         const modelo = document.getElementById('coletaModelo').value;
