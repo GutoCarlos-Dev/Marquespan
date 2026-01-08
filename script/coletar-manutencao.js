@@ -546,7 +546,7 @@ const ColetarManutencaoUI = {
         
         let weekNumber = Math.floor(diffInDays / 7) + 1;
         if (weekNumber < 1) weekNumber = 1; // Garante que não seja menor que 1
-        return String(weekNumber).padStart(2, '0');
+        return String(weekNumber).padStart(2, '');
     },
 
     async carregarVeiculos() {
