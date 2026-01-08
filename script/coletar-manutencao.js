@@ -132,6 +132,16 @@ const ColetarManutencaoUI = {
         document.querySelectorAll('#sectionGerarArquivo th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleReportSort(th.dataset.sort));
         });
+
+        // Atalho de teclado Ctrl+S para salvar no modal
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault(); // Evita salvar a página HTML
+                if (!this.modal.classList.contains('hidden')) {
+                    this.formColeta.requestSubmit();
+                }
+            }
+        });
     },
 
     initTabs() {
