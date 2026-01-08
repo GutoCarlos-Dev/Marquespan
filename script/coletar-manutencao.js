@@ -1290,31 +1290,34 @@ const ColetarManutencaoUI = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape' });
 
-            // 1. Carregar a imagem do logo
+            // 1. Carregar a imagem do logo e converter para JPEG com fundo branco
             const getLogoBase64 = async () => {
-                try {
-                    const response = await fetch('logo.png');
-                    const blob = await response.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
-                } catch (e) {
-                    console.warn('Logo não encontrado');
-                    return null;
-                }
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = 'logo.png';
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF'; // Fundo branco
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg'));
+                    };
+                    img.onerror = () => {
+                        console.warn('Logo não encontrado');
+                        resolve(null);
+                    };
+                });
             };
 
             const logoBase64 = await getLogoBase64();
 
             // 2. Cabeçalho com Logo
             if (logoBase64) {
-                // Adiciona um retângulo branco atrás do logo para evitar fundo preto em PNGs com transparência
-                doc.setFillColor(255, 255, 255);
-                doc.rect(14, 10, 40, 10, 'F'); // 'F' para preenchido (Fill)
-                doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10);
+                doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
             }
 
             doc.setFontSize(18);
