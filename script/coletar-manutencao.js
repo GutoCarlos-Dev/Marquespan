@@ -147,8 +147,8 @@ const ColetarManutencaoUI = {
     renderLegend() {
         const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
         for (const h of headings) {
-            if (h.textContent.includes('Manutenções Lançadas (Semana Atual)')) {
-                if (h.querySelector('.status-legend')) return;
+            if (h.textContent.includes('Manutenções Lançadas (Semana Atual)') || h.textContent.includes('Resultados da Busca')) {
+                if (h.querySelector('.status-legend')) continue;
 
                 const legend = document.createElement('span');
                 legend.className = 'status-legend';
@@ -161,7 +161,6 @@ const ColetarManutencaoUI = {
                 `;
                 
                 h.appendChild(legend);
-                break;
             }
         }
     },
