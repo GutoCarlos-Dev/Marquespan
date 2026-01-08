@@ -57,6 +57,11 @@ const ColetarManutencaoUI = {
         this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
         if (this.btnImportarMassa) this.btnImportarMassa.addEventListener('click', () => this.abrirModalImportacao());
 
+        // Adiciona listener para mudança de cor no status
+        document.querySelectorAll('.checklist-status').forEach(select => {
+            select.addEventListener('change', (e) => this.updateStatusColor(e.target));
+        });
+
         if (this.modalImportacao) {
             this.btnCloseModalImportacao.addEventListener('click', () => this.fecharModalImportacao());
             this.modalImportacao.addEventListener('click', (e) => { if (e.target === this.modalImportacao) this.fecharModalImportacao(); });
@@ -97,7 +102,7 @@ const ColetarManutencaoUI = {
             input.addEventListener('input', (e) => {
                 const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
                 if (statusSelect && statusSelect.value === "") {
-                    statusSelect.value = "NAO REALIZADO";
+                    statusSelect.value = "NAO REALIZADO";                    this.updateStatusColor(statusSelect); // Adicionado para atualizar a cor
                 }
             });
         });
@@ -170,7 +175,24 @@ const ColetarManutencaoUI = {
         this.formColeta.reset();
         this.preencherDadosPadrao();
         this.carregarVeiculos();
+        // Limpa as cores de todos os selects de status no modal
+        this.modal.querySelectorAll('.checklist-status').forEach(select => this.updateStatusColor(select));
         this.modal.classList.remove('hidden');
+    },
+
+    updateStatusColor(selectElement) {
+        if (!selectElement) return;
+        // Remove todas as classes de status antes de adicionar a nova
+        selectElement.classList.remove('status-ok', 'status-nao-realizado', 'status-internado');
+        const status = selectElement.value.toUpperCase();
+
+        if (status === 'OK') {
+            selectElement.classList.add('status-ok');
+        } else if (status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
+            selectElement.classList.add('status-nao-realizado');
+        } else if (status === 'INTERNADO') {
+            selectElement.classList.add('status-internado');
+        }
     },
 
     fecharModal() {
@@ -938,8 +960,10 @@ const ColetarManutencaoUI = {
             // 4. Preencher o checklist
             // Primeiro limpa tudo
             document.querySelectorAll('.checklist-item').forEach(div => {
+                const statusSelect = div.querySelector('.checklist-status');
                 div.querySelector('.checklist-details').value = '';
-                div.querySelector('.checklist-status').value = '';
+                statusSelect.value = '';
+                this.updateStatusColor(statusSelect); // Reseta a cor
             });
             // Limpa campo extra
             const extraField = document.getElementById('extra-eletrica-interna');
@@ -950,8 +974,10 @@ const ColetarManutencaoUI = {
             checklist.forEach(item => {
                 const div = document.querySelector(`.checklist-item[data-item="${item.item}"]`);
                 if (div) {
+                    const statusSelect = div.querySelector('.checklist-status');
                     div.querySelector('.checklist-details').value = item.detalhes || '';
-                    div.querySelector('.checklist-status').value = item.status || '';
+                    statusSelect.value = item.status || '';
+                    this.updateStatusColor(statusSelect); // Define a cor ao carregar
 
                     // Lógica específica para preencher Elétrica Interna
                     if (item.item === 'ELETRICA INTERNA' && item.status === 'OK') {
