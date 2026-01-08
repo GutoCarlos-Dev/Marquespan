@@ -715,18 +715,17 @@ const ColetarManutencaoUI = {
                     const latestHeader = existingHeaders[0];
                     const headersToUpdate = new Set();
                     const itemsToInsertInLatest = [];
-                    const itemsForNewHeader = [];
                     const updatesToPerform = [];
 
                     for (const formItem of itemsToProcess) {
                         const statusItem = formItem.status; // Permite salvar vazio
                         
-                        // 1. Tenta encontrar item 'NAO REALIZADO' em qualquer header existente da semana
+                        // 1. Tenta encontrar item existente em qualquer header existente da semana (independente do status)
                         let match = null;
                         let matchHeaderId = null;
 
                         for (const h of existingHeaders) {
-                            const found = h.coletas_manutencao_checklist.find(i => i.item === formItem.item && i.status === 'NAO REALIZADO');
+                            const found = h.coletas_manutencao_checklist.find(i => i.item === formItem.item);
                             if (found) {
                                 match = found;
                                 matchHeaderId = h.id;
@@ -738,7 +737,11 @@ const ColetarManutencaoUI = {
                             // ATUALIZAR EXISTENTE
                             let newDetails = match.detalhes || '';
                             if (formItem.detalhes) {
-                                newDetails = newDetails ? `${newDetails}, ${formItem.detalhes}` : formItem.detalhes;
+                                if (newDetails && newDetails.trim() !== '') {
+                                    newDetails = `${newDetails}, ${formItem.detalhes}`;
+                                } else {
+                                    newDetails = formItem.detalhes;
+                                }
                             }
                             
                             updatesToPerform.push({
@@ -749,17 +752,9 @@ const ColetarManutencaoUI = {
                             });
                             headersToUpdate.add(matchHeaderId);
                         } else {
-                            // 2. Se não achou 'NAO REALIZADO', verifica conflito no header mais recente
-                            const conflict = latestHeader.coletas_manutencao_checklist.find(i => i.item === formItem.item);
-                            
-                            if (conflict) {
-                                // Já existe (e é OK/INTERNADO) -> NOVO HEADER necessário para este item
-                                itemsForNewHeader.push({ ...formItem, status: statusItem });
-                            } else {
-                                // Não existe no header recente -> INSERIR no header recente
-                                itemsToInsertInLatest.push({ ...formItem, status: statusItem });
-                                headersToUpdate.add(latestHeader.id);
-                            }
+                            // Não existe no header recente -> INSERIR no header recente
+                            itemsToInsertInLatest.push({ ...formItem, status: statusItem });
+                            headersToUpdate.add(latestHeader.id);
                         }
                     }
 
@@ -789,25 +784,6 @@ const ColetarManutencaoUI = {
                         await supabaseClient.from('coletas_manutencao')
                             .update({ data_hora: dataHora, usuario: usuario })
                             .in('id', Array.from(headersToUpdate));
-                    }
-
-                    // D. Criar Novo Header (se necessário)
-                    if (itemsForNewHeader.length > 0) {
-                        const { data: newH, error: newHErr } = await supabaseClient
-                            .from('coletas_manutencao')
-                            .insert([{ semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km) }])
-                            .select().single();
-                        
-                        if (newHErr) throw newHErr;
-
-                        const payload = itemsForNewHeader.map(i => ({
-                            coleta_id: newH.id,
-                            item: i.item,
-                            detalhes: i.detalhes,
-                            status: i.status,
-                            pecas_usadas: i.pecas_usadas
-                        }));
-                        await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
                     }
                 }
             };
