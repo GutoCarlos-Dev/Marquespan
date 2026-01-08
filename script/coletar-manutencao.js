@@ -1311,6 +1311,9 @@ const ColetarManutencaoUI = {
 
             // 2. Cabeçalho com Logo
             if (logoBase64) {
+                // Adiciona um retângulo branco atrás do logo para evitar fundo preto em PNGs com transparência
+                doc.setFillColor(255, 255, 255);
+                doc.rect(14, 10, 40, 10, 'F'); // 'F' para preenchido (Fill)
                 doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10);
             }
 
