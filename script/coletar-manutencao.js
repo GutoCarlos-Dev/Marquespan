@@ -1030,17 +1030,18 @@ const ColetarManutencaoUI = {
         this.reportData.forEach(item => {
                 const coleta = item.coletas_manutencao;
                 const tr = document.createElement('tr');
-
-                // Lógica de cores para o Status
-                let statusStyle = '';
+                // Lógica de cores para a linha inteira baseada no Status
                 const statusUpper = item.status ? item.status.toUpperCase() : '';
                 
                 if (statusUpper === 'OK') {
-                    statusStyle = 'color: #28a745; font-weight: bold;'; // Verde
+                    tr.style.backgroundColor = '#d4edda'; // Verde claro
+                    tr.style.color = '#155724';
                 } else if (statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
-                    statusStyle = 'color: #dc3545; font-weight: bold;'; // Vermelho
+                    tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
+                    tr.style.color = '#721c24';
                 } else if (statusUpper === 'INTERNADO') {
-                    statusStyle = 'color: #007bff; font-weight: bold;'; // Azul
+                    tr.style.backgroundColor = '#cce5ff'; // Azul claro
+                    tr.style.color = '#004085';
                 }
 
                 tr.innerHTML = `
@@ -1048,7 +1049,7 @@ const ColetarManutencaoUI = {
                     <td>${coleta.semana}</td>
                     <td>${coleta.placa}</td>
                     <td>${item.item}</td>
-                    <td style="${statusStyle}">${item.status}</td>
+                    <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
                     <td>
