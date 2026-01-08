@@ -810,7 +810,7 @@ const ColetarManutencaoUI = {
         try {
             let query = supabaseClient
                 .from('coletas_manutencao')
-                .select('*');
+                .select('*, coletas_manutencao_checklist(status)');
 
             // Ordenação dinâmica
             query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
@@ -832,6 +832,37 @@ const ColetarManutencaoUI = {
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
+
+                // Lógica de status geral para colorir a linha
+                const checklist = item.coletas_manutencao_checklist || [];
+                let generalStatus = 'NONE';
+
+                if (checklist.length > 0) {
+                    const hasNaoRealizado = checklist.some(i => i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
+                    const hasInternado = checklist.some(i => i.status === 'INTERNADO');
+                    // Para ser 'OK', todos os itens devem ser 'OK'.
+                    const allOk = checklist.every(i => i.status === 'OK');
+
+                    if (hasNaoRealizado) {
+                        generalStatus = 'NAO REALIZADO';
+                    } else if (hasInternado) {
+                        generalStatus = 'INTERNADO';
+                    } else if (allOk) {
+                        generalStatus = 'OK';
+                    }
+                }
+
+                if (generalStatus === 'OK') {
+                    tr.style.backgroundColor = '#d4edda'; // Verde claro
+                    tr.style.color = '#155724';
+                } else if (generalStatus === 'NAO REALIZADO') {
+                    tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
+                    tr.style.color = '#721c24';
+                } else if (generalStatus === 'INTERNADO') {
+                    tr.style.backgroundColor = '#cce5ff'; // Azul claro
+                    tr.style.color = '#004085';
+                }
+
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${item.semana}</td>
