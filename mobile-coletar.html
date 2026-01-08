@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>App Coleta - Marquespan</title>
+  <link rel="stylesheet" href="css/buttons.css" />
+  <link rel="stylesheet" href="css/mobile-coletar.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- Cabeçalho Mobile -->
+  <header class="mobile-header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo" class="mobile-logo">
+      <h1>Coleta Manutenção</h1>
+    </div>
+    <a href="coletar-manutencao.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
+  </header>
+
+  <div class="mobile-container">
+    
+    <!-- Botão Flutuante de Ação (FAB) -->
+    <button type="button" id="btnAdicionarLancamento" class="fab-button">
+      <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Barra de Busca -->
+    <div class="mobile-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchPlaca" placeholder="Buscar placa...">
+    </div>
+
+    <!-- Lista de Cards (Antiga Tabela) -->
+    <div class="mobile-list-container">
+      <table class="data-grid mobile-cards-table">
+        <tbody id="tableBodyLancamentos">
+          <!-- Preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Elementos ocultos necessários para o JS funcionar sem erros -->
+    <div style="display: none;">
+      <div id="menu-coletar-manutencao">
+        <button class="painel-btn active" data-secao="sectionLancamento"></button>
+        <button class="painel-btn" data-secao="sectionGerarArquivo"></button>
+      </div>
+      <section id="sectionLancamento"></section>
+      <section id="sectionGerarArquivo"></section>
+      <button id="btnImportarMassa"></button>
+      <form id="formExportacao"></form>
+      <button id="btnBuscarRelatorio"></button>
+      <button id="btnExportarPDF"></button>
+      <div id="graficos-container"></div>
+      <span id="contadorResultados"></span>
+      <tbody id="tableBodyRelatorio"></tbody>
+    </div>
+
+  </div>
+
+  <!-- Modal para Lançamento (Adaptado para Mobile) -->
+  <div id="modalLancamento" class="panel-backdrop hidden">
+    <div class="panel mobile-panel">
+        <div class="panel-header">
+            <h3><i class="fas fa-wrench"></i> Nova Coleta</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="panel-body">
+            <form id="formLancamentoColeta">
+                <fieldset class="form-fieldset">
+                    <legend>Veículo</legend>
+                    <div class="form-grid-mobile">
+                        <div class="form-group">
+                            <label for="coletaPlaca">Placa</label>
+                            <input type="text" id="coletaPlaca" list="veiculosList" required placeholder="AAA-0000">
+                            <datalist id="veiculosList"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaKm">Km Atual</label>
+                            <input type="number" id="coletaKm" required placeholder="0">
+                        </div>
+                        <div class="form-group hidden">
+                            <label>Modelo</label>
+                            <input type="text" id="coletaModelo" readonly>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-fieldset">
+                    <legend>Detalhes</legend>
+                    <div class="form-grid-mobile">
+                        <div class="form-group">
+                            <label for="coletaSemana">Semana</label>
+                            <input type="text" id="coletaSemana" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaDataHora">Data/Hora</label>
+                            <input type="datetime-local" id="coletaDataHora" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaUsuario">Responsável</label>
+                            <input type="text" id="coletaUsuario" required readonly>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-fieldset">
+                    <legend>Checklist</legend>
+                    <div class="checklist-container mobile-checklist">
+                        <!-- Itens do Checklist -->
+                        <div class="checklist-item" data-item="ACESSORIOS"><label>ACESSÓRIOS</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="ALINHAMENTO/BALANCEAMENTO"><label>ALINHAMENTO</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="AR-CONDICIONADO"><label>AR-COND.</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="BORRACHARIA"><label>BORRACHARIA</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="ELETRICA INTERNA"><label>ELÉTRICA INT.</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div id="extra-eletrica-interna" class="checklist-extra hidden"><input type="text" class="checklist-pecas" placeholder="Peças usadas..."></div>
+                        <div class="checklist-item" data-item="MECANICA EXTERNA"><label>MEC. EXTERNA</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="MOLEIRO"><label>MOLEIRO</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="TACOGRAFO"><label>TACÓGRAFO</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="TAPEÇARIA"><label>TAPEÇARIA</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="THERMO KING"><label>THERMO KING</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="VIDROS / FECHADURAS"><label>VIDROS/FECH.</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                        <div class="checklist-item" data-item="SERVIÇOS_GERAIS"><label>SERV. GERAIS</label><select class="checklist-status"><option value="" selected>-</option><option value="NAO REALIZADO">NÃO</option><option value="OK">OK</option><option value="INTERNADO">INTERNADO</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions mobile-actions">
+                    <button type="submit" class="btn-primary btn-block btn-large"><i class="fas fa-save"></i> SALVAR COLETA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- Reutiliza o mesmo script -->
+  <script type="module" src="script/coletar-manutencao.js"></script>
+  <!-- Script para verificar login -->
+  <script>
+    const usuarioLogado = localStorage.getItem('usuarioLogado');
+    if (!usuarioLogado) {
+      alert('Você precisa fazer login.');
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>
