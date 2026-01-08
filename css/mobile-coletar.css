@@ -161,6 +161,25 @@ body {
     gap: 15px;
 }
 
+/* Modal Backdrop (Fundo escuro) */
+.panel-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+}
+
+.panel-backdrop.hidden {
+    display: none !important;
+}
+
 /* Modal Mobile */
 .mobile-panel {
     width: 100%;
@@ -172,6 +191,40 @@ body {
     transform: none;
     display: flex;
     flex-direction: column;
+    background-color: #f4f6f9; /* Cor de fundo do painel */
+}
+
+/* Cabeçalho do Modal */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #006937;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    line-height: 1;
+    color: #999;
+    cursor: pointer;
+    padding: 0 10px;
 }
 
 .mobile-panel .panel-body {
@@ -180,7 +233,80 @@ body {
     padding: 15px;
 }
 
+/* Estilização do Formulário */
+.form-fieldset {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.form-fieldset legend {
+    font-weight: bold;
+    color: #006937;
+    padding: 0 8px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
 .form-grid-mobile { display: flex; flex-direction: column; gap: 15px; }
-.form-group input, .form-group select { height: 45px; font-size: 16px; }
+
+.form-group {
+    margin-bottom: 5px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #444;
+    font-size: 0.95rem;
+}
+
+.form-group input, 
+.form-group select { 
+    width: 100%;
+    height: 45px; 
+    font-size: 16px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fff;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: #006937;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
+
+/* Botões do Formulário */
+.btn-primary {
+    background-color: #006937;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #00552d;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
 .btn-large { height: 50px; font-size: 1.1rem; font-weight: bold; }
 .hidden { display: none !important; }
