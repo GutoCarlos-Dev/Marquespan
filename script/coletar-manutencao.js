@@ -1030,12 +1030,25 @@ const ColetarManutencaoUI = {
         this.reportData.forEach(item => {
                 const coleta = item.coletas_manutencao;
                 const tr = document.createElement('tr');
+
+                // Lógica de cores para o Status
+                let statusStyle = '';
+                const statusUpper = item.status ? item.status.toUpperCase() : '';
+                
+                if (statusUpper === 'OK') {
+                    statusStyle = 'color: #28a745; font-weight: bold;'; // Verde
+                } else if (statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
+                    statusStyle = 'color: #dc3545; font-weight: bold;'; // Vermelho
+                } else if (statusUpper === 'INTERNADO') {
+                    statusStyle = 'color: #007bff; font-weight: bold;'; // Azul
+                }
+
                 tr.innerHTML = `
                     <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${coleta.semana}</td>
                     <td>${coleta.placa}</td>
                     <td>${item.item}</td>
-                    <td>${item.status}</td>
+                    <td style="${statusStyle}">${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
                     <td>
