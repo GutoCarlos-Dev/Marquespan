@@ -586,7 +586,7 @@ const ColetarManutencaoUI = {
         const semana = document.getElementById('coletaSemana').value;
         const dataHora = document.getElementById('coletaDataHora').value;
         const usuario = document.getElementById('coletaUsuario').value;
-        const placa = document.getElementById('coletaPlaca').value.toUpperCase();
+        const placa = document.getElementById('coletaPlaca').value.trim().toUpperCase();
         const modelo = document.getElementById('coletaModelo').value;
         const km = document.getElementById('coletaKm').value;
 
@@ -596,7 +596,7 @@ const ColetarManutencaoUI = {
                 .some(td => td.textContent === placa);
                 
             if (duplicado) {
-                if (!confirm(`⚠️ ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja registrar novamente?`)) {
+                if (!confirm(`⚠️ ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
                     return;
                 }
             }
