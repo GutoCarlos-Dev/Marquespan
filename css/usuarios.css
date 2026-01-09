@@ -90,6 +90,9 @@ input[type="password"] {
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
   margin-bottom: 20px;
+  max-width: 700px; /* Diminui a largura do formulário */
+  margin-left: auto; /* Centraliza horizontalmente */
+  margin-right: auto; /* Centraliza horizontalmente */
 }
 .form-fieldset {
   border: 1px solid #e0e0e0;
