@@ -863,6 +863,11 @@ const ColetarManutencaoUI = {
                 return;
             }
 
+            // Verifica permissão para excluir
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            const podeExcluir = !['mecanica_externa', 'mecanica_interna'].includes(nivelUsuario);
+
             data.forEach(item => {
                 const tr = document.createElement('tr');
 
@@ -896,14 +901,18 @@ const ColetarManutencaoUI = {
                     tr.style.color = '#004085';
                 }
 
+                let botoesAcao = `<button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
+                if (podeExcluir) {
+                    botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
+                }
+
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${item.semana}</td>
                     <td>${item.placa}</td>
                     <td>${item.usuario}</td>
                     <td>
-                        <button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        ${botoesAcao}
                     </td>
                 `;
                 this.tableBodyLancamentos.appendChild(tr);
@@ -1095,6 +1104,11 @@ const ColetarManutencaoUI = {
             return 0;
         });
 
+        // Verifica permissão para excluir
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+        const podeExcluir = !['mecanica_externa', 'mecanica_interna'].includes(nivelUsuario);
+
         this.reportData.forEach(item => {
                 const coleta = item.coletas_manutencao;
                 const tr = document.createElement('tr');
@@ -1112,6 +1126,11 @@ const ColetarManutencaoUI = {
                     tr.style.color = '#004085';
                 }
 
+                let botoesAcao = `<button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
+                if (podeExcluir) {
+                    botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${coleta.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
+                }
+
                 tr.innerHTML = `
                     <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${coleta.semana}</td>
@@ -1121,8 +1140,7 @@ const ColetarManutencaoUI = {
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
                     <td>
-                        <button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-delete" data-id="${coleta.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        ${botoesAcao}
                     </td>
                 `;
                 this.tableBodyRelatorio.appendChild(tr);
