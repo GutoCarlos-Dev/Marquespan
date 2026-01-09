@@ -178,3 +178,54 @@ input[type="password"] {
 @media (max-width: 768px) {
   .form-grid { grid-template-columns: 1fr; }
 }
+
+/* --- Estilos para Grid com Rolagem e Cabeçalho Fixo --- */
+
+/* Container que define a altura máxima e a rolagem */
+.table-scroll-container {
+  max-height: 450px; /* Ajuste conforme necessário */
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Estilização da barra de rolagem (Webkit) */
+.table-scroll-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Cabeçalho Fixo */
+.data-grid thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa; /* Cor de fundo para não ficar transparente ao rolar */
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Estilos para ordenação */
+.data-grid thead th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+.data-grid thead th[data-sort]:hover {
+  background-color: #e2e6ea;
+}
+.data-grid thead th[data-sort] i {
+  margin-left: 5px;
+  color: #999;
+  font-size: 0.8em;
+}
