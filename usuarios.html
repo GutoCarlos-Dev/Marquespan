@@ -16,21 +16,6 @@
     <header class="header">👥 Gestão de Usuários</header>
 
     <section id="cadastro" class="secao hidden">
-      <h3>📋 Cadastro de Usuários</h3>
-      <form id="formUsuario" class="formulario">
-        <label for="nome">Nome:</label>
-        <input type="text" id="nome" placeholder="Nome" required>
-        <label for="nomecompleto">Nome Completo:</label>
-        <input type="text" id="nomecompleto" placeholder="Nome Completo" required>
-        <label for="email">Email:</label>
-        <input type="email" id="email" placeholder="Email" autocomplete="email" required>
-        <label for="nivel">Nível:</label>
-        <select id="nivel" required>
-          <option value="" disabled selected>Selecione o nível</option>
-          <!-- Os níveis serão carregados dinamicamente -->
-        </select>
-        <label for="senha">Senha:</label>
-        <input type="password" id="senha" placeholder="Senha (deixe vazio para manter a atual)" autocomplete="current-password">
       <div class="form-container">
         <form id="formUsuario">
           <fieldset class="form-fieldset">
@@ -66,12 +51,6 @@
               </div>
             </div>
 
-        <div class="botoes-form">
-          <button type="submit" id="btnSalvar">✅ Cadastrar</button>
-          <button type="submit" id="btnAtualizar" class="hidden">🔄 Salvar</button>
-          <button type="button" onclick="window.location.href='usuarios.html'">⬅️ Voltar</button>
-        </div>
-      </form>
             <div class="form-actions">
               <button type="submit" id="btnSalvar" class="btn-success"><i class="fas fa-check"></i> Cadastrar</button>
               <button type="submit" id="btnAtualizar" class="btn-success hidden"><i class="fas fa-sync-alt"></i> Salvar Alterações</button>
@@ -83,10 +62,6 @@
     </section>
 
     <section id="busca" class="secao">
-      <h3>🔍 Buscar Usuários</h3>
-      <div class="campo-busca">
-        <input type="text" id="termoBusca" placeholder="Digite o nome, email ou código do usuário">
-      </div>
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h3 style="margin: 0;"><i class="fas fa-search"></i> Buscar Usuários</h3>
@@ -96,9 +71,6 @@
           </div>
         </div>
 
-      <div class="botoes-form">
-        <button id="btnAtualizarLista">🔄 Atualizar Lista</button>
-        <button id="btnAdicionarNovo" onclick="prepararNovoCadastro()">➕ Adicionar Novo</button>
         <div class="campo-busca" style="margin-bottom: 20px;">
           <input type="text" id="termoBusca" placeholder="Digite o nome, email ou código do usuário" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
         </div>
@@ -118,21 +90,6 @@
             <tbody id="corpoTabelaUsuarios"></tbody>
           </table>
         </div>
-      </div>
-
-      <table id="tabelaUsuarios" class="tabela-usuarios">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Nome Completo</th>
-            <th>Email</th>
-            <th>Nível</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaUsuarios"></tbody>
-      </table>
     </section>
 
     <footer class="footer">
