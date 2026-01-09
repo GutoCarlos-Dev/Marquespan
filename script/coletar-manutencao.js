@@ -44,7 +44,9 @@ const ColetarManutencaoUI = {
         this.filtroPlaca = document.getElementById('filtroPlaca');
         this.filtroDataIni = document.getElementById('filtroDataIni');
         this.filtroDataFim = document.getElementById('filtroDataFim');
-        this.filtroItem = document.getElementById('filtroItem');
+        this.filtroItemDisplay = document.getElementById('filtroItemDisplay');
+        this.filtroItemOptions = document.getElementById('filtroItemOptions');
+        this.filtroItemText = document.getElementById('filtroItemText');
         this.filtroStatus = document.getElementById('filtroStatus');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
@@ -142,6 +144,32 @@ const ColetarManutencaoUI = {
                 }
             }
         });
+
+        // Eventos do Multi-Select de Itens
+        if (this.filtroItemDisplay) {
+            this.filtroItemDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroItemOptions.style.display = this.filtroItemOptions.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Fechar ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (this.filtroItemOptions && this.filtroItemOptions.style.display === 'block') {
+                    if (!this.filtroItemDisplay.contains(e.target) && !this.filtroItemOptions.contains(e.target)) {
+                        this.filtroItemOptions.style.display = 'none';
+                    }
+                }
+            });
+
+            // Atualizar texto ao selecionar
+            const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
+                    this.filtroItemText.textContent = selected.length > 0 ? `${selected.length} item(ns) selecionado(s)` : 'Todos';
+                });
+            });
+        }
     },
 
     initTabs() {
@@ -1044,8 +1072,12 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
 
-            // Filtros do Checklist
-            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            // Filtros do Checklist (Multi-Select)
+            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
+            if (selectedItems.length > 0) {
+                query = query.in('item', selectedItems);
+            }
+
             if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
             
             // Filtros da Coleta (Pai)
@@ -1256,7 +1288,12 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
 
-            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            // Filtros do Checklist (Multi-Select)
+            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
+            if (selectedItems.length > 0) {
+                query = query.in('item', selectedItems);
+            }
+
             if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
@@ -1319,7 +1356,12 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
 
-            if (this.filtroItem.value) query = query.eq('item', this.filtroItem.value);
+            // Filtros do Checklist (Multi-Select)
+            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
+            if (selectedItems.length > 0) {
+                query = query.in('item', selectedItems);
+            }
+
             if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);

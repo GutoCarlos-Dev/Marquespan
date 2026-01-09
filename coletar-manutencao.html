@@ -104,21 +104,50 @@
                         </div>
                         <div class="form-group">
                             <label for="filtroItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificado</label>
-                            <select id="filtroItem" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">Todos</option>
-                                <option value="ACESSORIOS">ACESSORIOS</option>
-                                <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
-                                <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
-                                <option value="BORRACHARIA">BORRACHARIA</option>
-                                <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
-                                <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
-                                <option value="MOLEIRO">MOLEIRO</option>
-                                <option value="TACOGRAFO">TACOGRAFO</option>
-                                <option value="TAPEÇARIA">TAPEÇARIA</option>
-                                <option value="THERMO KING">THERMO KING</option>
-                                <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
-                                <option value="SERVIÇOS_GERAIS">SERVIÇOS_GERAIS</option>
-                            </select>
+                            <div class="custom-multiselect" style="position: relative;">
+                                <div id="filtroItemDisplay" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="filtroItemText">Todos</span>
+                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
+                                </div>
+                                <div id="filtroItemOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="ACESSORIOS" style="margin-right: 8px;"> ACESSORIOS
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="ALINHAMENTO/BALANCEAMENTO" style="margin-right: 8px;"> ALINHAMENTO/BALANCEAMENTO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="AR-CONDICIONADO" style="margin-right: 8px;"> AR-CONDICIONADO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="BORRACHARIA" style="margin-right: 8px;"> BORRACHARIA
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="ELETRICA INTERNA" style="margin-right: 8px;"> ELETRICA INTERNA
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="MECANICA EXTERNA" style="margin-right: 8px;"> MECANICA EXTERNA
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="MOLEIRO" style="margin-right: 8px;"> MOLEIRO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="TACOGRAFO" style="margin-right: 8px;"> TACOGRAFO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="TAPEÇARIA" style="margin-right: 8px;"> TAPEÇARIA
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="THERMO KING" style="margin-right: 8px;"> THERMO KING
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="VIDROS / FECHADURAS" style="margin-right: 8px;"> VIDROS / FECHADURAS
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-item-checkbox" value="SERVIÇOS_GERAIS" style="margin-right: 8px;"> SERVIÇOS_GERAIS
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="filtroStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
