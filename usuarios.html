@@ -31,6 +31,40 @@
         </select>
         <label for="senha">Senha:</label>
         <input type="password" id="senha" placeholder="Senha (deixe vazio para manter a atual)" autocomplete="current-password">
+      <div class="form-container">
+        <form id="formUsuario">
+          <fieldset class="form-fieldset">
+            <legend><i class="fas fa-user-plus"></i> Dados do Usuário</legend>
+            
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="nome">Nome de Usuário *</label>
+                <input type="text" id="nome" placeholder="Ex: joao.silva" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="nomecompleto">Nome Completo *</label>
+                <input type="text" id="nomecompleto" placeholder="Ex: João da Silva" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" placeholder="exemplo@marquespan.com.br" autocomplete="email" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="nivel">Nível de Acesso *</label>
+                <select id="nivel" required>
+                  <option value="" disabled selected>Selecione o nível</option>
+                  <!-- Os níveis serão carregados dinamicamente -->
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" placeholder="Deixe vazio para manter a atual" autocomplete="new-password">
+              </div>
+            </div>
 
         <div class="botoes-form">
           <button type="submit" id="btnSalvar">✅ Cadastrar</button>
@@ -38,6 +72,14 @@
           <button type="button" onclick="window.location.href='usuarios.html'">⬅️ Voltar</button>
         </div>
       </form>
+            <div class="form-actions">
+              <button type="submit" id="btnSalvar" class="btn-success"><i class="fas fa-check"></i> Cadastrar</button>
+              <button type="submit" id="btnAtualizar" class="btn-success hidden"><i class="fas fa-sync-alt"></i> Salvar Alterações</button>
+              <button type="button" class="btn-secondary" onclick="window.location.href='usuarios.html'"><i class="fas fa-arrow-left"></i> Voltar</button>
+            </div>
+          </fieldset>
+        </form>
+      </div>
     </section>
 
     <section id="busca" class="secao">
@@ -45,10 +87,37 @@
       <div class="campo-busca">
         <input type="text" id="termoBusca" placeholder="Digite o nome, email ou código do usuário">
       </div>
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin: 0;"><i class="fas fa-search"></i> Buscar Usuários</h3>
+          <div class="botoes-form" style="display: flex; gap: 10px;">
+            <button id="btnAtualizarLista" class="btn-secondary"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            <button id="btnAdicionarNovo" class="btn-success" onclick="prepararNovoCadastro()"><i class="fas fa-plus"></i> Novo Usuário</button>
+          </div>
+        </div>
 
       <div class="botoes-form">
         <button id="btnAtualizarLista">🔄 Atualizar Lista</button>
         <button id="btnAdicionarNovo" onclick="prepararNovoCadastro()">➕ Adicionar Novo</button>
+        <div class="campo-busca" style="margin-bottom: 20px;">
+          <input type="text" id="termoBusca" placeholder="Digite o nome, email ou código do usuário" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+
+        <div class="table-responsive">
+          <table id="tabelaUsuarios" class="data-grid" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nome</th>
+                <th>Nome Completo</th>
+                <th>Email</th>
+                <th>Nível</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="corpoTabelaUsuarios"></tbody>
+          </table>
+        </div>
       </div>
 
       <table id="tabelaUsuarios" class="tabela-usuarios">
