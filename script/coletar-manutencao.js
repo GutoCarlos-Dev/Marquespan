@@ -607,7 +607,7 @@ const ColetarManutencaoUI = {
         
         let weekNumber = Math.floor(diffInDays / 7) + 1;
         if (weekNumber < 1) weekNumber = 1; // Garante que não seja menor que 1
-        return String(weekNumber).padStart(2, '0'); // Padronizado com zero à esquerda
+        return String(weekNumber).padStart(2, ''); //Começa semana sem o zero
     },
 
     async carregarVeiculos() {
@@ -869,16 +869,13 @@ const ColetarManutencaoUI = {
     async carregarLancamentos() {
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
         try {
-            const currentWeek = this.calculateCurrentWeek();
-
             let query = supabaseClient
                 .from('coletas_manutencao')
-                .select('*, coletas_manutencao_checklist(status)')
-                .eq('semana', currentWeek);
+                .select('*, coletas_manutencao_checklist(status)');
 
             // Ordenação dinâmica
             query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
-            query = query.limit(1000);
+            query = query.limit(200);
 
             const searchTerm = this.searchPlacaInput?.value.trim().toUpperCase();
             if (searchTerm) {
