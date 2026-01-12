@@ -487,7 +487,13 @@ const ColetarManutencaoUI = {
                         'TAPEÇARIA': 'TAPEÇARIA',
                         'THERMO KING': 'THERMO KING',
                         'VIDROS / FECHADURAS': 'VIDROS / FECHADURAS',
-                        'SERVIÇOS_GERAIS': 'SERVIÇOS_GERAIS'
+                        'SERVIÇOS_GERAIS': 'SERVIÇOS_GERAIS',
+                        'CONCESSIONARIA': 'CONCESSIONARIA',
+                        'ANCA': 'ANCA',
+                        'TARRAXA': 'TARRAXA',
+                        'USIMAC': 'USIMAC',
+                        'LUCAS BAU': 'LUCAS BAU',
+                        'IBIFURGO': 'IBIFURGO'
                     };
 
                     for (const row of jsonData) {
@@ -1507,7 +1513,13 @@ const ColetarManutencaoUI = {
                     'TAPEÇARIA': [197, 202, 233], // Indigo
                     'THERMO KING': [248, 187, 208], // Pink
                     'VIDROS / FECHADURAS': [220, 220, 220], // Grey
-                    'SERVIÇOS_GERAIS': [207, 216, 220] // Blue Grey
+                    'SERVIÇOS_GERAIS': [207, 216, 220], // Blue Grey
+                    'CONCESSIONARIA': [255, 224, 130], // Light Amber
+                    'ANCA': [197, 225, 165], // Light Green
+                    'TARRAXA': [179, 229, 252], // Light Blue
+                    'USIMAC': [225, 190, 231], // Light Purple
+                    'LUCAS BAU': [255, 204, 188], // Light Red
+                    'IBIFURGO': [207, 216, 220] // Blue Grey
                 };
                 return colors[item] || [238, 238, 238];
             };
