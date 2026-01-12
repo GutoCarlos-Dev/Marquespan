@@ -883,12 +883,30 @@ const ColetarManutencaoUI = {
             let query;
 
             if (searchItem || searchStatus) {
+                // Correção para erro 500 do Supabase ao ordenar com inner join e filtro.
+                // Etapa 1: Buscar os IDs das coletas que correspondem aos filtros de item/status.
+                let idQuery = supabaseClient
+                    .from('coletas_manutencao_checklist')
+                    .select('coleta_id');
+
+                if (searchItem) idQuery = idQuery.eq('item', searchItem);
+                if (searchStatus) idQuery = idQuery.eq('status', searchStatus);
+
+                const { data: idData, error: idError } = await idQuery;
+                if (idError) throw idError;
+
+                const matchingIds = [...new Set(idData.map(item => item.coleta_id))];
+
+                if (matchingIds.length === 0) {
+                    this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado para os filtros.</td></tr>';
+                    return;
+                }
+
+                // Etapa 2: Buscar os dados completos das coletas usando os IDs encontrados.
                 query = supabaseClient
                     .from('coletas_manutencao')
-                    .select('*, coletas_manutencao_checklist!inner(status, item)');
-                
-                if (searchItem) query = query.eq('coletas_manutencao_checklist.item', searchItem);
-                if (searchStatus) query = query.eq('coletas_manutencao_checklist.status', searchStatus);
+                    .select('*, coletas_manutencao_checklist(status)')
+                    .in('id', matchingIds);
             } else {
                 query = supabaseClient
                     .from('coletas_manutencao')
