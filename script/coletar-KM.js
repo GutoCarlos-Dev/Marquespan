@@ -75,7 +75,7 @@ async function buscarUltimoKm(placa) {
     try {
         const { data, error } = await supabaseClient
             .from('coleta_km')
-            .select('km_atual')
+            .select('km_atual, data_coleta')
             .eq('placa', placa)
             .order('data_coleta', { ascending: false })
             .limit(1)
@@ -83,6 +83,16 @@ async function buscarUltimoKm(placa) {
 
         if (data) {
             document.getElementById('itemKmAnterior').value = data.km_atual;
+
+            // Validação: Verifica se já existe coleta para esta placa na data selecionada
+            const dataSelecionada = document.getElementById('coletaData').value;
+            if (data.data_coleta === dataSelecionada) {
+                alert(`O veículo ${placa} já possui uma coleta registrada nesta data (${dataSelecionada}).`);
+                document.getElementById('itemPlaca').value = '';
+                document.getElementById('itemModelo').value = '';
+                document.getElementById('itemKmAnterior').value = '';
+                setTimeout(() => document.getElementById('itemPlaca').focus(), 100);
+            }
         } else {
             document.getElementById('itemKmAnterior').value = '';
         }
@@ -105,6 +115,12 @@ function adicionarItem(e) {
 
     if (!placa || !kmAtual) {
         alert('Placa e KM Atual são obrigatórios.');
+        return;
+    }
+
+    // Validação: Verifica se a placa já está na lista de itens desta sessão
+    if (itensColeta.some(item => item.placa === placa)) {
+        alert('Este veículo já foi adicionado à lista.');
         return;
     }
 
