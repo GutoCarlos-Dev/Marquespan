@@ -53,8 +53,18 @@ async function carregarVeiculos() {
 }
 
 async function aoSelecionarPlaca(e) {
-    const placa = e.target.value.trim().toUpperCase();
+    const inputPlaca = e.target;
+    const placa = inputPlaca.value.trim().toUpperCase();
+
+    inputPlaca.style.color = '';
+    inputPlaca.style.fontWeight = '';
+
     if (!placa) return;
+
+    if (itensColeta.some(item => item.placa === placa)) {
+        inputPlaca.style.color = 'red';
+        inputPlaca.style.fontWeight = 'bold';
+    }
 
     // Buscar modelo no cache
     const veiculo = veiculosCache.find(v => v.placa === placa);
@@ -145,7 +155,10 @@ function adicionarItem(e) {
     renderizarTabela();
     
     // Limpar campos do item (mantendo foco na placa para inserção rápida)
-    document.getElementById('itemPlaca').value = '';
+    const inputPlaca = document.getElementById('itemPlaca');
+    inputPlaca.value = '';
+    inputPlaca.style.color = '';
+    inputPlaca.style.fontWeight = '';
     document.getElementById('itemModelo').value = '';
     document.getElementById('itemKmAnterior').value = '';
     document.getElementById('itemKmAtual').value = '';
