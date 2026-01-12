@@ -52,39 +52,52 @@
           <div class="card-header">
             <h2><i class="fas fa-list"></i> Manutenções Lançadas (Semana Atual)</h2>
           </div>
-          <div class="search-bar" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-            <div style="flex: 1; min-width: 200px;">
-                <label for="searchPlaca" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Placa</label>
-                <input type="text" id="searchPlaca" placeholder="Buscar por Placa..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+          <div class="search-bar-container">
+            <div class="search-group">
+                <label for="searchPlaca">Placa</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-car"></i>
+                    <input type="text" id="searchPlaca" placeholder="Buscar placa...">
+                </div>
             </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label for="searchItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificador</label>
-                <select id="searchItem" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="">Todos</option>
-                    <option value="ACESSORIOS">ACESSORIOS</option>
-                    <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
-                    <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
-                    <option value="BORRACHARIA">BORRACHARIA</option>
-                    <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
-                    <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
-                    <option value="MOLEIRO">MOLEIRO</option>
-                    <option value="TACOGRAFO">TACOGRAFO</option>
-                    <option value="TAPEÇARIA">TAPEÇARIA</option>
-                    <option value="THERMO KING">THERMO KING</option>
-                    <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
-                    <option value="SERVIÇOS_GERAIS">SERVIÇOS GERAIS</option>
-                </select>
+            <div class="search-group">
+                <label for="searchItem">Item Verificador</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-list-check"></i>
+                    <select id="searchItem">
+                        <option value="">Todos</option>
+                        <option value="ACESSORIOS">ACESSORIOS</option>
+                        <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
+                        <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
+                        <option value="BORRACHARIA">BORRACHARIA</option>
+                        <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
+                        <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
+                        <option value="MOLEIRO">MOLEIRO</option>
+                        <option value="TACOGRAFO">TACOGRAFO</option>
+                        <option value="TAPEÇARIA">TAPEÇARIA</option>
+                        <option value="THERMO KING">THERMO KING</option>
+                        <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
+                        <option value="SERVIÇOS_GERAIS">SERVIÇOS GERAIS</option>
+                    </select>
+                </div>
             </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label for="searchStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
-                <select id="searchStatus" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="">Todos</option>
-                    <option value="OK">OK</option>
-                    <option value="NAO REALIZADO">NÃO REALIZADO</option>
-                    <option value="INTERNADO">INTERNADO</option>
-                </select>
+            <div class="search-group">
+                <label for="searchStatus">Status</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-info-circle"></i>
+                    <select id="searchStatus">
+                        <option value="">Todos</option>
+                        <option value="OK">OK</option>
+                        <option value="NAO REALIZADO">NÃO REALIZADO</option>
+                        <option value="INTERNADO">INTERNADO</option>
+                    </select>
+                </div>
             </div>
-            <button type="button" id="btnFiltrarLancamentos" class="btn-primary" style="padding: 10px 20px; height: 42px; display: inline-flex; align-items: center; gap: 8px;"><i class="fas fa-search"></i> Filtrar</button>
+            <div class="search-actions">
+                <button type="button" id="btnFiltrarLancamentos" class="btn-primary">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
           </div>
           <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="data-grid">

@@ -1,0 +1,22 @@
+/* Estilos adicionais para filtros mobile */
+.mobile-filters {
+    background: white;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.mobile-filters select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #f9f9f9;
+}
+.mobile-filters .filter-row {
+    display: flex;
+    gap: 10px;
+}

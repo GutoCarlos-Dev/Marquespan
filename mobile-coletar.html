@@ -31,9 +31,37 @@
     </button>
 
     <!-- Barra de Busca -->
-    <div class="mobile-search">
-      <i class="fas fa-search"></i>
-      <input type="text" id="searchPlaca" placeholder="Buscar placa...">
+    <div class="mobile-filters">
+        <div class="mobile-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchPlaca" placeholder="Buscar placa...">
+        </div>
+        <div class="filter-row">
+            <select id="searchItem">
+                <option value="">Item: Todos</option>
+                <option value="ACESSORIOS">ACESSORIOS</option>
+                <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO</option>
+                <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
+                <option value="BORRACHARIA">BORRACHARIA</option>
+                <option value="ELETRICA INTERNA">ELETRICA INT.</option>
+                <option value="MECANICA EXTERNA">MECANICA EXT.</option>
+                <option value="MOLEIRO">MOLEIRO</option>
+                <option value="TACOGRAFO">TACOGRAFO</option>
+                <option value="TAPEÇARIA">TAPEÇARIA</option>
+                <option value="THERMO KING">THERMO KING</option>
+                <option value="VIDROS / FECHADURAS">VIDROS</option>
+                <option value="SERVIÇOS_GERAIS">GERAL</option>
+            </select>
+            <select id="searchStatus">
+                <option value="">Status: Todos</option>
+                <option value="OK">OK</option>
+                <option value="NAO REALIZADO">PENDENTE</option>
+                <option value="INTERNADO">INTERNADO</option>
+            </select>
+        </div>
+        <button type="button" id="btnFiltrarLancamentos" class="btn-primary btn-block" style="margin-top: 5px;">
+            <i class="fas fa-filter"></i> Filtrar
+        </button>
     </div>
 
     <!-- Lista de Cards (Antiga Tabela) -->
