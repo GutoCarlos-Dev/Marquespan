@@ -32,6 +32,9 @@ const ColetarManutencaoUI = {
         this.veiculosList = document.getElementById('veiculosList');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
         this.searchPlacaInput = document.getElementById('searchPlaca');
+        this.searchItemInput = document.getElementById('searchItem');
+        this.searchStatusInput = document.getElementById('searchStatus');
+        this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
 
         // Modal Importação
         this.modalImportacao = document.getElementById('modalImportacaoMassa');
@@ -90,6 +93,10 @@ const ColetarManutencaoUI = {
             if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
             if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
+
+        if (this.btnFiltrarLancamentos) {
+            this.btnFiltrarLancamentos.addEventListener('click', () => this.carregarLancamentos());
+        }
 
         if (this.searchPlacaInput) {
             this.searchPlacaInput.addEventListener('input', () => this.carregarLancamentos());
@@ -869,17 +876,31 @@ const ColetarManutencaoUI = {
     async carregarLancamentos() {
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
         try {
-            let query = supabaseClient
-                .from('coletas_manutencao')
-                .select('*, coletas_manutencao_checklist(status)');
+            const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
+            const searchItem = this.searchItemInput?.value;
+            const searchStatus = this.searchStatusInput?.value;
+
+            let query;
+
+            if (searchItem || searchStatus) {
+                query = supabaseClient
+                    .from('coletas_manutencao')
+                    .select('*, coletas_manutencao_checklist!inner(status, item)');
+                
+                if (searchItem) query = query.eq('coletas_manutencao_checklist.item', searchItem);
+                if (searchStatus) query = query.eq('coletas_manutencao_checklist.status', searchStatus);
+            } else {
+                query = supabaseClient
+                    .from('coletas_manutencao')
+                    .select('*, coletas_manutencao_checklist(status)');
+            }
 
             // Ordenação dinâmica
             query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
             query = query.limit(200);
 
-            const searchTerm = this.searchPlacaInput?.value.trim().toUpperCase();
-            if (searchTerm) {
-                query = query.ilike('placa', `%${searchTerm}%`);
+            if (searchPlaca) {
+                query = query.ilike('placa', `%${searchPlaca}%`);
             }
 
             const { data, error } = await query;
