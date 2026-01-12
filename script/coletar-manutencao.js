@@ -1386,22 +1386,62 @@ const ColetarManutencaoUI = {
 
             // Ordenação
             data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
+            // Agrupar dados por Coleta (Pivot) para criar colunas
+            const coletasMap = new Map();
+
+            data.forEach(row => {
+                const coletaId = row.coletas_manutencao.id;
+                if (!coletasMap.has(coletaId)) {
+                    coletasMap.set(coletaId, {
+                        meta: row.coletas_manutencao,
+                        items: {}
+                    });
+                }
+                const entry = coletasMap.get(coletaId);
+                
+                let cellValue = '';
+                if (row.status === 'OK') {
+                    cellValue = 'OK';
+                } else if (row.status === 'INTERNADO') {
+                    cellValue = 'INTERNADO';
+                } else {
+                    cellValue = row.detalhes || '';
+                }
+
+                if (row.item === 'ELETRICA INTERNA' && row.pecas_usadas) {
+                    cellValue += ` (Peças: ${row.pecas_usadas})`;
+                }
+                
+                entry.items[row.item] = cellValue;
+            });
+
+            // Lista de colunas de itens (incluindo os novos)
+            const itemColumns = [
+                'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA', 
+                'ELETRICA INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA', 
+                'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 
+                'CONCESSIONARIA', 'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
+            ];
 
             const dadosPlanilha = [];
-            data.forEach(item => {
-                const coleta = item.coletas_manutencao;
-                dadosPlanilha.push({
-                    'Data/Hora': new Date(coleta.data_hora).toLocaleString('pt-BR'),
-                    'Semana': coleta.semana,
-                    'Placa': coleta.placa,
-                    'Modelo': coleta.modelo,
-                    'KM': coleta.km,
-                    'Usuário': coleta.usuario,
-                    'Item Verificado': item.item,
-                    'Status': item.status,
-                    'Detalhes': item.detalhes,
-                    'Peças Usadas': item.pecas_usadas || ''
+            const coletasArray = Array.from(coletasMap.values());
+            coletasArray.sort((a, b) => new Date(b.meta.data_hora) - new Date(a.meta.data_hora));
+
+            coletasArray.forEach(entry => {
+                const row = {
+                    'DATA': new Date(entry.meta.data_hora).toLocaleDateString('pt-BR'),
+                    'SEMANA': entry.meta.semana,
+                    'PLACA': entry.meta.placa,
+                    'MODELO': entry.meta.modelo,
+                    'KM': entry.meta.km,
+                    'USUARIO': entry.meta.usuario
+                };
+
+                itemColumns.forEach(col => {
+                    row[col] = entry.items[col] || '';
                 });
+
+                dadosPlanilha.push(row);
             });
 
             const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
