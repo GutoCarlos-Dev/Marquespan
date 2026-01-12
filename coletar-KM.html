@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/coletar-KM.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Biblioteca para Importação/Exportação Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -20,23 +22,38 @@
       </header>
 
       <section class="section">
-        <!-- Card de Dados Gerais da Coleta -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Dados da Coleta</h2>
-          </div>
-          <div class="card-body">
-            <form id="formCabecalhoColeta" class="form-grid-header">
-              <div class="form-group">
-                <label for="coletaData">Data da Coleta</label>
-                <input type="date" id="coletaData" required>
+        <!-- Grid de Cards Superiores -->
+        <div class="top-cards-grid">
+            <!-- Card de Informações -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Informações Atuais</h2>
               </div>
-              <div class="form-group">
-                <label for="coletaResponsavel">Responsável</label>
-                <input type="text" id="coletaResponsavel" readonly>
+              <div class="card-body">
+                <form id="formCabecalhoColeta" class="form-grid-header">
+                  <div class="form-group">
+                    <label for="coletaData">Data da Coleta</label>
+                    <input type="date" id="coletaData" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="coletaResponsavel">Responsável</label>
+                    <input type="text" id="coletaResponsavel" readonly>
+                  </div>
+                </form>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <!-- Card de Ações -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Ações</h2>
+              </div>
+              <div class="card-body actions-body">
+                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
+                <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar Lançamento</button>
+                <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar Lançamento XLSX</button>
+              </div>
+            </div>
         </div>
 
         <!-- Card de Adicionar Veículo -->

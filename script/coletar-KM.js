@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('formItemColeta').addEventListener('submit', adicionarItem);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
     document.getElementById('tableBodyItens').addEventListener('click', removerItem);
+
+    // Novos Listeners para Importar/Exportar
+    document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', handleFileImport);
+    document.getElementById('btnExportar').addEventListener('click', exportarExcel);
 });
 
 async function carregarVeiculos() {
@@ -228,4 +233,97 @@ async function salvarColetaCompleta() {
         console.error('Erro ao salvar coleta:', error);
         alert('Erro ao salvar dados: ' + error.message);
     }
+}
+
+// --- Funções de Importação e Exportação ---
+
+function handleFileImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+
+            if (json.length === 0) {
+                alert('O arquivo está vazio.');
+                return;
+            }
+
+            let importadosCount = 0;
+            
+            // Mapeamento e processamento
+            json.forEach(row => {
+                // Normaliza chaves para maiúsculo para evitar problemas de case
+                const rowUpper = {};
+                Object.keys(row).forEach(key => {
+                    rowUpper[key.toUpperCase().trim()] = row[key];
+                });
+
+                const placa = (rowUpper['PLACA'] || '').trim().toUpperCase();
+                
+                // Validações básicas
+                if (!placa) return;
+                if (itensColeta.some(item => item.placa === placa)) return; // Evita duplicados na lista atual
+
+                const item = {
+                    id: Date.now() + Math.random(), // ID único temporário
+                    placa: placa,
+                    modelo: rowUpper['MODELO'] || '',
+                    km_anterior: parseInt(rowUpper['KM_ANTERIOR']) || null,
+                    km_atual: parseInt(rowUpper['KM_ATUAL']) || 0,
+                    km_proxima_troca: parseInt(rowUpper['KM_PROXIMA_TROCA']) || null,
+                    observacao: rowUpper['OBSERVAÇÃO'] || rowUpper['OBSERVACAO'] || ''
+                };
+
+                itensColeta.push(item);
+                importadosCount++;
+            });
+
+            renderizarTabela();
+            alert(`${importadosCount} registros importados com sucesso!`);
+            
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            alert('Erro ao processar o arquivo. Verifique o formato.');
+        } finally {
+            e.target.value = ''; // Limpa o input para permitir importar o mesmo arquivo novamente
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function exportarExcel() {
+    if (itensColeta.length === 0) {
+        alert('Não há dados para exportar.');
+        return;
+    }
+
+    const dataColeta = document.getElementById('coletaData').value;
+    
+    // Mapeia os dados para o formato solicitado
+    const dadosExportacao = itensColeta.map(item => ({
+        'DATA': dataColeta, // Usa a data global selecionada
+        'PLACA': item.placa,
+        'MODELO': item.modelo,
+        'KM_ANTERIOR': item.km_anterior || '',
+        'KM_PROXIMA_TROCA': item.km_proxima_troca || '',
+        'KM_ATUAL': item.km_atual,
+        'OBSERVAÇÃO': item.observacao || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lançamento KM");
+
+    // Ajusta largura das colunas (opcional, mas bom para visualização)
+    const wscols = [{wch:15}, {wch:10}, {wch:20}, {wch:15}, {wch:20}, {wch:15}, {wch:30}];
+    ws['!cols'] = wscols;
+
+    XLSX.writeFile(wb, `Lancamento_KM_${dataColeta}.xlsx`);
 }
