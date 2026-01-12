@@ -14,8 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('coletaResponsavel').value = usuario.nome || usuario.email;
 
     // 2. Definir Data Atual
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('coletaData').value = hoje;
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('coletaData').value = now.toISOString().slice(0, 16);
 
     // 3. Carregar Veículos para o Datalist
     await carregarVeiculos();
@@ -305,10 +306,20 @@ function exportarExcel() {
     }
 
     const dataColeta = document.getElementById('coletaData').value;
+    let dataFormatada = dataColeta;
+    if (dataColeta) {
+        const dateObj = new Date(dataColeta);
+        const dia = String(dateObj.getDate()).padStart(2, '0');
+        const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const ano = dateObj.getFullYear();
+        const horas = String(dateObj.getHours()).padStart(2, '0');
+        const minutos = String(dateObj.getMinutes()).padStart(2, '0');
+        dataFormatada = `${dia}/${mes}/${ano} ${horas}:${minutos}`;
+    }
     
     // Mapeia os dados para o formato solicitado
     const dadosExportacao = itensColeta.map(item => ({
-        'DATA': dataColeta, // Usa a data global selecionada
+        'DATA': dataFormatada, // Usa a data global selecionada
         'PLACA': item.placa,
         'MODELO': item.modelo,
         'KM_ANTERIOR': item.km_anterior || '',
