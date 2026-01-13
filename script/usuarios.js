@@ -98,7 +98,8 @@ async function editarUsuario(id) {
   document.getElementById('nome').value = data.nome;
   document.getElementById('nomecompleto').value = data.nomecompleto;
   document.getElementById('email').value = data.email;
-  document.getElementById('nivel').value = data.nivel;
+  // Garante que o valor seja minúsculo para corresponder às opções do select
+  document.getElementById('nivel').value = (data.nivel || '').toLowerCase();
   // Não carregar senha por segurança; deixar campo vazio para alteração opcional
   document.getElementById('senha').value = '';
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
@@ -111,6 +112,12 @@ async function editarUsuario(id) {
 async function atualizarUsuario(event) {
   event.preventDefault();
   const id = document.getElementById('formUsuario').dataset.usuarioId;
+  
+  if (!id) {
+    alert('Erro: ID do usuário não encontrado para atualização.');
+    return;
+  }
+
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
@@ -123,14 +130,21 @@ async function atualizarUsuario(event) {
     updateData.senha = senha;
   }
 
-  const { error } = await supabaseClient
+  // Adicionado .select() para confirmar a atualização e verificar erros
+  const { data, error } = await supabaseClient
     .from('usuarios')
     .update(updateData)
-    .eq('id', id);
+    .eq('id', id)
+    .select();
 
   if (error) {
     console.error(error);
-    alert('❌ Erro ao atualizar usuário.');
+    alert(`❌ Erro ao atualizar usuário: ${error.message}`);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    alert('⚠️ Nenhuma alteração foi salva. Verifique se o usuário ainda existe.');
     return;
   }
 
