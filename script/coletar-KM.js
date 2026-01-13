@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Event Listeners
     document.getElementById('itemPlaca').addEventListener('change', aoSelecionarPlaca);
-    document.getElementById('formItemColeta').addEventListener('submit', adicionarItem);
+    document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
-    document.getElementById('tableBodyItens').addEventListener('click', removerItem);
+    document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
 
     // Novos Listeners para Importar/Exportar
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
@@ -129,8 +129,11 @@ async function buscarUltimoKm(placa) {
     }
 }
 
-function adicionarItem(e) {
+function handleItemSubmit(e) {
     e.preventDefault();
+
+    const form = document.getElementById('formItemColeta');
+    const editingIndex = form.dataset.editingIndex;
 
     const placa = document.getElementById('itemPlaca').value.trim().toUpperCase();
     const modelo = document.getElementById('itemModelo').value;
@@ -144,21 +147,19 @@ function adicionarItem(e) {
         return;
     }
 
-    // Validação: Verifica se a placa já está na lista de itens desta sessão
-    if (itensColeta.some(item => item.placa === placa)) {
+    // Se não estiver editando, verifica se a placa já existe na lista
+    if (editingIndex === undefined && itensColeta.some(item => item.placa === placa)) {
         alert('Este veículo já foi adicionado à lista.');
         return;
     }
 
-    // Validação simples
     if (kmAnterior && parseInt(kmAtual) < parseInt(kmAnterior)) {
         if (!confirm(`O KM Atual (${kmAtual}) é menor que o KM Anterior (${kmAnterior}). Deseja continuar mesmo assim?`)) {
             return;
         }
     }
 
-    const item = {
-        id: Date.now(), // ID temporário para UI
+    const itemData = {
         placa,
         modelo,
         km_anterior: kmAnterior ? parseInt(kmAnterior) : null,
@@ -167,10 +168,39 @@ function adicionarItem(e) {
         observacao
     };
 
-    itensColeta.push(item);
+    if (editingIndex !== undefined) {
+        // --- MODO DE ATUALIZAÇÃO ---
+        const index = parseInt(editingIndex);
+        itemData.id = itensColeta[index].id; // Mantém o ID temporário original
+        itensColeta[index] = itemData;
+
+        // Reseta o estado do formulário
+        delete form.dataset.editingIndex;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn.dataset.originalHtml) {
+            submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+            delete submitBtn.dataset.originalHtml;
+        }
+        submitBtn.classList.remove('btn-warning');
+        submitBtn.classList.add('btn-primary');
+
+    } else {
+        // --- MODO DE ADIÇÃO ---
+        itemData.id = Date.now(); // ID temporário para a UI
+        itensColeta.push(itemData);
+    }
+
     renderizarTabela();
-    
-    // Limpar campos do item (mantendo foco na placa para inserção rápida)
+    clearItemForm();
+
+    // Fecha o modal no modo mobile, se estiver aberto
+    const modal = document.getElementById('modalLancamento');
+    if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+    }
+}
+
+function clearItemForm() {
     const inputPlaca = document.getElementById('itemPlaca');
     inputPlaca.value = '';
     inputPlaca.style.color = '';
@@ -181,12 +211,6 @@ function adicionarItem(e) {
     document.getElementById('itemKmProxima').value = '';
     document.getElementById('itemObservacao').value = '';
     document.getElementById('itemPlaca').focus();
-
-    // Se estiver no modo mobile (modal existe e não está oculto), fecha o modal
-    const modal = document.getElementById('modalLancamento');
-    if (modal && !modal.classList.contains('hidden')) {
-        modal.classList.add('hidden');
-    }
 }
 
 function renderizarTabela() {
@@ -203,19 +227,26 @@ function renderizarTabela() {
             <td data-label="KM Atual">${item.km_atual}</td>
             <td data-label="KM Próx. Troca">${item.km_proxima_troca || '-'}</td>
             <td data-label="Observação">${item.observacao || ''}</td>
-            <td>
-                <button class="btn-danger" data-index="${index}" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+            <td class="actions-cell" style="display: flex; gap: 5px; justify-content: flex-end;">
+                <button type="button" class="btn-primary btn-edit-item" data-index="${index}" title="Editar Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn-danger btn-delete-item" data-index="${index}" title="Remover Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-function removerItem(e) {
-    if (e.target.closest('button')) {
-        const index = e.target.closest('button').dataset.index;
+function handleTableActions(e) {
+    const button = e.target.closest('button');
+    if (!button) return;
+
+    const index = button.dataset.index;
+
+    if (button.classList.contains('btn-delete-item')) {
         itensColeta.splice(index, 1);
         renderizarTabela();
+    } else if (button.classList.contains('btn-edit-item')) {
+        prepararEdicaoItem(index);
     }
 }
 
@@ -335,6 +366,42 @@ async function carregarHistorico() {
     } catch (error) {
         console.error('Erro ao carregar histórico:', error);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Erro ao carregar dados.</td></tr>';
+    }
+}
+
+function prepararEdicaoItem(index) {
+    const item = itensColeta[index];
+    if (!item) return;
+
+    // Popula o formulário com os dados do item
+    document.getElementById('itemPlaca').value = item.placa;
+    document.getElementById('itemModelo').value = item.modelo;
+    document.getElementById('itemKmAnterior').value = item.km_anterior || '';
+    document.getElementById('itemKmAtual').value = item.km_atual || '';
+    document.getElementById('itemKmProxima').value = item.km_proxima_troca || '';
+    document.getElementById('itemObservacao').value = item.observacao || '';
+
+    // Define o estado de edição no formulário
+    const form = document.getElementById('formItemColeta');
+    form.dataset.editingIndex = index;
+
+    // Altera o botão para "Atualizar"
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (!submitBtn.dataset.originalHtml) {
+        submitBtn.dataset.originalHtml = submitBtn.innerHTML; // Salva o conteúdo original do botão
+    }
+    submitBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+    submitBtn.classList.remove('btn-primary');
+    submitBtn.classList.add('btn-warning');
+
+    // No modo mobile, abre o modal de lançamento
+    const modal = document.getElementById('modalLancamento');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('itemPlaca').focus();
+    } else {
+        // No desktop, rola a tela até o formulário
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
