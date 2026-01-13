@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Coletar KM - Marquespan</title>
+  <title>Coletar KM (App) - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/coletar-KM.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -11,15 +11,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
-<body>
+<body class="app-mode">
   <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
+    <!-- O menu será injetado aqui pelo menu.js (mas oculto pelo CSS app-mode) -->
     <div id="menu-container"></div>
 
     <div class="main-content">
       <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
         <span><i class="fas fa-tachometer-alt"></i> Coletar KM</span>
-        <a href="mobile-coletar-km.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
+        <a href="coletar-KM.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-desktop"></i> Versão Desktop</a>
       </header>
 
       <section class="section">
@@ -44,7 +44,7 @@
               </div>
             </div>
 
-            <!-- Card de Ações -->
+            <!-- Card de Ações (Oculto via CSS app-mode) -->
             <div class="card card-acoes">
               <div class="card-header">
                 <h2>Ações</h2>

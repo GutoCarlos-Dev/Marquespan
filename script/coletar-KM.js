@@ -31,24 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', handleFileImport);
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
-
-    // Botão para alternar Modo App manualmente
-    const btnToggleApp = document.getElementById('btnToggleAppMode');
-    if (btnToggleApp) {
-        btnToggleApp.addEventListener('click', (e) => {
-            e.preventDefault(); // Evita recarregar a página
-            document.body.classList.toggle('app-mode');
-            
-            // Feedback visual no botão
-            if (document.body.classList.contains('app-mode')) {
-                btnToggleApp.innerHTML = '<i class="fas fa-check"></i> App Ativo';
-                btnToggleApp.style.backgroundColor = '#004d29'; // Verde mais escuro para indicar ativo
-            } else {
-                btnToggleApp.innerHTML = '<i class="fas fa-mobile-alt"></i> Modo App';
-                btnToggleApp.style.backgroundColor = '#006937'; // Verde original
-            }
-        });
-    }
 });
 
 async function carregarVeiculos() {
