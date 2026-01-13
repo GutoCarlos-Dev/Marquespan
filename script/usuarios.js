@@ -98,8 +98,22 @@ async function editarUsuario(id) {
   document.getElementById('nome').value = data.nome;
   document.getElementById('nomecompleto').value = data.nomecompleto;
   document.getElementById('email').value = data.email;
-  // Usa o valor exato do banco para corresponder às opções do select
-  document.getElementById('nivel').value = data.nivel || '';
+  
+  // CORREÇÃO: Seleção robusta do nível (Case Insensitive)
+  const nivelSelect = document.getElementById('nivel');
+  const nivelBanco = data.nivel || '';
+  
+  // 1. Tenta atribuição direta
+  nivelSelect.value = nivelBanco;
+  
+  // 2. Se falhar (ex: banco 'admin', select 'Admin'), busca ignorando case
+  if (!nivelSelect.value && nivelBanco) {
+      const option = Array.from(nivelSelect.options).find(opt => opt.value.toLowerCase() === nivelBanco.toLowerCase());
+      if (option) {
+          nivelSelect.value = option.value;
+      }
+  }
+
   // Não carregar senha por segurança; deixar campo vazio para alteração opcional
   document.getElementById('senha').value = '';
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
