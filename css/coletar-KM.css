@@ -122,3 +122,76 @@
     white-space: nowrap;
   }
 }
+
+/* =========================================
+   FORÇAR MODO APP (VIA BOTÃO)
+   ========================================= */
+body.app-mode {
+  background-color: #f0f2f5;
+}
+
+body.app-mode .container {
+  display: block;
+}
+
+body.app-mode #menu-container {
+  display: none;
+}
+
+body.app-mode .main-content {
+  padding: 10px;
+  margin-left: 0;
+}
+
+body.app-mode .header {
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+body.app-mode .top-cards-grid,
+body.app-mode .form-grid-header,
+body.app-mode .form-grid-item {
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+body.app-mode .card {
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+body.app-mode input[type="text"],
+body.app-mode input[type="number"],
+body.app-mode input[type="datetime-local"],
+body.app-mode select {
+  padding: 14px;
+  font-size: 1rem;
+  height: auto;
+}
+
+body.app-mode .btn-primary,
+body.app-mode .btn-secondary,
+body.app-mode .btn-success {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body.app-mode .actions-body,
+body.app-mode .card-footer-actions {
+  flex-direction: column;
+}
+
+body.app-mode .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.app-mode .data-grid {
+  white-space: nowrap;
+}

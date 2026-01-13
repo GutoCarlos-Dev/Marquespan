@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', handleFileImport);
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
+
+    // Botão para alternar Modo App manualmente
+    const btnToggleApp = document.getElementById('btnToggleAppMode');
+    if (btnToggleApp) {
+        btnToggleApp.addEventListener('click', () => {
+            document.body.classList.toggle('app-mode');
+        });
+    }
 });
 
 async function carregarVeiculos() {
