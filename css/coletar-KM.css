@@ -136,11 +136,11 @@ body.app-mode {
 }
 
 body.app-mode .container {
-  display: block;
+  display: block !important;
 }
 
 body.app-mode #menu-container {
-  display: none;
+  display: none !important;
 }
 
 body.app-mode .main-content {
@@ -157,7 +157,7 @@ body.app-mode .header {
 body.app-mode .top-cards-grid,
 body.app-mode .form-grid-header,
 body.app-mode .form-grid-item {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr !important;
   gap: 15px;
 }
 
@@ -184,7 +184,7 @@ body.app-mode .btn-primary,
 body.app-mode .btn-secondary,
 body.app-mode .btn-success {
   width: 100%;
-  padding: 15px;
+  padding: 15px !important;
   font-size: 1.1rem;
   margin-bottom: 10px;
   display: flex;
@@ -194,7 +194,7 @@ body.app-mode .btn-success {
 
 body.app-mode .actions-body,
 body.app-mode .card-footer-actions {
-  flex-direction: column;
+  flex-direction: column !important;
 }
 
 body.app-mode .table-responsive {
