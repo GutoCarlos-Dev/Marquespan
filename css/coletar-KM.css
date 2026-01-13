@@ -73,6 +73,11 @@
     gap: 15px;
   }
 
+  /* Oculta o card de ações no modo app */
+  .card-acoes {
+    display: none;
+  }
+
   .card {
     padding: 15px;
     margin-bottom: 15px;
@@ -154,6 +159,11 @@ body.app-mode .form-grid-header,
 body.app-mode .form-grid-item {
   grid-template-columns: 1fr;
   gap: 15px;
+}
+
+/* Oculta o card de ações ao forçar o modo app */
+body.app-mode .card-acoes {
+  display: none;
 }
 
 body.app-mode .card {
