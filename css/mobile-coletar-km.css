@@ -117,11 +117,11 @@ body {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%; /* Garante que seja redondo */
-    background-color: #006937; /* Verde Marquespan */
-    color: white;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important; /* Garante que seja redondo */
+    background-color: #006937 !important; /* Verde Marquespan */
+    color: white !important;
     border: none;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     font-size: 24px;
