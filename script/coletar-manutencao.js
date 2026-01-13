@@ -1500,10 +1500,26 @@ const ColetarManutencaoUI = {
             }
 
             // Ordenação
+            const col = this.currentReportSort.column;
+            const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
+
             data.sort((a, b) => {
-                const itemCompare = a.item.localeCompare(b.item);
-                if (itemCompare !== 0) return itemCompare;
-                return new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora);
+                let valA, valB;
+
+                if (col === 'data_hora') {
+                    valA = new Date(a.coletas_manutencao.data_hora);
+                    valB = new Date(b.coletas_manutencao.data_hora);
+                } else if (['semana', 'placa', 'modelo'].includes(col)) {
+                    valA = a.coletas_manutencao[col];
+                    valB = b.coletas_manutencao[col];
+                } else {
+                    valA = a[col] || '';
+                    valB = b[col] || '';
+                }
+
+                if (valA < valB) return -1 * dir;
+                if (valA > valB) return 1 * dir;
+                return 0;
             });
 
             const { jsPDF } = window.jspdf;
