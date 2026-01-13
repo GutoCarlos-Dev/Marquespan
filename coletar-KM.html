@@ -123,7 +123,62 @@
             <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> Salvar Coleta Completa</button>
           </div>
         </div>
+
+        <!-- Grid de Histórico de Coletas Salvas -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h2><i class="fas fa-history"></i> Histórico de Coletas Salvas</h2>
+            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary" style="padding: 5px 10px; font-size: 0.9rem;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Responsável</th>
+                  <th>Placa</th>
+                  <th>KM Atual</th>
+                  <th>Observação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodyHistorico">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Modal de Edição (Desktop) -->
+  <div id="modalEdicao" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+    <div class="modal-content card" style="width: 400px; max-width: 90%;">
+      <div class="card-header" style="display: flex; justify-content: space-between;">
+        <h2>Editar Coleta</h2>
+        <button onclick="document.getElementById('modalEdicao').classList.add('hidden')" style="background:none; border:none; font-size: 1.2rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="card-body">
+        <form id="formEdicaoColeta">
+          <input type="hidden" id="editId">
+          <div class="form-group">
+            <label>Placa</label>
+            <input type="text" id="editPlaca" readonly style="background-color: #eee;">
+          </div>
+          <div class="form-group">
+            <label>KM Atual</label>
+            <input type="number" id="editKmAtual" required>
+          </div>
+          <div class="form-group">
+            <label>Observação</label>
+            <input type="text" id="editObservacao">
+          </div>
+          <div class="form-actions" style="margin-top: 15px; text-align: right;">
+            <button type="submit" class="btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 

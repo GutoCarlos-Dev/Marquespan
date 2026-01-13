@@ -31,6 +31,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', handleFileImport);
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
+
+    // 5. Carregar Histórico
+    await carregarHistorico();
+    
+    // Listeners do Histórico
+    const btnUpdateHist = document.getElementById('btnAtualizarHistorico');
+    if(btnUpdateHist) btnUpdateHist.addEventListener('click', carregarHistorico);
+    
+    const btnUpdateHistDesk = document.getElementById('btnAtualizarHistoricoDesktop');
+    if(btnUpdateHistDesk) btnUpdateHistDesk.addEventListener('click', carregarHistorico);
+
+    const formEdicao = document.getElementById('formEdicaoColeta');
+    if(formEdicao) formEdicao.addEventListener('submit', salvarEdicaoColeta);
 });
 
 async function carregarVeiculos() {
@@ -235,6 +248,7 @@ async function salvarColetaCompleta() {
         alert('Coleta de KM salva com sucesso!');
         itensColeta = [];
         renderizarTabela();
+        carregarHistorico(); // Atualiza o histórico após salvar
         // Opcional: Limpar data ou manter
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
@@ -244,6 +258,58 @@ async function salvarColetaCompleta() {
 
 // --- Funções para Gerenciamento no Banco de Dados (Editar/Excluir) ---
 // Estas funções estão prontas para serem usadas caso adicione uma listagem de histórico
+
+async function carregarHistorico() {
+    const tbody = document.getElementById('tableBodyHistorico');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Carregando histórico...</td></tr>';
+
+    try {
+        // Busca as últimas 20 coletas ordenadas por data de criação
+        const { data, error } = await supabaseClient
+            .from('coleta_km')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (error) throw error;
+
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Nenhum registro encontrado.</td></tr>';
+            return;
+        }
+
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            // Formatar Data
+            let dataDisplay = '-';
+            if (item.data_coleta) {
+                const dateObj = new Date(item.data_coleta);
+                dataDisplay = dateObj.toLocaleDateString('pt-BR') + ' ' + dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            }
+
+            tr.innerHTML = `
+                <td data-label="Data">${dataDisplay}</td>
+                <td data-label="Responsável">${item.usuario || '-'}</td>
+                <td data-label="Placa" style="font-weight: bold;">${item.placa}</td>
+                <td data-label="KM Atual">${item.km_atual}</td>
+                <td data-label="Observação">${item.observacao || ''}</td>
+                <td data-label="Ações" style="text-align: right;">
+                    <button type="button" class="btn-primary" style="padding: 6px 10px; margin-right: 5px;" onclick="prepararEdicao('${item.id}')"><i class="fas fa-edit"></i></button>
+                    <button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirColetaSalva('${item.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: red;">Erro ao carregar dados.</td></tr>';
+    }
+}
 
 async function atualizarColeta(id, dadosAtualizados) {
     if (!id) return;
@@ -278,10 +344,56 @@ async function excluirColeta(id) {
         if (error) throw error;
         
         alert('Registro excluído com sucesso!');
+        return true;
     } catch (error) {
         console.error('Erro ao excluir coleta:', error);
         alert('Erro ao excluir registro: ' + error.message);
+        return false;
     }
+}
+
+// Função wrapper para excluir e atualizar a lista
+window.excluirColetaSalva = async function(id) {
+    const sucesso = await excluirColeta(id);
+    if (sucesso) carregarHistorico();
+}
+
+// Função para abrir modal de edição
+window.prepararEdicao = async function(id) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('coleta_km')
+            .select('*')
+            .eq('id', id)
+            .single();
+            
+        if (error) throw error;
+        
+        document.getElementById('editId').value = data.id;
+        document.getElementById('editPlaca').value = data.placa;
+        document.getElementById('editKmAtual').value = data.km_atual;
+        document.getElementById('editObservacao').value = data.observacao || '';
+        
+        document.getElementById('modalEdicao').classList.remove('hidden');
+    } catch (error) {
+        alert('Erro ao carregar dados: ' + error.message);
+    }
+}
+
+async function salvarEdicaoColeta(e) {
+    e.preventDefault();
+    const id = document.getElementById('editId').value;
+    const kmAtual = document.getElementById('editKmAtual').value;
+    const observacao = document.getElementById('editObservacao').value;
+
+    const dados = {
+        km_atual: parseInt(kmAtual),
+        observacao: observacao
+    };
+
+    await atualizarColeta(id, dados);
+    document.getElementById('modalEdicao').classList.add('hidden');
+    carregarHistorico();
 }
 
 // --- Funções de Importação e Exportação ---
