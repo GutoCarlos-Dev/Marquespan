@@ -1400,16 +1400,22 @@ const ColetarManutencaoUI = {
                 const entry = coletasMap.get(coletaId);
                 
                 let cellValue = '';
-                if (row.status === 'OK') {
-                    cellValue = 'OK';
-                } else if (row.status === 'INTERNADO') {
-                    cellValue = 'INTERNADO';
+                if (row.item === 'ELETRICA INTERNA') {
+                    cellValue = `SOLICITAÇÃO: ${row.detalhes || ''}`;
+                    if (row.status === 'OK') {
+                        cellValue += `, SOLICITAÇÃO REALIZADA`;
+                    }
+                    if (row.pecas_usadas) {
+                        cellValue += ` ${row.pecas_usadas}`;
+                    }
                 } else {
-                    cellValue = row.detalhes || '';
-                }
-
-                if (row.item === 'ELETRICA INTERNA' && row.pecas_usadas) {
-                    cellValue += ` (Peças: ${row.pecas_usadas})`;
+                    if (row.status === 'OK') {
+                        cellValue = 'OK';
+                    } else if (row.status === 'INTERNADO') {
+                        cellValue = 'INTERNADO';
+                    } else {
+                        cellValue = row.detalhes || '';
+                    }
                 }
                 
                 entry.items[row.item] = cellValue;
