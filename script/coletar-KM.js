@@ -242,6 +242,48 @@ async function salvarColetaCompleta() {
     }
 }
 
+// --- Funções para Gerenciamento no Banco de Dados (Editar/Excluir) ---
+// Estas funções estão prontas para serem usadas caso adicione uma listagem de histórico
+
+async function atualizarColeta(id, dadosAtualizados) {
+    if (!id) return;
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('coleta_km')
+            .update(dadosAtualizados)
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+        
+        console.log('Coleta atualizada com sucesso:', data);
+        return data;
+    } catch (error) {
+        console.error('Erro ao atualizar coleta:', error);
+        alert('Erro ao atualizar registro: ' + error.message);
+        return null;
+    }
+}
+
+async function excluirColeta(id) {
+    if (!confirm('Tem certeza que deseja excluir este registro do banco de dados?')) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('coleta_km')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        alert('Registro excluído com sucesso!');
+    } catch (error) {
+        console.error('Erro ao excluir coleta:', error);
+        alert('Erro ao excluir registro: ' + error.message);
+    }
+}
+
 // --- Funções de Importação e Exportação ---
 
 function handleFileImport(e) {
@@ -344,3 +386,7 @@ function exportarExcel() {
 
     XLSX.writeFile(wb, `Lancamento_KM_${dataColeta}.xlsx`);
 }
+
+// Expor funções para uso global se necessário
+window.atualizarColeta = atualizarColeta;
+window.excluirColeta = excluirColeta;
