@@ -45,6 +45,7 @@ function toggleSidebar() {
     sidebar.classList.toggle('collapsed');
   }
 }
+window.toggleSidebar = toggleSidebar;
 
 function closeSidebarOnClickOutside(event) {
   const sidebar = document.getElementById('sidebar');
