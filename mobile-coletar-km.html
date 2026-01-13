@@ -5,131 +5,142 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coletar KM (App) - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/coletar-KM.css" />
+  <link rel="stylesheet" href="css/mobile-coletar-km.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- Biblioteca para Importação/Exportação Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
-<body class="app-mode">
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js (mas oculto pelo CSS app-mode) -->
-    <div id="menu-container"></div>
+<body>
 
-    <div class="main-content">
-      <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-tachometer-alt"></i> Coletar KM</span>
-        <a href="coletar-KM.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-desktop"></i> Versão Desktop</a>
-      </header>
+  <!-- Cabeçalho Mobile -->
+  <header class="mobile-header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo" class="mobile-logo">
+      <h1>Coletar KM</h1>
+    </div>
+    <a href="coletar-KM.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
+  </header>
 
-      <section class="section">
-        <!-- Grid de Cards Superiores -->
-        <div class="top-cards-grid">
-            <!-- Card de Informações -->
-            <div class="card">
-              <div class="card-header">
-                <h2>Informações Atuais</h2>
-              </div>
-              <div class="card-body">
-                <form id="formCabecalhoColeta" class="form-grid-header">
-                  <div class="form-group">
-                    <label for="coletaData">Data da Coleta</label>
-                    <input type="datetime-local" id="coletaData" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="coletaResponsavel">Responsável</label>
-                    <input type="text" id="coletaResponsavel" readonly>
-                  </div>
-                </form>
-              </div>
+  <div class="mobile-container">
+    
+    <!-- Card de Informações -->
+    <div class="info-card">
+      <h3><i class="fas fa-info-circle"></i> Dados da Coleta</h3>
+      <form id="formCabecalhoColeta">
+        <div class="form-group">
+          <label for="coletaData">Data</label>
+          <input type="datetime-local" id="coletaData" required>
+        </div>
+        <div class="form-group">
+          <label for="coletaResponsavel">Responsável</label>
+          <input type="text" id="coletaResponsavel" readonly style="background-color: #f9f9f9;">
+        </div>
+      </form>
+    </div>
+
+    <!-- Lista de Itens (Cards) -->
+    <div class="mobile-list-container">
+      <h3 style="margin-bottom: 10px; color: #333;">Veículos Coletados (<span id="contadorItens">0</span>)</h3>
+      <table class="mobile-cards-table">
+        <tbody id="tableBodyItens">
+          <!-- Preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Botão Salvar Tudo -->
+    <button type="button" id="btnSalvarColeta" class="btn-success btn-save-all">
+      <i class="fas fa-save"></i> FINALIZAR COLETA
+    </button>
+
+    <!-- Botão Flutuante (FAB) -->
+    <button type="button" id="btnAdicionarItem" class="fab-button">
+      <i class="fas fa-plus"></i>
+    </button>
+
+  </div>
+
+  <!-- Modal para Adicionar Veículo -->
+  <div id="modalLancamento" class="panel-backdrop hidden">
+    <div class="panel mobile-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-car"></i> Adicionar Veículo</h3>
+        <button class="close-button" id="btnCloseModal">&times;</button>
+      </div>
+      <div class="panel-body">
+        <form id="formItemColeta">
+          <div class="form-group">
+            <label for="itemPlaca">Placa</label>
+            <input type="text" id="itemPlaca" list="listaVeiculos" placeholder="Digite a placa..." required autocomplete="off" style="text-transform: uppercase;">
+            <datalist id="listaVeiculos"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="itemModelo">Modelo</label>
+            <input type="text" id="itemModelo" readonly placeholder="Automático" style="background-color: #f9f9f9;">
+          </div>
+          <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label for="itemKmAnterior">KM Anterior</label>
+              <input type="number" id="itemKmAnterior" placeholder="0" inputmode="numeric">
             </div>
-
-            <!-- Card de Ações (Oculto via CSS app-mode) -->
-            <div class="card card-acoes">
-              <div class="card-header">
-                <h2>Ações</h2>
-              </div>
-              <div class="card-body actions-body">
-                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
-                <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar Lançamento</button>
-                <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar Lançamento XLSX</button>
-              </div>
+            <div style="flex: 1;">
+              <label for="itemKmAtual">KM Atual</label>
+              <input type="number" id="itemKmAtual" required placeholder="0" inputmode="numeric">
             </div>
-        </div>
-
-        <!-- Card de Adicionar Veículo -->
-        <div class="card" style="margin-top: 20px;">
-          <div class="card-header">
-            <h2>Adicionar Veículo</h2>
           </div>
-          <div class="card-body">
-            <form id="formItemColeta">
-              <div class="form-grid-item">
-                <div class="form-group">
-                  <label for="itemPlaca">Placa</label>
-                  <input type="text" id="itemPlaca" list="listaVeiculos" placeholder="Digite a placa..." required autocomplete="off">
-                  <datalist id="listaVeiculos"></datalist>
-                </div>
-                <div class="form-group">
-                  <label for="itemModelo">Modelo</label>
-                  <input type="text" id="itemModelo" readonly placeholder="Automático">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmAnterior">KM Anterior</label>
-                  <input type="number" id="itemKmAnterior" placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmAtual">KM Atual</label>
-                  <input type="number" id="itemKmAtual" required placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmProxima">KM Próxima Troca</label>
-                  <input type="number" id="itemKmProxima" placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group full-width">
-                  <label for="itemObservacao">Observação</label>
-                  <input type="text" id="itemObservacao" placeholder="Observações gerais...">
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Adicionar à Lista</button>
-              </div>
-            </form>
+          <div class="form-group">
+            <label for="itemKmProxima">KM Próxima Troca</label>
+            <input type="number" id="itemKmProxima" placeholder="0" inputmode="numeric">
           </div>
-        </div>
-
-        <!-- Grid de Itens Coletados -->
-        <div class="card" style="margin-top: 20px;">
-          <div class="card-header">
-            <h2>Itens Coletados (<span id="contadorItens">0</span>)</h2>
+          <div class="form-group">
+            <label for="itemObservacao">Observação</label>
+            <input type="text" id="itemObservacao" placeholder="Observações gerais...">
           </div>
-          <div class="table-responsive">
-            <table class="data-grid">
-              <thead>
-                <tr>
-                  <th>Placa</th>
-                  <th>Modelo</th>
-                  <th>KM Anterior</th>
-                  <th>KM Atual</th>
-                  <th>KM Próx. Troca</th>
-                  <th>Observação</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tableBodyItens">
-                <!-- Preenchido via JS -->
-              </tbody>
-            </table>
+          
+          <div class="form-actions">
+            <button type="submit" class="btn-primary"><i class="fas fa-check"></i> ADICIONAR</button>
           </div>
-          <div class="card-footer-actions">
-            <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> Salvar Coleta Completa</button>
-          </div>
-        </div>
-      </section>
+        </form>
+      </div>
     </div>
   </div>
 
-  <script type="module" src="./script/menu.js" defer></script>
+  <!-- Elementos ocultos para compatibilidade com script desktop se necessário -->
+  <div style="display: none;">
+    <button id="btnImportar"></button>
+    <input type="file" id="importFile">
+    <button id="btnExportar"></button>
+  </div>
+
   <script type="module" src="./script/coletar-KM.js"></script>
+  
+  <!-- Script Inline para Controle do Modal Mobile -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('modalLancamento');
+      const btnAdd = document.getElementById('btnAdicionarItem');
+      const btnClose = document.getElementById('btnCloseModal');
+      
+      if(btnAdd) {
+        btnAdd.addEventListener('click', () => {
+          modal.classList.remove('hidden');
+          // Focar no campo placa após abrir
+          setTimeout(() => document.getElementById('itemPlaca').focus(), 100);
+        });
+      }
+      
+      if(btnClose) {
+        btnClose.addEventListener('click', () => {
+          modal.classList.add('hidden');
+        });
+      }
+      
+      // Fechar ao clicar fora
+      modal.addEventListener('click', (e) => {
+        if(e.target === modal) modal.classList.add('hidden');
+      });
+    });
+  </script>
 </body>
 </html>
