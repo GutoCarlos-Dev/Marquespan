@@ -101,17 +101,14 @@ async function editarUsuario(id) {
   
   // CORREÇÃO: Seleção robusta do nível (Case Insensitive)
   const nivelSelect = document.getElementById('nivel');
-  const nivelBanco = data.nivel || '';
+  const nivelBanco = (data.nivel || '').trim();
   
-  // 1. Tenta atribuição direta
-  nivelSelect.value = nivelBanco;
-  
-  // 2. Se falhar (ex: banco 'admin', select 'Admin'), busca ignorando case
-  if (!nivelSelect.value && nivelBanco) {
-      const option = Array.from(nivelSelect.options).find(opt => opt.value.toLowerCase() === nivelBanco.toLowerCase());
-      if (option) {
-          nivelSelect.value = option.value;
-      }
+  // Busca a opção correspondente ignorando case para garantir que o valor correto seja selecionado
+  const option = Array.from(nivelSelect.options).find(opt => opt.value.toLowerCase() === nivelBanco.toLowerCase());
+  if (option) {
+      nivelSelect.value = option.value;
+  } else {
+      nivelSelect.value = nivelBanco; // Fallback para atribuição direta
   }
 
   // Não carregar senha por segurança; deixar campo vazio para alteração opcional
@@ -233,8 +230,10 @@ async function carregarNiveisDisponiveis() {
 
   data.forEach(item => {
     const option = document.createElement('option');
-    option.value = item.nivel.toLowerCase();
-    option.textContent = item.nivel.charAt(0).toUpperCase() + item.nivel.slice(1); // Capitaliza para exibição
+    option.value = (item.nivel || '').toLowerCase();
+    // Formata para Capitalize (Primeira maiúscula, resto minúscula) para exibição amigável
+    const texto = item.nivel || '';
+    option.textContent = texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
     nivelSelect.appendChild(option);
   });
 }
