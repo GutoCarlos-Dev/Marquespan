@@ -51,7 +51,7 @@ async function cadastrarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim();
+  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
   const senha = document.getElementById('senha').value.trim();
 
   if (!nome || !nomecompleto || !email || !nivel || !senha) {
@@ -135,7 +135,7 @@ async function atualizarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim();
+  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
   const senha = document.getElementById('senha').value.trim();
 
   // Preparar dados para update, só incluir senha se não estiver vazia
@@ -233,7 +233,7 @@ async function carregarNiveisDisponiveis() {
 
   data.forEach(item => {
     const option = document.createElement('option');
-    option.value = item.nivel;
+    option.value = item.nivel.toLowerCase();
     option.textContent = item.nivel.charAt(0).toUpperCase() + item.nivel.slice(1); // Capitaliza para exibição
     nivelSelect.appendChild(option);
   });
