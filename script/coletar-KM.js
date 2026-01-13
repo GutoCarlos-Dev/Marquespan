@@ -171,6 +171,12 @@ function adicionarItem(e) {
     document.getElementById('itemKmProxima').value = '';
     document.getElementById('itemObservacao').value = '';
     document.getElementById('itemPlaca').focus();
+
+    // Se estiver no modo mobile (modal existe e não está oculto), fecha o modal
+    const modal = document.getElementById('modalLancamento');
+    if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+    }
 }
 
 function renderizarTabela() {
@@ -181,12 +187,12 @@ function renderizarTabela() {
     itensColeta.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.placa}</td>
-            <td>${item.modelo}</td>
-            <td>${item.km_anterior || '-'}</td>
-            <td>${item.km_atual}</td>
-            <td>${item.km_proxima_troca || '-'}</td>
-            <td>${item.observacao || ''}</td>
+            <td data-label="Placa">${item.placa}</td>
+            <td data-label="Modelo">${item.modelo}</td>
+            <td data-label="KM Anterior">${item.km_anterior || '-'}</td>
+            <td data-label="KM Atual">${item.km_atual}</td>
+            <td data-label="KM Próx. Troca">${item.km_proxima_troca || '-'}</td>
+            <td data-label="Observação">${item.observacao || ''}</td>
             <td>
                 <button class="btn-danger" data-index="${index}" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
             </td>
