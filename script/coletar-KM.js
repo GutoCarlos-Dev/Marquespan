@@ -41,9 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const btnUpdateHistDesk = document.getElementById('btnAtualizarHistoricoDesktop');
     if(btnUpdateHistDesk) btnUpdateHistDesk.addEventListener('click', carregarHistorico);
-
-    const formEdicao = document.getElementById('formEdicaoColeta');
-    if(formEdicao) formEdicao.addEventListener('submit', salvarEdicaoColeta);
 });
 
 async function carregarVeiculos() {
@@ -231,6 +228,20 @@ async function salvarColetaCompleta() {
     const dataColeta = document.getElementById('coletaData').value;
     const responsavel = document.getElementById('coletaResponsavel').value;
 
+    // Verifica se estamos editando um lote existente (mesma data)
+    // Se sim, removemos os registros antigos dessa data para substituir pelos novos
+    // Isso evita duplicação ao editar um lote.
+    const { error: deleteError } = await supabaseClient
+        .from('coleta_km')
+        .delete()
+        .eq('data_coleta', dataColeta);
+
+    if (deleteError) {
+        console.error('Erro ao limpar registros antigos para atualização:', deleteError);
+        // Continua mesmo com erro? Depende da regra de negócio. Por segurança, alertamos.
+        if(!confirm('Houve um erro ao preparar a atualização. Deseja tentar salvar como novos registros?')) return;
+    }
+
     // Prepara os dados para inserção (remove ID temporário)
     const dadosParaInserir = itensColeta.map(({ id, ...resto }) => ({
         ...resto,
@@ -266,7 +277,7 @@ async function carregarHistorico() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Carregando histórico...</td></tr>';
 
     try {
-        // Busca as últimas 20 coletas ordenadas por data de criação
+        // Busca as coletas ordenadas por data
         const { data, error } = await supabaseClient
             .from('coleta_km')
             .select('*')
@@ -282,25 +293,41 @@ async function carregarHistorico() {
             return;
         }
 
+        // Agrupar por Data e Usuário
+        const grupos = {};
         data.forEach(item => {
+            // Chave de agrupamento: Data + Usuario
+            const key = `${item.data_coleta}_${item.usuario}`;
+            if (!grupos[key]) {
+                grupos[key] = {
+                    data_coleta: item.data_coleta,
+                    usuario: item.usuario,
+                    qtd: 0,
+                    ids: []
+                };
+            }
+            grupos[key].qtd++;
+            grupos[key].ids.push(item.id);
+        });
+
+        // Renderizar os grupos
+        Object.values(grupos).forEach(grupo => {
             const tr = document.createElement('tr');
             
             // Formatar Data
             let dataDisplay = '-';
-            if (item.data_coleta) {
-                const dateObj = new Date(item.data_coleta);
+            if (grupo.data_coleta) {
+                const dateObj = new Date(grupo.data_coleta);
                 dataDisplay = dateObj.toLocaleDateString('pt-BR') + ' ' + dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             }
 
             tr.innerHTML = `
                 <td data-label="Data">${dataDisplay}</td>
-                <td data-label="Responsável">${item.usuario || '-'}</td>
-                <td data-label="Placa" style="font-weight: bold;">${item.placa}</td>
-                <td data-label="KM Atual">${item.km_atual}</td>
-                <td data-label="Observação">${item.observacao || ''}</td>
+                <td data-label="Responsável">${grupo.usuario || '-'}</td>
+                <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
                 <td data-label="Ações" style="text-align: right;">
-                    <button type="button" class="btn-primary" style="padding: 6px 10px; margin-right: 5px;" onclick="prepararEdicao('${item.id}')"><i class="fas fa-edit"></i></button>
-                    <button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirColetaSalva('${item.id}')"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-primary" style="padding: 6px 10px; margin-right: 5px;" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote"><i class="fas fa-edit"></i></button>
+                    <button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirBatchColeta('${grupo.data_coleta}')" title="Excluir Lote"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -311,89 +338,70 @@ async function carregarHistorico() {
     }
 }
 
-async function atualizarColeta(id, dadosAtualizados) {
-    if (!id) return;
-    
+// Função para carregar um lote inteiro para edição na tabela principal
+window.carregarBatchParaEdicao = async function(dataColeta) {
     try {
+        // Busca todos os itens daquela data
         const { data, error } = await supabaseClient
             .from('coleta_km')
-            .update(dadosAtualizados)
-            .eq('id', id)
-            .select();
-
+            .select('*')
+            .eq('data_coleta', dataColeta);
+            
         if (error) throw error;
         
-        console.log('Coleta atualizada com sucesso:', data);
-        return data;
+        if (!data || data.length === 0) {
+            alert('Nenhum item encontrado para esta data.');
+            return;
+        }
+
+        // Preenche o cabeçalho
+        // Ajusta o formato da data para o input datetime-local (YYYY-MM-DDTHH:mm)
+        const dataISO = new Date(data[0].data_coleta).toISOString().slice(0, 16);
+        document.getElementById('coletaData').value = dataISO;
+        document.getElementById('coletaResponsavel').value = data[0].usuario;
+
+        // Preenche a lista de itens
+        itensColeta = data.map(item => ({
+            id: item.id, // Mantém o ID original (embora ao salvar, deletaremos e criaremos novos para simplificar a lógica de lote)
+            placa: item.placa,
+            modelo: item.modelo,
+            km_anterior: item.km_anterior,
+            km_atual: item.km_atual,
+            km_proxima_troca: item.km_proxima_troca,
+            observacao: item.observacao
+        }));
+
+        renderizarTabela();
+        
+        // Scroll para o topo para ver os itens carregados
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        alert(`Lote carregado com ${itensColeta.length} itens. Faça as alterações e clique em "Salvar Coleta Completa" para atualizar.`);
+
     } catch (error) {
-        console.error('Erro ao atualizar coleta:', error);
-        alert('Erro ao atualizar registro: ' + error.message);
-        return null;
+        console.error('Erro ao carregar lote:', error);
+        alert('Erro ao carregar dados: ' + error.message);
     }
 }
 
-async function excluirColeta(id) {
-    if (!confirm('Tem certeza que deseja excluir este registro do banco de dados?')) return;
+// Função para excluir um lote inteiro
+window.excluirBatchColeta = async function(dataColeta) {
+    if (!confirm('Tem certeza que deseja excluir TODO este lote de coletas? Esta ação não pode ser desfeita.')) return;
 
     try {
         const { error } = await supabaseClient
             .from('coleta_km')
             .delete()
-            .eq('id', id);
+            .eq('data_coleta', dataColeta);
 
         if (error) throw error;
         
-        alert('Registro excluído com sucesso!');
-        return true;
+        alert('Lote excluído com sucesso!');
+        carregarHistorico();
     } catch (error) {
-        console.error('Erro ao excluir coleta:', error);
-        alert('Erro ao excluir registro: ' + error.message);
-        return false;
+        console.error('Erro ao excluir lote:', error);
+        alert('Erro ao excluir lote: ' + error.message);
     }
-}
-
-// Função wrapper para excluir e atualizar a lista
-window.excluirColetaSalva = async function(id) {
-    const sucesso = await excluirColeta(id);
-    if (sucesso) carregarHistorico();
-}
-
-// Função para abrir modal de edição
-window.prepararEdicao = async function(id) {
-    try {
-        const { data, error } = await supabaseClient
-            .from('coleta_km')
-            .select('*')
-            .eq('id', id)
-            .single();
-            
-        if (error) throw error;
-        
-        document.getElementById('editId').value = data.id;
-        document.getElementById('editPlaca').value = data.placa;
-        document.getElementById('editKmAtual').value = data.km_atual;
-        document.getElementById('editObservacao').value = data.observacao || '';
-        
-        document.getElementById('modalEdicao').classList.remove('hidden');
-    } catch (error) {
-        alert('Erro ao carregar dados: ' + error.message);
-    }
-}
-
-async function salvarEdicaoColeta(e) {
-    e.preventDefault();
-    const id = document.getElementById('editId').value;
-    const kmAtual = document.getElementById('editKmAtual').value;
-    const observacao = document.getElementById('editObservacao').value;
-
-    const dados = {
-        km_atual: parseInt(kmAtual),
-        observacao: observacao
-    };
-
-    await atualizarColeta(id, dados);
-    document.getElementById('modalEdicao').classList.add('hidden');
-    carregarHistorico();
 }
 
 // --- Funções de Importação e Exportação ---

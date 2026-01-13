@@ -119,36 +119,6 @@
     </div>
   </div>
 
-  <!-- Modal para Edição de Histórico -->
-  <div id="modalEdicao" class="panel-backdrop hidden">
-    <div class="panel mobile-panel">
-      <div class="panel-header">
-        <h3><i class="fas fa-edit"></i> Editar Coleta</h3>
-        <button class="close-button" id="btnCloseModalEdicao">&times;</button>
-      </div>
-      <div class="panel-body">
-        <form id="formEdicaoColeta">
-          <input type="hidden" id="editId">
-          <div class="form-group">
-            <label for="editPlaca">Placa</label>
-            <input type="text" id="editPlaca" readonly style="background-color: #f0f0f0;">
-          </div>
-          <div class="form-group">
-            <label for="editKmAtual">KM Atual</label>
-            <input type="number" id="editKmAtual" required inputmode="numeric">
-          </div>
-          <div class="form-group">
-            <label for="editObservacao">Observação</label>
-            <input type="text" id="editObservacao">
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> SALVAR ALTERAÇÕES</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Elementos ocultos para compatibilidade com script desktop se necessário -->
   <div style="display: none;">
     <button id="btnImportar"></button>
@@ -164,8 +134,6 @@
       const modal = document.getElementById('modalLancamento');
       const btnAdd = document.getElementById('btnAdicionarItem');
       const btnClose = document.getElementById('btnCloseModal');
-      const modalEdicao = document.getElementById('modalEdicao');
-      const btnCloseEdicao = document.getElementById('btnCloseModalEdicao');
       
       if(btnAdd) {
         btnAdd.addEventListener('click', () => {
@@ -185,14 +153,6 @@
       modal.addEventListener('click', (e) => {
         if(e.target === modal) modal.classList.add('hidden');
       });
-
-      // Controles do Modal de Edição
-      if(btnCloseEdicao) {
-        btnCloseEdicao.addEventListener('click', () => modalEdicao.classList.add('hidden'));
-      }
-      if(modalEdicao) {
-        modalEdicao.addEventListener('click', (e) => { if(e.target === modalEdicao) modalEdicao.classList.add('hidden'); });
-      }
     });
   </script>
 </body>
