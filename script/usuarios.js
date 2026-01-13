@@ -51,7 +51,7 @@ async function cadastrarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
+  const nivel = document.getElementById('nivel').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
   if (!nome || !nomecompleto || !email || !nivel || !senha) {
@@ -98,8 +98,8 @@ async function editarUsuario(id) {
   document.getElementById('nome').value = data.nome;
   document.getElementById('nomecompleto').value = data.nomecompleto;
   document.getElementById('email').value = data.email;
-  // Garante que o valor seja minúsculo para corresponder às opções do select
-  document.getElementById('nivel').value = (data.nivel || '').toLowerCase();
+  // Usa o valor exato do banco para corresponder às opções do select
+  document.getElementById('nivel').value = data.nivel || '';
   // Não carregar senha por segurança; deixar campo vazio para alteração opcional
   document.getElementById('senha').value = '';
   document.getElementById('formUsuario').dataset.usuarioId = data.id;
@@ -121,7 +121,7 @@ async function atualizarUsuario(event) {
   const nome = document.getElementById('nome').value.trim();
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
+  const nivel = document.getElementById('nivel').value.trim();
   const senha = document.getElementById('senha').value.trim();
 
   // Preparar dados para update, só incluir senha se não estiver vazia
