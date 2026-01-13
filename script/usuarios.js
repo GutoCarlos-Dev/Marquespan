@@ -141,6 +141,8 @@ async function atualizarUsuario(event) {
     updateData.senha = senha;
   }
 
+  console.log('Tentando atualizar usuário ID:', id, updateData);
+
   // Adicionado .select() para confirmar a atualização e verificar erros
   const { data, error } = await supabaseClient
     .from('usuarios')
@@ -150,12 +152,13 @@ async function atualizarUsuario(event) {
 
   if (error) {
     console.error(error);
-    alert(`❌ Erro ao atualizar usuário: ${error.message}`);
+    alert(`❌ Erro ao atualizar usuário: ${error.message}\n\nDica: Verifique se a tabela 'usuarios' tem permissão (RLS) para UPDATE.`);
     return;
   }
 
   if (!data || data.length === 0) {
-    alert('⚠️ Nenhuma alteração foi salva. Verifique se o usuário ainda existe.');
+    console.warn('Update retornou lista vazia. Possível bloqueio de RLS.');
+    alert('⚠️ Nenhuma alteração foi salva.\n\nMotivo provável: O banco de dados bloqueou a edição (RLS) ou o usuário não existe mais.');
     return;
   }
 
@@ -173,14 +176,24 @@ async function excluirUsuario(id) {
 
   if (!confirmar) return;
 
-  const { error } = await supabaseClient
+  console.log('Tentando excluir usuário ID:', id);
+
+  // Adicionado .select() para garantir que sabemos se algo foi deletado
+  const { data, error } = await supabaseClient
     .from('usuarios')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select();
 
   if (error) {
-    alert('❌ Erro ao excluir usuário.');
-    console.error(error);
+    console.error('Erro ao excluir:', error);
+    alert(`❌ Erro ao excluir usuário: ${error.message}\n\nDica: Verifique se existem registros vinculados a este usuário ou se há permissão (RLS) para DELETE.`);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    console.warn('Delete retornou lista vazia. Possível bloqueio de RLS.');
+    alert('⚠️ O usuário não foi excluído.\n\nMotivo provável: O banco de dados bloqueou a exclusão (RLS).');
     return;
   }
 
