@@ -1138,7 +1138,7 @@ const ColetarManutencaoUI = {
     },
 
     async buscarRelatorio() {
-        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center">Buscando...</td></tr>';
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
         
         try {
             // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
@@ -1169,7 +1169,7 @@ const ColetarManutencaoUI = {
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
-                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum registro encontrado.</td></tr>';
+                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum registro encontrado.</td></tr>';
                 if (this.graficosContainer) this.graficosContainer.style.display = 'none';
                 return;
             }
@@ -1180,7 +1180,7 @@ const ColetarManutencaoUI = {
 
         } catch (err) {
             console.error('Erro ao buscar relatório:', err);
-            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
         }
     },
 
@@ -1198,7 +1198,7 @@ const ColetarManutencaoUI = {
             if (col === 'data_hora') {
                 valA = new Date(a.coletas_manutencao.data_hora);
                 valB = new Date(b.coletas_manutencao.data_hora);
-            } else if (['semana', 'placa'].includes(col)) {
+            } else if (['semana', 'placa', 'modelo'].includes(col)) {
                 valA = a.coletas_manutencao[col];
                 valB = b.coletas_manutencao[col];
             } else {
@@ -1242,6 +1242,7 @@ const ColetarManutencaoUI = {
                     <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${coleta.semana}</td>
                     <td>${coleta.placa}</td>
+                    <td>${coleta.modelo || '-'}</td>
                     <td>${item.item}</td>
                     <td>${item.status}</td>
                     <td>${item.detalhes || '-'}</td>
