@@ -30,9 +30,20 @@ select.form, input.form, textarea.form{width:100%; padding:8px 10px; border-radi
 .muted{color:#6b7280; font-size:13px}
 /* Main content */
 .jornada-content{flex:1; min-width:0}
-.header{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px}
-.title{font-size:20px; font-weight:800; color:var(--primary)}
-.meta{color:#6b7280; font-size:13px}
+
+/* Header Customization inside global .header */
+.jornada-header-wrapper { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.jornada-title-group { display: flex; align-items: center; gap: 12px; }
+.jornada-title-group i { font-size: 1.8rem; color: var(--primary); }
+.jornada-title-text { line-height: 1.2; font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+.jornada-subtitle { font-size: 0.85rem; font-weight: normal; color: #6c757d; margin-top: 2px; }
+.jornada-meta { font-size: 0.9rem; font-weight: 600; color: #6c757d; background: #e9ecef; padding: 4px 10px; border-radius: 6px; }
+
+/* Removed old conflicting classes
+.header{...}
+.title{...}
+.meta{...} */
+
 .grid-cards{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:12px}
 .summary{padding:12px; border-radius:10px; background:white; border:1px solid #eef2f4}
 .summary h4{margin:0; font-size:13px}
