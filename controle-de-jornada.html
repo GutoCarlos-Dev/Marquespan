@@ -10,126 +10,130 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-  <div id="menu-container"></div>
-  <div class="app">
-    <!-- CONTROL SIDEBAR (Renomeado para evitar conflito com o menu principal) -->
-    <aside class="control-sidebar">
-      <div class="card">
-        <div class="card-title">Importar / Selecionar Aba</div>
-        <input id="fileInput" type="file" accept=".xlsx,.xls" />
-        <div style="height:8px"></div>
-        <select id="sheetSelect" class="form"></select>
-        <div style="height:8px"></div>
-        <button id="btnLoad" class="btn btn-primary">Carregar Aba</button>
+  <div class="container">
+    <div id="menu-container"></div>
+    <div class="main-content">
+      <div class="jornada-layout">
+        <!-- CONTROL SIDEBAR -->
+        <aside class="control-sidebar">
+          <div class="card">
+            <div class="card-title">Importar / Selecionar Aba</div>
+            <input id="fileInput" type="file" accept=".xlsx,.xls" />
+            <div style="height:8px"></div>
+            <select id="sheetSelect" class="form"></select>
+            <div style="height:8px"></div>
+            <button id="btnLoad" class="btn btn-primary">Carregar Aba</button>
+          </div>
+
+          <div class="card filters">
+            <div class="card-title">Filtros</div>
+            <div class="form-group">
+              <label class="muted">Tipo de Serviço</label>
+              <select id="filterStat" class="form">
+                <option value="all">Todos</option>
+                <option value="viagem">Somente Viagem</option>
+                <option value="bateevolta">Somente Bate e Volta</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="muted">Status</label>
+              <select id="filterIrregular" class="form">
+                <option value="all">Todos</option>
+                <option value="only">Apenas irregularidades</option>
+                <option value="ok">Apenas conformes</option>
+                <option value="semregistro">Apenas Sem Registro</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="muted">Irregularidade específica</label>
+              <select id="filterSpecific" class="form">
+                <option value="all">Todas</option>
+                <option value="saidaTardia">Saída após 19:20</option>
+                <option value="entradaPrecoce">Entrada antes de 06:45</option>
+                <option value="interjCurta">Interjornada &lt; 11h</option>
+                <option value="semRegistro">Sem Registro</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="muted">Pesquisar</label>
+              <input id="searchBox" class="form" placeholder="placa, nome, rota..." />
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Export / Import Histórico</div>
+            <div style="display:flex; gap:8px; margin-bottom:8px">
+              <button id="btnExportJSON" class="btn btn-ghost btn-small">Exportar JSON</button>
+              <button id="btnImportJSON" class="btn btn-ghost btn-small">Importar JSON</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:8px">
+              <button id="btnExportPDF" class="btn btn-primary btn-small" title="Exportar PDF (misto)">Exportar PDF (Misto)</button>
+              <button id="btnExportExcel" class="btn btn-ghost btn-small">Exportar Excel</button>
+            </div>
+            <div class="muted" style="font-size:12px">Histórico salvo localmente (localStorage). Use export/import JSON para sincronizar entre máquinas.</div>
+          </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <div class="jornada-content">
+          <div class="header">
+            <div>
+              <div class="title">Controle de Jornada — V6 FINAL (PDFpro)</div>
+              <div class="muted">Resumo unificado | PDF Misto</div>
+            </div>
+            <div class="meta" id="metaInfo"></div>
+          </div>
+
+          <div class="grid-cards" id="summaryCards" style="margin-bottom:14px">
+            <div class="summary">
+              <h4>Totais</h4>
+              <p id="sumTotals">Colaboradores: 0</p>
+            </div>
+            <div class="summary">
+              <h4>Irregularidades (hoje)</h4>
+              <p id="sumIrreg">Motoristas: 0 — Auxiliares: 0</p>
+            </div>
+            <div class="summary">
+              <h4>Infrações principais</h4>
+              <p id="sumInfra">Saída &gt;19:20: 0 — Entrada &lt;06:45: 0 — Interj &lt;11h: 0</p>
+            </div>
+            <div class="summary">
+              <h4>Ações (histórico)</h4>
+              <p id="sumActions">Total ações: 0</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div style="margin-bottom:8px; color:#6b7280" id="detailedSummary">Carregue a planilha para ver o resumo detalhado</div>
+            <div style="overflow:auto">
+              <table id="mainTable">
+                <thead>
+                  <tr>
+                    <th class="checkbox-cell"><input id="selectAll" type="checkbox" /></th>
+                    <th>Placa</th>
+                    <th>Rota</th>
+                    <th>Tipo</th>
+                    <th>Colaborador</th>
+                    <th>Saída</th>
+                    <th>Entrada</th>
+                    <th>Interjornada</th>
+                    <th>Status</th>
+                    <th>Última Ação</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody">
+                  <tr><td colspan="11" style="padding:40px; color:#6b7280; text-align:center">Nenhum dado carregado. Importe a planilha.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div class="card filters">
-        <div class="card-title">Filtros</div>
-        <div class="form-group">
-          <label class="muted">Tipo de Serviço</label>
-          <select id="filterStat" class="form">
-            <option value="all">Todos</option>
-            <option value="viagem">Somente Viagem</option>
-            <option value="bateevolta">Somente Bate e Volta</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="muted">Status</label>
-          <select id="filterIrregular" class="form">
-            <option value="all">Todos</option>
-            <option value="only">Apenas irregularidades</option>
-            <option value="ok">Apenas conformes</option>
-            <option value="semregistro">Apenas Sem Registro</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="muted">Irregularidade específica</label>
-          <select id="filterSpecific" class="form">
-            <option value="all">Todas</option>
-            <option value="saidaTardia">Saída após 19:20</option>
-            <option value="entradaPrecoce">Entrada antes de 06:45</option>
-            <option value="interjCurta">Interjornada &lt; 11h</option>
-            <option value="semRegistro">Sem Registro</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="muted">Pesquisar</label>
-          <input id="searchBox" class="form" placeholder="placa, nome, rota..." />
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Export / Import Histórico</div>
-        <div style="display:flex; gap:8px; margin-bottom:8px">
-          <button id="btnExportJSON" class="btn btn-ghost btn-small">Exportar JSON</button>
-          <button id="btnImportJSON" class="btn btn-ghost btn-small">Importar JSON</button>
-        </div>
-        <div style="display:flex; gap:8px; margin-bottom:8px">
-          <button id="btnExportPDF" class="btn btn-primary btn-small" title="Exportar PDF (misto)">Exportar PDF (Misto)</button>
-          <button id="btnExportExcel" class="btn btn-ghost btn-small">Exportar Excel</button>
-        </div>
-        <div class="muted" style="font-size:12px">Histórico salvo localmente (localStorage). Use export/import JSON para sincronizar entre máquinas.</div>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="main">
-      <div class="header">
-        <div>
-          <div class="title">Controle de Jornada — V6 FINAL (PDFpro)</div>
-          <div class="muted">Resumo unificado | PDF Misto</div>
-        </div>
-        <div class="meta" id="metaInfo"></div>
-      </div>
-
-      <div class="grid-cards" id="summaryCards" style="margin-bottom:14px">
-        <div class="summary">
-          <h4>Totais</h4>
-          <p id="sumTotals">Colaboradores: 0</p>
-        </div>
-        <div class="summary">
-          <h4>Irregularidades (hoje)</h4>
-          <p id="sumIrreg">Motoristas: 0 — Auxiliares: 0</p>
-        </div>
-        <div class="summary">
-          <h4>Infrações principais</h4>
-          <p id="sumInfra">Saída &gt;19:20: 0 — Entrada &lt;06:45: 0 — Interj &lt;11h: 0</p>
-        </div>
-        <div class="summary">
-          <h4>Ações (histórico)</h4>
-          <p id="sumActions">Total ações: 0</p>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <div style="margin-bottom:8px; color:#6b7280" id="detailedSummary">Carregue a planilha para ver o resumo detalhado</div>
-        <div style="overflow:auto">
-          <table id="mainTable">
-            <thead>
-              <tr>
-                <th class="checkbox-cell"><input id="selectAll" type="checkbox" /></th>
-                <th>Placa</th>
-                <th>Rota</th>
-                <th>Tipo</th>
-                <th>Colaborador</th>
-                <th>Saída</th>
-                <th>Entrada</th>
-                <th>Interjornada</th>
-                <th>Status</th>
-                <th>Última Ação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-              <tr><td colspan="11" style="padding:40px; color:#6b7280; text-align:center">Nenhum dado carregado. Importe a planilha.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 
   <!-- Tooltip -->

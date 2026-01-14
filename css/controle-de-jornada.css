@@ -13,8 +13,8 @@
   --sidebar-w:340px;
 }
 *{box-sizing:border-box}
-body{font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7faf9; color:#111827; margin:0}
-.app{display:flex; gap:var(--gap); min-height:100vh; padding:20px}
+/* body styles removed to use global defaults */
+.jornada-layout{display:flex; gap:var(--gap); align-items: flex-start;}
 /* Control Sidebar (white with green accents) */
 .control-sidebar{width:var(--sidebar-w); background:var(--card); border-radius:var(--border-radius); padding:18px; box-shadow:var(--shadow); border:2px solid rgba(11,110,70,0.06); position:sticky; top:20px; align-self:flex-start}
 .card{background:var(--card); border-radius:10px; padding:12px; margin-bottom:12px; border:1px solid #eef2f4}
@@ -29,7 +29,7 @@ select.form, input.form, textarea.form{width:100%; padding:8px 10px; border-radi
 .filters .form-group{margin-bottom:10px}
 .muted{color:#6b7280; font-size:13px}
 /* Main content */
-.main{flex:1; min-width:0}
+.jornada-content{flex:1; min-width:0}
 .header{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px}
 .title{font-size:20px; font-weight:800; color:var(--primary)}
 .meta{color:#6b7280; font-size:13px}
@@ -65,5 +65,5 @@ th{background:#ffffff; position:sticky; top:0; z-index:2; color:#374151; font-we
 @media (max-width:1100px){
   .grid-cards{grid-template-columns:repeat(2,1fr)}
   .control-sidebar{position:static; width:100%}
-  .app{flex-direction:column}
+  .jornada-layout{flex-direction:column}
 }
