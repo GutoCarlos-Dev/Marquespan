@@ -393,25 +393,35 @@ const ReportUI = {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape' });
 
-        // 1. Carregar a imagem do logo e converter para Base64
+        // 1. Carregar a imagem do logo e converter para JPEG com fundo branco (Correção do fundo preto)
         const getLogoBase64 = async () => {
-            const response = await fetch('logo.png');
-            const blob = await response.blob();
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF'; // Fundo branco
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => {
+                    console.warn('Logo não encontrado');
+                    resolve(null);
+                };
             });
         };
 
         const logoBase64 = await getLogoBase64();
 
-        // 2. Desenha um retângulo branco atrás do logo para garantir fundo branco
-        doc.setFillColor(255, 255, 255); // Define a cor de preenchimento para branco
-        doc.rect(14, 10, 40, 10, 'F'); // Desenha o retângulo preenchido (X, Y, Largura, Altura, 'F' para preencher)
-
-        doc.addImage(logoBase64, 'PNG', 14, 10, 40, 10); // 3. Adiciona o logo por cima do retângulo
+        // 2. Adiciona o logo (agora JPEG com fundo branco)
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
 
         const dataToExport = this.getExportData();
         const totalGeral = this.reportData.reduce((sum, item) => sum + item.valor_total, 0);
@@ -424,8 +434,14 @@ const ReportUI = {
             body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], this.formatCurrency(item['Valor Diaria']), this.formatCurrency(item['Valor Energia']), this.formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
             foot: [['Total Geral', '', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
             startY: 35, // Ajusta o início da tabela
+            showFoot: 'lastPage', // Correção: Total Geral apenas na última página
             headStyles: { fillColor: [0, 105, 55] }, // Cor verde da Marquespan
-            footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' }
+            footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' },
+            columnStyles: {
+                4: { halign: 'right' }, // Valor Diaria
+                5: { halign: 'right' }, // Valor Energia
+                6: { halign: 'right' }  // Valor Total
+            }
         });
 
         doc.save('Relatorio_de_Despesas.pdf');
