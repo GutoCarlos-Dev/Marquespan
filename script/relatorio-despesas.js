@@ -435,12 +435,19 @@ const ReportUI = {
             foot: [['Total Geral', '', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
             startY: 35, // Ajusta o início da tabela
             showFoot: 'lastPage', // Correção: Total Geral apenas na última página
+            styles: { fontSize: 8, cellPadding: 2 }, // Fonte reduzida para evitar quebras de linha
             headStyles: { fillColor: [0, 105, 55] }, // Cor verde da Marquespan
             footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' },
             columnStyles: {
-                4: { halign: 'right' }, // Valor Diaria
-                5: { halign: 'right' }, // Valor Energia
-                6: { halign: 'right' }  // Valor Total
+                0: { cellWidth: 22 }, // Data
+                1: { cellWidth: 15 }, // Rota
+                2: { cellWidth: 40 }, // Hotel
+                3: { cellWidth: 15, halign: 'center' }, // Qtd Diarias
+                4: { halign: 'right', cellWidth: 28 }, // Valor Diaria (Largura fixa para não quebrar)
+                5: { halign: 'right', cellWidth: 28 }, // Valor Energia
+                6: { halign: 'right', cellWidth: 32 }, // Valor Total (Largura fixa para não quebrar)
+                7: { cellWidth: 'auto' }, // Funcionários (Flexível)
+                8: { cellWidth: 25 }  // Nota Fiscal
             }
         });
 
