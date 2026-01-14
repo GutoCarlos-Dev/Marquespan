@@ -79,7 +79,7 @@ const ReportUI = {
         this.btnExportarPDF.addEventListener('click', () => this.exportarPDF());
 
         // Event listener para ordenação da tabela
-        const thead = document.querySelector('.data-table thead');
+        const thead = document.querySelector('.data-grid thead');
         if (thead) {
             thead.addEventListener('click', (e) => {
                 const th = e.target.closest('th');
@@ -225,7 +225,7 @@ const ReportUI = {
     },
 
     updateHeaderIcons() {
-        const ths = document.querySelectorAll('.data-table th');
+        const ths = document.querySelectorAll('.data-grid th');
         ths.forEach(th => {
             const icon = th.querySelector('i');
             if (icon) {
