@@ -451,6 +451,29 @@ const ReportUI = {
             }
         });
 
+        // Adicionar rodapé com paginação profissional
+        const pageCount = doc.internal.getNumberOfPages();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const dateStr = new Date().toLocaleString('pt-BR');
+
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Linha separadora sutil
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+
+            // Data de geração à esquerda
+            doc.text(`Gerado em: ${dateStr}`, 14, pageHeight - 10);
+
+            // Paginação à direita
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+        }
+
         doc.save('Relatorio_de_Despesas.pdf');
     }
 };
