@@ -6,6 +6,7 @@ const DespesasUI = {
         this.cache();
         this.sortField = 'data_checkin'; // Campo padrão
         this.sortAsc = false; // Ordem padrão (descendente)
+        this.editingQuartoId = null;
         this.bind();
         this.loadInitialData();
     },
@@ -82,8 +83,10 @@ const DespesasUI = {
         });
 
         this.listaQuartosEdicao.addEventListener('click', (e) => {
-            const btn = e.target.closest('.btn-delete-quarto');
-            if (btn) this.excluirQuarto(btn.dataset.id);
+            const btnDelete = e.target.closest('.btn-delete-quarto');
+            const btnEdit = e.target.closest('.btn-edit-quarto');
+            if (btnDelete) this.excluirQuarto(btnDelete.dataset.id);
+            if (btnEdit) this.prepararEdicaoQuarto(btnEdit.dataset.id, btnEdit.dataset.nome);
         });
 
         // Evento de clique para ordenação das colunas
@@ -501,6 +504,8 @@ const DespesasUI = {
     fecharModalQuartos() {
         this.modalQuartos.style.display = 'none';
         this.novoTipoQuartoInput.value = '';
+        this.editingQuartoId = null;
+        this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-plus"></i>';
     },
 
     async listarQuartosNoModal() {
@@ -527,7 +532,10 @@ const DespesasUI = {
                 li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;';
                 li.innerHTML = `
                     <span>${q.nome_quarto}</span>
-                    <button type="button" class="btn-delete-quarto" data-id="${q.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                    <div>
+                        <button type="button" class="btn-edit-quarto" data-id="${q.id}" data-nome="${q.nome_quarto}" style="background: #ffc107; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-right: 5px;"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="btn-delete-quarto" data-id="${q.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                    </div>
                 `;
                 this.listaQuartosEdicao.appendChild(li);
             });
@@ -537,13 +545,30 @@ const DespesasUI = {
         }
     },
 
+    prepararEdicaoQuarto(id, nome) {
+        this.editingQuartoId = id;
+        this.novoTipoQuartoInput.value = nome;
+        this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-check"></i>';
+        this.novoTipoQuartoInput.focus();
+    },
+
     async salvarNovoQuarto() {
         const nomeQuarto = this.novoTipoQuartoInput.value.trim();
         if (!nomeQuarto || !this.currentHotelId) return;
 
         try {
-            const { error } = await supabaseClient.from('hotel_quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
-            if (error) throw error;
+            if (this.editingQuartoId) {
+                const { error } = await supabaseClient
+                    .from('hotel_quartos')
+                    .update({ nome_quarto: nomeQuarto })
+                    .eq('id', this.editingQuartoId);
+                if (error) throw error;
+                this.editingQuartoId = null;
+                this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-plus"></i>';
+            } else {
+                const { error } = await supabaseClient.from('hotel_quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
+                if (error) throw error;
+            }
 
             this.novoTipoQuartoInput.value = '';
             await this.listarQuartosNoModal();

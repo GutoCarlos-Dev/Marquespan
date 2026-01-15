@@ -6,6 +6,7 @@ class HotelManager {
         this.cache();
         this.bind();
         this.renderHotels();
+        this.editingQuartoId = null;
     }
 
     cache() {
@@ -306,6 +307,8 @@ Atenção:
         this.quartosPanelBackdrop.classList.add('hidden');
         this.formQuarto.reset();
         this.listaQuartos.innerHTML = '';
+        this.editingQuartoId = null;
+        this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Adicionar';
 
         // Se houver uma URL de redirecionamento pendente, executa agora
         if (this.redirectUrlOnPanelClose) {
@@ -337,7 +340,10 @@ Atenção:
                 div.className = 'quarto-item';
                 div.innerHTML = `
                     <span class="quarto-item-name"><i class="fas fa-bed"></i> ${quarto.nome_quarto}</span>
-                    <button class="btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto"><i class="fas fa-trash-alt"></i></button>
+                    <div>
+                        <button class="btn-edit-quarto" data-id="${quarto.id}" data-nome="${quarto.nome_quarto}" title="Editar quarto" style="background: #ffc107; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-right: 5px;"><i class="fas fa-pen"></i></button>
+                        <button class="btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
+                    </div>
                 `;
                 this.listaQuartos.appendChild(div);
             });
@@ -354,21 +360,38 @@ Atenção:
             return;
         }
 
-        const { error } = await supabaseClient.from('hotel_quartos').insert([{
-            id_hotel: hotelId,
-            nome_quarto: nomeQuarto
-        }]);
+        if (this.editingQuartoId) {
+            const { error } = await supabaseClient.from('hotel_quartos')
+                .update({ nome_quarto: nomeQuarto })
+                .eq('id', this.editingQuartoId);
 
-        if (error) {
-            alert('Erro ao adicionar quarto: ' + error.message);
+            if (error) {
+                alert('Erro ao atualizar quarto: ' + error.message);
+            } else {
+                this.quartoNomeInput.value = '';
+                this.editingQuartoId = null;
+                this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Adicionar';
+                await this.renderQuartos(hotelId);
+            }
         } else {
-            this.quartoNomeInput.value = '';
-            await this.renderQuartos(hotelId);
+            const { error } = await supabaseClient.from('hotel_quartos').insert([{
+                id_hotel: hotelId,
+                nome_quarto: nomeQuarto
+            }]);
+
+            if (error) {
+                alert('Erro ao adicionar quarto: ' + error.message);
+            } else {
+                this.quartoNomeInput.value = '';
+                await this.renderQuartos(hotelId);
+            }
         }
     }
 
     async handleQuartoListClick(e) {
-        const target = e.target;
+        const target = e.target.closest('button');
+        if (!target) return;
+
         if (target.classList.contains('btn-delete-quarto')) {
             const quartoId = target.dataset.id;
             const hotelId = this.quartoHotelIdInput.value;
@@ -381,7 +404,16 @@ Atenção:
                     await this.renderQuartos(hotelId);
                 }
             }
+        } else if (target.classList.contains('btn-edit-quarto')) {
+            this.prepararEdicaoQuarto(target.dataset.id, target.dataset.nome);
         }
+    }
+
+    prepararEdicaoQuarto(id, nome) {
+        this.editingQuartoId = id;
+        this.quartoNomeInput.value = nome;
+        this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Atualizar';
+        this.quartoNomeInput.focus();
     }
 }
 
