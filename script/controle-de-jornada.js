@@ -351,6 +351,15 @@ function renderTable(){
     });
     statusCell.addEventListener('mouseleave', ()=>{ document.getElementById('tooltip').style.display = 'none'; });
 
+    // Attach click event to action button directly
+    const btnAction = tr.querySelector('.action-btn');
+    if(btnAction) {
+      btnAction.addEventListener('click', () => {
+        currentSelected = { row, idx };
+        openModal(row);
+      });
+    }
+
     tbody.appendChild(tr);
   });
 
@@ -547,18 +556,6 @@ document.getElementById('searchBox').addEventListener('input', () => setTimeout(
 
 // Sort listeners
 document.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => handleSort(th.dataset.key)));
-
-// Event delegation for action buttons
-document.getElementById('tbody').addEventListener('click', e => {
-  const btn = e.target.closest('.action-btn');
-  if(btn){
-    const idx = parseInt(btn.dataset.idx, 10);
-    if(currentRows[idx]){
-      currentSelected = {row: currentRows[idx], idx};
-      openModal(currentSelected.row);
-    }
-  }
-});
 
 // hide tooltip on scroll
 window.addEventListener('scroll', ()=> document.getElementById('tooltip').style.display = 'none');
