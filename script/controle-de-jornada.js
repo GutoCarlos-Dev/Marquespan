@@ -33,6 +33,18 @@ const FIXED_HEADERS = {
   obs_aux: 'OBSERVAÇÃO AUXILIAR'
 };
 
+// Função global para garantir que o clique seja capturado
+window.abrirModalAcao = function(idx) {
+  console.log('Tentando abrir modal para índice:', idx);
+  const row = currentRows[idx];
+  if(row) {
+    currentSelected = { row, idx };
+    openModal(row);
+  } else {
+    alert('Erro: Registro não encontrado na memória.');
+  }
+};
+
 // ---------- helpers ----------
 function loadActions(){
   try { return JSON.parse(localStorage.getItem(STORAGE_ACTIONS) || '[]'); } catch(e){ return []; }
@@ -294,7 +306,7 @@ function renderTable(){
       `<td data-field="interj">${escapeHtml(row.interj || '')}</td>`,
       `<td data-field="status">${escapeHtml(finalStatusText)}</td>`,
       `<td data-field="last">${last ? escapeHtml(last.acao + ' — ' + (last.data_acao ? (last.data_acao + ' ' + (last.hora_acao||'')) : last.timestamp.split(',')[0]) + (last.data_infracao ? (' (Infração ' + last.data_infracao + ')') : '')) : '-'}</td>`,
-      `<td><button class="action-btn" data-idx="${idx}">AÇÃO</button></td>`
+      `<td><button class="action-btn" onclick="abrirModalAcao(${idx})">AÇÃO</button></td>`
     ].join('');
 
     // styling cells
@@ -351,15 +363,6 @@ function renderTable(){
     });
     statusCell.addEventListener('mouseleave', ()=>{ document.getElementById('tooltip').style.display = 'none'; });
 
-    // Attach click event to action button directly
-    const btnAction = tr.querySelector('.action-btn');
-    if(btnAction) {
-      btnAction.addEventListener('click', () => {
-        currentSelected = { row, idx };
-        openModal(row);
-      });
-    }
-
     tbody.appendChild(tr);
   });
 
@@ -382,7 +385,8 @@ function renderTable(){
 function openModal(row){
   if(!row) return;
   const modal = document.getElementById('modal');
-  modal.style.display = 'flex';
+  // Força a exibição com prioridade máxima
+  modal.style.setProperty('display', 'flex', 'important');
   try {
     document.getElementById('modalRowInfo').textContent = `${row.placa || ''} — ${row.nome || ''} (${row.role || ''})`;
     // build action options
