@@ -41,6 +41,7 @@ window.abrirModalAcao = function(idx) {
     currentSelected = { row, idx };
     openModal(row);
   } else {
+    console.error('Linha não encontrada para o índice:', idx);
     alert('Erro: Registro não encontrado na memória.');
   }
 };
@@ -384,7 +385,7 @@ function renderTable(){
 // --------- MODAL ACTION ----------
 function openModal(row){
   if(!row) return;
-  const modal = document.getElementById('modal');
+  const modal = document.getElementById('modalAcao');
   // Força a exibição com prioridade máxima
   modal.style.setProperty('display', 'flex', 'important');
   try {
@@ -404,7 +405,7 @@ function openModal(row){
   }
 }
 
-document.getElementById('btnCloseModal').addEventListener('click', ()=>{ document.getElementById('modal').style.display = 'none'; });
+document.getElementById('btnCloseModal').addEventListener('click', ()=>{ document.getElementById('modalAcao').style.display = 'none'; });
 document.getElementById('btnSaveAction').addEventListener('click', ()=>{
   if(!currentSelected) return alert('Nenhuma linha selecionada');
   const action = document.getElementById('actionSelect').value || ACTION_ORDER[0];
@@ -426,7 +427,7 @@ document.getElementById('btnSaveAction').addEventListener('click', ()=>{
     data_acao: now.toLocaleDateString('pt-BR'),
     hora_acao: now.toLocaleTimeString('pt-BR')
   });
-  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modalAcao').style.display = 'none';
   renderTable(); renderSummary();
 });
 
@@ -439,7 +440,7 @@ document.getElementById('btnRemoveAction').addEventListener('click', ()=>{
   const last = acts.slice().reverse()[0];
   if(!confirm('Remover a ação: ' + last.acao + ' — ' + last.timestamp + '?')) return;
   removeActionById(last.id);
-  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modalAcao').style.display = 'none';
   renderTable(); renderSummary();
 });
 
