@@ -12,6 +12,7 @@ const STORAGE_MAP = 'marquespan_map_v6_pdfpro';
 let workbook = null;
 let currentRows = [];
 let currentSelected = null;
+let sortState = { key: null, asc: true };
 
 // fixed mapping expected exactly as in your sheet:
 // PLACA | CIDADE | ROTA | STAT | MOTORISTA | SAÍDA MOTORISTA | ENTRADA MOTORISTA | INTERJORNADA MOTORISTA | OBSERVAÇÃO MOTORISTA | AUXILIAR | SAÍDA AUXILIAR | ENTRADA AUXILIAR | INTERJORNADA AUXILIAR | OBSERVAÇÃO AUXILIAR
@@ -175,6 +176,8 @@ document.getElementById('btnLoad').addEventListener('click', ()=>{
   // sort by rota numeric where possible then role then name
   currentRows.forEach(rr => rr._rota_num = parseInt((''+(rr.rota||'')).replace(/[^0-9]/g,'')) || 999999);
   currentRows.sort((a,b)=> a._rota_num - b._rota_num || (a.role===b.role ? (''+a.nome).localeCompare(b.nome) : (a.role==='MOTORISTA'? -1:1) ));
+  // Reset sort state on new load
+  sortState = { key: 'rota', asc: true }; updateSortIcons();
   renderTable();
   renderSummary();
   document.getElementById('metaInfo').textContent = `${currentRows.length} registros carregados`;
@@ -185,6 +188,53 @@ function safeIdx(row, idx){
   if(idx === null || idx === undefined) return '';
   if(isNaN(idx)) return row[idx] || '';
   return row[idx] !== undefined ? row[idx] : '';
+}
+
+function handleSort(key) {
+  if (sortState.key === key) {
+    sortState.asc = !sortState.asc;
+  } else {
+    sortState.key = key;
+    sortState.asc = true;
+  }
+  updateSortIcons();
+  
+  const actions = loadActions(); // for 'last' sort
+
+  currentRows.sort((a, b) => {
+    let valA = a[key] || '';
+    let valB = b[key] || '';
+
+    if (key === 'rota') {
+      valA = a._rota_num || 999999;
+      valB = b._rota_num || 999999;
+    } else if (key === 'saida' || key === 'entrada' || key === 'interj') {
+       valA = toMins(parseTime(valA)) || -1;
+       valB = toMins(parseTime(valB)) || -1;
+    } else if (key === 'status') {
+       // approximate sort by issue count
+       valA = checkIssues({saida:a.saida, entrada:a.entrada, interj:a.interj}).length;
+       valB = checkIssues({saida:b.saida, entrada:b.entrada, interj:b.interj}).length;
+    } else if (key === 'last') {
+       const actsA = actions.filter(x => x.placa === a.placa && x.nome === a.nome);
+       const actsB = actions.filter(x => x.placa === b.placa && x.nome === b.nome);
+       valA = actsA.length ? actsA[actsA.length-1].timestamp : '';
+       valB = actsB.length ? actsB[actsB.length-1].timestamp : '';
+    }
+
+    if (valA < valB) return sortState.asc ? -1 : 1;
+    if (valA > valB) return sortState.asc ? 1 : -1;
+    return 0;
+  });
+  renderTable();
+}
+
+function updateSortIcons() {
+  document.querySelectorAll('th.sortable i').forEach(i => i.className = 'fas fa-sort');
+  if (sortState.key) {
+    const th = document.querySelector(`th[data-key="${sortState.key}"] i`);
+    if (th) th.className = sortState.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+  }
 }
 
 // --------- RENDER TABLE ----------
@@ -503,6 +553,9 @@ document.getElementById('filterStat').addEventListener('change', renderTable);
 document.getElementById('filterIrregular').addEventListener('change', renderTable);
 document.getElementById('filterSpecific').addEventListener('change', renderTable);
 document.getElementById('searchBox').addEventListener('input', () => setTimeout(renderTable, 80));
+
+// Sort listeners
+document.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => handleSort(th.dataset.key)));
 
 // hide tooltip on scroll
 window.addEventListener('scroll', ()=> document.getElementById('tooltip').style.display = 'none');

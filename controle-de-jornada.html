@@ -8,6 +8,19 @@
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/controle-de-jornada.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    .table-scroll {
+      max-height: 65vh; /* Altura máxima para ativar a rolagem */
+      overflow-y: auto;
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover {
+      background-color: #f1f5f9;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -113,20 +126,20 @@
 
           <div class="table-wrap">
             <div style="margin-bottom:8px; color:#6b7280" id="detailedSummary">Carregue a planilha para ver o resumo detalhado</div>
-            <div style="overflow:auto">
+            <div class="table-scroll">
               <table id="mainTable">
                 <thead>
                   <tr>
                     <th class="checkbox-cell"><input id="selectAll" type="checkbox" /></th>
-                    <th>Placa</th>
-                    <th>Rota</th>
-                    <th>Tipo</th>
-                    <th>Colaborador</th>
-                    <th>Saída</th>
-                    <th>Entrada</th>
-                    <th>Interjornada</th>
-                    <th>Status</th>
-                    <th>Última Ação</th>
+                    <th class="sortable" data-key="placa">Placa <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="rota">Rota <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="stat">Tipo <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="nome">Colaborador <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="saida">Saída <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="entrada">Entrada <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="interj">Interjornada <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="status">Status <i class="fas fa-sort"></i></th>
+                    <th class="sortable" data-key="last">Última Ação <i class="fas fa-sort"></i></th>
                     <th>Ações</th>
                   </tr>
                 </thead>
