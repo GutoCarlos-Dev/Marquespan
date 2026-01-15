@@ -360,15 +360,6 @@ function renderTable(){
     document.getElementById('tbody').innerHTML = '<tr><td colspan="11" style="padding:40px; text-align:center; color:#6b7280">Nenhum resultado com estes filtros.</td></tr>';
   }
 
-  // attach action button listeners
-  document.querySelectorAll('.action-btn').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const idx = parseInt(btn.dataset.idx,10);
-      currentSelected = {row: currentRows[idx], idx};
-      openModal(currentSelected.row);
-    });
-  });
-
   // selectAll
   const selAll = document.getElementById('selectAll');
   selAll.checked = false;
@@ -556,6 +547,18 @@ document.getElementById('searchBox').addEventListener('input', () => setTimeout(
 
 // Sort listeners
 document.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => handleSort(th.dataset.key)));
+
+// Event delegation for action buttons
+document.getElementById('tbody').addEventListener('click', e => {
+  const btn = e.target.closest('.action-btn');
+  if(btn){
+    const idx = parseInt(btn.dataset.idx, 10);
+    if(currentRows[idx]){
+      currentSelected = {row: currentRows[idx], idx};
+      openModal(currentSelected.row);
+    }
+  }
+});
 
 // hide tooltip on scroll
 window.addEventListener('scroll', ()=> document.getElementById('tooltip').style.display = 'none');
