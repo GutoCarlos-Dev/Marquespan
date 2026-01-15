@@ -380,16 +380,24 @@ function renderTable(){
 
 // --------- MODAL ACTION ----------
 function openModal(row){
-  document.getElementById('modal').style.display = 'flex';
-  document.getElementById('modalRowInfo').textContent = `${row.placa || ''} — ${row.nome || ''} (${row.role || ''})`;
-  // build action options
-  const sel = document.getElementById('actionSelect'); sel.innerHTML = '';
-  ACTION_ORDER.forEach(a => {
-    const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o);
-  });
-  document.getElementById('recommendedAction').textContent = recommendNextActionFor(row.nome, row.placa);
-  document.getElementById('actionSelect').value = document.getElementById('recommendedAction').textContent || ACTION_ORDER[0];
-  document.getElementById('actionNote').value = '';
+  if(!row) return;
+  const modal = document.getElementById('modal');
+  modal.style.display = 'flex';
+  try {
+    document.getElementById('modalRowInfo').textContent = `${row.placa || ''} — ${row.nome || ''} (${row.role || ''})`;
+    // build action options
+    const sel = document.getElementById('actionSelect'); sel.innerHTML = '';
+    ACTION_ORDER.forEach(a => {
+      const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o);
+    });
+    document.getElementById('recommendedAction').textContent = recommendNextActionFor(row.nome, row.placa);
+    document.getElementById('actionSelect').value = document.getElementById('recommendedAction').textContent || ACTION_ORDER[0];
+    document.getElementById('actionNote').value = '';
+  } catch(e) {
+    console.error(e);
+    modal.style.display = 'none';
+    alert('Erro ao abrir modal: ' + e.message);
+  }
 }
 
 document.getElementById('btnCloseModal').addEventListener('click', ()=>{ document.getElementById('modal').style.display = 'none'; });
