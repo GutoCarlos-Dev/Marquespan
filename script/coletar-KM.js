@@ -269,8 +269,10 @@ async function salvarColetaCompleta() {
     const dataColetaInput = document.getElementById('coletaData').value;
     if (!dataColetaInput) return alert('Data inválida');
     
-    // Converte para ISO string (UTC) para salvar corretamente no banco
-    const dataColetaISO = new Date(dataColetaInput).toISOString();
+    // Usa o valor do input diretamente (Hora Local) pois o banco é TIMESTAMP WITHOUT TIME ZONE
+    // Isso evita a conversão automática para UTC que estava adicionando 3 horas
+    let dataColetaISO = dataColetaInput;
+    if (dataColetaISO.length === 16) dataColetaISO += ':00';
 
     // Garante que o usuário salvo seja o atual logado, atualizando a autoria da edição
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
