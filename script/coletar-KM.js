@@ -266,13 +266,18 @@ async function salvarColetaCompleta() {
         return;
     }
 
-    const dataColeta = document.getElementById('coletaData').value;
+    const dataColetaInput = document.getElementById('coletaData').value;
+    if (!dataColetaInput) return alert('Data inválida');
+    
+    // Converte para ISO string (UTC) para salvar corretamente no banco
+    const dataColetaISO = new Date(dataColetaInput).toISOString();
+
     // Garante que o usuário salvo seja o atual logado, atualizando a autoria da edição
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const responsavel = usuarioLogado ? (usuarioLogado.nome || usuarioLogado.email) : document.getElementById('coletaResponsavel').value;
 
     // Define qual data usar para exclusão (a original se for edição, ou a atual se for novo/sobrescrever)
-    const dataParaExcluir = originalDataColeta || dataColeta;
+    const dataParaExcluir = originalDataColeta || dataColetaISO;
 
     // Verifica se estamos editando um lote existente (mesma data)
     // Se sim, removemos os registros antigos dessa data para substituir pelos novos
@@ -291,7 +296,7 @@ async function salvarColetaCompleta() {
     // Prepara os dados para inserção (remove ID temporário)
     const dadosParaInserir = itensColeta.map(({ id, ...resto }) => ({
         ...resto,
-        data_coleta: dataColeta,
+        data_coleta: dataColetaISO,
         usuario: responsavel
     }));
 
