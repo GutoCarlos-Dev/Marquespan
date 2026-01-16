@@ -351,6 +351,10 @@ async function carregarHistorico() {
             grupos[key].ids.push(item.id);
         });
 
+        // Verifica nível do usuário para permissão de exclusão
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const isAdmin = usuarioLogado && usuarioLogado.nivel && usuarioLogado.nivel.toLowerCase() === 'administrador';
+
         // Renderizar os grupos
         Object.values(grupos).forEach(grupo => {
             const tr = document.createElement('tr');
@@ -362,13 +366,15 @@ async function carregarHistorico() {
                 dataDisplay = dateObj.toLocaleDateString('pt-BR') + ' ' + dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             }
 
+            const btnDelete = isAdmin ? `<button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirBatchColeta('${grupo.data_coleta}')" title="Excluir Lote"><i class="fas fa-trash"></i></button>` : '';
+
             tr.innerHTML = `
                 <td data-label="Data">${dataDisplay}</td>
                 <td data-label="Responsável">${grupo.usuario || '-'}</td>
                 <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
                 <td data-label="Ações" style="text-align: right;">
                     <button type="button" class="btn-primary" style="padding: 6px 10px; margin-right: 5px;" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote"><i class="fas fa-edit"></i></button>
-                    <button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirBatchColeta('${grupo.data_coleta}')" title="Excluir Lote"><i class="fas fa-trash"></i></button>
+                    ${btnDelete}
                 </td>
             `;
             tbody.appendChild(tr);
