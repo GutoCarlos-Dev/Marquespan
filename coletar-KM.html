@@ -52,15 +52,15 @@
               </div>
               <div class="card-body actions-body">
                 <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
-                <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar Lançamento</button>
-                <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar Lançamento XLSX</button>
-                <button type="button" id="btnExportarPDF" class="btn-danger" style="background-color: #dc3545; color: white;"><i class="fas fa-file-pdf"></i> Exportar Lançamento PDF</button>
+                <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar</button>
+                <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar XLSX</button>
+                <button type="button" id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
               </div>
             </div>
         </div>
 
         <!-- Card de Adicionar Veículo -->
-        <div class="card" style="margin-top: 20px;">
+        <div class="card">
           <div class="card-header">
             <h2>Adicionar Veículo</h2>
           </div>
@@ -94,14 +94,14 @@
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Adicionar à Lista</button>
+                <button type="submit" class="btn-primary" style="height: 32px; padding: 0 20px;"><i class="fas fa-plus"></i> Adicionar</button>
               </div>
             </form>
           </div>
         </div>
 
         <!-- Grid de Itens Coletados -->
-        <div class="card" style="margin-top: 20px;">
+        <div class="card">
           <div class="card-header">
             <h2>Itens Coletados (<span id="contadorItens">0</span>)</h2>
           </div>
@@ -124,15 +124,15 @@
             </table>
           </div>
           <div class="card-footer-actions">
-            <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> Salvar Coleta Completa</button>
+            <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> SALVAR COLETA COMPLETA</button>
           </div>
         </div>
 
         <!-- Grid de Histórico de Coletas Salvas -->
-        <div class="card" style="margin-top: 20px;">
+        <div class="card">
           <div class="card-header">
             <h2><i class="fas fa-history"></i> Histórico de Coletas Salvas</h2>
-            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary" style="padding: 5px 10px; font-size: 0.9rem;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; height: 28px;"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
           <div class="table-responsive">
             <table class="data-grid">

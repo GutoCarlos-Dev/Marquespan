@@ -1,56 +1,162 @@
 /* Estilos Gerais / Desktop */
+
+/* Cards mais compactos e limpos */
+.card {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-header h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #34495e;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inputs e Selects Profissionais */
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"],
+select {
+  width: 100%;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  height: 32px; /* Altura fixa compacta */
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fff;
+  color: #495057;
+}
+
+input:focus, select:focus {
+  border-color: #006937;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 105, 55, 0.1);
+}
+
+input[readonly] {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: default;
+}
+
+label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+}
+
+/* Grids de Layout */
 .top-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1.5fr; /* Mais espaço para ações */
+  gap: 15px;
 }
 
 .form-grid-header {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 10px;
 }
 
+/* Grid de Adicionar Veículo - 5 colunas na primeira linha */
 .form-grid-item {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
   align-items: end;
 }
 
 .full-width {
   grid-column: 1 / -1;
+  margin-top: 5px;
 }
 
+/* Botões de Ação */
 .actions-body {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+  height: 100%; /* Alinha verticalmente com o card vizinho */
+}
+
+.actions-body button {
+  flex: 1;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  padding: 0 12px;
+  height: 32px; /* Mesma altura dos inputs */
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.form-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .card-footer-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+  justify-content: center; /* Centraliza o botão principal */
 }
 
 /* Estilos para Tabela com Scroll e Cabeçalho Fixo */
 .table-scroll-container {
-  max-height: 450px; /* Altura máxima da tabela */
+  max-height: 350px; /* Altura ajustada */
   overflow-y: auto;  /* Barra de rolagem vertical */
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
 }
 
 .table-scroll-container table thead th {
   position: sticky;
   top: 0;
-  background-color: #f8f9fa; /* Cor de fundo para não ficar transparente */
+  background-color: #f1f3f5;
+  color: #495057;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  padding: 8px 10px;
+  border-bottom: 2px solid #dee2e6;
   z-index: 2;
-  box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
 }
 
-th.sortable { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+.data-grid td {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { background-color: #e9ecef; }
 
 /* Estilos do Modal de Edição (Desktop) */
@@ -69,6 +175,11 @@ th.sortable:hover { background-color: #e9ecef; }
 
 #modalEdicao.hidden {
   display: none !important;
+}
+
+/* Responsividade Desktop Menor */
+@media (max-width: 1200px) {
+  .form-grid-item { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* =========================================
