@@ -4,6 +4,7 @@ const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
 
 let itensColeta = [];
 let veiculosCache = [];
+let originalDataColeta = null; // Armazena a data original do lote em edição
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Verificar Login
@@ -268,13 +269,16 @@ async function salvarColetaCompleta() {
     const dataColeta = document.getElementById('coletaData').value;
     const responsavel = document.getElementById('coletaResponsavel').value;
 
+    // Define qual data usar para exclusão (a original se for edição, ou a atual se for novo/sobrescrever)
+    const dataParaExcluir = originalDataColeta || dataColeta;
+
     // Verifica se estamos editando um lote existente (mesma data)
     // Se sim, removemos os registros antigos dessa data para substituir pelos novos
     // Isso evita duplicação ao editar um lote.
     const { error: deleteError } = await supabaseClient
         .from('coleta_km')
         .delete()
-        .eq('data_coleta', dataColeta);
+        .eq('data_coleta', dataParaExcluir);
 
     if (deleteError) {
         console.error('Erro ao limpar registros antigos para atualização:', deleteError);
@@ -299,6 +303,7 @@ async function salvarColetaCompleta() {
         alert('Coleta de KM salva com sucesso!');
         itensColeta = [];
         renderizarTabela();
+        originalDataColeta = null; // Limpa a referência de edição
         carregarHistorico(); // Atualiza o histórico após salvar
         limparRascunho(); // Limpa o rascunho pois já foi salvo no banco
         // Opcional: Limpar data ou manter
@@ -436,6 +441,9 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
             alert('Nenhum item encontrado para esta data.');
             return;
         }
+
+        // Armazena a data original para garantir que o lote correto seja atualizado/substituído
+        originalDataColeta = dataColeta;
 
         // Preenche o cabeçalho
         // Ajusta o formato da data para o input datetime-local (YYYY-MM-DDTHH:mm)
@@ -666,7 +674,8 @@ function salvarRascunho() {
     const data = {
         dataColeta: document.getElementById('coletaData').value,
         responsavel: document.getElementById('coletaResponsavel').value,
-        itens: itensColeta
+        itens: itensColeta,
+        originalDataColeta: originalDataColeta
     };
     localStorage.setItem(STORAGE_KEY_RASCUNHO, JSON.stringify(data));
     // Opcional: Feedback visual discreto
@@ -685,6 +694,7 @@ function carregarRascunho() {
             // Restaura itens
             if (data.itens && Array.isArray(data.itens) && data.itens.length > 0) {
                 itensColeta = data.itens;
+                if (data.originalDataColeta) originalDataColeta = data.originalDataColeta;
                 renderizarTabela();
                 console.log('Rascunho restaurado com sucesso.');
             }
