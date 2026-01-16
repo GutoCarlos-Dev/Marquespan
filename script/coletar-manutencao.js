@@ -223,6 +223,7 @@ const ColetarManutencaoUI = {
         this.carregarVeiculos();
         // Limpa as cores de todos os selects de status no modal
         this.modal.querySelectorAll('.checklist-status').forEach(select => this.updateStatusColor(select));
+        this.aplicarRestricoesDeNivelNoModal();
         this.modal.classList.remove('hidden');
     },
 
@@ -238,6 +239,20 @@ const ColetarManutencaoUI = {
             selectElement.classList.add('status-nao-realizado');
         } else if (status === 'INTERNADO') {
             selectElement.classList.add('status-internado');
+        }
+    },
+
+    aplicarRestricoesDeNivelNoModal() {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+        
+        const allItems = this.modal.querySelectorAll('.checklist-item');
+        allItems.forEach(item => item.style.display = 'block'); // Reset: mostra tudo por padrão
+
+        if (nivel === 'moleiro') {
+            allItems.forEach(item => { if (item.dataset.item !== 'MOLEIRO') item.style.display = 'none'; });
+        } else if (nivel === 'mecanica_externa') {
+            allItems.forEach(item => { if (item.dataset.item !== 'MECANICA EXTERNA') item.style.display = 'none'; });
         }
     },
 
@@ -886,10 +901,17 @@ const ColetarManutencaoUI = {
             const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
             const searchItem = this.searchItemInput?.value;
             const searchStatus = this.searchStatusInput?.value;
+            
+            // Verifica nível do usuário para filtro automático
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            let roleFilterItem = null;
+            if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
+            if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
 
             let query;
 
-            if (searchItem || searchStatus) {
+            if (searchItem || searchStatus || roleFilterItem) {
                 // Correção para erro 500 do Supabase ao ordenar com inner join e filtro.
                 // Etapa 1: Buscar os IDs das coletas que correspondem aos filtros de item/status.
                 let idQuery = supabaseClient
@@ -898,6 +920,7 @@ const ColetarManutencaoUI = {
 
                 if (searchItem) idQuery = idQuery.eq('item', searchItem);
                 if (searchStatus) idQuery = idQuery.eq('status', searchStatus);
+                if (roleFilterItem) idQuery = idQuery.eq('item', roleFilterItem);
 
                 const { data: idData, error: idError } = await idQuery;
                 if (idError) throw idError;
@@ -938,9 +961,7 @@ const ColetarManutencaoUI = {
             }
 
             // Verifica permissão para excluir
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-            const podeExcluir = !['mecanica_externa', 'mecanica_interna'].includes(nivelUsuario);
+            const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
 
             // --- NOVA LÓGICA: Filtrar apenas a última atualização por placa ---
             const ultimosLancamentos = [];
@@ -1110,6 +1131,7 @@ const ColetarManutencaoUI = {
                 }
             });
 
+            this.aplicarRestricoesDeNivelNoModal();
             this.modal.classList.remove('hidden');
         } catch (err) {
             console.error('Erro ao carregar para edição:', err);
@@ -1214,7 +1236,7 @@ const ColetarManutencaoUI = {
         // Verifica permissão para excluir
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-        const podeExcluir = !['mecanica_externa', 'mecanica_interna'].includes(nivelUsuario);
+        const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivelUsuario);
 
         this.reportData.forEach(item => {
                 const coleta = item.coletas_manutencao;
@@ -1478,6 +1500,12 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
 
+            // Filtro automático por nível
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
+
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
             if (selectedItems.length > 0) {
@@ -1559,8 +1587,8 @@ const ColetarManutencaoUI = {
             doc.text("Relatório de Coleta de Manutenção", 14, 28);
             doc.setFontSize(10);
             
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-            doc.text(`Exportado por: ${usuarioLogado}`, 14, 34);
+            const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+            doc.text(`Exportado por: ${nomeUsuario}`, 14, 34);
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
 
             // Helper para cores dos itens
