@@ -307,11 +307,11 @@ const UI = {
       card.className='company-card';
       card.innerHTML = `
         <h4>Empresa ${i}</h4>
-        <select id="empresa${i}Cot"><option value="">-- Carregando --</option></select>
-        <textarea id="obsEmpresa${i}" placeholder="Observações" rows="2"></textarea>
+        <div class="form-group"><select id="empresa${i}Cot"><option value="">-- Carregando --</option></select></div>
+        <div class="form-group"><textarea id="obsEmpresa${i}" placeholder="Observações" rows="2"></textarea></div>
         <div id="precosEmpresa${i}"></div>
-        <input type="number" step="0.01" id="freteEmpresa${i}" placeholder="Frete" />
-        <input type="text" id="totalEmpresa${i}" placeholder="Total" readonly />
+        <div class="form-group"><input type="number" step="0.01" id="freteEmpresa${i}" placeholder="Frete (R$)" /></div>
+        <div class="form-group"><input type="text" id="totalEmpresa${i}" placeholder="Total (R$)" readonly style="font-weight:bold; background-color: #e9ecef;" /></div>
         <div class="winner-selector"><input type="radio" name="empresaVencedora" value="${i}" id="vencedor${i}" /><label for="vencedor${i}">Vencedor</label></div>
       `;
       this.orccardrow.appendChild(card);
@@ -326,13 +326,13 @@ const UI = {
     this.cart.items.forEach(item=>{ // Corrigido: &gt; para >
       const tr = document.createElement('tr');
       tr.dataset.cod = item.cod;
-      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td><input type="number" class="cart-item-qtd" value="${item.qtd}" min="1" data-cod="${item.cod}" style="width: 60px; text-align: center;"></td><td>${item.uni||'UN'}</td><td><button class="btn-remove">Remover</button></td>`; // Corrigido: &lt; e &gt;
+      tr.innerHTML = `<td>${item.cod}</td><td>${item.produto}</td><td><input type="number" class="cart-item-qtd" value="${item.qtd}" min="1" data-cod="${item.cod}" style="width: 70px; text-align: center; padding: 4px;"></td><td>${item.uni||'UN'}</td><td><button class="btn-remove"><i class="fas fa-trash"></i></button></td>`;
       this.cartBody.appendChild(tr);
 
       for(let i=1;i<=3;i++){ // Corrigido: &lt; para <
         const priceContainer = document.getElementById(`precosEmpresa${i}`);
         const div = document.createElement('div'); div.className='price-entry';
-        div.innerHTML = `<label>${item.produto} (Qtd: ${item.qtd})</label><input type="number" step="0.01" id="price-${i}-${item.cod}" data-empresa="${i}" data-cod="${item.cod}" placeholder="Preço Unit." />`; // Corrigido: &lt; e &gt;
+        div.innerHTML = `<label>${item.produto} (Qtd: ${item.qtd})</label><input type="number" step="0.01" id="price-${i}-${item.cod}" data-empresa="${i}" data-cod="${item.cod}" placeholder="Preço Unit. (R$)" />`;
         priceContainer.appendChild(div);
       }
     });

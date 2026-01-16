@@ -12,6 +12,7 @@
   --shadow-sm: 0 2px 6px rgba(0,0,0,0.06);
   --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
   --radius:12px;
+  --input-height: 42px;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -71,15 +72,49 @@ body{
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:980px){.main-layout{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}.sidebar{order:2}.content{order:1}}
 .row{display:flex;gap:8px;align-items:center}
-.btn-primary{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:none;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
-.btn-muted{background:#f0f0f0;color:#333;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
+
+/* Inputs e Selects Modernos */
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%;
+  height: var(--input-height);
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #495057;
+  background-color: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+textarea { height: auto; min-height: 80px; resize: vertical; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand-light);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+}
+
+/* Botões Modernos */
+.btn-primary, .btn-muted, .btn-success, .btn-danger, .btn-delete {
+  height: var(--input-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  gap: 8px;
+}
+
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-muted{background:#f0f0f0;color:#333;border:1px solid #dcdcdc;}
 .btn-inline{display:inline-flex;align-items:center;gap:8px}
 .btn-primary:hover{background:var(--brand-dark);transform:translateY(-1px)}
 .btn-muted:hover{background:#e9e9e9}
 .btn-success{background:var(--success);color:#fff;border-radius:8px;padding:8px 10px;border:none}
-.btn-delete{background:var(--danger);color:#fff;padding:8px 10px;border-radius:8px;border:none;cursor:pointer;transition:background-color 0.2s ease-in-out;}
 .btn-delete:hover{background:#b02a37;}
-.form-compact input, .form-compact select, .form-compact textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e6e6;background:#fafafa}
 .table-responsive{overflow:auto}
 .data-grid{width:100%;border-collapse:collapse;margin-top:10px}
 .data-grid th,.data-grid td{padding:12px;border:1px solid #f1f1f1;text-align:left;font-size:14px}
@@ -90,9 +125,8 @@ body{
 .card-row{align-items:flex-start}
 .card-row .company-card{flex:1;padding:16px;border-radius:12px;border:1px solid #eee;background:linear-gradient(180deg,#ffffff,#fbfffb)}
 .company-card h4{margin:0 0 8px 0;color:var(--brand-contrast);font-size:16px}
-.price-entry{display:flex;flex-direction:column;margin-bottom:8px}
-.price-entry input{padding:8px;border-radius:6px;border:1px solid #ddd}
-.price-entry label{font-size:13px;margin-bottom:6px;color:var(--muted)}
+.price-entry{display:flex;flex-direction:column;margin-bottom:10px; background: #f9f9f9; padding: 8px; border-radius: 6px;}
+.price-entry label{font-size:12px;margin-bottom:4px;color:var(--muted); font-weight: 600;}
 .winner{border:2px solid var(--brand);box-shadow:0 0 12px rgba(0,128,0,0.08)}
 /* Make company card use column layout so footer (winner) aligns bottom */
 .card-row .company-card{display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
@@ -101,7 +135,7 @@ body{
 .company-card textarea{resize:none;min-height:48px;max-height:120px;overflow:auto}
 
 /* Winner selector styled as a button */
-.winner-selector{display:flex;align-items:center;gap:8px;margin-top:12px}
+.winner-selector{display:flex;align-items:center;gap:8px;margin-top:15px; padding-top: 10px; border-top: 1px solid #eee;}
 .winner-selector input[type="radio"]{position:absolute;opacity:0;width:0;height:0}
 .winner-selector label{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #dfe7df;background:#fbfffb;color:var(--brand-contrast);cursor:pointer;font-weight:600}
 .winner-selector label:hover{background:#f1fff1}
@@ -152,7 +186,7 @@ body{
 .quotation-status-select.status-Rejeitada{background:#ffe9e9;color:#a00}
 .quotation-status-select.status-Recebido{background:#e7f4ff;color:#0b5a88}
 /* Carrinho styling */
-#cartTable .btn-remove{background:var(--brand-light);color:#fff;border:none;padding:8px 10px;border-radius:8px}
+#cartTable .btn-remove{background:var(--danger);color:#fff;border:none;padding:6px 10px;border-radius:6px; height: 32px; font-size: 0.85rem;}
 #cartTable .btn-remove:hover{background:var(--brand-dark)}
 #cartTable td{vertical-align:middle}
 .cart-empty{color:var(--muted);padding:18px;text-align:center}
@@ -296,4 +330,22 @@ body{
   .panel-footer {
     display: none;
   }
+}
+
+/* Utilitários de Formulário */
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 0.9rem; }
+.form-row { display: flex; gap: 15px; align-items: flex-end; }
+.form-row .form-group { flex: 1; }
+
+/* Ajustes específicos para botões pequenos */
+.btn-sm { height: 32px; padding: 0 12px; font-size: 0.85rem; }
+
+/* Ajuste para o input de código da cotação no header */
+#quotationCode { 
+    font-weight: bold; 
+    color: var(--brand); 
+    text-align: center; 
+    font-size: 1.1rem; 
+    border: 2px solid #e0e0e0;
 }

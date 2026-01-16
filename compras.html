@@ -73,12 +73,20 @@
         <div class="card grid-2">
           <div>
             <h3>Adicionar Produto</h3>
-            <input type="text" id="cartProductInput" list="productList" placeholder="Digite para buscar um produto..." aria-label="Produtos">
-            <datalist id="productList"></datalist>
-            <input type="number" id="cartQtd" placeholder="Quantidade" min="1" aria-label="Quantidade" />
-            <div class="row">
-              <button id="btnAddToCart" class="btn-inline btn-primary">Adicionar ao Carrinho</button>
-              <button id="btnClearCart" class="btn-inline btn-muted">Limpar Carrinho</button>
+            <div class="form-row">
+              <div class="form-group" style="flex: 3;">
+                <input type="text" id="cartProductInput" list="productList" placeholder="Buscar produto..." aria-label="Produtos">
+                <datalist id="productList"></datalist>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <input type="number" id="cartQtd" placeholder="Qtd" min="1" aria-label="Quantidade" />
+              </div>
+              <div class="form-group" style="flex: 0 0 auto;">
+                <button id="btnAddToCart" class="btn-primary" title="Adicionar"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div style="text-align: right; margin-bottom: 10px;">
+              <button id="btnClearCart" class="btn-muted btn-sm"><i class="fas fa-trash"></i> Limpar</button>
             </div>
 
             <h3 style="margin-top:18px">Carrinho</h3>
@@ -134,25 +142,35 @@
       <section id="sectionCadastrarProdutos" class="section hidden">
         <div class="card card-header"><h2>Cadastrar Produtos</h2></div>
         <div class="card grid-2">
-          <form id="formCadastrarProduto" class="form-compact">
-            <label for="produtoCodigo1">Código 1</label>
-            <input type="text" id="produtoCodigo1" required />
-            <label for="produtoCodigo2">Código 2</label>
-            <input type="text" id="produtoCodigo2" />
-            <label for="produtoNome">Nome do Produto</label>
-            <input type="text" id="produtoNome" required />
-            <label for="produtoUnidade">Unidade de Medida (opcional)</label>
-            <select id="produtoUnidade">
-              <option value="">-- Deixe em branco para usar 'UN' --</option>
-              <option value="UN">UN</option>
-              <option value="KG">KG</option>
-              <option value="M">M</option>
-              <option value="L">L</option>
-              <option value="PC">PC</option>
-            </select>
-            <div class="row">
-              <button type="submit" id="btnSubmitProduto" class="btn-primary">Cadastrar</button>
-              <button type="button" id="btnOpenImportExportModal" class="btn-muted">Import/Export</button>
+          <form id="formCadastrarProduto">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="produtoCodigo1">Código 1</label>
+                <input type="text" id="produtoCodigo1" required />
+              </div>
+              <div class="form-group">
+                <label for="produtoCodigo2">Código 2</label>
+                <input type="text" id="produtoCodigo2" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="produtoNome">Nome do Produto</label>
+              <input type="text" id="produtoNome" required />
+            </div>
+            <div class="form-group">
+              <label for="produtoUnidade">Unidade</label>
+              <select id="produtoUnidade">
+                <option value="">Padrão (UN)</option>
+                <option value="UN">UN</option>
+                <option value="KG">KG</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="PC">PC</option>
+              </select>
+            </div>
+            <div class="row" style="margin-top: 15px;">
+              <button type="submit" id="btnSubmitProduto" class="btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
+              <button type="button" id="btnOpenImportExportModal" class="btn-muted"><i class="fas fa-file-excel"></i> Import/Export</button>
             </div>
           </form>
 
@@ -179,14 +197,18 @@
       <section id="sectionCadastrarFornecedor" class="section hidden">
         <div class="card card-header"><h2>Cadastrar Fornecedor</h2></div>
         <div class="card grid-2">
-          <form id="formCadastrarFornecedor" class="form-compact">
-            <label for="fornecedorNome">Nome do Fornecedor</label>
-            <input type="text" id="fornecedorNome" required />
-            <label for="fornecedorTelefone">Telefone</label>
-            <input type="text" id="fornecedorTelefone" />
-            <div class="row">
-              <button type="submit" id="btnSubmitFornecedor" class="btn-primary">Cadastrar</button>
-              <button type="button" id="btnOpenImportExportFornecedor" class="btn-muted">Import/Export</button>
+          <form id="formCadastrarFornecedor">
+            <div class="form-group">
+              <label for="fornecedorNome">Nome do Fornecedor</label>
+              <input type="text" id="fornecedorNome" required />
+            </div>
+            <div class="form-group">
+              <label for="fornecedorTelefone">Telefone</label>
+              <input type="text" id="fornecedorTelefone" />
+            </div>
+            <div class="row" style="margin-top: 15px;">
+              <button type="submit" id="btnSubmitFornecedor" class="btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
+              <button type="button" id="btnOpenImportExportFornecedor" class="btn-muted"><i class="fas fa-file-excel"></i> Import/Export</button>
             </div>
           </form>
 
