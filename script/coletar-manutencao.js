@@ -935,12 +935,12 @@ const ColetarManutencaoUI = {
                 // Etapa 2: Buscar os dados completos das coletas usando os IDs encontrados.
                 query = supabaseClient
                     .from('coletas_manutencao')
-                    .select('*, coletas_manutencao_checklist(status)')
+                    .select('*, coletas_manutencao_checklist(status, item)')
                     .in('id', matchingIds);
             } else {
                 query = supabaseClient
                     .from('coletas_manutencao')
-                    .select('*, coletas_manutencao_checklist(status)');
+                    .select('*, coletas_manutencao_checklist(status, item)');
             }
 
             // Ordenação dinâmica
@@ -996,7 +996,12 @@ const ColetarManutencaoUI = {
                 const tr = document.createElement('tr');
 
                 // Lógica de status geral para colorir a linha
-                const checklist = item.coletas_manutencao_checklist || [];
+                let checklist = item.coletas_manutencao_checklist || [];
+                
+                if (roleFilterItem) {
+                    checklist = checklist.filter(i => i.item === roleFilterItem);
+                }
+
                 let generalStatus = 'NONE';
 
                 if (checklist.length > 0) {
