@@ -19,6 +19,7 @@ const ColetarManutencaoUI = {
 
     cacheDOM() {
         this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
+        this.btnAdicionarItem = document.getElementById('btnAdicionarItem'); // Botão Flutuante Mobile
         this.btnImportarMassa = document.getElementById('btnImportarMassa');
         
         // Modal
@@ -60,6 +61,8 @@ const ColetarManutencaoUI = {
 
     bindEvents() {
         this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
+        if (this.btnAdicionarLancamento) this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
+        if (this.btnAdicionarItem) this.btnAdicionarItem.addEventListener('click', () => this.abrirModal()); // Evento Mobile
         if (this.btnImportarMassa) this.btnImportarMassa.addEventListener('click', () => this.abrirModalImportacao());
 
         // Adiciona listener para mudança de cor no status
@@ -85,6 +88,14 @@ const ColetarManutencaoUI = {
             if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
             if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
+        if (this.tableBodyLancamentos) {
+            this.tableBodyLancamentos.addEventListener('click', (e) => {
+                const btnDelete = e.target.closest('.btn-delete');
+                const btnEdit = e.target.closest('.btn-edit');
+                if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
+                if (btnEdit) this.editarColeta(btnEdit.dataset.id);
+            });
+        }
 
         // Event delegation para botões da tabela de relatório (Resultados da Busca)
         this.tableBodyRelatorio.addEventListener('click', (e) => {
@@ -93,6 +104,14 @@ const ColetarManutencaoUI = {
             if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
             if (btnEdit) this.editarColeta(btnEdit.dataset.id);
         });
+        if (this.tableBodyRelatorio) {
+            this.tableBodyRelatorio.addEventListener('click', (e) => {
+                const btnDelete = e.target.closest('.btn-delete');
+                const btnEdit = e.target.closest('.btn-edit');
+                if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
+                if (btnEdit) this.editarColeta(btnEdit.dataset.id);
+            });
+        }
 
         if (this.btnFiltrarLancamentos) {
             this.btnFiltrarLancamentos.addEventListener('click', () => this.carregarLancamentos());
@@ -901,6 +920,7 @@ const ColetarManutencaoUI = {
     },
 
     async carregarLancamentos() {
+        if (!this.tableBodyLancamentos) return;
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
         try {
             const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
@@ -1170,6 +1190,7 @@ const ColetarManutencaoUI = {
     },
 
     async buscarRelatorio() {
+        if (!this.tableBodyRelatorio) return;
         this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
         
         try {
@@ -1223,6 +1244,7 @@ const ColetarManutencaoUI = {
     },
 
     renderRelatorio() {
+        if (!this.tableBodyRelatorio) return;
         this.tableBodyRelatorio.innerHTML = '';
         
         // Ordenação
