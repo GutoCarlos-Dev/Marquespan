@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- Biblioteca para Importação/Exportação Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Bibliotecas para Exportação PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -51,6 +54,7 @@
                 <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
                 <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar Lançamento</button>
                 <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar Lançamento XLSX</button>
+                <button type="button" id="btnExportarPDF" class="btn-danger" style="background-color: #dc3545; color: white;"><i class="fas fa-file-pdf"></i> Exportar Lançamento PDF</button>
               </div>
             </div>
         </div>

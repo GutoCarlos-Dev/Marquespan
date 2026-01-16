@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', handleFileImport);
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
+    document.getElementById('btnExportarPDF')?.addEventListener('click', exportarPDF);
 
     // 5. Carregar Histórico
     await carregarHistorico();
@@ -583,6 +584,74 @@ function exportarExcel() {
     ws['!cols'] = wscols;
 
     XLSX.writeFile(wb, `Lancamento_KM_${dataColeta}.xlsx`);
+}
+
+async function exportarPDF() {
+    if (itensColeta.length === 0) {
+        alert('Não há dados para exportar.');
+        return;
+    }
+
+    if (!window.jspdf) {
+        alert('Biblioteca PDF não carregada.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Tenta carregar o logo
+    try {
+        const response = await fetch('logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const base64data = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+        doc.addImage(base64data, 'PNG', 150, 10, 40, 15);
+    } catch (e) {
+        console.warn('Logo não carregado', e);
+    }
+
+    const dataColeta = document.getElementById('coletaData').value;
+    const responsavel = document.getElementById('coletaResponsavel').value;
+    
+    let dataFormatada = dataColeta;
+    if (dataColeta) {
+        const d = new Date(dataColeta);
+        dataFormatada = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    }
+
+    doc.setFontSize(18);
+    doc.text('Relatório de Coleta de KM', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Data: ${dataFormatada}`, 14, 32);
+    doc.text(`Responsável: ${responsavel}`, 14, 38);
+    doc.text(`Total de Veículos: ${itensColeta.length}`, 14, 44);
+
+    const tableColumn = ["Placa", "Modelo", "KM Ant.", "KM Atual", "Próx. Troca", "Observação"];
+    const tableRows = itensColeta.map(item => [
+        item.placa,
+        item.modelo,
+        item.km_anterior || '-',
+        item.km_atual,
+        item.km_proxima_troca || '-',
+        item.observacao || ''
+    ]);
+
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 50,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 2 },
+        headStyles: { fillColor: [0, 105, 55] } // Marquespan Green
+    });
+
+    const fileName = `Coleta_KM_${dataColeta.replace(/[:]/g, '-')}.pdf`;
+    doc.save(fileName);
 }
 
 // --- Funções de Persistência Local (Rascunho Automático) ---
