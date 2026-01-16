@@ -248,11 +248,16 @@ const ColetarManutencaoUI = {
         
         const allItems = this.modal.querySelectorAll('.checklist-item');
         allItems.forEach(item => item.style.display = 'block'); // Reset: mostra tudo por padrão
+        
+        const extraEletrica = document.getElementById('extra-eletrica-interna');
+        if (extraEletrica) extraEletrica.style.display = '';
 
         if (nivel === 'moleiro') {
             allItems.forEach(item => { if (item.dataset.item !== 'MOLEIRO') item.style.display = 'none'; });
+            if (extraEletrica) extraEletrica.style.display = 'none';
         } else if (nivel === 'mecanica_externa') {
             allItems.forEach(item => { if (item.dataset.item !== 'MECANICA EXTERNA') item.style.display = 'none'; });
+            if (extraEletrica) extraEletrica.style.display = 'none';
         }
     },
 
