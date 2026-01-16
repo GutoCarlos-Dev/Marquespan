@@ -1719,6 +1719,26 @@ const ColetarManutencaoUI = {
                 }
             });
 
+            // Adicionar rodapé com numeração de páginas
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(100); // Cinza escuro
+
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+
+                // Texto da esquerda (Data de geração)
+                const dateText = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
+                doc.text(dateText, 14, pageHeight - 10);
+
+                // Texto da direita (Paginação)
+                const pageText = `Página ${i} de ${pageCount}`;
+                const textWidth = doc.getTextWidth(pageText);
+                doc.text(pageText, pageWidth - 14 - textWidth, pageHeight - 10);
+            }
+
             doc.save(`Relatorio_Manutencao_${new Date().toISOString().slice(0,10)}.pdf`);
 
         } catch (err) {
