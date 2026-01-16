@@ -267,7 +267,9 @@ async function salvarColetaCompleta() {
     }
 
     const dataColeta = document.getElementById('coletaData').value;
-    const responsavel = document.getElementById('coletaResponsavel').value;
+    // Garante que o usuário salvo seja o atual logado, atualizando a autoria da edição
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const responsavel = usuarioLogado ? (usuarioLogado.nome || usuarioLogado.email) : document.getElementById('coletaResponsavel').value;
 
     // Define qual data usar para exclusão (a original se for edição, ou a atual se for novo/sobrescrever)
     const dataParaExcluir = originalDataColeta || dataColeta;
@@ -446,10 +448,14 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
         originalDataColeta = dataColeta;
 
         // Preenche o cabeçalho
-        // Ajusta o formato da data para o input datetime-local (YYYY-MM-DDTHH:mm)
-        const dataISO = new Date(data[0].data_coleta).toISOString().slice(0, 16);
+        // Ajusta o formato da data para o input datetime-local (YYYY-MM-DDTHH:mm) corrigindo fuso horário
+        const dateObj = new Date(data[0].data_coleta);
+        dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
+        const dataISO = dateObj.toISOString().slice(0, 16);
+        
         document.getElementById('coletaData').value = dataISO;
-        document.getElementById('coletaResponsavel').value = data[0].usuario;
+        // Não sobrescreve o responsável com o do lote antigo, mantém o usuário logado atual para indicar quem está editando
+        // document.getElementById('coletaResponsavel').value = data[0].usuario;
 
         // Preenche a lista de itens
         itensColeta = data.map(item => ({
