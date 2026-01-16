@@ -636,6 +636,32 @@ async function exportarPDF() {
             reader.readAsDataURL(blob);
         });
         doc.addImage(base64data, 'PNG', 150, 10, 40, 15);
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF'; // Fundo branco
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => {
+                    console.warn('Logo não encontrado');
+                    resolve(null);
+                };
+            });
+        };
+
+        const logoBase64 = await getLogoBase64();
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 150, 10, 40, 15);
+        }
     } catch (e) {
         console.warn('Logo não carregado', e);
     }
