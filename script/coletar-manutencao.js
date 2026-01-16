@@ -1179,6 +1179,12 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
 
+            // Filtro automático por nível
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
+
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
             if (selectedItems.length > 0) {
@@ -1395,6 +1401,12 @@ const ColetarManutencaoUI = {
             let query = supabaseClient
                 .from('coletas_manutencao_checklist')
                 .select('*, coletas_manutencao!inner(*)');
+
+            // Filtro automático por nível
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
 
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
