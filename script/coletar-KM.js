@@ -452,13 +452,12 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
         // Armazena a data original para garantir que o lote correto seja atualizado/substituído
         originalDataColeta = dataColeta;
 
-        // Preenche o cabeçalho
-        // Ajusta o formato da data para o input datetime-local (YYYY-MM-DDTHH:mm) corrigindo fuso horário
-        const dateObj = new Date(data[0].data_coleta);
-        dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
-        const dataISO = dateObj.toISOString().slice(0, 16);
+        // Preenche o cabeçalho com a DATA ATUAL para garantir que a edição salve com o horário do momento
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        const currentDataISO = now.toISOString().slice(0, 16);
         
-        document.getElementById('coletaData').value = dataISO;
+        document.getElementById('coletaData').value = currentDataISO;
         // Não sobrescreve o responsável com o do lote antigo, mantém o usuário logado atual para indicar quem está editando
         // document.getElementById('coletaResponsavel').value = data[0].usuario;
 
