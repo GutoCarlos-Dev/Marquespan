@@ -5,6 +5,7 @@ const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
 let itensColeta = [];
 let veiculosCache = [];
 let originalDataColeta = null; // Armazena a data original do lote em edição
+let currentSort = { key: null, asc: true }; // Estado da ordenação
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Verificar Login
@@ -49,6 +50,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 6. Tenta recuperar rascunho salvo (caso tenha caído a internet ou fechado a aba)
     carregarRascunho();
+
+    // 7. Listeners de Ordenação
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => ordenarItens(th.dataset.sort));
+    });
 });
 
 async function carregarVeiculos() {
@@ -704,6 +710,39 @@ async function exportarPDF() {
 
     const fileName = `Coleta_KM_${dataColeta.replace(/[:]/g, '-')}.pdf`;
     doc.save(fileName);
+}
+
+// --- Funções de Ordenação ---
+
+function ordenarItens(key) {
+    if (currentSort.key === key) {
+        currentSort.asc = !currentSort.asc;
+    } else {
+        currentSort.key = key;
+        currentSort.asc = true;
+    }
+
+    itensColeta.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        // Tratamento para números e strings
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA == null) valA = '';
+        if (valB == null) valB = '';
+
+        if (valA < valB) return currentSort.asc ? -1 : 1;
+        if (valA > valB) return currentSort.asc ? 1 : -1;
+        return 0;
+    });
+
+    // Atualiza ícones
+    document.querySelectorAll('th.sortable i').forEach(i => i.className = 'fas fa-sort');
+    const activeTh = document.querySelector(`th[data-sort="${key}"] i`);
+    if (activeTh) activeTh.className = currentSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+    renderizarTabela();
 }
 
 // --- Funções de Persistência Local (Rascunho Automático) ---
