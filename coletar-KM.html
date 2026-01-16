@@ -150,36 +150,6 @@
     </div>
   </div>
 
-  <!-- Modal de Edição (Desktop) -->
-  <div id="modalEdicao" class="modal-overlay hidden">
-    <div class="modal-content card" style="width: 400px; max-width: 90%;">
-      <div class="card-header" style="display: flex; justify-content: space-between;">
-        <h2>Editar Coleta</h2>
-        <button onclick="document.getElementById('modalEdicao').classList.add('hidden')" style="background:none; border:none; font-size: 1.2rem; cursor: pointer;">&times;</button>
-      </div>
-      <div class="card-body">
-        <form id="formEdicaoColeta">
-          <input type="hidden" id="editId">
-          <div class="form-group">
-            <label>Placa</label>
-            <input type="text" id="editPlaca" readonly style="background-color: #eee;">
-          </div>
-          <div class="form-group">
-            <label>KM Atual</label>
-            <input type="number" id="editKmAtual" required>
-          </div>
-          <div class="form-group">
-            <label>Observação</label>
-            <input type="text" id="editObservacao">
-          </div>
-          <div class="form-actions" style="margin-top: 15px; text-align: right;">
-            <button type="submit" class="btn-primary">Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/coletar-KM.js"></script>
 </body>

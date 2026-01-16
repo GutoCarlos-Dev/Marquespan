@@ -1,5 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
+const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
+
 let itensColeta = [];
 let veiculosCache = [];
 
@@ -23,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Event Listeners
     document.getElementById('itemPlaca').addEventListener('change', aoSelecionarPlaca);
+    document.getElementById('coletaData').addEventListener('change', salvarRascunho); // Salvar ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
@@ -41,6 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const btnUpdateHistDesk = document.getElementById('btnAtualizarHistoricoDesktop');
     if(btnUpdateHistDesk) btnUpdateHistDesk.addEventListener('click', carregarHistorico);
+
+    // 6. Tenta recuperar rascunho salvo (caso tenha caído a internet ou fechado a aba)
+    carregarRascunho();
 });
 
 async function carregarVeiculos() {
@@ -186,12 +192,13 @@ function handleItemSubmit(e) {
 
     } else {
         // --- MODO DE ADIÇÃO ---
-        itemData.id = Date.now(); // ID temporário para a UI
+        itemData.id = Date.now() + Math.random(); // ID temporário mais seguro
         itensColeta.push(itemData);
     }
 
     renderizarTabela();
     clearItemForm();
+    salvarRascunho(); // Salva automaticamente
 
     // Fecha o modal no modo mobile, se estiver aberto
     const modal = document.getElementById('modalLancamento');
@@ -245,6 +252,7 @@ function handleTableActions(e) {
     if (button.classList.contains('btn-delete-item')) {
         itensColeta.splice(index, 1);
         renderizarTabela();
+        salvarRascunho(); // Atualiza o rascunho ao deletar
     } else if (button.classList.contains('btn-edit-item')) {
         prepararEdicaoItem(index);
     }
@@ -291,6 +299,7 @@ async function salvarColetaCompleta() {
         itensColeta = [];
         renderizarTabela();
         carregarHistorico(); // Atualiza o histórico após salvar
+        limparRascunho(); // Limpa o rascunho pois já foi salvo no banco
         // Opcional: Limpar data ou manter
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
@@ -439,6 +448,7 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
         }));
 
         renderizarTabela();
+        salvarRascunho(); // Salva o lote carregado como rascunho atual
         
         // Scroll para o topo para ver os itens carregados
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -522,6 +532,7 @@ function handleFileImport(e) {
             });
 
             renderizarTabela();
+            salvarRascunho(); // Salva importação no rascunho
             alert(`${importadosCount} registros importados com sucesso!`);
             
         } catch (error) {
@@ -572,6 +583,44 @@ function exportarExcel() {
     ws['!cols'] = wscols;
 
     XLSX.writeFile(wb, `Lancamento_KM_${dataColeta}.xlsx`);
+}
+
+// --- Funções de Persistência Local (Rascunho Automático) ---
+
+function salvarRascunho() {
+    const data = {
+        dataColeta: document.getElementById('coletaData').value,
+        responsavel: document.getElementById('coletaResponsavel').value,
+        itens: itensColeta
+    };
+    localStorage.setItem(STORAGE_KEY_RASCUNHO, JSON.stringify(data));
+    // Opcional: Feedback visual discreto
+    // console.log('Rascunho salvo automaticamente.');
+}
+
+function carregarRascunho() {
+    const saved = localStorage.getItem(STORAGE_KEY_RASCUNHO);
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            
+            // Restaura cabeçalho se existir
+            if (data.dataColeta) document.getElementById('coletaData').value = data.dataColeta;
+            
+            // Restaura itens
+            if (data.itens && Array.isArray(data.itens) && data.itens.length > 0) {
+                itensColeta = data.itens;
+                renderizarTabela();
+                console.log('Rascunho restaurado com sucesso.');
+            }
+        } catch (e) {
+            console.error('Erro ao restaurar rascunho:', e);
+        }
+    }
+}
+
+function limparRascunho() {
+    localStorage.removeItem(STORAGE_KEY_RASCUNHO);
 }
 
 // Expor funções para uso global se necessário
