@@ -131,7 +131,7 @@ const ColetarManutencaoUI = {
                 e.target.value = e.target.value.toUpperCase();
                 const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
                 if (statusSelect && statusSelect.value === "") {
-                    statusSelect.value = "NAO REALIZADO";                    this.updateStatusColor(statusSelect); // Adicionado para atualizar a cor
+                    statusSelect.value = "PENDENTE";                    this.updateStatusColor(statusSelect); // Adicionado para atualizar a cor
                 }
             });
         });
@@ -226,7 +226,7 @@ const ColetarManutencaoUI = {
                 
                 legend.innerHTML = `
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724; margin-right: 12px;">OK</span>
-                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24; margin-right: 12px;">NÃO REALIZADO</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24; margin-right: 12px;">PENDENTE</span>
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span>
                 `;
                 
@@ -249,13 +249,13 @@ const ColetarManutencaoUI = {
     updateStatusColor(selectElement) {
         if (!selectElement) return;
         // Remove todas as classes de status antes de adicionar a nova
-        selectElement.classList.remove('status-ok', 'status-nao-realizado', 'status-internado');
+        selectElement.classList.remove('status-ok', 'status-nao-realizado', 'status-pendente', 'status-internado');
         const status = selectElement.value.toUpperCase();
 
         if (status === 'OK') {
             selectElement.classList.add('status-ok');
-        } else if (status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
-            selectElement.classList.add('status-nao-realizado');
+        } else if (status === 'PENDENTE' || status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
+            selectElement.classList.add('status-pendente');
         } else if (status === 'INTERNADO') {
             selectElement.classList.add('status-internado');
         }
@@ -395,7 +395,7 @@ const ColetarManutencaoUI = {
                             .insert([{
                                 coleta_id: coleta.id,
                                 item: 'MOLEIRO',
-                                status: 'NAO REALIZADO', // Status fixo conforme solicitado
+                                status: 'PENDENTE', // Status fixo conforme solicitado
                                 detalhes: descricao
                             }]);
 
@@ -483,7 +483,7 @@ const ColetarManutencaoUI = {
                             .insert([{
                                 coleta_id: coleta.id,
                                 item: 'MECANICA EXTERNA',
-                                status: 'NAO REALIZADO',
+                                status: 'PENDENTE',
                                 detalhes: detalhes
                             }]);
 
@@ -588,7 +588,7 @@ const ColetarManutencaoUI = {
                         const pecaEletrica = rowNormalized['PECA'];
 
                         if (descEletrica || statusEletricaRaw !== undefined || pecaEletrica) {
-                            let statusEletrica = 'NAO REALIZADO';
+                            let statusEletrica = 'PENDENTE';
                             // Verifica se é TRUE (Excel bool) ou string "TRUE"/"OK"
                             if (statusEletricaRaw === true || String(statusEletricaRaw).toUpperCase() === 'TRUE' || String(statusEletricaRaw).toUpperCase() === 'OK') {
                                 statusEletrica = 'OK';
@@ -610,7 +610,7 @@ const ColetarManutencaoUI = {
                                 checklistItems.push({
                                     coleta_id: coleta.id,
                                     item: itemDb,
-                                    status: 'NAO REALIZADO',
+                                    status: 'PENDENTE',
                                     detalhes: String(valorCelula).toUpperCase()
                                 });
                             }
@@ -1042,13 +1042,13 @@ const ColetarManutencaoUI = {
                 let generalStatus = 'NONE';
 
                 if (checklist.length > 0) {
-                    const hasNaoRealizado = checklist.some(i => i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
+                    const hasNaoRealizado = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
                     const hasInternado = checklist.some(i => i.status === 'INTERNADO');
                     // Para ser 'OK', todos os itens devem ser 'OK'.
                     const allOk = checklist.every(i => i.status === 'OK');
 
                     if (hasNaoRealizado) {
-                        generalStatus = 'NAO REALIZADO';
+                        generalStatus = 'PENDENTE';
                     } else if (hasInternado) {
                         generalStatus = 'INTERNADO';
                     } else if (allOk) {
@@ -1059,7 +1059,7 @@ const ColetarManutencaoUI = {
                 if (generalStatus === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
-                } else if (generalStatus === 'NAO REALIZADO') {
+                } else if (generalStatus === 'PENDENTE') {
                     tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
                     tr.style.color = '#721c24';
                 } else if (generalStatus === 'INTERNADO') {
@@ -1297,7 +1297,7 @@ const ColetarManutencaoUI = {
                 if (statusUpper === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
-                } else if (statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
+                } else if (statusUpper === 'PENDENTE' || statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
                     tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
                     tr.style.color = '#721c24';
                 } else if (statusUpper === 'INTERNADO') {
@@ -1347,7 +1347,8 @@ const ColetarManutencaoUI = {
         // Cores para os status
         const statusColors = {
             'OK': '#28a745',
-            'NAO REALIZADO': '#dc3545',
+            'PENDENTE': '#dc3545',
+            'NAO REALIZADO': '#dc3545', // Mantido para compatibilidade
             'INTERNADO': '#ffc107',
             'N/A': '#6c757d'
         };
