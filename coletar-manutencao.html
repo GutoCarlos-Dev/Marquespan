@@ -47,66 +47,76 @@
           </div>
         </div>
         
-        <!-- Grid de Lançamentos Recentes (Movidado para a aba principal) -->
+        <!-- Filtros e Ações -->
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; align-items: flex-start;">
+            <!-- Card Filtros -->
+            <div class="card" style="flex: 1; min-width: 300px; margin-top: 0;">
+                <div class="card-header">
+                    <h2><i class="fas fa-filter"></i> Filtros</h2>
+                </div>
+                <div class="card-body" style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="searchPlaca" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Placa</label>
+                            <input type="text" id="searchPlaca" placeholder="Buscar placa..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="searchItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificador</label>
+                            <select id="searchItem" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="">Todos</option>
+                                <option value="ACESSORIOS">ACESSORIOS</option>
+                                <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
+                                <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
+                                <option value="BORRACHARIA">BORRACHARIA</option>
+                                <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
+                                <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
+                                <option value="MOLEIRO">MOLEIRO</option>
+                                <option value="TACOGRAFO">TACOGRAFO</option>
+                                <option value="TAPEÇARIA">TAPEÇARIA</option>
+                                <option value="THERMO KING">THERMO KING</option>
+                                <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
+                                <option value="SERVIÇOS_GERAIS">SERVIÇOS GERAIS</option>
+                                <option value="CONCESSIONARIA">CONCESSIONARIA</option>
+                                <option value="ANKA">ANKA</option>
+                                <option value="TARRAXA">TARRAXA</option>
+                                <option value="USIMAC">USIMAC</option>
+                                <option value="LUCAS BAU">LUCAS BAU</option>
+                                <option value="IBIFURGO">IBIFURGO</option>
+                                <option value="IBIPORAN">IBIPORÃ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="searchStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
+                            <select id="searchStatus" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="">Todos</option>
+                                <option value="FINALIZADO">FINALIZADO</option>
+                                <option value="PENDENTE">PENDENTE</option>
+                                <option value="INTERNADO">INTERNADO</option>
+                                <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
+                                <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Ações -->
+            <div class="card" style="width: 200px; flex-shrink: 0; margin-top: 0;">
+                <div class="card-header">
+                    <h2><i class="fas fa-cogs"></i> Ações</h2>
+                </div>
+                <div class="card-body" style="padding: 20px; display: flex; align-items: center; justify-content: center;">
+                    <button type="button" id="btnFiltrarLancamentos" class="action-btn btn-buscar" style="width: 100%;">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de Lançamentos Recentes -->
         <div class="card" style="margin-top: 20px;">
           <div class="card-header">
             <h2><i class="fas fa-list"></i> Manutenções Lançadas (Semana Atual)</h2>
-          </div>
-          <div class="search-bar-container">
-            <div class="search-group">
-                <label for="searchPlaca">Placa</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-car"></i>
-                    <input type="text" id="searchPlaca" placeholder="Buscar placa...">
-                </div>
-            </div>
-            <div class="search-group">
-                <label for="searchItem">Item Verificador</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-list-check"></i>
-                    <select id="searchItem">
-                        <option value="">Todos</option>
-                        <option value="ACESSORIOS">ACESSORIOS</option>
-                        <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
-                        <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
-                        <option value="BORRACHARIA">BORRACHARIA</option>
-                        <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
-                        <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
-                        <option value="MOLEIRO">MOLEIRO</option>
-                        <option value="TACOGRAFO">TACOGRAFO</option>
-                        <option value="TAPEÇARIA">TAPEÇARIA</option>
-                        <option value="THERMO KING">THERMO KING</option>
-                        <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
-                        <option value="SERVIÇOS_GERAIS">SERVIÇOS GERAIS</option>
-                        <option value="CONCESSIONARIA">CONCESSIONARIA</option>
-                        <option value="ANKA">ANKA</option>
-                        <option value="TARRAXA">TARRAXA</option>
-                        <option value="USIMAC">USIMAC</option>
-                        <option value="LUCAS BAU">LUCAS BAU</option>
-                        <option value="IBIFURGO">IBIFURGO</option>
-                        <option value="IBIPORAN">IBIPORÃ</option>
-                    </select>
-                </div>
-            </div>
-            <div class="search-group">
-                <label for="searchStatus">Status</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-info-circle"></i>
-                    <select id="searchStatus">
-                        <option value="">Todos</option>
-                        <option value="FINALIZADO">FINALIZADO</option>
-                        <option value="PENDENTE">PENDENTE</option>
-                        <option value="INTERNADO">INTERNADO</option>
-                        <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
-                        <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
-                    </select>
-                </div>
-            </div>
-            <div class="search-actions">
-                <button type="button" id="btnFiltrarLancamentos" class="btn-primary">
-                    <i class="fas fa-filter"></i> Filtrar
-                </button>
-            </div>
           </div>
           <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="data-grid">
