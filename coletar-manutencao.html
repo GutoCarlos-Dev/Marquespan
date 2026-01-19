@@ -306,8 +306,29 @@
         </div>
         <div class="panel-body">
             <form id="formLancamentoColeta">
-                <fieldset class="form-fieldset">
-                    <legend>Dados Gerais</legend>
+                <!-- Seção 1: Veículo (Azul) -->
+                <fieldset class="form-fieldset fieldset-veiculo">
+                    <legend><i class="fas fa-car"></i> Veículo</legend>
+                    <div class="form-grid-coleta">
+                        <div class="form-group">
+                            <label for="coletaPlaca">Placa</label>
+                            <input type="text" id="coletaPlaca" list="veiculosList" required>
+                            <datalist id="veiculosList"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaKm">Km</label>
+                            <input type="number" id="coletaKm" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="coletaModelo">Modelo</label>
+                            <input type="text" id="coletaModelo" readonly>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Seção 2: Detalhes (Verde) -->
+                <fieldset class="form-fieldset fieldset-detalhes">
+                    <legend><i class="fas fa-info-circle"></i> Detalhes</legend>
                     <div class="form-grid-coleta">
                         <div class="form-group">
                             <label for="coletaSemana">Semana</label>
@@ -321,24 +342,12 @@
                             <label for="coletaUsuario">Usuário</label>
                             <input type="text" id="coletaUsuario" required readonly>
                         </div>
-                        <div class="form-group">
-                            <label for="coletaPlaca">Placa</label>
-                            <input type="text" id="coletaPlaca" list="veiculosList" required>
-                            <datalist id="veiculosList"></datalist>
-                        </div>
-                        <div class="form-group">
-                            <label for="coletaModelo">Modelo</label>
-                            <input type="text" id="coletaModelo" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="coletaKm">Km</label>
-                            <input type="number" id="coletaKm" required>
-                        </div>
                     </div>
                 </fieldset>
 
-                <fieldset class="form-fieldset">
-                    <legend>Checklist de Manutenção</legend>
+                <!-- Seção 3: Checklist (Amarelo/Laranja) -->
+                <fieldset class="form-fieldset fieldset-checklist">
+                    <legend><i class="fas fa-list-check"></i> Checklist de Manutenção</legend>
                     <div class="checklist-container">
                         <!-- ACESSORIOS -->
                         <div class="checklist-item" data-item="ACESSORIOS">
