@@ -96,7 +96,7 @@
     async function carregarTotalManutencoes() {
       try {
         const { count, error } = await supabaseClient
-          .from('coletas_manutencao_itens')
+          .from('coletas_manutencao_checklist')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'FINALIZADO');
 
