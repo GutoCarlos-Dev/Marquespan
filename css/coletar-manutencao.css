@@ -36,6 +36,45 @@
 .btn-limpar { background-color: #6c757d; color: white; }
 .btn-limpar:hover { background-color: #5a6268; }
 
+/* Estilização do Checklist Zebrado */
+.checklist-container {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden; /* Garante que o zebrado respeite as bordas arredondadas */
+}
+
+.checklist-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.checklist-item:last-child {
+    border-bottom: none;
+}
+
+/* Zebra: Ímpar Branco, Par Cinza */
+.checklist-item:nth-of-type(odd) {
+    background-color: #ffffff;
+}
+
+.checklist-item:nth-of-type(even) {
+    background-color: #f2f2f2; /* Cinza */
+}
+
+/* Ajuste para manter o padrão zebrado após o elemento oculto de elétrica */
+#extra-eletrica-interna ~ .checklist-item:nth-of-type(odd) {
+    background-color: #f2f2f2;
+}
+
+#extra-eletrica-interna ~ .checklist-item:nth-of-type(even) {
+    background-color: #ffffff;
+}
+
 /* Estilos para os fieldsets do modal de lançamento */
 .form-fieldset {
     border: 1px solid #e0e0e0;
