@@ -5,6 +5,7 @@ const ColetarManutencaoUI = {
         console.log('Página de Coleta de Manutenção iniciada.');
         this.cacheDOM();
         this.fixStatusOptions();
+        this.injectStyles();
         this.bindEvents();
         this.initTabs();
         this.renderLegend();
@@ -70,6 +71,28 @@ const ColetarManutencaoUI = {
                 }
             });
         });
+    },
+
+    injectStyles() {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .status-pendente {
+                background-color: #f8d7da !important;
+                color: #721c24 !important;
+                border: 1px solid #f5c6cb !important;
+            }
+            .status-ok {
+                background-color: #d4edda !important;
+                color: #155724 !important;
+                border: 1px solid #c3e6cb !important;
+            }
+            .status-internado {
+                background-color: #cce5ff !important;
+                color: #004085 !important;
+                border: 1px solid #b8daff !important;
+            }
+        `;
+        document.head.appendChild(style);
     },
 
     bindEvents() {
