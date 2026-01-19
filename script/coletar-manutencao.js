@@ -95,6 +95,16 @@ const ColetarManutencaoUI = {
                 color: #004085 !important;
                 border: 1px solid #b8daff !important;
             }
+            .status-checkin-oficina {
+                background-color: #fff3cd !important;
+                color: #856404 !important;
+                border: 1px solid #ffeeba !important;
+            }
+            .status-checkin-rota {
+                background-color: #ffe0b2 !important;
+                color: #d35400 !important;
+                border: 1px solid #ffcc80 !important;
+            }
         `;
         document.head.appendChild(style);
     },
@@ -268,6 +278,8 @@ const ColetarManutencaoUI = {
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724; margin-right: 12px;">FINALIZADO</span>
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24; margin-right: 12px;">PENDENTE</span>
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #fff3cd; border: 1px solid #856404; margin-right: 4px;"></span><span style="color:#856404; margin-right: 12px;">CHECK-IN OFICINA</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #ffe0b2; border: 1px solid #d35400; margin-right: 4px;"></span><span style="color:#d35400;">CHECK-IN ROTA</span>
                 `;
                 
                 h.appendChild(legend);
@@ -290,7 +302,7 @@ const ColetarManutencaoUI = {
     updateStatusColor(selectElement) {
         if (!selectElement) return;
         // Remove todas as classes de status antes de adicionar a nova
-        selectElement.classList.remove('status-ok', 'status-finalizado', 'status-nao-realizado', 'status-pendente', 'status-internado');
+        selectElement.classList.remove('status-ok', 'status-finalizado', 'status-nao-realizado', 'status-pendente', 'status-internado', 'status-checkin-oficina', 'status-checkin-rota');
         const status = selectElement.value.toUpperCase();
 
         if (status === 'FINALIZADO' || status === 'OK') {
@@ -299,6 +311,10 @@ const ColetarManutencaoUI = {
             selectElement.classList.add('status-pendente');
         } else if (status === 'INTERNADO') {
             selectElement.classList.add('status-internado');
+        } else if (status === 'CHECK-IN OFICINA') {
+            selectElement.classList.add('status-checkin-oficina');
+        } else if (status === 'CHECK-IN ROTA') {
+            selectElement.classList.add('status-checkin-rota');
         }
     },
 
@@ -1085,6 +1101,8 @@ const ColetarManutencaoUI = {
                 if (checklist.length > 0) {
                     const hasNaoRealizado = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
                     const hasInternado = checklist.some(i => i.status === 'INTERNADO');
+                    const hasCheckinOficina = checklist.some(i => i.status === 'CHECK-IN OFICINA');
+                    const hasCheckinRota = checklist.some(i => i.status === 'CHECK-IN ROTA');
                     // Para ser 'OK', todos os itens devem ser 'OK'.
                     const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK');
 
@@ -1092,6 +1110,10 @@ const ColetarManutencaoUI = {
                         generalStatus = 'PENDENTE';
                     } else if (hasInternado) {
                         generalStatus = 'INTERNADO';
+                    } else if (hasCheckinOficina) {
+                        generalStatus = 'CHECK-IN OFICINA';
+                    } else if (hasCheckinRota) {
+                        generalStatus = 'CHECK-IN ROTA';
                     } else if (allOk) {
                         generalStatus = 'FINALIZADO';
                     }
@@ -1106,6 +1128,12 @@ const ColetarManutencaoUI = {
                 } else if (generalStatus === 'INTERNADO') {
                     tr.style.backgroundColor = '#cce5ff'; // Azul claro
                     tr.style.color = '#004085';
+                } else if (generalStatus === 'CHECK-IN OFICINA') {
+                    tr.style.backgroundColor = '#fff3cd'; // Amarelo claro
+                    tr.style.color = '#856404';
+                } else if (generalStatus === 'CHECK-IN ROTA') {
+                    tr.style.backgroundColor = '#ffe0b2'; // Laranja claro
+                    tr.style.color = '#d35400';
                 }
 
                 let botoesAcao = `<button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
@@ -1353,6 +1381,12 @@ const ColetarManutencaoUI = {
                 } else if (statusUpper === 'INTERNADO') {
                     tr.style.backgroundColor = '#cce5ff'; // Azul claro
                     tr.style.color = '#004085';
+                } else if (statusUpper === 'CHECK-IN OFICINA') {
+                    tr.style.backgroundColor = '#fff3cd'; // Amarelo claro
+                    tr.style.color = '#856404';
+                } else if (statusUpper === 'CHECK-IN ROTA') {
+                    tr.style.backgroundColor = '#ffe0b2'; // Laranja claro
+                    tr.style.color = '#d35400';
                 }
 
                 let botoesAcao = `<button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
@@ -1401,6 +1435,8 @@ const ColetarManutencaoUI = {
             'PENDENTE': '#dc3545',
             'NAO REALIZADO': '#dc3545', // Mantido para compatibilidade
             'INTERNADO': '#ffc107',
+            'CHECK-IN OFICINA': '#ffc107', // Amarelo
+            'CHECK-IN ROTA': '#fd7e14', // Laranja
             'N/A': '#6c757d'
         };
         const bgColorsStatus = Object.keys(statusCounts).map(s => statusColors[s] || '#17a2b8');
@@ -1544,6 +1580,10 @@ const ColetarManutencaoUI = {
                         cellValue = 'FINALIZADO';
                     } else if (row.status === 'INTERNADO') {
                         cellValue = 'INTERNADO';
+                    } else if (row.status === 'CHECK-IN OFICINA') {
+                        cellValue = 'CHECK-IN OFICINA';
+                    } else if (row.status === 'CHECK-IN ROTA') {
+                        cellValue = 'CHECK-IN ROTA';
                     } else {
                         cellValue = row.detalhes || '';
                     }
