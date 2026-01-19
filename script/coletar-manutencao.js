@@ -54,6 +54,8 @@ const ColetarManutencaoUI = {
         this.filtroItemOptions = document.getElementById('filtroItemOptions');
         this.filtroItemText = document.getElementById('filtroItemText');
         this.filtroStatus = document.getElementById('filtroStatus');
+        this.btnLimparSelecaoItem = document.getElementById('btnLimparSelecaoItem');
+        this.btnLimparTudo = document.getElementById('btnLimparTudo');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
@@ -174,6 +176,13 @@ const ColetarManutencaoUI = {
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
         if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
         if(this.btnExportarPDF) this.btnExportarPDF.addEventListener('click', (e) => this.gerarRelatorioPDF(e));
+        
+        if(this.btnLimparSelecaoItem) {
+            this.btnLimparSelecaoItem.addEventListener('click', () => this.limparSelecaoItem());
+        }
+        if(this.btnLimparTudo) {
+            this.btnLimparTudo.addEventListener('click', () => this.limparFiltros());
+        }
 
         // Automação do status ao digitar detalhes
         document.querySelectorAll('.checklist-details').forEach(input => {
@@ -246,6 +255,29 @@ const ColetarManutencaoUI = {
                 });
             });
         }
+    },
+
+    limparSelecaoItem() {
+        const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        this.filtroItemText.textContent = 'Todos';
+    },
+
+    limparFiltros() {
+        // Limpa inputs de texto e data
+        this.filtroSemana.value = '';
+        this.filtroPlaca.value = '';
+        this.filtroDataIni.value = '';
+        this.filtroDataFim.value = '';
+
+        // Limpa Multiselect de Itens
+        this.limparSelecaoItem();
+
+        // Limpa Multiselect de Status
+        const statusCheckboxes = document.querySelectorAll('.filtro-status-checkbox');
+        statusCheckboxes.forEach(cb => cb.checked = false);
+        const statusText = document.getElementById('filtroStatusText');
+        if(statusText) statusText.textContent = 'Todos';
     },
 
     initTabs() {
