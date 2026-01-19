@@ -306,8 +306,8 @@
     background-color: #ffffff;
 }
 .checklist-item:nth-of-type(even) {
-    background-color: #f0f0f0; /* Cinza claro */
+    background-color: #b8b8b8; /* Cinza claro */
 }
 /* Ajuste para manter o padrão zebrado após o elemento oculto de elétrica */
-#extra-eletrica-interna ~ .checklist-item:nth-of-type(odd) { background-color: #f0f0f0; }
+#extra-eletrica-interna ~ .checklist-item:nth-of-type(odd) { background-color: #b8b8b8; }
 #extra-eletrica-interna ~ .checklist-item:nth-of-type(even) { background-color: #ffffff; }
