@@ -53,7 +53,9 @@ const ColetarManutencaoUI = {
         this.filtroItemDisplay = document.getElementById('filtroItemDisplay');
         this.filtroItemOptions = document.getElementById('filtroItemOptions');
         this.filtroItemText = document.getElementById('filtroItemText');
-        this.filtroStatus = document.getElementById('filtroStatus');
+        this.filtroStatusDisplay = document.getElementById('filtroStatusDisplay');
+        this.filtroStatusOptions = document.getElementById('filtroStatusOptions');
+        this.filtroStatusText = document.getElementById('filtroStatusText');
         this.btnLimparSelecaoItem = document.getElementById('btnLimparSelecaoItem');
         this.btnLimparTudo = document.getElementById('btnLimparTudo');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
@@ -255,6 +257,32 @@ const ColetarManutencaoUI = {
                 });
             });
         }
+
+        // Eventos do Multi-Select de Status
+        if (this.filtroStatusDisplay) {
+            this.filtroStatusDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroStatusOptions.style.display = this.filtroStatusOptions.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Fechar ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (this.filtroStatusOptions && this.filtroStatusOptions.style.display === 'block') {
+                    if (!this.filtroStatusDisplay.contains(e.target) && !this.filtroStatusOptions.contains(e.target)) {
+                        this.filtroStatusOptions.style.display = 'none';
+                    }
+                }
+            });
+
+            // Atualizar texto ao selecionar
+            const statusCheckboxes = this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox');
+            statusCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const selected = Array.from(statusCheckboxes).filter(c => c.checked).map(c => c.value);
+                    this.filtroStatusText.textContent = selected.length > 0 ? `${selected.length} selecionado(s)` : 'Todos';
+                });
+            });
+        }
     },
 
     limparSelecaoItem() {
@@ -274,10 +302,11 @@ const ColetarManutencaoUI = {
         this.limparSelecaoItem();
 
         // Limpa Multiselect de Status
-        const statusCheckboxes = document.querySelectorAll('.filtro-status-checkbox');
-        statusCheckboxes.forEach(cb => cb.checked = false);
-        const statusText = document.getElementById('filtroStatusText');
-        if(statusText) statusText.textContent = 'Todos';
+        if (this.filtroStatusOptions) {
+            const statusCheckboxes = this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox');
+            statusCheckboxes.forEach(cb => cb.checked = false);
+        }
+        if (this.filtroStatusText) this.filtroStatusText.textContent = 'Todos';
     },
 
     initTabs() {
@@ -1334,7 +1363,10 @@ const ColetarManutencaoUI = {
                 query = query.in('item', selectedItems);
             }
 
-            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
+            if (selectedStatus.length > 0) {
+                query = query.in('status', selectedStatus);
+            }
             
             // Filtros da Coleta (Pai)
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
@@ -1568,7 +1600,10 @@ const ColetarManutencaoUI = {
                 query = query.in('item', selectedItems);
             }
 
-            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
+            if (selectedStatus.length > 0) {
+                query = query.in('status', selectedStatus);
+            }
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
             if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
@@ -1692,7 +1727,10 @@ const ColetarManutencaoUI = {
                 query = query.in('item', selectedItems);
             }
 
-            if (this.filtroStatus.value) query = query.eq('status', this.filtroStatus.value);
+            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
+            if (selectedStatus.length > 0) {
+                query = query.in('status', selectedStatus);
+            }
             
             if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
             if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
