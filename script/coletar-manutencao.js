@@ -934,11 +934,19 @@ const ColetarManutencaoUI = {
             if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
             if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
 
-            let query;
+            let data = [];
 
+            // 1. Query principal na tabela pai (coletas_manutencao)
+            let query = supabaseClient
+                .from('coletas_manutencao')
+                .select('*');
+
+            if (searchPlaca) {
+                query = query.ilike('placa', `%${searchPlaca}%`);
+            }
+
+            // Se houver filtros de item/status (filhos), precisamos filtrar os IDs primeiro
             if (searchItem || searchStatus || roleFilterItem) {
-                // Correção para erro 500 do Supabase ao ordenar com inner join e filtro.
-                // Etapa 1: Buscar os IDs das coletas que correspondem aos filtros de item/status.
                 let idQuery = supabaseClient
                     .from('coletas_manutencao_checklist')
                     .select('coleta_id');
@@ -956,34 +964,38 @@ const ColetarManutencaoUI = {
                     this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado para os filtros.</td></tr>';
                     return;
                 }
-
-                // Etapa 2: Buscar os dados completos das coletas usando os IDs encontrados.
-                query = supabaseClient
-                    .from('coletas_manutencao')
-                    .select('*, coletas_manutencao_checklist(status, item)')
-                    .in('id', matchingIds);
-            } else {
-                query = supabaseClient
-                    .from('coletas_manutencao')
-                    .select('*, coletas_manutencao_checklist(status, item)');
+                
+                query = query.in('id', matchingIds);
             }
 
-            // Ordenação dinâmica
+            // Ordenação e Limite na tabela pai (evita timeout)
             query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
             query = query.limit(200);
 
-            if (searchPlaca) {
-                query = query.ilike('placa', `%${searchPlaca}%`);
-            }
+            const { data: coletas, error: errorColetas } = await query;
+            if (errorColetas) throw errorColetas;
 
-            const { data, error } = await query;
-            if (error) throw error;
-
-            this.tableBodyLancamentos.innerHTML = '';
-            if (!data || data.length === 0) {
+            if (!coletas || coletas.length === 0) {
                 this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
+
+            // 2. Buscar checklists relacionados apenas para as coletas carregadas
+            const coletaIds = coletas.map(c => c.id);
+            const { data: checklists, error: errorChecklist } = await supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('coleta_id, status, item')
+                .in('coleta_id', coletaIds);
+
+            if (errorChecklist) throw errorChecklist;
+
+            // 3. Combinar dados (Associa checklists às coletas)
+            data = coletas.map(coleta => {
+                coleta.coletas_manutencao_checklist = checklists.filter(ch => ch.coleta_id === coleta.id);
+                return coleta;
+            });
+
+            this.tableBodyLancamentos.innerHTML = '';
 
             // Verifica permissão para excluir
             const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
