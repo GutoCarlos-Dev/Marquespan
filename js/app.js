@@ -36,9 +36,11 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
                         usuarioLogado = usuarios[0];
 
                         // Prioriza o Nome Completo para exibição no sistema, se disponível
-                        if (usuarioLogado.nome_completo) {
+                        // Verifica 'nomecompleto' (conforme seu banco de dados) ou 'nome_completo'
+                        const nomeCompleto = usuarioLogado.nomecompleto || usuarioLogado.nome_completo;
+                        if (nomeCompleto) {
                             usuarioLogado.usuario_login = usuarioLogado.nome; // Guarda o login original (opcional)
-                            usuarioLogado.nome = usuarioLogado.nome_completo; // Substitui o nome de exibição pelo completo
+                            usuarioLogado.nome = nomeCompleto; // Substitui o nome de exibição pelo completo
                         }
 
                         localStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
