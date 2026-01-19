@@ -69,6 +69,10 @@ const ColetarManutencaoUI = {
                     option.value = 'PENDENTE';
                     option.text = 'PENDENTE';
                 }
+                if (option.value === 'OK') {
+                    option.value = 'FINALIZADO';
+                    option.text = 'FINALIZADO';
+                }
             });
         });
     },
@@ -81,7 +85,7 @@ const ColetarManutencaoUI = {
                 color: #721c24 !important;
                 border: 1px solid #f5c6cb !important;
             }
-            .status-ok {
+            .status-finalizado {
                 background-color: #d4edda !important;
                 color: #155724 !important;
                 border: 1px solid #c3e6cb !important;
@@ -178,7 +182,7 @@ const ColetarManutencaoUI = {
             const statusSelect = eletricaItem.querySelector('.checklist-status');
             statusSelect.addEventListener('change', (e) => {
                 const extraField = document.getElementById('extra-eletrica-interna');
-                if (e.target.value === 'OK') {
+                if (e.target.value === 'FINALIZADO' || e.target.value === 'OK') {
                     extraField.classList.remove('hidden');
                 } else {
                     extraField.classList.add('hidden');
@@ -261,7 +265,7 @@ const ColetarManutencaoUI = {
                 legend.style.cssText = 'font-size: 0.65em; margin-left: 15px; font-weight: normal; vertical-align: middle; display: inline-flex; align-items: center;';
                 
                 legend.innerHTML = `
-                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724; margin-right: 12px;">OK</span>
+                    <span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724; margin-right: 12px;">FINALIZADO</span>
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24; margin-right: 12px;">PENDENTE</span>
                     <span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span>
                 `;
@@ -286,11 +290,11 @@ const ColetarManutencaoUI = {
     updateStatusColor(selectElement) {
         if (!selectElement) return;
         // Remove todas as classes de status antes de adicionar a nova
-        selectElement.classList.remove('status-ok', 'status-nao-realizado', 'status-pendente', 'status-internado');
+        selectElement.classList.remove('status-ok', 'status-finalizado', 'status-nao-realizado', 'status-pendente', 'status-internado');
         const status = selectElement.value.toUpperCase();
 
-        if (status === 'OK') {
-            selectElement.classList.add('status-ok');
+        if (status === 'FINALIZADO' || status === 'OK') {
+            selectElement.classList.add('status-finalizado');
         } else if (status === 'PENDENTE' || status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
             selectElement.classList.add('status-pendente');
         } else if (status === 'INTERNADO') {
@@ -628,7 +632,7 @@ const ColetarManutencaoUI = {
                             let statusEletrica = 'PENDENTE';
                             // Verifica se é TRUE (Excel bool) ou string "TRUE"/"OK"
                             if (statusEletricaRaw === true || String(statusEletricaRaw).toUpperCase() === 'TRUE' || String(statusEletricaRaw).toUpperCase() === 'OK') {
-                                statusEletrica = 'OK';
+                                statusEletrica = 'FINALIZADO';
                             }
 
                             checklistItems.push({
@@ -1082,18 +1086,18 @@ const ColetarManutencaoUI = {
                     const hasNaoRealizado = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
                     const hasInternado = checklist.some(i => i.status === 'INTERNADO');
                     // Para ser 'OK', todos os itens devem ser 'OK'.
-                    const allOk = checklist.every(i => i.status === 'OK');
+                    const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK');
 
                     if (hasNaoRealizado) {
                         generalStatus = 'PENDENTE';
                     } else if (hasInternado) {
                         generalStatus = 'INTERNADO';
                     } else if (allOk) {
-                        generalStatus = 'OK';
+                        generalStatus = 'FINALIZADO';
                     }
                 }
 
-                if (generalStatus === 'OK') {
+                if (generalStatus === 'FINALIZADO' || generalStatus === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
                 } else if (generalStatus === 'PENDENTE') {
@@ -1205,11 +1209,14 @@ const ColetarManutencaoUI = {
                     if (statusValue === 'NAO REALIZADO' || statusValue === 'NÃO REALIZADO') {
                         statusValue = 'PENDENTE';
                     }
+                    if (statusValue === 'OK') {
+                        statusValue = 'FINALIZADO';
+                    }
                     statusSelect.value = statusValue;
                     this.updateStatusColor(statusSelect); // Define a cor ao carregar
 
                     // Lógica específica para preencher Elétrica Interna
-                    if (item.item === 'ELETRICA INTERNA' && statusValue === 'OK') {
+                    if (item.item === 'ELETRICA INTERNA' && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
                         extraField.classList.remove('hidden');
                         extraField.querySelector('input').value = item.pecas_usadas || '';
                     }
@@ -1337,7 +1344,7 @@ const ColetarManutencaoUI = {
                 // Lógica de cores para a linha inteira baseada no Status
                 const statusUpper = item.status ? item.status.toUpperCase() : '';
                 
-                if (statusUpper === 'OK') {
+                if (statusUpper === 'FINALIZADO' || statusUpper === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
                 } else if (statusUpper === 'PENDENTE' || statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
@@ -1389,7 +1396,8 @@ const ColetarManutencaoUI = {
 
         // Cores para os status
         const statusColors = {
-            'OK': '#28a745',
+            'FINALIZADO': '#28a745',
+            'OK': '#28a745', // Mantido para compatibilidade
             'PENDENTE': '#dc3545',
             'NAO REALIZADO': '#dc3545', // Mantido para compatibilidade
             'INTERNADO': '#ffc107',
@@ -1525,15 +1533,15 @@ const ColetarManutencaoUI = {
                 let cellValue = '';
                 if (row.item === 'ELETRICA INTERNA') {
                     cellValue = `SOLICITAÇÃO: ${row.detalhes || ''}`;
-                    if (row.status === 'OK') {
+                    if (row.status === 'FINALIZADO' || row.status === 'OK') {
                         cellValue += `, SOLICITAÇÃO REALIZADA`;
                     }
                     if (row.pecas_usadas) {
                         cellValue += ` ${row.pecas_usadas}`;
                     }
                 } else {
-                    if (row.status === 'OK') {
-                        cellValue = 'OK';
+                    if (row.status === 'FINALIZADO' || row.status === 'OK') {
+                        cellValue = 'FINALIZADO';
                     } else if (row.status === 'INTERNADO') {
                         cellValue = 'INTERNADO';
                     } else {
