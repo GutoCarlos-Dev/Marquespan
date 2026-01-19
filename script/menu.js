@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const divUsuario = document.getElementById('usuario-logado');
       if (usuario && usuario.nome) {
-        divUsuario.textContent = `👤 Olá, ${usuario.nomecompleto}`;
+        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
       }
 
       // Controlar visibilidade do menu baseado no nível do usuário
