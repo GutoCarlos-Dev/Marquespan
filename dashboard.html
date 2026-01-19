@@ -35,8 +35,8 @@
         <p id="total-veiculos">Carregando...</p>
       </div>
       <div class="card">
-        <h3>Manutenções</h3>
-        <p>38 | R$ 12.865,87</p>
+        <h3>Manutenções Finalizadas</h3>
+        <p id="total-manutencoes">Carregando...</p>
       </div>
       <div class="card">
         <h3>Multas</h3>
@@ -92,6 +92,23 @@
     }
 
     carregarTotalVeiculos();
+
+    async function carregarTotalManutencoes() {
+      try {
+        const { count, error } = await supabaseClient
+          .from('manutencao')
+          .select('*', { count: 'exact', head: true })
+          .ilike('status', 'finalizado'); // Busca status 'finalizado' ignorando maiúsculas/minúsculas
+
+        if (error) throw error;
+
+        document.getElementById('total-manutencoes').textContent = count;
+      } catch (err) {
+        console.error('Erro ao carregar total de manutenções:', err);
+      }
+    }
+
+    carregarTotalManutencoes();
   </script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
