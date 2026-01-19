@@ -4,6 +4,7 @@ const ColetarManutencaoUI = {
     init() {
         console.log('Página de Coleta de Manutenção iniciada.');
         this.cacheDOM();
+        this.fixStatusOptions();
         this.bindEvents();
         this.initTabs();
         this.renderLegend();
@@ -57,6 +58,18 @@ const ColetarManutencaoUI = {
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
         this.graficosContainer = document.getElementById('graficos-container');
         this.contadorResultados = document.getElementById('contadorResultados');
+    },
+
+    fixStatusOptions() {
+        const selects = document.querySelectorAll('.checklist-status');
+        selects.forEach(select => {
+            Array.from(select.options).forEach(option => {
+                if (option.value === 'NAO REALIZADO' || option.value === 'NÃO REALIZADO') {
+                    option.value = 'PENDENTE';
+                    option.text = 'PENDENTE';
+                }
+            });
+        });
     },
 
     bindEvents() {
@@ -240,6 +253,7 @@ const ColetarManutencaoUI = {
         this.formColeta.reset();
         this.preencherDadosPadrao();
         this.carregarVeiculos();
+        this.fixStatusOptions();
         // Limpa as cores de todos os selects de status no modal
         this.modal.querySelectorAll('.checklist-status').forEach(select => this.updateStatusColor(select));
         this.aplicarRestricoesDeNivelNoModal();
@@ -1162,11 +1176,17 @@ const ColetarManutencaoUI = {
                 if (div) {
                     const statusSelect = div.querySelector('.checklist-status');
                     div.querySelector('.checklist-details').value = item.detalhes || '';
-                    statusSelect.value = item.status || '';
+                    
+                    // Ajuste para compatibilidade com registros antigos
+                    let statusValue = item.status || '';
+                    if (statusValue === 'NAO REALIZADO' || statusValue === 'NÃO REALIZADO') {
+                        statusValue = 'PENDENTE';
+                    }
+                    statusSelect.value = statusValue;
                     this.updateStatusColor(statusSelect); // Define a cor ao carregar
 
                     // Lógica específica para preencher Elétrica Interna
-                    if (item.item === 'ELETRICA INTERNA' && item.status === 'OK') {
+                    if (item.item === 'ELETRICA INTERNA' && statusValue === 'OK') {
                         extraField.classList.remove('hidden');
                         extraField.querySelector('input').value = item.pecas_usadas || '';
                     }
