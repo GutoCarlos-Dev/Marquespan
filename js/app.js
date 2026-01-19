@@ -34,6 +34,13 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
 
                     if (usuarios && usuarios.length > 0) {
                         usuarioLogado = usuarios[0];
+
+                        // Prioriza o Nome Completo para exibição no sistema, se disponível
+                        if (usuarioLogado.nome_completo) {
+                            usuarioLogado.usuario_login = usuarioLogado.nome; // Guarda o login original (opcional)
+                            usuarioLogado.nome = usuarioLogado.nome_completo; // Substitui o nome de exibição pelo completo
+                        }
+
                         localStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
                         // Redirecionar para dashboard após login
                         window.location.href = 'pages/dashboard.html';
