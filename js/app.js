@@ -178,6 +178,15 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = '../index.html';
         } else {
             console.log('Usuário logado:', usuarioLogado);
+
+            // Verifica se precisa atualizar o nome para o Nome Completo (correção para sessões antigas)
+            const nomeCompleto = usuarioLogado.nomecompleto || usuarioLogado.nome_completo;
+            if (nomeCompleto && usuarioLogado.nome !== nomeCompleto) {
+                usuarioLogado.usuario_login = usuarioLogado.usuario_login || usuarioLogado.nome;
+                usuarioLogado.nome = nomeCompleto;
+                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
+            }
+
             atualizarMenu();
             if (window.location.pathname.includes('dashboard.html')) {
                 // A lógica de preenchimento do dashboard já está em dashboard.js,
