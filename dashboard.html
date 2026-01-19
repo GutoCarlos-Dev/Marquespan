@@ -98,7 +98,7 @@
         const { count, error } = await supabaseClient
           .from('manutencao')
           .select('*', { count: 'exact', head: true })
-          .ilike('status', 'finalizado'); // Busca status 'finalizado' ignorando maiúsculas/minúsculas
+          .eq('status', 'FINALIZADO');
 
         if (error) throw error;
 
