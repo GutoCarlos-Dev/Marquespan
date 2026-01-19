@@ -4,25 +4,45 @@ document.addEventListener('DOMContentLoaded', function() {
   // Carregar o menu
   fetch('menu.html')
     .then(response => response.text())
-    .then(data => {
+    .then(async data => {
       document.body.insertAdjacentHTML('afterbegin', data);
  
       // Inicializar funcionalidades do menu após carregamento
-      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-
-      // Verifica e atualiza para usar o Nome Completo se disponível
-      if (usuario) {
-        const nomeCompleto = usuario.nomecompleto || usuario.nome_completo;
-        if (nomeCompleto && usuario.nome !== nomeCompleto) {
-          usuario.usuario_login = usuario.usuario_login || usuario.nome; // Preserva o login original
-          usuario.nome = nomeCompleto; // Atualiza o nome de exibição
-          localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-        }
-      }
-
+      let usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
       const divUsuario = document.getElementById('usuario-logado');
+
+      // 1. Exibe o nome atual do cache imediatamente (para não ficar vazio enquanto carrega)
       if (usuario && usuario.nome) {
         divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+      }
+
+      // 2. Busca dados atualizados do banco para garantir Nome Completo e permissões
+      if (usuario && usuario.id) {
+        try {
+          const { data: dadosAtualizados, error } = await supabaseClient
+            .from('usuarios')
+            .select('*')
+            .eq('id', usuario.id)
+            .single();
+
+          if (!error && dadosAtualizados) {
+            const nomeCompleto = dadosAtualizados.nomecompleto || dadosAtualizados.nome_completo;
+            // Atualiza objeto local com dados do banco
+            usuario = { ...usuario, ...dadosAtualizados };
+            
+            if (nomeCompleto) {
+              usuario.usuario_login = usuario.usuario_login || usuario.nome; // Preserva login original
+              usuario.nome = nomeCompleto; // Usa Nome Completo para exibição
+            }
+            
+            localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+            
+            // Atualiza a exibição com o nome novo
+            if (divUsuario) divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
+          }
+        } catch (err) {
+          console.error('Erro ao atualizar dados do usuário:', err);
+        }
       }
 
       // Controlar visibilidade do menu baseado no nível do usuário
