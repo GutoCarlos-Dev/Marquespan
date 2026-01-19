@@ -225,14 +225,29 @@
                         </div>
                         <div class="form-group">
                             <label for="filtroStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
-                            <select id="filtroStatus" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">Todos</option>
-                                <option value="PENDENTE">PENDENTE</option>
-                                <option value="FINALIZADO">FINALIZADO</option>
-                                <option value="INTERNADO">INTERNADO</option>
-                                <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
-                                <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
-                            </select>
+                            <div class="custom-multiselect" style="position: relative;">
+                                <div id="filtroStatusDisplay" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="filtroStatusText">Todos</span>
+                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
+                                </div>
+                                <div id="filtroStatusOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="PENDENTE" style="margin-right: 8px;"> PENDENTE
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO" style="margin-right: 8px;"> FINALIZADO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="INTERNADO" style="margin-right: 8px;"> INTERNADO
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN OFICINA" style="margin-right: 8px;"> CHECK-IN OFICINA
+                                    </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN ROTA" style="margin-right: 8px;"> CHECK-IN ROTA
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -514,5 +529,41 @@
   </script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/coletar-manutencao.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Lógica para o multiselect de Status
+        const statusDisplay = document.getElementById('filtroStatusDisplay');
+        const statusOptions = document.getElementById('filtroStatusOptions');
+        const statusText = document.getElementById('filtroStatusText');
+        const statusCheckboxes = document.querySelectorAll('.filtro-status-checkbox');
+
+        if (statusDisplay && statusOptions) {
+            statusDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = statusOptions.style.display === 'block';
+                statusOptions.style.display = isVisible ? 'none' : 'block';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!statusDisplay.contains(e.target) && !statusOptions.contains(e.target)) {
+                    statusOptions.style.display = 'none';
+                }
+            });
+
+            statusCheckboxes.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    const checked = Array.from(statusCheckboxes).filter(c => c.checked);
+                    if (checked.length === 0) {
+                        statusText.textContent = 'Todos';
+                    } else if (checked.length === 1) {
+                        statusText.textContent = checked[0].value;
+                    } else {
+                        statusText.textContent = `${checked.length} selecionados`;
+                    }
+                });
+            });
+        }
+    });
+  </script>
 </body>
 </html>
