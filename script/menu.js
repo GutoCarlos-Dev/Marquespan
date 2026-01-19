@@ -9,6 +9,17 @@ document.addEventListener('DOMContentLoaded', function() {
  
       // Inicializar funcionalidades do menu após carregamento
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+
+      // Verifica e atualiza para usar o Nome Completo se disponível
+      if (usuario) {
+        const nomeCompleto = usuario.nomecompleto || usuario.nome_completo;
+        if (nomeCompleto && usuario.nome !== nomeCompleto) {
+          usuario.usuario_login = usuario.usuario_login || usuario.nome; // Preserva o login original
+          usuario.nome = nomeCompleto; // Atualiza o nome de exibição
+          localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+        }
+      }
+
       const divUsuario = document.getElementById('usuario-logado');
       if (usuario && usuario.nome) {
         divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
