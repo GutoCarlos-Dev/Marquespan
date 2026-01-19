@@ -31,8 +31,8 @@
         <p>R$ 513.488,66</p>
       </div>
       <div class="card">
-        <h3>Veículos Utilizados</h3>
-        <p>603</p>
+        <h3>Quantidade de Veículos Cadastrados</h3>
+        <p id="total-veiculos">Carregando...</p>
       </div>
       <div class="card">
         <h3>Manutenções</h3>
@@ -76,7 +76,22 @@
   <!-- 3. Carrega os scripts da página e Supabase centralizado -->
   <script type="module">
     import { supabaseClient } from './script/supabase.js';
-    // Agora você pode usar 'supabaseClient' aqui se precisar carregar dados do dashboard
+    
+    async function carregarTotalVeiculos() {
+      try {
+        const { count, error } = await supabaseClient
+          .from('veiculos')
+          .select('*', { count: 'exact', head: true });
+
+        if (error) throw error;
+
+        document.getElementById('total-veiculos').textContent = count;
+      } catch (err) {
+        console.error('Erro ao carregar total de veículos:', err);
+      }
+    }
+
+    carregarTotalVeiculos();
   </script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
