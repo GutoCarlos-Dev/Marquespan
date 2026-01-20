@@ -242,9 +242,11 @@ function renderizarTabela() {
             <td data-label="KM Atual">${item.km_atual}</td>
             <td data-label="KM Próx. Troca">${item.km_proxima_troca || '-'}</td>
             <td data-label="Observação">${item.observacao || ''}</td>
-            <td class="actions-cell" style="display: flex; gap: 5px; justify-content: flex-end;">
-                <button type="button" class="btn-primary btn-edit-item" data-index="${index}" title="Editar Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-edit"></i></button>
-                <button type="button" class="btn-danger btn-delete-item" data-index="${index}" title="Remover Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+            <td class="actions-cell">
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button type="button" class="btn-primary btn-edit-item" data-index="${index}" title="Editar Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-edit"></i></button>
+                    <button type="button" class="btn-danger btn-delete-item" data-index="${index}" title="Remover Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);

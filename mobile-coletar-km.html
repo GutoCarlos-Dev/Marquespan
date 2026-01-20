@@ -13,6 +13,51 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Estilos para tabela com rolagem (Planilha) */
+    .table-scroll-wrapper {
+      max-height: 400px;
+      overflow: auto; /* Rolagem vertical e horizontal */
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .spreadsheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px; /* Garante rolagem horizontal em telas pequenas para ver todas colunas */
+    }
+    
+    .spreadsheet-table th, .spreadsheet-table td {
+      padding: 10px;
+      border: 1px solid #eee;
+      text-align: left;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    
+    .spreadsheet-table th {
+      background-color: #f4f4f4;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      font-weight: 600;
+      color: #333;
+      box-shadow: 0 1px 0 #ddd; /* Borda inferior no sticky */
+    }
+    
+    .spreadsheet-table tbody tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    /* Força exibição de tabela mesmo se houver CSS de cards mobile */
+    .spreadsheet-table tr { display: table-row !important; margin: 0 !important; box-shadow: none !important; border: none !important; }
+    .spreadsheet-table td { display: table-cell !important; }
+    .spreadsheet-table td::before { content: none !important; } /* Remove labels de cards */
+  </style>
 </head>
 <body>
 
@@ -45,11 +90,25 @@
     <!-- Lista de Itens (Cards) -->
     <div class="mobile-list-container">
       <h3 style="margin-bottom: 10px; color: #333;">Veículos Coletados (<span id="contadorItens">0</span>)</h3>
-      <table class="mobile-cards-table">
-        <tbody id="tableBodyItens">
-          <!-- Preenchido via JS -->
-        </tbody>
-      </table>
+      
+      <div class="table-scroll-wrapper">
+        <table class="mobile-cards-table spreadsheet-table">
+          <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Modelo</th>
+              <th>KM Ant.</th>
+              <th>KM Atual</th>
+              <th>Próx. Troca</th>
+              <th>Obs.</th>
+              <th style="text-align: center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyItens">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Histórico de Coletas Salvas (Banco de Dados) -->
