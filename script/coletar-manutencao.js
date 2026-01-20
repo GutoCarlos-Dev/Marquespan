@@ -1456,10 +1456,6 @@ const ColetarManutencaoUI = {
                 if (statusUpper === 'FINALIZADO' || statusUpper === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
-                } else if (statusUpper === 'FINALIZADO ROTA') {
-                    tr.style.backgroundColor = '#d4edda'; // Verde claro
-                    tr.style.color = '#006400'; // Verde Escuro
-                    tr.style.fontWeight = 'bold';
                 } else if (statusUpper === 'PENDENTE' || statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
                     tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
                     tr.style.color = '#721c24';
@@ -1472,6 +1468,10 @@ const ColetarManutencaoUI = {
                 } else if (statusUpper === 'CHECK-IN ROTA') {
                     tr.style.backgroundColor = '#ffe0b2'; // Laranja claro
                     tr.style.color = '#d35400';
+                } else if (statusUpper === 'FINALIZADO ROTA') {
+                    tr.style.backgroundColor = '#d4edda'; // Verde claro
+                    tr.style.color = '#006400'; // Verde Escuro
+                    tr.style.fontWeight = 'bold';
                 }
 
                 let botoesAcao = `<button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
@@ -1522,6 +1522,7 @@ const ColetarManutencaoUI = {
             'INTERNADO': '#ffc107',
             'CHECK-IN OFICINA': '#ffc107', // Amarelo
             'CHECK-IN ROTA': '#fd7e14', // Laranja
+            'FINALIZADO ROTA': '#006400', // Verde Escuro
             'N/A': '#6c757d'
         };
         const bgColorsStatus = Object.keys(statusCounts).map(s => statusColors[s] || '#17a2b8');
