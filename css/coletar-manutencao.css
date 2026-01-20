@@ -231,3 +231,12 @@
     background-color: #006400 !important; /* Verde Escuro */
     color: white;
 }
+
+/* === Legenda === */
+.status-legend {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    font-size: 0.9em;
+    color: #555;
+}

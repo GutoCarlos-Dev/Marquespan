@@ -98,6 +98,14 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Legenda de Status -->
+                    <div class="status-legend">
+                        <strong><i class="fas fa-info-circle"></i> Legenda:</strong>
+                        <span style="display: inline-flex; align-items: center; gap: 5px; margin-left: 10px;">
+                            <span class="badge-finalizado-rota" style="padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">FINALIZADO ROTA</span>
+                            <span>= Veículo Liberado em Rota</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -584,6 +592,33 @@
                 gerenciarOpcaoFinalizado(e.target);
             }
         });
+
+        // === Correção Visual para Status "FINALIZADO ROTA" ===
+        function aplicarCorStatusFinalizadoRota() {
+            const cells = document.querySelectorAll('#tableBodyLancamentos td');
+            cells.forEach(cell => {
+                if (cell.textContent.trim() === 'FINALIZADO ROTA') {
+                    // Aplica estilo na célula ou no badge/span se existir
+                    const badge = cell.querySelector('.badge') || cell.querySelector('span');
+                    if (badge) {
+                        badge.classList.add('badge-finalizado-rota');
+                        badge.style.backgroundColor = '#006400';
+                        badge.style.color = 'white';
+                    } else {
+                        cell.classList.add('status-finalizado-rota');
+                        cell.style.color = '#006400';
+                        cell.style.fontWeight = 'bold';
+                    }
+                }
+            });
+        }
+
+        // Monitora mudanças na tabela para reaplicar a cor quando os dados forem carregados/filtrados
+        const observerTabela = new MutationObserver(aplicarCorStatusFinalizadoRota);
+        const tabelaAlvo = document.getElementById('tableBodyLancamentos');
+        if (tabelaAlvo) {
+            observerTabela.observe(tabelaAlvo, { childList: true, subtree: true });
+        }
     });
   </script>
 </body>

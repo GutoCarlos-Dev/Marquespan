@@ -72,6 +72,15 @@
         <button type="button" id="btnFiltrarLancamentos" class="btn-primary btn-block" style="margin-top: 5px;">
             <i class="fas fa-filter"></i> Filtrar
         </button>
+        
+        <!-- Legenda Mobile -->
+        <div class="status-legend" style="margin-top: 10px; padding: 10px; background: #fff; border-radius: 8px; font-size: 0.85em;">
+            <strong>Legenda:</strong>
+            <div style="margin-top: 5px; display: flex; align-items: center; gap: 8px;">
+                <span class="badge-finalizado-rota" style="padding: 2px 8px; border-radius: 4px;">FINALIZADO ROTA</span>
+                <span>Veículo Liberado em Rota</span>
+            </div>
+        </div>
     </div>
 
     <!-- Lista de Cards (Antiga Tabela) -->
@@ -223,6 +232,30 @@
             gerenciarOpcaoFinalizado(e.target);
         }
     });
+
+    // === Correção Visual para Status "FINALIZADO ROTA" ===
+    function aplicarCorStatusFinalizadoRota() {
+        // No mobile, pode ser td ou div dependendo da renderização, buscamos onde tem o texto
+        const elements = document.querySelectorAll('#tableBodyLancamentos *');
+        elements.forEach(el => {
+            // Verifica se é um elemento de texto direto contendo o status
+            if (el.children.length === 0 && el.textContent.trim() === 'FINALIZADO ROTA') {
+                // Se for um badge/span
+                if (el.tagName === 'SPAN' || el.classList.contains('badge')) {
+                    el.classList.add('badge-finalizado-rota');
+                    el.style.backgroundColor = '#006400';
+                    el.style.color = 'white';
+                } else {
+                    el.style.color = '#006400';
+                    el.style.fontWeight = 'bold';
+                }
+            }
+        });
+    }
+
+    const observerTabela = new MutationObserver(aplicarCorStatusFinalizadoRota);
+    const tabelaAlvo = document.getElementById('tableBodyLancamentos');
+    if (tabelaAlvo) observerTabela.observe(tabelaAlvo, { childList: true, subtree: true });
   </script>
 </body>
 </html>
