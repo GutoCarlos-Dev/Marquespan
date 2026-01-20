@@ -103,9 +103,10 @@
         grid-template-columns: 1fr;
     }
 
-    /* Ajuste para o Modal em telas pequenas */
+    /* Ajuste para o Modal e seus componentes em telas pequenas */
     .panel {
         width: 95% !important;
+        max-width: 100% !important; /* Sobrescreve o max-width inline */
         margin: 10px auto;
         max-height: 90vh;
         overflow-y: auto;
@@ -116,9 +117,10 @@
     }
     
     /* Ajuste para inputs de checklist */
-    .checklist-item input[type="text"],
-    .checklist-item select {
-        width: 100%;
+    .checklist-item {
+        grid-template-columns: 1fr; /* Empilha os itens do checklist */
+        gap: 8px;
+        padding: 12px 10px;
     }
 }
 
@@ -132,11 +134,13 @@
 }
 
 .checklist-item {
-    padding: 12px 15px;
+    padding: 10px 15px;
     border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    display: grid;
+    /* Layout em 3 colunas para desktop: Label, Input de Detalhes, Select de Status */
+    grid-template-columns: 200px 1fr 180px;
+    gap: 15px;
+    align-items: center;
 }
 
 .checklist-item:last-child {
