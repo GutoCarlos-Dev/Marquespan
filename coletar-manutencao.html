@@ -222,6 +222,9 @@
                                     <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
                                         <input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN ROTA" style="margin-right: 8px;"> CHECK-IN ROTA
                                     </label>
+                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO ROTA" style="margin-right: 8px;"> FINALIZADO ROTA
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -523,39 +526,6 @@
   <script type="module" src="script/coletar-manutencao.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Lógica para o multiselect de Status
-        const statusDisplay = document.getElementById('filtroStatusDisplay');
-        const statusOptions = document.getElementById('filtroStatusOptions');
-        const statusText = document.getElementById('filtroStatusText');
-        const statusCheckboxes = document.querySelectorAll('.filtro-status-checkbox');
-
-        if (statusDisplay && statusOptions) {
-            statusDisplay.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isVisible = statusOptions.style.display === 'block';
-                statusOptions.style.display = isVisible ? 'none' : 'block';
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!statusDisplay.contains(e.target) && !statusOptions.contains(e.target)) {
-                    statusOptions.style.display = 'none';
-                }
-            });
-
-            statusCheckboxes.forEach(chk => {
-                chk.addEventListener('change', () => {
-                    const checked = Array.from(statusCheckboxes).filter(c => c.checked);
-                    if (checked.length === 0) {
-                        statusText.textContent = 'Todos';
-                    } else if (checked.length === 1) {
-                        statusText.textContent = checked[0].value;
-                    } else {
-                        statusText.textContent = `${checked.length} selecionados`;
-                    }
-                });
-            });
-        }
-
         // Lógica para ocultar a opção FINALIZADO quando status for CHECK-IN
         function gerenciarOpcaoFinalizado(select) {
             const val = select.value;
