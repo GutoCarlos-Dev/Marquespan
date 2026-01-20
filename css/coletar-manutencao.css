@@ -220,3 +220,14 @@
 }
 .btn-limpar { background-color: #6c757d; color: white; }
 .btn-limpar:hover { background-color: #5a6268; }
+
+/* === Status Personalizados === */
+.status-finalizado-rota {
+    color: #006400 !important; /* Verde Escuro */
+    font-weight: bold;
+}
+
+.badge-finalizado-rota {
+    background-color: #006400 !important; /* Verde Escuro */
+    color: white;
+}
