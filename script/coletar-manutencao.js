@@ -1172,8 +1172,9 @@ const ColetarManutencaoUI = {
                     const hasInternado = checklist.some(i => i.status === 'INTERNADO');
                     const hasCheckinOficina = checklist.some(i => i.status === 'CHECK-IN OFICINA');
                     const hasCheckinRota = checklist.some(i => i.status === 'CHECK-IN ROTA');
+                    const hasFinalizadoRota = checklist.some(i => i.status === 'FINALIZADO ROTA');
                     // Para ser 'OK', todos os itens devem ser 'OK'.
-                    const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK');
+                    const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK' || i.status === 'FINALIZADO ROTA');
 
                     if (hasNaoRealizado) {
                         generalStatus = 'PENDENTE';
@@ -1184,13 +1185,21 @@ const ColetarManutencaoUI = {
                     } else if (hasCheckinRota) {
                         generalStatus = 'CHECK-IN ROTA';
                     } else if (allOk) {
-                        generalStatus = 'FINALIZADO';
+                        if (hasFinalizadoRota) {
+                            generalStatus = 'FINALIZADO ROTA';
+                        } else {
+                            generalStatus = 'FINALIZADO';
+                        }
                     }
                 }
 
                 if (generalStatus === 'FINALIZADO' || generalStatus === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
+                } else if (generalStatus === 'FINALIZADO ROTA') {
+                    tr.style.backgroundColor = '#d4edda'; // Verde claro
+                    tr.style.color = '#006400'; // Verde Escuro
+                    tr.style.fontWeight = 'bold';
                 } else if (generalStatus === 'PENDENTE') {
                     tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
                     tr.style.color = '#721c24';
@@ -1447,6 +1456,10 @@ const ColetarManutencaoUI = {
                 if (statusUpper === 'FINALIZADO' || statusUpper === 'OK') {
                     tr.style.backgroundColor = '#d4edda'; // Verde claro
                     tr.style.color = '#155724';
+                } else if (statusUpper === 'FINALIZADO ROTA') {
+                    tr.style.backgroundColor = '#d4edda'; // Verde claro
+                    tr.style.color = '#006400'; // Verde Escuro
+                    tr.style.fontWeight = 'bold';
                 } else if (statusUpper === 'PENDENTE' || statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
                     tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
                     tr.style.color = '#721c24';
