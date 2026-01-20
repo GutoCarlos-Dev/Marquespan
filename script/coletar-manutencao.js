@@ -1519,7 +1519,7 @@ const ColetarManutencaoUI = {
             'OK': '#28a745', // Mantido para compatibilidade
             'PENDENTE': '#dc3545',
             'NAO REALIZADO': '#dc3545', // Mantido para compatibilidade
-            'INTERNADO': '#ffc107',
+            'INTERNADO': '#007bff', // Azul (Corrigido para combinar com a tabela)
             'CHECK-IN OFICINA': '#ffc107', // Amarelo
             'CHECK-IN ROTA': '#fd7e14', // Laranja
             'FINALIZADO ROTA': '#006400', // Verde Escuro
