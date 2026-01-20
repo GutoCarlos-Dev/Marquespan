@@ -203,7 +203,7 @@ function handleItemSubmit(e) {
             submitBtn.innerHTML = submitBtn.dataset.originalHtml;
             delete submitBtn.dataset.originalHtml;
         }
-        submitBtn.classList.remove('btn-warning');
+        submitBtn.classList.remove('btn-update');
         submitBtn.classList.add('btn-primary');
 
     } else {
@@ -436,9 +436,9 @@ function prepararEdicaoItem(index) {
     if (!submitBtn.dataset.originalHtml) {
         submitBtn.dataset.originalHtml = submitBtn.innerHTML; // Salva o conteúdo original do botão
     }
-    submitBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+    submitBtn.innerHTML = '<i class="fas fa-sync-alt"></i> ATUALIZAR VEÍCULO';
     submitBtn.classList.remove('btn-primary');
-    submitBtn.classList.add('btn-warning');
+    submitBtn.classList.add('btn-update');
 
     // No modo mobile, abre o modal de lançamento
     const modal = document.getElementById('modalLancamento');
