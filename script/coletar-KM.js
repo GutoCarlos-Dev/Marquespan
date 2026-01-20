@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
+    document.getElementById('tableBodyItens').addEventListener('dblclick', (e) => {
+        const row = e.target.closest('tr');
+        if (!row) return;
+        const btnEdit = row.querySelector('.btn-edit-item');
+        if (btnEdit) {
+            prepararEdicaoItem(btnEdit.dataset.index);
+        }
+    });
 
     // Novos Listeners para Importar/Exportar
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
