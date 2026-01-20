@@ -555,6 +555,35 @@
                 });
             });
         }
+
+        // Lógica para ocultar a opção FINALIZADO quando status for CHECK-IN
+        function gerenciarOpcaoFinalizado(select) {
+            const val = select.value;
+            const finalizadoOpt = select.querySelector('option[value="FINALIZADO"]');
+            if (finalizadoOpt) {
+                if (val === 'CHECK-IN OFICINA' || val === 'CHECK-IN ROTA') {
+                    finalizadoOpt.hidden = true;
+                    finalizadoOpt.style.display = 'none';
+                    finalizadoOpt.disabled = true;
+                } else {
+                    finalizadoOpt.hidden = false;
+                    finalizadoOpt.style.display = '';
+                    finalizadoOpt.disabled = false;
+                }
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('checklist-status')) {
+                gerenciarOpcaoFinalizado(e.target);
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.classList.contains('checklist-status')) {
+                gerenciarOpcaoFinalizado(e.target);
+            }
+        });
     });
   </script>
 </body>
