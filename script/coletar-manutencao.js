@@ -89,6 +89,11 @@ const ColetarManutencaoUI = {
                 color: #721c24 !important;
                 border: 1px solid #f5c6cb !important;
             }
+            .status-finalizado-rota {
+                background-color: #d4edda !important;
+                color: #0b3314 !important;
+                border: 1px solid #c3e6cb !important;
+            }
             .status-finalizado {
                 background-color: #d4edda !important;
                 color: #155724 !important;
@@ -337,6 +342,7 @@ const ColetarManutencaoUI = {
                 
                 legend.innerHTML = `
                     <span title="Manutenção concluída." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724;">FINALIZADO</span></span>
+                    <span title="Manutenção concluída em Rota." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #0b3314; margin-right: 4px;"></span><span style="color:#0b3314;">FINALIZADO ROTA</span></span>
                     <span title="Veículo sem direcionamento." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24;">PENDENTE</span></span>
                     <span title="Veículo está na oficina, necessitando de mais dias para reparo." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span></span>
                     <span title="Veículo deu entrada na oficina!" style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #fff3cd; border: 1px solid #856404; margin-right: 4px;"></span><span style="color:#856404;">CHECK-IN OFICINA</span></span>
@@ -363,11 +369,13 @@ const ColetarManutencaoUI = {
     updateStatusColor(selectElement) {
         if (!selectElement) return;
         // Remove todas as classes de status antes de adicionar a nova
-        selectElement.classList.remove('status-ok', 'status-finalizado', 'status-nao-realizado', 'status-pendente', 'status-internado', 'status-checkin-oficina', 'status-checkin-rota');
+        selectElement.classList.remove('status-ok', 'status-finalizado','status-finalizado-rota', 'status-nao-realizado', 'status-pendente', 'status-internado', 'status-checkin-oficina', 'status-checkin-rota');
         const status = selectElement.value.toUpperCase();
 
         if (status === 'FINALIZADO' || status === 'OK') {
             selectElement.classList.add('status-finalizado');
+        } else if (status === 'FINALIZADO ROTA') {
+            selectElement.classList.add('status-finalizado-rota');
         } else if (status === 'PENDENTE' || status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
             selectElement.classList.add('status-pendente');
         } else if (status === 'INTERNADO') {
