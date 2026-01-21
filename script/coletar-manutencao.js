@@ -16,6 +16,7 @@ const ColetarManutencaoUI = {
         this.reportData = []; // Cache dos dados do relatório
         this.chartStatus = null; // Instância do gráfico de status
         this.chartItems = null; // Instância do gráfico de itens
+        this.carregarFiltrosDinamicos();
         this.carregarLancamentos(); // Carrega a lista ao iniciar
     },
 
@@ -36,6 +37,7 @@ const ColetarManutencaoUI = {
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
         this.searchPlacaInput = document.getElementById('searchPlaca');
         this.searchItemInput = document.getElementById('searchItem');
+        this.searchOficinaInput = document.getElementById('searchOficina');
         this.searchStatusInput = document.getElementById('searchStatus');
         this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
 
@@ -53,10 +55,14 @@ const ColetarManutencaoUI = {
         this.filtroItemDisplay = document.getElementById('filtroItemDisplay');
         this.filtroItemOptions = document.getElementById('filtroItemOptions');
         this.filtroItemText = document.getElementById('filtroItemText');
+        this.filtroOficinaDisplay = document.getElementById('filtroOficinaDisplay');
+        this.filtroOficinaOptions = document.getElementById('filtroOficinaOptions');
+        this.filtroOficinaText = document.getElementById('filtroOficinaText');
         this.filtroStatusDisplay = document.getElementById('filtroStatusDisplay');
         this.filtroStatusOptions = document.getElementById('filtroStatusOptions');
         this.filtroStatusText = document.getElementById('filtroStatusText');
         this.btnLimparSelecaoItem = document.getElementById('btnLimparSelecaoItem');
+        this.btnLimparSelecaoOficina = document.getElementById('btnLimparSelecaoOficina');
         this.btnLimparTudo = document.getElementById('btnLimparTudo');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
@@ -118,15 +124,77 @@ const ColetarManutencaoUI = {
         document.head.appendChild(style);
     },
 
+    async carregarFiltrosDinamicos() {
+        try {
+            // Carregar Itens Verificadores
+            const { data: itens } = await supabaseClient.from('itens_verificacao').select('descricao').order('descricao');
+            if (itens) {
+                // Filtro Lançamento
+                if (this.searchItemInput) {
+                    this.searchItemInput.innerHTML = '<option value="">Todos</option>';
+                    itens.forEach(i => this.searchItemInput.add(new Option(i.descricao, i.descricao)));
+                }
+                // Filtro Relatório (Checkbox)
+                const containerItem = this.filtroItemOptions.querySelector('div') ? this.filtroItemOptions : null; // Mantém o botão limpar se existir
+                // Limpa apenas os labels, mantendo o botão de limpar
+                const labels = this.filtroItemOptions.querySelectorAll('label');
+                labels.forEach(l => l.remove());
+                
+                itens.forEach(i => {
+                    const label = document.createElement('label');
+                    label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
+                    label.innerHTML = `<input type="checkbox" class="filtro-item-checkbox" value="${i.descricao}" style="margin-right: 8px;"> ${i.descricao}`;
+                    this.filtroItemOptions.appendChild(label);
+                });
+            }
+
+            // Carregar Oficinas
+            const { data: oficinas } = await supabaseClient.from('oficinas').select('nome, filial').order('nome');
+            if (oficinas) {
+                // Filtro Lançamento
+                if (this.searchOficinaInput) this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
+                
+                oficinas.forEach(o => {
+                    const texto = `${o.nome} - ${o.filial}`;
+                    if (this.searchOficinaInput) this.searchOficinaInput.add(new Option(texto, texto));
+                    
+                    // Filtro Relatório (Checkbox)
+                    if (this.filtroOficinaOptions) {
+                        const label = document.createElement('label');
+                        label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
+                        label.innerHTML = `<input type="checkbox" class="filtro-oficina-checkbox" value="${o.nome}" style="margin-right: 8px;"> ${texto}`;
+                        this.filtroOficinaOptions.appendChild(label);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Erro ao carregar filtros dinâmicos:', e);
+        }
+    },
+
     bindEvents() {
-        this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
         if (this.btnAdicionarLancamento) this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
         if (this.btnAdicionarItem) this.btnAdicionarItem.addEventListener('click', () => this.abrirModal()); // Evento Mobile
         if (this.btnImportarMassa) this.btnImportarMassa.addEventListener('click', () => this.abrirModalImportacao());
 
-        // Adiciona listener para mudança de cor no status
-        document.querySelectorAll('.checklist-status').forEach(select => {
-            select.addEventListener('change', (e) => this.updateStatusColor(e.target));
+        // DELEGAÇÃO DE EVENTOS: Para funcionar com itens criados dinamicamente
+        // Listener para mudança de cor no status
+        this.formColeta.addEventListener('change', (e) => {
+            if (e.target.classList.contains('checklist-status')) {
+                this.updateStatusColor(e.target);
+            }
+        });
+
+        // Automação do status ao digitar detalhes
+        this.formColeta.addEventListener('input', (e) => {
+            if (e.target.classList.contains('checklist-details')) {
+                e.target.value = e.target.value.toUpperCase();
+                const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
+                if (statusSelect && statusSelect.value === "") {
+                    statusSelect.value = "PENDENTE";
+                    this.updateStatusColor(statusSelect);
+                }
+            }
         });
 
         if (this.modalImportacao) {
@@ -141,12 +209,6 @@ const ColetarManutencaoUI = {
         this.formColeta.addEventListener('submit', (e) => this.registrarColeta(e));
         
         // Event delegation para botões da tabela
-        this.tableBodyLancamentos.addEventListener('click', (e) => {
-            const btnDelete = e.target.closest('.btn-delete');
-            const btnEdit = e.target.closest('.btn-edit');
-            if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
-            if (btnEdit) this.editarColeta(btnEdit.dataset.id);
-        });
         if (this.tableBodyLancamentos) {
             this.tableBodyLancamentos.addEventListener('click', (e) => {
                 const btnDelete = e.target.closest('.btn-delete');
@@ -157,12 +219,6 @@ const ColetarManutencaoUI = {
         }
 
         // Event delegation para botões da tabela de relatório (Resultados da Busca)
-        this.tableBodyRelatorio.addEventListener('click', (e) => {
-            const btnDelete = e.target.closest('.btn-delete');
-            const btnEdit = e.target.closest('.btn-edit');
-            if (btnDelete) this.excluirColeta(btnDelete.dataset.id);
-            if (btnEdit) this.editarColeta(btnEdit.dataset.id);
-        });
         if (this.tableBodyRelatorio) {
             this.tableBodyRelatorio.addEventListener('click', (e) => {
                 const btnDelete = e.target.closest('.btn-delete');
@@ -187,34 +243,11 @@ const ColetarManutencaoUI = {
         if(this.btnLimparSelecaoItem) {
             this.btnLimparSelecaoItem.addEventListener('click', () => this.limparSelecaoItem());
         }
+        if(this.btnLimparSelecaoOficina) {
+            this.btnLimparSelecaoOficina.addEventListener('click', () => this.limparSelecaoOficina());
+        }
         if(this.btnLimparTudo) {
             this.btnLimparTudo.addEventListener('click', () => this.limparFiltros());
-        }
-
-        // Automação do status ao digitar detalhes
-        document.querySelectorAll('.checklist-details').forEach(input => {
-            input.addEventListener('input', (e) => {
-                e.target.value = e.target.value.toUpperCase();
-                const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
-                if (statusSelect && statusSelect.value === "") {
-                    statusSelect.value = "PENDENTE";                    this.updateStatusColor(statusSelect); // Adicionado para atualizar a cor
-                }
-            });
-        });
-
-        // Lógica específica para ELETRICA INTERNA
-        const eletricaItem = document.querySelector('.checklist-item[data-item="ELETRICA INTERNA"]');
-        if (eletricaItem) {
-            const statusSelect = eletricaItem.querySelector('.checklist-status');
-            statusSelect.addEventListener('change', (e) => {
-                const extraField = document.getElementById('extra-eletrica-interna');
-                if (e.target.value === 'FINALIZADO' || e.target.value === 'OK') {
-                    extraField.classList.remove('hidden');
-                } else {
-                    extraField.classList.add('hidden');
-                    extraField.querySelector('input').value = ''; // Limpa se não for OK
-                }
-            });
         }
 
         // Eventos de ordenação da grid
@@ -253,13 +286,37 @@ const ColetarManutencaoUI = {
                 }
             });
 
-            // Atualizar texto ao selecionar
-            const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
-            checkboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
+            // Delegação de evento para checkboxes dinâmicos
+            this.filtroItemOptions.addEventListener('change', (e) => {
+                if (e.target.classList.contains('filtro-item-checkbox')) {
+                    const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
+                    const selected = Array.from(checkboxes).filter(c => c.checked);
                     this.filtroItemText.textContent = selected.length > 0 ? `${selected.length} item(ns) selecionado(s)` : 'Todos';
-                });
+                }
+            });
+        }
+
+        // Eventos do Multi-Select de Oficinas
+        if (this.filtroOficinaDisplay) {
+            this.filtroOficinaDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroOficinaOptions.style.display = this.filtroOficinaOptions.style.display === 'block' ? 'none' : 'block';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (this.filtroOficinaOptions && this.filtroOficinaOptions.style.display === 'block') {
+                    if (!this.filtroOficinaDisplay.contains(e.target) && !this.filtroOficinaOptions.contains(e.target)) {
+                        this.filtroOficinaOptions.style.display = 'none';
+                    }
+                }
+            });
+
+            this.filtroOficinaOptions.addEventListener('change', (e) => {
+                if (e.target.classList.contains('filtro-oficina-checkbox')) {
+                    const checkboxes = this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox');
+                    const selected = Array.from(checkboxes).filter(c => c.checked);
+                    this.filtroOficinaText.textContent = selected.length > 0 ? `${selected.length} oficina(s) selecionada(s)` : 'Todas';
+                }
             });
         }
 
@@ -296,6 +353,12 @@ const ColetarManutencaoUI = {
         this.filtroItemText.textContent = 'Todos';
     },
 
+    limparSelecaoOficina() {
+        const checkboxes = this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        this.filtroOficinaText.textContent = 'Todas';
+    },
+
     limparFiltros() {
         // Limpa inputs de texto e data
         this.filtroSemana.value = '';
@@ -305,6 +368,9 @@ const ColetarManutencaoUI = {
 
         // Limpa Multiselect de Itens
         this.limparSelecaoItem();
+
+        // Limpa Multiselect de Oficinas
+        this.limparSelecaoOficina();
 
         // Limpa Multiselect de Status
         if (this.filtroStatusOptions) {
@@ -844,19 +910,50 @@ const ColetarManutencaoUI = {
             }
         }
 
+        // Validação de Oficina Obrigatória
+        const checklistElements = document.querySelectorAll('.checklist-item');
+        for (const item of checklistElements) {
+            const status = item.querySelector('.checklist-status').value;
+            const oficinaSelect = item.querySelector('.oficina-selector');
+            
+            if ((status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA') && oficinaSelect) {
+                // Verifica se há opções carregadas (length > 1 pois a primeira é "Selecione...")
+                if (oficinaSelect.options.length > 1 && !oficinaSelect.value) {
+                    const nomeItem = item.querySelector('.checklist-label').textContent;
+                    alert(`⚠️ É obrigatório selecionar uma oficina para o item "${nomeItem}" com status "${status}".`);
+                    oficinaSelect.focus();
+                    return;
+                }
+            }
+        }
+
         const checklistItems = [];
         document.querySelectorAll('.checklist-item').forEach(item => {
             const nomeItem = item.dataset.item;
-            const detalhes = item.querySelector('.checklist-details').value.trim().toUpperCase();
+            let detalhes = item.querySelector('.checklist-details').value.trim().toUpperCase();
             let status = item.querySelector('.checklist-status').value;
             let pecasUsadas = null;
 
             // Captura peças usadas se for Elétrica Interna e estiver visível
-            if (nomeItem === 'ELETRICA INTERNA') {
+            if (nomeItem === 'ELETRICA INTERNA' || nomeItem === 'ELETRICA / MECANICA - INTERNA') {
                 const extraInput = document.getElementById('extra-eletrica-interna').querySelector('input');
                 if (!document.getElementById('extra-eletrica-interna').classList.contains('hidden')) {
                     pecasUsadas = extraInput.value;
                 }
+            }
+
+            // Captura oficina selecionada para CHECK-IN (OFICINA ou ROTA)
+            const oficinaSelect = item.querySelector('.oficina-selector');
+            if (oficinaSelect && oficinaSelect.value && (status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA')) {
+                const oficinaTexto = oficinaSelect.options[oficinaSelect.selectedIndex].text;
+                detalhes = detalhes ? `${detalhes} | ${oficinaTexto}` : oficinaTexto;
+            }
+
+            // Captura motivo de INTERNADO
+            const internadoInput = item.querySelector('.internado-details');
+            if (internadoInput && internadoInput.value && status === 'INTERNADO') {
+                const motivo = internadoInput.value.trim().toUpperCase();
+                detalhes = detalhes ? `${detalhes} | MOTIVO: ${motivo}` : `MOTIVO: ${motivo}`;
             }
 
             // Regra: Se a descrição estiver vazia, força o status para vazio.
@@ -1051,6 +1148,7 @@ const ColetarManutencaoUI = {
         try {
             const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
             const searchItem = this.searchItemInput?.value;
+            const searchOficina = this.searchOficinaInput?.value;
             const searchStatus = this.searchStatusInput?.value;
             
             // Verifica nível do usuário para filtro automático
@@ -1072,13 +1170,14 @@ const ColetarManutencaoUI = {
             }
 
             // Se houver filtros de item/status (filhos), precisamos filtrar os IDs primeiro
-            if (searchItem || searchStatus || roleFilterItem) {
+            if (searchItem || searchStatus || roleFilterItem || searchOficina) {
                 let idQuery = supabaseClient
                     .from('coletas_manutencao_checklist')
                     .select('coleta_id');
 
                 if (searchItem) idQuery = idQuery.eq('item', searchItem);
                 if (searchStatus) idQuery = idQuery.eq('status', searchStatus);
+                if (searchOficina) idQuery = idQuery.ilike('detalhes', `%${searchOficina}%`);
                 if (roleFilterItem) idQuery = idQuery.eq('item', roleFilterItem);
 
                 const { data: idData, error: idError } = await idQuery;
@@ -1319,12 +1418,18 @@ const ColetarManutencaoUI = {
                         statusValue = 'FINALIZADO';
                     }
                     statusSelect.value = statusValue;
-                    this.updateStatusColor(statusSelect); // Define a cor ao carregar
+                    statusSelect.dispatchEvent(new Event('change', { bubbles: true })); // Dispara evento para atualizar UI (mostrar/ocultar oficina) e cor
 
                     // Lógica específica para preencher Elétrica Interna
-                    if (item.item === 'ELETRICA INTERNA' && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
+                    if ((item.item === 'ELETRICA INTERNA' || item.item === 'ELETRICA / MECANICA - INTERNA') && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
                         extraField.classList.remove('hidden');
                         extraField.querySelector('input').value = item.pecas_usadas || '';
+                    }
+
+                    // Lógica para mostrar campo de Internado se necessário
+                    const internadoInput = div.querySelector('.internado-details');
+                    if (internadoInput && statusValue === 'INTERNADO') {
+                        internadoInput.style.display = 'block';
                     }
                 }
             });
@@ -1378,6 +1483,13 @@ const ColetarManutencaoUI = {
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
             if (selectedItems.length > 0) {
                 query = query.in('item', selectedItems);
+            }
+
+            // Filtros de Oficina (Multi-Select) - Busca no campo detalhes
+            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
+            if (selectedOficinas.length > 0) {
+                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
+                query = query.or(oficinaFilters);
             }
 
             const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
@@ -1622,6 +1734,12 @@ const ColetarManutencaoUI = {
                 query = query.in('item', selectedItems);
             }
 
+            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
+            if (selectedOficinas.length > 0) {
+                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
+                query = query.or(oficinaFilters);
+            }
+
             const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
             if (selectedStatus.length > 0) {
                 query = query.in('status', selectedStatus);
@@ -1656,7 +1774,7 @@ const ColetarManutencaoUI = {
                 const entry = coletasMap.get(coletaId);
                 
                 let cellValue = '';
-                if (row.item === 'ELETRICA INTERNA') {
+                if (row.item === 'ELETRICA INTERNA' || row.item === 'ELETRICA / MECANICA - INTERNA') {
                     cellValue = `SOLICITAÇÃO: ${row.detalhes || ''}`;
                     if (row.status === 'FINALIZADO' || row.status === 'OK') {
                         cellValue += `, SOLICITAÇÃO REALIZADA`;
@@ -1684,7 +1802,7 @@ const ColetarManutencaoUI = {
             // Lista de colunas de itens (incluindo os novos)
             const itemColumns = [
                 'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA', 
-                'ELETRICA INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA', 
+                'ELETRICA INTERNA', 'ELETRICA / MECANICA - INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA', 
                 'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 
                 'CONCESSIONARIA', 'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
             ];
@@ -1747,6 +1865,12 @@ const ColetarManutencaoUI = {
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
             if (selectedItems.length > 0) {
                 query = query.in('item', selectedItems);
+            }
+
+            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
+            if (selectedOficinas.length > 0) {
+                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
+                query = query.or(oficinaFilters);
             }
 
             const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
@@ -1839,6 +1963,7 @@ const ColetarManutencaoUI = {
                     'AR-CONDICIONADO': [187, 222, 251], // Blue
                     'BORRACHARIA': [255, 249, 196], // Amber
                     'ELETRICA INTERNA': [225, 190, 231], // Purple
+                    'ELETRICA / MECANICA - INTERNA': [225, 190, 231], // Purple
                     'MECANICA EXTERNA': [178, 235, 242], // Cyan
                     'MOLEIRO': [255, 224, 178], // Deep Orange
                     'TACOGRAFO': [209, 196, 233], // Deep Purple

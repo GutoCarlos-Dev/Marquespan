@@ -64,25 +64,12 @@
                             <label for="searchItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificador</label>
                             <select id="searchItem" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                                 <option value="">Todos</option>
-                                <option value="ACESSORIOS">ACESSORIOS</option>
-                                <option value="ALINHAMENTO/BALANCEAMENTO">ALINHAMENTO/BALANCEAMENTO</option>
-                                <option value="AR-CONDICIONADO">AR-CONDICIONADO</option>
-                                <option value="BORRACHARIA">BORRACHARIA</option>
-                                <option value="ELETRICA INTERNA">ELETRICA INTERNA</option>
-                                <option value="MECANICA EXTERNA">MECANICA EXTERNA</option>
-                                <option value="MOLEIRO">MOLEIRO</option>
-                                <option value="TACOGRAFO">TACOGRAFO</option>
-                                <option value="TAPEÇARIA">TAPEÇARIA</option>
-                                <option value="THERMO KING">THERMO KING</option>
-                                <option value="VIDROS / FECHADURAS">VIDROS / FECHADURAS</option>
-                                <option value="SERVIÇOS_GERAIS">SERVIÇOS GERAIS</option>
-                                <option value="CONCESSIONARIA">CONCESSIONARIA</option>
-                                <option value="ANKA">ANKA</option>
-                                <option value="TARRAXA">TARRAXA</option>
-                                <option value="USIMAC">USIMAC</option>
-                                <option value="LUCAS BAU">LUCAS BAU</option>
-                                <option value="IBIFURGO">IBIFURGO</option>
-                                <option value="IBIPORAN">IBIPORÃ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="searchOficina" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Oficina</label>
+                            <select id="searchOficina" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="">Todas</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -177,25 +164,22 @@
                                     <div style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background-color: #f9f9f9;">
                                         <button type="button" id="btnLimparSelecaoItem" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85em; font-weight: bold;">Limpar Selecionados</button>
                                     </div>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="ACESSORIOS" style="margin-right: 8px;"> ACESSORIOS</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="ALINHAMENTO/BALANCEAMENTO" style="margin-right: 8px;"> ALINHAMENTO/BALANCEAMENTO</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="AR-CONDICIONADO" style="margin-right: 8px;"> AR-CONDICIONADO</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="BORRACHARIA" style="margin-right: 8px;"> BORRACHARIA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="ELETRICA INTERNA" style="margin-right: 8px;"> ELETRICA INTERNA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="MECANICA EXTERNA" style="margin-right: 8px;"> MECANICA EXTERNA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="MOLEIRO" style="margin-right: 8px;"> MOLEIRO</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="TACOGRAFO" style="margin-right: 8px;"> TACOGRAFO</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="TAPEÇARIA" style="margin-right: 8px;"> TAPEÇARIA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="THERMO KING" style="margin-right: 8px;"> THERMO KING</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="VIDROS / FECHADURAS" style="margin-right: 8px;"> VIDROS / FECHADURAS</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="SERVIÇOS_GERAIS" style="margin-right: 8px;"> SERVIÇOS GERAIS</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="CONCESSIONARIA" style="margin-right: 8px;"> CONCESSIONARIA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="ANKA" style="margin-right: 8px;"> ANKA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="TARRAXA" style="margin-right: 8px;"> TARRAXA</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="USIMAC" style="margin-right: 8px;"> USIMAC</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="LUCAS BAU" style="margin-right: 8px;"> LUCAS BAU</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="IBIFURGO" style="margin-right: 8px;"> IBIFURGO</label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"><input type="checkbox" class="filtro-item-checkbox" value="IBIPORAN" style="margin-right: 8px;"> IBIPORÃ</label>
+                                    <!-- Opções carregadas dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="filtroOficina" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Oficina</label>
+                            <div class="custom-multiselect" style="position: relative;">
+                                <div id="filtroOficinaDisplay" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="filtroOficinaText">Todas</span>
+                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
+                                </div>
+                                <div id="filtroOficinaOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <div style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background-color: #f9f9f9;">
+                                        <button type="button" id="btnLimparSelecaoOficina" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85em; font-weight: bold;">Limpar Selecionados</button>
+                                    </div>
+                                    <!-- Opções carregadas dinamicamente -->
                                 </div>
                             </div>
                         </div>
@@ -352,125 +336,8 @@
                 <!-- Seção 3: Checklist (Amarelo/Laranja) -->
                 <fieldset class="form-fieldset fieldset-checklist">
                     <legend><i class="fas fa-list-check"></i> Checklist de Manutenção</legend>
-                    <div class="checklist-container">
-                        <!-- ACESSORIOS -->
-                        <div class="checklist-item" data-item="ACESSORIOS">
-                            <label class="checklist-label">ACESSORIOS</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- ALINHAMENTO/BALANCEAMENTO -->
-                        <div class="checklist-item" data-item="ALINHAMENTO/BALANCEAMENTO">
-                            <label class="checklist-label">ALINHAMENTO/BALANCEAMENTO</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- AR-CONDICIONADO -->
-                        <div class="checklist-item" data-item="AR-CONDICIONADO">
-                            <label class="checklist-label">AR-CONDICIONADO</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- BORRACHARIA -->
-                        <div class="checklist-item" data-item="BORRACHARIA">
-                            <label class="checklist-label">BORRACHARIA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- ELETRICA INTERNA -->
-                        <div class="checklist-item" data-item="ELETRICA INTERNA">
-                            <label class="checklist-label">ELETRICA INTERNA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <div id="extra-eletrica-interna" class="checklist-extra hidden" style="margin-top: -10px; padding: 15px; background-color: #e8f4fd; border: 1px solid #b8daff; border-radius: 0 0 8px 8px; border-top: none;">
-                            <label style="font-weight: bold; color: #0056b3; display: block; margin-bottom: 5px;"><i class="fas fa-cogs"></i> Peças Usadas (Elétrica):</label>
-                            <input type="text" class="checklist-pecas" placeholder="Informe as peças utilizadas..." style="width: 100%; padding: 8px; border: 1px solid #99caff; border-radius: 4px;" oninput="this.value = this.value.toUpperCase()">
-                        </div>
-                        <!-- MECANICA EXTERNA -->
-                        <div class="checklist-item" data-item="MECANICA EXTERNA">
-                            <label class="checklist-label">MECANICA EXTERNA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- MOLEIRO -->
-                        <div class="checklist-item" data-item="MOLEIRO">
-                            <label class="checklist-label">MOLEIRO</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- TACOGRAFO -->
-                        <div class="checklist-item" data-item="TACOGRAFO">
-                            <label class="checklist-label">TACOGRAFO</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- TAPEÇARIA -->
-                        <div class="checklist-item" data-item="TAPEÇARIA">
-                            <label class="checklist-label">TAPEÇARIA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- THERMO KING -->
-                        <div class="checklist-item" data-item="THERMO KING">
-                            <label class="checklist-label">THERMO KING</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- VIDROS / FECHADURAS -->
-                        <div class="checklist-item" data-item="VIDROS / FECHADURAS">
-                            <label class="checklist-label">VIDROS / FECHADURAS</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- SERVIÇOS_GERAIS -->
-                        <div class="checklist-item" data-item="SERVIÇOS_GERAIS">
-                            <label class="checklist-label">SERVIÇOS GERAIS</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- CONCESSIONARIA -->
-                        <div class="checklist-item" data-item="CONCESSIONARIA">
-                            <label class="checklist-label">CONCESSIONARIA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- ANKA -->
-                        <div class="checklist-item" data-item="ANKA">
-                            <label class="checklist-label">ANKA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- TARRAXA -->
-                        <div class="checklist-item" data-item="TARRAXA">
-                            <label class="checklist-label">TARRAXA</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- USIMAC -->
-                        <div class="checklist-item" data-item="USIMAC">
-                            <label class="checklist-label">USIMAC</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- LUCAS BAU -->
-                        <div class="checklist-item" data-item="LUCAS BAU">
-                            <label class="checklist-label">LUCAS BAU</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- IBIFURGO -->
-                        <div class="checklist-item" data-item="IBIFURGO">
-                            <label class="checklist-label">IBIFURGO</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
-                        <!-- IBIPORAN -->
-                        <div class="checklist-item" data-item="IBIPORAN">
-                            <label class="checklist-label">IBIPORÃ</label>
-                            <input type="text" class="checklist-details" placeholder="Detalhes...">
-                            <select class="checklist-status"><option value="" selected></option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option></select>
-                        </div>
+                    <div class="checklist-container" id="checklistContainer">
+                        <p style="text-align: center; padding: 10px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Carregando itens do checklist...</p>
                     </div>
                 </fieldset>
 
@@ -524,37 +391,143 @@
   </script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/coletar-manutencao.js"></script>
+  <script type="module">
+    import { supabaseClient } from './script/supabase.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const container = document.getElementById('checklistContainer');
+        if (!container) return;
+
+        // Lista de segurança (Fallback) caso o banco de dados falhe ou a tabela não exista
+        const STATIC_ITEMS = [
+            'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
+            'ELETRICA / MECANICA - INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
+            'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 'CONCESSIONARIA',
+            'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
+        ];
+
+        try {
+            // 1. Tentar Buscar Itens Verificadores do Banco
+            let { data: itens, error: errorItens } = await supabaseClient
+                .from('itens_verificacao')
+                .select('*')
+                .order('descricao');
+
+            // Se der erro (ex: tabela não existe 404), usa a lista estática
+            if (errorItens || !itens || itens.length === 0) {
+                console.warn('Usando lista estática de checklist (Tabela não encontrada ou vazia).', errorItens);
+                itens = STATIC_ITEMS.map((desc, index) => ({ id: `static-${index}`, descricao: desc }));
+            }
+
+            // 2. Tentar Buscar Oficinas (pode falhar silenciosamente se não existir)
+            const { data: oficinas, error: errorOficinas } = await supabaseClient
+                .from('oficinas')
+                .select('id, nome, filial, item_verificador_id');
+
+            // Agrupar oficinas por item_verificador para acesso rápido
+            const oficinasPorItem = {};
+            if (oficinas) {
+                oficinas.forEach(oficina => {
+                    const key = oficina.item_verificador_id; 
+                    if (!oficinasPorItem[key]) oficinasPorItem[key] = [];
+                    oficinasPorItem[key].push(oficina);
+                });
+            }
+
+            container.innerHTML = '';
+
+            itens.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'checklist-item';
+                div.dataset.item = item.descricao; // Mantém compatibilidade com scripts existentes
+                div.dataset.itemId = item.id;
+
+                // Constrói as opções de oficina para este item
+                const oficinasDoItem = oficinasPorItem[item.id] || oficinasPorItem[item.descricao] || [];
+                let oficinaOptions = '<option value="">Selecione a Oficina</option>';
+                oficinasDoItem.forEach(of => {
+                    oficinaOptions += `<option value="${of.id}">${of.nome} - ${of.filial}</option>`;
+                });
+
+                div.innerHTML = `
+                    <label class="checklist-label">${item.descricao}</label>
+                    <input type="text" class="checklist-details" placeholder="Detalhes...">
+                    <select class="checklist-status">
+                        <option value="" selected>-</option>
+                        <option value="PENDENTE">PENDENTE</option>
+                        <option value="FINALIZADO">FINALIZADO</option>
+                        <option value="INTERNADO">INTERNADO</option>
+                        <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
+                        <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
+                        <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
+                    </select>
+                    <div class="oficina-selector-wrapper" style="display: none; margin-top: 5px;">
+                        <select class="oficina-selector" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f8ff;">
+                            ${oficinaOptions}
+                        </select>
+                    </div>
+                    <input type="text" class="internado-details" placeholder="MOTIVO DA INTERNAÇÃO..." style="display: none; width: 100%; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; padding: 5px; background-color: #e8f4fd;" oninput="this.value = this.value.toUpperCase()">
+                `;
+                container.appendChild(div);
+
+                // Lógica para mostrar/ocultar o seletor de oficina
+                const statusSelect = div.querySelector('.checklist-status');
+                const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
+                const oficinaSelect = div.querySelector('.oficina-selector');
+                const internadoInput = div.querySelector('.internado-details');
+
+                statusSelect.addEventListener('change', (e) => {
+                    // Resetar visualização
+                    oficinaWrapper.style.display = 'none';
+                    oficinaSelect.required = false;
+                    internadoInput.style.display = 'none';
+                    internadoInput.required = false;
+
+                    if (e.target.value === 'CHECK-IN OFICINA' || e.target.value === 'CHECK-IN ROTA' || e.target.value === 'FINALIZADO' || e.target.value === 'FINALIZADO ROTA') {
+                        oficinaWrapper.style.display = 'block';
+                        // Só exige seleção se houver oficinas cadastradas para este item
+                        if (oficinasDoItem.length > 0) {
+                            oficinaSelect.required = true;
+                        }
+                    } else if (e.target.value === 'INTERNADO') {
+                        internadoInput.style.display = 'block';
+                        internadoInput.required = true;
+                        oficinaSelect.value = '';
+                    }
+                });
+
+                // Recria o campo especial para ELETRICA INTERNA se necessário
+                if (item.descricao === 'ELETRICA INTERNA' || item.descricao === 'ELETRICA / MECANICA - INTERNA') {
+                    const extraDiv = document.createElement('div');
+                    extraDiv.id = 'extra-eletrica-interna';
+                    extraDiv.className = 'checklist-extra hidden'; // Inicialmente oculto, lógica de exibição deve ser tratada no JS principal ou aqui
+                    extraDiv.style.cssText = "margin-top: -10px; padding: 15px; background-color: #e8f4fd; border: 1px solid #b8daff; border-radius: 0 0 8px 8px; border-top: none;";
+                    extraDiv.innerHTML = `
+                        <label style="font-weight: bold; color: #0056b3; display: block; margin-bottom: 5px;"><i class="fas fa-cogs"></i> Peças Usadas (Mecanica/Elétrica):</label>
+                        <input type="text" class="checklist-pecas" placeholder="Informe as peças utilizadas..." style="width: 100%; padding: 8px; border: 1px solid #99caff; border-radius: 4px;" oninput="this.value = this.value.toUpperCase()">
+                    `;
+                    container.appendChild(extraDiv);
+                    
+                    // Adiciona listener para mostrar o campo extra quando status não for vazio/pendente (ajuste conforme regra de negócio original)
+                    statusSelect.addEventListener('change', (e) => {
+                         if (e.target.value === 'FINALIZADO') {
+                             extraDiv.classList.remove('hidden');
+                         } else {
+                             extraDiv.classList.add('hidden');
+                             extraDiv.querySelector('input').value = '';
+                         }
+                    });
+                }
+            });
+
+        } catch (err) {
+            console.error('Erro crítico no script do checklist:', err);
+            // Em último caso, não quebra a página
+        }
+    });
+  </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Lógica para ocultar a opção FINALIZADO quando status for CHECK-IN
-        function gerenciarOpcaoFinalizado(select) {
-            const val = select.value;
-            const finalizadoOpt = select.querySelector('option[value="FINALIZADO"]');
-            if (finalizadoOpt) {
-                if (val === 'CHECK-IN OFICINA' || val === 'CHECK-IN ROTA') {
-                    finalizadoOpt.hidden = true;
-                    finalizadoOpt.style.display = 'none';
-                    finalizadoOpt.disabled = true;
-                } else {
-                    finalizadoOpt.hidden = false;
-                    finalizadoOpt.style.display = '';
-                    finalizadoOpt.disabled = false;
-                }
-            }
-        }
-
-        document.addEventListener('click', (e) => {
-            if (e.target && e.target.classList.contains('checklist-status')) {
-                gerenciarOpcaoFinalizado(e.target);
-            }
-        });
-
-        document.addEventListener('change', (e) => {
-            if (e.target && e.target.classList.contains('checklist-status')) {
-                gerenciarOpcaoFinalizado(e.target);
-            }
-        });
-
         // === Correção Visual para Status "FINALIZADO ROTA" ===
         function aplicarCorStatusFinalizadoRota() {
             const cells = document.querySelectorAll('#tableBodyLancamentos td');
