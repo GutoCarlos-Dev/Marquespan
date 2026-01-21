@@ -2098,6 +2098,7 @@ const ColetarManutencaoUI = {
                     'ELETRICA INTERNA': [225, 190, 231], // Purple
                     'ELETRICA / MECANICA - INTERNA': [225, 190, 231], // Purple
                     'MECANICA EXTERNA': [178, 235, 242], // Cyan
+                    'MECANICA - EXTERNA': [178, 235, 242], // Cyan
                     'MOLEIRO': [255, 224, 178], // Deep Orange
                     'TACOGRAFO': [209, 196, 233], // Deep Purple
                     'TAPEÇARIA': [197, 202, 233], // Indigo
