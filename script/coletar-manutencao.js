@@ -198,7 +198,6 @@ const ColetarManutencaoUI = {
                             ${oficinaOptions}
                         </select>
                     </div>
-                    <input type="text" class="internado-details" placeholder="MOTIVO DA INTERNAÇÃO..." style="display: none; width: 100%; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; padding: 5px; background-color: #e8f4fd;" oninput="this.value = this.value.toUpperCase()">
                 `;
                 container.appendChild(div);
 
@@ -206,27 +205,24 @@ const ColetarManutencaoUI = {
                 const statusSelect = div.querySelector('.checklist-status');
                 const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
                 const oficinaSelect = div.querySelector('.oficina-selector');
-                const internadoInput = div.querySelector('.internado-details');
 
                 statusSelect.addEventListener('change', (e) => {
                     // Resetar visualização
                     oficinaWrapper.style.display = 'none';
                     oficinaSelect.required = false;
-                    internadoInput.style.display = 'none';
-                    internadoInput.required = false;
 
-                    if (e.target.value === 'CHECK-IN OFICINA' || e.target.value === 'CHECK-IN ROTA' || e.target.value === 'FINALIZADO' || e.target.value === 'FINALIZADO ROTA') {
+                    const val = e.target.value;
+
+                    if (['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(val)) {
                         oficinaWrapper.style.display = 'block';
                         // Só exige seleção se houver oficinas cadastradas para este item
                         if (oficinasDoItem.length > 0) {
                             oficinaSelect.required = true;
                         }
-                    } else if (e.target.value === 'INTERNADO') {
-                        internadoInput.style.display = 'block';
-                        internadoInput.required = true;
+                    } else {
                         oficinaSelect.value = '';
                     }
-                    
+
                     // Atualiza cor
                     this.updateStatusColor(e.target);
                 });
@@ -1065,7 +1061,7 @@ const ColetarManutencaoUI = {
             const status = item.querySelector('.checklist-status').value;
             const oficinaSelect = item.querySelector('.oficina-selector');
             
-            if ((status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA') && oficinaSelect) {
+            if ((status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA' || status === 'INTERNADO') && oficinaSelect) {
                 // Verifica se há opções carregadas (length > 1 pois a primeira é "Selecione...")
                 if (oficinaSelect.options.length > 1 && !oficinaSelect.value) {
                     const nomeItem = item.querySelector('.checklist-label').textContent;
@@ -1093,16 +1089,9 @@ const ColetarManutencaoUI = {
 
             // Captura oficina selecionada para CHECK-IN (OFICINA ou ROTA)
             const oficinaSelect = item.querySelector('.oficina-selector');
-            if (oficinaSelect && oficinaSelect.value && (status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA')) {
+            if (oficinaSelect && oficinaSelect.value && (status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA' || status === 'INTERNADO')) {
                 const oficinaTexto = oficinaSelect.options[oficinaSelect.selectedIndex].text;
                 detalhes = detalhes ? `${detalhes} | ${oficinaTexto}` : oficinaTexto;
-            }
-
-            // Captura motivo de INTERNADO
-            const internadoInput = item.querySelector('.internado-details');
-            if (internadoInput && internadoInput.value && status === 'INTERNADO') {
-                const motivo = internadoInput.value.trim().toUpperCase();
-                detalhes = detalhes ? `${detalhes} | MOTIVO: ${motivo}` : `MOTIVO: ${motivo}`;
             }
 
             // Regra: Se a descrição estiver vazia, força o status para vazio.
@@ -1574,12 +1563,6 @@ const ColetarManutencaoUI = {
                     if ((item.item === 'ELETRICA INTERNA' || item.item === 'ELETRICA / MECANICA - INTERNA') && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
                         extraField.classList.remove('hidden');
                         extraField.querySelector('input').value = item.pecas_usadas || '';
-                    }
-
-                    // Lógica para mostrar campo de Internado se necessário
-                    const internadoInput = div.querySelector('.internado-details');
-                    if (internadoInput && statusValue === 'INTERNADO') {
-                        internadoInput.style.display = 'block';
                     }
                 }
             });
