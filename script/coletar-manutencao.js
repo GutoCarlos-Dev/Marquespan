@@ -133,6 +133,7 @@ const ColetarManutencaoUI = {
         const STATIC_ITEMS = [
             'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
             'ELETRICA / MECANICA - INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
+            'ELETRICA / MECANICA - INTERNA', 'MECANICA - EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
             'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 'CONCESSIONARIA',
             'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
         ];
@@ -614,6 +615,7 @@ const ColetarManutencaoUI = {
             allItems.forEach(item => { 
                 const itemNome = item.dataset.item ? item.dataset.item.toUpperCase() : '';
                 if (itemNome !== 'MECANICA EXTERNA' && itemNome !== 'MECANICA - EXTERNA') item.style.display = 'none'; 
+                if (itemNome !== 'MECANICA - EXTERNA') item.style.display = 'none'; 
             });
             if (extraEletrica) extraEletrica.style.display = 'none';
         }
