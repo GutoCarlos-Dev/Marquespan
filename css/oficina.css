@@ -88,3 +88,37 @@
     gap: 10px;
     justify-content: flex-start;
 }
+
+/* Estilos das Abas de Navegação */
+.painel-navegacao {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.painel-btn {
+    padding: 10px 20px;
+    border: none;
+    background-color: #f8f9fa;
+    color: #555;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.painel-btn:hover {
+    background-color: #e2e6ea;
+}
+
+.painel-btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Utilitário para esconder seções */
+.hidden {
+    display: none !important;
+}

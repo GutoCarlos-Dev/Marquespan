@@ -14,7 +14,13 @@
   <div class="container">
     <!-- O menu será injetado aqui pelo menu.js -->
     <div class="main-content">
-      <header class="header"><i class="fas fa-wrench"></i> Cadastro de Oficina</header>
+      <header class="header"><i class="fas fa-wrench"></i> Gestão de Oficina</header>
+
+      <!-- Navegação por abas -->
+      <div class="painel-navegacao" role="tablist">
+        <button class="painel-btn active" data-tab="sectionCadastrarOficina">Oficina</button>
+        <button class="painel-btn" data-tab="sectionCadastrarItem">Item Verificador</button>
+      </div>
 
       <section id="sectionCadastrarOficina" class="section">
         <div class="form-container">
@@ -73,6 +79,44 @@
           </div>
         </div>
       </section>
+
+      <!-- Seção Cadastro de Item Verificador -->
+      <section id="sectionCadastrarItem" class="section hidden">
+        <div class="form-container">
+          <form id="formCadastrarItem" class="form-grid-layout">
+            <fieldset>
+              <legend>Formulário de Item Verificador</legend>
+              <input type="hidden" id="itemEditingId">
+              
+              <div class="form-group">
+                <label for="itemDescricao">Descrição do Item</label>
+                <input type="text" id="itemDescricao" required placeholder="Ex: Checklist Padrão">
+              </div>
+
+              <div class="form-buttons">
+                <button type="submit" id="btnSubmitItem" class="btn-submit">Cadastrar Item</button>
+                <button type="button" id="btnClearItemForm" class="btn-clear">Limpar</button>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="table-scroll-container" style="max-height: 500px; overflow-y: auto;">
+            <table class="data-grid" aria-label="Itens Verificadores Cadastrados">
+              <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Itens Verificadores</caption>
+              <thead>
+                <tr>
+                  <th data-field="descricao">Descrição</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="itemTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </div>
   </div>
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>

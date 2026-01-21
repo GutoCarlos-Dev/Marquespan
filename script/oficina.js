@@ -2,14 +2,36 @@ import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     carregarItensVerificadores();
+    listarItensVerificadores(); // Carrega a grid da aba Item Verificador
     carregarOficinas();
     
+    // Eventos Oficina
     document.getElementById('formCadastrarOficina').addEventListener('submit', salvarOficina);
     document.getElementById('btnClearOficinaForm').addEventListener('click', limparFormulario);
     document.getElementById('searchOficinaInput').addEventListener('input', filtrarOficinas);
+
+    // Eventos Item Verificador
+    document.getElementById('formCadastrarItem').addEventListener('submit', salvarItemVerificador);
+    document.getElementById('btnClearItemForm').addEventListener('click', limparFormularioItem);
+
+    // Controle de Abas
+    const tabs = document.querySelectorAll('.painel-btn');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active de todas as abas e esconde seções
+            document.querySelectorAll('.painel-btn').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+
+            // Ativa aba clicada e mostra seção correspondente
+            tab.classList.add('active');
+            const targetId = tab.getAttribute('data-tab');
+            document.getElementById(targetId).classList.remove('hidden');
+        });
+    });
 });
 
 let oficinasCache = [];
+let itensCache = [];
 
 // Carrega o select de Itens Verificadores
 async function carregarItensVerificadores() {
@@ -35,6 +57,50 @@ async function carregarItensVerificadores() {
         console.error('Erro ao carregar itens verificadores:', error);
         select.innerHTML = '<option value="">Erro ao carregar</option>';
     }
+}
+
+// Lista os itens na grid da aba Item Verificador
+async function listarItensVerificadores() {
+    const tbody = document.getElementById('itemTableBody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center">Carregando...</td></tr>';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('itens_verificacao')
+            .select('*')
+            .order('descricao');
+
+        if (error) throw error;
+
+        itensCache = data;
+        renderizarTabelaItens(itensCache);
+    } catch (error) {
+        console.error('Erro ao listar itens:', error);
+        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-danger">Erro: ${error.message}</td></tr>`;
+    }
+}
+
+function renderizarTabelaItens(itens) {
+    const tbody = document.getElementById('itemTableBody');
+    
+    if (itens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center">Nenhum item cadastrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = itens.map(item => `
+        <tr>
+            <td>${item.descricao}</td>
+            <td>
+                <button class="btn-acao editar" onclick="editarItem(${item.id})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-acao excluir" onclick="excluirItem(${item.id})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 async function carregarOficinas() {
@@ -132,6 +198,45 @@ async function salvarOficina(e) {
     }
 }
 
+async function salvarItemVerificador(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('itemEditingId').value;
+    const descricao = document.getElementById('itemDescricao').value;
+    const btnSubmit = document.getElementById('btnSubmitItem');
+
+    const dados = { descricao: descricao };
+
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Salvando...';
+
+    try {
+        let error;
+        if (id) {
+            // Atualizar
+            const response = await supabaseClient.from('itens_verificacao').update(dados).eq('id', id);
+            error = response.error;
+        } else {
+            // Criar
+            const response = await supabaseClient.from('itens_verificacao').insert(dados);
+            error = response.error;
+        }
+
+        if (error) throw error;
+
+        alert('Item salvo com sucesso!');
+        limparFormularioItem();
+        listarItensVerificadores();
+        carregarItensVerificadores(); // Atualiza o select da outra aba
+    } catch (error) {
+        console.error('Erro ao salvar item:', error);
+        alert('Erro ao salvar: ' + error.message);
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = id ? 'Atualizar Item' : 'Cadastrar Item';
+    }
+}
+
 window.editarOficina = function(id) {
     const oficina = oficinasCache.find(o => o.id === id);
     if (!oficina) return;
@@ -143,6 +248,18 @@ window.editarOficina = function(id) {
 
     document.getElementById('btnSubmitOficina').textContent = 'Atualizar Oficina';
     document.getElementById('sectionCadastrarOficina').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.editarItem = function(id) {
+    const item = itensCache.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('itemEditingId').value = item.id;
+    document.getElementById('itemDescricao').value = item.descricao;
+
+    document.getElementById('btnSubmitItem').textContent = 'Atualizar Item';
+    // A aba já deve estar ativa, mas podemos focar no input
+    document.getElementById('itemDescricao').focus();
 };
 
 window.excluirOficina = async function(id) {
@@ -158,12 +275,32 @@ window.excluirOficina = async function(id) {
     }
 };
 
+window.excluirItem = async function(id) {
+    if (!confirm('Tem certeza que deseja excluir este item? Isso pode afetar oficinas vinculadas.')) return;
+
+    try {
+        const { error } = await supabaseClient.from('itens_verificacao').delete().eq('id', id);
+        if (error) throw error;
+        listarItensVerificadores();
+        carregarItensVerificadores();
+    } catch (error) {
+        console.error('Erro ao excluir item:', error);
+        alert('Erro ao excluir: ' + error.message);
+    }
+};
+
 function limparFormulario() {
     document.getElementById('formCadastrarOficina').reset();
     document.getElementById('oficinaEditingId').value = '';
     document.getElementById('btnSubmitOficina').textContent = 'Cadastrar Oficina';
     // Garante que SP volte a ser o padrão se o reset não o fizer (embora reset faça)
     document.getElementById('oficinaFilial').value = 'SP';
+}
+
+function limparFormularioItem() {
+    document.getElementById('formCadastrarItem').reset();
+    document.getElementById('itemEditingId').value = '';
+    document.getElementById('btnSubmitItem').textContent = 'Cadastrar Item';
 }
 
 function filtrarOficinas() {
