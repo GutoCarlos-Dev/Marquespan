@@ -1543,7 +1543,11 @@ const ColetarManutencaoUI = {
                 const div = document.querySelector(`.checklist-item[data-item="${item.item}"]`);
                 if (div) {
                     const statusSelect = div.querySelector('.checklist-status');
-                    div.querySelector('.checklist-details').value = item.detalhes || '';
+                    const detailsInput = div.querySelector('.checklist-details');
+                    const oficinaSelect = div.querySelector('.oficina-selector');
+
+                    let detalhesTexto = item.detalhes || '';
+                    let oficinaEncontrada = null;
                     
                     // Ajuste para compatibilidade com registros antigos
                     let statusValue = item.status || '';
@@ -1553,8 +1557,36 @@ const ColetarManutencaoUI = {
                     if (statusValue === 'OK') {
                         statusValue = 'FINALIZADO';
                     }
+
+                    // Lógica para extrair oficina do texto de detalhes se o status exigir
+                    const statusRequiresOffice = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(statusValue);
+
+                    if (statusRequiresOffice && oficinaSelect && oficinaSelect.options.length > 1) {
+                        for (let i = 0; i < oficinaSelect.options.length; i++) {
+                            const optText = oficinaSelect.options[i].text;
+                            if (!optText || optText === 'Selecione a Oficina') continue;
+
+                            const suffix = ` | ${optText}`;
+                            if (detalhesTexto.endsWith(suffix)) {
+                                oficinaEncontrada = oficinaSelect.options[i].value;
+                                detalhesTexto = detalhesTexto.substring(0, detalhesTexto.length - suffix.length);
+                                break; 
+                            } else if (detalhesTexto === optText) {
+                                oficinaEncontrada = oficinaSelect.options[i].value;
+                                detalhesTexto = '';
+                                break;
+                            }
+                        }
+                    }
+
+                    detailsInput.value = detalhesTexto;
+
                     statusSelect.value = statusValue;
                     statusSelect.dispatchEvent(new Event('change', { bubbles: true })); // Dispara evento para atualizar UI (mostrar/ocultar oficina) e cor
+
+                    if (oficinaEncontrada) {
+                        oficinaSelect.value = oficinaEncontrada;
+                    }
 
                     // Lógica específica para preencher Elétrica Interna
                     if ((item.item === 'ELETRICA INTERNA' || item.item === 'ELETRICA / MECANICA - INTERNA') && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
