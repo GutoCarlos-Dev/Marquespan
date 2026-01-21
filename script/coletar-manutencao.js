@@ -816,7 +816,7 @@ const ColetarManutencaoUI = {
                             .from('coletas_manutencao_checklist')
                             .insert([{
                                 coleta_id: coleta.id,
-                                item: 'MECANICA EXTERNA',
+                                item: 'MECANICA - EXTERNA',
                                 status: 'PENDENTE',
                                 detalhes: detalhes
                             }]);
