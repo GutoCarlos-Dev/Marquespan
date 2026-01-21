@@ -1306,6 +1306,7 @@ const ColetarManutencaoUI = {
             let roleFilterItem = null;
             if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
             if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
+            if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA - EXTERNA';
 
             let data = [];
 
@@ -1627,6 +1628,7 @@ const ColetarManutencaoUI = {
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
 
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
@@ -1876,6 +1878,7 @@ const ColetarManutencaoUI = {
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
 
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
@@ -2009,6 +2012,7 @@ const ColetarManutencaoUI = {
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
+            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
 
             // Filtros do Checklist (Multi-Select)
             const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
