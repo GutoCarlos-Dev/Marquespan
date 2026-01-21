@@ -1075,6 +1075,7 @@ const ColetarManutencaoUI = {
             let detalhes = item.querySelector('.checklist-details').value.trim().toUpperCase();
             let status = item.querySelector('.checklist-status').value;
             let pecasUsadas = null;
+            let oficinaId = null;
 
             // Captura peças usadas se for Elétrica Interna e estiver visível
             if (nomeItem === 'ELETRICA INTERNA' || nomeItem === 'ELETRICA / MECANICA - INTERNA') {
@@ -1087,8 +1088,7 @@ const ColetarManutencaoUI = {
             // Captura oficina selecionada para CHECK-IN (OFICINA ou ROTA)
             const oficinaSelect = item.querySelector('.oficina-selector');
             if (oficinaSelect && oficinaSelect.value && (status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA' || status === 'INTERNADO')) {
-                const oficinaTexto = oficinaSelect.options[oficinaSelect.selectedIndex].text;
-                detalhes = detalhes ? `${detalhes} | ${oficinaTexto}` : oficinaTexto;
+                oficinaId = parseInt(oficinaSelect.value);
             }
 
             // Regra: Se a descrição estiver vazia, força o status para vazio.
@@ -1098,7 +1098,7 @@ const ColetarManutencaoUI = {
             }
             
             checklistItems.push({
-                item: nomeItem, detalhes, status, pecas_usadas: pecasUsadas
+                item: nomeItem, detalhes, status, pecas_usadas: pecasUsadas, oficina_id: oficinaId
             });
         });
 
@@ -1135,7 +1135,8 @@ const ColetarManutencaoUI = {
                     item: i.item,
                     detalhes: i.detalhes,
                     status: i.status, // Permite salvar vazio se selecionado
-                    pecas_usadas: i.pecas_usadas
+                    pecas_usadas: i.pecas_usadas,
+                    oficina_id: i.oficina_id
                 })).filter(i => i.status !== "" || i.detalhes !== ""); // Salva apenas preenchidos
 
                 if (checklistPayload.length > 0) {
@@ -1222,7 +1223,8 @@ const ColetarManutencaoUI = {
                                 id: match.id,
                                 detalhes: newDetails,
                                 status: statusItem, // Atualiza status (ex: para OK)
-                                pecas_usadas: formItem.pecas_usadas || match.pecas_usadas
+                                pecas_usadas: formItem.pecas_usadas || match.pecas_usadas,
+                                oficina_id: formItem.oficina_id
                             });
                             headersToUpdate.add(matchHeaderId);
                         } else {
@@ -1237,7 +1239,7 @@ const ColetarManutencaoUI = {
                     // A. Updates de Itens
                     for (const up of updatesToPerform) {
                         await supabaseClient.from('coletas_manutencao_checklist')
-                            .update({ detalhes: up.detalhes, status: up.status, pecas_usadas: up.pecas_usadas })
+                            .update({ detalhes: up.detalhes, status: up.status, pecas_usadas: up.pecas_usadas, oficina_id: up.oficina_id })
                             .eq('id', up.id);
                     }
 
@@ -1248,7 +1250,8 @@ const ColetarManutencaoUI = {
                             item: i.item,
                             detalhes: i.detalhes,
                             status: i.status,
-                            pecas_usadas: i.pecas_usadas
+                            pecas_usadas: i.pecas_usadas,
+                            oficina_id: i.oficina_id
                         }));
                         await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
                     }
@@ -1547,7 +1550,7 @@ const ColetarManutencaoUI = {
                     const oficinaSelect = div.querySelector('.oficina-selector');
 
                     let detalhesTexto = item.detalhes || '';
-                    let oficinaEncontrada = null;
+                    let oficinaEncontrada = item.oficina_id || null;
                     
                     // Ajuste para compatibilidade com registros antigos
                     let statusValue = item.status || '';
@@ -1561,7 +1564,7 @@ const ColetarManutencaoUI = {
                     // Lógica para extrair oficina do texto de detalhes se o status exigir
                     const statusRequiresOffice = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(statusValue);
 
-                    if (statusRequiresOffice && oficinaSelect && oficinaSelect.options.length > 1) {
+                    if (!oficinaEncontrada && statusRequiresOffice && oficinaSelect && oficinaSelect.options.length > 1) {
                         for (let i = 0; i < oficinaSelect.options.length; i++) {
                             const optText = oficinaSelect.options[i].text;
                             if (!optText || optText === 'Selecione a Oficina') continue;
@@ -1633,7 +1636,7 @@ const ColetarManutencaoUI = {
             // O !inner força que o registro pai exista e obedeça aos filtros aplicados nele
             let query = supabaseClient
                 .from('coletas_manutencao_checklist')
-                .select('*, coletas_manutencao!inner(*)');
+                .select('*, coletas_manutencao!inner(*), oficinas(nome)');
 
             // Filtro automático por nível
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -1749,6 +1752,7 @@ const ColetarManutencaoUI = {
                     tr.style.fontWeight = 'bold';
                 }
 
+                const nomeOficina = item.oficinas ? item.oficinas.nome : '-';
                 let botoesAcao = `<button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
                 if (podeExcluir) {
                     botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${coleta.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
@@ -1761,6 +1765,7 @@ const ColetarManutencaoUI = {
                     <td>${coleta.modelo || '-'}</td>
                     <td>${item.item}</td>
                     <td>${item.status}</td>
+                    <td>${nomeOficina}</td>
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
                     <td>
