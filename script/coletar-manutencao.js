@@ -2152,6 +2152,29 @@ const ColetarManutencaoUI = {
                 return colors[item] || [238, 238, 238];
             };
 
+            // Helper para cores das oficinas (Gera cor baseada no nome)
+            const getOfficeColor = (name) => {
+                const colors = [
+                    [187, 222, 251], // Blue
+                    [255, 224, 178], // Orange
+                    [200, 230, 201], // Green
+                    [255, 205, 210], // Red
+                    [225, 190, 231], // Purple
+                    [178, 235, 242], // Cyan
+                    [255, 249, 196], // Yellow
+                    [248, 187, 208], // Pink
+                    [209, 196, 233], // Deep Purple
+                    [215, 204, 200]  // Brown
+                ];
+                if (!name || name === 'SEM OFICINA') return [220, 220, 220];
+                
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                return colors[Math.abs(hash) % colors.length];
+            };
+
             const tableBody = [];
             let currentGroup = null;
 
@@ -2161,7 +2184,7 @@ const ColetarManutencaoUI = {
 
                 if (tipoAgrupamento === 'OFICINA') {
                     groupValue = row.oficinas ? row.oficinas.nome : 'SEM OFICINA';
-                    groupColor = [220, 220, 220]; // Cinza padrão para oficinas
+                    groupColor = getOfficeColor(groupValue);
                 } else {
                     groupValue = row.item;
                     groupColor = getItemColor(groupValue);
