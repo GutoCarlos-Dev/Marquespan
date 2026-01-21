@@ -18,6 +18,7 @@ const ColetarManutencaoUI = {
         this.chartItems = null; // Instância do gráfico de itens
         this.carregarFiltrosDinamicos();
         this.carregarLancamentos(); // Carrega a lista ao iniciar
+        this.carregarChecklistDinamico(); // Carrega o checklist dinâmico (Desktop e Mobile)
     },
 
     cacheDOM() {
@@ -122,6 +123,139 @@ const ColetarManutencaoUI = {
             }
         `;
         document.head.appendChild(style);
+    },
+
+    async carregarChecklistDinamico() {
+        const container = document.getElementById('checklistContainer') || document.querySelector('.checklist-container');
+        if (!container) return;
+
+        // Lista de segurança (Fallback) caso o banco de dados falhe ou a tabela não exista
+        const STATIC_ITEMS = [
+            'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
+            'ELETRICA / MECANICA - INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
+            'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 'CONCESSIONARIA',
+            'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
+        ];
+
+        try {
+            // 1. Tentar Buscar Itens Verificadores do Banco
+            let { data: itens, error: errorItens } = await supabaseClient
+                .from('itens_verificacao')
+                .select('*')
+                .order('descricao');
+
+            // Se der erro (ex: tabela não existe 404), usa a lista estática
+            if (errorItens || !itens || itens.length === 0) {
+                console.warn('Usando lista estática de checklist (Tabela não encontrada ou vazia).', errorItens);
+                itens = STATIC_ITEMS.map((desc, index) => ({ id: `static-${index}`, descricao: desc }));
+            }
+
+            // 2. Tentar Buscar Oficinas (pode falhar silenciosamente se não existir)
+            const { data: oficinas, error: errorOficinas } = await supabaseClient
+                .from('oficinas')
+                .select('id, nome, filial, item_verificador_id');
+
+            // Agrupar oficinas por item_verificador para acesso rápido
+            const oficinasPorItem = {};
+            if (oficinas) {
+                oficinas.forEach(oficina => {
+                    const key = oficina.item_verificador_id; 
+                    if (!oficinasPorItem[key]) oficinasPorItem[key] = [];
+                    oficinasPorItem[key].push(oficina);
+                });
+            }
+
+            container.innerHTML = '';
+
+            itens.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'checklist-item';
+                div.dataset.item = item.descricao; // Mantém compatibilidade com scripts existentes
+                div.dataset.itemId = item.id;
+
+                // Constrói as opções de oficina para este item
+                const oficinasDoItem = oficinasPorItem[item.id] || oficinasPorItem[item.descricao] || [];
+                let oficinaOptions = '<option value="">Selecione a Oficina</option>';
+                oficinasDoItem.forEach(of => {
+                    oficinaOptions += `<option value="${of.id}">${of.nome} - ${of.filial}</option>`;
+                });
+
+                div.innerHTML = `
+                    <label class="checklist-label">${item.descricao}</label>
+                    <input type="text" class="checklist-details" placeholder="Detalhes...">
+                    <select class="checklist-status">
+                        <option value="" selected>-</option>
+                        <option value="PENDENTE">PENDENTE</option>
+                        <option value="FINALIZADO">FINALIZADO</option>
+                        <option value="INTERNADO">INTERNADO</option>
+                        <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
+                        <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
+                        <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
+                    </select>
+                    <div class="oficina-selector-wrapper" style="display: none; margin-top: 5px;">
+                        <select class="oficina-selector" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f8ff;">
+                            ${oficinaOptions}
+                        </select>
+                    </div>
+                    <input type="text" class="internado-details" placeholder="MOTIVO DA INTERNAÇÃO..." style="display: none; width: 100%; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; padding: 5px; background-color: #e8f4fd;" oninput="this.value = this.value.toUpperCase()">
+                `;
+                container.appendChild(div);
+
+                // Lógica para mostrar/ocultar o seletor de oficina
+                const statusSelect = div.querySelector('.checklist-status');
+                const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
+                const oficinaSelect = div.querySelector('.oficina-selector');
+                const internadoInput = div.querySelector('.internado-details');
+
+                statusSelect.addEventListener('change', (e) => {
+                    // Resetar visualização
+                    oficinaWrapper.style.display = 'none';
+                    oficinaSelect.required = false;
+                    internadoInput.style.display = 'none';
+                    internadoInput.required = false;
+
+                    if (e.target.value === 'CHECK-IN OFICINA' || e.target.value === 'CHECK-IN ROTA' || e.target.value === 'FINALIZADO' || e.target.value === 'FINALIZADO ROTA') {
+                        oficinaWrapper.style.display = 'block';
+                        // Só exige seleção se houver oficinas cadastradas para este item
+                        if (oficinasDoItem.length > 0) {
+                            oficinaSelect.required = true;
+                        }
+                    } else if (e.target.value === 'INTERNADO') {
+                        internadoInput.style.display = 'block';
+                        internadoInput.required = true;
+                        oficinaSelect.value = '';
+                    }
+                    
+                    // Atualiza cor
+                    this.updateStatusColor(e.target);
+                });
+
+                // Recria o campo especial para ELETRICA INTERNA se necessário
+                if (item.descricao === 'ELETRICA INTERNA' || item.descricao === 'ELETRICA / MECANICA - INTERNA') {
+                    const extraDiv = document.createElement('div');
+                    extraDiv.id = 'extra-eletrica-interna';
+                    extraDiv.className = 'checklist-extra hidden'; // Inicialmente oculto
+                    extraDiv.style.cssText = "margin-top: -10px; padding: 15px; background-color: #e8f4fd; border: 1px solid #b8daff; border-radius: 0 0 8px 8px; border-top: none;";
+                    extraDiv.innerHTML = `
+                        <label style="font-weight: bold; color: #0056b3; display: block; margin-bottom: 5px;"><i class="fas fa-cogs"></i> Peças Usadas (Mecanica/Elétrica):</label>
+                        <input type="text" class="checklist-pecas" placeholder="Informe as peças utilizadas..." style="width: 100%; padding: 8px; border: 1px solid #99caff; border-radius: 4px;" oninput="this.value = this.value.toUpperCase()">
+                    `;
+                    container.appendChild(extraDiv);
+                    
+                    statusSelect.addEventListener('change', (e) => {
+                         if (e.target.value === 'FINALIZADO') {
+                             extraDiv.classList.remove('hidden');
+                         } else {
+                             extraDiv.classList.add('hidden');
+                             extraDiv.querySelector('input').value = '';
+                         }
+                    });
+                }
+            });
+
+        } catch (err) {
+            console.error('Erro crítico no script do checklist:', err);
+        }
     },
 
     async carregarFiltrosDinamicos() {

@@ -153,28 +153,8 @@
 
                 <fieldset class="form-fieldset">
                     <legend>Checklist</legend>
-                    <div class="checklist-container mobile-checklist">
-                        <!-- Itens do Checklist -->
-                        <div class="checklist-item" data-item="ACESSORIOS"><label>ACESSÓRIOS</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="ALINHAMENTO/BALANCEAMENTO"><label>ALINHAMENTO</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="AR-CONDICIONADO"><label>AR-COND.</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="BORRACHARIA"><label>BORRACHARIA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="ELETRICA INTERNA"><label>ELÉTRICA INT.</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div id="extra-eletrica-interna" class="checklist-extra hidden"><input type="text" class="checklist-pecas" placeholder="Peças usadas..." oninput="this.value = this.value.toUpperCase()" style="text-transform: uppercase;"></div>
-                        <div class="checklist-item" data-item="MECANICA EXTERNA"><label>MEC. EXTERNA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="MOLEIRO"><label>MOLEIRO</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="TACOGRAFO"><label>TACÓGRAFO</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="TAPEÇARIA"><label>TAPEÇARIA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="THERMO KING"><label>THERMO KING</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="VIDROS / FECHADURAS"><label>VIDROS/FECH.</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="SERVIÇOS_GERAIS"><label>SERV. GERAIS</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="CONCESSIONARIA"><label>CONCESSIONARIA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="ANKA"><label>ANKA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="TARRAXA"><label>TARRAXA</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="USIMAC"><label>USIMAC</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="LUCAS BAU"><label>LUCAS BAU</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="IBIFURGO"><label>IBIFURGO</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
-                        <div class="checklist-item" data-item="IBIPORAN"><label>IBIPORÃ</label><select class="checklist-status"><option value="" selected>-</option><option value="PENDENTE">PENDENTE</option><option value="FINALIZADO">FINALIZADO</option><option value="FINALIZADO ROTA">FINALIZADO ROTA</option><option value="INTERNADO">INTERNADO</option><option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option><option value="CHECK-IN ROTA">CHECK-IN ROTA</option></select><input type="text" class="checklist-details" placeholder="Obs..."></div>
+                    <div class="checklist-container mobile-checklist" id="checklistContainer">
+                        <p style="text-align: center; padding: 10px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Carregando itens...</p>
                     </div>
                 </fieldset>
 
@@ -195,59 +175,6 @@
       alert('Você precisa fazer login.');
       window.location.href = 'index.html';
     }
-
-    // Lógica para ocultar a opção FINALIZADO quando status for CHECK-IN
-    function gerenciarOpcaoFinalizado(select) {
-        const val = select.value;
-        const finalizadoOpt = select.querySelector('option[value="FINALIZADO"]');
-        if (finalizadoOpt) {
-            if (val === 'CHECK-IN OFICINA' || val === 'CHECK-IN ROTA') {
-                finalizadoOpt.hidden = true;
-                finalizadoOpt.style.display = 'none';
-                finalizadoOpt.disabled = true;
-            } else {
-                finalizadoOpt.hidden = false;
-                finalizadoOpt.style.display = '';
-                finalizadoOpt.disabled = false;
-            }
-        }
-    }
-
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('checklist-status')) {
-            gerenciarOpcaoFinalizado(e.target);
-        }
-    });
-
-    document.addEventListener('change', (e) => {
-        if (e.target && e.target.classList.contains('checklist-status')) {
-            gerenciarOpcaoFinalizado(e.target);
-        }
-    });
-
-    // === Correção Visual para Status "FINALIZADO ROTA" ===
-    function aplicarCorStatusFinalizadoRota() {
-        // No mobile, pode ser td ou div dependendo da renderização, buscamos onde tem o texto
-        const elements = document.querySelectorAll('#tableBodyLancamentos *');
-        elements.forEach(el => {
-            // Verifica se é um elemento de texto direto contendo o status
-            if (el.children.length === 0 && el.textContent.trim() === 'FINALIZADO ROTA') {
-                // Se for um badge/span
-                if (el.tagName === 'SPAN' || el.classList.contains('badge')) {
-                    el.classList.add('badge-finalizado-rota');
-                    el.style.backgroundColor = '#006400';
-                    el.style.color = 'white';
-                } else {
-                    el.style.color = '#006400';
-                    el.style.fontWeight = 'bold';
-                }
-            }
-        });
-    }
-
-    const observerTabela = new MutationObserver(aplicarCorStatusFinalizadoRota);
-    const tabelaAlvo = document.getElementById('tableBodyLancamentos');
-    if (tabelaAlvo) observerTabela.observe(tabelaAlvo, { childList: true, subtree: true });
   </script>
 </body>
 </html>
