@@ -28,10 +28,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(targetId).classList.remove('hidden');
         });
     });
+
+    // Eventos de Ordenação (Oficinas)
+    document.querySelectorAll('#sectionCadastrarOficina th[data-field]').forEach(th => {
+        th.addEventListener('click', () => handleSortOficina(th.dataset.field));
+    });
+
+    // Eventos de Ordenação (Itens)
+    document.querySelectorAll('#sectionCadastrarItem th[data-field]').forEach(th => {
+        th.addEventListener('click', () => handleSortItem(th.dataset.field));
+    });
 });
 
 let oficinasCache = [];
 let itensCache = [];
+let sortStateOficina = { field: 'nome', order: 'asc' };
+let sortStateItem = { field: 'descricao', order: 'asc' };
 
 // Carrega o select de Itens Verificadores
 async function carregarItensVerificadores() {
@@ -73,6 +85,7 @@ async function listarItensVerificadores() {
         if (error) throw error;
 
         itensCache = data;
+        aplicarOrdenacaoItens(); // Aplica ordenação inicial
         renderizarTabelaItens(itensCache);
     } catch (error) {
         console.error('Erro ao listar itens:', error);
@@ -117,6 +130,7 @@ async function carregarOficinas() {
         if (error) throw error;
 
         oficinasCache = data;
+        aplicarOrdenacaoOficinas(); // Aplica ordenação inicial
         renderizarTabela(oficinasCache);
     } catch (error) {
         console.error('Erro ao carregar oficinas:', error);
@@ -310,4 +324,77 @@ function filtrarOficinas() {
         o.filial.toLowerCase().includes(termo)
     );
     renderizarTabela(filtrados);
+}
+
+// --- Funções de Ordenação ---
+
+function handleSortOficina(field) {
+    if (sortStateOficina.field === field) {
+        sortStateOficina.order = sortStateOficina.order === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortStateOficina.field = field;
+        sortStateOficina.order = 'asc';
+    }
+    updateSortIcons('sectionCadastrarOficina', field, sortStateOficina.order);
+    aplicarOrdenacaoOficinas();
+    filtrarOficinas(); // Re-renderiza respeitando o filtro atual
+}
+
+function aplicarOrdenacaoOficinas() {
+    const { field, order } = sortStateOficina;
+    oficinasCache.sort((a, b) => {
+        let valA = getOficinaValue(a, field);
+        let valB = getOficinaValue(b, field);
+        
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) return order === 'asc' ? -1 : 1;
+        if (valA > valB) return order === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+function getOficinaValue(obj, field) {
+    if (field === 'item_verificador') return obj.itens_verificacao?.descricao || '';
+    return obj[field] || '';
+}
+
+function handleSortItem(field) {
+    if (sortStateItem.field === field) {
+        sortStateItem.order = sortStateItem.order === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortStateItem.field = field;
+        sortStateItem.order = 'asc';
+    }
+    updateSortIcons('sectionCadastrarItem', field, sortStateItem.order);
+    aplicarOrdenacaoItens();
+    renderizarTabelaItens(itensCache);
+}
+
+function aplicarOrdenacaoItens() {
+    const { field, order } = sortStateItem;
+    itensCache.sort((a, b) => {
+        let valA = (a[field] || '').toLowerCase();
+        let valB = (b[field] || '').toLowerCase();
+
+        if (valA < valB) return order === 'asc' ? -1 : 1;
+        if (valA > valB) return order === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+function updateSortIcons(sectionId, activeField, order) {
+    const headers = document.querySelectorAll(`#${sectionId} th[data-field]`);
+    headers.forEach(th => {
+        // Remove ícones existentes
+        const icon = th.querySelector('i');
+        if (icon) icon.remove();
+
+        if (th.dataset.field === activeField) {
+            const i = document.createElement('i');
+            i.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            th.appendChild(i);
+        }
+    });
 }
