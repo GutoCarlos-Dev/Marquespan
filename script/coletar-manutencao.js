@@ -67,7 +67,8 @@ const ColetarManutencaoUI = {
         this.btnLimparTudo = document.getElementById('btnLimparTudo');
         this.btnBuscarRelatorio = document.getElementById('btnBuscarRelatorio');
         this.tableBodyRelatorio = document.getElementById('tableBodyRelatorio');
-        this.btnExportarPDF = document.getElementById('btnExportarPDF');
+        this.btnExportarPDFServicos = document.getElementById('btnExportarPDFServicos');
+        this.btnExportarPDFOficina = document.getElementById('btnExportarPDFOficina');
         this.graficosContainer = document.getElementById('graficos-container');
         this.contadorResultados = document.getElementById('contadorResultados');
     },
@@ -371,7 +372,8 @@ const ColetarManutencaoUI = {
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
         if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
-        if(this.btnExportarPDF) this.btnExportarPDF.addEventListener('click', (e) => this.gerarRelatorioPDF(e));
+        if(this.btnExportarPDFServicos) this.btnExportarPDFServicos.addEventListener('click', (e) => this.gerarRelatorioPDF(e, 'ITEM'));
+        if(this.btnExportarPDFOficina) this.btnExportarPDFOficina.addEventListener('click', (e) => this.gerarRelatorioPDF(e, 'OFICINA'));
         
         if(this.btnLimparSelecaoItem) {
             this.btnLimparSelecaoItem.addEventListener('click', () => this.limparSelecaoItem());
@@ -2011,9 +2013,9 @@ const ColetarManutencaoUI = {
         }
     },
 
-    async gerarRelatorioPDF(e) {
+    async gerarRelatorioPDF(e, tipoAgrupamento = 'ITEM') {
         e.preventDefault();
-        const btn = this.btnExportarPDF;
+        const btn = tipoAgrupamento === 'OFICINA' ? this.btnExportarPDFOficina : this.btnExportarPDFServicos;
         const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
@@ -2022,7 +2024,7 @@ const ColetarManutencaoUI = {
             // Mesma lógica de query para consistência
             let query = supabaseClient
                 .from('coletas_manutencao_checklist')
-                .select('*, coletas_manutencao!inner(*)');
+                .select('*, coletas_manutencao!inner(*), oficinas(nome)');
 
             // Filtro automático por nível
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -2061,27 +2063,23 @@ const ColetarManutencaoUI = {
                 return;
             }
 
-            // Ordenação
-            const col = this.currentReportSort.column;
-            const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
-
+            // Ordenação Forçada para Agrupamento
             data.sort((a, b) => {
-                let valA, valB;
-
-                if (col === 'data_hora') {
-                    valA = new Date(a.coletas_manutencao.data_hora);
-                    valB = new Date(b.coletas_manutencao.data_hora);
-                } else if (['semana', 'placa', 'modelo'].includes(col)) {
-                    valA = a.coletas_manutencao[col];
-                    valB = b.coletas_manutencao[col];
+                if (tipoAgrupamento === 'OFICINA') {
+                    const oficinaA = a.oficinas ? a.oficinas.nome : 'ZZZ'; // ZZZ para ir para o final
+                    const oficinaB = b.oficinas ? b.oficinas.nome : 'ZZZ';
+                    if (oficinaA < oficinaB) return -1;
+                    if (oficinaA > oficinaB) return 1;
                 } else {
-                    valA = a[col] || '';
-                    valB = b[col] || '';
+                    // Agrupamento por ITEM
+                    if (a.item < b.item) return -1;
+                    if (a.item > b.item) return 1;
                 }
-
-                if (valA < valB) return -1 * dir;
-                if (valA > valB) return 1 * dir;
-                return 0;
+                
+                // Ordenação secundária por data (decrescente)
+                const dateA = new Date(a.coletas_manutencao.data_hora);
+                const dateB = new Date(b.coletas_manutencao.data_hora);
+                return dateB - dateA;
             });
 
             const { jsPDF } = window.jspdf;
@@ -2118,7 +2116,8 @@ const ColetarManutencaoUI = {
             }
 
             doc.setFontSize(18);
-            doc.text("Relatório de Coleta de Manutenção", 14, 28);
+            const tituloRelatorio = tipoAgrupamento === 'OFICINA' ? "Relatório de Manutenção por Oficina" : "Relatório de Coleta de Manutenção";
+            doc.text(tituloRelatorio, 14, 28);
             doc.setFontSize(10);
             
             const nomeUsuario = usuarioLogado?.nome || 'Sistema';
@@ -2154,17 +2153,28 @@ const ColetarManutencaoUI = {
             };
 
             const tableBody = [];
-            let currentItem = null;
+            let currentGroup = null;
 
             data.forEach(row => {
-                if (row.item !== currentItem) {
-                    currentItem = row.item;
+                let groupValue;
+                let groupColor;
+
+                if (tipoAgrupamento === 'OFICINA') {
+                    groupValue = row.oficinas ? row.oficinas.nome : 'SEM OFICINA';
+                    groupColor = [220, 220, 220]; // Cinza padrão para oficinas
+                } else {
+                    groupValue = row.item;
+                    groupColor = getItemColor(groupValue);
+                }
+
+                if (groupValue !== currentGroup) {
+                    currentGroup = groupValue;
                     // Adiciona linha de título destacada
                     tableBody.push([{
-                        content: currentItem,
+                        content: currentGroup,
                         colSpan: 9,
                         styles: { 
-                            fillColor: getItemColor(currentItem), 
+                            fillColor: groupColor, 
                             textColor: [0, 0, 0], 
                             fontStyle: 'bold', 
                             halign: 'center',
@@ -2174,17 +2184,32 @@ const ColetarManutencaoUI = {
                 }
 
                 const coleta = row.coletas_manutencao;
-                tableBody.push([
-                    new Date(coleta.data_hora).toLocaleString('pt-BR'),
-                    coleta.semana,
-                    coleta.placa,
-                    coleta.modelo || '-',
-                    coleta.km,
-                    coleta.usuario,
-                    row.status,
-                    row.detalhes || '',
-                    row.pecas_usadas || ''
-                ]);
+                
+                if (tipoAgrupamento === 'OFICINA') {
+                    // Layout para Oficina (Inclui o Item na linha)
+                    tableBody.push([
+                        new Date(coleta.data_hora).toLocaleString('pt-BR'),
+                        coleta.placa,
+                        coleta.modelo || '-',
+                        row.item, // Mostra o Item
+                        row.status,
+                        row.detalhes || '',
+                        row.pecas_usadas || ''
+                    ]);
+                } else {
+                    // Layout Padrão (Item é o título)
+                    tableBody.push([
+                        new Date(coleta.data_hora).toLocaleString('pt-BR'),
+                        coleta.semana,
+                        coleta.placa,
+                        coleta.modelo || '-',
+                        coleta.km,
+                        coleta.usuario,
+                        row.status,
+                        row.detalhes || '',
+                        row.pecas_usadas || ''
+                    ]);
+                }
             });
 
             // Adiciona linha de totalizador
@@ -2199,15 +2224,18 @@ const ColetarManutencaoUI = {
                 }
             }]);
 
+            const tableHead = tipoAgrupamento === 'OFICINA' 
+                ? [['Data/Hora', 'Placa', 'Modelo', 'Item', 'Status', 'Detalhes', 'Peças']]
+                : [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Status', 'Detalhes', 'Peças']];
+
             doc.autoTable({
-                head: [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Status', 'Detalhes', 'Peças']],
+                head: tableHead,
                 body: tableBody,
                 startY: 45,
                 headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    7: { cellWidth: 50 }, // Detalhes
-                    8: { cellWidth: 40 }  // Peças
+                    // Ajuste automático
                 }
             });
 
