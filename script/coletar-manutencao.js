@@ -178,7 +178,7 @@ const ColetarManutencaoUI = {
                 const oficinasDoItem = oficinasPorItem[item.id] || oficinasPorItem[item.descricao] || [];
                 let oficinaOptions = '<option value="">Selecione a Oficina</option>';
                 oficinasDoItem.forEach(of => {
-                    oficinaOptions += `<option value="${of.id}">${of.nome} - ${of.filial}</option>`;
+                    oficinaOptions += `<option value="${of.id}">${of.nome}</option>`;
                 });
 
                 div.innerHTML = `
@@ -289,7 +289,7 @@ const ColetarManutencaoUI = {
                 if (this.searchOficinaInput) this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
                 
                 oficinas.forEach(o => {
-                    const texto = `${o.nome} - ${o.filial}`;
+                    const texto = o.nome;
                     if (this.searchOficinaInput) this.searchOficinaInput.add(new Option(texto, texto));
                     
                     // Filtro Relatório (Checkbox)
