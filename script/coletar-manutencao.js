@@ -16,6 +16,7 @@ const ColetarManutencaoUI = {
         this.reportData = []; // Cache dos dados do relatório
         this.chartStatus = null; // Instância do gráfico de status
         this.chartItems = null; // Instância do gráfico de itens
+        this.chartOficinas = null; // Instância do novo gráfico de oficinas
         this.carregarFiltrosDinamicos();
         this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.carregarChecklistDinamico(); // Carrega o checklist dinâmico (Desktop e Mobile)
@@ -73,6 +74,7 @@ const ColetarManutencaoUI = {
         this.contadorResultados = document.getElementById('contadorResultados');
     },
 
+    // Corrige opções de status para padronizar valores
     fixStatusOptions() {
         const selects = document.querySelectorAll('.checklist-status');
         selects.forEach(select => {
@@ -89,6 +91,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Injeta estilos CSS dinamicamente para os badges de status
     injectStyles() {
         const style = document.createElement('style');
         style.innerHTML = `
@@ -126,6 +129,7 @@ const ColetarManutencaoUI = {
         document.head.appendChild(style);
     },
 
+    // Carrega dinamicamente os itens do checklist e as oficinas relacionadas
     async carregarChecklistDinamico() {
         const container = document.getElementById('checklistContainer') || document.querySelector('.checklist-container');
         if (!container) return;
@@ -258,6 +262,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Carrega os dados para os filtros dinâmicos (Itens e Oficinas)
     async carregarFiltrosDinamicos() {
         try {
             // Carregar Itens Verificadores
@@ -306,6 +311,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Associa os eventos aos elementos DOM
     bindEvents() {
         if (this.btnAdicionarLancamento) this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
         if (this.btnAdicionarItem) this.btnAdicionarItem.addEventListener('click', () => this.abrirModal()); // Evento Mobile
@@ -482,6 +488,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Limpa a seleção de itens no filtro de relatório
     limparSelecaoItem() {
         const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
         checkboxes.forEach(cb => cb.checked = false);
@@ -489,12 +496,14 @@ const ColetarManutencaoUI = {
     },
 
     limparSelecaoOficina() {
+        // Limpa a seleção de oficinas no filtro de relatório
         const checkboxes = this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox');
         checkboxes.forEach(cb => cb.checked = false);
         this.filtroOficinaText.textContent = 'Todas';
     },
 
     limparFiltros() {
+        // Limpa todos os filtros da seção "Gerar Arquivo"
         // Limpa inputs de texto e data
         this.filtroSemana.value = '';
         this.filtroPlaca.value = '';
@@ -515,6 +524,7 @@ const ColetarManutencaoUI = {
         if (this.filtroStatusText) this.filtroStatusText.textContent = 'Todos';
     },
 
+    // Inicializa a navegação por abas
     initTabs() {
         const buttons = document.querySelectorAll('#menu-coletar-manutencao .painel-btn');
         const sections = document.querySelectorAll('.main-content .section');
@@ -531,6 +541,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Renderiza a legenda de cores para os status
     renderLegend() {
         const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
         for (const h of headings) {
@@ -555,6 +566,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Abre o modal de lançamento de manutenção
     abrirModal() {
         this.editingId = null; // Reseta o ID de edição para criar um novo
         this.formColeta.reset();
@@ -567,6 +579,7 @@ const ColetarManutencaoUI = {
         this.modal.classList.remove('hidden');
     },
 
+    // Atualiza a cor de fundo de um select de status com base no valor selecionado
     updateStatusColor(selectElement) {
         if (!selectElement) return;
         // Remove todas as classes de status antes de adicionar a nova
@@ -588,6 +601,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Aplica restrições de visibilidade no modal com base no nível do usuário
     aplicarRestricoesDeNivelNoModal() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
@@ -616,14 +630,17 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Fecha o modal de lançamento de manutenção
     fecharModal() {
         this.modal.classList.add('hidden');
     },
 
+    // Abre o modal de importação em massa
     abrirModalImportacao() {
         this.formImportacao.reset();
         this.modalImportacao.classList.remove('hidden');
     },
+    // Fecha o modal de importação em massa
 
     fecharModalImportacao() {
         this.modalImportacao.classList.add('hidden');
@@ -663,6 +680,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Processa o arquivo XLSX para importação de dados de Moleiro
     async processarArquivoMoleiro(arquivo) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -747,6 +765,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Processa o arquivo XLSX para importação de dados de Mecânica Externa
     async processarArquivoMecanicaExterna(arquivo) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -835,6 +854,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Processa o arquivo XLSX para importação de dados gerais
     async processarArquivoGeral(arquivo) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -969,6 +989,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Preenche os campos de data, hora e usuário no modal de lançamento
     preencherDadosPadrao() {
         // Preenche data e hora
         const now = new Date();
@@ -989,6 +1010,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Calcula o número da semana com base em uma data de início
     calculateCurrentWeek(dateObj = new Date()) {
         const startDate = new Date('2025-12-28T00:00:00');
         const diffInMs = dateObj.getTime() - startDate.getTime();
@@ -999,6 +1021,7 @@ const ColetarManutencaoUI = {
         return String(weekNumber).padStart(2, ''); //Começa semana sem o zero
     },
 
+    // Carrega a lista de veículos para o datalist
     async carregarVeiculos() {
         try {
             const { data, error } = await supabaseClient
@@ -1020,6 +1043,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Preenche o modelo do veículo automaticamente ao selecionar a placa
     preencherModeloVeiculo() {
         const placaSelecionada = this.coletaPlacaInput.value;
         const veiculo = this.veiculosData.find(v => v.placa === placaSelecionada);
@@ -1030,6 +1054,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Registra uma nova coleta ou atualiza uma existente
     async registrarColeta(e) {
         e.preventDefault();
         
@@ -1288,6 +1313,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Carrega os lançamentos recentes para a tabela principal
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
@@ -1482,6 +1508,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Lida com a ordenação da tabela de lançamentos
     handleSort(column) {
         if (this.currentSort.column === column) {
             this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -1493,6 +1520,7 @@ const ColetarManutencaoUI = {
         this.carregarLancamentos();
     },
 
+    // Atualiza os ícones de ordenação na tabela de lançamentos
     updateSortIcons() {
         document.querySelectorAll('#sectionLancamento th[data-sort] i').forEach(icon => {
             icon.className = 'fas fa-sort'; // Reset
@@ -1503,6 +1531,7 @@ const ColetarManutencaoUI = {
         });
     },
 
+    // Carrega os dados de uma coleta para edição no modal
     async editarColeta(id) {
         try {
             // 1. Buscar dados do cabeçalho
@@ -1615,6 +1644,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Exclui uma coleta de manutenção
     async excluirColeta(id) {
         if (!confirm('Deseja realmente excluir este lançamento?')) return;
         try {
@@ -1635,6 +1665,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Busca e renderiza o relatório de manutenções com base nos filtros
     async buscarRelatorio() {
         if (!this.tableBodyRelatorio) return;
         this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
@@ -1700,6 +1731,7 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Renderiza a tabela de resultados do relatório
     renderRelatorio() {
         if (!this.tableBodyRelatorio) return;
         this.tableBodyRelatorio.innerHTML = '';
@@ -1786,11 +1818,13 @@ const ColetarManutencaoUI = {
         this.updateReportSortIcons();
     },
 
+    // Renderiza os gráficos de análise
     renderizarGraficos() {
         if (!this.reportData || this.reportData.length === 0) {
             if (this.graficosContainer) this.graficosContainer.style.display = 'none';
             return;
         }
+        // Mostra o container de gráficos
 
         if (this.graficosContainer) this.graficosContainer.style.display = 'block';
 
@@ -1822,10 +1856,23 @@ const ColetarManutencaoUI = {
             itemCounts[item] = (itemCounts[item] || 0) + 1;
         });
 
+        // 3. Preparar dados para Gráfico de Oficinas
+        const oficinaCounts = {};
+        this.reportData.forEach(row => {
+            const oficina = row.oficinas ? row.oficinas.nome : 'N/A';
+            oficinaCounts[oficina] = (oficinaCounts[oficina] || 0) + 1;
+        });
+
         // Destruir gráficos existentes se houver
         if (this.chartStatus) this.chartStatus.destroy();
         if (this.chartItems) this.chartItems.destroy();
+        if (this.chartOficinas) this.chartOficinas.destroy(); // Destruir o novo gráfico
 
+        // Renderizar Gráfico de Status (Pizza)
+        // ... (código existente para o gráfico de status)
+
+        // Renderizar Gráfico de Status (Pizza)
+        // ... (código existente para o gráfico de status)
         // Renderizar Gráfico de Status (Pizza)
         const ctxStatus = document.getElementById('grafico-status').getContext('2d');
         this.chartStatus = new Chart(ctxStatus, {
@@ -1854,6 +1901,26 @@ const ColetarManutencaoUI = {
                     label: 'Quantidade',
                     data: Object.values(itemCounts),
                     backgroundColor: '#007bff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Renderizar Gráfico de Oficinas (Barras)
+        const ctxOficinas = document.getElementById('grafico-oficinas').getContext('2d');
+        this.chartOficinas = new Chart(ctxOficinas, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(oficinaCounts),
+                datasets: [{
+                    label: 'Quantidade de Manutenções',
+                    data: Object.values(oficinaCounts),
+                    backgroundColor: '#17a2b8' // Cor diferente para este gráfico
                 }]
             },
             options: {
