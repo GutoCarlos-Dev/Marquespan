@@ -36,6 +36,7 @@ const ColetarManutencaoUI = {
         this.coletaPlacaInput = document.getElementById('coletaPlaca');
         this.coletaModeloInput = document.getElementById('coletaModelo');
         this.veiculosList = document.getElementById('veiculosList');
+        this.coletaValorTotalInput = document.getElementById('coletaValorTotal');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
         this.searchPlacaInput = document.getElementById('searchPlaca');
         this.searchItemInput = document.getElementById('searchItem');
@@ -202,6 +203,9 @@ const ColetarManutencaoUI = {
                             ${oficinaOptions}
                         </select>
                     </div>
+                    <div class="valor-wrapper" style="display: none; margin-top: 5px;">
+                        <input type="text" class="checklist-valor" placeholder="R$ 0,00" value="R$ 0,00" style="width: 100%; padding: 5px; border: 1px solid #28a745; border-radius: 4px; color: #155724; font-weight: bold;">
+                    </div>
                 `;
                 container.appendChild(div);
 
@@ -209,6 +213,8 @@ const ColetarManutencaoUI = {
                 const statusSelect = div.querySelector('.checklist-status');
                 const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
                 const oficinaSelect = div.querySelector('.oficina-selector');
+                const valorWrapper = div.querySelector('.valor-wrapper');
+                const valorInput = div.querySelector('.checklist-valor');
 
                 statusSelect.addEventListener('change', (e) => {
                     // Resetar visualização
@@ -227,8 +233,27 @@ const ColetarManutencaoUI = {
                         oficinaSelect.value = '';
                     }
 
+                    // Lógica para Valor (FINALIZADO ou FINALIZADO ROTA)
+                    if (['FINALIZADO', 'FINALIZADO ROTA'].includes(val)) {
+                        valorWrapper.style.display = 'block';
+                    } else {
+                        valorWrapper.style.display = 'none';
+                        valorInput.value = 'R$ 0,00';
+                    }
+                    this.calcularValorTotal();
+
                     // Atualiza cor
                     this.updateStatusColor(e.target);
+                });
+
+                // Formatação de Moeda e Cálculo
+                valorInput.addEventListener('input', (e) => {
+                    let value = e.target.value.replace(/\D/g, '');
+                    value = (parseInt(value) / 100).toFixed(2) + '';
+                    value = value.replace('.', ',');
+                    value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+                    e.target.value = 'R$ ' + value;
+                    this.calcularValorTotal();
                 });
 
                 // Recria o campo especial para ELETRICA INTERNA se necessário
@@ -259,6 +284,21 @@ const ColetarManutencaoUI = {
 
         } catch (err) {
             console.error('Erro crítico no script do checklist:', err);
+        }
+    },
+
+    // Calcula o valor total dos itens do checklist
+    calcularValorTotal() {
+        let total = 0;
+        const valorInputs = document.querySelectorAll('.checklist-valor');
+        valorInputs.forEach(input => {
+            if (input.closest('.valor-wrapper').style.display !== 'none') {
+                let valStr = input.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+                total += parseFloat(valStr) || 0;
+            }
+        });
+        if (this.coletaValorTotalInput) {
+            this.coletaValorTotalInput.value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
     },
 
@@ -571,6 +611,7 @@ const ColetarManutencaoUI = {
         this.editingId = null; // Reseta o ID de edição para criar um novo
         this.formColeta.reset();
         this.preencherDadosPadrao();
+        if (this.coletaValorTotalInput) this.coletaValorTotalInput.value = 'R$ 0,00';
         this.carregarVeiculos();
         this.fixStatusOptions();
         // Limpa as cores de todos os selects de status no modal
@@ -1066,6 +1107,10 @@ const ColetarManutencaoUI = {
         const placa = document.getElementById('coletaPlaca').value.trim().toUpperCase();
         const modelo = document.getElementById('coletaModelo').value;
         const km = document.getElementById('coletaKm').value;
+        
+        // Captura o valor total calculado
+        const valorTotalStr = this.coletaValorTotalInput ? this.coletaValorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim() : '0';
+        const valorTotal = parseFloat(valorTotalStr) || 0;
 
         // Validação de duplicidade visual na grid atual
         if (!this.editingId) { // Só valida duplicidade se for novo registro
@@ -1109,6 +1154,7 @@ const ColetarManutencaoUI = {
             let status = item.querySelector('.checklist-status').value;
             let pecasUsadas = null;
             let oficinaId = null;
+            let valorItem = 0;
 
             // Captura peças usadas se for Elétrica Interna e estiver visível
             if (nomeItem === 'ELETRICA INTERNA' || nomeItem === 'ELETRICA / MECANICA - INTERNA') {
@@ -1124,6 +1170,13 @@ const ColetarManutencaoUI = {
                 oficinaId = parseInt(oficinaSelect.value);
             }
 
+            // Captura valor se estiver visível
+            const valorWrapper = item.querySelector('.valor-wrapper');
+            if (valorWrapper && valorWrapper.style.display !== 'none') {
+                const valStr = item.querySelector('.checklist-valor').value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+                valorItem = parseFloat(valStr) || 0;
+            }
+
             // Regra: Se a descrição estiver vazia, força o status para vazio.
             // Isso garante que o item seja filtrado abaixo e removido do banco (não aparecerá na busca).
             if (detalhes === "") {
@@ -1131,7 +1184,7 @@ const ColetarManutencaoUI = {
             }
             
             checklistItems.push({
-                item: nomeItem, detalhes, status, pecas_usadas: pecasUsadas, oficina_id: oficinaId
+                item: nomeItem, detalhes, status, pecas_usadas: pecasUsadas, oficina_id: oficinaId, valor: valorItem
             });
         });
 
@@ -1154,7 +1207,8 @@ const ColetarManutencaoUI = {
                         usuario,
                         placa,
                         modelo,
-                        km: parseInt(km)
+                        km: parseInt(km),
+                        valor_total: valorTotal
                     })
                     .eq('id', this.editingId);
 
@@ -1169,7 +1223,8 @@ const ColetarManutencaoUI = {
                     detalhes: i.detalhes,
                     status: i.status, // Permite salvar vazio se selecionado
                     pecas_usadas: i.pecas_usadas,
-                    oficina_id: i.oficina_id
+                    oficina_id: i.oficina_id,
+                    valor: i.valor
                 })).filter(i => i.status !== "" || i.detalhes !== ""); // Salva apenas preenchidos
 
                 if (checklistPayload.length > 0) {
@@ -1197,7 +1252,7 @@ const ColetarManutencaoUI = {
                     const { data: coleta, error: coletaError } = await supabaseClient
                         .from('coletas_manutencao')
                         .insert([{
-                            semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km)
+                            semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km), valor_total: valorTotal
                         }])
                         .select()
                         .single();
@@ -1209,7 +1264,8 @@ const ColetarManutencaoUI = {
                         item: i.item,
                         detalhes: i.detalhes,
                         status: i.status, // Permite salvar vazio
-                        pecas_usadas: i.pecas_usadas
+                        pecas_usadas: i.pecas_usadas,
+                        valor: i.valor
                     }));
 
                     const { error: checklistError } = await supabaseClient
@@ -1257,7 +1313,8 @@ const ColetarManutencaoUI = {
                                 detalhes: newDetails,
                                 status: statusItem, // Atualiza status (ex: para OK)
                                 pecas_usadas: formItem.pecas_usadas || match.pecas_usadas,
-                                oficina_id: formItem.oficina_id
+                                oficina_id: formItem.oficina_id,
+                                valor: formItem.valor
                             });
                             headersToUpdate.add(matchHeaderId);
                         } else {
@@ -1272,7 +1329,7 @@ const ColetarManutencaoUI = {
                     // A. Updates de Itens
                     for (const up of updatesToPerform) {
                         await supabaseClient.from('coletas_manutencao_checklist')
-                            .update({ detalhes: up.detalhes, status: up.status, pecas_usadas: up.pecas_usadas, oficina_id: up.oficina_id })
+                            .update({ detalhes: up.detalhes, status: up.status, pecas_usadas: up.pecas_usadas, oficina_id: up.oficina_id, valor: up.valor })
                             .eq('id', up.id);
                     }
 
@@ -1284,7 +1341,8 @@ const ColetarManutencaoUI = {
                             detalhes: i.detalhes,
                             status: i.status,
                             pecas_usadas: i.pecas_usadas,
-                            oficina_id: i.oficina_id
+                            oficina_id: i.oficina_id,
+                            valor: i.valor
                         }));
                         await supabaseClient.from('coletas_manutencao_checklist').insert(payload);
                     }
@@ -1502,6 +1560,7 @@ const ColetarManutencaoUI = {
                     <td>${item.semana}</td>
                     <td>${item.placa}</td>
                     <td>${item.usuario}</td>
+                    <td><strong>${(item.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
                     <td>
                         ${botoesAcao}
                     </td>
@@ -1570,6 +1629,7 @@ const ColetarManutencaoUI = {
             document.getElementById('coletaPlaca').value = coleta.placa;
             document.getElementById('coletaModelo').value = coleta.modelo;
             document.getElementById('coletaKm').value = coleta.km;
+            if (this.coletaValorTotalInput) this.coletaValorTotalInput.value = (coleta.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
             // 4. Preencher o checklist
             // Primeiro limpa tudo
@@ -1577,6 +1637,7 @@ const ColetarManutencaoUI = {
                 const statusSelect = div.querySelector('.checklist-status');
                 div.querySelector('.checklist-details').value = '';
                 statusSelect.value = '';
+                div.querySelector('.checklist-valor').value = 'R$ 0,00';
                 this.updateStatusColor(statusSelect); // Reseta a cor
             });
             // Limpa campo extra
@@ -1591,6 +1652,8 @@ const ColetarManutencaoUI = {
                     const statusSelect = div.querySelector('.checklist-status');
                     const detailsInput = div.querySelector('.checklist-details');
                     const oficinaSelect = div.querySelector('.oficina-selector');
+                    const valorWrapper = div.querySelector('.valor-wrapper');
+                    const valorInput = div.querySelector('.checklist-valor');
 
                     let detalhesTexto = item.detalhes || '';
                     let oficinaEncontrada = item.oficina_id || null;
@@ -1634,6 +1697,11 @@ const ColetarManutencaoUI = {
                         oficinaSelect.value = oficinaEncontrada;
                     }
 
+                    // Preenche valor se existir
+                    if (item.valor) {
+                        valorInput.value = item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    }
+
                     // Lógica específica para preencher Elétrica Interna
                     if ((item.item === 'ELETRICA INTERNA' || item.item === 'ELETRICA / MECANICA - INTERNA') && (statusValue === 'FINALIZADO' || statusValue === 'OK')) {
                         extraField.classList.remove('hidden');
@@ -1641,6 +1709,7 @@ const ColetarManutencaoUI = {
                     }
                 }
             });
+            this.calcularValorTotal(); // Recalcula para garantir consistência visual
 
             this.aplicarRestricoesDeNivelNoModal();
             this.modal.classList.remove('hidden');
