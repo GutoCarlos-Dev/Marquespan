@@ -1326,6 +1326,7 @@ const ColetarManutencaoUI = {
             // Verifica nível do usuário para filtro automático
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            const nomeUsuario = usuarioLogado ? usuarioLogado.nome : '';
             let roleFilterItem = null;
             if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
             if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
@@ -1337,6 +1338,11 @@ const ColetarManutencaoUI = {
             let query = supabaseClient
                 .from('coletas_manutencao')
                 .select('*');
+
+            // Filtro para usuários específicos (ROMO e MOLEIRO) verem apenas seus lançamentos
+            if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nivel === 'moleiro')) {
+                query = query.eq('usuario', nomeUsuario);
+            }
 
             if (searchPlaca) {
                 query = query.ilike('placa', `%${searchPlaca}%`);
