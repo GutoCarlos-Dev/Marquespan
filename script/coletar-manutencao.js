@@ -1059,14 +1059,20 @@ const ColetarManutencaoUI = {
         for (const item of checklistElements) {
             const status = item.querySelector('.checklist-status').value;
             const oficinaSelect = item.querySelector('.oficina-selector');
-            
-            if ((status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA' || status === 'INTERNADO') && oficinaSelect) {
-                // Verifica se há opções carregadas (length > 1 pois a primeira é "Selecione...")
-                if (oficinaSelect.options.length > 1 && !oficinaSelect.value) {
+            const statusRequiresOffice = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(status);
+
+            if (statusRequiresOffice && oficinaSelect) {
+                if (!oficinaSelect.value) { // Verifica se um valor foi selecionado
                     const nomeItem = item.querySelector('.checklist-label').textContent;
-                    alert(`⚠️ É obrigatório selecionar uma oficina para o item "${nomeItem}" com status "${status}".`);
+                    if (oficinaSelect.options.length > 1) {
+                        // Existem oficinas para escolher, mas nenhuma foi selecionada
+                        alert(`⚠️ É obrigatório selecionar uma oficina para o item "${nomeItem}" com status "${status}".`);
+                    } else {
+                        // Não há oficinas disponíveis no dropdown
+                        alert(`⚠️ Não é possível marcar o item "${nomeItem}" como "${status}" pois não há oficinas cadastradas para este tipo de serviço. Cadastre uma oficina primeiro.`);
+                    }
                     oficinaSelect.focus();
-                    return;
+                    return; // Bloqueia o envio do formulário
                 }
             }
         }
