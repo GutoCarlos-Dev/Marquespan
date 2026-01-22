@@ -1340,7 +1340,7 @@ const ColetarManutencaoUI = {
                 .select('*');
 
             // Filtro para usuários específicos (ROMO e MOLEIRO) verem apenas seus lançamentos
-            if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nomeUsuario.toUpperCase() === 'ROMO DIESEL' || nivel === 'mecanica_externa')) {
+            if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nomeUsuario.toUpperCase() === 'ROMO DIESEL' || nomeUsuario.toUpperCase() === 'MOLEIRO' || nomeUsuario.toUpperCase() === 'TREVO DE MOLAS' || nivel === 'moleiro')) {
                 query = query.eq('usuario', nomeUsuario);
             }
 
