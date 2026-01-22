@@ -132,7 +132,7 @@ const ColetarManutencaoUI = {
 
         // Lista de segurança (Fallback) caso o banco de dados falhe ou a tabela não exista
         const STATIC_ITEMS = [
-            'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
+            'ACESSORIOS', 'ALINHAMENTO / BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
             'ELETRICA / MECANICA - INTERNA', 'MECANICA - EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
             'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 'CONCESSIONARIA',
             'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
@@ -853,7 +853,7 @@ const ColetarManutencaoUI = {
                     // Chave: Nome da coluna no Excel (normalizado upper/trim), Valor: Nome do item no Banco
                     const mapItens = {
                         'ACESSORIOS': 'ACESSORIOS',
-                        'ALINHAMENTO / BALANCEAMENTO': 'ALINHAMENTO/BALANCEAMENTO',
+                        'ALINHAMENTO / BALANCEAMENTO': 'ALINHAMENTO / BALANCEAMENTO',
                         'AR-CONDICIONADO': 'AR-CONDICIONADO',
                         'BORRACHARIA': 'BORRACHARIA',
                         'MECANICA EXTERNA': 'MECANICA EXTERNA',
@@ -2128,7 +2128,7 @@ const ColetarManutencaoUI = {
             const getItemColor = (item) => {
                 const colors = {
                     'ACESSORIOS': [255, 205, 210], // Red
-                    'ALINHAMENTO/BALANCEAMENTO': [200, 230, 201], // Green
+                    'ALINHAMENTO / BALANCEAMENTO': [200, 230, 201], // Green
                     'AR-CONDICIONADO': [187, 222, 251], // Blue
                     'BORRACHARIA': [255, 249, 196], // Amber
                     'ELETRICA INTERNA': [225, 190, 231], // Purple
