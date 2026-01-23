@@ -446,65 +446,52 @@ function renderChartTopServicosFreq(data) {
 }
 
 function renderChartPendentesInternados(data) {
-    // Filtra apenas itens com status PENDENTE ou INTERNADO
-    const relevantData = data.filter(item => 
-        item.status === 'PENDENTE' || item.status === 'INTERNADO'
-    );
+    // Contagem total de Pendentes e Internados
+    let totalPendente = 0;
+    let totalInternado = 0;
 
-    // Agrupa por Placa e conta os status
-    const placas = {};
-    relevantData.forEach(item => {
-        const placa = item.coletas_manutencao.placa || 'N/A';
-        if (!placas[placa]) {
-            placas[placa] = { PENDENTE: 0, INTERNADO: 0 };
-        }
-        if (item.status === 'PENDENTE') placas[placa].PENDENTE++;
-        if (item.status === 'INTERNADO') placas[placa].INTERNADO++;
+    data.forEach(item => {
+        if (item.status === 'PENDENTE') totalPendente++;
+        if (item.status === 'INTERNADO') totalInternado++;
     });
-
-    const labels = Object.keys(placas);
-    const dataPendente = labels.map(p => placas[p].PENDENTE);
-    const dataInternado = labels.map(p => placas[p].INTERNADO);
 
     const ctx = document.getElementById('chartPendentesInternados').getContext('2d');
     if (chartPendentesInternados) chartPendentesInternados.destroy();
 
     chartPendentesInternados = new Chart(ctx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Pendente',
-                    data: dataPendente,
-                    backgroundColor: STATUS_COLORS['PENDENTE'],
-                    stack: 'Stack 0'
-                },
-                {
-                    label: 'Internado',
-                    data: dataInternado,
-                    backgroundColor: STATUS_COLORS['INTERNADO'],
-                    stack: 'Stack 0'
-                }
-            ]
+            labels: ['Pendentes', 'Internados'],
+            datasets: [{
+                data: [totalPendente, totalInternado],
+                backgroundColor: [STATUS_COLORS['PENDENTE'], STATUS_COLORS['INTERNADO']],
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' }
-            },
-            scales: {
-                x: {
-                    stacked: true,
-                    ticks: { stepSize: 1 }
+                legend: { 
+                    position: 'bottom',
+                    labels: { font: { size: 14 } }
                 },
-                y: {
-                    stacked: true
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 24 },
+                    formatter: (value) => value > 0 ? value : ''
+                },
+                title: {
+                    display: true,
+                    text: `Total: ${totalPendente + totalInternado}`,
+                    font: { size: 16 },
+                    position: 'top'
                 }
-            }
-        }
+            },
+            cutout: '60%'
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
