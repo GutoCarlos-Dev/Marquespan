@@ -41,13 +41,22 @@ async function carregarDados() {
     const dtFim = document.getElementById('dataFinal').value;
 
     try {
-        // Busca dados da tabela de manutenções (coletas_manutencao_checklist)
-        // Ajuste os nomes das colunas conforme seu banco de dados real
+        // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
         const { data, error } = await supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*')
-            .gte('data_hora', `${dtIni}T00:00:00`)
-            .lte('data_hora', `${dtFim}T23:59:59`);
+            .select(`
+                *,
+                coletas_manutencao!inner (
+                    id,
+                    data_hora,
+                    placa
+                ),
+                oficinas (
+                    nome
+                )
+            `)
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
 
         if (error) throw error;
 
@@ -67,20 +76,16 @@ async function carregarDados() {
 }
 
 function atualizarKPIs(data) {
-    // 1. Total Manutenções
-    const totalQtd = data.length;
-    document.getElementById('kpi-total-qtd').textContent = totalQtd;
+    // 1. Total Manutenções (Conta cabeçalhos únicos, pois 'data' contém itens)
+    const uniqueManutencoes = new Set(data.map(item => item.coletas_manutencao.id));
+    document.getElementById('kpi-total-qtd').textContent = uniqueManutencoes.size;
 
-    // 2. Gasto Total
-    // Assume que existe uma coluna 'valor_total' ou similar. Se for string "R$ 100,00", precisa converter.
+    // 2. Gasto Total (Soma o valor de cada item do checklist)
     let totalValor = 0;
     data.forEach(item => {
-        let val = item.valor_total; // Ajuste conforme nome da coluna no DB
-        if (typeof val === 'string') {
-            // Remove R$, pontos de milhar e troca vírgula por ponto
-            val = parseFloat(val.replace(/[R$\s.]/g, '').replace(',', '.'));
-        }
-        if (!isNaN(val)) totalValor += val;
+        // O valor vem da tabela checklist
+        const val = parseFloat(item.valor) || 0;
+        totalValor += val;
     });
     document.getElementById('kpi-total-valor').textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -91,7 +96,7 @@ function atualizarKPIs(data) {
     // 4. Finalizados Hoje
     const hojeStr = new Date().toISOString().split('T')[0];
     const finalizadosHoje = data.filter(item => {
-        const dataItem = item.data_hora ? item.data_hora.split('T')[0] : '';
+        const dataItem = item.coletas_manutencao.data_hora ? item.coletas_manutencao.data_hora.split('T')[0] : '';
         return (item.status === 'FINALIZADO' || item.status === 'FINALIZADO ROTA') && dataItem === hojeStr;
     }).length;
     document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
@@ -109,10 +114,16 @@ function atualizarGraficos(data) {
 function renderChartEvolucao(data) {
     // Agrupar por data
     const agrupado = {};
+    const processedIds = new Set();
+
     data.forEach(item => {
-        const dataStr = item.data_hora ? new Date(item.data_hora).toLocaleDateString('pt-BR') : 'N/A';
-        if (!agrupado[dataStr]) agrupado[dataStr] = 0;
-        agrupado[dataStr]++;
+        // Conta apenas uma vez por manutenção (cabeçalho), ignorando múltiplos itens
+        if (!processedIds.has(item.coletas_manutencao.id)) {
+            processedIds.add(item.coletas_manutencao.id);
+            const dataStr = item.coletas_manutencao.data_hora ? new Date(item.coletas_manutencao.data_hora).toLocaleDateString('pt-BR') : 'N/A';
+            if (!agrupado[dataStr]) agrupado[dataStr] = 0;
+            agrupado[dataStr]++;
+        }
     });
 
     // Ordenar datas
@@ -154,11 +165,8 @@ function renderChartTopPlacas(data) {
     // Agrupar gastos por placa
     const gastosPorPlaca = {};
     data.forEach(item => {
-        let val = item.valor_total;
-        if (typeof val === 'string') val = parseFloat(val.replace(/[R$\s.]/g, '').replace(',', '.'));
-        if (isNaN(val)) val = 0;
-
-        const placa = item.placa || 'N/A';
+        const val = parseFloat(item.valor) || 0;
+        const placa = item.coletas_manutencao.placa || 'N/A';
         if (!gastosPorPlaca[placa]) gastosPorPlaca[placa] = 0;
         gastosPorPlaca[placa] += val;
     });
@@ -200,12 +208,10 @@ function renderChartOficinas(data) {
     // Agrupar gastos por Oficina
     const gastosPorOficina = {};
     data.forEach(item => {
-        let val = item.valor_total;
-        if (typeof val === 'string') val = parseFloat(val.replace(/[R$\s.]/g, '').replace(',', '.'));
-        if (isNaN(val)) val = 0;
+        const val = parseFloat(item.valor) || 0;
 
-        // Tenta pegar oficina ou fornecedor
-        const oficina = item.oficina || item.fornecedor || 'Não Informado';
+        // Tenta pegar nome da oficina da relação, ou fallback
+        const oficina = item.oficinas ? item.oficinas.nome : (item.detalhes && item.detalhes.includes('|') ? item.detalhes.split('|')[1].trim() : 'Não Informado');
         if (!gastosPorOficina[oficina]) gastosPorOficina[oficina] = 0;
         gastosPorOficina[oficina] += val;
     });
