@@ -5,6 +5,8 @@ let chartEvolucao = null;
 let chartTopPlacas = null;
 let chartOficinas = null;
 let chartStatus = null;
+let chartTopServicosFreq = null;
+let chartTopServicosCusto = null;
 
 // Intervalo de atualização automática (30 segundos)
 const REFRESH_INTERVAL = 30000;
@@ -107,6 +109,8 @@ function atualizarGraficos(data) {
     renderChartTopPlacas(data);
     renderChartOficinas(data);
     renderChartStatus(data);
+    renderChartTopServicosFreq(data);
+    renderChartTopServicosCusto(data);
 }
 
 // --- Funções de Renderização dos Gráficos ---
@@ -307,5 +311,97 @@ function renderChartStatus(data) {
             }
         },
         plugins: [ChartDataLabels] // Ativa o plugin se estiver carregado
+    });
+}
+
+function renderChartTopServicosFreq(data) {
+    // Agrupar frequência por Item/Serviço
+    const freqPorItem = {};
+    data.forEach(item => {
+        // Tenta pegar o nome do item (ajuste 'item' ou 'descricao' conforme sua coluna no banco)
+        const nomeItem = item.item || item.descricao || 'Outros';
+        if (!freqPorItem[nomeItem]) freqPorItem[nomeItem] = 0;
+        freqPorItem[nomeItem]++;
+    });
+
+    // Ordenar e pegar Top 10
+    const sorted = Object.entries(freqPorItem)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10);
+
+    const labels = sorted.map(([k]) => k);
+    const values = sorted.map(([,v]) => v);
+
+    const ctx = document.getElementById('chartTopServicosFreq').getContext('2d');
+    if (chartTopServicosFreq) chartTopServicosFreq.destroy();
+
+    chartTopServicosFreq = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Qtd. Realizada',
+                data: values,
+                backgroundColor: '#17a2b8', // Azul Ciano
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Barra horizontal para facilitar leitura dos nomes
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function renderChartTopServicosCusto(data) {
+    // Agrupar custo por Item/Serviço
+    const custoPorItem = {};
+    data.forEach(item => {
+        const nomeItem = item.item || item.descricao || 'Outros';
+        const val = parseFloat(item.valor) || 0;
+        
+        if (!custoPorItem[nomeItem]) custoPorItem[nomeItem] = 0;
+        custoPorItem[nomeItem] += val;
+    });
+
+    // Ordenar e pegar Top 10
+    const sorted = Object.entries(custoPorItem)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10);
+
+    const labels = sorted.map(([k]) => k);
+    const values = sorted.map(([,v]) => v);
+
+    const ctx = document.getElementById('chartTopServicosCusto').getContext('2d');
+    if (chartTopServicosCusto) chartTopServicosCusto.destroy();
+
+    chartTopServicosCusto = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Custo Total (R$)',
+                data: values,
+                backgroundColor: '#dc3545', // Vermelho
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
     });
 }
