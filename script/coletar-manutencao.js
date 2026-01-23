@@ -1883,6 +1883,7 @@ const ColetarManutencaoUI = {
                     <td>${nomeOficina}</td>
                     <td>${item.detalhes || '-'}</td>
                     <td>${item.pecas_usadas || '-'}</td>
+                    <td><strong>${(item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
                     <td>
                         ${botoesAcao}
                     </td>
