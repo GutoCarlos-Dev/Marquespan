@@ -84,38 +84,41 @@
                     <canvas id="chartEvolucao"></canvas>
                 </div>
             </div>
-            
-            <!-- Linha 2 -->
-            <div class="chart-container">
-                <h3><i class="fas fa-truck"></i> Top 10 Veículos com Maior Custo</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartTopPlacas"></canvas>
+        </div>
+
+        <!-- Container de Gráficos com Rolagem Horizontal (Marquee) -->
+        <div class="marquee-wrapper">
+            <div class="marquee-track" id="marqueeTrack">
+                <!-- Os gráficos abaixo serão embaralhados via JS -->
+                <div class="chart-container marquee-item">
+                    <h3><i class="fas fa-truck"></i> Top 10 Veículos com Maior Custo</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartTopPlacas"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="chart-container">
-                <h3><i class="fas fa-building"></i> Gastos por Oficina/Empresa</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartOficinas"></canvas>
+                <div class="chart-container marquee-item">
+                    <h3><i class="fas fa-building"></i> Gastos por Oficina/Empresa</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartOficinas"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="chart-container">
-                <h3><i class="fas fa-chart-pie"></i> Distribuição de Status</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartStatus"></canvas>
+                <div class="chart-container marquee-item">
+                    <h3><i class="fas fa-chart-pie"></i> Distribuição de Status</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartStatus"></canvas>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Linha 3: Novos Gráficos de Itens/Serviços -->
-            <div class="chart-container">
-                <h3><i class="fas fa-clipboard-list"></i> Top 10 Serviços Mais Frequentes</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartTopServicosFreq"></canvas>
+                <div class="chart-container marquee-item">
+                    <h3><i class="fas fa-clipboard-list"></i> Top 10 Serviços Mais Frequentes</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartTopServicosFreq"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="chart-container">
-                <h3><i class="fas fa-file-invoice-dollar"></i> Top 10 Serviços por Custo Total</h3>
-                <div class="chart-wrapper">
-                    <canvas id="chartTopServicosCusto"></canvas>
+                <div class="chart-container marquee-item">
+                    <h3><i class="fas fa-file-invoice-dollar"></i> Top 10 Serviços por Custo Total</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartTopServicosCusto"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

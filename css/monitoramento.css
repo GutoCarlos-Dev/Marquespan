@@ -146,6 +146,26 @@
     width: 100%;
 }
 
+/* Estilos para o Marquee (Rolagem Horizontal) */
+.marquee-wrapper {
+    width: 100%;
+    overflow-x: hidden; /* Esconde a barra de rolagem padrão */
+    padding: 10px 0;
+    margin-top: 20px;
+    position: relative;
+}
+
+.marquee-track {
+    display: flex;
+    gap: 20px;
+    width: max-content; /* Permite que o conteúdo cresça horizontalmente */
+}
+
+.marquee-item {
+    min-width: 450px; /* Largura fixa para cada gráfico no carrossel */
+    flex: 0 0 auto;   /* Impede que encolham */
+}
+
 @media (max-width: 768px) {
     .filter-bar {
         flex-direction: column;

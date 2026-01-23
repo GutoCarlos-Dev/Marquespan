@@ -13,7 +13,9 @@ const REFRESH_INTERVAL = 30000;
 let refreshTimer;
 
 document.addEventListener('DOMContentLoaded', () => {
+    randomizarGraficos(); // Embaralha a ordem antes de iniciar
     initDashboard();
+    iniciarRolagemAutomatica(); // Inicia a animação
 });
 
 function initDashboard() {
@@ -57,6 +59,50 @@ function initDashboard() {
             btn.innerHTML = '<i class="fas fa-expand"></i>';
             btn.title = "Tela Cheia";
         }
+    });
+}
+
+// Função para embaralhar a ordem dos gráficos no DOM
+function randomizarGraficos() {
+    const track = document.getElementById('marqueeTrack');
+    if (!track) return;
+    
+    const items = Array.from(track.children);
+    // Algoritmo de Fisher-Yates shuffle simplificado
+    items.sort(() => Math.random() - 0.5);
+    
+    // Reanexa os elementos na nova ordem
+    items.forEach(item => track.appendChild(item));
+}
+
+// Função para rolagem automática horizontal (vai e volta)
+function iniciarRolagemAutomatica() {
+    const wrapper = document.querySelector('.marquee-wrapper');
+    if (!wrapper) return;
+
+    let direction = 1; // 1 = direita, -1 = esquerda
+    const speed = 1;   // Pixels por frame (ajuste para mais rápido ou mais lento)
+
+    function step() {
+        // Verifica se chegou ao fim ou ao início
+        if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) {
+            direction = -1;
+        } else if (wrapper.scrollLeft <= 0) {
+            direction = 1;
+        }
+        wrapper.scrollLeft += speed * direction;
+        requestAnimationFrame(step);
+    }
+    
+    // Inicia o loop de animação
+    requestAnimationFrame(step);
+    
+    // Opcional: Pausar ao passar o mouse
+    wrapper.addEventListener('mouseenter', () => direction = 0);
+    wrapper.addEventListener('mouseleave', () => {
+        // Recalcula direção baseado na posição atual para retomar
+        if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 10) direction = -1;
+        else direction = 1;
     });
 }
 
