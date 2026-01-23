@@ -24,8 +24,12 @@
     transition: transform 0.3s ease;
 }
 
-.btn-refresh:hover {
+#btn-refresh:hover {
     transform: rotate(180deg);
+}
+
+#btn-fullscreen:hover {
+    transform: scale(1.2);
 }
 
 /* Barra de Filtros */

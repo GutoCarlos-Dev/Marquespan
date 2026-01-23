@@ -27,12 +27,37 @@ function initDashboard() {
     // Listeners
     document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarDados);
     document.getElementById('btn-refresh').addEventListener('click', carregarDados);
+    document.getElementById('btn-fullscreen').addEventListener('click', toggleFullScreen);
 
     // Carregamento inicial
     carregarDados();
 
     // Configura atualização automática
     refreshTimer = setInterval(carregarDados, REFRESH_INTERVAL);
+
+    // Monitora mudanças de tela cheia (ex: ESC) para atualizar o ícone
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('btn-fullscreen');
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="fas fa-compress"></i>';
+            btn.title = "Sair da Tela Cheia";
+        } else {
+            btn.innerHTML = '<i class="fas fa-expand"></i>';
+            btn.title = "Tela Cheia";
+        }
+    });
+}
+
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.error(`Erro ao tentar entrar em tela cheia: ${err.message}`);
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
 }
 
 async function carregarDados() {
