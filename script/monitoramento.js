@@ -39,9 +39,20 @@ function initDashboard() {
     // Monitora mudanças de tela cheia (ex: ESC) para atualizar o ícone
     document.addEventListener('fullscreenchange', () => {
         const btn = document.getElementById('btn-fullscreen');
+        const sidebar = document.getElementById('sidebar');
+
         if (document.fullscreenElement) {
             btn.innerHTML = '<i class="fas fa-compress"></i>';
             btn.title = "Sair da Tela Cheia";
+
+            // Ocultar menu ao entrar em tela cheia
+            if (sidebar) {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('mobile-open');
+                } else {
+                    sidebar.classList.add('collapsed');
+                }
+            }
         } else {
             btn.innerHTML = '<i class="fas fa-expand"></i>';
             btn.title = "Tela Cheia";
