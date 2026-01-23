@@ -196,6 +196,11 @@ function atualizarKPIs(data) {
         return (item.status === 'FINALIZADO' || item.status === 'FINALIZADO ROTA') && dataItem === hojeStr;
     }).length;
     document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
+
+    // 5. Total Pendentes
+    const pendentes = data.filter(item => item.status === 'PENDENTE').length;
+    const kpiPendentes = document.getElementById('kpi-pendentes');
+    if (kpiPendentes) kpiPendentes.textContent = pendentes;
 }
 
 function atualizarGraficos(data) {
