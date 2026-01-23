@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   formImportacao?.addEventListener('submit', (e) => handleImport(e));
 
+  // DELEGAÇÃO DE EVENTOS: Gerencia cliques na tabela (Editar/Excluir)
+  gridBody?.addEventListener('click', handleGridClick);
+
   // � Carrega veículos ao iniciar
   carregarVeiculos();
 
@@ -48,6 +51,21 @@ window.refreshGrid = function() {
   console.log('Grid de veículos será atualizada...');
   carregarVeiculos();
 };
+
+// Gerencia cliques nos botões dentro da tabela
+function handleGridClick(e) {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  if (!id) return;
+
+  if (btn.classList.contains('editar')) {
+    editarVeiculo(id);
+  } else if (btn.classList.contains('excluir')) {
+    excluirVeiculo(id);
+  }
+}
 
 // ➕ Abre a janela para um novo cadastro
 function abrirCadastroVeiculo() {
@@ -271,9 +289,11 @@ function renderizarVeiculos(lista) {
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
         <div class="acoes" style="display: flex; gap: 5px;">
           <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')" title="Editar">
+          <button class="btn-acao editar" data-id="${veiculo.id}" title="Editar">
             <i class="fas fa-pen"></i>
           </button>
           <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')" title="Excluir">
+          <button class="btn-acao excluir" data-id="${veiculo.id}" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -285,9 +305,7 @@ function renderizarVeiculos(lista) {
 
 
 // ✏️ Editar veículo
-window.editarVeiculo = function (id) {
-  if (!id) return;
-
+function editarVeiculo(id) {
   const largura = 900;
   const altura = 700;
   const esquerda = (window.screen.width - largura) / 2;
@@ -299,10 +317,10 @@ window.editarVeiculo = function (id) {
     'EditarVeiculo',
     `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
   );
-};
+}
 
 // 🗑️ Excluir veículo
-window.excluirVeiculo = async function (id) {
+async function excluirVeiculo(id) {
   const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
   if (!confirmar) return;
 
@@ -318,4 +336,4 @@ window.excluirVeiculo = async function (id) {
     alert("✅ Veículo excluído com sucesso!");
     carregarVeiculos(); // Atualiza a grid
   }
-};
+}

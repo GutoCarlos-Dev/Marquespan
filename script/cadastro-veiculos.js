@@ -13,19 +13,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
-  console.log("Página carregada. ID na URL:", id);
-
   // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
-    console.log("Modo edição ativado. Buscando veículo no Supabase...");
 
     const { data: veiculo, error } = await supabaseClient
       .from("veiculos")
       .select("*")
       .eq("id", id)
       .single();
-
-    console.log("Resposta da busca:", { veiculo, error });
 
     if (error || !veiculo) {
       console.error("Erro ao buscar veículo:", error);
@@ -47,8 +42,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
         if (!confirmar) return;
 
-        console.log("Solicitando exclusão do veículo ID:", id);
-
         const { error: erroExclusao } = await supabaseClient
           .from("veiculos")
           .delete()
@@ -58,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           console.error("Erro ao excluir:", erroExclusao);
           alert("Erro ao excluir o veículo.");
         } else {
-          console.log("Veículo excluído com sucesso.");
           alert("Veículo excluído com sucesso!");
           // Notifica a janela pai para recarregar a grid
           if (window.opener && typeof window.opener.refreshGrid === 'function') {
@@ -76,7 +68,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 💾 Submeter dados
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    console.log("Formulário enviado.");
 
     const placa = form.placa.value.trim();
     const filial = form.filial.value.trim();
@@ -85,6 +76,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Por favor, preencha os campos obrigatórios: Placa e Filial.");
       return;
     }
+
+    const btnSalvar = form.querySelector('button[type="submit"]');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
     const veiculo = {
       placa,
@@ -95,24 +91,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       situacao: form.situacao.value.trim(),
       chassi: form.chassi?.value.trim() || null,
       renavan: form.renavan?.value.trim() || null,
-      anofab: parseInt(form.anofab.value),
-      anomod: parseInt(form.anomod.value),
-      qtdtanque: form.qtdtanque ? parseInt(form.qtdtanque.value) : null,
+      anofab: form.anofab.value ? parseInt(form.anofab.value) : null,
+      anomod: form.anomod.value ? parseInt(form.anomod.value) : null,
+      qtdtanque: form.qtdtanque.value ? parseInt(form.qtdtanque.value) : null,
       qrcode: form.qrcode?.value.trim() || null,
     };
 
-    console.log("Dados do veículo a salvar:", veiculo);
-
     try {
       if (id) {
-        console.log("Tentando atualizar veículo com ID:", id);
-
         const { data, error } = await supabaseClient
           .from("veiculos")
           .update(veiculo)
           .eq("id", id);
-
-        console.log("Resposta da atualização:", { data, error });
 
         if (error) {
           console.error("Erro ao atualizar:", error);
@@ -128,14 +118,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         window.close();
       } else {
-        console.log("Modo cadastro. Verificando placa duplicada...");
-
         const { data: existente, error: erroBusca } = await supabaseClient
           .from("veiculos")
           .select("id")
           .eq("placa", veiculo.placa);
-
-        console.log("Resultado da verificação de placa:", { existente, erroBusca });
 
         if (erroBusca) {
           console.error("Erro ao verificar placa:", erroBusca);
@@ -144,12 +130,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (existente.length > 0) {
-          console.warn("Placa já existente:", veiculo.placa);
           alert("Já existe um veículo com essa placa.");
           return;
         }
-
-        console.log("Inserindo novo veículo...");
 
         const { data, error } = await supabaseClient
           .from("veiculos")
@@ -172,6 +155,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error("Erro inesperado:", err);
       alert("Erro inesperado. Verifique sua conexão.");
+    } finally {
+      btnSalvar.disabled = false;
+      btnSalvar.innerHTML = textoOriginal;
     }
   });
 });
