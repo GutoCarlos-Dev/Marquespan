@@ -136,6 +136,8 @@ async function carregarDados() {
     const dtIni = document.getElementById('dataInicial').value;
     const dtFim = document.getElementById('dataFinal').value;
 
+    carregarTotalFrota(); // Busca total da frota (sem filtros)
+
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
         const { data, error } = await supabaseClient
@@ -168,6 +170,21 @@ async function carregarDados() {
         // alert('Erro ao atualizar dashboard.');
     } finally {
         btnRefresh.classList.remove('fa-spin');
+    }
+}
+
+async function carregarTotalFrota() {
+    try {
+        const { count, error } = await supabaseClient
+            .from('veiculos')
+            .select('*', { count: 'exact', head: true });
+
+        if (error) throw error;
+
+        const kpi = document.getElementById('kpi-total-frota');
+        if (kpi) kpi.textContent = count;
+    } catch (error) {
+        console.error('Erro ao carregar total da frota:', error);
     }
 }
 
