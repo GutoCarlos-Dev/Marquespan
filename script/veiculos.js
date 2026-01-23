@@ -288,11 +288,9 @@ function renderizarVeiculos(lista) {
       <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.qrcode || '-'}</td>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
         <div class="acoes" style="display: flex; gap: 5px;">
-          <button class="btn-acao editar" onclick="editarVeiculo('${veiculo.id}')" title="Editar">
           <button class="btn-acao editar" data-id="${veiculo.id}" title="Editar">
             <i class="fas fa-pen"></i>
           </button>
-          <button class="btn-acao excluir" onclick="excluirVeiculo('${veiculo.id}')" title="Excluir">
           <button class="btn-acao excluir" data-id="${veiculo.id}" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
