@@ -1454,11 +1454,15 @@ const ColetarManutencaoUI = {
             // 3. Combinar dados (Associa checklists às coletas)
             data = coletas.map(coleta => {
                 coleta.coletas_manutencao_checklist = checklists.filter(ch => ch.coleta_id === coleta.id);
+
+                // Recalcula o valor total somando os valores dos itens do checklist para exibir na grid
+                const totalItens = coleta.coletas_manutencao_checklist.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+                coleta.valor_total = totalItens;
+
                 return coleta;
             });
 
             this.tableBodyLancamentos.innerHTML = '';
-
             // Verifica permissão para excluir
             const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
 
