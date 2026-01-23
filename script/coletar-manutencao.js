@@ -735,65 +735,65 @@ const ColetarManutencaoUI = {
                     if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
 
                     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-                    
-                    // Processamento sequencial para garantir integridade
-                    for (const row of jsonData) {
-                        // Normaliza as chaves para maiúsculo para evitar erros de case sensitive
+                    const coletasParaInserir = [];
+
+                    // 1. Prepara os dados do cabeçalho
+                    jsonData.forEach(row => {
                         const rowNormalized = {};
                         Object.keys(row).forEach(key => {
                             rowNormalized[key.toUpperCase().trim()] = row[key];
                         });
 
-                        // Campos: ID_MEC, DATA, PLACA, MODELO, DESCRICAO
                         const dataRaw = rowNormalized['DATA'];
                         let dataHora;
-                        
-                        // Tratamento de data
                         if (dataRaw instanceof Date) {
                             dataHora = dataRaw;
                         } else if (typeof dataRaw === 'string') {
-                            // Tenta converter string DD/MM/YYYY
                             const parts = dataRaw.split('/');
                             if (parts.length === 3) {
                                 dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
                             } else {
-                                dataHora = new Date(); // Fallback
+                                dataHora = new Date();
                             }
                         } else {
                             dataHora = new Date();
                         }
 
-                        const semana = this.calculateCurrentWeek(dataHora);
-                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
-                        const modelo = rowNormalized['MODELO'] || '';
-                        const descricao = (rowNormalized['DESCRICAO'] || '').toUpperCase(); // Descrição em MAIÚSCULAS
+                        coletasParaInserir.push({
+                            semana: this.calculateCurrentWeek(dataHora),
+                            data_hora: dataHora.toISOString(),
+                            usuario: usuarioLogado,
+                            placa: (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase(),
+                            modelo: rowNormalized['MODELO'] || '',
+                            km: 0,
+                            // Adiciona a descrição original para uso posterior
+                            _descricaoOriginal: (rowNormalized['DESCRICAO'] || '').toUpperCase()
+                        });
+                    });
 
-                        // 1. Inserir Cabeçalho (Coleta)
-                        const { data: coleta, error: errColeta } = await supabaseClient
-                            .from('coletas_manutencao')
-                            .insert([{
-                                semana: semana,
-                                data_hora: dataHora.toISOString(),
-                                usuario: usuarioLogado,
-                                placa: placa,
-                                modelo: modelo,
-                                km: 0 // Valor padrão pois não vem no arquivo
-                            }])
-                            .select()
-                            .single();
+                    // 2. Insere todos os cabeçalhos de uma vez
+                    const { data: coletasInseridas, error: errColetas } = await supabaseClient
+                        .from('coletas_manutencao')
+                        .insert(coletasParaInserir.map(({ _descricaoOriginal, ...rest }) => rest)) // Remove o campo temporário
+                        .select('id');
 
-                        if (errColeta) throw errColeta;
+                    if (errColetas) throw errColetas;
+                    if (coletasInseridas.length !== coletasParaInserir.length) {
+                        throw new Error('Falha ao inserir todos os cabeçalhos de manutenção.');
+                    }
 
-                        // 2. Inserir Item (Checklist) - MOLEIRO
+                    // 3. Prepara e insere todos os itens do checklist
+                    const checklistItens = coletasInseridas.map((coleta, index) => ({
+                        coleta_id: coleta.id,
+                        item: 'MOLEIRO',
+                        status: 'PENDENTE',
+                        detalhes: coletasParaInserir[index]._descricaoOriginal
+                    }));
+
+                    if (checklistItens.length > 0) {
                         const { error: errItem } = await supabaseClient
                             .from('coletas_manutencao_checklist')
-                            .insert([{
-                                coleta_id: coleta.id,
-                                item: 'MOLEIRO',
-                                status: 'PENDENTE', // Status fixo conforme solicitado
-                                detalhes: descricao
-                            }]);
-
+                            .insert(checklistItens);
                         if (errItem) throw errItem;
                     }
                     resolve();
@@ -820,17 +820,17 @@ const ColetarManutencaoUI = {
                     if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
 
                     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-                    
-                    for (const row of jsonData) {
+                    const coletasParaInserir = [];
+
+                    // 1. Prepara os dados do cabeçalho
+                    jsonData.forEach(row => {
                         const rowNormalized = {};
                         Object.keys(row).forEach(key => {
                             rowNormalized[key.toUpperCase().trim()] = row[key];
                         });
 
-                        // Campos: ID_MEC, DATA, PLACA, MODELO, DESCRICAO, OBSERVACAO
                         const dataRaw = rowNormalized['DATA'];
                         let dataHora;
-                        
                         if (dataRaw instanceof Date) {
                             dataHora = dataRaw;
                         } else if (typeof dataRaw === 'string') {
@@ -844,45 +844,45 @@ const ColetarManutencaoUI = {
                             dataHora = new Date();
                         }
 
-                        const semana = this.calculateCurrentWeek(dataHora);
-                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
-                        const modelo = rowNormalized['MODELO'] || '';
-                        
                         const descricao = (rowNormalized['DESCRICAO'] || '').toUpperCase();
                         const observacao = (rowNormalized['OBSERVACAO'] || '').toUpperCase();
-                        
-                        // Concatena Descrição e Observação
                         let detalhes = descricao;
-                        if (observacao) {
-                            detalhes += `, ${observacao}`;
-                        }
+                        if (observacao) detalhes += `, ${observacao}`;
 
-                        // 1. Inserir Cabeçalho (Coleta)
-                        const { data: coleta, error: errColeta } = await supabaseClient
-                            .from('coletas_manutencao')
-                            .insert([{
-                                semana: semana,
-                                data_hora: dataHora.toISOString(),
-                                usuario: usuarioLogado,
-                                placa: placa,
-                                modelo: modelo,
-                                km: 0
-                            }])
-                            .select()
-                            .single();
+                        coletasParaInserir.push({
+                            semana: this.calculateCurrentWeek(dataHora),
+                            data_hora: dataHora.toISOString(),
+                            usuario: usuarioLogado,
+                            placa: (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase(),
+                            modelo: rowNormalized['MODELO'] || '',
+                            km: 0,
+                            _detalhesOriginais: detalhes
+                        });
+                    });
 
-                        if (errColeta) throw errColeta;
+                    // 2. Insere todos os cabeçalhos de uma vez
+                    const { data: coletasInseridas, error: errColetas } = await supabaseClient
+                        .from('coletas_manutencao')
+                        .insert(coletasParaInserir.map(({ _detalhesOriginais, ...rest }) => rest))
+                        .select('id');
 
-                        // 2. Inserir Item (Checklist) - MECANICA EXTERNA
+                    if (errColetas) throw errColetas;
+                    if (coletasInseridas.length !== coletasParaInserir.length) {
+                        throw new Error('Falha ao inserir todos os cabeçalhos de manutenção.');
+                    }
+
+                    // 3. Prepara e insere todos os itens do checklist
+                    const checklistItens = coletasInseridas.map((coleta, index) => ({
+                        coleta_id: coleta.id,
+                        item: 'MECANICA - EXTERNA',
+                        status: 'PENDENTE',
+                        detalhes: coletasParaInserir[index]._detalhesOriginais
+                    }));
+
+                    if (checklistItens.length > 0) {
                         const { error: errItem } = await supabaseClient
                             .from('coletas_manutencao_checklist')
-                            .insert([{
-                                coleta_id: coleta.id,
-                                item: 'MECANICA - EXTERNA',
-                                status: 'PENDENTE',
-                                detalhes: detalhes
-                            }]);
-
+                            .insert(checklistItens);
                         if (errItem) throw errItem;
                     }
                     resolve();
