@@ -7,6 +7,17 @@ let chartOficinas = null;
 let chartStatus = null;
 let chartTopServicosFreq = null;
 let chartTopServicosCusto = null;
+let chartPendentesInternados = null;
+
+// Cores padrão dos status
+const STATUS_COLORS = {
+    'FINALIZADO': '#28a745',       // Verde
+    'PENDENTE': '#ffc107',         // Amarelo
+    'INTERNADO': '#dc3545',        // Vermelho
+    'CHECK-IN OFICINA': '#17a2b8', // Azul Ciano
+    'CHECK-IN ROTA': '#6f42c1',    // Roxo
+    'FINALIZADO ROTA': '#006400'   // Verde Escuro
+};
 
 // Intervalo de atualização automática (30 segundos)
 const REFRESH_INTERVAL = 30000;
@@ -194,6 +205,7 @@ function atualizarGraficos(data) {
     renderChartStatus(data);
     renderChartTopServicosFreq(data);
     renderChartTopServicosCusto(data);
+    renderChartPendentesInternados(data);
 }
 
 // --- Funções de Renderização dos Gráficos ---
@@ -342,17 +354,7 @@ function renderChartStatus(data) {
     const labels = Object.keys(contagem);
     const values = Object.values(contagem);
 
-    // Cores específicas para status conhecidos
-    const colorMap = {
-        'FINALIZADO': '#28a745', // Verde
-        'PENDENTE': '#ffc107', // Amarelo
-        'INTERNADO': '#dc3545', // Vermelho
-        'CHECK-IN OFICINA': '#17a2b8', // Azul claro
-        'CHECK-IN ROTA': '#6f42c1', // Roxo
-        'FINALIZADO ROTA': '#20c997' // Verde água
-    };
-
-    const bgColors = labels.map(label => colorMap[label] || '#6c757d'); // Cinza default
+    const bgColors = labels.map(label => STATUS_COLORS[label] || '#6c757d'); // Cinza default
 
     const ctx = document.getElementById('chartStatus').getContext('2d');
     if (chartStatus) chartStatus.destroy();
@@ -438,6 +440,69 @@ function renderChartTopServicosFreq(data) {
             },
             scales: {
                 x: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function renderChartPendentesInternados(data) {
+    // Filtra apenas itens com status PENDENTE ou INTERNADO
+    const relevantData = data.filter(item => 
+        item.status === 'PENDENTE' || item.status === 'INTERNADO'
+    );
+
+    // Agrupa por Placa e conta os status
+    const placas = {};
+    relevantData.forEach(item => {
+        const placa = item.coletas_manutencao.placa || 'N/A';
+        if (!placas[placa]) {
+            placas[placa] = { PENDENTE: 0, INTERNADO: 0 };
+        }
+        if (item.status === 'PENDENTE') placas[placa].PENDENTE++;
+        if (item.status === 'INTERNADO') placas[placa].INTERNADO++;
+    });
+
+    const labels = Object.keys(placas);
+    const dataPendente = labels.map(p => placas[p].PENDENTE);
+    const dataInternado = labels.map(p => placas[p].INTERNADO);
+
+    const ctx = document.getElementById('chartPendentesInternados').getContext('2d');
+    if (chartPendentesInternados) chartPendentesInternados.destroy();
+
+    chartPendentesInternados = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Pendente',
+                    data: dataPendente,
+                    backgroundColor: STATUS_COLORS['PENDENTE'],
+                    stack: 'Stack 0'
+                },
+                {
+                    label: 'Internado',
+                    data: dataInternado,
+                    backgroundColor: STATUS_COLORS['INTERNADO'],
+                    stack: 'Stack 0'
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { stepSize: 1 }
+                },
+                y: {
+                    stacked: true
+                }
             }
         }
     });
