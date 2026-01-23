@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalImportacao = document.getElementById('modalImportacao');
   const formImportacao = document.getElementById('formImportacao');
   const btnCloseModalImportacao = modalImportacao?.querySelector('.close-button');
+  const btnExportarXLS = document.getElementById('btn-exportar-xls');
 
 
   // 🔍 Buscar veículos
@@ -33,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   });
   formImportacao?.addEventListener('submit', (e) => handleImport(e));
+
+  // 📤 Exportar XLS
+  btnExportarXLS?.addEventListener('click', exportarXLS);
 
   // DELEGAÇÃO DE EVENTOS: Gerencia cliques na tabela (Editar/Excluir)
   gridBody?.addEventListener('click', handleGridClick);
@@ -189,6 +193,47 @@ async function handleImport(e) {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalText;
     }
+}
+
+async function exportarXLS() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('veiculos')
+      .select('*')
+      .order('placa');
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      alert('Não há dados para exportar.');
+      return;
+    }
+
+    // Formata os dados para o Excel
+    const dadosFormatados = data.map(v => ({
+      'Filial': v.filial || '',
+      'Placa': v.placa || '',
+      'Marca': v.marca || '',
+      'Modelo': v.modelo || '',
+      'Renavan': v.renavan || '',
+      'Tipo': v.tipo || '',
+      'Situação': v.situacao || '',
+      'Ano Fab.': v.anofab || '',
+      'Ano Mod.': v.anomod || '',
+      'Chassi': v.chassi || '',
+      'Qtd Tanque': v.qtdtanque || '',
+      'QRCode': v.qrcode || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Veiculos");
+    XLSX.writeFile(wb, "Veiculos_Marquespan.xlsx");
+
+  } catch (error) {
+    console.error('Erro ao exportar:', error);
+    alert('Erro ao exportar dados.');
+  }
 }
 
 function handleSort(column) {
