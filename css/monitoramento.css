@@ -89,6 +89,7 @@
 .kpi-card.green { border-left-color: #28a745; }
 .kpi-card.orange { border-left-color: #fd7e14; }
 .kpi-card.purple { border-left-color: #6f42c1; }
+.kpi-card.red { border-left-color: #ff0019;}
 
 .kpi-icon {
     font-size: 2rem;
