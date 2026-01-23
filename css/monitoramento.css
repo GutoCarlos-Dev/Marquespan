@@ -28,6 +28,10 @@
     transform: rotate(180deg);
 }
 
+#btn-toggle-sidebar:hover {
+    transform: scale(1.2);
+}
+
 #btn-fullscreen:hover {
     transform: scale(1.2);
 }

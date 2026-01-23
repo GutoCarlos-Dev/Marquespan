@@ -28,6 +28,7 @@ function initDashboard() {
     document.getElementById('btn-aplicar-filtro').addEventListener('click', carregarDados);
     document.getElementById('btn-refresh').addEventListener('click', carregarDados);
     document.getElementById('btn-fullscreen').addEventListener('click', toggleFullScreen);
+    document.getElementById('btn-toggle-sidebar').addEventListener('click', () => window.toggleSidebar && window.toggleSidebar());
 
     // Carregamento inicial
     carregarDados();
