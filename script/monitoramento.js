@@ -11,11 +11,11 @@ let chartPendentesInternados = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
-    'FINALIZADO': '#155724',       // Verde
-    'PENDENTE': '#721c24',         // Amarelo
-    'INTERNADO': '#004085',        // Vermelho
-    'CHECK-IN OFICINA': '#856404', // Azul Ciano
-    'CHECK-IN ROTA': '#d35400',    // Roxo
+    'FINALIZADO': '#249c40',       // Verde
+    'PENDENTE': '#ff0019',         // Vermelho
+    'INTERNADO': '#0cabf5',        // Azul
+    'CHECK-IN OFICINA': '#eede06', // Amarelo
+    'CHECK-IN ROTA': '#d35400',    // Laranja
     'FINALIZADO ROTA': '#0b3314'   // Verde Escuro
 };
 
