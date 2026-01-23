@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoramento de Manutenção - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Chart.js para os gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Plugin Datalabels para exibir valores nos gráficos (opcional, mas recomendado) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container"></div>
+    
+    <div class="main-content">
+      <header class="header header-flex">
+        <span><i class="fas fa-chart-line"></i> Monitoramento de Manutenção (Real-Time)</span>
+        <div class="header-controls">
+            <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
+            <button id="btn-refresh" class="btn-refresh" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+        </div>
+      </header>
+
+      <section class="section">
+        <!-- Filtros de Período -->
+        <div class="filter-bar">
+            <div class="form-group">
+                <label for="dataInicial">De:</label>
+                <input type="date" id="dataInicial">
+            </div>
+            <div class="form-group">
+                <label for="dataFinal">Até:</label>
+                <input type="date" id="dataFinal">
+            </div>
+            <button id="btn-aplicar-filtro" class="btn-primary">Aplicar Filtro</button>
+        </div>
+
+        <!-- KPIs (Indicadores Chave) -->
+        <div class="kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-icon"><i class="fas fa-tools"></i></div>
+                <div class="kpi-info">
+                    <h3>Total Manutenções</h3>
+                    <p id="kpi-total-qtd">0</p>
+                </div>
+            </div>
+            <div class="kpi-card green">
+                <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="kpi-info">
+                    <h3>Gasto Total (Período)</h3>
+                    <p id="kpi-total-valor">R$ 0,00</p>
+                </div>
+            </div>
+            <div class="kpi-card orange">
+                <div class="kpi-icon"><i class="fas fa-hospital"></i></div>
+                <div class="kpi-info">
+                    <h3>Veículos Internados</h3>
+                    <p id="kpi-internados">0</p>
+                </div>
+            </div>
+            <div class="kpi-card purple">
+                <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
+                <div class="kpi-info">
+                    <h3>Finalizados Hoje</h3>
+                    <p id="kpi-finalizados-hoje">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de Gráficos -->
+        <div class="charts-dashboard">
+            <!-- Linha 1 -->
+            <div class="chart-container wide">
+                <h3><i class="fas fa-calendar-alt"></i> Evolução de Manutenções (Quantidade vs Tempo)</h3>
+                <canvas id="chartEvolucao"></canvas>
+            </div>
+            
+            <!-- Linha 2 -->
+            <div class="chart-container">
+                <h3><i class="fas fa-truck"></i> Top 10 Veículos com Maior Custo</h3>
+                <canvas id="chartTopPlacas"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3><i class="fas fa-building"></i> Gastos por Oficina/Empresa</h3>
+                <canvas id="chartOficinas"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-pie"></i> Distribuição de Status</h3>
+                <canvas id="chartStatus"></canvas>
+            </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/monitoramento.js"></script>
+</body>
+</html>
