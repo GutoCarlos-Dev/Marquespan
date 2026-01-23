@@ -99,6 +99,7 @@
 .kpi-card.green .kpi-icon { color: #28a745; }
 .kpi-card.orange .kpi-icon { color: #fd7e14; }
 .kpi-card.purple .kpi-icon { color: #6f42c1; }
+.kpi-card.red .kpi-icon { color: #ff0019; }
 
 .kpi-info h3 {
     margin: 0;
