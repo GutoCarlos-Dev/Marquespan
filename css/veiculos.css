@@ -110,3 +110,59 @@
 .data-grid tbody tr:hover {
     background-color: #f8f9fa;
 }
+
+/* Estilos migrados de veiculos.html */
+.veiculos-grid-card {
+    margin-top: 20px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.veiculos-grid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.veiculos-grid-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.veiculos-count-badge {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #555;
+    background-color: #e9ecef;
+    padding: 5px 10px;
+    border-radius: 6px;
+}
+
+.veiculos-table-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.veiculos-data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.veiculos-table-head {
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+    z-index: 5;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.veiculos-table-th {
+    padding: 12px;
+    text-align: left;
+}
+
+.veiculos-table-th.sortable {
+    cursor: pointer;
+}
