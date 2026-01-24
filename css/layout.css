@@ -10,6 +10,7 @@
   padding: 20px;
   transition: transform 0.3s ease, width 0.3s ease;
   overflow-x: hidden;
+  overflow-y: auto;
   z-index: 1000;
 }
 

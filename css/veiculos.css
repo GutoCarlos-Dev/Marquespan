@@ -1,12 +1,5 @@
 /* 🚚 Estilos específicos da página de veículos */
 
-/* Ajuste para que o conteúdo principal ocupe mais espaço na tela,
-   melhorando a visualização dos dados conforme solicitado. */
-.main-content {
-  max-width: 95%; /* Aumenta a largura máxima do container principal */
-  margin: 0 auto;
-}
-
 /* Layout de Grid para o topo */
 .veiculos-top-grid {
     display: grid;
