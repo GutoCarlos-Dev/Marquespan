@@ -6,6 +6,9 @@
     grid-template-columns: 3fr 1fr; /* Filtros ocupam mais espaço, Ações menos */
     gap: 20px;
     margin-bottom: 25px;
+    max-width: 1400px; /* Define uma largura máxima para o conjunto de cards */
+    margin-left: auto;  /* Centraliza o grid */
+    margin-right: auto; /* Centraliza o grid */
 }
 
 @media (max-width: 1024px) {

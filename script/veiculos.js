@@ -268,6 +268,8 @@ function updateSortIcons() {
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
   if (!gridBody) return;
+  const countSpan = document.getElementById('grid-records-count');
+  if (countSpan) countSpan.textContent = ''; // Limpa o contador durante o carregamento
   gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Carregando veículos...</td></tr>';
 
   const { data, error } = await supabaseClient
@@ -278,6 +280,7 @@ async function carregarVeiculos() {
   if (error) {
     console.error('Erro ao carregar veículos:', error);
     gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao carregar dados.</td></tr>';
+    if (countSpan) countSpan.textContent = 'Erro';
     return;
   }
 
@@ -288,6 +291,8 @@ async function carregarVeiculos() {
 // 🔍 Buscar veículos por placa
 async function buscarVeiculos() {
   if (!gridBody) return;
+  const countSpan = document.getElementById('grid-records-count');
+  if (countSpan) countSpan.textContent = ''; // Limpa o contador durante a busca
   gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Buscando...</td></tr>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
@@ -307,11 +312,7 @@ async function buscarVeiculos() {
   if (error) {
     console.error('Erro ao buscar veículos:', error);
     gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao buscar dados.</td></tr>';
-    return;
-  }
-
-  if (data.length === 0) {
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 30px; color: #888;">Nenhum veículo encontrado.</td></tr>';
+    if (countSpan) countSpan.textContent = 'Erro';
     return;
   }
 
@@ -322,10 +323,18 @@ async function buscarVeiculos() {
 // 🧱 Renderiza os veículos na grid
 function renderizarVeiculos(lista) {
   gridBody.innerHTML = '';
+  const countSpan = document.getElementById('grid-records-count');
 
   if (!lista || lista.length === 0) {
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Nenhum veículo cadastrado.</td></tr>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 30px; color: #888;">Nenhum veículo encontrado.</td></tr>';
+    if (countSpan) countSpan.textContent = '0 Registros';
     return;
+  }
+
+  // Atualiza o contador de registros
+  if (countSpan) {
+    const recordText = lista.length === 1 ? 'Registro' : 'Registros';
+    countSpan.textContent = `${lista.length} ${recordText}`;
   }
 
   lista.forEach(veiculo => {
