@@ -247,7 +247,11 @@ function handleSort(column) {
   
   // Recarrega os dados com a nova ordenação
   const placa = document.getElementById('campo-placa')?.value.trim();
-  if (placa) buscarVeiculos();
+  const modelo = document.getElementById('campo-modelo')?.value.trim();
+  const tipo = document.getElementById('campo-tipo')?.value;
+  const situacao = document.getElementById('campo-situacao')?.value;
+
+  if (placa || modelo || tipo || situacao) buscarVeiculos();
   else carregarVeiculos();
 }
 
@@ -287,13 +291,16 @@ async function buscarVeiculos() {
   gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Buscando...</td></tr>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
+  const modelo = document.getElementById('campo-modelo')?.value.trim();
+  const tipo = document.getElementById('campo-tipo')?.value;
+  const situacao = document.getElementById('campo-situacao')?.value;
+
   let query = supabaseClient.from('veiculos').select('*').order(currentSort.column, { ascending: currentSort.direction === 'asc' });
 
-  if (placa) {
-    query = query.ilike('placa', `%${placa}%`);
-  } else {
-    // Se a busca for vazia, carrega todos, sem confirmação.
-  }
+  if (placa) query = query.ilike('placa', `%${placa}%`);
+  if (modelo) query = query.ilike('modelo', `%${modelo}%`);
+  if (tipo) query = query.eq('tipo', tipo);
+  if (situacao) query = query.eq('situacao', situacao);
 
   const { data, error } = await query;
 
