@@ -268,7 +268,7 @@ function updateSortIcons() {
 // 📦 Carregar todos os veículos
 async function carregarVeiculos() {
   if (!gridBody) return;
-  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Carregando veículos...</td></tr>';
+  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Carregando veículos...</td></tr>';
 
   const { data, error } = await supabaseClient
     .from('veiculos')
@@ -288,7 +288,7 @@ async function carregarVeiculos() {
 // 🔍 Buscar veículos por placa
 async function buscarVeiculos() {
   if (!gridBody) return;
-  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Buscando...</td></tr>';
+  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Buscando...</td></tr>';
 
   const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
   const modelo = document.getElementById('campo-modelo')?.value.trim();
@@ -311,7 +311,7 @@ async function buscarVeiculos() {
   }
 
   if (data.length === 0) {
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Nenhum veículo encontrado.</td></tr>';
+    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 30px; color: #888;">Nenhum veículo encontrado.</td></tr>';
     return;
   }
 

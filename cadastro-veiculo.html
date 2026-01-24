@@ -16,6 +16,10 @@
 <body>
   <div class="modal-veiculo show">
     <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-truck"></i> Cadastro de Veículo</h2>
+        <button type="button" class="close-modal" onclick="window.close()">&times;</button>
+      </div>
       <div class="form-container">
         <form id="formVeiculo">
           <!-- 🔹 Bloco 1: Localização -->
@@ -110,9 +114,9 @@
 
           <!-- 🔹 Botões -->
           <div class="modal-actions">
-            <button type="submit"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" id="btnExcluir" class="btn-excluir">Excluir</button>
-            <button type="button" onclick="window.close()"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="button" onclick="window.close()" class="btn-cancelar"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="button" id="btnExcluir" class="btn-excluir"><i class="fas fa-trash"></i> Excluir</button>
+            <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar Dados</button>
           </div>
         </form>
 
