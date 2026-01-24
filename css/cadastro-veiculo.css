@@ -1,5 +1,11 @@
 /* Estilos exclusivos para a janela de Cadastro de Veículos */
 
+/* Correção: Garante que a barra de rolagem apareça, sobrescrevendo estilos globais do index.css */
+html, body {
+    overflow-y: auto !important;
+    height: auto !important;
+}
+
 body {
     background-color: #f4f6f9;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
