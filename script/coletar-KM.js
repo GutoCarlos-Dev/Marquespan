@@ -348,12 +348,13 @@ async function carregarHistorico() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Carregando histórico...</td></tr>';
 
     try {
-        // Busca as coletas ordenadas por data
+        // Busca um número maior de coletas recentes para garantir que lotes completos sejam processados
         const { data, error } = await supabaseClient
             .from('coleta_km')
             .select('*')
-            .order('created_at', { ascending: false })
-            .limit(20);
+            // Ordena pela data da coleta para agrupar os lotes mais recentes primeiro
+            .order('data_coleta', { ascending: false }) 
+            .limit(500); // Aumenta o limite para capturar vários lotes completos
 
         if (error) throw error;
 
@@ -367,8 +368,8 @@ async function carregarHistorico() {
         // Agrupar por Data e Usuário
         const grupos = {};
         data.forEach(item => {
-            // Chave de agrupamento: Data + Usuario
-            const key = `${item.data_coleta}_${item.usuario}`;
+            // Chave de agrupamento: A data da coleta, que é única para cada lote salvo.
+            const key = item.data_coleta;
             if (!grupos[key]) {
                 grupos[key] = {
                     data_coleta: item.data_coleta,
@@ -385,8 +386,11 @@ async function carregarHistorico() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const isAdmin = usuarioLogado && usuarioLogado.nivel && usuarioLogado.nivel.toLowerCase() === 'administrador';
 
-        // Renderizar os grupos
-        Object.values(grupos).forEach(grupo => {
+        // Pega os 20 lotes mais recentes para exibir na tela
+        const lotesParaExibir = Object.values(grupos).slice(0, 20);
+
+        // Renderizar os lotes agrupados
+        lotesParaExibir.forEach(grupo => {
             const tr = document.createElement('tr');
             
             // Formatar Data
