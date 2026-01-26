@@ -325,10 +325,12 @@ async function salvarColetaCompleta() {
 
         if (error) throw error;
         
-        alert('Coleta de KM salva com sucesso!');        
-        originalDataColeta = dataColetaISO; // Define a data salva como a referência para futuras edições nesta sessão
+        alert('Coleta de KM salva com sucesso!');
+        itensColeta = []; // Limpa a lista de itens em memória
+        originalDataColeta = null; // Reseta a referência de edição para um novo lote
+        renderizarTabela(); // Limpa a tabela na tela
         carregarHistorico(); // Atualiza o histórico após salvar
-        salvarRascunho(); // Atualiza o rascunho com a nova data de referência para persistir entre recarregamentos da página
+        limparRascunho(); // Remove o rascunho do localStorage, já que a coleta foi salva
 
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
