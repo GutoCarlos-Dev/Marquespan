@@ -1511,36 +1511,10 @@ const ColetarManutencaoUI = {
             // Verifica permissão para excluir
             const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
 
-            // --- NOVA LÓGICA: Filtrar apenas a última atualização por placa ---
-            const ultimosLancamentos = [];
-            const placasProcessadas = new Set();
-
-            // Ordena temporariamente por data decrescente para pegar o mais recente
-            const dadosOrdenadosPorData = [...data].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
-
-            for (const item of dadosOrdenadosPorData) {
-                if (!placasProcessadas.has(item.placa)) {
-                    placasProcessadas.add(item.placa);
-                    ultimosLancamentos.push(item);
-                }
-            }
-
-            // Reordena conforme a seleção do usuário (ou padrão) para exibição
-            ultimosLancamentos.sort((a, b) => {
-                const col = this.currentSort.column;
-                const dir = this.currentSort.direction === 'asc' ? 1 : -1;
-                let valA = a[col];
-                let valB = b[col];
-                
-                if (typeof valA === 'string') valA = valA.toLowerCase();
-                if (typeof valB === 'string') valB = valB.toLowerCase();
-
-                if (valA < valB) return -1 * dir;
-                if (valA > valB) return 1 * dir;
-                return 0;
-            });
-
-            ultimosLancamentos.forEach(item => {
+            // A ordenação agora é feita diretamente na query do Supabase.
+            // A lógica de exibir apenas o último lançamento por placa foi removida
+            // para mostrar todos os registros que correspondem ao filtro.
+            data.forEach(item => {
                 const tr = document.createElement('tr');
 
                 // Lógica de status geral para colorir a linha
