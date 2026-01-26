@@ -1446,7 +1446,7 @@ const ColetarManutencaoUI = {
             const coletaIds = coletas.map(c => c.id);
             const { data: checklists, error: errorChecklist } = await supabaseClient
                 .from('coletas_manutencao_checklist')
-                .select('coleta_id, status, item')
+                .select('coleta_id, status, item, valor')
                 .in('coleta_id', coletaIds);
 
             if (errorChecklist) throw errorChecklist;
@@ -1559,12 +1559,16 @@ const ColetarManutencaoUI = {
                     botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
                 }
 
+                const valorDisplay = item.valor_total > 0
+                    ? `<strong>${(item.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>`
+                    : '-';
+
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${item.semana}</td>
                     <td>${item.placa}</td>
                     <td>${item.usuario}</td>
-                    <td><strong>${(item.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
+                    <td>${valorDisplay}</td>
                     <td>
                         ${botoesAcao}
                     </td>
