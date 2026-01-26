@@ -13,6 +13,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
+  // Atalho de teclado Ctrl+S para salvar
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
   // 🔍 Preenche os campos se estiver em modo de edição
   if (id) {
 
