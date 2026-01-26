@@ -1153,18 +1153,6 @@ const ColetarManutencaoUI = {
         const valorTotalStr = this.coletaValorTotalInput ? this.coletaValorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim() : '0';
         const valorTotal = parseFloat(valorTotalStr) || 0;
 
-        // Validação de duplicidade visual na grid atual
-        if (!this.editingId) { // Só valida duplicidade se for novo registro
-            const duplicado = Array.from(this.tableBodyLancamentos.querySelectorAll('tr td:nth-child(3)'))
-                .some(td => td.textContent === placa);
-                
-            if (duplicado) {
-                if (!confirm(`⚠️ ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
-                    return;
-                }
-            }
-        }
-
         // Validação de Oficina Obrigatória
         const checklistElements = document.querySelectorAll('.checklist-item');
         for (const item of checklistElements) {
@@ -1288,7 +1276,24 @@ const ColetarManutencaoUI = {
 
                 if (fetchError) throw fetchError;
 
-                if (!existingHeaders || existingHeaders.length === 0) {
+                let shouldMerge = false;
+                let latestHeader = null;
+
+                if (existingHeaders && existingHeaders.length > 0) {
+                    latestHeader = existingHeaders[0];
+                    const checklist = latestHeader.coletas_manutencao_checklist || [];
+                    const hasPendente = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
+
+                    if (hasPendente) {
+                        if (confirm(`ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
+                            shouldMerge = true;
+                        } else {
+                            return;
+                        }
+                    }
+                }
+
+                if (!shouldMerge) {
                     // NENHUM REGISTRO EXISTENTE: Cria novo cabeçalho e insere itens
                     const { data: coleta, error: coletaError } = await supabaseClient
                         .from('coletas_manutencao')
@@ -1317,7 +1322,6 @@ const ColetarManutencaoUI = {
 
                 } else {
                     // REGISTROS EXISTENTES: Lógica de Merge/Novo
-                    const latestHeader = existingHeaders[0];
                     const headersToUpdate = new Set();
                     const itemsToInsertInLatest = [];
                     const updatesToPerform = [];
