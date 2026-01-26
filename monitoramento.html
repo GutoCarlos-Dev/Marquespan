@@ -45,11 +45,16 @@
 
         <!-- KPIs (Indicadores Chave) -->
         <div class="kpi-grid">
-            <div class="kpi-card red">
+            <div class="kpi-card red" id="card-total-frota" style="position: relative; cursor: help;">
                 <div class="kpi-icon"><i class="fas fa-truck"></i></div>
                 <div class="kpi-info">
                     <h3>Total Frota</h3>
                     <p id="kpi-total-frota">0</p>
+                </div>
+                <!-- Tooltip para detalhamento -->
+                <div id="tooltip-frota" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 1000; min-width: 220px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Detalhamento por Tipo</div>
+                    <div id="tooltip-frota-content">Carregando...</div>
                 </div>
             </div>
             <div class="kpi-card orange">
@@ -147,5 +152,53 @@
   </div>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/monitoramento.js"></script>
+  <script type="module">
+    import { supabaseClient } from './script/supabase.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const cardFrota = document.getElementById('card-total-frota');
+        const tooltipFrota = document.getElementById('tooltip-frota');
+        const tooltipContent = document.getElementById('tooltip-frota-content');
+
+        if (cardFrota && tooltipFrota) {
+            // Carregar dados de tipos de veículos
+            let detalhesHtml = 'Carregando...';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('veiculos')
+                    .select('tipo');
+
+                if (!error && data) {
+                    const counts = {};
+                    data.forEach(v => {
+                        const tipo = v.tipo ? v.tipo.toUpperCase() : 'NÃO DEFINIDO';
+                        counts[tipo] = (counts[tipo] || 0) + 1;
+                    });
+
+                    detalhesHtml = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                    Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([tipo, qtd]) => {
+                        detalhesHtml += `<li style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #444;">
+                            <span style="color: #ddd;">${tipo}</span> <strong style="color: #fff;">${qtd}</strong>
+                        </li>`;
+                    });
+                    detalhesHtml += '</ul>';
+                }
+            } catch (err) {
+                console.error('Erro ao carregar detalhes da frota:', err);
+                detalhesHtml = 'Erro ao carregar dados.';
+            }
+
+            cardFrota.addEventListener('mouseenter', () => {
+                tooltipContent.innerHTML = detalhesHtml;
+                tooltipFrota.style.display = 'block';
+            });
+
+            cardFrota.addEventListener('mouseleave', () => {
+                tooltipFrota.style.display = 'none';
+            });
+        }
+    });
+  </script>
 </body>
 </html>
