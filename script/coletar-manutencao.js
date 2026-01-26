@@ -1682,12 +1682,33 @@ const ColetarManutencaoUI = {
 
             // 4. Preencher o checklist
             // Primeiro limpa tudo
-            document.querySelectorAll('.checklist-item').forEach(div => {
+            const checklistItems = this.modal.querySelectorAll('.checklist-item');
+            checklistItems.forEach(div => {
+                // Limpa inputs de texto
+                const detailsInput = div.querySelector('.checklist-details');
+                if (detailsInput) detailsInput.value = '';
+                
+                // Reseta status
                 const statusSelect = div.querySelector('.checklist-status');
-                div.querySelector('.checklist-details').value = '';
-                statusSelect.value = '';
-                div.querySelector('.checklist-valor').value = 'R$ 0,00';
-                this.updateStatusColor(statusSelect); // Reseta a cor
+                if (statusSelect) {
+                    statusSelect.value = '';
+                    this.updateStatusColor(statusSelect);
+                }
+
+                // Reseta e esconde oficina
+                const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
+                const oficinaSelect = div.querySelector('.oficina-selector');
+                if (oficinaWrapper) oficinaWrapper.style.display = 'none';
+                if (oficinaSelect) {
+                    oficinaSelect.value = '';
+                    oficinaSelect.required = false;
+                }
+
+                // Reseta e esconde valor
+                const valorWrapper = div.querySelector('.valor-wrapper');
+                const valorInput = div.querySelector('.checklist-valor');
+                if (valorWrapper) valorWrapper.style.display = 'none';
+                if (valorInput) valorInput.value = 'R$ 0,00';
             });
             // Limpa campo extra
             const extraField = document.getElementById('extra-eletrica-interna');
