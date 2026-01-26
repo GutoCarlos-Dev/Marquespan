@@ -614,8 +614,45 @@ const ColetarManutencaoUI = {
         if (this.coletaValorTotalInput) this.coletaValorTotalInput.value = 'R$ 0,00';
         this.carregarVeiculos();
         this.fixStatusOptions();
-        // Limpa as cores de todos os selects de status no modal
-        this.modal.querySelectorAll('.checklist-status').forEach(select => this.updateStatusColor(select));
+        
+        // Limpa completamente o checklist (valores e visibilidade)
+        const checklistItems = this.modal.querySelectorAll('.checklist-item');
+        checklistItems.forEach(div => {
+            // Limpa inputs de texto
+            const detailsInput = div.querySelector('.checklist-details');
+            if (detailsInput) detailsInput.value = '';
+            
+            // Reseta status
+            const statusSelect = div.querySelector('.checklist-status');
+            if (statusSelect) {
+                statusSelect.value = '';
+                this.updateStatusColor(statusSelect);
+            }
+
+            // Reseta e esconde oficina
+            const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
+            const oficinaSelect = div.querySelector('.oficina-selector');
+            if (oficinaWrapper) oficinaWrapper.style.display = 'none';
+            if (oficinaSelect) {
+                oficinaSelect.value = '';
+                oficinaSelect.required = false;
+            }
+
+            // Reseta e esconde valor
+            const valorWrapper = div.querySelector('.valor-wrapper');
+            const valorInput = div.querySelector('.checklist-valor');
+            if (valorWrapper) valorWrapper.style.display = 'none';
+            if (valorInput) valorInput.value = 'R$ 0,00';
+        });
+
+        // Limpa campo extra de elétrica
+        const extraField = document.getElementById('extra-eletrica-interna');
+        if (extraField) {
+            extraField.classList.add('hidden');
+            const extraInput = extraField.querySelector('input');
+            if (extraInput) extraInput.value = '';
+        }
+
         this.aplicarRestricoesDeNivelNoModal();
         this.modal.classList.remove('hidden');
     },
