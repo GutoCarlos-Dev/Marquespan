@@ -1344,7 +1344,11 @@ const ColetarManutencaoUI = {
                             let newDetails = match.detalhes || '';
                             if (formItem.detalhes) {
                                 if (newDetails && newDetails.trim() !== '') {
-                                    newDetails = `${newDetails}, ${formItem.detalhes}`;
+                                    if (match.status === 'FINALIZADO' || match.status === 'FINALIZADO ROTA') {
+                                        newDetails = `${newDetails} ( ${match.status} ) ${formItem.detalhes}`;
+                                    } else {
+                                        newDetails = `${newDetails}, ${formItem.detalhes}`;
+                                    }
                                 } else {
                                     newDetails = formItem.detalhes;
                                 }
