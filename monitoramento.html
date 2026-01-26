@@ -71,11 +71,16 @@
                     <p id="kpi-total-valor">R$ 0,00</p>
                 </div>
             </div>
-            <div class="kpi-card blue1">
+            <div class="kpi-card blue1" id="card-internados" style="position: relative; cursor: help;">
                 <div class="kpi-icon"><i class="fas fa-hospital"></i></div>
                 <div class="kpi-info">
                     <h3>Veículos Internados</h3>
                     <p id="kpi-internados">0</p>
+                </div>
+                <!-- Tooltip para detalhamento -->
+                <div id="tooltip-internados" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 1000; min-width: 220px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas Internadas</div>
+                    <div id="tooltip-internados-content">Carregando...</div>
                 </div>
             </div>
             <div class="kpi-card green">
@@ -196,6 +201,54 @@
 
             cardFrota.addEventListener('mouseleave', () => {
                 tooltipFrota.style.display = 'none';
+            });
+        }
+
+        // Lógica para Tooltip de Veículos Internados
+        const cardInternados = document.getElementById('card-internados');
+        const tooltipInternados = document.getElementById('tooltip-internados');
+        const tooltipInternadosContent = document.getElementById('tooltip-internados-content');
+
+        if (cardInternados && tooltipInternados) {
+            cardInternados.addEventListener('mouseenter', async () => {
+                tooltipInternados.style.display = 'block';
+                tooltipInternadosContent.innerHTML = 'Carregando...';
+
+                try {
+                    const dataIni = document.getElementById('dataInicial').value;
+                    const dataFim = document.getElementById('dataFinal').value;
+
+                    let query = supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .select('coletas_manutencao!inner(placa, data_hora)')
+                        .eq('status', 'INTERNADO');
+
+                    if (dataIni) query = query.gte('coletas_manutencao.data_hora', dataIni + 'T00:00:00');
+                    if (dataFim) query = query.lte('coletas_manutencao.data_hora', dataFim + 'T23:59:59');
+
+                    const { data, error } = await query;
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        const placas = [...new Set(data.map(item => item.coletas_manutencao.placa))];
+                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        placas.forEach(placa => {
+                            html += `<li style="padding: 2px 0; border-bottom: 1px solid #444; color: #ddd;">${placa}</li>`;
+                        });
+                        html += '</ul>';
+                        tooltipInternadosContent.innerHTML = html;
+                    } else {
+                        tooltipInternadosContent.innerHTML = 'Nenhum veículo internado no período.';
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar internados:', err);
+                    tooltipInternadosContent.innerHTML = 'Erro ao carregar dados.';
+                }
+            });
+
+            cardInternados.addEventListener('mouseleave', () => {
+                tooltipInternados.style.display = 'none';
             });
         }
     });
