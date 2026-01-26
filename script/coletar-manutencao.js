@@ -1281,15 +1281,12 @@ const ColetarManutencaoUI = {
 
                 if (existingHeaders && existingHeaders.length > 0) {
                     latestHeader = existingHeaders[0];
-                    const checklist = latestHeader.coletas_manutencao_checklist || [];
-                    const hasPendente = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
-
-                    if (hasPendente) {
-                        if (confirm(`ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
-                            shouldMerge = true;
-                        } else {
-                            return;
-                        }
+                    // Se já existe um lançamento para esta placa na mesma semana, pergunta se deseja atualizar.
+                    // Isso cobre tanto o caso de um lançamento PENDENTE quanto um FINALIZADO.
+                    if (confirm(`ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
+                        shouldMerge = true;
+                    } else {
+                        return; // Usuário cancelou a operação
                     }
                 }
 
