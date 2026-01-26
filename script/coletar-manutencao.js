@@ -1346,7 +1346,7 @@ const ColetarManutencaoUI = {
                             if (formItem.detalhes) {
                                 if (newDetails && newDetails.trim() !== '') {
                                     if (match.status === 'FINALIZADO' || match.status === 'FINALIZADO ROTA') {
-                                        newDetails = `${newDetails} ( ${match.status} ), ${formItem.detalhes}`;
+                                        newDetails = `${newDetails} ( <-- ${match.status} ), ${formItem.detalhes}`;
                                     } else {
                                         newDetails = `${newDetails}, ${formItem.detalhes}`;
                                     }
