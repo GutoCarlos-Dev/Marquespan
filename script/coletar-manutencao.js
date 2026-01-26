@@ -1308,6 +1308,7 @@ const ColetarManutencaoUI = {
                         detalhes: i.detalhes,
                         status: i.status, // Permite salvar vazio
                         pecas_usadas: i.pecas_usadas,
+                        oficina_id: i.oficina_id,
                         valor: i.valor
                     }));
 
