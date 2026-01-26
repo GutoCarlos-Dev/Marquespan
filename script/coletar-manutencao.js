@@ -1103,7 +1103,11 @@ const ColetarManutencaoUI = {
         const dataHoraInput = document.getElementById('coletaDataHora').value;
         if (!dataHoraInput) return alert("Por favor, preencha a data e hora.");
         const dataHora = new Date(dataHoraInput).toISOString();
-        const usuario = document.getElementById('coletaUsuario').value;
+        
+        // Sempre registra/atualiza com o usuário logado no momento da ação.
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const usuario = usuarioLogado ? usuarioLogado.nome : document.getElementById('coletaUsuario').value; // Fallback para o valor do campo
+
         const placa = document.getElementById('coletaPlaca').value.trim().toUpperCase();
         const modelo = document.getElementById('coletaModelo').value;
         const km = document.getElementById('coletaKm').value;
