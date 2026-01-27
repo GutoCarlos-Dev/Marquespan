@@ -486,7 +486,7 @@ const UI = {
 
   async exportSavedQuotationPdf(id, mode = 'save'){
     try {
-      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario, status').eq('id', id).single();
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario, status, id_fornecedor_vencedor').eq('id', id).single();
       if (cotErr) throw cotErr;
 
       const { jsPDF } = window.jspdf;
@@ -541,6 +541,21 @@ const UI = {
       doc.text(`Data de Emissão: ${dateStr}`, 14, 47);
       doc.text(`Responsável: ${userIdent}`, 14, 52);
 
+      let startY = 60;
+
+      // Se status for Aprovada e tiver vencedor, exibe dados do fornecedor
+      if (cotacao.status === 'Aprovada' && cotacao.id_fornecedor_vencedor) {
+        const { data: fornecedor } = await supabaseClient.from('fornecedores').select('nome, telefone').eq('id', cotacao.id_fornecedor_vencedor).single();
+        if (fornecedor) {
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Fornecedor: ${fornecedor.nome}`, 14, 58);
+            doc.setFont('helvetica', 'normal');
+            const telText = fornecedor.telefone ? `Telefone: ${fornecedor.telefone}` : '';
+            if(telText) doc.text(telText, 14, 63);
+            startY = telText ? 70 : 65;
+        }
+      }
+
       let columns = [];
       let rows = [];
 
@@ -563,6 +578,55 @@ const UI = {
                 divStr
             ];
         });
+      } else if (cotacao.status === 'Aprovada') {
+        // Layout para Pedido Aprovado (Com Preços e Fornecedor)
+        if (cotacao.id_fornecedor_vencedor) {
+             // Buscar orçamento e preços do vencedor
+             const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
+                  .select('id, valor_frete')
+                  .eq('id_cotacao', id)
+                  .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
+                  .single();
+             
+             const { data: precos } = await supabaseClient.from('orcamento_item_precos')
+                  .select('id_produto, preco_unitario')
+                  .eq('id_orcamento', orcamento?.id);
+             
+             const priceMap = new Map((precos || []).map(p => [p.id_produto, p.preco_unitario]));
+
+             const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens')
+                  .select('id_produto, quantidade, produtos(codigo_principal, nome, unidade_medida)')
+                  .eq('id_cotacao', id);
+             if (itensErr) throw itensErr;
+
+             columns = ['Produto', 'QTD', 'Preço Unit.', 'Preço Total'];
+             let subtotal = 0;
+             
+             rows = itens.map(i => {
+                 const unitPrice = priceMap.get(i.id_produto) || 0;
+                 const total = unitPrice * i.quantidade;
+                 subtotal += total;
+                 return [
+                     i.produtos?.nome || '',
+                     i.quantidade,
+                     `R$ ${unitPrice.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                     `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                 ];
+             });
+
+             const frete = orcamento?.valor_frete || 0;
+             const totalGeral = subtotal + frete;
+
+             rows.push(['', '', 'Subtotal:', `R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             if (frete > 0) rows.push(['', '', 'Frete:', `R$ ${frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             rows.push(['', '', 'TOTAL:', `R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+        } else {
+             // Fallback caso não tenha vencedor definido (erro de dados)
+             const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
+             if (itensErr) throw itensErr;
+             columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
+             rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN']);
+        }
       } else {
         // Layout Padrão de Cotação
         const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
@@ -574,7 +638,8 @@ const UI = {
 
       doc.autoTable({
         head: [columns], body: rows, startY: 60, theme: 'grid',
-        headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold' },
+        startY: startY,
+        headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center' },
         styles: { fontSize: 10, cellPadding: 3 }, alternateRowStyles: { fillColor: [240, 240, 240] }
       });
 
