@@ -922,6 +922,19 @@ const UI = {
     this.renderFornecedoresGrid();
   },
 
+  updateSortIcons(sectionId, sortState){
+    const ths = document.querySelectorAll(`${sectionId} .data-grid thead th[data-field]`);
+    ths.forEach(th => {
+      const icon = th.querySelector('i');
+      if(icon){
+        icon.className = 'fas fa-sort'; // Reset para ícone neutro
+        if(th.getAttribute('data-field') === sortState.field){
+           icon.className = sortState.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+      }
+    });
+  },
+
   async renderProdutosGrid(){
     try {
       const searchTerm = document.getElementById('searchProdutoInput')?.value.trim();
@@ -944,6 +957,9 @@ const UI = {
             <button class="btn-delete" data-id="${p.id}">Excluir</button>
           </td>
         </tr>`).join('');
+      
+      // Atualiza os ícones de ordenação visualmente
+      this.updateSortIcons('#sectionCadastrarProdutos', this._produtosSort);
     } catch(e) {
       console.error('Erro ao carregar produtos', e);
     }
@@ -968,6 +984,9 @@ const UI = {
             <button class="btn-delete" data-id="${f.id}">Excluir</button>
           </td>
         </tr>`).join('');
+
+      // Atualiza os ícones de ordenação visualmente
+      this.updateSortIcons('#sectionCadastrarFornecedor', this._fornecedoresSort);
     } catch(e) {
       console.error('Erro ao carregar fornecedores', e);
     }
