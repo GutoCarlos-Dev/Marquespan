@@ -315,7 +315,7 @@ const UI = {
       card.innerHTML = `
         <h4>Empresa ${i}</h4>
         <div class="form-group"><select id="empresa${i}Cot"><option value="">-- Carregando --</option></select></div>
-        <div class="form-group"><textarea id="obsEmpresa${i}" placeholder="Observações" rows="2"></textarea></div>
+        <div class="form-group"><textarea id="obsEmpresa${i}" placeholder="Observações" rows="2" oninput="this.value = this.value.toUpperCase()"></textarea></div>
         <div id="precosEmpresa${i}"></div>
         <div class="form-group"><input type="number" step="0.01" id="freteEmpresa${i}" placeholder="Frete (R$)" /></div>
         <div class="form-group"><input type="text" id="totalEmpresa${i}" placeholder="Total (R$)" readonly style="font-weight:bold; background-color: #e9ecef;" /></div>
@@ -768,7 +768,7 @@ const UI = {
         const valorTotal = parseFloat(document.getElementById(`totalEmpresa${idx}`).value)||null;
         const valorFrete = parseFloat(document.getElementById(`freteEmpresa${idx}`).value)||null;
         if(fornecedorId && valorTotal){
-          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, observacao:document.getElementById(`obsEmpresa${idx}`).value||'' });
+          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, observacao:(document.getElementById(`obsEmpresa${idx}`).value||'').toUpperCase() });
           const orcamentoId = orc[0].id;
           const precos = [];
           this.cart.items.forEach(it=>{ // Corrigido: &gt; para >
