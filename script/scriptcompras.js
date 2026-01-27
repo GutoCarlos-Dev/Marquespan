@@ -1012,6 +1012,7 @@ const UI = {
       const div = document.createElement('div');
       div.className = 'recebimento-item';
       div.dataset.itemId = item.produtos.id;
+      div.dataset.qtdPedida = item.quantidade;
       div.innerHTML = `
         <label for="qtd-recebida-${item.produtos.id}">${item.produtos.nome} (Pedido: ${item.quantidade})</label>
         <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
