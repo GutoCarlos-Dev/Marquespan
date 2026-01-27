@@ -543,8 +543,8 @@ const UI = {
 
       let startY = 60;
 
-      // Se status for Aprovada ou Pendente e tiver vencedor, exibe dados do fornecedor
-      if ((cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') && cotacao.id_fornecedor_vencedor) {
+      // Se status for Aprovada, Pendente ou Recebido e tiver vencedor, exibe dados do fornecedor
+      if ((cotacao.status === 'Aprovada' || cotacao.status === 'Pendente' || cotacao.status === 'Recebido') && cotacao.id_fornecedor_vencedor) {
         const { data: fornecedor } = await supabaseClient.from('fornecedores').select('nome, telefone').eq('id', cotacao.id_fornecedor_vencedor).single();
         if (fornecedor) {
             doc.setFont('helvetica', 'bold');
@@ -560,24 +560,70 @@ const UI = {
       let rows = [];
 
       if (cotacao.status === 'Recebido') {
-        // Layout para Cotação Recebida (Conferência)
-        const { data: recebimentos, error: recErr } = await supabaseClient
-            .from('recebimentos')
-            .select('qtd_pedida, qtd_recebida, produtos(codigo_principal, nome, unidade_medida)')
-            .eq('id_cotacao', id);
-        if (recErr) throw recErr;
+        // Layout para Cotação Recebida (Com valores e verificação de divergência)
+        if (cotacao.id_fornecedor_vencedor) {
+             // Buscar orçamento e preços do vencedor para calcular valores finais
+             const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
+                  .select('id, valor_frete')
+                  .eq('id_cotacao', id)
+                  .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
+                  .single();
+             
+             const { data: precos } = await supabaseClient.from('orcamento_item_precos')
+                  .select('id_produto, preco_unitario')
+                  .eq('id_orcamento', orcamento?.id);
+             
+             const priceMap = new Map((precos || []).map(p => [p.id_produto, p.preco_unitario]));
 
-        columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência'];
-        rows = recebimentos.map(r => {
-            const divergencia = r.qtd_recebida - r.qtd_pedida;
-            const divStr = divergencia > 0 ? `+${divergencia}` : (divergencia === 0 ? 'OK' : `${divergencia}`);
-            return [
-                r.produtos?.nome || '',
-                r.qtd_pedida,
-                r.qtd_recebida,
-                divStr
-            ];
-        });
+             const { data: recebimentos, error: recErr } = await supabaseClient
+                .from('recebimentos')
+                .select('qtd_pedida, qtd_recebida, id_produto, produtos(codigo_principal, nome, unidade_medida)')
+                .eq('id_cotacao', id);
+             if (recErr) throw recErr;
+
+             // Verifica se existe alguma divergência em qualquer item
+             const hasDivergence = recebimentos.some(r => r.qtd_recebida !== r.qtd_pedida);
+
+             if (hasDivergence) {
+                 columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência', 'Preço Unit.', 'Preço Total'];
+             } else {
+                 columns = ['Produto', 'QTD', 'Preço Unit.', 'Preço Total'];
+             }
+
+             let subtotal = 0;
+             rows = recebimentos.map(r => {
+                 const unitPrice = priceMap.get(r.id_produto) || 0;
+                 const total = unitPrice * r.qtd_recebida;
+                 subtotal += total;
+                 
+                 const divergencia = r.qtd_recebida - r.qtd_pedida;
+                 const divStr = divergencia > 0 ? `+${divergencia}` : (divergencia === 0 ? 'OK' : `${divergencia}`);
+                 const priceStr = `R$ ${unitPrice.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                 const totalStr = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                 if (hasDivergence) {
+                     return [r.produtos?.nome || '', r.qtd_pedida, r.qtd_recebida, divStr, priceStr, totalStr];
+                 } else {
+                     return [r.produtos?.nome || '', r.qtd_recebida, priceStr, totalStr];
+                 }
+             });
+
+             const frete = orcamento?.valor_frete || 0;
+             const totalGeral = subtotal + frete;
+
+             // Ajusta colunas vazias para alinhar os totais à direita
+             const emptyCols = hasDivergence ? ['', '', '', ''] : ['', ''];
+             
+             rows.push([...emptyCols, 'Subtotal:', `R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             if (frete > 0) rows.push([...emptyCols, 'Frete:', `R$ ${frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             rows.push([...emptyCols, 'TOTAL:', `R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+        } else {
+             // Fallback simples caso não tenha vencedor (apenas quantidades)
+             const { data: recebimentos, error: recErr } = await supabaseClient.from('recebimentos').select('qtd_pedida, qtd_recebida, produtos(nome)').eq('id_cotacao', id);
+             if (recErr) throw recErr;
+             columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência'];
+             rows = recebimentos.map(r => [r.produtos?.nome || '', r.qtd_pedida, r.qtd_recebida, (r.qtd_recebida - r.qtd_pedida)]);
+        }
       } else if (cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') {
         // Layout para Pedido Aprovado ou Cotação Pendente (Com Preços e Fornecedor)
         if (cotacao.id_fornecedor_vencedor) {
