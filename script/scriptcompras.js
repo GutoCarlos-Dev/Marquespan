@@ -799,7 +799,7 @@ const UI = {
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
-        const btnEditarHtml = (!isRecebido || nivelUsuario === 'administrador') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
+        const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
         tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
