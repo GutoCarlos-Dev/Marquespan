@@ -519,7 +519,8 @@ const UI = {
 
       doc.setFontSize(18);
       doc.setTextColor(0, 105, 55);
-      doc.text('Cotação - Logistica', 14, 35);
+      const titulo = cotacao.status === 'Recebido' ? 'Recebimento - Logistica' : 'Cotação - Logistica';
+      doc.text(titulo, 14, 35);
 
       doc.setFontSize(10);
       doc.setTextColor(0);
