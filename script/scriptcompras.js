@@ -184,7 +184,9 @@ const UI = {
     this.recebimentoPanelBackdrop?.addEventListener('click', e=>{ if(e.target===this.recebimentoPanelBackdrop) this.closeRecebimentoPanel() });
 
     // print and close buttons for quotation details
-    this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
+    this.btnPrintQuotation?.addEventListener('click', () => {
+        if(this.detailPanel.dataset.id) this.exportSavedQuotationPdf(this.detailPanel.dataset.id, 'print');
+    });
     this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
     
     // Correção: Adiciona o evento para o botão de PDF dentro do painel de detalhes
@@ -481,7 +483,7 @@ const UI = {
     doc.save(`cotacao_${code}.pdf`);
   },
 
-  async exportSavedQuotationPdf(id){
+  async exportSavedQuotationPdf(id, mode = 'save'){
     try {
       const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario').eq('id', id).single();
       if (cotErr) throw cotErr;
@@ -542,7 +544,12 @@ const UI = {
         styles: { fontSize: 10, cellPadding: 3 }, alternateRowStyles: { fillColor: [240, 240, 240] }
       });
 
-      doc.save(`cotacao_${code}.pdf`);
+      if (mode === 'print') {
+        doc.autoPrint(); // Prepara o PDF para abrir a janela de impressão automaticamente
+        window.open(doc.output('bloburl'), '_blank'); // Abre em nova aba
+      } else {
+        doc.save(`cotacao_${code}.pdf`);
+      }
     } catch(e) { console.error(e); alert('Erro ao gerar PDF'); }
   },
 
