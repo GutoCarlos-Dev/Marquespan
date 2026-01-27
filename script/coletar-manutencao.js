@@ -143,6 +143,12 @@ const ColetarManutencaoUI = {
                 searchStatus.innerHTML = '<option value="PENDENTE">PENDENTE</option>';
                 searchStatus.value = 'PENDENTE';
             }
+
+            // Ocultar a aba "Gerar Arquivo" para usuários restritos
+            const btnGerarArquivo = document.querySelector('.painel-btn[data-secao="sectionGerarArquivo"]');
+            if (btnGerarArquivo) {
+                btnGerarArquivo.style.display = 'none';
+            }
         }
     },
 
