@@ -485,11 +485,8 @@ const UI = {
 
   async exportSavedQuotationPdf(id, mode = 'save'){
     try {
-      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario').eq('id', id).single();
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario, status').eq('id', id).single();
       if (cotErr) throw cotErr;
-
-      const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
-      if (itensErr) throw itensErr;
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
@@ -530,13 +527,36 @@ const UI = {
       doc.text(`Data de Emissão: ${dateStr}`, 14, 47);
       doc.text(`Responsável: ${userIdent}`, 14, 52);
 
-      const columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
-      const rows = itens.map(i => [
-        i.produtos?.codigo_principal || '',
-        i.produtos?.nome || '',
-        i.quantidade,
-        i.produtos?.unidade_medida || 'UN'
-      ]);
+      let columns = [];
+      let rows = [];
+
+      if (cotacao.status === 'Recebido') {
+        // Layout para Cotação Recebida (Conferência)
+        const { data: recebimentos, error: recErr } = await supabaseClient
+            .from('recebimentos')
+            .select('qtd_pedida, qtd_recebida, produtos(codigo_principal, nome, unidade_medida)')
+            .eq('id_cotacao', id);
+        if (recErr) throw recErr;
+
+        columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência'];
+        rows = recebimentos.map(r => {
+            const divergencia = r.qtd_recebida - r.qtd_pedida;
+            const divStr = divergencia > 0 ? `+${divergencia}` : (divergencia === 0 ? 'OK' : `${divergencia}`);
+            return [
+                r.produtos?.nome || '',
+                r.qtd_pedida,
+                r.qtd_recebida,
+                divStr
+            ];
+        });
+      } else {
+        // Layout Padrão de Cotação
+        const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
+        if (itensErr) throw itensErr;
+
+        columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
+        rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN']);
+      }
 
       doc.autoTable({
         head: [columns], body: rows, startY: 60, theme: 'grid',
