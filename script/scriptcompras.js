@@ -186,6 +186,11 @@ const UI = {
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', ()=>this.printQuotation()); // Corrigido: &gt; para >
     this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
+    
+    // Correção: Adiciona o evento para o botão de PDF dentro do painel de detalhes
+    this.btnGeneratePdf?.addEventListener('click', () => {
+        if(this.detailPanel.dataset.id) this.exportSavedQuotationPdf(this.detailPanel.dataset.id);
+    });
 
     // product form
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e)); // Corrigido: &gt; para >
@@ -733,6 +738,9 @@ const UI = {
         }).join('')}</tbody></table></div>`  // Corrigido: &lt; e &gt;
       });
       this.quotationDetailTitle.innerHTML = `Detalhes: <span style="color: red; font-weight: bold;">${cotacao.codigo_cotacao}</span>`; // Corrigido: &lt; e &gt;
+
+      // Armazena o ID da cotação no painel para uso do botão de PDF
+      this.detailPanel.dataset.id = id;
 
       // Se o status for 'Recebido', busca e exibe os detalhes do recebimento com as divergências
       if (cotacao.status === 'Recebido') {
