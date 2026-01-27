@@ -480,13 +480,13 @@ const UI = {
     if(this.cart.items.length===0) return alert('Adicione produtos para registrar a cotação');
     const code = this.quotationCode.value.trim(); if(!code) return alert('Código não gerado');
 
-    // Validação: Exige que um vencedor seja selecionado antes de registrar.
+    // Validação: Vencedor opcional (pode ser informado posteriormente)
     const winner = document.querySelector('input[name="empresaVencedora"]:checked');
-    if (!winner) {
-      return alert('Por favor, selecione um fornecedor como "Vencedor" antes de registrar a cotação.');
-    }
     let idFornecedorVencedor=null, valorTotalVencedor=null;
-    if(winner){idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null}
+    if(winner){
+      idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; 
+      valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null
+    }
 
     try{
       // Se estiver editando, primeiro apaga os dados antigos relacionados
@@ -747,6 +747,12 @@ const UI = {
             if (inputPreco) inputPreco.value = p.preco_unitario;
           }
         });
+
+        // Marca o radio button se este for o fornecedor vencedor
+        if (cotacao.id_fornecedor_vencedor && orc.id_fornecedor === cotacao.id_fornecedor_vencedor) {
+          const radio = document.getElementById(`vencedor${cardIndex}`);
+          if (radio) radio.checked = true;
+        }
       });
 
       this.updateAllTotals();
