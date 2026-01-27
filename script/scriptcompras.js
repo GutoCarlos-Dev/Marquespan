@@ -519,14 +519,24 @@ const UI = {
       const code = cotacao.codigo_cotacao || 'N/A';
 
       doc.setFontSize(18);
-      doc.setTextColor(0, 105, 55);
-      let titulo = 'Cotação - Logistica';
-      if (cotacao.status === 'Recebido') titulo = 'Recebimento - Logistica';
-      else if (cotacao.status === 'Aprovada') titulo = 'Pedido - Logistica';
-      doc.text(titulo, 14, 35);
+      doc.setFont('helvetica', 'bold'); // Título em negrito
 
+      // Mapeamento de status para cores e títulos
+      const statusConfig = {
+        'Pendente':  { titulo: 'Cotação - Logistica',      color: [179, 107, 0] }, // Laranja/Marrom
+        'Aprovada':  { titulo: 'Pedido - Logistica',       color: [27, 122, 27] }, // Verde
+        'Rejeitada': { titulo: 'Cotação Rejeitada',        color: [170, 0, 0]   }, // Vermelho
+        'Recebido':  { titulo: 'Recebimento - Logistica',  color: [11, 90, 136]  }  // Azul
+      };
+      
+      const config = statusConfig[cotacao.status] || { titulo: 'Cotação - Logistica', color: [0, 105, 55] }; // Padrão Verde Marquespan
+
+      doc.setTextColor(config.color[0], config.color[1], config.color[2]);
+      doc.text(config.titulo, 14, 35);
+
+      doc.setFont('helvetica', 'normal'); // Reseta a fonte para o resto do documento
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(0); // Reseta a cor para preto
       doc.text(`Código: ${code}`, 14, 42);
       doc.text(`Data de Emissão: ${dateStr}`, 14, 47);
       doc.text(`Responsável: ${userIdent}`, 14, 52);
