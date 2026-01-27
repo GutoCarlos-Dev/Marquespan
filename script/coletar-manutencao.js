@@ -155,6 +155,21 @@ const ColetarManutencaoUI = {
             if (btnImportarMassa) {
                 btnImportarMassa.style.display = 'none';
             }
+
+            // Ocultar filtros de Item e Oficina
+            const searchItem = document.getElementById('searchItem');
+            if (searchItem) {
+                const wrapper = searchItem.closest('.form-group');
+                if (wrapper) wrapper.style.display = 'none';
+                else searchItem.style.display = 'none';
+            }
+
+            const searchOficina = document.getElementById('searchOficina');
+            if (searchOficina) {
+                const wrapper = searchOficina.closest('.form-group');
+                if (wrapper) wrapper.style.display = 'none';
+                else searchOficina.style.display = 'none';
+            }
         }
     },
 
