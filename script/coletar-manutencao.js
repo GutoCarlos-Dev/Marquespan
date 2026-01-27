@@ -699,28 +699,61 @@ const ColetarManutencaoUI = {
     aplicarRestricoesDeNivelNoModal() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+        const isRestricted = ['mecanica_externa', 'moleiro'].includes(nivel);
         
         if (!this.modal) return;
+
+        // --- RESTRIÇÃO DE VALOR TOTAL ---
+        const valorTotalContainer = this.coletaValorTotalInput?.closest('.form-group');
+        if (valorTotalContainer) {
+            valorTotalContainer.style.display = isRestricted ? 'none' : '';
+        }
         
         const allItems = this.modal.querySelectorAll('.checklist-item');
-        allItems.forEach(item => item.style.display = 'block'); // Reset: mostra tudo por padrão
+        
+        // Reset: mostra tudo por padrão e restaura opções de status
+        allItems.forEach(item => {
+            item.style.display = 'block';
+            const statusSelect = item.querySelector('.checklist-status');
+            if (statusSelect && statusSelect.dataset.originalOptions) {
+                statusSelect.innerHTML = statusSelect.dataset.originalOptions;
+                delete statusSelect.dataset.originalOptions;
+            }
+        }); 
         
         const extraEletrica = document.getElementById('extra-eletrica-interna');
         if (extraEletrica) extraEletrica.style.display = '';
 
-        if (nivel === 'moleiro') {
-            allItems.forEach(item => { 
-                const itemNome = item.dataset.item ? item.dataset.item.toUpperCase() : '';
-                if (itemNome !== 'MOLEIRO') item.style.display = 'none'; 
+        if (isRestricted) {
+            // --- RESTRIÇÃO DE ITENS DO CHECKLIST ---
+            if (nivel === 'moleiro') {
+                allItems.forEach(item => { 
+                    const itemNome = item.dataset.item ? item.dataset.item.toUpperCase() : '';
+                    if (itemNome !== 'MOLEIRO') item.style.display = 'none'; 
+                });
+                if (extraEletrica) extraEletrica.style.display = 'none';
+            } else if (nivel === 'mecanica_externa') {
+                allItems.forEach(item => { 
+                    const itemNome = item.dataset.item ? item.dataset.item.toUpperCase() : '';
+                    // Permite ambas as variações para garantir que o item apareça
+                    if (itemNome !== 'MECANICA EXTERNA' && itemNome !== 'MECANICA - EXTERNA') item.style.display = 'none'; 
+                });
+                if (extraEletrica) extraEletrica.style.display = 'none';
+            }
+
+            // --- RESTRIÇÃO DE STATUS ---
+            allItems.forEach(item => {
+                const statusSelect = item.querySelector('.checklist-status');
+                if (statusSelect) {
+                    // Salva as opções originais antes de modificar
+                    if (!statusSelect.dataset.originalOptions) {
+                        statusSelect.dataset.originalOptions = statusSelect.innerHTML;
+                    }
+                    statusSelect.innerHTML = '<option value="PENDENTE">PENDENTE</option>';
+                    statusSelect.value = 'PENDENTE';
+                    this.updateStatusColor(statusSelect);
+                }
             });
-            if (extraEletrica) extraEletrica.style.display = 'none';
-        } else if (nivel === 'mecanica_externa') {
-            allItems.forEach(item => { 
-                const itemNome = item.dataset.item ? item.dataset.item.toUpperCase() : '';
-                // Permite ambas as variações para garantir que o item apareça
-                if (itemNome !== 'MECANICA EXTERNA' && itemNome !== 'MECANICA - EXTERNA') item.style.display = 'none'; 
-            });
-            if (extraEletrica) extraEletrica.style.display = 'none';
         }
     },
 
