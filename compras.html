@@ -33,6 +33,32 @@
       /* Esconde os botões de ação dentro do painel */
       .panel-footer { display: none; }
     }
+/* Estilos para botões de ação na tabela (Padrão Visual) */
+    .btn-action {
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: white;
+      transition: all 0.2s ease;
+      margin-right: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+      opacity: 0.95;
+    }
+    .btn-view { background-color: #17a2b8; } /* Azul Info */
+    .btn-edit { background-color: #ffc107; color: #212529; } /* Amarelo Alerta */
+    .btn-delete { background-color: #dc3545; } /* Vermelho Perigo */
+    .btn-receive { background-color: #28a745; } /* Verde Sucesso */
+    .btn-pdf { background-color: #6f42c1; } /* Roxo para PDF (Distinto do Excluir) */
+
   </style>
 </head>
 <body>
