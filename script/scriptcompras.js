@@ -523,13 +523,13 @@ const UI = {
 
       // Mapeamento de status para cores e títulos
       const statusConfig = {
-        'Pendente':  { titulo: 'Cotação - Logistica',      color: [179, 107, 0] }, // Laranja/Marrom
-        'Aprovada':  { titulo: 'Pedido - Logistica',       color: [27, 122, 27] }, // Verde
+        'Pendente':  { titulo: 'Cotação - Logística',      color: [179, 107, 0] }, // Laranja/Marrom
+        'Aprovada':  { titulo: 'Pedido - Logística',       color: [27, 122, 27] }, // Verde
         'Rejeitada': { titulo: 'Cotação Rejeitada',        color: [170, 0, 0]   }, // Vermelho
-        'Recebido':  { titulo: 'Recebimento - Logistica',  color: [11, 90, 136]  }  // Azul
+        'Recebido':  { titulo: 'Recebimento - Logística',  color: [11, 90, 136]  }  // Azul
       };
-      
-      const config = statusConfig[cotacao.status] || { titulo: 'Cotação - Logistica', color: [0, 105, 55] }; // Padrão Verde Marquespan
+
+      const config = statusConfig[cotacao.status] || { titulo: 'Cotação - Logística', color: [0, 105, 55] }; // Padrão Verde Marquespan
 
       doc.setTextColor(config.color[0], config.color[1], config.color[2]);
       doc.text(config.titulo, 14, 35);
