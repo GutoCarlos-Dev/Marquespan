@@ -476,6 +476,71 @@ const UI = {
     doc.save(`cotacao_${code}.pdf`);
   },
 
+  async exportSavedQuotationPdf(id){
+    try {
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('codigo_cotacao, created_at, data_cotacao, usuario').eq('id', id).single();
+      if (cotErr) throw cotErr;
+
+      const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
+      if (itensErr) throw itensErr;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const getLogoBase64 = async () => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.src = 'logo.png';
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg'));
+          };
+          img.onerror = () => { resolve(null); };
+        });
+      };
+
+      const logoBase64 = await getLogoBase64();
+      if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 15);
+
+      const userIdent = cotacao.usuario || 'N/D';
+      const dateStr = new Date(cotacao.created_at || cotacao.data_cotacao).toLocaleString('pt-BR');
+      const code = cotacao.codigo_cotacao || 'N/A';
+
+      doc.setFontSize(18);
+      doc.setTextColor(0, 105, 55);
+      doc.text('Cotação - Logistica', 14, 35);
+
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(`Código: ${code}`, 14, 42);
+      doc.text(`Data de Emissão: ${dateStr}`, 14, 47);
+      doc.text(`Responsável: ${userIdent}`, 14, 52);
+
+      const columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
+      const rows = itens.map(i => [
+        i.produtos?.codigo_principal || '',
+        i.produtos?.nome || '',
+        i.quantidade,
+        i.produtos?.unidade_medida || 'UN'
+      ]);
+
+      doc.autoTable({
+        head: [columns], body: rows, startY: 60, theme: 'grid',
+        headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 3 }, alternateRowStyles: { fillColor: [240, 240, 240] }
+      });
+
+      doc.save(`cotacao_${code}.pdf`);
+    } catch(e) { console.error(e); alert('Erro ao gerar PDF'); }
+  },
+
   async handleRegisterQuotation(){
     if(this.cart.items.length===0) return alert('Adicione produtos para registrar a cotação');
     const code = this.quotationCode.value.trim(); if(!code) return alert('Código não gerado');
@@ -619,11 +684,12 @@ const UI = {
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
 
+        const btnPdfHtml = `<button class="btn-action btn-pdf" data-id="${c.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>`;
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
-        const btnEditarHtml = (!isRecebido || nivelUsuario === 'administrador') ? `<button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        const btnEditarHtml = (!isRecebido || nivelUsuario === 'administrador') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -632,6 +698,7 @@ const UI = {
       });
       // attach listeners
       this.savedQuotationsTableBody.querySelectorAll('.btn-view').forEach(b=>b.addEventListener('click', e=>this.openDetailPanel(e.target.dataset.id))); // Corrigido: &gt; para >
+      this.savedQuotationsTableBody.querySelectorAll('.btn-pdf').forEach(b=>b.addEventListener('click', e=>this.exportSavedQuotationPdf(e.target.closest('button').dataset.id)));
       this.savedQuotationsTableBody.querySelectorAll('.btn-delete').forEach(b=>b.addEventListener('click', e=>this.deleteQuotation(e.target.dataset.id))); // Corrigido: &gt; para >
       this.savedQuotationsTableBody.querySelectorAll('.btn-edit').forEach(b=>b.addEventListener('click', e=>this.loadQuotationForEditing(e.target.dataset.id)));
       this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoPanel(e.target.dataset.id)));
