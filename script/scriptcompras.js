@@ -441,7 +441,7 @@ const UI = {
 
     doc.setFontSize(18);
     doc.setTextColor(0, 105, 55); // Verde Marquespan
-    doc.text('Pedido de Cotação', 14, 35);
+    doc.text('Cotação - Logistica', 14, 35);
 
     doc.setFontSize(10);
     doc.setTextColor(0);
