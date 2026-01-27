@@ -400,15 +400,80 @@ const UI = {
     }catch(e){console.error(e);alert('Erro ao adicionar produto')}
   },
 
-  handleExportPdf(){
+  async handleExportPdf(){
     if(this.cart.items.length===0) return alert('Adicione produtos antes de exportar');
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFontSize(14); doc.text('Pedido de Cotação - Marquespan',14,18);
-    const columns = ['Código','Produto','Quantidade'];
-    const rows = this.cart.items.map(i=>[i.cod,i.produto,i.qtd]); // Corrigido: &gt; para >
-    doc.autoTable({ head:[columns], body:rows, startY:28 });
-    doc.save(`cotacao_${this.quotationCode.value||'novo'}.pdf`);
+
+    // 1. Carregar Logo
+    const getLogoBase64 = async () => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = 'logo.png';
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF'; 
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg'));
+        };
+        img.onerror = () => {
+          console.warn('Logo não encontrado');
+          resolve(null);
+        };
+      });
+    };
+
+    const logoBase64 = await getLogoBase64();
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 15);
+    }
+
+    // 2. Cabeçalho
+    const currentUser = this._getCurrentUser()?.nome || 'Usuário não identificado';
+    const dateStr = new Date().toLocaleString('pt-BR');
+    const code = this.quotationCode.value || 'N/A';
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 105, 55); // Verde Marquespan
+    doc.text('Pedido de Cotação', 14, 35);
+
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Código: ${code}`, 14, 42);
+    doc.text(`Data de Emissão: ${dateStr}`, 14, 47);
+    doc.text(`Responsável: ${currentUser}`, 14, 52);
+
+    // 3. Tabela
+    const columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
+    const rows = this.cart.items.map(i => [i.cod, i.produto, i.qtd, i.uni || 'UN']);
+
+    doc.autoTable({
+      head: [columns],
+      body: rows,
+      startY: 60,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [240, 240, 240] }
+    });
+
+    // 4. Rodapé
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 10, { align: 'right' });
+      doc.text(`Marquespan - Sistema de Compras`, 14, doc.internal.pageSize.height - 10);
+    }
+
+    doc.save(`cotacao_${code}.pdf`);
   },
 
   async handleRegisterQuotation(){
