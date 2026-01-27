@@ -18,6 +18,7 @@ const ColetarManutencaoUI = {
         this.chartItems = null; // Instância do gráfico de itens
         this.chartOficinas = null; // Instância do novo gráfico de oficinas
         this.carregarFiltrosDinamicos();
+        this.aplicarRestricoesPerfil(); // Aplica restrições de UI antes de carregar dados
         this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.carregarChecklistDinamico(); // Carrega o checklist dinâmico (Desktop e Mobile)
     },
@@ -128,6 +129,21 @@ const ColetarManutencaoUI = {
             }
         `;
         document.head.appendChild(style);
+    },
+
+    // Aplica restrições visuais e de filtro baseadas no nível do usuário
+    aplicarRestricoesPerfil() {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+        const isRestricted = ['mecanica_externa', 'moleiro'].includes(nivel);
+
+        if (isRestricted) {
+            const searchStatus = document.getElementById('searchStatus');
+            if (searchStatus) {
+                searchStatus.innerHTML = '<option value="PENDENTE">PENDENTE</option>';
+                searchStatus.value = 'PENDENTE';
+            }
+        }
     },
 
     // Carrega dinamicamente os itens do checklist e as oficinas relacionadas
@@ -1432,6 +1448,7 @@ const ColetarManutencaoUI = {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
             const nomeUsuario = usuarioLogado ? usuarioLogado.nome : '';
+            const isRestricted = ['mecanica_externa', 'moleiro'].includes(nivel);
             let roleFilterItem = null;
             if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
             if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
@@ -1513,6 +1530,12 @@ const ColetarManutencaoUI = {
             // Verifica permissão para excluir
             const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
 
+            // Ocultar cabeçalho de Valor Total se restrito (Desktop)
+            const headerValor = document.querySelector('#sectionLancamento .data-grid thead th:nth-child(5)');
+            if (headerValor) {
+                headerValor.style.display = isRestricted ? 'none' : '';
+            }
+
             // A ordenação agora é feita diretamente na query do Supabase.
             // A lógica de exibir apenas o último lançamento por placa foi removida
             // para mostrar todos os registros que correspondem ao filtro.
@@ -1584,12 +1607,14 @@ const ColetarManutencaoUI = {
                     ? `<strong>${(item.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>`
                     : '-';
 
+                const valorStyle = isRestricted ? 'display: none;' : '';
+
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
                     <td>${item.semana}</td>
                     <td>${item.placa}</td>
                     <td>${item.usuario}</td>
-                    <td>${valorDisplay}</td>
+                    <td style="${valorStyle}">${valorDisplay}</td>
                     <td>
                         ${botoesAcao}
                     </td>
