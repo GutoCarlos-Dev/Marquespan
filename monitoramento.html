@@ -240,7 +240,11 @@
                         });
 
                         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-                        veiculosMap.forEach((oficina, placa) => {
+                        
+                        // Ordenar alfabeticamente pela placa
+                        const sortedVeiculos = Array.from(veiculosMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+                        sortedVeiculos.forEach(([placa, oficina]) => {
                             html += `<li style="padding: 4px 0; border-bottom: 1px solid #444; color: #ddd; display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-weight: bold;">${placa}</span>
                                 <span style="font-size: 0.85em; color: #aaa; margin-left: 10px; text-align: right;">${oficina}</span>
