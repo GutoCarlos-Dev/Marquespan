@@ -543,8 +543,8 @@ const UI = {
 
       let startY = 60;
 
-      // Se status for Aprovada e tiver vencedor, exibe dados do fornecedor
-      if (cotacao.status === 'Aprovada' && cotacao.id_fornecedor_vencedor) {
+      // Se status for Aprovada ou Pendente e tiver vencedor, exibe dados do fornecedor
+      if ((cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') && cotacao.id_fornecedor_vencedor) {
         const { data: fornecedor } = await supabaseClient.from('fornecedores').select('nome, telefone').eq('id', cotacao.id_fornecedor_vencedor).single();
         if (fornecedor) {
             doc.setFont('helvetica', 'bold');
@@ -578,8 +578,8 @@ const UI = {
                 divStr
             ];
         });
-      } else if (cotacao.status === 'Aprovada') {
-        // Layout para Pedido Aprovado (Com Preços e Fornecedor)
+      } else if (cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') {
+        // Layout para Pedido Aprovado ou Cotação Pendente (Com Preços e Fornecedor)
         if (cotacao.id_fornecedor_vencedor) {
              // Buscar orçamento e preços do vencedor
              const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
