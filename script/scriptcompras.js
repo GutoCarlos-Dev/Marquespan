@@ -989,13 +989,36 @@ const UI = {
 
   async openRecebimentoPanel(id) {
     try {
-      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id, codigo_cotacao').eq('id', id).single();
+      // Busca dados da cotação incluindo o vencedor para pegar os preços
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id, codigo_cotacao, id_fornecedor_vencedor').eq('id', id).single();
       if (cotErr) throw cotErr;
 
       const { data: itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
 
+      // Busca preços e frete se houver vencedor
+      let priceMap = new Map();
+      let frete = 0;
+      if (cotacao.id_fornecedor_vencedor) {
+          const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
+            .select('id, valor_frete')
+            .eq('id_cotacao', id)
+            .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
+            .single();
+          
+          if (orcamento) {
+              frete = parseFloat(orcamento.valor_frete) || 0;
+              const { data: precos } = await supabaseClient.from('orcamento_item_precos')
+                .select('id_produto, preco_unitario')
+                .eq('id_orcamento', orcamento.id);
+              
+              if (precos) {
+                  precos.forEach(p => priceMap.set(p.id_produto, parseFloat(p.preco_unitario)));
+              }
+          }
+      }
+
       document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
-      this.renderRecebimentoItems(itens, id);
+      this.renderRecebimentoItems(itens, id, priceMap, frete);
       this.recebimentoPanelBackdrop?.classList.remove('hidden');
     } catch (e) {
       console.error('Erro ao abrir painel de recebimento', e);
@@ -1003,22 +1026,89 @@ const UI = {
     }
   },
 
-  renderRecebimentoItems(itens, cotacaoId) {
+  updateRecebimentoCalculations() {
+      let totalItens = 0;
+      const frete = parseFloat(this.recebimentoItemsContainer.dataset.frete) || 0;
+
+      this.recebimentoItemsContainer.querySelectorAll('.recebimento-item').forEach(div => {
+          const input = div.querySelector('.qtd-recebida');
+          const divDivergencia = div.querySelector('.item-divergencia');
+          const divTotal = div.querySelector('.item-total');
+          
+          const qtdPedida = parseFloat(div.dataset.qtdPedida);
+          const preco = parseFloat(div.dataset.preco);
+          const qtdRecebida = parseFloat(input.value);
+
+          if (isNaN(qtdRecebida)) return;
+
+          // Validador Inteligente de Divergência
+          const diff = qtdRecebida - qtdPedida;
+          if (diff === 0) {
+              divDivergencia.textContent = 'OK';
+              divDivergencia.style.color = '#28a745'; // Verde
+          } else {
+              divDivergencia.textContent = diff > 0 ? `+${diff}` : `${diff}`;
+              divDivergencia.style.color = diff > 0 ? '#007bff' : '#dc3545'; // Azul (mais) ou Vermelho (menos)
+          }
+
+          // Cálculo do Total do Item
+          const totalItem = qtdRecebida * preco;
+          divTotal.textContent = `R$ ${totalItem.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          
+          totalItens += totalItem;
+      });
+
+      // Atualiza Total Geral
+      const totalGeral = totalItens + frete;
+      const totalDisplay = document.getElementById('recebimentoTotalValue');
+      if(totalDisplay) totalDisplay.textContent = totalGeral.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+  },
+
+  renderRecebimentoItems(itens, cotacaoId, priceMap = new Map(), frete = 0) {
     if (!this.recebimentoItemsContainer) return;
     this.recebimentoItemsContainer.innerHTML = '';
     this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
+    this.recebimentoItemsContainer.dataset.frete = frete;
 
     itens.forEach(item => {
       const div = document.createElement('div');
       div.className = 'recebimento-item';
       div.dataset.itemId = item.produtos.id;
       div.dataset.qtdPedida = item.quantidade;
+      
+      const preco = priceMap.get(item.produtos.id) || 0;
+      div.dataset.preco = preco;
+
       div.innerHTML = `
-        <label for="qtd-recebida-${item.produtos.id}">${item.produtos.nome} (Pedido: ${item.quantidade})</label>
-        <input type="number" class="qtd-recebida" placeholder="Qtd. Recebida" value="${item.quantidade}" min="0" />
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <label for="qtd-recebida-${item.produtos.id}" style="margin:0;">${item.produtos.nome}</label>
+            <span style="font-size:0.85em; color:#666;">Pedido: ${item.quantidade}</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="number" class="qtd-recebida" id="qtd-recebida-${item.produtos.id}" placeholder="Qtd" value="${item.quantidade}" min="0" style="flex:1;" />
+            <div class="item-divergencia" style="font-weight:bold; font-size:0.9em; width:40px; text-align:center; color:#28a745;">OK</div>
+            <div class="item-total" style="font-size:0.9em; width:100px; text-align:right;">R$ 0,00</div>
+        </div>
       `;
       this.recebimentoItemsContainer.appendChild(div);
     });
+
+    // Adiciona Display de Total
+    const totalDiv = document.createElement('div');
+    totalDiv.style.cssText = 'margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; text-align: right; font-size: 1.1em; border: 1px solid #dee2e6;';
+    totalDiv.innerHTML = `
+        <div style="margin-bottom:5px; font-size:0.9em; color:#666;">Frete: R$ ${frete.toFixed(2)}</div>
+        <div style="font-weight:bold; color:#006937;">Total Recebimento: <span id="recebimentoTotalValue">R$ 0,00</span></div>
+    `;
+    this.recebimentoItemsContainer.appendChild(totalDiv);
+
+    // Adiciona Listeners para cálculo em tempo real
+    this.recebimentoItemsContainer.querySelectorAll('.qtd-recebida').forEach(input => {
+        input.addEventListener('input', () => this.updateRecebimentoCalculations());
+    });
+
+    // Cálculo inicial
+    this.updateRecebimentoCalculations();
 
     // Controle de visibilidade do botão Salvar
     const btnSalvar = document.getElementById('btnSalvarRecebimento');
