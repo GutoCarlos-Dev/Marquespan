@@ -149,6 +149,12 @@ const ColetarManutencaoUI = {
             if (btnGerarArquivo) {
                 btnGerarArquivo.style.display = 'none';
             }
+
+            // Ocultar botão Importar em Massa
+            const btnImportarMassa = document.getElementById('btnImportarMassa');
+            if (btnImportarMassa) {
+                btnImportarMassa.style.display = 'none';
+            }
         }
     },
 
