@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('coletaData').addEventListener('change', salvarRascunho); // Salvar ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
-    document.getElementById('btnCancelarColeta').addEventListener('click', cancelarColeta);
+    document.getElementById('btnCancelarColeta')?.addEventListener('click', cancelarColeta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
     document.getElementById('tableBodyItens').addEventListener('dblclick', (e) => {
         const row = e.target.closest('tr');
@@ -45,9 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('searchItemColetado')?.addEventListener('input', renderizarTabela);
 
     // Novos Listeners para Importar/Exportar
-    document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
-    document.getElementById('importFile').addEventListener('change', handleFileImport);
-    document.getElementById('btnExportar').addEventListener('click', exportarExcel);
+    document.getElementById('btnImportar')?.addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile')?.addEventListener('change', handleFileImport);
+    document.getElementById('btnExportar')?.addEventListener('click', exportarExcel);
     document.getElementById('btnExportarPDF')?.addEventListener('click', exportarPDF);
 
     // 5. Carregar Histórico
