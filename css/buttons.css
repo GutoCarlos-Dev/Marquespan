@@ -163,4 +163,27 @@
   transition: background-color 0.2s;
 }
 .btn-secondary:hover { background-color: #5a6268; }
+
+/* ⚠️ Botão Alerta (Amarelo) */
+.btn-warning {
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
+.btn-warning:hover { background-color: #e0a800; }
+
+/* ℹ️ Botão Info (Ciano) */
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-info:hover { background-color: #138496; }
