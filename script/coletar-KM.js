@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('coletaData').addEventListener('change', salvarRascunho); // Salvar ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
+    document.getElementById('btnCancelarColeta').addEventListener('click', cancelarColeta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
     document.getElementById('tableBodyItens').addEventListener('dblclick', (e) => {
         const row = e.target.closest('tr');
@@ -335,6 +336,24 @@ async function salvarColetaCompleta() {
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
         alert('Erro ao salvar dados: ' + error.message);
+    }
+}
+
+function cancelarColeta() {
+    if (itensColeta.length > 0 || originalDataColeta) {
+        if (confirm('Tem certeza que deseja cancelar a operação atual? Todas as alterações não salvas serão perdidas.')) {
+            itensColeta = [];
+            originalDataColeta = null;
+            
+            // Resetar data para o momento atual
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('coletaData').value = now.toISOString().slice(0, 16);
+            
+            renderizarTabela();
+            limparRascunho();
+            clearItemForm();
+        }
     }
 }
 
