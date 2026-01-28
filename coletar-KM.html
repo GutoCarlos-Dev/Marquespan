@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coletar KM - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/buttons.css" />
   <link rel="stylesheet" href="css/coletar-KM.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- Biblioteca para Importação/Exportação Excel -->
@@ -20,7 +21,7 @@
     <div class="main-content">
       <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
         <span><i class="fas fa-tachometer-alt"></i> Coletar KM</span>
-        <a href="mobile-coletar-km.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
+        <a href="mobile-coletar-km.html" class="btn-primary" style="text-decoration: none;"><i class="fas fa-mobile-alt"></i> Modo App</a>
       </header>
 
       <section class="section">
@@ -52,8 +53,8 @@
               </div>
               <div class="card-body actions-body">
                 <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
-                <button type="button" id="btnImportar" class="btn-secondary"><i class="fas fa-file-import"></i> Importar</button>
-                <button type="button" id="btnExportar" class="btn-secondary"><i class="fas fa-file-export"></i> Exportar XLSX</button>
+                <button type="button" id="btnImportar" class="btn-import"><i class="fas fa-file-import"></i> Importar</button>
+                <button type="button" id="btnExportar" class="btn-import"><i class="fas fa-file-export"></i> Exportar XLSX</button>
                 <button type="button" id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
               </div>
             </div>
@@ -95,7 +96,7 @@
                 </div>
               </div>
               <div class="form-actions">
-                <button type="submit" class="btn-primary" style="height: 32px; padding: 0 20px;"><i class="fas fa-plus"></i> Adicionar</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Adicionar</button>
               </div>
             </form>
           </div>
@@ -124,9 +125,9 @@
               </tbody>
             </table>
           </div>
-          <div class="card-footer-actions">
-            <button type="button" id="btnCancelarColeta" class="btn-danger" style="margin-right: 10px;"><i class="fas fa-times"></i> CANCELAR</button>
-            <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> SALVAR COLETA COMPLETA</button>
+          <div class="card-footer-actions" style="display: flex; gap: 10px;">
+            <button type="button" id="btnCancelarColeta" class="btn-danger"><i class="fas fa-times"></i> CANCELAR</button>
+            <button type="button" id="btnSalvarColeta" class="btn-submit"><i class="fas fa-save"></i> SALVAR COLETA COMPLETA</button>
           </div>
         </div>
 
@@ -134,7 +135,7 @@
         <div class="card">
           <div class="card-header">
             <h2><i class="fas fa-history"></i> Histórico de Coletas Salvas</h2>
-            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; height: 28px;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary"><i class="fas fa-sync-alt"></i> Atualizar</button>
           </div>
           <div class="table-responsive">
             <table class="data-grid">
