@@ -344,3 +344,8 @@ body.app-mode .table-responsive {
 body.app-mode .data-grid {
   white-space: nowrap;
 }
+
+/* Campo de busca ajustado para o tamanho do texto */
+#searchItemColetado {
+  width: 250px;
+}
