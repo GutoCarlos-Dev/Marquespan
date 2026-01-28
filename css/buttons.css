@@ -118,3 +118,49 @@
   background-color: #c82333;
   transform: translateY(-1px);
 }
+
+/* 🎨 Botões Padrão do Sistema */
+.btn-primary {
+  background-color: #007bff; /* Azul */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-primary:hover { background-color: #0056b3; }
+
+.btn-success {
+  background-color: #28a745; /* Verde */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-success:hover { background-color: #218838; }
+
+.btn-danger {
+  background-color: #dc3545; /* Vermelho */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-danger:hover { background-color: #c82333; }
+
+.btn-secondary {
+  background-color: #6c757d; /* Cinza */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-secondary:hover { background-color: #5a6268; }
+}
