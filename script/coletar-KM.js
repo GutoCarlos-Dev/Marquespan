@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             prepararEdicaoItem(btnEdit.dataset.index);
         }
     });
+    
+    // Listener para busca na lista de itens coletados
+    document.getElementById('searchItemColetado')?.addEventListener('input', renderizarTabela);
 
     // Novos Listeners para Importar/Exportar
     document.getElementById('btnImportar').addEventListener('click', () => document.getElementById('importFile').click());
@@ -241,8 +244,15 @@ function renderizarTabela() {
     const tbody = document.getElementById('tableBodyItens');
     tbody.innerHTML = '';
     document.getElementById('contadorItens').textContent = itensColeta.length;
+    
+    const termoBusca = document.getElementById('searchItemColetado')?.value.trim().toUpperCase() || '';
 
     itensColeta.forEach((item, index) => {
+        // Filtro de busca visual
+        if (termoBusca && !item.placa.includes(termoBusca)) {
+            return;
+        }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td data-label="Placa">${item.placa}</td>
