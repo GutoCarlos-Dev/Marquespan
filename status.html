@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legenda de Status - Marquespan</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .status-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .status-table th, .status-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .status-table th { background-color: #f2f2f2; }
+        .status-badge { padding: 5px 10px; border-radius: 4px; color: white; font-weight: bold; display: inline-block; font-size: 0.9em; }
+        
+        /* Cores dos Status */
+        .bg-cnt-sp { background-color: #FF9800; }
+        .bg-zmrc { background-color: #F44336; }
+        .bg-zmrc-cpn { background-color: #B71C1C; }
+        .bg-v { background-color: #2196F3; }
+        .bg-p { background-color: #9C27B0; }
+        .bg-r { background-color: #4CAF50; }
+        .bg-v-restr { background-color: #3F51B5; }
+        .bg-restr { background-color: #795548; }
+        .bg-bgmn { background-color: #FFEB3B; color: black; }
+        .bg-tri { background-color: #E91E63; }
+        .bg-152-257 { background-color: #00BCD4; color: black; }
+        .bg-194-ter { background-color: #009688; }
+    </style>
+</head>
+<body>
+    <div id="menu-container"></div>
+    <main class="main-content">
+        <header class="header">
+            <h1><i class="fa-solid fa-info-circle"></i> Legenda de Status</h1>
+            <a href="escala.html" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: 4px; background-color: #006937; color: white; font-weight: bold;">
+                <i class="fa-solid fa-arrow-left"></i> Voltar para Escala
+            </a>
+        </header>
+        <section class="content-section">
+            <div class="card">
+                <table class="status-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="status-badge bg-cnt-sp">CNT SP</span></td><td>CENTRO DE SP CAMINHÃO PRECISA SAIR ATÉ 12 HRS</td></tr>
+                        <tr><td><span class="status-badge bg-zmrc">ZMRC</span></td><td>SÃO PAULO ZONA DE MÁXIMA RESTRIÇÃO DE CIRCULAÇÃO (PRECISA SER VUC)</td></tr>
+                        <tr><td><span class="status-badge bg-zmrc-cpn">ZMRC CPN</span></td><td>CAMPINAS ZONA DE MÁXIMA RESTRIÇÃO DE CIRCULAÇÃO (PRECISA SER VUC)</td></tr>
+                        <tr><td><span class="status-badge bg-v">V</span></td><td>ROTA *VAI* PARA VIAGEM DE PERNOITE</td></tr>
+                        <tr><td><span class="status-badge bg-p">P</span></td><td>ROTA VAI PERNOITAR</td></tr>
+                        <tr><td><span class="status-badge bg-r">R</span></td><td>ROTA VAI RETORNAR</td></tr>
+                        <tr><td><span class="status-badge bg-v-restr">V - RESTR</span></td><td>ROTA *VAI* PARA VIAGEM DE PERNOITE *TEM RESTRIÇÃO A CIRCULAÇÃO DE CAMINHÕES, PRECISA CADASTRAR A PLACA</td></tr>
+                        <tr><td><span class="status-badge bg-restr">RESTR</span></td><td>ROTA COM RESTRIÇÃO A CIRCULAÇÃO DE CAMINHÕES, PRECISA CADASTRAR A PLACA</td></tr>
+                        <tr><td><span class="status-badge bg-bgmn">BGMN</span></td><td>ROTA DO BERGAMINI TEM QUE IR PALETE DE MADEIRA</td></tr>
+                        <tr><td><span class="status-badge bg-tri">TRI +</span></td><td>ROTA DO TRIMAIS TEM QUE IR PALETE DE MADEIRA</td></tr>
+                        <tr><td><span class="status-badge bg-152-257">152/257</span></td><td>ROTAS DOS PROXIMOS DIAS NA PROGRAMAÇÃO DO CAMINHÃO E DA DUPLA</td></tr>
+                        <tr><td><span class="status-badge bg-194-ter">194 TER</span></td><td>ROTAS DOS PROXIMOS DIAS NA PROGRAMAÇÃO DO CAMINHÃO E DA DUPLA</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="../script/menu.js"></script>
+</body>
+</html>
