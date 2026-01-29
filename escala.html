@@ -67,6 +67,16 @@
         .tab-btn[data-dia="SEXTA"].active { border-bottom-color: #dc3545; color: #dc3545; }
         .tab-btn[data-dia="SABADO"].active { border-bottom-color: #17a2b8; color: #17a2b8; }
         .tab-btn[data-dia="DOMINGO"].active { border-bottom-color: #e83e8c; color: #e83e8c; }
+
+        /* Estilo para os títulos das seções */
+        .section-title {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            margin: 20px 0 10px 0;
+            border-left: 5px solid #006937;
+            color: #333;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -111,6 +121,9 @@
                 <!-- Conteúdo da Aba -->
                 <div class="card tab-content-card">
                     <h3 id="tituloDia" style="margin-bottom: 15px; color: #006937;"><i class="fa-solid fa-calendar-day"></i> SEGUNDA</h3>
+                    
+                    <!-- 1. PADRÃO -->
+                    <h4 class="section-title">PADRÃO</h4>
                     <div class="table-scroll-container">
                         <table class="data-grid">
                             <thead>
@@ -124,14 +137,96 @@
                                     <th>TERCEIRO</th>
                                 </tr>
                             </thead>
-                            <tbody id="tabelaEscalaBody">
-                                <!-- Conteúdo carregado via JS -->
-                                <tr>
-                                    <td colspan="7" style="text-align: center;">Selecione uma semana e clique em Abrir Escala.</td>
-                                </tr>
+                            <tbody id="tbodyPadrao">
+                                <tr><td colspan="7" style="text-align: center;">Aguardando dados...</td></tr>
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- 2. TRANSFERÊNCIA CD -->
+                    <h4 class="section-title">TRANSFERÊNCIA CD</h4>
+                    <div class="table-scroll-container">
+                        <table class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>PLACA</th>
+                                    <th>MODELO</th>
+                                    <th>ROTA</th>
+                                    <th>STATUS</th>
+                                    <th>MOTORISTA</th>
+                                    <th>AUXILIAR</th>
+                                    <th>TERCEIRO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyTransferencia">
+                                <tr><td colspan="7" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 3. EQUIPAMENTO -->
+                    <h4 class="section-title">EQUIPAMENTO</h4>
+                    <div class="table-scroll-container">
+                        <table class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>PLACA</th>
+                                    <th>MODELO</th>
+                                    <th>ROTA</th>
+                                    <th>STATUS</th>
+                                    <th>MOTORISTA</th>
+                                    <th>AUXILIAR</th>
+                                    <th>TERCEIRO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyEquipamento">
+                                <tr><td colspan="7" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 4. RESERVAS -->
+                    <h4 class="section-title">RESERVAS</h4>
+                    <div class="table-scroll-container">
+                        <table class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>PLACA</th>
+                                    <th>MODELO</th>
+                                    <th>ROTA</th>
+                                    <th>STATUS</th>
+                                    <th>MOTORISTA</th>
+                                    <th>AUXILIAR</th>
+                                    <th>TERCEIRO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyReservas">
+                                <tr><td colspan="7" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 5. FALTAS / FÉRIAS / AFASTADOS -->
+                    <h4 class="section-title">FALTAS / FÉRIAS / AFASTADOS</h4>
+                    <div class="table-scroll-container">
+                        <table class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>NOME</th>
+                                    <th>FUNÇÃO</th>
+                                    <th>MOTIVO</th>
+                                    <th>DATA INÍCIO</th>
+                                    <th>DATA FIM</th>
+                                    <th>OBSERVAÇÃO</th>
+                                    <th>AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyFaltas">
+                                <tr><td colspan="7" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
             </div>
 

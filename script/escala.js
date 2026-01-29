@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectSemana = document.getElementById('escalaSemana');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
     const painelEscala = document.getElementById('painelEscala');
-    const tabelaBody = document.getElementById('tabelaEscalaBody');
     const tituloDia = document.getElementById('tituloDia');
     const tabButtons = document.querySelectorAll('.tab-btn');
 
@@ -99,7 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} semana - A semana selecionada (ex: 'SEMANA 01').
      */
     async function carregarDadosDia(dia, semana) {
-        tabelaBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando...</td></tr>';
+        // IDs das 5 seções
+        const sections = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
+        sections.forEach(sec => {
+            const tbody = document.getElementById(`tbody${sec}`);
+            if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando...</td></tr>';
+        });
 
         const coresDia = {
             'SEGUNDA': '#007bff',
@@ -125,7 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // const { data, error } = await supabaseClient.from('escala_diaria').select('*').eq('semana', semana).eq('dia', dia);
         
         // Simulação de dados vazios por enquanto, pois a tabela específica não foi fornecida
-        tabelaBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro encontrado para ${dia} na ${semana}.</td></tr>`;
+        sections.forEach(sec => {
+            const tbody = document.getElementById(`tbody${sec}`);
+            if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
+        });
     }
 
     // --- EVENT LISTENERS ---
