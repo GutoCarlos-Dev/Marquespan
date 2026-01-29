@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CACHE DE VEÍCULOS ---
     let listaVeiculos = [];
+    let listaRotas = [];
 
     /**
      * Carrega a lista de veículos ativos do banco de dados para popular os seletores.
@@ -93,6 +94,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Erro ao carregar veículos:', error);
+        }
+    }
+
+    /**
+     * Carrega a lista de rotas do banco de dados para popular o seletor.
+     */
+    async function carregarRotas() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('rotas')
+                .select('numero')
+                .order('numero');
+
+            if (error) throw error;
+
+            listaRotas = data || [];
+            const datalistRotas = document.getElementById('listaRotas');
+            if (datalistRotas) {
+                const rotasUnicas = [...new Set(data.map(r => r.numero).filter(r => r))];
+                datalistRotas.innerHTML = rotasUnicas.map(r => `<option value="${r}">`).join('');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar rotas:', error);
         }
     }
 
@@ -205,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         tr.innerHTML = `
                             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.PLACA || ''}" data-section="${sec}" data-row="${index}" data-key="PLACA" placeholder="Placa"></td>
                             <td><input type="text" list="listaModelos" class="table-input" value="${item.MODELO || ''}" data-section="${sec}" data-row="${index}" data-key="MODELO" placeholder="Modelo"></td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="ROTA">${item.ROTA || ''}</td>
+                            <td><input type="text" list="listaRotas" class="table-input" value="${item.ROTA || ''}" data-section="${sec}" data-row="${index}" data-key="ROTA" placeholder="Rota"></td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="STATUS">${item.STATUS || ''}</td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="AUXILIAR">${item.AUXILIAR || ''}</td>
@@ -476,4 +500,5 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarSemanas();
     preencherCacheDatas();
     carregarVeiculos();
+    carregarRotas();
 });
