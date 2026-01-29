@@ -166,6 +166,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- CONFIGURAÇÃO DE STATUS ---
+    const STATUS_CONFIG = {
+        'CNT SP': { color: '#FF9800', text: 'white' },
+        'ZMRC': { color: '#F44336', text: 'white' },
+        'ZMRC CPN': { color: '#B71C1C', text: 'white' },
+        'V': { color: '#2196F3', text: 'white' },
+        'P': { color: '#9C27B0', text: 'white' },
+        'R': { color: '#4CAF50', text: 'white' },
+        'V - RESTR': { color: '#3F51B5', text: 'white' },
+        'RESTR': { color: '#795548', text: 'white' },
+        'BGMN': { color: '#FFEB3B', text: 'black' },
+        'TRI +': { color: '#E91E63', text: 'white' },
+        '152/257': { color: '#00BCD4', text: 'black' },
+        '194 TER': { color: '#009688', text: 'white' }
+    };
+
+    function carregarStatus() {
+        const datalist = document.getElementById('listaStatus');
+        if (datalist) {
+            datalist.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
+        }
+    }
+
+    function getStatusStyle(status) {
+        const config = STATUS_CONFIG[status];
+        if (config) {
+            return `background-color: ${config.color}; color: ${config.text}; font-weight: bold;`;
+        }
+        return '';
+    }
+
+    function updateInputColor(input) {
+        const style = getStatusStyle(input.value);
+        input.style.cssText = style;
+    }
+
     // --- FUNÇÕES ---
 
     /**
@@ -276,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.PLACA || ''}" data-section="${sec}" data-row="${index}" data-key="PLACA" placeholder="Placa"></td>
                             <td><input type="text" list="listaModelos" class="table-input" value="${item.MODELO || ''}" data-section="${sec}" data-row="${index}" data-key="MODELO" placeholder="Modelo"></td>
                             <td><input type="text" list="listaRotas" class="table-input" value="${item.ROTA || ''}" data-section="${sec}" data-row="${index}" data-key="ROTA" placeholder="Rota"></td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="STATUS">${item.STATUS || ''}</td>
+                            <td><input type="text" list="listaStatus" class="table-input" value="${item.STATUS || ''}" data-section="${sec}" data-row="${index}" data-key="STATUS" placeholder="Status" style="${getStatusStyle(item.STATUS || '')}"></td>
                             <td><input type="text" list="listaMotoristas" class="table-input" value="${item.MOTORISTA || ''}" data-section="${sec}" data-row="${index}" data-key="MOTORISTA" placeholder="Motorista"></td>
                             <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.AUXILIAR || ''}" data-section="${sec}" data-row="${index}" data-key="AUXILIAR" placeholder="Auxiliar"></td>
                             <td><input type="text" list="listaTerceiros" class="table-input" value="${item.TERCEIRO || ''}" data-section="${sec}" data-row="${index}" data-key="TERCEIRO" placeholder="Terceiro"></td>
@@ -517,6 +553,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
                             }
                         }
+
+                        // Atualiza cor se for Status
+                        if (key === 'STATUS') {
+                            updateInputColor(target);
+                        }
                     }
                 }
             }
@@ -548,4 +589,5 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarVeiculos();
     carregarRotas();
     carregarFuncionarios();
+    carregarStatus();
 });
