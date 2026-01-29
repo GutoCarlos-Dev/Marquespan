@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Escala - Marquespan</title>
+    <!-- Estilos Globais -->
+    <link rel="stylesheet" href="../css/index.css">
+    <!-- Estilos Específicos da Página -->
+    <link rel="stylesheet" href="../css/escala.css">
+    <!-- Font Awesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <!-- O container da aplicação é gerenciado pelo layout.css -->
+    <aside class="sidebar" id="sidebar">
+        <!-- O menu é carregado dinamicamente via JS a partir de menu.html -->
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+        <header class="header">
+            <h1><i class="fa-solid fa-calendar-days"></i> Controle de Escala</h1>
+        </header>
+
+        <section id="sectionControleEscala" class="content-section">
+            
+            <!-- Formulário de Cadastro/Edição de Escala -->
+            <div class="card form-container">
+                <fieldset>
+                    <legend><i class="fa-solid fa-plus"></i> Adicionar/Editar Escala</legend>
+                    <form id="formEscala">
+                        <!-- Conteúdo do formulário aqui -->
+                        <p>Funcionalidade em desenvolvimento.</p>
+                    </form>
+                </fieldset>
+            </div>
+
+            <!-- Tabela de Escalas -->
+            <div class="card">
+                <h3><i class="fa-solid fa-list-check"></i> Escalas Cadastradas</h3>
+                <div class="table-scroll-container">
+                    <table id="tabelaEscalas" class="data-grid">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Funcionário</th>
+                                <th>Data Início</th>
+                                <th>Data Fim</th>
+                                <th>Turno</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaEscalasBody">
+                            <!-- Linhas serão adicionadas via JS -->
+                            <tr>
+                                <td colspan="6" style="text-align: center;">Nenhuma escala cadastrada.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
+    <script type="module" src="../script/supabase.js"></script>
+    <script type="module" src="../script/escala.js"></script>
+</body>
+</html>
