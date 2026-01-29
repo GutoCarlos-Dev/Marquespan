@@ -27,8 +27,32 @@
                 <fieldset>
                     <legend><i class="fa-solid fa-plus"></i> Adicionar/Editar Escala</legend>
                     <form id="formEscala">
-                        <!-- Conteúdo do formulário aqui -->
-                        <p>Funcionalidade em desenvolvimento.</p>
+                        <input type="hidden" id="escalaId">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="escalaSemana">Semana</label>
+                                <select id="escalaSemana" name="semana" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="escalaFuncionario">Funcionário</label>
+                                <select id="escalaFuncionario" name="funcionario" required>
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="escalaTurno">Turno</label>
+                                <select id="escalaTurno" name="turno" required>
+                                    <option value="" disabled selected>Selecione o turno</option>
+                                    <option value="MANHA">Manhã (06:00 - 14:00)</option>
+                                    <option value="TARDE">Tarde (14:00 - 22:00)</option>
+                                    <option value="NOITE">Noite (22:00 - 06:00)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="button" id="btnLimparEscala" class="btn-secondary">Limpar</button>
+                            <button type="submit" id="btnSalvarEscala" class="btn-primary"><i class="fas fa-save"></i> Salvar Escala</button>
+                        </div>
                     </form>
                 </fieldset>
             </div>
