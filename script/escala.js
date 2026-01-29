@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBaixarModelo = document.getElementById('btnBaixarModelo');
     const btnImportar = document.getElementById('btnImportar');
     const fileImportar = document.getElementById('fileImportar');
+    const fileImportarDia = document.getElementById('fileImportarDia');
 
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
@@ -128,7 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentDate = new Date(dataDia);
         const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
-        tituloDia.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}`;
+        tituloDia.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
+                <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
+            </div>`;
 
         // Verifica se há dados locais importados para esta semana e dia
         const dadosSemana = DADOS_LOCAL[semana];
@@ -180,23 +185,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function baixarModeloExcel() {
         const wb = XLSX.utils.book_new();
 
-        // Aba 1: Veículos (Padrão, Transferência, Equipamento, Reservas)
-        const headersVeiculos = ['DIA', 'SECAO', 'PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
-        const dataVeiculos = [
-            ['SEGUNDA', 'PADRAO', 'ABC1234', 'TRUCK', 'ROTA 01', 'OK', 'JOAO SILVA', 'MARIA', 'NAO'],
-            ['SEGUNDA', 'TRANSFERENCIA CD', 'XYZ9876', 'CARRETA', 'ROTA 02', 'MANUTENCAO', 'PEDRO', '', 'SIM'],
-            ['TERCA', 'EQUIPAMENTO', 'EQP001', 'EMPILHADEIRA', '', 'OK', '', '', '']
-        ];
-        const wsVeiculos = XLSX.utils.aoa_to_sheet([headersVeiculos, ...dataVeiculos]);
-        XLSX.utils.book_append_sheet(wb, wsVeiculos, "Veiculos");
+        // Definição das colunas padrão para veículos
+        const headersVeiculos = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
+        
+        // 1. PADRÃO
+        const wsPadrao = XLSX.utils.aoa_to_sheet([headersVeiculos]);
+        XLSX.utils.book_append_sheet(wb, wsPadrao, "PADRAO");
 
-        // Aba 2: Faltas/Férias
-        const headersFaltas = ['DIA', 'NOME', 'FUNCAO', 'MOTIVO', 'DATA_INICIO', 'DATA_FIM', 'OBSERVACAO'];
-        const dataFaltas = [
-            ['SEGUNDA', 'CARLOS SOUZA', 'MOTORISTA', 'FERIAS', '01/01/2025', '30/01/2025', 'Ferias anuais']
-        ];
-        const wsFaltas = XLSX.utils.aoa_to_sheet([headersFaltas, ...dataFaltas]);
-        XLSX.utils.book_append_sheet(wb, wsFaltas, "Faltas");
+        // 2. TRANSFERÊNCIA CD
+        const wsTransf = XLSX.utils.aoa_to_sheet([headersVeiculos]);
+        XLSX.utils.book_append_sheet(wb, wsTransf, "TRANSFERENCIA CD");
+
+        // 3. EQUIPAMENTO
+        const wsEquip = XLSX.utils.aoa_to_sheet([headersVeiculos]);
+        XLSX.utils.book_append_sheet(wb, wsEquip, "EQUIPAMENTO");
+
+        // 4. RESERVAS
+        const wsReservas = XLSX.utils.aoa_to_sheet([headersVeiculos]);
+        XLSX.utils.book_append_sheet(wb, wsReservas, "RESERVAS");
+
+        // 5. FALTAS / FÉRIAS / AFASTADOS
+        // Nota: Excel tem limite de caracteres para nome de aba e não aceita barras. Usaremos um nome simplificado.
+        const headersFaltas = ['NOME', 'FUNCAO', 'MOTIVO', 'DATA_INICIO', 'DATA_FIM', 'OBSERVACAO'];
+        const wsFaltas = XLSX.utils.aoa_to_sheet([headersFaltas]);
+        XLSX.utils.book_append_sheet(wb, wsFaltas, "FALTAS");
+
+        // Adiciona dados de exemplo na aba PADRAO para orientação
+        XLSX.utils.sheet_add_aoa(wsPadrao, [
+            ['ABC1234', 'TRUCK', 'ROTA 01', 'OK', 'JOAO SILVA', 'MARIA', 'NAO']
+        ], { origin: -1 });
+        
+        XLSX.utils.sheet_add_aoa(wsFaltas, [['CARLOS', 'MOTORISTA', 'FALTA', '01/01/2025', '01/01/2025', 'ATESTADO']], { origin: -1 });
 
         XLSX.writeFile(wb, "Modelo_Importacao_Escala.xlsx");
     }
@@ -214,47 +233,59 @@ document.addEventListener('DOMContentLoaded', () => {
             const workbook = XLSX.read(data, { type: 'array' });
 
             const semanaAtual = selectSemana.value;
-            if (!DADOS_LOCAL[semanaAtual]) DADOS_LOCAL[semanaAtual] = {};
-
-            // Processar Aba Veículos
-            const sheetVeiculos = workbook.Sheets["Veiculos"];
-            if (sheetVeiculos) {
-                const jsonVeiculos = XLSX.utils.sheet_to_json(sheetVeiculos);
-                jsonVeiculos.forEach(row => {
-                    const dia = row.DIA ? row.DIA.toUpperCase().trim() : 'SEGUNDA';
-                    // Mapeia o nome da seção do Excel para o ID interno
-                    let secao = 'Padrao';
-                    const secaoExcel = row.SECAO ? row.SECAO.toUpperCase().trim() : '';
-                    if (secaoExcel.includes('TRANSFERENCIA')) secao = 'Transferencia';
-                    else if (secaoExcel.includes('EQUIPAMENTO')) secao = 'Equipamento';
-                    else if (secaoExcel.includes('RESERVA')) secao = 'Reservas';
-
-                    if (!DADOS_LOCAL[semanaAtual][dia]) DADOS_LOCAL[semanaAtual][dia] = {};
-                    if (!DADOS_LOCAL[semanaAtual][dia][secao]) DADOS_LOCAL[semanaAtual][dia][secao] = [];
-
-                    DADOS_LOCAL[semanaAtual][dia][secao].push(row);
-                });
-            }
-
-            // Processar Aba Faltas
-            const sheetFaltas = workbook.Sheets["Faltas"];
-            if (sheetFaltas) {
-                const jsonFaltas = XLSX.utils.sheet_to_json(sheetFaltas);
-                jsonFaltas.forEach(row => {
-                    const dia = row.DIA ? row.DIA.toUpperCase().trim() : 'SEGUNDA';
-                    if (!DADOS_LOCAL[semanaAtual][dia]) DADOS_LOCAL[semanaAtual][dia] = {};
-                    if (!DADOS_LOCAL[semanaAtual][dia]['Faltas']) DADOS_LOCAL[semanaAtual][dia]['Faltas'] = [];
-                    DADOS_LOCAL[semanaAtual][dia]['Faltas'].push(row);
-                });
-            }
-
-            alert('Dados importados com sucesso! Verifique as abas dos dias.');
-            // Recarrega o dia atual para mostrar os dados
+            // Obtém o dia ativo atual da interface (ex: 'SEGUNDA')
             const diaAtivo = document.querySelector('.tab-btn.active').dataset.dia;
+
+            if (!DADOS_LOCAL[semanaAtual]) DADOS_LOCAL[semanaAtual] = {};
+            if (!DADOS_LOCAL[semanaAtual][diaAtivo]) DADOS_LOCAL[semanaAtual][diaAtivo] = {};
+
+            // Mapeamento de nomes de abas do Excel para IDs internos das seções
+            const mapaAbas = {
+                'PADRAO': 'Padrao',
+                'PADRÃO': 'Padrao',
+                'TRANSFERENCIA CD': 'Transferencia',
+                'TRANSFERÊNCIA CD': 'Transferencia',
+                'EQUIPAMENTO': 'Equipamento',
+                'RESERVAS': 'Reservas',
+                'FALTAS': 'Faltas',
+                'FALTAS / FÉRIAS / AFASTADOS': 'Faltas'
+            };
+
+            let importouAlgo = false;
+
+            // Itera sobre as abas do arquivo Excel
+            workbook.SheetNames.forEach(sheetName => {
+                const nomeNormalizado = sheetName.toUpperCase().trim();
+                const secaoId = mapaAbas[nomeNormalizado];
+
+                if (secaoId) {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (json.length > 0) {
+                        // Inicializa o array se não existir
+                        if (!DADOS_LOCAL[semanaAtual][diaAtivo][secaoId]) {
+                            DADOS_LOCAL[semanaAtual][diaAtivo][secaoId] = [];
+                        }
+                        // Adiciona os dados (substituindo ou appendando? Aqui estou appendando)
+                        // Se quiser substituir, use = json;
+                        DADOS_LOCAL[semanaAtual][diaAtivo][secaoId] = json;
+                        importouAlgo = true;
+                    }
+                }
+            });
+
+            if (importouAlgo) {
+                alert(`Dados importados com sucesso para ${diaAtivo}!`);
+            } else {
+                alert('Nenhuma aba correspondente encontrada no arquivo. Verifique se os nomes das abas estão corretos (PADRAO, TRANSFERENCIA CD, etc).');
+            }
+
+            // Recarrega o dia atual para mostrar os dados
             carregarDadosDia(diaAtivo, semanaAtual);
             
             // Limpa o input para permitir importar o mesmo arquivo novamente se necessário
-            fileImportar.value = '';
+            e.target.value = '';
         };
         reader.readAsArrayBuffer(file);
     }
@@ -313,6 +344,17 @@ document.addEventListener('DOMContentLoaded', () => {
         btnImportar.addEventListener('click', () => fileImportar.click());
         fileImportar.addEventListener('change', importarExcel);
     }
+
+    // Listener para o botão de importar específico do dia (Delegado pois o botão é criado dinamicamente)
+    if (painelEscala) {
+        painelEscala.addEventListener('click', (e) => {
+            const btn = e.target.closest('#btnImportarDiaAction');
+            if (btn && fileImportarDia) {
+                fileImportarDia.click();
+            }
+        });
+    }
+    if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
 
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
