@@ -125,10 +125,13 @@
             background-color: #ffffff; /* Branco */
         }
 
-        /* Ajusta a altura das linhas para ficarem mais compactas */
+        /* Ajusta a altura das linhas e fonte para ficarem mais compactas (estilo planilha) */
+        .data-grid {
+            font-size: 12px;
+        }
         .data-grid td {
-            padding-top: 1px;
-            padding-bottom: 1px;
+            padding: 2px 4px;
+            height: 26px;
         }
 
         /* Estilo para inputs dentro da tabela (Placa/Modelo) */
@@ -136,10 +139,11 @@
             width: 100%;
             border: 1px solid transparent;
             background: transparent;
-            padding: 0 2px;
+            padding: 0;
             font-family: inherit;
             font-size: inherit;
             color: inherit;
+            height: 100%;
         }
         .table-input:focus {
             outline: none;
