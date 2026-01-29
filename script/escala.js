@@ -120,6 +120,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Carrega a lista de funcionários ativos do banco de dados para popular os seletores.
+     */
+    async function carregarFuncionarios() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario')
+                .select('nome_completo, funcao')
+                .eq('status', 'Ativo')
+                .order('nome_completo');
+
+            if (error) throw error;
+
+            const datalistMotoristas = document.getElementById('listaMotoristas');
+            const datalistAuxiliares = document.getElementById('listaAuxiliares');
+            const datalistTerceiros = document.getElementById('listaTerceiros');
+
+            if (datalistMotoristas) datalistMotoristas.innerHTML = '';
+            if (datalistAuxiliares) datalistAuxiliares.innerHTML = '';
+            if (datalistTerceiros) datalistTerceiros.innerHTML = '';
+
+            const terceiros = [];
+
+            data.forEach(func => {
+                const nome = func.nome_completo;
+                const funcao = func.funcao;
+
+                if (funcao === 'Motorista') {
+                    if (datalistMotoristas) datalistMotoristas.insertAdjacentHTML('beforeend', `<option value="${nome}">`);
+                    terceiros.push(`(MOT-) ${nome}`);
+                } else if (funcao === 'Auxiliar') {
+                    if (datalistAuxiliares) datalistAuxiliares.insertAdjacentHTML('beforeend', `<option value="${nome}">`);
+                    terceiros.push(`(AUX-) ${nome}`);
+                }
+            });
+            
+            terceiros.sort();
+            if (datalistTerceiros) {
+                datalistTerceiros.innerHTML = terceiros.map(t => `<option value="${t}">`).join('');
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar funcionários:', error);
+        }
+    }
+
     // --- FUNÇÕES ---
 
     /**
@@ -219,9 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tr = document.createElement('tr');
                     if (sec === 'Faltas') {
                         tr.innerHTML = `
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
+                            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.MOTORISTA || ''}" data-section="${sec}" data-row="${index}" data-key="MOTORISTA" placeholder="Motorista"></td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_MOTORISTA">${item.MOTIVO_MOTORISTA || ''}</td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="AUXILIAR">${item.AUXILIAR || ''}</td>
+                            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.AUXILIAR || ''}" data-section="${sec}" data-row="${index}" data-key="AUXILIAR" placeholder="Auxiliar"></td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_AUXILIAR">${item.MOTIVO_AUXILIAR || ''}</td>
                             <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                         `;
@@ -231,9 +277,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td><input type="text" list="listaModelos" class="table-input" value="${item.MODELO || ''}" data-section="${sec}" data-row="${index}" data-key="MODELO" placeholder="Modelo"></td>
                             <td><input type="text" list="listaRotas" class="table-input" value="${item.ROTA || ''}" data-section="${sec}" data-row="${index}" data-key="ROTA" placeholder="Rota"></td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="STATUS">${item.STATUS || ''}</td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="AUXILIAR">${item.AUXILIAR || ''}</td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="TERCEIRO">${item.TERCEIRO || ''}</td>
+                            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.MOTORISTA || ''}" data-section="${sec}" data-row="${index}" data-key="MOTORISTA" placeholder="Motorista"></td>
+                            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.AUXILIAR || ''}" data-section="${sec}" data-row="${index}" data-key="AUXILIAR" placeholder="Auxiliar"></td>
+                            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.TERCEIRO || ''}" data-section="${sec}" data-row="${index}" data-key="TERCEIRO" placeholder="Terceiro"></td>
                         `;
                     }
                     tbody.appendChild(tr);
@@ -501,4 +547,5 @@ document.addEventListener('DOMContentLoaded', () => {
     preencherCacheDatas();
     carregarVeiculos();
     carregarRotas();
+    carregarFuncionarios();
 });
