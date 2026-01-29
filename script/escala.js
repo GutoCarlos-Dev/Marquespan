@@ -57,6 +57,17 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function carregarDadosDia(dia, semana) {
         tabelaBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando...</td></tr>';
+        
+        const coresDia = {
+            'SEGUNDA': '#007bff',
+            'TERCA': '#fd7e14',
+            'QUARTA': '#28a745',
+            'QUINTA': '#6f42c1',
+            'SEXTA': '#dc3545',
+            'SABADO': '#17a2b8',
+            'DOMINGO': '#e83e8c'
+        };
+        tituloDia.style.color = coresDia[dia] || '#006937';
         tituloDia.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${dia === 'TERCA' ? 'TERÇA' : dia}`;
 
         // AQUI VOCÊ DEVE IMPLEMENTAR A BUSCA REAL NO BANCO DE DADOS
