@@ -109,7 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const sections = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
         sections.forEach(sec => {
             const tbody = document.getElementById(`tbody${sec}`);
-            if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando...</td></tr>';
+            const colspan = sec === 'Faltas' ? 5 : 7;
+            if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
         const coresDia = {
@@ -151,12 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tr = document.createElement('tr');
                     if (sec === 'Faltas') {
                         tr.innerHTML = `
-                            <td>${item.NOME || ''}</td>
-                            <td>${item.FUNCAO || ''}</td>
-                            <td>${item.MOTIVO || ''}</td>
-                            <td>${item.DATA_INICIO || ''}</td>
-                            <td>${item.DATA_FIM || ''}</td>
-                            <td>${item.OBSERVACAO || ''}</td>
+                            <td>${item.MOTORISTA || ''}</td>
+                            <td>${item.MOTIVO_MOTORISTA || ''}</td>
+                            <td>${item.AUXILIAR || ''}</td>
+                            <td>${item.MOTIVO_AUXILIAR || ''}</td>
                             <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                         `;
                     } else {
@@ -174,7 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // Se não houver dados, mostra mensagem padrão
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
+                const colspan = sec === 'Faltas' ? 5 : 7;
+                tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
             }
         });
     }
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 5. FALTAS / FÉRIAS / AFASTADOS
         // Nota: Excel tem limite de caracteres para nome de aba e não aceita barras. Usaremos um nome simplificado.
-        const headersFaltas = ['NOME', 'FUNCAO', 'MOTIVO', 'DATA_INICIO', 'DATA_FIM', 'OBSERVACAO'];
+        const headersFaltas = ['MOTORISTA', 'MOTIVO_MOTORISTA', 'AUXILIAR', 'MOTIVO_AUXILIAR'];
         const wsFaltas = XLSX.utils.aoa_to_sheet([headersFaltas]);
         XLSX.utils.book_append_sheet(wb, wsFaltas, "FALTAS");
 
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ['ABC1234', 'TRUCK', 'ROTA 01', 'OK', 'JOAO SILVA', 'MARIA', 'NAO']
         ], { origin: -1 });
         
-        XLSX.utils.sheet_add_aoa(wsFaltas, [['CARLOS', 'MOTORISTA', 'FALTA', '01/01/2025', '01/01/2025', 'ATESTADO']], { origin: -1 });
+        XLSX.utils.sheet_add_aoa(wsFaltas, [['CARLOS SOUZA', 'FALTA', 'JOAO PEDRO', 'FERIAS']], { origin: -1 });
 
         XLSX.writeFile(wb, "Modelo_Importacao_Escala.xlsx");
     }
