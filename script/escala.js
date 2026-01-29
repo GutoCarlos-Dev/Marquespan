@@ -1,6 +1,5 @@
 // Importa o cliente Supabase, assumindo que ele está configurado em supabase.js
 import { supabaseClient } from './supabase.js';
-let editingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
@@ -14,12 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ELEMENTOS DO DOM ---
-    const form = document.getElementById('formEscala');
     const selectSemana = document.getElementById('escalaSemana');
-    const selectFuncionario = document.getElementById('escalaFuncionario');
-    const selectTurno = document.getElementById('escalaTurno');
-    const tabelaBody = document.getElementById('tabelaEscalasBody');
-    const btnLimpar = document.getElementById('btnLimparEscala');
+    const btnAbrirEscala = document.getElementById('btnAbrirEscala');
+    const painelEscala = document.getElementById('painelEscala');
+    const tabelaBody = document.getElementById('tabelaEscalaBody');
+    const tituloDia = document.getElementById('tituloDia');
+    const tabButtons = document.querySelectorAll('.tab-btn');
 
     // --- FUNÇÕES ---
 
@@ -52,188 +51,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Carrega a lista de funcionários ativos do banco de dados.
+     * Carrega os dados da escala para o dia e semana selecionados.
+     * @param {string} dia - O dia da semana (ex: 'SEGUNDA').
+     * @param {string} semana - A semana selecionada (ex: 'SEMANA 01').
      */
-    async function carregarFuncionarios() {
-        selectFuncionario.innerHTML = '<option value="">Carregando...</option>';
-        try {
-            const { data, error } = await supabaseClient
-                .from('funcionario')
-                .select('id, nome_completo')
-                .eq('status', 'Ativo')
-                .order('nome_completo', { ascending: true });
+    async function carregarDadosDia(dia, semana) {
+        tabelaBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando...</td></tr>';
+        tituloDia.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${dia === 'TERCA' ? 'TERÇA' : dia}`;
 
-            if (error) throw error;
-
-            selectFuncionario.innerHTML = '<option value="" disabled selected>Selecione o funcionário</option>';
-            data.forEach(func => {
-                selectFuncionario.add(new Option(func.nome_completo, func.id));
-            });
-        } catch (error) {
-            console.error('Erro ao carregar funcionários:', error);
-            selectFuncionario.innerHTML = '<option value="">Erro ao carregar</option>';
-        }
-    }
-
-    /**
-     * Carrega as escalas do banco de dados e as renderiza na tabela.
-     */
-    async function carregarEscalas() {
-        tabelaBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando...</td></tr>';
-
-        const { data, error } = await supabaseClient
-            .from('escalas')
-            .select(`
-                id,
-                semana,
-                turno,
-                funcionario:id_funcionario ( nome_completo )
-            `)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Erro ao carregar escalas:', error);
-            tabelaBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar escalas.</td></tr>';
-            return;
-        }
+        // AQUI VOCÊ DEVE IMPLEMENTAR A BUSCA REAL NO BANCO DE DADOS
+        // Exemplo de estrutura esperada:
+        // const { data, error } = await supabaseClient.from('escala_diaria').select('*').eq('semana', semana).eq('dia', dia);
         
-        if (data.length === 0) {
-            tabelaBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhuma escala cadastrada.</td></tr>';
-            return;
-        }
-
-        renderizarTabela(data);
-    }
-
-    /**
-     * Renderiza os dados na tabela.
-     * @param {Array} escalas - A lista de escalas a ser renderizada.
-     */
-    function renderizarTabela(escalas) {
-        tabelaBody.innerHTML = '';
-
-        escalas.forEach(escala => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escala.id}</td>
-                <td>${escala.funcionario.nome_completo}</td>
-                <td>${escala.semana}</td>
-                <td>${escala.turno}</td>
-                <td class="actions-cell">
-                    <button class="btn-acao editar" data-id="${escala.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button class="btn-acao excluir" data-id="${escala.id}" title="Excluir"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-            tabelaBody.appendChild(tr);
-        });
-    }
-
-    /**
-     * Limpa o formulário e reseta o estado de edição.
-     */
-    function limparFormulario() {
-        form.reset();
-        editingId = null;
-        document.getElementById('escalaId').value = '';
-        document.getElementById('btnSalvarEscala').innerHTML = '<i class="fas fa-save"></i> Salvar Escala';
-        carregarSemanas(); // Reseta para a semana atual
-    }
-
-    /**
-     * Carrega os dados de uma escala para edição no formulário.
-     * @param {number} id - O ID da escala a ser editada.
-     */
-    async function carregarParaEdicao(id) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('escalas')
-                .select('*')
-                .eq('id', id)
-                .single();
-
-            if (error) throw error;
-
-            editingId = id;
-            document.getElementById('escalaId').value = data.id;
-            selectSemana.value = data.semana;
-            selectFuncionario.value = data.id_funcionario;
-            selectTurno.value = data.turno;
-
-            document.getElementById('btnSalvarEscala').innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Escala';
-            form.scrollIntoView({ behavior: 'smooth' });
-
-        } catch (error) {
-            console.error('Erro ao carregar escala para edição:', error);
-            alert('Não foi possível carregar os dados para edição.');
-        }
-    }
-
-    /**
-     * Exclui uma escala do banco de dados.
-     * @param {number} id - O ID da escala a ser excluída.
-     */
-    async function excluirEscala(id) {
-        if (!confirm('Tem certeza que deseja excluir esta escala?')) return;
-
-        try {
-            const { error } = await supabaseClient.from('escalas').delete().eq('id', id);
-            if (error) throw error;
-            alert('Escala excluída com sucesso!');
-            carregarEscalas();
-        } catch (error) {
-            console.error('Erro ao excluir escala:', error);
-            alert('Erro ao excluir escala.');
-        }
+        // Simulação de dados vazios por enquanto, pois a tabela específica não foi fornecida
+        setTimeout(() => {
+            tabelaBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro encontrado para ${dia} na ${semana}.</td></tr>`;
+        }, 300);
     }
 
     // --- EVENT LISTENERS ---
 
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const payload = {
-                semana: selectSemana.value,
-                id_funcionario: selectFuncionario.value,
-                turno: selectTurno.value,
-                usuario_logado: usuarioLogado.nome
-            };
-
-            if (editingId) {
-                payload.id = editingId;
+    // Botão Abrir Escala
+    if (btnAbrirEscala) {
+        btnAbrirEscala.addEventListener('click', () => {
+            const semanaSelecionada = selectSemana.value;
+            if (!semanaSelecionada) {
+                alert('Por favor, selecione uma semana.');
+                return;
             }
 
-            try {
-                const { error } = await supabaseClient.from('escalas').upsert(payload);
-                if (error) throw error;
-
-                alert(`Escala ${editingId ? 'atualizada' : 'salva'} com sucesso!`);
-                limparFormulario();
-                carregarEscalas();
-            } catch (error) {
-                console.error('Erro ao salvar escala:', error);
-                alert('Erro ao salvar escala: ' + error.message);
-            }
+            painelEscala.classList.remove('hidden');
+            
+            // Ativa a primeira aba (SEGUNDA) por padrão
+            const abaSegunda = document.querySelector('.tab-btn[data-dia="SEGUNDA"]');
+            if (abaSegunda) abaSegunda.click();
         });
     }
 
-    if (btnLimpar) {
-        btnLimpar.addEventListener('click', limparFormulario);
-    }
-
-    tabelaBody.addEventListener('click', (e) => {
-        const editButton = e.target.closest('.btn-acao.editar');
-        const deleteButton = e.target.closest('.btn-acao.excluir');
-
-        if (editButton) {
-            carregarParaEdicao(editButton.dataset.id);
-        } else if (deleteButton) {
-            excluirEscala(deleteButton.dataset.id);
-        }
+    // Navegação por Abas
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Remove classe active de todos
+            tabButtons.forEach(b => b.classList.remove('active'));
+            // Adiciona ao clicado
+            e.target.classList.add('active');
+            
+            const dia = e.target.dataset.dia;
+            const semana = selectSemana.value;
+            carregarDadosDia(dia, semana);
+        });
     });
 
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
-    carregarFuncionarios();
-    carregarEscalas();
 });

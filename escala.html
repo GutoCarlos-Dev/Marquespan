@@ -10,6 +10,44 @@
     <link rel="stylesheet" href="../css/escala.css">
     <!-- Font Awesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Estilos para as Abas */
+        .tabs-container {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 0;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            color: #555;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-btn.active {
+            background-color: #fff;
+            border-bottom: 3px solid #006937; /* Verde Marquespan */
+            color: #006937;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .tab-btn:hover:not(.active) {
+            background-color: #d0d0d0;
+        }
+        .hidden {
+            display: none !important;
+        }
+        /* Ajuste para o card de conteúdo ficar colado nas abas */
+        .tab-content-card {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            margin-top: 0;
+        }
+    </style>
 </head>
 <body>
     <div id="menu-container"></div>
@@ -22,63 +60,58 @@
 
         <section id="sectionControleEscala" class="content-section">
             
-            <!-- Formulário de Cadastro/Edição de Escala -->
-            <div class="card form-container">
-                <fieldset>
-                    <legend><i class="fa-solid fa-plus"></i> Adicionar/Editar Escala</legend>
-                    <form id="formEscala">
-                        <input type="hidden" id="escalaId">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="escalaSemana">Semana</label>
-                                <select id="escalaSemana" name="semana" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="escalaFuncionario">Funcionário</label>
-                                <select id="escalaFuncionario" name="funcionario" required>
-                                    <option value="">Carregando...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="escalaTurno">Turno</label>
-                                <select id="escalaTurno" name="turno" required>
-                                    <option value="" disabled selected>Selecione o turno</option>
-                                    <option value="MANHA">Manhã (06:00 - 14:00)</option>
-                                    <option value="TARDE">Tarde (14:00 - 22:00)</option>
-                                    <option value="NOITE">Noite (22:00 - 06:00)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-buttons">
-                            <button type="button" id="btnLimparEscala" class="btn-secondary">Limpar</button>
-                            <button type="submit" id="btnSalvarEscala" class="btn-primary"><i class="fas fa-save"></i> Salvar Escala</button>
-                        </div>
-                    </form>
-                </fieldset>
+            <!-- Seleção de Semana -->
+            <div class="card">
+                <div class="form-grid" style="grid-template-columns: 1fr auto; align-items: end;">
+                    <div class="form-group">
+                        <label for="escalaSemana">Selecione a Semana</label>
+                        <select id="escalaSemana" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <button id="btnAbrirEscala" class="btn-primary" style="height: 36px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-folder-open"></i> Abrir Escala
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Tabela de Escalas -->
-            <div class="card">
-                <h3><i class="fa-solid fa-list-check"></i> Escalas Cadastradas</h3>
-                <div class="table-scroll-container">
-                    <table id="tabelaEscalas" class="data-grid">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Funcionário</th>
-                                <th>Data Início</th>
-                                <th>Data Fim</th>
-                                <th>Turno</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaEscalasBody">
-                            <!-- Linhas serão adicionadas via JS -->
-                            <tr>
-                                <td colspan="6" style="text-align: center;">Nenhuma escala cadastrada.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Container das Abas e Tabela (Inicialmente Oculto) -->
+            <div id="painelEscala" class="hidden">
+                <!-- Abas dos Dias -->
+                <div class="tabs-container">
+                    <button class="tab-btn active" data-dia="SEGUNDA">SEGUNDA</button>
+                    <button class="tab-btn" data-dia="TERCA">TERÇA</button>
+                    <button class="tab-btn" data-dia="QUARTA">QUARTA</button>
+                    <button class="tab-btn" data-dia="QUINTA">QUINTA</button>
+                    <button class="tab-btn" data-dia="SEXTA">SEXTA</button>
+                    <button class="tab-btn" data-dia="SABADO">SÁBADO</button>
+                    <button class="tab-btn" data-dia="DOMINGO">DOMINGO</button>
+                </div>
+
+                <!-- Conteúdo da Aba -->
+                <div class="card tab-content-card">
+                    <h3 id="tituloDia" style="margin-bottom: 15px; color: #006937;"><i class="fa-solid fa-calendar-day"></i> SEGUNDA</h3>
+                    <div class="table-scroll-container">
+                        <table class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>PLACA</th>
+                                    <th>MODELO</th>
+                                    <th>ROTA</th>
+                                    <th>STATUS</th>
+                                    <th>MOTORISTA</th>
+                                    <th>AUXILIAR</th>
+                                    <th>TERCEIRO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaEscalaBody">
+                                <!-- Conteúdo carregado via JS -->
+                                <tr>
+                                    <td colspan="7" style="text-align: center;">Selecione uma semana e clique em Abrir Escala.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
