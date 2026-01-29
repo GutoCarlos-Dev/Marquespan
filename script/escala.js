@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileImportar = document.getElementById('fileImportar');
     const fileImportarDia = document.getElementById('fileImportarDia');
     const btnSalvar = document.getElementById('btnSalvar');
+    
+    // Elementos do Modal de Status
+    const btnStatusLegend = document.getElementById('btnStatusLegend');
+    const modalStatus = document.getElementById('modalStatus');
+    const closeModalStatus = document.getElementById('closeModalStatus');
+    const formStatus = document.getElementById('formStatus');
 
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
@@ -167,19 +173,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- CONFIGURAÇÃO DE STATUS ---
-    const STATUS_CONFIG = {
-        'CNT SP': { color: '#FF9800', text: 'white' },
-        'ZMRC': { color: '#F44336', text: 'white' },
-        'ZMRC CPN': { color: '#B71C1C', text: 'white' },
-        'V': { color: '#2196F3', text: 'white' },
-        'P': { color: '#9C27B0', text: 'white' },
-        'R': { color: '#4CAF50', text: 'white' },
-        'V - RESTR': { color: '#3F51B5', text: 'white' },
-        'RESTR': { color: '#795548', text: 'white' },
-        'BGMN': { color: '#FFEB3B', text: 'black' },
-        'TRI +': { color: '#E91E63', text: 'white' },
-        '152/257': { color: '#00BCD4', text: 'black' },
-        '194 TER': { color: '#009688', text: 'white' }
+    // Tenta carregar do localStorage ou usa o padrão
+    let STATUS_CONFIG = JSON.parse(localStorage.getItem('marquespan_status_config')) || {
+        'CNT SP': { color: '#FF9800', text: 'white', descricao: 'CENTRO DE SP CAMINHÃO PRECISA SAIR ATÉ 12 HRS' },
+        'ZMRC': { color: '#F44336', text: 'white', descricao: 'SÃO PAULO ZONA DE MÁXIMA RESTRIÇÃO DE CIRCULAÇÃO (PRECISA SER VUC)' },
+        'ZMRC CPN': { color: '#B71C1C', text: 'white', descricao: 'CAMPINAS ZONA DE MÁXIMA RESTRIÇÃO DE CIRCULAÇÃO (PRECISA SER VUC)' },
+        'V': { color: '#2196F3', text: 'white', descricao: 'ROTA *VAI* PARA VIAGEM DE PERNOITE' },
+        'P': { color: '#9C27B0', text: 'white', descricao: 'ROTA VAI PERNOITAR' },
+        'R': { color: '#4CAF50', text: 'white', descricao: 'ROTA VAI RETORNAR' },
+        'V - RESTR': { color: '#3F51B5', text: 'white', descricao: 'ROTA *VAI* PARA VIAGEM DE PERNOITE *TEM RESTRIÇÃO A CIRCULAÇÃO DE CAMINHÕES, PRECISA CADASTRAR A PLACA' },
+        'RESTR': { color: '#795548', text: 'white', descricao: 'ROTA COM RESTRIÇÃO A CIRCULAÇÃO DE CAMINHÕES, PRECISA CADASTRAR A PLACA' },
+        'BGMN': { color: '#FFEB3B', text: 'black', descricao: 'ROTA DO BERGAMINI TEM QUE IR PALETE DE MADEIRA' },
+        'TRI +': { color: '#E91E63', text: 'white', descricao: 'ROTA DO TRIMAIS TEM QUE IR PALETE DE MADEIRA' },
+        '152/257': { color: '#00BCD4', text: 'black', descricao: 'ROTAS DOS PROXIMOS DIAS NA PROGRAMAÇÃO DO CAMINHÃO E DA DUPLA' },
+        '194 TER': { color: '#009688', text: 'white', descricao: 'ROTAS DOS PROXIMOS DIAS NA PROGRAMAÇÃO DO CAMINHÃO E DA DUPLA' }
     };
 
     function carregarStatus() {
@@ -201,6 +208,92 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = getStatusStyle(input.value);
         input.style.cssText = style;
     }
+
+    function salvarStatusConfig() {
+        localStorage.setItem('marquespan_status_config', JSON.stringify(STATUS_CONFIG));
+        carregarStatus(); // Atualiza datalist
+        // Atualiza cores na tabela atual
+        document.querySelectorAll('input[data-key="STATUS"]').forEach(input => updateInputColor(input));
+    }
+
+    // --- LÓGICA DO MODAL DE STATUS ---
+    function renderizarTabelaStatus() {
+        const tbody = document.getElementById('tabelaStatusBody');
+        tbody.innerHTML = '';
+
+        Object.entries(STATUS_CONFIG).forEach(([key, config]) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span style="background-color: ${config.color}; color: ${config.text}; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${key}</span></td>
+                <td>${config.descricao || ''}</td>
+                <td>
+                    <button type="button" class="btn-acao editar btn-edit-status" data-key="${key}"><i class="fas fa-pen"></i></button>
+                    <button type="button" class="btn-acao excluir btn-delete-status" data-key="${key}"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Listeners para botões da tabela
+        tbody.querySelectorAll('.btn-edit-status').forEach(btn => {
+            btn.addEventListener('click', () => editarStatus(btn.dataset.key));
+        });
+        tbody.querySelectorAll('.btn-delete-status').forEach(btn => {
+            btn.addEventListener('click', () => excluirStatus(btn.dataset.key));
+        });
+    }
+
+    function editarStatus(key) {
+        const config = STATUS_CONFIG[key];
+        document.getElementById('statusEditingKey').value = key;
+        document.getElementById('statusNome').value = key;
+        document.getElementById('statusDescricao').value = config.descricao || '';
+        document.getElementById('statusCor').value = config.color;
+        document.getElementById('statusCorTexto').value = config.text;
+        
+        document.getElementById('btnSalvarStatus').innerHTML = '<i class="fas fa-check"></i>';
+    }
+
+    function excluirStatus(key) {
+        if (confirm(`Deseja excluir o status "${key}"?`)) {
+            delete STATUS_CONFIG[key];
+            salvarStatusConfig();
+            renderizarTabelaStatus();
+        }
+    }
+
+    if (formStatus) {
+        formStatus.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const oldKey = document.getElementById('statusEditingKey').value;
+            const newKey = document.getElementById('statusNome').value.trim().toUpperCase();
+            
+            const newConfig = {
+                color: document.getElementById('statusCor').value,
+                text: document.getElementById('statusCorTexto').value,
+                descricao: document.getElementById('statusDescricao').value
+            };
+
+            if (oldKey && oldKey !== newKey) {
+                delete STATUS_CONFIG[oldKey]; // Remove a chave antiga se o nome mudou
+            }
+
+            STATUS_CONFIG[newKey] = newConfig;
+            salvarStatusConfig();
+            renderizarTabelaStatus();
+            
+            // Limpa formulário
+            formStatus.reset();
+            document.getElementById('statusEditingKey').value = '';
+            document.getElementById('btnSalvarStatus').innerHTML = '<i class="fas fa-plus"></i>';
+        });
+    }
+
+    // Eventos de Abertura/Fechamento do Modal
+    if (btnStatusLegend) btnStatusLegend.addEventListener('click', () => { renderizarTabelaStatus(); modalStatus.classList.remove('hidden'); });
+    if (closeModalStatus) closeModalStatus.addEventListener('click', () => modalStatus.classList.add('hidden'));
+    window.addEventListener('click', (e) => { if (e.target === modalStatus) modalStatus.classList.add('hidden'); });
+
 
     // --- FUNÇÕES ---
 

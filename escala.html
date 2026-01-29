@@ -179,7 +179,7 @@
                 <!-- Card de Ações -->
                 <div class="card" style="margin-bottom: 0;">
                     <div class="action-buttons">
-                        <button id="btnStatusLegend" class="btn-custom" style="background-color: #6f42c1;" onclick="window.location.href='status.html'"><i class="fa-solid fa-info-circle"></i> Status</button>
+                        <button id="btnStatusLegend" class="btn-custom" style="background-color: #6f42c1;"><i class="fa-solid fa-info-circle"></i> Status</button>
                         <button id="btnBaixarModelo" class="btn-custom" style="background-color: #6c757d;"><i class="fa-solid fa-download"></i> Modelo</button>
                         <button id="btnImportar" class="btn-custom btn-import"><i class="fa-solid fa-file-import"></i> Importar</button>
                         <button id="btnSalvar" class="btn-custom btn-save"><i class="fa-solid fa-save"></i> Salvar</button>
@@ -325,6 +325,60 @@
     <datalist id="listaAuxiliares"></datalist>
     <datalist id="listaTerceiros"></datalist>
     <datalist id="listaStatus"></datalist>
+
+    <!-- Modal de Gerenciamento de Status -->
+    <div id="modalStatus" class="modal hidden">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2><i class="fa-solid fa-tags"></i> Gerenciar Status</h2>
+                <span class="close-button" id="closeModalStatus" style="font-size: 24px; cursor: pointer;">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formStatus" style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee;">
+                    <input type="hidden" id="statusEditingKey">
+                    <div class="form-grid" style="grid-template-columns: 1fr 2fr auto auto auto; gap: 10px; align-items: end;">
+                        <div class="form-group">
+                            <label for="statusNome" style="font-size: 0.9em;">Sigla/Nome</label>
+                            <input type="text" id="statusNome" required placeholder="Ex: V" class="form-control" style="padding: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="statusDescricao" style="font-size: 0.9em;">Descrição</label>
+                            <input type="text" id="statusDescricao" placeholder="Descrição detalhada..." class="form-control" style="padding: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="statusCor" style="font-size: 0.9em;">Fundo</label>
+                            <input type="color" id="statusCor" value="#ffffff" style="height: 38px; width: 50px; padding: 2px; border: 1px solid #ccc;">
+                        </div>
+                         <div class="form-group">
+                            <label for="statusCorTexto" style="font-size: 0.9em;">Texto</label>
+                            <select id="statusCorTexto" class="form-control" style="padding: 8px;">
+                                <option value="white">Branco</option>
+                                <option value="black">Preto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" id="btnSalvarStatus" class="btn-primary" style="height: 38px; padding: 0 15px;"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-scroll-container" style="max-height: 400px;">
+                    <table class="data-grid">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Descrição</th>
+                                <th style="width: 100px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaStatusBody">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
