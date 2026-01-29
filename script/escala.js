@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnImportar = document.getElementById('btnImportar');
     const fileImportar = document.getElementById('fileImportar');
     const fileImportarDia = document.getElementById('fileImportarDia');
+    const btnSalvar = document.getElementById('btnSalvar');
 
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
@@ -52,6 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DADOS LOCAIS (Para Importação) ---
     let DADOS_LOCAL = {}; // Estrutura: { 'SEMANA XX': { 'SEGUNDA': { 'Padrao': [], ... } } }
+    
+    // Tenta carregar dados salvos anteriormente
+    try {
+        const savedData = localStorage.getItem('marquespan_escala_dados');
+        if (savedData) DADOS_LOCAL = JSON.parse(savedData);
+    } catch (e) { console.error('Erro ao carregar dados locais:', e); }
 
     // --- FUNÇÕES ---
 
@@ -148,25 +155,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Se houver dados importados para esta seção
             if (dadosDia && dadosDia[sec] && dadosDia[sec].length > 0) {
-                dadosDia[sec].forEach(item => {
+                dadosDia[sec].forEach((item, index) => {
                     const tr = document.createElement('tr');
                     if (sec === 'Faltas') {
                         tr.innerHTML = `
-                            <td>${item.MOTORISTA || ''}</td>
-                            <td>${item.MOTIVO_MOTORISTA || ''}</td>
-                            <td>${item.AUXILIAR || ''}</td>
-                            <td>${item.MOTIVO_AUXILIAR || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_MOTORISTA">${item.MOTIVO_MOTORISTA || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="AUXILIAR">${item.AUXILIAR || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_AUXILIAR">${item.MOTIVO_AUXILIAR || ''}</td>
                             <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                         `;
                     } else {
                         tr.innerHTML = `
-                            <td>${item.PLACA || ''}</td>
-                            <td>${item.MODELO || ''}</td>
-                            <td>${item.ROTA || ''}</td>
-                            <td>${item.STATUS || ''}</td>
-                            <td>${item.MOTORISTA || ''}</td>
-                            <td>${item.AUXILIAR || ''}</td>
-                            <td>${item.TERCEIRO || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="PLACA">${item.PLACA || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MODELO">${item.MODELO || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="ROTA">${item.ROTA || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="STATUS">${item.STATUS || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="AUXILIAR">${item.AUXILIAR || ''}</td>
+                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="TERCEIRO">${item.TERCEIRO || ''}</td>
                         `;
                     }
                     tbody.appendChild(tr);
@@ -348,13 +355,72 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listener para o botão de importar específico do dia (Delegado pois o botão é criado dinamicamente)
     if (painelEscala) {
         painelEscala.addEventListener('click', (e) => {
-            const btn = e.target.closest('#btnImportarDiaAction');
-            if (btn && fileImportarDia) {
+            // Botão Importar Dia
+            const btnImport = e.target.closest('#btnImportarDiaAction');
+            if (btnImport && fileImportarDia) {
                 fileImportarDia.click();
+                return;
+            }
+
+            // Botão Excluir Linha
+            const btnExcluir = e.target.closest('.btn-acao.excluir');
+            if (btnExcluir) {
+                const tr = btnExcluir.closest('tr');
+                // Encontra a primeira célula editável para pegar os metadados
+                const firstCell = tr.querySelector('td[data-section]');
+                if (firstCell) {
+                    const section = firstCell.dataset.section;
+                    const index = parseInt(firstCell.dataset.row);
+                    const semana = selectSemana.value;
+                    const dia = document.querySelector('.tab-btn.active').dataset.dia;
+
+                    if (confirm('Deseja remover esta linha?')) {
+                        if (DADOS_LOCAL[semana] && DADOS_LOCAL[semana][dia] && DADOS_LOCAL[semana][dia][section]) {
+                            DADOS_LOCAL[semana][dia][section].splice(index, 1);
+                            carregarDadosDia(dia, semana); // Re-renderiza para atualizar índices
+                        }
+                    }
+                }
+            }
+        });
+
+        // Listener para Edição (Input) - Atualiza DADOS_LOCAL em tempo real
+        painelEscala.addEventListener('input', (e) => {
+            const target = e.target;
+            if (target.hasAttribute('contenteditable')) {
+                const section = target.dataset.section;
+                const row = parseInt(target.dataset.row);
+                const key = target.dataset.key;
+                const semana = selectSemana.value;
+                const dia = document.querySelector('.tab-btn.active').dataset.dia;
+                
+                if (DADOS_LOCAL[semana] && DADOS_LOCAL[semana][dia] && DADOS_LOCAL[semana][dia][section]) {
+                    if (DADOS_LOCAL[semana][dia][section][row]) {
+                        DADOS_LOCAL[semana][dia][section][row][key] = target.innerText;
+                    }
+                }
             }
         });
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
+
+    // --- SALVAR ---
+    function salvarDados() {
+        localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+        alert('Dados salvos com sucesso!');
+    }
+
+    if (btnSalvar) {
+        btnSalvar.addEventListener('click', salvarDados);
+    }
+
+    // Atalho Ctrl+S
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault(); // Previne o salvar padrão do navegador
+            salvarDados();
+        }
+    });
 
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
