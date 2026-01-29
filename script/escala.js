@@ -20,6 +20,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const tituloDia = document.getElementById('tituloDia');
     const tabButtons = document.querySelectorAll('.tab-btn');
 
+    // --- CACHE DE DATAS ---
+    const CACHE_DATAS = {};
+
+    function preencherCacheDatas() {
+        const anoAtual = new Date().getFullYear();
+        for (let i = 1; i <= 53; i++) {
+            const semanaStr = `SEMANA ${String(i).padStart(2, '0')}`;
+            const monday = getMondayOfIsoWeek(i, anoAtual);
+            
+            CACHE_DATAS[semanaStr] = {
+                'SEGUNDA':  addDays(monday, 0),
+                'TERCA':    addDays(monday, 1),
+                'QUARTA':   addDays(monday, 2),
+                'QUINTA':   addDays(monday, 3),
+                'SEXTA':    addDays(monday, 4),
+                'SABADO':   addDays(monday, 5),
+                'DOMINGO':  addDays(monday, 6)
+            };
+        }
+    }
+
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setUTCDate(result.getUTCDate() + days);
+        return result;
+    }
+
     // --- FUNÇÕES ---
 
     /**
@@ -85,24 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         tituloDia.style.color = coresDia[dia] || '#006937';
 
-        // --- NOVA LÓGICA PARA ADICIONAR A DATA ---
-        const weekNum = parseInt(semana.replace('SEMANA ', ''), 10);
-        const today = new Date();
-        const currentMonth = today.getMonth(); // 0-11
-        let year = today.getFullYear();
-
-        // Adjust year for weeks at the boundary of the year
-        if (currentMonth === 11 && weekNum < 5) { // It's December, but user chose an early week (e.g. week 1) -> must be next year
-            year++;
-        } else if (currentMonth === 0 && weekNum > 50) { // It's January, but user chose a late week (e.g. week 52) -> must be last year
-            year--;
-        }
-
-        const mondayDate = getMondayOfIsoWeek(weekNum, year);
-        const dayOffsets = { 'SEGUNDA': 0, 'TERCA': 1, 'QUARTA': 2, 'QUINTA': 3, 'SEXTA': 4, 'SABADO': 5, 'DOMINGO': 6 };
-        const dayOffset = dayOffsets[dia] || 0;
-        const currentDate = new Date(mondayDate);
-        currentDate.setUTCDate(mondayDate.getUTCDate() + dayOffset);
+        // Usa o cache para obter a data sem recalcular
+        const dataDia = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
+        
+        const currentDate = new Date(dataDia);
         const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
         tituloDia.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}`;
@@ -112,9 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // const { data, error } = await supabaseClient.from('escala_diaria').select('*').eq('semana', semana).eq('dia', dia);
         
         // Simulação de dados vazios por enquanto, pois a tabela específica não foi fornecida
-        setTimeout(() => {
-            tabelaBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro encontrado para ${dia} na ${semana}.</td></tr>`;
-        }, 300);
+        tabelaBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nenhum registro encontrado para ${dia} na ${semana}.</td></tr>`;
     }
 
     // --- EVENT LISTENERS ---
@@ -128,22 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- NOVA LÓGICA PARA ATUALIZAR ABAS COM DATAS ---
-            const weekNum = parseInt(semanaSelecionada.replace('SEMANA ', ''), 10);
-            const today = new Date();
-            const currentMonth = today.getMonth(); // 0-11
-            let year = today.getFullYear();
-            if (currentMonth === 11 && weekNum < 5) { year++; } 
-            else if (currentMonth === 0 && weekNum > 50) { year--; }
-
-            const mondayDate = getMondayOfIsoWeek(weekNum, year);
-            const dayOffsets = { 'SEGUNDA': 0, 'TERCA': 1, 'QUARTA': 2, 'QUINTA': 3, 'SEXTA': 4, 'SABADO': 5, 'DOMINGO': 6 };
+            // Usa o cache para atualizar as abas
+            const dadosSemana = CACHE_DATAS[semanaSelecionada];
 
             tabButtons.forEach(btn => {
                 const dia = btn.dataset.dia;
-                const dayOffset = dayOffsets[dia] || 0;
-                const currentDate = new Date(mondayDate);
-                currentDate.setUTCDate(mondayDate.getUTCDate() + dayOffset);
+                const currentDate = dadosSemana ? dadosSemana[dia] : new Date();
                 const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
                 
                 const diaNome = btn.textContent.split(' ')[0].replace(/\d/g, '').replace(/\//g, '').trim();
@@ -175,4 +176,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
+    preencherCacheDatas();
 });
