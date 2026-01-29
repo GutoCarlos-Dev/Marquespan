@@ -60,6 +60,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedData) DADOS_LOCAL = JSON.parse(savedData);
     } catch (e) { console.error('Erro ao carregar dados locais:', e); }
 
+    // --- CACHE DE VEÍCULOS ---
+    let listaVeiculos = [];
+
+    /**
+     * Carrega a lista de veículos ativos do banco de dados para popular os seletores.
+     */
+    async function carregarVeiculos() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('veiculos')
+                .select('placa, modelo')
+                .eq('situacao', 'ativo')
+                .order('placa');
+
+            if (error) throw error;
+            
+            listaVeiculos = data || [];
+            
+            const datalistPlacas = document.getElementById('listaVeiculos');
+            const datalistModelos = document.getElementById('listaModelos');
+
+            if (datalistPlacas) {
+                datalistPlacas.innerHTML = data.map(v => `<option value="${v.placa}">`).join('');
+            }
+
+            if (datalistModelos) {
+                // Filtra modelos únicos e não vazios
+                const modelosUnicos = [...new Set(data.map(v => v.modelo).filter(m => m))];
+                datalistModelos.innerHTML = modelosUnicos.map(m => `<option value="${m}">`).join('');
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar veículos:', error);
+        }
+    }
+
     // --- FUNÇÕES ---
 
     /**
@@ -167,8 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     } else {
                         tr.innerHTML = `
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="PLACA">${item.PLACA || ''}</td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MODELO">${item.MODELO || ''}</td>
+                            <td><input type="text" list="listaVeiculos" class="table-input" value="${item.PLACA || ''}" data-section="${sec}" data-row="${index}" data-key="PLACA" placeholder="Placa"></td>
+                            <td><input type="text" list="listaModelos" class="table-input" value="${item.MODELO || ''}" data-section="${sec}" data-row="${index}" data-key="MODELO" placeholder="Modelo"></td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="ROTA">${item.ROTA || ''}</td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="STATUS">${item.STATUS || ''}</td>
                             <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTORISTA">${item.MOTORISTA || ''}</td>
@@ -387,7 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Listener para Edição (Input) - Atualiza DADOS_LOCAL em tempo real
         painelEscala.addEventListener('input', (e) => {
             const target = e.target;
-            if (target.hasAttribute('contenteditable')) {
+            // Verifica se é um elemento editável (input ou contenteditable)
+            if (target.hasAttribute('contenteditable') || target.classList.contains('table-input')) {
                 const section = target.dataset.section;
                 const row = parseInt(target.dataset.row);
                 const key = target.dataset.key;
@@ -396,7 +433,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (DADOS_LOCAL[semana] && DADOS_LOCAL[semana][dia] && DADOS_LOCAL[semana][dia][section]) {
                     if (DADOS_LOCAL[semana][dia][section][row]) {
-                        DADOS_LOCAL[semana][dia][section][row][key] = target.innerText;
+                        const valor = target.value !== undefined ? target.value : target.innerText;
+                        DADOS_LOCAL[semana][dia][section][row][key] = valor;
+
+                        // Auto-preencher Modelo se a Placa for alterada
+                        if (key === 'PLACA') {
+                            const veiculoEncontrado = listaVeiculos.find(v => v.placa === valor);
+                            if (veiculoEncontrado) {
+                                DADOS_LOCAL[semana][dia][section][row]['MODELO'] = veiculoEncontrado.modelo;
+                                // Atualiza o input de modelo na mesma linha visualmente
+                                const tr = target.closest('tr');
+                                const inputModelo = tr.querySelector('input[data-key="MODELO"]');
+                                if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
+                            }
+                        }
                     }
                 }
             }
@@ -425,4 +475,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
     preencherCacheDatas();
+    carregarVeiculos();
 });

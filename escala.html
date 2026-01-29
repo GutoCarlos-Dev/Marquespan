@@ -130,6 +130,23 @@
             padding-top: 4px;
             padding-bottom: 4px;
         }
+
+        /* Estilo para inputs dentro da tabela (Placa/Modelo) */
+        .table-input {
+            width: 100%;
+            border: 1px solid transparent;
+            background: transparent;
+            padding: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+        }
+        .table-input:focus {
+            outline: none;
+            border: 1px solid #006937;
+            background: #fff;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +315,10 @@
 
         </section>
     </main>
+
+    <!-- Datalists para Autocomplete -->
+    <datalist id="listaVeiculos"></datalist>
+    <datalist id="listaModelos"></datalist>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
