@@ -77,6 +77,43 @@
             color: #333;
             font-weight: bold;
         }
+
+        /* Estilos para o container de controles superiores */
+        .top-controls-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .top-controls-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            height: 100%;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .btn-custom {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.2s;
+        }
+        .btn-custom:hover { opacity: 0.9; }
+        .btn-import { background-color: #17a2b8; }
+        .btn-save { background-color: #007bff; }
+        .btn-pdf { background-color: #dc3545; }
+        .btn-xlsx { background-color: #28a745; }
     </style>
 </head>
 <body>
@@ -90,17 +127,29 @@
 
         <section id="sectionControleEscala" class="content-section">
             
-            <!-- Seleção de Semana -->
-            <div class="card">
-                <div class="form-grid" style="grid-template-columns: 1fr auto; align-items: end;">
-                    <div class="form-group">
-                        <label for="escalaSemana">Selecione a Semana</label>
-                        <select id="escalaSemana" class="form-control"></select>
+            <div class="top-controls-container">
+                <!-- Seleção de Semana -->
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="form-grid" style="grid-template-columns: 1fr auto; align-items: end;">
+                        <div class="form-group">
+                            <label for="escalaSemana">Selecione a Semana</label>
+                            <select id="escalaSemana" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <button id="btnAbrirEscala" class="btn-primary" style="height: 36px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-folder-open"></i> Abrir Escala
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <button id="btnAbrirEscala" class="btn-primary" style="height: 36px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-folder-open"></i> Abrir Escala
-                        </button>
+                </div>
+
+                <!-- Card de Ações -->
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="action-buttons">
+                        <button id="btnImportar" class="btn-custom btn-import"><i class="fa-solid fa-file-import"></i> Importar</button>
+                        <button id="btnSalvar" class="btn-custom btn-save"><i class="fa-solid fa-save"></i> Salvar</button>
+                        <button id="btnPDF" class="btn-custom btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                        <button id="btnXLSX" class="btn-custom btn-xlsx"><i class="fa-solid fa-file-excel"></i> XLSX</button>
                     </div>
                 </div>
             </div>
