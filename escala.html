@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="../css/escala.css">
     <!-- Font Awesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- SheetJS para Importar/Exportar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* Estilos para as Abas */
         .tabs-container {
@@ -146,10 +148,12 @@
                 <!-- Card de Ações -->
                 <div class="card" style="margin-bottom: 0;">
                     <div class="action-buttons">
+                        <button id="btnBaixarModelo" class="btn-custom" style="background-color: #6c757d;"><i class="fa-solid fa-download"></i> Modelo</button>
                         <button id="btnImportar" class="btn-custom btn-import"><i class="fa-solid fa-file-import"></i> Importar</button>
                         <button id="btnSalvar" class="btn-custom btn-save"><i class="fa-solid fa-save"></i> Salvar</button>
                         <button id="btnPDF" class="btn-custom btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         <button id="btnXLSX" class="btn-custom btn-xlsx"><i class="fa-solid fa-file-excel"></i> XLSX</button>
+                        <input type="file" id="fileImportar" accept=".xlsx, .xls" style="display: none;">
                     </div>
                 </div>
             </div>
