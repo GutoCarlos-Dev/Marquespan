@@ -1,0 +1,187 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    padding-bottom: 40px;
+}
+
+.mobile-header {
+    background-color: #006937;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mobile-logo {
+    height: 30px;
+    background: white;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.mobile-header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.btn-desktop-link {
+    color: white;
+    font-size: 1.2rem;
+    text-decoration: none;
+    padding: 5px;
+}
+
+.mobile-container {
+    padding: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.date-selector-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.date-selector-card label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.date-selector-card input[type="date"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.loading-placeholder {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.bico-card {
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    border-left: 5px solid #ccc;
+    transition: border-color 0.3s;
+}
+
+.bico-card.status-salvo {
+    border-left-color: #28a745; /* Verde */
+}
+
+.bico-card.status-pendente {
+    border-left-color: #ffc107; /* Amarelo */
+}
+
+.bico-header {
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bico-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #006937;
+}
+
+.bico-status-badge {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+    color: white;
+}
+
+.bico-status-badge.salvo {
+    background-color: #28a745;
+}
+
+.bico-status-badge.pendente {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.bico-body {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.leitura-group {
+    padding: 10px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+}
+
+.leitura-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.leitura-group .value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.leitura-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    text-align: right;
+}
+
+.leitura-group input:focus {
+    border-color: #006937;
+    outline: none;
+}
+
+.bico-actions {
+    padding: 0 15px 15px 15px;
+}
+
+.btn-salvar-leitura {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+}
