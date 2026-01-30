@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('saidaDataHora').value = now.toISOString().slice(0, 16);
     document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
+    document.getElementById('transfData').value = now.toISOString().slice(0, 16);
 
     // Preenche o usuário logado na aba de Entrada
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners de Formulários
     document.getElementById('formMobileAbastecimento').addEventListener('submit', salvarAbastecimento);
     document.getElementById('formMobileEntrada').addEventListener('submit', salvarEntrada);
+    document.getElementById('formMobileTransferencia').addEventListener('submit', salvarTransferencia);
     
     // Botões de Atualização
     document.getElementById('btnAtualizarHistorico').addEventListener('click', carregarHistoricoRecente);
@@ -295,6 +297,8 @@ async function carregarHistoricoRecente() {
 async function carregarEstoque() {
     const listaEstoque = document.getElementById('listaEstoque');
     const selectTanqueEntrada = document.getElementById('entradaTanque');
+    const selectOrigem = document.getElementById('transfOrigem');
+    const selectDestino = document.getElementById('transfDestino');
     
     // Limpa lista visual mas mantém loading se for a primeira vez
     if(listaEstoque.children.length === 0) listaEstoque.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Atualizando...</p>';
@@ -345,6 +349,8 @@ async function carregarEstoque() {
         listaEstoque.innerHTML = '';
         // Popula Select de Entrada (Aba 2)
         selectTanqueEntrada.innerHTML = '<option value="">Selecione o Tanque</option>';
+        if(selectOrigem) selectOrigem.innerHTML = '<option value="">Selecione Tanque Origem</option>';
+        if(selectDestino) selectDestino.innerHTML = '<option value="">Selecione Tanque Destino</option>';
 
         if (estoqueMap.size === 0) {
             listaEstoque.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum tanque cadastrado.</p>';
@@ -382,6 +388,16 @@ async function carregarEstoque() {
             opt.value = t.id;
             opt.textContent = `${t.nome} (${t.tipo_combustivel})`;
             selectTanqueEntrada.appendChild(opt);
+
+            // Opções de Transferência
+            if(selectOrigem) {
+                const optO = opt.cloneNode(true);
+                selectOrigem.appendChild(optO);
+            }
+            if(selectDestino) {
+                const optD = opt.cloneNode(true);
+                selectDestino.appendChild(optD);
+            }
         });
 
     } catch (e) {
@@ -432,5 +448,52 @@ async function salvarEntrada(e) {
     } catch (err) {
         console.error('Erro ao salvar entrada:', err);
         alert('Erro ao registrar entrada: ' + err.message);
+    }
+}
+
+async function salvarTransferencia(e) {
+    e.preventDefault();
+    const data = document.getElementById('transfData').value;
+    const origemId = document.getElementById('transfOrigem').value;
+    const destinoId = document.getElementById('transfDestino').value;
+    const qtd = parseFloat(document.getElementById('transfQtd').value);
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+
+    if (!origemId || !destinoId) {
+        alert('Selecione os tanques de origem e destino.');
+        return;
+    }
+    if (origemId === destinoId) {
+        alert('Origem e Destino devem ser diferentes.');
+        return;
+    }
+    if (isNaN(qtd) || qtd <= 0) {
+        alert('Quantidade inválida.');
+        return;
+    }
+
+    try {
+        const records = [
+            { data: data, numero_nota: 'TRANSFERENCIA', tanque_id: origemId, qtd_litros: -qtd, valor_litro: 0, valor_total: 0, usuario: usuario },
+            { data: data, numero_nota: 'TRANSFERENCIA', tanque_id: destinoId, qtd_litros: qtd, valor_litro: 0, valor_total: 0, usuario: usuario }
+        ];
+
+        const { error } = await supabaseClient.from('abastecimentos').insert(records);
+        if (error) throw error;
+
+        alert('Transferência realizada com sucesso!');
+        document.getElementById('formMobileTransferencia').reset();
+        
+        // Reset date
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('transfData').value = now.toISOString().slice(0, 16);
+
+        carregarEstoque();
+
+    } catch (err) {
+        console.error('Erro ao transferir:', err);
+        alert('Erro ao realizar transferência: ' + err.message);
     }
 }

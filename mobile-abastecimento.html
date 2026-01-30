@@ -178,6 +178,40 @@
             </div>
         </div>
       </div>
+
+      <!-- Painel de Transferência -->
+      <div class="panel mobile-panel" style="margin-top: 20px;">
+        <div class="panel-header">
+            <h3><i class="fas fa-exchange-alt"></i> Transferência Interna</h3>
+        </div>
+        <div class="panel-body">
+            <form id="formMobileTransferencia">
+                <div class="form-group">
+                    <label for="transfData">Data e Hora</label>
+                    <input type="datetime-local" id="transfData" required>
+                </div>
+                <div class="form-group">
+                    <label for="transfOrigem">De (Origem)</label>
+                    <select id="transfOrigem" required>
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transfDestino">Para (Destino)</label>
+                    <select id="transfDestino" required>
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transfQtd">Quantidade (Litros)</label>
+                    <input type="number" id="transfQtd" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-actions mobile-actions">
+                    <button type="submit" class="btn-primary btn-block btn-large" style="background-color: #ffc107; color: #212529; border: none;"><i class="fas fa-exchange-alt"></i> TRANSFERIR</button>
+                </div>
+            </form>
+        </div>
+      </div>
     </div>
 
   </div>
