@@ -44,13 +44,6 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="saidaBico">Bico / Bomba</label>
-                    <select id="saidaBico" required>
-                        <option value="">Carregando bicos...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
                     <label for="saidaVeiculo">Veículo (Placa)</label>
                     <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;">
                     <datalist id="listaVeiculos"></datalist>
@@ -62,15 +55,42 @@
                     <datalist id="listaMotoristas"></datalist>
                 </div>
 
-                <div class="form-row-mobile">
+                <div class="form-group">
+                    <label for="saidaKm">KM / Horímetro</label>
+                    <input type="number" id="saidaKm" placeholder="0" inputmode="numeric" required>
+                </div>
+
+                <hr class="form-divider">
+
+                <!-- Bico 1 -->
+                <div class="form-group">
+                    <label for="saidaBico">Bico / Bomba 1</label>
+                    <select id="saidaBico" required>
+                        <option value="">Carregando bicos...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="saidaLitros">Litros (Bico 1)</label>
+                    <input type="number" id="saidaLitros" step="0.01" placeholder="0.00" inputmode="decimal" required style="font-weight: bold; color: #006937;">
+                </div>
+
+                <!-- Campos para o segundo bico (inicialmente ocultos) -->
+                <div id="camposBico2" class="hidden">
                     <div class="form-group">
-                        <label for="saidaKm">KM / Horímetro</label>
-                        <input type="number" id="saidaKm" placeholder="0" inputmode="numeric" required>
+                        <label for="saidaBico2">Bico / Bomba 2</label>
+                        <select id="saidaBico2">
+                            <option value="">Selecione o Bico</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="saidaLitros">Litros</label>
-                        <input type="number" id="saidaLitros" step="0.01" placeholder="0.00" inputmode="decimal" required style="font-weight: bold; color: #006937;">
+                        <label for="saidaLitros2">Litros (Bico 2)</label>
+                        <input type="number" id="saidaLitros2" step="0.01" placeholder="0.00" inputmode="decimal" style="font-weight: bold; color: #0056b3;">
                     </div>
+                </div>
+
+                <!-- Botão para adicionar/remover segundo bico -->
+                <div class="form-group">
+                    <button type="button" id="btnToggleBico2" class="btn-secondary btn-block" style="background-color: #6c757d; font-size: 0.9rem; padding: 10px;"><i class="fas fa-plus"></i> Adicionar 2º Bico</button>
                 </div>
 
                 <div class="form-actions mobile-actions">

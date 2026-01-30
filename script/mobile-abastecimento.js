@@ -19,6 +19,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAtualizarHistorico').addEventListener('click', carregarHistoricoRecente);
     document.getElementById('btnAtualizarEstoque').addEventListener('click', carregarEstoque);
 
+    // Botão para Adicionar/Remover 2º Bico
+    const btnToggleBico2 = document.getElementById('btnToggleBico2');
+    const camposBico2 = document.getElementById('camposBico2');
+    btnToggleBico2.addEventListener('click', () => {
+        const isHidden = camposBico2.classList.contains('hidden');
+        if (isHidden) {
+            camposBico2.classList.remove('hidden');
+            btnToggleBico2.innerHTML = '<i class="fas fa-minus"></i> Remover 2º Bico';
+            btnToggleBico2.style.backgroundColor = '#dc3545'; // Red
+        } else {
+            camposBico2.classList.add('hidden');
+            // Limpa os campos ao remover
+            document.getElementById('saidaBico2').value = '';
+            document.getElementById('saidaLitros2').value = '';
+            btnToggleBico2.innerHTML = '<i class="fas fa-plus"></i> Adicionar 2º Bico';
+            btnToggleBico2.style.backgroundColor = '#6c757d'; // Gray
+        }
+    });
+
     // Navegação por Abas
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(tab => {
@@ -46,7 +65,9 @@ async function carregarDadosIniciais() {
         if (errBicos) throw errBicos;
 
         const selectBico = document.getElementById('saidaBico');
+        const selectBico2 = document.getElementById('saidaBico2');
         selectBico.innerHTML = '<option value="">Selecione o Bico</option>';
+        selectBico2.innerHTML = '<option value="">Selecione o Bico</option>';
         
         if (bicos) {
             bicos.forEach(bico => {
@@ -55,7 +76,9 @@ async function carregarDadosIniciais() {
                 const option = document.createElement('option');
                 option.value = bico.id;
                 option.textContent = `${bico.nome} - ${combustivel} (${nomeTanque})`;
-                selectBico.appendChild(option);
+                
+                selectBico.appendChild(option.cloneNode(true));
+                selectBico2.appendChild(option.cloneNode(true));
             });
         }
     } catch (e) {
@@ -114,44 +137,88 @@ async function carregarDadosIniciais() {
 async function salvarAbastecimento(e) {
     e.preventDefault();
     
+    // Dados comuns
     const dataHora = document.getElementById('saidaDataHora').value;
-    const bicoId = document.getElementById('saidaBico').value;
     const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
     const motorista = document.getElementById('saidaMotorista').value;
     const km = document.getElementById('saidaKm').value;
-    const litros = document.getElementById('saidaLitros').value;
-    
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 
-    if (!bicoId || !placa || !litros) {
-        alert('Preencha os campos obrigatórios.');
+    // Dados do Bico 1
+    const bicoId1 = document.getElementById('saidaBico').value;
+    const litros1 = document.getElementById('saidaLitros').value;
+
+    // Dados do Bico 2 (opcional)
+    const bicoId2 = document.getElementById('saidaBico2').value;
+    const litros2 = document.getElementById('saidaLitros2').value;
+
+    if (!placa || !km) {
+        alert('Preencha a Placa e o KM.');
         return;
     }
 
+    const payloads = [];
+
+    // Prepara payload para o Bico 1 (obrigatório)
+    if (bicoId1 && litros1 > 0) {
+        payloads.push({
+            data_hora: dataHora,
+            bico_id: bicoId1,
+            placa: placa,
+            motorista: motorista,
+            km_atual: km,
+            litros: litros1,
+            usuario: usuario
+        });
+    } else {
+        alert('Preencha os dados do Bico 1 (Bico e Litros).');
+        return;
+    }
+
+    // Prepara payload para o Bico 2 (se preenchido)
+    if (bicoId2 && litros2 > 0) {
+        // Validação: não pode usar o mesmo bico duas vezes
+        if (bicoId1 === bicoId2) {
+            alert('Não é possível usar o mesmo bico duas vezes no mesmo abastecimento.');
+            return;
+        }
+        payloads.push({
+            data_hora: dataHora,
+            bico_id: bicoId2,
+            placa: placa,
+            motorista: motorista,
+            km_atual: km,
+            litros: litros2,
+            usuario: usuario
+        });
+    }
+
     try {
-        // Salva na tabela de saídas (ajuste o nome da tabela conforme seu banco, assumindo 'abastecimentos_saida')
+        // Salva um ou dois registros de uma vez
         const { error } = await supabaseClient
             .from('abastecimentos_saida')
-            .insert([{
-                data_hora: dataHora,
-                bico_id: bicoId,
-                placa: placa,
-                motorista: motorista,
-                km_atual: km,
-                litros: litros,
-                usuario: usuario
-            }]);
+            .insert(payloads);
 
         if (error) throw error;
 
-        alert('Abastecimento registrado com sucesso!');
+        alert(`Abastecimento(s) registrado(s) com sucesso!`);
         
         // Limpa campos específicos, mantendo data e bico para agilizar o próximo
         document.getElementById('saidaVeiculo').value = '';
         document.getElementById('saidaMotorista').value = '';
         document.getElementById('saidaKm').value = '';
         document.getElementById('saidaLitros').value = '';
+        document.getElementById('saidaBico2').value = '';
+        document.getElementById('saidaLitros2').value = '';
+        
+        // Esconde campos do bico 2
+        const camposBico2 = document.getElementById('camposBico2');
+        const btnToggleBico2 = document.getElementById('btnToggleBico2');
+        camposBico2.classList.add('hidden');
+        btnToggleBico2.innerHTML = '<i class="fas fa-plus"></i> Adicionar 2º Bico';
+        btnToggleBico2.style.backgroundColor = '#6c757d';
+
         document.getElementById('saidaVeiculo').focus();
 
         carregarHistoricoRecente();
