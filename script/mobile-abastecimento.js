@@ -293,37 +293,79 @@ async function carregarEstoque() {
     if(listaEstoque.children.length === 0) listaEstoque.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Atualizando...</p>';
 
     try {
-        const { data: tanques, error } = await supabaseClient
+        // 1. Buscar Tanques
+        const { data: tanques, error: errTanques } = await supabaseClient
             .from('tanques')
-            .select('*')
+            .select('id, nome, capacidade, tipo_combustivel')
             .order('nome');
 
-        if (error) throw error;
+        if (errTanques) throw errTanques;
+
+        // 2. Buscar Entradas (Abastecimentos)
+        const { data: entradas, error: errEntradas } = await supabaseClient
+            .from('abastecimentos')
+            .select('tanque_id, qtd_litros');
+        
+        if (errEntradas) throw errEntradas;
+
+        // 3. Buscar Saídas
+        const { data: saidas, error: errSaidas } = await supabaseClient
+            .from('saidas_combustivel')
+            .select('qtd_litros, bicos(bombas(tanque_id))');
+
+        if (errSaidas) throw errSaidas;
+
+        // 4. Calcular Estoque
+        const estoqueMap = new Map();
+        tanques.forEach(t => {
+            estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
+        });
+
+        entradas.forEach(e => {
+            if (estoqueMap.has(e.tanque_id)) {
+                estoqueMap.get(e.tanque_id).estoque_atual += (parseFloat(e.qtd_litros) || 0);
+            }
+        });
+
+        saidas.forEach(s => {
+            const tanqueId = s.bicos?.bombas?.tanque_id;
+            if (tanqueId && estoqueMap.has(tanqueId)) {
+                estoqueMap.get(tanqueId).estoque_atual -= (parseFloat(s.qtd_litros) || 0);
+            }
+        });
 
         // Popula Lista de Estoque (Aba 3)
         listaEstoque.innerHTML = '';
         // Popula Select de Entrada (Aba 2)
         selectTanqueEntrada.innerHTML = '<option value="">Selecione o Tanque</option>';
 
-        if (!tanques || tanques.length === 0) {
+        if (estoqueMap.size === 0) {
             listaEstoque.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum tanque cadastrado.</p>';
             return;
         }
 
-        tanques.forEach(t => {
+        estoqueMap.forEach(t => {
             // Item da Lista de Estoque
             const div = document.createElement('div');
             div.className = 'stock-item';
             const percentual = t.capacidade > 0 ? ((t.estoque_atual / t.capacidade) * 100).toFixed(0) : 0;
             
+            // Define cor da barra/texto baseado no nível
+            let colorClass = '#006937'; // Verde
+            if(percentual < 20) colorClass = '#dc3545'; // Vermelho
+            else if(percentual < 50) colorClass = '#ffc107'; // Amarelo
+
             div.innerHTML = `
                 <div class="stock-info">
                     <h4>${t.nome}</h4>
                     <p>${t.tipo_combustivel}</p>
                 </div>
                 <div class="stock-level">
-                    <strong>${parseFloat(t.estoque_atual).toFixed(0)} L</strong>
+                    <strong style="color: ${colorClass}">${parseFloat(t.estoque_atual).toFixed(0)} L</strong>
                     <small>${percentual}% de ${parseFloat(t.capacidade).toFixed(0)} L</small>
+                    <div style="width: 100%; background: #eee; height: 5px; border-radius: 3px; margin-top: 5px;">
+                        <div style="width: ${Math.min(percentual, 100)}%; background: ${colorClass}; height: 100%; border-radius: 3px;"></div>
+                    </div>
                 </div>
             `;
             listaEstoque.appendChild(div);
@@ -369,18 +411,6 @@ async function salvarEntrada(e) {
             }]);
 
         if (errInsert) throw errInsert;
-
-        // 2. Atualiza o estoque do tanque (RPC ou Update direto)
-        // Aqui faremos um update direto buscando o valor atual primeiro para garantir consistência simples
-        const { data: tanqueAtual } = await supabaseClient.from('tanques').select('estoque_atual').eq('id', tanqueId).single();
-        const novoEstoque = (parseFloat(tanqueAtual.estoque_atual) + parseFloat(litros));
-
-        const { error: errUpdate } = await supabaseClient
-            .from('tanques')
-            .update({ estoque_atual: novoEstoque })
-            .eq('id', tanqueId);
-
-        if (errUpdate) throw errUpdate;
 
         alert('Entrada registrada com sucesso!');
         document.getElementById('formMobileEntrada').reset();
