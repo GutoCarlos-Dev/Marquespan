@@ -139,6 +139,7 @@ async function carregarDados() {
 
     carregarTotalFrota(); // Busca total da frota (sem filtros)
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
+    carregarKPIsDetalhados(dtIni, dtFim); // Busca KPIs com contagem exata
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -160,7 +161,7 @@ async function carregarDados() {
 
         if (error) throw error;
 
-        atualizarKPIs(data);
+        // atualizarKPIs(data); // Removido: KPIs agora são carregados por carregarKPIsDetalhados
         atualizarGraficos(data);
         
         // Atualiza timestamp
@@ -172,6 +173,78 @@ async function carregarDados() {
         // alert('Erro ao atualizar dashboard.');
     } finally {
         btnRefresh.classList.remove('fa-spin');
+    }
+}
+
+async function carregarKPIsDetalhados(dtIni, dtFim) {
+    try {
+        // 1. Total Pendentes (Contar Itens/Serviços)
+        // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
+        const { count: countPendentes, error: errPendentes } = await supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO'])
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (!errPendentes) {
+            document.getElementById('kpi-pendentes').textContent = countPendentes || 0;
+        }
+
+        // 2. Veículos Internados (Contar Itens)
+        const { count: countInternados, error: errInternados } = await supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .eq('status', 'INTERNADO')
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (!errInternados) {
+            document.getElementById('kpi-internados').textContent = countInternados || 0;
+        }
+
+        // 3. Finalizados Hoje (Contar Itens)
+        // Usa a data atual do sistema para filtrar "Hoje"
+        const hoje = new Date();
+        const hojeIni = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+        const hojeFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+
+        const { count: countFinalizados, error: errFinalizados } = await supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .in('status', ['FINALIZADO', 'FINALIZADO ROTA', 'OK'])
+            .gte('coletas_manutencao.data_hora', hojeIni)
+            .lte('coletas_manutencao.data_hora', hojeFim);
+
+        if (!errFinalizados) {
+            document.getElementById('kpi-finalizados-hoje').textContent = countFinalizados || 0;
+        }
+
+        // 4. Total Manutenções (Contar Cabeçalhos/Veículos Atendidos)
+        const { count: countManutencoes, error: errManutencoes } = await supabaseClient
+            .from('coletas_manutencao')
+            .select('*', { count: 'exact', head: true })
+            .gte('data_hora', `${dtIni}T00:00:00`)
+            .lte('data_hora', `${dtFim}T23:59:59`);
+
+        if (!errManutencoes) {
+            document.getElementById('kpi-total-qtd').textContent = countManutencoes || 0;
+        }
+
+        // 5. Gasto Total (Soma dos valores)
+        const { data: dataValores, error: errValores } = await supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('valor, coletas_manutencao!inner(id)')
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (!errValores && dataValores) {
+            const totalValor = dataValores.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+            document.getElementById('kpi-total-valor').textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+    } catch (error) {
+        console.error('Erro ao carregar KPIs detalhados:', error);
     }
 }
 
@@ -188,43 +261,6 @@ async function carregarTotalFrota() {
     } catch (error) {
         console.error('Erro ao carregar total da frota:', error);
     }
-}
-
-function atualizarKPIs(data) {
-    // 1. Total Manutenções (Conta cabeçalhos únicos, pois 'data' contém itens)
-    const uniqueManutencoes = new Set(data.map(item => item.coletas_manutencao.id));
-    document.getElementById('kpi-total-qtd').textContent = uniqueManutencoes.size;
-
-    // 2. Gasto Total (Soma o valor de cada item do checklist)
-    let totalValor = 0;
-    data.forEach(item => {
-        // O valor vem da tabela checklist
-        const val = parseFloat(item.valor) || 0;
-        totalValor += val;
-    });
-    document.getElementById('kpi-total-valor').textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-    // 3. Veículos Internados
-    const internados = data.filter(item => item.status === 'INTERNADO').length;
-    document.getElementById('kpi-internados').textContent = internados;
-
-    // 4. Finalizados Hoje
-    const hojeLocal = new Date().toLocaleDateString('pt-BR');
-    const finalizadosHoje = data.filter(item => {
-        const s = (item.status || '').toUpperCase();
-        const dataItem = item.coletas_manutencao.data_hora ? new Date(item.coletas_manutencao.data_hora).toLocaleDateString('pt-BR') : '';
-        return (s === 'FINALIZADO' || s === 'FINALIZADO ROTA' || s === 'OK') && dataItem === hojeLocal;
-    }).length;
-    document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
-
-    // 5. Total Pendentes (Contar por serviços/itens, não por placa)
-    const pendentes = data.filter(item => {
-        const s = (item.status || '').toUpperCase();
-        return s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO';
-    }).length;
-    
-    const kpiPendentes = document.getElementById('kpi-pendentes');
-    if (kpiPendentes) kpiPendentes.textContent = pendentes;
 }
 
 function atualizarGraficos(data) {
