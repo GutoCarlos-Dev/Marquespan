@@ -1,0 +1,176 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    padding-bottom: 40px;
+}
+
+.mobile-header {
+    background-color: #006937; /* Verde Marquespan */
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mobile-logo {
+    height: 30px;
+    background: white;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.mobile-header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.btn-desktop-link {
+    color: white;
+    font-size: 1.2rem;
+    text-decoration: none;
+    padding: 5px;
+}
+
+.mobile-container {
+    padding: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.mobile-panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.panel-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: #006937;
+    font-size: 1.1rem;
+}
+
+.panel-body {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    background-color: #fff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #006937;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 105, 55, 0.1);
+}
+
+.form-row-mobile {
+    display: flex;
+    gap: 10px;
+}
+
+.form-row-mobile .form-group {
+    flex: 1;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    background-color: #006937;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-block:active {
+    background-color: #00552b;
+    transform: translateY(1px);
+}
+
+/* Lista de Histórico */
+.historico-item {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 5px solid #006937;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.historico-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.historico-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.historico-litros {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #006937;
+    text-align: right;
+}
+
+.historico-litros small {
+    display: block;
+    font-size: 0.7rem;
+    color: #999;
+    font-weight: normal;
+}
