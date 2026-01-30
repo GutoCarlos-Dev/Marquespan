@@ -209,10 +209,11 @@ function atualizarKPIs(data) {
     document.getElementById('kpi-internados').textContent = internados;
 
     // 4. Finalizados Hoje
-    const hojeStr = new Date().toISOString().split('T')[0];
+    const hojeLocal = new Date().toLocaleDateString('pt-BR');
     const finalizadosHoje = data.filter(item => {
-        const dataItem = item.coletas_manutencao.data_hora ? item.coletas_manutencao.data_hora.split('T')[0] : '';
-        return (item.status === 'FINALIZADO' || item.status === 'FINALIZADO ROTA') && dataItem === hojeStr;
+        const s = (item.status || '').toUpperCase();
+        const dataItem = item.coletas_manutencao.data_hora ? new Date(item.coletas_manutencao.data_hora).toLocaleDateString('pt-BR') : '';
+        return (s === 'FINALIZADO' || s === 'FINALIZADO ROTA' || s === 'OK') && dataItem === hojeLocal;
     }).length;
     document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
 
