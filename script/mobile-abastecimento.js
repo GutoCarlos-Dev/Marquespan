@@ -128,28 +128,31 @@ async function carregarDadosIniciais() {
         console.error('Erro ao carregar veículos:', e);
     }
 
-    // Carregar Motoristas
+    // Carregar Rotas (Substituindo Motoristas)
     try {
-        const { data: motoristas, error: errMot } = await supabaseClient
-            .from('funcionario')
-            .select('nome')
-            .eq('funcao', 'Motorista')
-            .eq('status', 'Ativo')
-            .order('nome');
+        const { data: rotas, error: errRotas } = await supabaseClient
+            .from('rotas')
+            .select('numero');
         
-        if (errMot) throw errMot;
+        if (errRotas) throw errRotas;
 
-        const dlMotoristas = document.getElementById('listaMotoristas');
-        dlMotoristas.innerHTML = '';
-        if (motoristas) {
-            motoristas.forEach(m => {
+        const dlRotas = document.getElementById('listaRotas');
+        dlRotas.innerHTML = '';
+        
+        if (rotas) {
+            // Ordenação numérica correta (1, 2, 10 em vez de 1, 10, 2)
+            rotas.sort((a, b) => {
+                return String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            rotas.forEach(r => {
                 const opt = document.createElement('option');
-                opt.value = m.nome;
-                dlMotoristas.appendChild(opt);
+                opt.value = r.numero;
+                dlRotas.appendChild(opt);
             });
         }
     } catch (e) {
-        console.error('Erro ao carregar motoristas:', e);
+        console.error('Erro ao carregar rotas:', e);
     }
 }
 
@@ -159,7 +162,7 @@ async function salvarAbastecimento(e) {
     // Dados comuns
     const dataHora = document.getElementById('saidaDataHora').value;
     const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
-    const motorista = document.getElementById('saidaMotorista').value;
+    const rota = document.getElementById('saidaRota').value;
     const km = document.getElementById('saidaKm').value;
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
@@ -185,7 +188,7 @@ async function salvarAbastecimento(e) {
             data_hora: dataHora,
             bico_id: bicoId1,
             veiculo_placa: placa,
-            motorista_nome: motorista,
+            rota: rota, // Salva no campo rota
             km_atual: km,
             qtd_litros: litros1,
             usuario: usuario
@@ -206,7 +209,7 @@ async function salvarAbastecimento(e) {
             data_hora: dataHora,
             bico_id: bicoId2,
             veiculo_placa: placa,
-            motorista_nome: motorista,
+            rota: rota, // Salva no campo rota
             km_atual: km,
             qtd_litros: litros2,
             usuario: usuario
@@ -225,7 +228,7 @@ async function salvarAbastecimento(e) {
         
         // Limpa campos específicos, mantendo data e bico para agilizar o próximo
         document.getElementById('saidaVeiculo').value = '';
-        document.getElementById('saidaMotorista').value = '';
+        document.getElementById('saidaRota').value = '';
         document.getElementById('saidaKm').value = '';
         document.getElementById('saidaLitros').value = '';
         document.getElementById('saidaBico2').value = '';
@@ -278,7 +281,7 @@ async function carregarHistoricoRecente() {
                 <div class="historico-info">
                     <h4>${item.veiculo_placa}</h4>
                     <p><i class="far fa-clock"></i> ${dataFormatada} às ${horaFormatada}</p>
-                    <p><i class="far fa-user"></i> ${item.motorista_nome || 'N/I'}</p>
+                    <p><i class="fas fa-route"></i> Rota: ${item.rota || item.motorista_nome || 'N/I'}</p>
                 </div>
                 <div class="historico-litros">
                     ${parseFloat(item.qtd_litros).toFixed(2)} L
