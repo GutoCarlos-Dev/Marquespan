@@ -8,6 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = today;
     carregarBicos(today);
 
+    // Preenche o usuário logado
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    if (usuarioLogado) {
+        const inputUsuario = document.getElementById('leituraUsuario');
+        if (inputUsuario) inputUsuario.value = usuarioLogado.nome;
+    }
+
     // Recarrega os bicos quando a data muda
     dateInput.addEventListener('change', () => {
         carregarBicos(dateInput.value);
