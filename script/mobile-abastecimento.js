@@ -419,6 +419,9 @@ async function carregarEstoque() {
             }
         });
 
+        // Carrega o histórico de movimentação também
+        carregarHistoricoMovimentacao();
+
     } catch (e) {
         console.error('Erro ao carregar estoque:', e);
         listaEstoque.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar dados.</p>';
@@ -556,5 +559,106 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado) {
     } catch (err) {
         console.error('Erro ao ajustar estoque:', err);
         alert('Erro ao salvar ajuste: ' + err.message);
+    }
+}
+
+async function carregarHistoricoMovimentacao() {
+    const lista = document.getElementById('listaHistoricoEstoque');
+    if (!lista) return;
+    
+    lista.innerHTML = '<p style="text-align:center; color:#666;">Atualizando...</p>';
+
+    try {
+        // 1. Buscar Entradas e Ajustes (Tabela abastecimentos)
+        const { data: entradas, error: errEntradas } = await supabaseClient
+            .from('abastecimentos')
+            .select('id, data, numero_nota, qtd_litros, usuario, tanques(nome)')
+            .order('data', { ascending: false })
+            .limit(20);
+        
+        if (errEntradas) throw errEntradas;
+
+        // 2. Buscar Saídas (Tabela saidas_combustivel)
+        const { data: saidas, error: errSaidas } = await supabaseClient
+            .from('saidas_combustivel')
+            .select('id, data_hora, veiculo_placa, qtd_litros, usuario, bicos(bombas(tanques(nome)))')
+            .order('data_hora', { ascending: false })
+            .limit(20);
+
+        if (errSaidas) throw errSaidas;
+
+        // 3. Combinar e Ordenar
+        const historico = [];
+
+        entradas.forEach(e => {
+            historico.push({
+                tipo: 'ENTRADA', // Pode ser AJUSTE ou TRANSFERENCIA também
+                data: e.data,
+                detalhe: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'Ajuste Manual' : (e.numero_nota === 'TRANSFERENCIA' ? 'Transferência' : `NF: ${e.numero_nota}`),
+                tanque: e.tanques?.nome || 'N/A',
+                qtd: e.qtd_litros,
+                usuario: e.usuario
+            });
+        });
+
+        saidas.forEach(s => {
+            historico.push({
+                tipo: 'SAIDA',
+                data: s.data_hora,
+                detalhe: `Veículo: ${s.veiculo_placa}`,
+                tanque: s.bicos?.bombas?.tanques?.nome || 'N/A',
+                qtd: s.qtd_litros,
+                usuario: s.usuario
+            });
+        });
+
+        // Ordena do mais recente para o mais antigo
+        historico.sort((a, b) => new Date(b.data) - new Date(a.data));
+        const top20 = historico.slice(0, 20);
+
+        lista.innerHTML = '';
+        if (top20.length === 0) {
+            lista.innerHTML = '<p style="text-align:center; padding:20px;">Nenhuma movimentação recente.</p>';
+            return;
+        }
+
+        top20.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'historico-item';
+            
+            // Define cor da borda lateral baseada no tipo
+            if (item.tipo === 'SAIDA') {
+                div.style.borderLeftColor = '#dc3545'; // Vermelho
+            } else if (item.detalhe === 'Transferência') {
+                div.style.borderLeftColor = '#ffc107'; // Amarelo
+            } else {
+                div.style.borderLeftColor = '#28a745'; // Verde
+            }
+
+            const dataObj = new Date(item.data);
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            const qtdFormatted = parseFloat(item.qtd).toFixed(2);
+            const sinal = item.tipo === 'SAIDA' || (item.tipo === 'ENTRADA' && item.qtd < 0) ? '-' : '+';
+            const corQtd = item.tipo === 'SAIDA' || item.qtd < 0 ? '#dc3545' : '#28a745';
+
+            div.innerHTML = `
+                <div class="historico-info">
+                    <h4>${item.tanque}</h4>
+                    <p><i class="far fa-clock"></i> ${dataFormatada} ${horaFormatada !== '00:00' ? horaFormatada : ''}</p>
+                    <p><i class="fas fa-info-circle"></i> ${item.detalhe}</p>
+                    <p><i class="far fa-user"></i> ${item.usuario || 'N/I'}</p>
+                </div>
+                <div class="historico-litros" style="color: ${corQtd}">
+                    ${sinal}${Math.abs(qtdFormatted)} L
+                </div>
+            `;
+            lista.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error('Erro ao carregar histórico de movimentação:', e);
+        lista.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar histórico.</p>';
     }
 }
