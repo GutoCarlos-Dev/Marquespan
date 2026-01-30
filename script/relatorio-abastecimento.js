@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dadosFormatados = this.dadosRelatorio.map(reg => ({
                 'Data/Hora': new Date(reg.data_hora).toLocaleString('pt-BR'),
                 'Tipo': reg.tipo,
-                'Usuário': reg.usuario,
+                'Usuário': reg.usuario || '-',
                 'Placa': reg.placa,
                 'Rota': reg.rota,
                 'KM Atual': reg.km_atual,
@@ -237,9 +237,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Total': Number(reg.valor_total)
             }));
 
+            // Calcular totais para adicionar ao final da planilha
+            const totalLitros = this.dadosRelatorio.reduce((sum, reg) => sum + Number(reg.litros), 0);
+            const totalValor = this.dadosRelatorio.reduce((sum, reg) => sum + Number(reg.valor_total), 0);
+
+            dadosFormatados.push({
+                'Data/Hora': 'TOTAIS GERAIS',
+                'Tipo': '',
+                'Usuário': '',
+                'Placa': '',
+                'Rota': '',
+                'KM Atual': '',
+                'Nº Nota': '',
+                'Tanque': '',
+                'Combustível': '',
+                'Litros': totalLitros,
+                'Vlr. Litro': '',
+                'Total': totalValor
+            });
+
             const ws = XLSX.utils.json_to_sheet(dadosFormatados);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Abastecimentos");
+            XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
             XLSX.writeFile(wb, "Relatorio_Abastecimentos.xlsx");
         },
 
