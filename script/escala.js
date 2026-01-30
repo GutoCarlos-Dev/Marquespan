@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileImportar = document.getElementById('fileImportar');
     const fileImportarDia = document.getElementById('fileImportarDia');
     const btnSalvar = document.getElementById('btnSalvar');
+    const btnPDF = document.getElementById('btnPDF');
     
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
@@ -439,6 +440,138 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     }
 
+    /**
+     * Gera o PDF da escala completa da semana.
+     */
+    async function gerarPDF() {
+        if (!window.jspdf) {
+            alert('Biblioteca PDF não carregada. Verifique sua conexão.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        // Configuração A4 Paisagem com margens mínimas (5mm)
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        
+        const semana = selectSemana.value;
+        const dadosSemana = DADOS_LOCAL[semana] || {};
+
+        // Tenta carregar o logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                // Logo no canto superior esquerdo
+                doc.addImage(base64data, 'PNG', 5, 5, 40, 15);
+            }
+        } catch (e) {
+            console.warn('Logo não carregado', e);
+        }
+
+        // Cabeçalho do Relatório
+        doc.setFontSize(18);
+        doc.text(`Escala Semanal - ${semana}`, 148.5, 15, { align: 'center' });
+        doc.setFontSize(9);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 292, 10, { align: 'right' });
+
+        let finalY = 25;
+
+        const dias = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
+        const secoes = [
+            { id: 'Padrao', title: 'PADRÃO' },
+            { id: 'Transferencia', title: 'TRANSFERÊNCIA CD' },
+            { id: 'Equipamento', title: 'EQUIPAMENTO' },
+            { id: 'Reservas', title: 'RESERVAS' },
+            { id: 'Faltas', title: 'FALTAS / FÉRIAS / AFASTADOS' }
+        ];
+
+        let hasContent = false;
+
+        for (const dia of dias) {
+            const dadosDia = dadosSemana[dia];
+            if (!dadosDia) continue;
+            
+            // Verifica se o dia tem algum dado em qualquer seção
+            const hasData = secoes.some(sec => dadosDia[sec.id] && dadosDia[sec.id].length > 0);
+            if (!hasData) continue;
+
+            hasContent = true;
+
+            // Verifica espaço para o cabeçalho do dia
+            if (finalY > 185) {
+                doc.addPage();
+                finalY = 15;
+            }
+            
+            // Cabeçalho do Dia (Barra Cinza)
+            doc.setFillColor(230, 230, 230);
+            doc.rect(5, finalY, 287, 7, 'F'); // Largura total menos margens (297 - 5 - 5)
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            
+            let dateStr = '';
+            if (CACHE_DATAS[semana] && CACHE_DATAS[semana][dia]) {
+                 dateStr = ' - ' + CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+            }
+            
+            doc.text(`${dia}${dateStr}`, 148.5, finalY + 5, { align: 'center' });
+            finalY += 9;
+
+            for (const sec of secoes) {
+                const itens = dadosDia[sec.id] || [];
+                if (itens.length === 0) continue;
+
+                let columns, body;
+                if (sec.id === 'Faltas') {
+                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR'];
+                    body = itens.map(i => [i.MOTORISTA || '', i.MOTIVO_MOTORISTA || '', i.AUXILIAR || '', i.MOTIVO_AUXILIAR || '']);
+                } else {
+                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
+                    body = itens.map(i => [i.PLACA || '', i.MODELO || '', i.ROTA || '', i.STATUS || '', i.MOTORISTA || '', i.AUXILIAR || '', i.TERCEIRO || '']);
+                }
+
+                // Título da Seção
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 105, 55); // Verde Marquespan
+                doc.text(sec.title, 5, finalY + 3);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: body,
+                    startY: finalY + 4,
+                    margin: { left: 5, right: 5 }, // Margens laterais de 5mm
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' }
+                    },
+                    didDrawPage: (data) => {
+                        // Se a tabela quebrar página, atualiza o finalY
+                        finalY = data.cursor.y;
+                    }
+                });
+
+                finalY = doc.lastAutoTable.finalY + 4;
+            }
+            finalY += 2; // Espaço entre dias
+        }
+
+        if (!hasContent) {
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Nenhum dado encontrado para esta semana.', 148.5, 50, { align: 'center' });
+        }
+
+        doc.save(`Escala_${semana.replace(/\s+/g, '_')}.pdf`);
+    }
+
     // --- EVENT LISTENERS ---
 
     // Botão Abrir Escala
@@ -492,6 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnImportar && fileImportar) {
         btnImportar.addEventListener('click', () => fileImportar.click());
         fileImportar.addEventListener('change', importarExcel);
+    }
+
+    if (btnPDF) {
+        btnPDF.addEventListener('click', gerarPDF);
     }
 
     // Listener para o botão de importar específico do dia (Delegado pois o botão é criado dinamicamente)
