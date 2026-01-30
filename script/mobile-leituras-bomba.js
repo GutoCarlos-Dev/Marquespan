@@ -145,13 +145,17 @@ async function salvarLeitura(event) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
     try {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+
         const { error } = await supabaseClient
             .from('leituras_bomba')
             .insert({
                 data: dataSelecionada,
                 bomba_id: bicoId,
                 leitura_inicial: leituraAtual,
-                leitura_final: leituraAtual // No início do dia, a final é igual à inicial
+                leitura_final: leituraAtual, // No início do dia, a final é igual à inicial
+                usuario_cadastro: usuario
             });
 
         if (error) throw error;
