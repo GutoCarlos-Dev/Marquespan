@@ -43,23 +43,24 @@
                     <input type="datetime-local" id="saidaDataHora" required>
                 </div>
                 
-                <div class="form-group">
-                    <label for="saidaBico">Bico de Origem</label>
-                    <select id="saidaBico" required>
-                        <option value="">Carregando bicos...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="saidaVeiculo">Veículo (Placa)</label>
-                    <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;">
-                    <datalist id="listaVeiculos"></datalist>
-                </div>
+                <div class="form-row-mobile">
+                    <div class="form-group">
+                        <label for="saidaVeiculo">Veículo (Placa)</label>
+                        <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;">
+                        <datalist id="listaVeiculos"></datalist>
+                    </div>
 
                 <div class="form-group">
                     <label for="saidaMotorista">Motorista</label>
                     <input type="text" id="saidaMotorista" list="listaMotoristas" placeholder="Nome do Motorista" required autocomplete="off">
                     <datalist id="listaMotoristas"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="saidaBico">Bico de Origem</label>
+                    <select id="saidaBico" required>
+                        <option value="">Carregando bicos...</option>
+                    </select>
                 </div>
 
                 <div class="form-row-mobile">
