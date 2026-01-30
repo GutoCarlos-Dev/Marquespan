@@ -217,7 +217,10 @@ function atualizarKPIs(data) {
     document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
 
     // 5. Total Pendentes
-    const pendentes = data.filter(item => item.status === 'PENDENTE').length;
+    const pendentes = data.filter(item => {
+        const s = (item.status || '').toUpperCase();
+        return s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO';
+    }).length;
     const kpiPendentes = document.getElementById('kpi-pendentes');
     if (kpiPendentes) kpiPendentes.textContent = pendentes;
 }
@@ -458,7 +461,12 @@ function renderChartOficinas(data) {
 function renderChartStatus(data) {
     const contagem = {};
     data.forEach(item => {
-        const status = item.status || 'N/A';
+        let status = (item.status || 'N/A').toUpperCase();
+        
+        // Normalização de status para consistência com os KPIs
+        if (status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') status = 'PENDENTE';
+        if (status === 'OK') status = 'FINALIZADO';
+
         if (!contagem[status]) contagem[status] = 0;
         contagem[status]++;
     });
@@ -563,8 +571,9 @@ function renderChartPendentesInternados(data) {
     let totalInternado = 0;
 
     data.forEach(item => {
-        if (item.status === 'PENDENTE') totalPendente++;
-        if (item.status === 'INTERNADO') totalInternado++;
+        const s = (item.status || '').toUpperCase();
+        if (s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO') totalPendente++;
+        if (s === 'INTERNADO') totalInternado++;
     });
 
     const ctx = document.getElementById('chartPendentesInternados').getContext('2d');
