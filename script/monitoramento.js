@@ -216,17 +216,14 @@ function atualizarKPIs(data) {
     }).length;
     document.getElementById('kpi-finalizados-hoje').textContent = finalizadosHoje;
 
-    // 5. Total Pendentes (Contar Veículos Únicos com pendência, não itens)
-    const idsComPendencia = new Set();
-    data.forEach(item => {
+    // 5. Total Pendentes (Contar por serviços/itens, não por placa)
+    const pendentes = data.filter(item => {
         const s = (item.status || '').toUpperCase();
-        if (s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO') {
-            idsComPendencia.add(item.coletas_manutencao.id);
-        }
-    });
+        return s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO';
+    }).length;
     
     const kpiPendentes = document.getElementById('kpi-pendentes');
-    if (kpiPendentes) kpiPendentes.textContent = idsComPendencia.size;
+    if (kpiPendentes) kpiPendentes.textContent = pendentes;
 }
 
 function atualizarGraficos(data) {
