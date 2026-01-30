@@ -56,11 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
             this.formSaida = document.getElementById('formSaidaCombustivel');
             this.saidaEditingId = document.getElementById('saidaEditingId');
             this.saidaDataHora = document.getElementById('saidaDataHora');
+            this.saidaUsuario = document.getElementById('saidaUsuario');
             this.saidaBico = document.getElementById('saidaBico');
             this.saidaVeiculo = document.getElementById('saidaVeiculo');
-            this.listaVeiculos = document.getElementById('listaVeiculos');
-            this.saidaMotorista = document.getElementById('saidaMotorista');
-            this.listaMotoristas = document.getElementById('listaMotoristas');
+            this.listaVeiculos = document.getElementById('listaVeiculos'); // This is for veiculos, not motoristas
+            this.saidaRota = document.getElementById('saidaRota');
+            this.listaRotas = document.getElementById('listaRotas');
             this.saidaKm = document.getElementById('saidaKm');
             this.saidaLitros = document.getElementById('saidaLitros');
             this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
@@ -290,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
+            if(this.saidaUsuario) this.saidaUsuario.value = this.getUsuarioLogado();
 
             this.toggleSaidaForm(false); // Bloqueia o formulário inicialmente
             // Carregar Bicos
@@ -302,14 +304,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.listaVeiculos.innerHTML = veiculos.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar veículos', e); }
-
-            // Carregar Motoristas
+            
+            // Carregar Rotas (substituindo Motoristas)
             try {
-                const { data: motoristas } = await supabaseClient.from('funcionario').select('nome').eq('status', 'Ativo');
-                if (motoristas) {
-                    this.listaMotoristas.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
+                const { data: rotas, error: errRotas } = await supabaseClient
+                    .from('rotas')
+                    .select('numero');
+                
+                if (errRotas) throw errRotas;
+
+                if (rotas) {
+                    // Ordenação numérica correta
+                    rotas.sort((a, b) => {
+                        return String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' });
+                    });
+
+                    this.listaRotas.innerHTML = rotas.map(r => `<option value="${r.numero}"></option>`).join('');
                 }
-            } catch (e) { console.error('Erro ao carregar motoristas', e); }
+            } catch (e) { console.error('Erro ao carregar rotas', e); }
         },
 
         async loadBicos() {
@@ -628,6 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
+            if(this.saidaUsuario) this.saidaUsuario.value = this.getUsuarioLogado();
         },
 
         async handleSaidaSubmit(e) {
@@ -637,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data_hora: this.saidaDataHora.value,
                 bico_id: parseInt(this.saidaBico.value),
                 veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
-                motorista_nome: this.saidaMotorista.value,
+                rota: this.saidaRota.value,
                 km_atual: parseFloat(this.saidaKm.value),
                 qtd_litros: parseFloat(this.saidaLitros.value),
                 usuario: this.getUsuarioLogado()
@@ -687,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
                         <td>${saida.veiculo_placa || ''}</td>
-                        <td>${saida.motorista_nome || ''}</td>
+                        <td>${saida.rota || ''}</td>
                         <td>${saida.qtd_litros.toLocaleString('pt-BR')} L</td>
                         <td>${saida.km_atual || ''}</td>
                         <td>${saida.usuario || '-'}</td>
@@ -728,9 +741,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const date = new Date(data.data_hora);
                 date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
                 this.saidaDataHora.value = date.toISOString().slice(0, 16);
+                if(this.saidaUsuario) this.saidaUsuario.value = data.usuario || this.getUsuarioLogado();
                 this.saidaBico.value = data.bico_id;
-                this.saidaVeiculo.value = data.veiculo_placa;
-                this.saidaMotorista.value = data.motorista_nome;
+                this.saidaVeiculo.value = data.veiculo_placa; // This is correct
+                this.saidaRota.value = data.rota;
                 this.saidaKm.value = data.km_atual;
                 this.saidaLitros.value = data.qtd_litros;
 

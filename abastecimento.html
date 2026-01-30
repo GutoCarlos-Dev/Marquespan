@@ -178,10 +178,8 @@
             </div>
 
             <div class="form-group">
-              <label for="saidaBico">Bico de Origem</label>
-              <select id="saidaBico" required class="input-large">
-                <option value="">Carregando bicos...</option>
-              </select>
+              <label for="saidaUsuario">Usuário Responsável</label>
+              <input type="text" id="saidaUsuario" readonly style="background-color: #e9ecef; font-weight: bold; color: #555;" />
             </div>
 
             <div class="form-group">
@@ -191,9 +189,16 @@
             </div>
 
             <div class="form-group">
-              <label for="saidaMotorista">Motorista</label>
-              <input type="text" id="saidaMotorista" list="listaMotoristas" placeholder="Nome do motorista..." required class="input-large" autocomplete="off" />
-              <datalist id="listaMotoristas"></datalist>
+              <label for="saidaRota">Rota</label>
+              <input type="text" id="saidaRota" list="listaRotas" placeholder="Selecione a Rota" required class="input-large" autocomplete="off" inputmode="numeric" />
+              <datalist id="listaRotas"></datalist>
+            </div>
+
+            <div class="form-group">
+              <label for="saidaBico">Bico de Origem</label>
+              <select id="saidaBico" required class="input-large">
+                <option value="">Carregando bicos...</option>
+              </select>
             </div>
 
             <div class="form-row-mobile">
@@ -226,7 +231,7 @@
                   <tr>
                     <th>Data/Hora</th>
                     <th>Veículo</th>
-                    <th>Motorista</th>
+                    <th>Rota</th>
                     <th>Litros</th>
                     <th>KM</th>
                     <th>Usuário</th>

@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (usuarioLogado) {
         const inputUsuario = document.getElementById('entradaUsuario');
         if (inputUsuario) inputUsuario.value = usuarioLogado.nome;
+        const inputUsuarioSaida = document.getElementById('saidaUsuario');
+        if (inputUsuarioSaida) inputUsuarioSaida.value = usuarioLogado.nome;
     }
 
     carregarDadosIniciais();
