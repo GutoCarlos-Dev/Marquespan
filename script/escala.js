@@ -289,12 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Eventos de Abertura/Fechamento do Modal
-    if (btnStatusLegend) btnStatusLegend.addEventListener('click', () => { renderizarTabelaStatus(); modalStatus.classList.remove('hidden'); });
-    if (closeModalStatus) closeModalStatus.addEventListener('click', () => modalStatus.classList.add('hidden'));
-    window.addEventListener('click', (e) => { if (e.target === modalStatus) modalStatus.classList.add('hidden'); });
-
-
     // --- FUNÇÕES ---
 
     /**
@@ -533,6 +527,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
+
+    // Eventos do Modal de Status
+    if (btnStatusLegend) btnStatusLegend.addEventListener('click', () => { renderizarTabelaStatus(); modalStatus.classList.remove('hidden'); });
+    if (closeModalStatus) closeModalStatus.addEventListener('click', () => modalStatus.classList.add('hidden'));
+    window.addEventListener('click', (e) => { if (e.target === modalStatus) modalStatus.classList.add('hidden'); });
+
 
     // Botão Abrir Escala
     if (btnAbrirEscala) {
