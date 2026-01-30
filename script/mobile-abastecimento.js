@@ -173,7 +173,8 @@ async function salvarAbastecimento(e) {
     e.preventDefault();
     
     // Dados comuns
-    const dataHora = document.getElementById('saidaDataHora').value;
+    const dataHoraInput = document.getElementById('saidaDataHora').value;
+    const dataHora = dataHoraInput ? new Date(dataHoraInput).toISOString() : new Date().toISOString();
     const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
     const rota = document.getElementById('saidaRota').value;
     const km = document.getElementById('saidaKm').value;
@@ -431,7 +432,8 @@ async function carregarEstoque() {
 async function salvarEntrada(e) {
     e.preventDefault();
     
-    const data = document.getElementById('entradaData').value;
+    const dataInput = document.getElementById('entradaData').value;
+    const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
     const nota = document.getElementById('entradaNota').value;
     const tanqueId = document.getElementById('entradaTanque').value;
     const litros = document.getElementById('entradaQtdTotal').value;
@@ -475,7 +477,8 @@ async function salvarEntrada(e) {
 
 async function salvarTransferencia(e) {
     e.preventDefault();
-    const data = document.getElementById('transfData').value;
+    const dataInput = document.getElementById('transfData').value;
+    const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
     const origemId = document.getElementById('transfOrigem').value;
     const destinoId = document.getElementById('transfDestino').value;
     const qtd = parseFloat(document.getElementById('transfQtd').value);
@@ -538,7 +541,7 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado) {
 
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
-    const dataAjuste = new Date().toISOString().slice(0, 10);
+    const dataAjuste = new Date().toISOString();
 
     try {
         const { error } = await supabaseClient.from('abastecimentos').insert([{

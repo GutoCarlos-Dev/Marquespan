@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async handleSalvarEstoque() {
-            const dataAjuste = new Date().toISOString().slice(0, 10);
+            const dataAjuste = new Date().toISOString();
             const usuario = this.getUsuarioLogado();
             const ajustes = [];
             let erroCapacidade = false;
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalDistribuido += qtd;
 
                 payloads.push({
-                    data: this.dataInput.value,
+                    data: this.dataInput.value ? new Date(this.dataInput.value).toISOString() : new Date().toISOString(),
                     numero_nota: notaFiscal,
                     tanque_id: parseInt(tanqueId),
                     qtd_litros: qtd,
@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             
             const payload = {
-                data_hora: this.saidaDataHora.value,
+                data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
                 bico_id: parseInt(this.saidaBico.value),
                 veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
                 rota: this.saidaRota.value,
