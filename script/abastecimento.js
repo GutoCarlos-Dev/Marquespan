@@ -367,8 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         toggleSaidaForm(enabled, mensagem = '') {
-            const campos = [this.saidaVeiculo, this.saidaMotorista, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
-            campos.forEach(campo => campo.disabled = !enabled);
+            const campos = [this.saidaVeiculo, this.saidaRota, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
+            campos.forEach(campo => {
+                if (campo) campo.disabled = !enabled;
+            });
 
             let alertDiv = document.getElementById('saida-form-alert');
             if (!alertDiv) {
