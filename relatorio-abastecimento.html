@@ -79,6 +79,15 @@
                   <!-- Preenchido via JS -->
                 </select>
               </div>
+              <div class="form-group">
+                <label for="filtroTipoMovimentacao">Tipo de Movimentação</label>
+                <select id="filtroTipoMovimentacao" class="form-control">
+                  <option value="">Todos</option>
+                  <option value="ENTRADA">Entrada</option>
+                  <option value="SAIDA">Saída</option>
+                  <option value="AJUSTE">Ajuste de Estoque</option>
+                </select>
+              </div>
               <div class="form-group form-switch-container">
                 <label for="incluirAjusteEstoque" style="cursor: pointer; white-space: nowrap;">Incluir Ajustes</label>
                 <label class="form-switch">
@@ -108,7 +117,11 @@
             <table class="data-grid" id="tabelaRelatorio">
               <thead>
                 <tr>
-                  <th>Data</th>
+                  <th>Data/Hora</th>
+                  <th>Usuário</th>
+                  <th>Placa</th>
+                  <th>Rota</th>
+                  <th>KM Atual</th>
                   <th>Nº Nota</th>
                   <th>Tanque</th>
                   <th>Combustível</th>
@@ -121,8 +134,8 @@
                 <!-- Preenchido via JS -->
               </tbody>
               <tfoot>
-                <tr class="total-row">
-                  <td colspan="4" style="text-align: right;">TOTAIS:</td>
+                <tr class="total-row" style="background-color: #f8f9fa; font-weight: bold;">
+                  <td colspan="8" style="text-align: right;">TOTAIS:</td>
                   <td id="totalLitros">0,00 L</td>
                   <td>-</td>
                   <td id="totalValor">R$ 0,00</td>
