@@ -174,3 +174,60 @@ body {
     color: #999;
     font-weight: normal;
 }
+
+/* --- Estilos das Abas --- */
+.mobile-tabs {
+    display: flex;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 60px; /* Logo abaixo do header */
+    z-index: 90;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    font-size: 0.95rem;
+    color: #666;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    color: #006937;
+    border-bottom-color: #006937;
+    background-color: #f9fff9;
+}
+
+.tab-btn i {
+    margin-right: 5px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* --- Lista de Estoque --- */
+.stock-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stock-item:last-child {
+    border-bottom: none;
+}
+
+.stock-level strong {
+    display: block;
+    font-size: 1.2rem;
+    color: #006937;
+    text-align: right;
+}

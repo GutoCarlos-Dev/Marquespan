@@ -21,10 +21,18 @@
     <a href="abastecimento.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
   </header>
 
+  <!-- Navegação por Abas -->
+  <div class="mobile-tabs">
+    <button class="tab-btn active" data-target="tab-saida"><i class="fas fa-gas-pump"></i> Saída</button>
+    <button class="tab-btn" data-target="tab-entrada"><i class="fas fa-arrow-down"></i> Entrada</button>
+    <button class="tab-btn" data-target="tab-estoque"><i class="fas fa-tachometer-alt"></i> Estoque</button>
+  </div>
+
   <div class="mobile-container">
     
-    <!-- Card de Lançamento -->
-    <div class="panel mobile-panel">
+    <!-- ABA 1: SAÍDA (Abastecimento de Veículos) -->
+    <div id="tab-saida" class="tab-content active">
+      <div class="panel mobile-panel">
         <div class="panel-header">
             <h3><i class="fas fa-gas-pump"></i> Novo Abastecimento</h3>
         </div>
@@ -70,10 +78,10 @@
                 </div>
             </form>
         </div>
-    </div>
+      </div>
 
-    <!-- Histórico Recente -->
-    <div class="mobile-list-container">
+      <!-- Histórico Recente (Saída) -->
+      <div class="mobile-list-container">
         <h3 style="margin: 20px 0 10px; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
             <span>Últimos Registros</span>
             <button id="btnAtualizarHistorico" style="background: none; border: none; color: #006937;"><i class="fas fa-sync-alt"></i></button>
@@ -82,6 +90,63 @@
             <!-- Preenchido via JS -->
             <p style="text-align: center; color: #666;">Carregando...</p>
         </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: ENTRADA (Recebimento de Combustível) -->
+    <div id="tab-entrada" class="tab-content hidden">
+      <div class="panel mobile-panel">
+        <div class="panel-header">
+            <h3><i class="fas fa-truck-loading"></i> Registrar Entrada</h3>
+        </div>
+        <div class="panel-body">
+            <form id="formMobileEntrada">
+                <div class="form-group">
+                    <label for="entradaData">Data</label>
+                    <input type="date" id="entradaData" required>
+                </div>
+                <div class="form-group">
+                    <label for="entradaNota">Nota Fiscal</label>
+                    <input type="text" id="entradaNota" placeholder="Número da NF" required>
+                </div>
+                <div class="form-group">
+                    <label for="entradaTanque">Tanque de Destino</label>
+                    <select id="entradaTanque" required>
+                        <option value="">Carregando tanques...</option>
+                    </select>
+                </div>
+                <div class="form-row-mobile">
+                    <div class="form-group">
+                        <label for="entradaLitros">Litros</label>
+                        <input type="number" id="entradaLitros" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entradaValor">Valor Total (R$)</label>
+                        <input type="number" id="entradaValor" step="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="form-actions mobile-actions">
+                    <button type="submit" class="btn-primary btn-block btn-large" style="background-color: #0056b3;"><i class="fas fa-save"></i> SALVAR ENTRADA</button>
+                </div>
+            </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 3: ESTOQUE (Visualização de Níveis) -->
+    <div id="tab-estoque" class="tab-content hidden">
+      <div class="panel mobile-panel">
+        <div class="panel-header">
+            <h3><i class="fas fa-ruler-vertical"></i> Níveis dos Tanques</h3>
+            <button id="btnAtualizarEstoque" style="float: right; background: none; border: none; color: #006937; font-size: 1.2rem;"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div id="listaEstoque" class="stock-list">
+                <!-- Preenchido via JS -->
+                <p style="text-align: center; padding: 20px; color: #666;">Carregando estoque...</p>
+            </div>
+        </div>
+      </div>
     </div>
 
   </div>
