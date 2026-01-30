@@ -73,6 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('entradaQtdTotal').addEventListener('input', calcTotalEntrada);
     document.getElementById('entradaVlrLitro').addEventListener('input', calcTotalEntrada);
+
+    // Listener para ajuste de estoque (delegação de evento para botões dinâmicos)
+    document.getElementById('listaEstoque').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-ajustar-estoque');
+        if (btn) {
+            const id = btn.dataset.id;
+            const nome = btn.dataset.nome;
+            const atual = parseFloat(btn.dataset.atual);
+            realizarAjusteEstoque(id, nome, atual);
+        }
+    });
 });
 
 async function carregarDadosIniciais() {
@@ -381,9 +392,12 @@ async function carregarEstoque() {
                 <div class="stock-level">
                     <strong style="color: ${colorClass}">${parseFloat(t.estoque_atual).toFixed(0)} L</strong>
                     <small>${percentual}% de ${parseFloat(t.capacidade).toFixed(0)} L</small>
-                    <div style="width: 100%; background: #eee; height: 5px; border-radius: 3px; margin-top: 5px;">
+                    <div style="width: 100%; background: #eee; height: 5px; border-radius: 3px; margin-top: 5px; margin-bottom: 8px;">
                         <div style="width: ${Math.min(percentual, 100)}%; background: ${colorClass}; height: 100%; border-radius: 3px;"></div>
                     </div>
+                    <button class="btn-ajustar-estoque" data-id="${t.id}" data-nome="${t.nome}" data-atual="${t.estoque_atual}" style="width: 100%; padding: 6px; background-color: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">
+                        <i class="fas fa-edit"></i> Informar Estoque
+                    </button>
                 </div>
             `;
             listaEstoque.appendChild(div);
@@ -500,5 +514,47 @@ async function salvarTransferencia(e) {
     } catch (err) {
         console.error('Erro ao transferir:', err);
         alert('Erro ao realizar transferência: ' + err.message);
+    }
+}
+
+async function realizarAjusteEstoque(id, nome, estoqueCalculado) {
+    const novoValorStr = prompt(`Informe a quantidade real (física) para o tanque ${nome}:`, estoqueCalculado);
+    if (novoValorStr === null) return; // Cancelado pelo usuário
+
+    const novoValor = parseFloat(novoValorStr.replace(',', '.'));
+    if (isNaN(novoValor) || novoValor < 0) {
+        alert('Valor inválido. Informe um número positivo.');
+        return;
+    }
+
+    const diferenca = novoValor - estoqueCalculado;
+    if (Math.abs(diferenca) < 0.01) {
+        alert('O valor informado é igual ao calculado. Nenhum ajuste necessário.');
+        return;
+    }
+
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+    const dataAjuste = new Date().toISOString().slice(0, 10);
+
+    try {
+        const { error } = await supabaseClient.from('abastecimentos').insert([{
+            data: dataAjuste,
+            numero_nota: 'AJUSTE DE ESTOQUE',
+            tanque_id: parseInt(id),
+            qtd_litros: diferenca, // Pode ser positivo (entrada) ou negativo (saída)
+            valor_litro: 0,
+            valor_total: 0,
+            usuario: usuario
+        }]);
+
+        if (error) throw error;
+
+        alert('Estoque ajustado com sucesso!');
+        carregarEstoque(); // Recarrega a lista para mostrar o novo valor
+
+    } catch (err) {
+        console.error('Erro ao ajustar estoque:', err);
+        alert('Erro ao salvar ajuste: ' + err.message);
     }
 }
