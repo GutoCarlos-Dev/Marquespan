@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('saidaDataHora').value = now.toISOString().slice(0, 16);
-    document.getElementById('entradaData').value = now.toISOString().slice(0, 10);
+    document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
 
     carregarDadosIniciais();
     carregarHistoricoRecente();
@@ -52,6 +52,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(targetId).classList.remove('hidden');
         });
     });
+
+    // Cálculo automático do total na Entrada
+    const calcTotalEntrada = () => {
+        const qtd = parseFloat(document.getElementById('entradaQtdTotal').value) || 0;
+        const vlr = parseFloat(document.getElementById('entradaVlrLitro').value) || 0;
+        const total = qtd * vlr;
+        document.getElementById('entradaTotal').value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+    document.getElementById('entradaQtdTotal').addEventListener('input', calcTotalEntrada);
+    document.getElementById('entradaVlrLitro').addEventListener('input', calcTotalEntrada);
 });
 
 async function carregarDadosIniciais() {
@@ -337,10 +347,12 @@ async function salvarEntrada(e) {
     const data = document.getElementById('entradaData').value;
     const nota = document.getElementById('entradaNota').value;
     const tanqueId = document.getElementById('entradaTanque').value;
-    const litros = document.getElementById('entradaLitros').value;
-    const valorTotal = document.getElementById('entradaValor').value;
+    const litros = document.getElementById('entradaQtdTotal').value;
+    const vlrLitro = document.getElementById('entradaVlrLitro').value;
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+
+    const valorTotal = (parseFloat(litros) * parseFloat(vlrLitro)).toFixed(2);
 
     try {
         // 1. Insere na tabela de entradas
@@ -375,7 +387,7 @@ async function salvarEntrada(e) {
         // Reseta a data para hoje
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('entradaData').value = now.toISOString().slice(0, 10);
+        document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
 
         carregarEstoque(); // Atualiza a visualização
 
