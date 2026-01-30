@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuarioLogado) {
         alert('Acesso negado. Por favor, faça login.');
-        window.location.href = '../index.html'; // Redireciona para a página de login na raiz
+        window.location.href = 'index.html'; // Redireciona para a página de login na raiz
         return;
     }
 
