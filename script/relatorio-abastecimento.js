@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 somaValor += Number(reg.valor_total);
 
                 const tr = document.createElement('tr');
-                const dataFormatada = new Date(reg.data).toLocaleDateString('pt-BR');
+                const dataFormatada = new Date(reg.data).toLocaleString('pt-BR');
                 const tanqueNome = reg.tanques ? reg.tanques.nome : 'N/A';
                 const tipoCombustivel = reg.tanques ? reg.tanques.tipo_combustivel : '-';
 
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.dadosRelatorio.length === 0) return alert('Sem dados para exportar.');
 
             const dadosFormatados = this.dadosRelatorio.map(reg => ({
-                'Data': new Date(reg.data).toLocaleDateString('pt-BR'),
+                'Data': new Date(reg.data).toLocaleString('pt-BR'),
                 'Nº Nota': reg.numero_nota,
                 'Tanque': reg.tanques ? reg.tanques.nome : 'N/A',
                 'Combustível': reg.tanques ? reg.tanques.tipo_combustivel : '-',
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.dadosRelatorio.forEach(reg => {
                 const row = [
-                    new Date(reg.data).toLocaleDateString('pt-BR'),
+                    new Date(reg.data).toLocaleString('pt-BR'),
                     reg.numero_nota,
                     reg.tanques ? reg.tanques.nome : 'N/A',
                     reg.tanques ? reg.tanques.tipo_combustivel : '-',
