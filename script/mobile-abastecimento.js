@@ -175,10 +175,10 @@ async function salvarAbastecimento(e) {
         payloads.push({
             data_hora: dataHora,
             bico_id: bicoId1,
-            placa: placa,
-            motorista: motorista,
+            veiculo_placa: placa,
+            motorista_nome: motorista,
             km_atual: km,
-            litros: litros1,
+            qtd_litros: litros1,
             usuario: usuario
         });
     } else {
@@ -196,10 +196,10 @@ async function salvarAbastecimento(e) {
         payloads.push({
             data_hora: dataHora,
             bico_id: bicoId2,
-            placa: placa,
-            motorista: motorista,
+            veiculo_placa: placa,
+            motorista_nome: motorista,
             km_atual: km,
-            litros: litros2,
+            qtd_litros: litros2,
             usuario: usuario
         });
     }
@@ -207,7 +207,7 @@ async function salvarAbastecimento(e) {
     try {
         // Salva um ou dois registros de uma vez
         const { error } = await supabaseClient
-            .from('abastecimentos_saida')
+            .from('saidas_combustivel')
             .insert(payloads);
 
         if (error) throw error;
@@ -245,7 +245,7 @@ async function carregarHistoricoRecente() {
 
     try {
         const { data, error } = await supabaseClient
-            .from('abastecimentos_saida')
+            .from('saidas_combustivel')
             .select('*')
             .order('data_hora', { ascending: false })
             .limit(10);
@@ -267,12 +267,12 @@ async function carregarHistoricoRecente() {
             
             div.innerHTML = `
                 <div class="historico-info">
-                    <h4>${item.placa}</h4>
+                    <h4>${item.veiculo_placa}</h4>
                     <p><i class="far fa-clock"></i> ${dataFormatada} às ${horaFormatada}</p>
-                    <p><i class="far fa-user"></i> ${item.motorista || 'N/I'}</p>
+                    <p><i class="far fa-user"></i> ${item.motorista_nome || 'N/I'}</p>
                 </div>
                 <div class="historico-litros">
-                    ${parseFloat(item.litros).toFixed(2)} L
+                    ${parseFloat(item.qtd_litros).toFixed(2)} L
                     <small>KM: ${item.km_atual}</small>
                 </div>
             `;
@@ -357,12 +357,13 @@ async function salvarEntrada(e) {
     try {
         // 1. Insere na tabela de entradas
         const { error: errInsert } = await supabaseClient
-            .from('abastecimentos_entradas')
+            .from('abastecimentos')
             .insert([{
                 data: data,
-                nota_fiscal: nota,
+                numero_nota: nota,
                 tanque_id: tanqueId,
-                litros: litros,
+                qtd_litros: litros,
+                valor_litro: vlrLitro,
                 valor_total: valorTotal,
                 usuario: usuario
             }]);
