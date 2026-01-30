@@ -63,13 +63,16 @@ async function carregarBicos(dataSelecionada) {
             const leituraAnterior = anterioresMap.get(bico.id) || 0;
             const isSalvo = !!leituraDoDia;
 
+            const nomeBomba = bico.bombas?.nome || 'Bomba N/A';
+            const nomeTanque = bico.bombas?.tanques?.nome || 'Tanque N/A';
+
             const card = document.createElement('div');
             card.className = `bico-card ${isSalvo ? 'status-salvo' : 'status-pendente'}`;
             card.id = `card-bico-${bico.id}`;
 
             card.innerHTML = `
                 <div class="bico-header">
-                    <h3>${bico.nome}</h3>
+                    <h3>${bico.nome} - ${nomeBomba} - ${nomeTanque}</h3>
                     <span class="bico-status-badge ${isSalvo ? 'salvo' : 'pendente'}">
                         ${isSalvo ? 'SALVO' : 'PENDENTE'}
                     </span>
