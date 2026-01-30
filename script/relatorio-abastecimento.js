@@ -265,44 +265,130 @@ document.addEventListener('DOMContentLoaded', () => {
         async exportPDF() {
             if (this.dadosRelatorio.length === 0) return alert('Sem dados para exportar.');
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape' }); // Paisagem para caber mais colunas
+            const btn = this.btnExportarPDF;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
-            // Título
-            doc.setFontSize(16);
-            doc.text("Relatório de Movimentação de Combustível", 14, 20);
-            
-            doc.setFontSize(10);
-            doc.text(`Período: ${new Date(this.dataInicial.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFinal.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 28);
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' }); // Paisagem para caber mais colunas
 
-            const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Combustível", "Litros", "Vlr. Unit", "Total"];
-            const tableRows = [];
+                // 1. Carregar a imagem do logo e converter para JPEG com fundo branco
+                const getLogoBase64 = async () => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.src = 'logo.png';
+                        img.crossOrigin = 'Anonymous';
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#FFFFFF'; // Fundo branco
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0);
+                            resolve(canvas.toDataURL('image/jpeg'));
+                        };
+                        img.onerror = () => {
+                            console.warn('Logo não encontrado');
+                            resolve(null);
+                        };
+                    });
+                };
 
-            this.dadosRelatorio.forEach(reg => {
-                const row = [
-                    new Date(reg.data_hora).toLocaleString('pt-BR'),
-                    reg.usuario || '-',
-                    reg.placa,
-                    reg.rota,
-                    reg.km_atual,
-                    reg.numero_nota,
-                    reg.tanque,
-                    reg.combustivel,
-                    Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2}),
-                    Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
-                    Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
-                ];
-                tableRows.push(row);
-            });
+                const logoBase64 = await getLogoBase64();
 
-            doc.autoTable({
-                head: [tableColumn],
-                body: tableRows,
-                startY: 35,
-                styles: { fontSize: 8 } // Fonte menor para caber tudo
-            });
+                // 2. Cabeçalho com Logo
+                if (logoBase64) {
+                    doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+                }
 
-            doc.save("Relatorio_Abastecimentos.pdf");
+                doc.setFontSize(18);
+                doc.text("Relatório de Movimentação de Combustível", 14, 28);
+                
+                doc.setFontSize(10);
+                doc.text(`Período: ${new Date(this.dataInicial.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFinal.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
+
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+                const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+                doc.text(`Gerado por: ${nomeUsuario}`, 14, 39);
+
+                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Combustível", "Litros", "Vlr. Unit", "Total"];
+                const tableRows = [];
+                let totalLitros = 0;
+                let totalValor = 0;
+
+                this.dadosRelatorio.forEach(reg => {
+                    totalLitros += Number(reg.litros);
+                    totalValor += Number(reg.valor_total);
+
+                    const row = [
+                        new Date(reg.data_hora).toLocaleString('pt-BR'),
+                        reg.usuario || '-',
+                        reg.placa,
+                        reg.rota,
+                        reg.km_atual,
+                        reg.numero_nota,
+                        reg.tanque,
+                        reg.combustivel,
+                        Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2}),
+                        Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
+                        Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                    ];
+                    tableRows.push(row);
+                });
+
+                // Adiciona linha de total
+                tableRows.push([
+                    { content: 'TOTAIS GERAIS', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: totalLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold' } },
+                    '',
+                    { content: totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}), styles: { fontStyle: 'bold' } }
+                ]);
+
+                doc.autoTable({
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: 45,
+                    headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
+                    styles: { fontSize: 8 },
+                    columnStyles: {
+                        0: { cellWidth: 25 }, // Data
+                        8: { halign: 'right' }, // Litros
+                        9: { halign: 'right' }, // Vlr Unit
+                        10: { halign: 'right' } // Total
+                    }
+                });
+
+                // Adicionar rodapé com numeração de páginas
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(100); // Cinza escuro
+
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+
+                    // Texto da esquerda (Data de geração)
+                    const dateText = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
+                    doc.text(dateText, 14, pageHeight - 10);
+
+                    // Texto da direita (Paginação)
+                    const pageText = `Página ${i} de ${pageCount}`;
+                    const textWidth = doc.getTextWidth(pageText);
+                    doc.text(pageText, pageWidth - 14 - textWidth, pageHeight - 10);
+                }
+
+                doc.save(`Relatorio_Abastecimentos_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch (err) {
+                console.error('Erro ao exportar PDF:', err);
+                alert('Erro ao gerar PDF: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         },
 
         clearFilters() {
