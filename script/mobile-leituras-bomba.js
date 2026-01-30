@@ -52,10 +52,10 @@ async function carregarBicos(dataSelecionada) {
 
         const { data: leiturasAnteriores, error: anterioresError } = await supabaseClient
             .from('leituras_bomba')
-            .select('bomba_id, leitura_final, usuario_cadastro, created_at')
+            .select('id, bomba_id, leitura_final, usuario_cadastro, created_at')
             .eq('data', dataAnteriorStr);
         if (anterioresError) throw anterioresError;
-        const anterioresMap = new Map(leiturasAnteriores.map(l => [l.bomba_id, l]));
+        const anterioresMap = new Map(leiturasAnteriores.map(l => [l.bomba_id, l])); // Mapeia o objeto completo
 
         container.innerHTML = ''; // Limpa o container
 
@@ -69,11 +69,21 @@ async function carregarBicos(dataSelecionada) {
             const leituraDoDia = leiturasMap.get(bico.id);
             const dadosAnteriores = anterioresMap.get(bico.id);
             const leituraAnterior = dadosAnteriores ? dadosAnteriores.leitura_final : 0;
+            const idAnterior = dadosAnteriores ? dadosAnteriores.id : null;
             
             let infoAnterior = '';
+            let acoesAnterior = '';
+
             if (dadosAnteriores) {
                 const dataHora = new Date(dadosAnteriores.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 infoAnterior = `<div style="font-size: 0.75rem; color: #666; margin-bottom: 2px;">${dadosAnteriores.usuario_cadastro || 'Sistema'} - ${dataHora}</div>`;
+                
+                acoesAnterior = `
+                    <div style="margin-top: 5px; text-align: right;">
+                        <button class="btn-edit-prev" data-id="${idAnterior}" data-valor="${parseInt(leituraAnterior)}" style="background: #ffc107; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; margin-right: 5px;"><i class="fas fa-pen"></i></button>
+                        <button class="btn-del-prev" data-id="${idAnterior}" style="background: #dc3545; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white;"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
             }
 
             const isSalvo = !!leituraDoDia;
@@ -96,15 +106,17 @@ async function carregarBicos(dataSelecionada) {
                     <div class="leitura-group">
                         <label>Leitura Anterior</label>
                         ${infoAnterior}
-                        <div class="value" id="anterior-${bico.id}">${parseFloat(leituraAnterior).toFixed(2)}</div>
+                        <div class="value" id="anterior-${bico.id}">${parseInt(leituraAnterior)}</div>
+                        ${acoesAnterior}
                     </div>
                     <div class="leitura-group">
                         <label>Leitura Atual</label>
-                        <input type="number" step="0.01" id="atual-${bico.id}" 
+                        <input type="number" step="1" id="atual-${bico.id}" 
                                placeholder="0.00" 
-                               value="${leituraDoDia ? parseFloat(leituraDoDia.leitura_inicial).toFixed(2) : ''}" 
+                               value="${leituraDoDia ? parseInt(leituraDoDia.leitura_inicial) : ''}" 
                                ${isSalvo ? 'readonly' : ''} 
-                               style="background-color: ${isSalvo ? '#e9ecef' : '#fff'};" />
+                               style="background-color: ${isSalvo ? '#e9ecef' : '#fff'};" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '');" />
                     </div>
                 </div>
                 <div class="bico-actions">
@@ -119,9 +131,56 @@ async function carregarBicos(dataSelecionada) {
             btn.addEventListener('click', salvarLeitura);
         });
 
+        // Listeners para editar/excluir anterior
+        document.querySelectorAll('.btn-edit-prev').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                const valor = e.currentTarget.dataset.valor;
+                editarLeituraAnterior(id, valor);
+            });
+        });
+
+        document.querySelectorAll('.btn-del-prev').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                excluirLeituraAnterior(id);
+            });
+        });
+
     } catch (err) {
         console.error('Erro ao carregar bicos:', err);
         container.innerHTML = `<div class="loading-placeholder" style="color:red;">Erro ao carregar dados: ${err.message}</div>`;
+    }
+}
+
+async function editarLeituraAnterior(id, valorAtual) {
+    const novoValor = prompt("Informe a nova leitura anterior (Inteiro):", valorAtual);
+    if (novoValor === null) return;
+    
+    const valorInt = parseInt(novoValor);
+    if (isNaN(valorInt)) return alert("Valor inválido. Digite apenas números.");
+
+    try {
+        const { error } = await supabaseClient.from('leituras_bomba').update({ leitura_final: valorInt }).eq('id', id);
+        if (error) throw error;
+        alert("Leitura anterior atualizada com sucesso!");
+        document.getElementById('leituraDataMobile').dispatchEvent(new Event('change')); // Recarrega
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao atualizar: " + e.message);
+    }
+}
+
+async function excluirLeituraAnterior(id) {
+    if (!confirm("Tem certeza que deseja excluir a leitura anterior?")) return;
+    try {
+        const { error } = await supabaseClient.from('leituras_bomba').delete().eq('id', id);
+        if (error) throw error;
+        alert("Leitura anterior excluída!");
+        document.getElementById('leituraDataMobile').dispatchEvent(new Event('change')); // Recarrega
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao excluir: " + e.message);
     }
 }
 
@@ -133,8 +192,8 @@ async function salvarLeitura(event) {
     const leituraAnteriorEl = document.getElementById(`anterior-${bicoId}`);
     const leituraAtualEl = document.getElementById(`atual-${bicoId}`);
 
-    const leituraAnterior = parseFloat(leituraAnteriorEl.textContent);
-    const leituraAtual = parseFloat(leituraAtualEl.value);
+    const leituraAnterior = parseInt(leituraAnteriorEl.textContent);
+    const leituraAtual = parseInt(leituraAtualEl.value);
 
     if (isNaN(leituraAtual) || leituraAtual <= 0) {
         alert('Por favor, insira um valor válido para a leitura atual.');
