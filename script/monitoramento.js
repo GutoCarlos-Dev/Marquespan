@@ -8,6 +8,7 @@ let chartStatus = null;
 let chartTopServicosFreq = null;
 let chartTopServicosCusto = null;
 let chartPendentesInternados = null;
+let chartNivelTanques = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
@@ -137,6 +138,7 @@ async function carregarDados() {
     const dtFim = document.getElementById('dataFinal').value;
 
     carregarTotalFrota(); // Busca total da frota (sem filtros)
+    carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -228,6 +230,94 @@ function atualizarGraficos(data) {
     renderChartTopServicosFreq(data);
     renderChartTopServicosCusto(data);
     renderChartPendentesInternados(data);
+}
+
+async function carregarDadosEstoque() {
+    try {
+        // 1. Buscar todos os tanques
+        const { data: tanques, error: tanquesError } = await supabaseClient
+            .from('tanques')
+            .select('id, nome, capacidade, tipo_combustivel');
+        if (tanquesError) throw tanquesError;
+
+        // 2. Buscar todas as entradas (abastecimentos)
+        const { data: entradas, error: entradasError } = await supabaseClient
+            .from('abastecimentos')
+            .select('tanque_id, qtd_litros');
+        if (entradasError) throw entradasError;
+
+        // 3. Buscar todas as saídas
+        const { data: saidas, error: saidasError } = await supabaseClient
+            .from('saidas_combustivel')
+            .select('qtd_litros, bicos(bombas(tanque_id))');
+        if (saidasError) throw saidasError;
+
+        // 4. Calcular o estoque atual
+        const estoqueMap = new Map();
+        tanques.forEach(t => {
+            estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
+        });
+        entradas.forEach(e => {
+            if (estoqueMap.has(e.tanque_id)) {
+                estoqueMap.get(e.tanque_id).estoque_atual += e.qtd_litros;
+            }
+        });
+        saidas.forEach(s => {
+            const tanqueId = s.bicos?.bombas?.tanque_id;
+            if (tanqueId && estoqueMap.has(tanqueId)) {
+                estoqueMap.get(tanqueId).estoque_atual -= s.qtd_litros;
+            }
+        });
+        const estoqueCalculado = Array.from(estoqueMap.values());
+
+        // 5. Renderizar o novo gráfico
+        renderChartNivelTanques(estoqueCalculado);
+
+    } catch (error) {
+        console.error('Erro ao carregar dados de estoque para o monitoramento:', error);
+    }
+}
+
+function renderChartNivelTanques(estoqueData) {
+    const labels = estoqueData.map(t => `${t.nome} (${t.tipo_combustivel})`);
+    const percentages = estoqueData.map(t => {
+        const capacidade = t.capacidade > 0 ? t.capacidade : 1; // Evita divisão por zero
+        return ((t.estoque_atual / capacidade) * 100).toFixed(1);
+    });
+
+    const backgroundColors = percentages.map(p => {
+        if (p < 20) return 'rgba(220, 53, 69, 0.7)';   // Vermelho
+        if (p < 50) return 'rgba(255, 193, 7, 0.7)';  // Amarelo
+        return 'rgba(40, 167, 69, 0.7)';              // Verde
+    });
+
+    const ctx = document.getElementById('chartNivelTanques').getContext('2d');
+    if (chartNivelTanques) chartNivelTanques.destroy();
+
+    chartNivelTanques = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nível do Tanque (%)',
+                data: percentages,
+                backgroundColor: backgroundColors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Gráfico de barras horizontais
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { beginAtZero: true, max: 100, ticks: { callback: value => value + "%" } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: context => ` ${context.parsed.x}% (${estoqueData[context.dataIndex].estoque_atual.toFixed(0)}L de ${estoqueData[context.dataIndex].capacidade}L)` } }
+            }
+        }
+    });
 }
 
 // --- Funções de Renderização dos Gráficos ---
