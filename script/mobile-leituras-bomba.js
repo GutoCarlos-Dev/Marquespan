@@ -45,10 +45,10 @@ async function carregarBicos(dataSelecionada) {
 
         const { data: leiturasAnteriores, error: anterioresError } = await supabaseClient
             .from('leituras_bomba')
-            .select('bomba_id, leitura_final')
+            .select('bomba_id, leitura_final, usuario_cadastro, created_at')
             .eq('data', dataAnteriorStr);
         if (anterioresError) throw anterioresError;
-        const anterioresMap = new Map(leiturasAnteriores.map(l => [l.bomba_id, l.leitura_final]));
+        const anterioresMap = new Map(leiturasAnteriores.map(l => [l.bomba_id, l]));
 
         container.innerHTML = ''; // Limpa o container
 
@@ -60,7 +60,15 @@ async function carregarBicos(dataSelecionada) {
         // 4. Renderizar os cards
         bicos.forEach(bico => {
             const leituraDoDia = leiturasMap.get(bico.id);
-            const leituraAnterior = anterioresMap.get(bico.id) || 0;
+            const dadosAnteriores = anterioresMap.get(bico.id);
+            const leituraAnterior = dadosAnteriores ? dadosAnteriores.leitura_final : 0;
+            
+            let infoAnterior = '';
+            if (dadosAnteriores) {
+                const dataHora = new Date(dadosAnteriores.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                infoAnterior = `<div style="font-size: 0.75rem; color: #666; margin-bottom: 2px;">${dadosAnteriores.usuario_cadastro || 'Sistema'} - ${dataHora}</div>`;
+            }
+
             const isSalvo = !!leituraDoDia;
 
             const nomeBomba = bico.bombas?.nome || 'Bomba N/A';
@@ -80,6 +88,7 @@ async function carregarBicos(dataSelecionada) {
                 <div class="bico-body">
                     <div class="leitura-group">
                         <label>Leitura Anterior</label>
+                        ${infoAnterior}
                         <div class="value" id="anterior-${bico.id}">${parseFloat(leituraAnterior).toFixed(2)}</div>
                     </div>
                     <div class="leitura-group">
