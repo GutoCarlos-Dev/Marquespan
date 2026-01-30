@@ -7,6 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saidaDataHora').value = now.toISOString().slice(0, 16);
     document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
 
+    // Preenche o usuário logado na aba de Entrada
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    if (usuarioLogado) {
+        const inputUsuario = document.getElementById('entradaUsuario');
+        if (inputUsuario) inputUsuario.value = usuarioLogado.nome;
+    }
+
     carregarDadosIniciais();
     carregarHistoricoRecente();
     carregarEstoque(); // Carrega dados para a aba de estoque e select de entrada
