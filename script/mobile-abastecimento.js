@@ -410,6 +410,10 @@ async function carregarEstoque() {
             listaEstoque.appendChild(div);
 
 
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.nome} (${t.tipo_combustivel})`;
+
             // Opções de Transferência
             if(selectOrigem) {
                 const optO = opt.cloneNode(true);
