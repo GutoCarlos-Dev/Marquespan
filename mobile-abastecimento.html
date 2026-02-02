@@ -155,11 +155,18 @@
                     <input type="text" id="entradaTotal" readonly style="background-color: #f0f0f0; font-weight: bold;">
                 </div>
 
-                <div class="form-group">
-                    <label for="entradaTanque">Tanque de Destino</label>
-                    <select id="entradaTanque" required>
-                        <option value="">Carregando tanques...</option>
-                    </select>
+                <hr class="form-divider" style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                
+                <h4 style="margin-bottom: 10px; font-size: 0.9rem; color: #333;">
+                    Distribuição <span id="litros-restantes-display" style="font-weight: normal; font-size: 0.8rem;">(Restante: <span id="litros-restantes-valor">0.00</span> L)</span>
+                </h4>
+                
+                <div id="distribuicao-container"></div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <button type="button" id="btnAdicionarTanque" class="btn-secondary btn-block" style="background-color: #6c757d; font-size: 0.9rem; padding: 10px;">
+                        <i class="fas fa-plus"></i> Adicionar Tanque
+                    </button>
                 </div>
                 <div class="form-actions mobile-actions">
                     <button type="submit" class="btn-primary btn-block btn-large" style="background-color: #0056b3;"><i class="fas fa-save"></i> SALVAR ENTRADA</button>

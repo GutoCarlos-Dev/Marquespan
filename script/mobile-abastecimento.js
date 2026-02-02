@@ -1,5 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
+let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
+
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data/hora atual no input
     const now = new Date();
@@ -29,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Botões de Atualização
     document.getElementById('btnAtualizarHistorico').addEventListener('click', carregarHistoricoRecente);
     document.getElementById('btnAtualizarEstoque').addEventListener('click', carregarEstoque);
+
+    // Botão Adicionar Tanque na Entrada
+    const btnAddTanque = document.getElementById('btnAdicionarTanque');
+    if (btnAddTanque) btnAddTanque.addEventListener('click', () => adicionarLinhaTanqueMobile());
 
     // Botão para Adicionar/Remover 2º Bico
     const btnToggleBico2 = document.getElementById('btnToggleBico2');
@@ -70,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const vlr = parseFloat(document.getElementById('entradaVlrLitro').value) || 0;
         const total = qtd * vlr;
         document.getElementById('entradaTotal').value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        updateLitrosRestantesMobile();
     };
     document.getElementById('entradaQtdTotal').addEventListener('input', calcTotalEntrada);
     document.getElementById('entradaVlrLitro').addEventListener('input', calcTotalEntrada);
@@ -313,7 +320,6 @@ async function carregarHistoricoRecente() {
 
 async function carregarEstoque() {
     const listaEstoque = document.getElementById('listaEstoque');
-    const selectTanqueEntrada = document.getElementById('entradaTanque');
     const selectOrigem = document.getElementById('transfOrigem');
     const selectDestino = document.getElementById('transfDestino');
     
@@ -328,6 +334,7 @@ async function carregarEstoque() {
             .order('nome');
 
         if (errTanques) throw errTanques;
+        tanquesDisponiveis = tanques; // Salva para usar na distribuição
 
         // 2. Buscar Entradas (Abastecimentos)
         const { data: entradas, error: errEntradas } = await supabaseClient
@@ -365,7 +372,6 @@ async function carregarEstoque() {
         // Popula Lista de Estoque (Aba 3)
         listaEstoque.innerHTML = '';
         // Popula Select de Entrada (Aba 2)
-        selectTanqueEntrada.innerHTML = '<option value="">Selecione o Tanque</option>';
         if(selectOrigem) selectOrigem.innerHTML = '<option value="">Selecione Tanque Origem</option>';
         if(selectDestino) selectDestino.innerHTML = '<option value="">Selecione Tanque Destino</option>';
 
@@ -403,11 +409,6 @@ async function carregarEstoque() {
             `;
             listaEstoque.appendChild(div);
 
-            // Opção do Select de Entrada
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = `${t.nome} (${t.tipo_combustivel})`;
-            selectTanqueEntrada.appendChild(opt);
 
             // Opções de Transferência
             if(selectOrigem) {
@@ -419,6 +420,12 @@ async function carregarEstoque() {
                 selectDestino.appendChild(optD);
             }
         });
+
+        // Inicializa a distribuição se estiver vazia
+        const distContainer = document.getElementById('distribuicao-container');
+        if (distContainer && distContainer.children.length === 0) {
+            adicionarLinhaTanqueMobile();
+        }
 
         // Carrega o histórico de movimentação também
         carregarHistoricoMovimentacao();
@@ -435,32 +442,68 @@ async function salvarEntrada(e) {
     const dataInput = document.getElementById('entradaData').value;
     const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
     const nota = document.getElementById('entradaNota').value;
-    const tanqueId = document.getElementById('entradaTanque').value;
-    const litros = document.getElementById('entradaQtdTotal').value;
-    const vlrLitro = document.getElementById('entradaVlrLitro').value;
+    const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value);
+    const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value);
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 
-    const valorTotal = (parseFloat(litros) * parseFloat(vlrLitro)).toFixed(2);
+    // Validação da Distribuição
+    const linhas = document.querySelectorAll('.distribuicao-row');
+    if (linhas.length === 0) {
+        alert('Adicione pelo menos um tanque para distribuição.');
+        return;
+    }
+
+    const payloads = [];
+    let totalDistribuido = 0;
+    const tanquesUsados = new Set();
+
+    for (const linha of linhas) {
+        const tanqueId = linha.querySelector('.tanque-select').value;
+        const qtd = parseFloat(linha.querySelector('.tanque-qtd').value);
+
+        if (!tanqueId || isNaN(qtd) || qtd <= 0) {
+            alert('Preencha todos os campos de tanque e quantidade corretamente.');
+            return;
+        }
+        if (tanquesUsados.has(tanqueId)) {
+            alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
+            return;
+        }
+        tanquesUsados.add(tanqueId);
+        totalDistribuido += qtd;
+
+        payloads.push({
+            data: data,
+            numero_nota: nota,
+            tanque_id: parseInt(tanqueId),
+            qtd_litros: qtd,
+            valor_litro: vlrLitro,
+            valor_total: (qtd * vlrLitro).toFixed(2),
+            usuario: usuario
+        });
+    }
+
+    if (Math.abs(totalDistribuido - litrosTotal) > 0.01) {
+        alert(`A soma distribuída (${totalDistribuido.toFixed(2)} L) não corresponde ao total da nota (${litrosTotal.toFixed(2)} L).`);
+        return;
+    }
 
     try {
         // 1. Insere na tabela de entradas
         const { error: errInsert } = await supabaseClient
             .from('abastecimentos')
-            .insert([{
-                data: data,
-                numero_nota: nota,
-                tanque_id: tanqueId,
-                qtd_litros: litros,
-                valor_litro: vlrLitro,
-                valor_total: valorTotal,
-                usuario: usuario
-            }]);
+            .insert(payloads);
 
         if (errInsert) throw errInsert;
 
         alert('Entrada registrada com sucesso!');
         document.getElementById('formMobileEntrada').reset();
+        
+        // Limpa distribuição e adiciona uma linha nova
+        document.getElementById('distribuicao-container').innerHTML = '';
+        adicionarLinhaTanqueMobile();
+        updateLitrosRestantesMobile();
         
         // Reseta a data para hoje
         const now = new Date();
@@ -663,5 +706,84 @@ async function carregarHistoricoMovimentacao() {
     } catch (e) {
         console.error('Erro ao carregar histórico de movimentação:', e);
         lista.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar histórico.</p>';
+    }
+}
+
+// Funções Auxiliares para Distribuição Mobile
+function adicionarLinhaTanqueMobile(tanqueId = '', qtd = '') {
+    const container = document.getElementById('distribuicao-container');
+    const row = document.createElement('div');
+    row.className = 'distribuicao-row';
+    row.style.display = 'flex';
+    row.style.gap = '10px';
+    row.style.marginBottom = '10px';
+    row.style.alignItems = 'center';
+
+    const select = document.createElement('select');
+    select.className = 'tanque-select';
+    select.style.flex = '2';
+    select.style.padding = '10px';
+    select.style.border = '1px solid #ccc';
+    select.style.borderRadius = '4px';
+    
+    select.innerHTML = '<option value="">Tanque</option>';
+    tanquesDisponiveis.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.id;
+        option.textContent = `${t.nome} (${t.tipo_combustivel})`;
+        select.appendChild(option);
+    });
+    select.value = tanqueId;
+
+    const inputQtd = document.createElement('input');
+    inputQtd.type = 'number';
+    inputQtd.className = 'tanque-qtd';
+    inputQtd.placeholder = 'Litros';
+    inputQtd.step = '0.01';
+    inputQtd.min = '0.01';
+    inputQtd.value = qtd;
+    inputQtd.style.flex = '1';
+    inputQtd.style.padding = '10px';
+    inputQtd.style.border = '1px solid #ccc';
+    inputQtd.style.borderRadius = '4px';
+    inputQtd.style.width = '80px';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    removeBtn.style.background = '#dc3545';
+    removeBtn.style.color = 'white';
+    removeBtn.style.border = 'none';
+    removeBtn.style.borderRadius = '4px';
+    removeBtn.style.padding = '10px';
+    removeBtn.style.cursor = 'pointer';
+
+    removeBtn.addEventListener('click', () => {
+        row.remove();
+        updateLitrosRestantesMobile();
+    });
+
+    inputQtd.addEventListener('input', updateLitrosRestantesMobile);
+
+    row.appendChild(select);
+    row.appendChild(inputQtd);
+    row.appendChild(removeBtn);
+
+    container.appendChild(row);
+    updateLitrosRestantesMobile();
+}
+
+function updateLitrosRestantesMobile() {
+    const totalNota = parseFloat(document.getElementById('entradaQtdTotal').value) || 0;
+    let totalDistribuido = 0;
+    document.querySelectorAll('.tanque-qtd').forEach(input => {
+        totalDistribuido += parseFloat(input.value) || 0;
+    });
+
+    const restantes = totalNota - totalDistribuido;
+    const el = document.getElementById('litros-restantes-valor');
+    if(el) {
+        el.textContent = restantes.toFixed(2);
+        el.style.color = restantes < 0 ? 'red' : (Math.abs(restantes) < 0.01 ? 'green' : 'orange');
     }
 }
