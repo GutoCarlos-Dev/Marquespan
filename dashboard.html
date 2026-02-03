@@ -120,7 +120,7 @@
             <div class="kpi-icon"><i class="fas fa-gas-pump"></i></div>
             <div class="kpi-info">
                 <h3>Litros Abastecidos</h3>
-                <p>92.052,40 L</p>
+                <p id="litros-abastecidos">Carregando...</p>
             </div>
         </div>
         <div class="kpi-card green">
@@ -246,6 +246,31 @@
       }
     }
     carregarCustoTotal();
+
+    async function carregarLitrosAbastecidos() {
+      try {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+        const { data, error } = await supabaseClient
+          .from('abastecimentos')
+          .select('qtd_litros')
+          .neq('numero_nota', 'AJUSTE DE ESTOQUE') // Desconsidera ajustes
+          .gte('data', firstDay) // Filtra pelo mês atual para consistência
+          .lt('data', nextMonth);
+
+        if (error) throw error;
+
+        const total = data.reduce((acc, item) => acc + (item.qtd_litros || 0), 0);
+
+        document.getElementById('litros-abastecidos').textContent = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' L';
+      } catch (err) {
+        console.error('Erro ao carregar litros abastecidos:', err);
+        document.getElementById('litros-abastecidos').textContent = 'Erro';
+      }
+    }
+    carregarLitrosAbastecidos();
   </script>
 
   <!-- Script do Carrossel -->
