@@ -81,6 +81,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedData) DADOS_LOCAL = JSON.parse(savedData);
     } catch (e) { console.error('Erro ao carregar dados locais:', e); }
 
+    // --- INJEÇÃO DE BOTÕES "ADICIONAR LINHA" ---
+    const sectionsIds = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
+    sectionsIds.forEach(sec => {
+        const tbody = document.getElementById(`tbody${sec}`);
+        if (tbody) {
+            const table = tbody.closest('table');
+            if (table) {
+                const container = document.createElement('div');
+                container.style.textAlign = 'right';
+                container.style.marginTop = '5px';
+                
+                const btnAdd = document.createElement('button');
+                btnAdd.className = 'btn-custom';
+                btnAdd.style.backgroundColor = '#28a745';
+                btnAdd.style.color = 'white';
+                btnAdd.style.padding = '5px 10px';
+                btnAdd.style.fontSize = '0.85rem';
+                btnAdd.innerHTML = '<i class="fas fa-plus"></i> Adicionar Linha';
+                btnAdd.onclick = () => adicionarLinhaManual(sec);
+                
+                container.appendChild(btnAdd);
+                table.parentNode.insertBefore(container, table.nextSibling);
+            }
+        }
+    });
+
+    function adicionarLinhaManual(section) {
+        const semana = selectSemana.value;
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        
+        if (!semana || !dia) return;
+
+        if (!DADOS_LOCAL[semana]) DADOS_LOCAL[semana] = {};
+        if (!DADOS_LOCAL[semana][dia]) DADOS_LOCAL[semana][dia] = {};
+        if (!DADOS_LOCAL[semana][dia][section]) DADOS_LOCAL[semana][dia][section] = [];
+
+        DADOS_LOCAL[semana][dia][section].push({});
+        localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+        carregarDadosDia(dia, semana);
+    }
+
     // --- CACHE DE VEÍCULOS ---
     let listaVeiculos = [];
     let listaRotas = [];
