@@ -1084,6 +1084,204 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- BOLETA DE HORÁRIO ---
+    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
+    const modalBoleta = document.getElementById('modalBoleta');
+    const btnCloseModalBoleta = document.getElementById('btnCloseModalBoleta');
+    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
+    const filtroBoletaTipo = document.getElementById('filtroBoletaTipo');
+    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
+    const listaBoletaOpcoes = document.getElementById('listaBoletaOpcoes');
+
+    if (btnGerarBoleta) {
+        btnGerarBoleta.addEventListener('click', () => {
+            if (modalBoleta) {
+                modalBoleta.classList.remove('hidden');
+                // Garante que o display flex inline funcione se a classe hidden usar display:none
+                modalBoleta.style.display = 'flex'; 
+                atualizarOpcoesBoleta();
+            }
+        });
+    }
+
+    if (btnCloseModalBoleta) {
+        btnCloseModalBoleta.addEventListener('click', () => {
+            if (modalBoleta) {
+                modalBoleta.classList.add('hidden');
+                modalBoleta.style.display = 'none';
+            }
+        });
+    }
+    
+    // Fechar ao clicar fora
+    if (modalBoleta) {
+        modalBoleta.addEventListener('click', (e) => {
+            if (e.target === modalBoleta) {
+                modalBoleta.classList.add('hidden');
+                modalBoleta.style.display = 'none';
+            }
+        });
+    }
+
+    if (filtroBoletaTipo) {
+        filtroBoletaTipo.addEventListener('change', () => {
+            if (filtroBoletaValor) filtroBoletaValor.value = '';
+            atualizarOpcoesBoleta();
+        });
+    }
+
+    function atualizarOpcoesBoleta() {
+        if (!listaBoletaOpcoes) return;
+        const tipo = filtroBoletaTipo.value;
+        listaBoletaOpcoes.innerHTML = '';
+        
+        if (tipo === 'ROTA') {
+             const options = document.getElementById('listaRotas').innerHTML;
+             listaBoletaOpcoes.innerHTML = options;
+        } else {
+             const motOptions = document.getElementById('listaMotoristas').innerHTML;
+             const auxOptions = document.getElementById('listaAuxiliares').innerHTML;
+             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
+        }
+    }
+
+    if (btnGerarBoletaPDF) {
+        btnGerarBoletaPDF.addEventListener('click', () => {
+            const tipo = filtroBoletaTipo.value;
+            const valor = filtroBoletaValor.value.trim();
+            const semana = selectSemana.value;
+            
+            if (!valor) {
+                alert('Por favor, informe o nome ou rota.');
+                return;
+            }
+            
+            gerarPDFBoleta(semana, tipo, valor);
+        });
+    }
+
+    async function gerarPDFBoleta(semana, tipo, valor) {
+        if (!window.jspdf) {
+            alert('Biblioteca PDF não carregada.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        // Logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
+            }
+        } catch (e) { console.warn('Logo não carregado', e); }
+
+        doc.setFontSize(16);
+        doc.text(`Boleta de Controle - ${semana}`, 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 28, { align: 'center' });
+        doc.setFontSize(9);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
+
+        const dadosSemana = DADOS_LOCAL[semana] || {};
+        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const secoes = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
+        
+        const rows = [];
+
+        dias.forEach(dia => {
+            const dadosDia = dadosSemana[dia];
+            if (!dadosDia) return;
+
+            let dataStr = '';
+            if (CACHE_DATAS[semana] && CACHE_DATAS[semana][dia]) {
+                 dataStr = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+            }
+
+            secoes.forEach(sec => {
+                const itens = dadosDia[sec] || [];
+                itens.forEach(item => {
+                    let match = false;
+                    let info = {};
+
+                    if (sec === 'Faltas') {
+                        if (tipo === 'MOTORISTA') {
+                            if (item.MOTORISTA === valor) {
+                                match = true;
+                                info = { funcao: 'Motorista', obs: `FALTA/AFASTADO: ${item.MOTIVO_MOTORISTA || ''}` };
+                            } else if (item.AUXILIAR === valor) {
+                                match = true;
+                                info = { funcao: 'Auxiliar', obs: `FALTA/AFASTADO: ${item.MOTIVO_AUXILIAR || ''}` };
+                            }
+                        }
+                    } else {
+                        if (tipo === 'ROTA') {
+                            if (item.ROTA === valor) match = true;
+                        } else {
+                            if (item.MOTORISTA === valor) {
+                                match = true;
+                                info = { funcao: 'Motorista', parceiro: item.AUXILIAR || '-' };
+                            } else if (item.AUXILIAR === valor) {
+                                match = true;
+                                info = { funcao: 'Auxiliar', parceiro: item.MOTORISTA || '-' };
+                            }
+                        }
+                    }
+
+                    if (match) {
+                        if (tipo === 'ROTA') {
+                            rows.push([
+                                dia,
+                                dataStr,
+                                item.PLACA || '-',
+                                item.MOTORISTA || '-',
+                                item.AUXILIAR || '-',
+                                item.STATUS || '-'
+                            ]);
+                        } else {
+                            rows.push([
+                                dia,
+                                dataStr,
+                                item.ROTA || (sec === 'Faltas' ? '-' : ''),
+                                item.PLACA || '-',
+                                info.funcao || '-',
+                                info.parceiro || info.obs || '-'
+                            ]);
+                        }
+                    }
+                });
+            });
+        });
+
+        let head = [];
+        if (tipo === 'ROTA') {
+            head = [['Dia', 'Data', 'Placa', 'Motorista', 'Auxiliar', 'Status']];
+        } else {
+            head = [['Dia', 'Data', 'Rota', 'Placa', 'Função', 'Parceiro / Obs']];
+        }
+
+        if (rows.length === 0) {
+            doc.text('Nenhum registro encontrado para esta seleção.', 105, 50, { align: 'center' });
+        } else {
+            doc.autoTable({
+                head: head,
+                body: rows,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 105, 55] },
+                styles: { fontSize: 10 }
+            });
+        }
+
+        doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
+    }
+
     // --- INICIALIZAÇÃO ---
     carregarSemanas();
     preencherCacheDatas();

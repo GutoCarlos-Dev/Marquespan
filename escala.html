@@ -175,9 +175,12 @@
                             <label for="escalaSemana">Selecione a Semana</label>
                             <select id="escalaSemana" class="form-control"></select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="display: flex; gap: 10px;">
                             <button id="btnAbrirEscala" class="btn-primary" style="height: 36px; display: flex; align-items: center; gap: 8px;">
                                 <i class="fa-solid fa-folder-open"></i> Abrir Escala
+                            </button>
+                            <button id="btnGerarBoleta" class="btn-primary" style="height: 36px; display: flex; align-items: center; gap: 8px; background-color: #6f42c1;">
+                                <i class="fa-solid fa-file-invoice"></i> Gerar Boleta
                             </button>
                         </div>
                     </div>
@@ -327,6 +330,33 @@
 
         </section>
     </main>
+
+    <!-- Modal Gerar Boleta -->
+    <div id="modalBoleta" class="panel-backdrop hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div class="panel" style="background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <h3 style="margin: 0;"><i class="fas fa-file-invoice"></i> Gerar Boleta</h3>
+                <button class="close-button" id="btnCloseModalBoleta" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="filtroBoletaTipo" style="display: block; margin-bottom: 5px; font-weight: bold;">Tipo de Boleta</label>
+                    <select id="filtroBoletaTipo" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="MOTORISTA">Motorista / Auxiliar</option>
+                        <option value="ROTA">Rota</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="filtroBoletaValor" style="display: block; margin-bottom: 5px; font-weight: bold;">Selecionar:</label>
+                    <input type="text" id="filtroBoletaValor" list="listaBoletaOpcoes" placeholder="Digite para buscar..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <datalist id="listaBoletaOpcoes"></datalist>
+                </div>
+                <div class="form-actions" style="justify-content: flex-end; display: flex;">
+                    <button id="btnGerarBoletaPDF" class="btn-custom btn-pdf"><i class="fa-solid fa-file-pdf"></i> Gerar PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Datalists para Autocomplete -->
     <datalist id="listaVeiculos"></datalist>
