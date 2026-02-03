@@ -1092,6 +1092,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtroBoletaTipo = document.getElementById('filtroBoletaTipo');
     const filtroBoletaValor = document.getElementById('filtroBoletaValor');
     const listaBoletaOpcoes = document.getElementById('listaBoletaOpcoes');
+    const boletaPlaca = document.getElementById('boletaPlaca');
+    const boletaModelo = document.getElementById('boletaModelo');
+    const boletaRota = document.getElementById('boletaRota');
 
     if (btnGerarBoleta) {
         btnGerarBoleta.addEventListener('click', () => {
@@ -1100,6 +1103,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Garante que o display flex inline funcione se a classe hidden usar display:none
                 modalBoleta.style.display = 'flex'; 
                 atualizarOpcoesBoleta();
+                // Limpa campos ao abrir
+                if(filtroBoletaValor) filtroBoletaValor.value = '';
+                if(boletaPlaca) boletaPlaca.value = '';
+                if(boletaModelo) boletaModelo.value = '';
+                if(boletaRota) boletaRota.value = '';
             }
         });
     }
@@ -1127,6 +1135,60 @@ document.addEventListener('DOMContentLoaded', () => {
         filtroBoletaTipo.addEventListener('change', () => {
             if (filtroBoletaValor) filtroBoletaValor.value = '';
             atualizarOpcoesBoleta();
+            // Limpa campos automáticos
+            if(boletaPlaca) boletaPlaca.value = '';
+            if(boletaModelo) boletaModelo.value = '';
+            if(boletaRota) boletaRota.value = '';
+        });
+    }
+
+    // Preenchimento automático ao selecionar/digitar
+    if (filtroBoletaValor) {
+        filtroBoletaValor.addEventListener('input', () => {
+            const semana = selectSemana.value;
+            const tipo = filtroBoletaTipo.value;
+            const valor = filtroBoletaValor.value.trim();
+
+            if (!valor || !DADOS_LOCAL[semana]) return;
+
+            // Busca na escala da semana
+            const diasBusca = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
+            
+            let found = false;
+
+            outerLoop:
+            for (const d of diasBusca) {
+                if (DADOS_LOCAL[semana][d]) {
+                    for (const s of secoesBusca) {
+                        const lista = DADOS_LOCAL[semana][d][s] || [];
+                        for (const item of lista) {
+                            if (tipo === 'MOTORISTA') {
+                                if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
+                                    if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                                    if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                                    if(boletaRota) boletaRota.value = item.ROTA || '';
+                                    found = true;
+                                    break outerLoop;
+                                }
+                            } else { // ROTA
+                                if (item.ROTA === valor) {
+                                    if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                                    if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                                    if(boletaRota) boletaRota.value = valor;
+                                    found = true;
+                                    break outerLoop;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!found && valor.length > 3) {
+                // Se não encontrou e o usuário digitou algo substancial, limpa para não ficar dado antigo
+                // Mas permite edição manual
+            }
         });
     }
 
@@ -1188,41 +1250,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
-        // Busca informações adicionais (Placa, Modelo, Rota) para o cabeçalho
-        let infoPlaca = '_____';
-        let infoModelo = '_____';
-        let infoRota = '_____';
-
-        if (DADOS_LOCAL[semana]) {
-            const diasBusca = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
-            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
-            
-            outerLoop:
-            for (const d of diasBusca) {
-                if (DADOS_LOCAL[semana][d]) {
-                    for (const s of secoesBusca) {
-                        const lista = DADOS_LOCAL[semana][d][s] || [];
-                        for (const item of lista) {
-                            if (tipo === 'MOTORISTA') {
-                                if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
-                                    infoPlaca = item.PLACA || '_____';
-                                    infoModelo = item.MODELO || '_____';
-                                    infoRota = item.ROTA || '_____';
-                                    break outerLoop;
-                                }
-                            } else { // ROTA
-                                if (item.ROTA === valor) {
-                                    infoPlaca = item.PLACA || '_____';
-                                    infoModelo = item.MODELO || '_____';
-                                    infoRota = valor;
-                                    break outerLoop;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Pega as informações dos campos do modal (que foram preenchidos automaticamente ou manualmente)
+        const infoPlaca = document.getElementById('boletaPlaca').value || '_____';
+        const infoModelo = document.getElementById('boletaModelo').value || '_____';
+        const infoRota = document.getElementById('boletaRota').value || '_____';
 
         doc.setFontSize(16);
         doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
