@@ -25,6 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvar = document.getElementById('btnSalvar');
     const btnPDF = document.getElementById('btnPDF');
     
+    // Reordenar abas visualmente para começar com Domingo
+    if (tabButtons.length > 0) {
+        const container = tabButtons[0].parentNode;
+        const order = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const buttonsMap = {};
+        
+        tabButtons.forEach(btn => {
+            if (btn.dataset.dia) buttonsMap[btn.dataset.dia] = btn;
+        });
+
+        order.forEach(dia => {
+            if (buttonsMap[dia]) container.appendChild(buttonsMap[dia]);
+        });
+    }
+
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
 
@@ -464,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let finalY = 25;
 
-        const dias = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
+        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
         const secoes = [
             { id: 'Padrao', title: 'PADRÃO' },
             { id: 'Transferencia', title: 'TRANSFERÊNCIA CD' },
@@ -582,9 +597,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             painelEscala.classList.remove('hidden');
             
-            // Ativa a primeira aba (SEGUNDA) por padrão
-            const abaSegunda = document.querySelector('.tab-btn[data-dia="SEGUNDA"]');
-            if (abaSegunda) abaSegunda.click();
+            // Ativa a primeira aba (DOMINGO) por padrão
+            const abaDomingo = document.querySelector('.tab-btn[data-dia="DOMINGO"]');
+            if (abaDomingo) abaDomingo.click();
         });
     }
 
