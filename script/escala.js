@@ -536,6 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
                 <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
+                <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala para o Dia Seguinte"><i class="fa-solid fa-copy"></i></button>
             </div>`;
 
         // Verifica se há dados locais importados para esta semana e dia
@@ -895,6 +896,81 @@ document.addEventListener('DOMContentLoaded', () => {
             const btnImport = e.target.closest('#btnImportarDiaAction');
             if (btnImport && fileImportarDia) {
                 fileImportarDia.click();
+                return;
+            }
+
+            // Botão Copiar Dia Seguinte
+            const btnCopiar = e.target.closest('#btnCopiarDiaSeguinte');
+            if (btnCopiar) {
+                const semanaAtual = selectSemana.value;
+                const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+                
+                if (!semanaAtual || !diaAtual) return;
+
+                const diasOrdenados = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+                const idxAtual = diasOrdenados.indexOf(diaAtual);
+                
+                let proximaSemana = semanaAtual;
+                let proximoDia = '';
+
+                if (idxAtual === -1) return;
+
+                if (idxAtual < diasOrdenados.length - 1) {
+                    proximoDia = diasOrdenados[idxAtual + 1];
+                } else {
+                    // É Sábado, vai para Domingo da próxima semana
+                    const match = semanaAtual.match(/SEMANA (\d+) - (\d+)/);
+                    if (match) {
+                        let numSemana = parseInt(match[1], 10);
+                        let ano = parseInt(match[2], 10);
+                        
+                        numSemana++;
+                        if (numSemana > 53) {
+                             alert('Limite de semanas atingido.');
+                             return;
+                        }
+                        proximaSemana = `SEMANA ${String(numSemana).padStart(2, '0')} - ${ano}`;
+                        proximoDia = 'DOMINGO';
+                    } else {
+                        return;
+                    }
+                }
+
+                if (!DADOS_LOCAL[semanaAtual] || !DADOS_LOCAL[semanaAtual][diaAtual]) {
+                    alert('Não há dados neste dia para copiar.');
+                    return;
+                }
+
+                const dadosOrigem = DADOS_LOCAL[semanaAtual][diaAtual];
+                const temDadosOrigem = Object.values(dadosOrigem).some(arr => Array.isArray(arr) && arr.length > 0);
+                
+                if (!temDadosOrigem) {
+                    alert('O dia atual está vazio. Nada para copiar.');
+                    return;
+                }
+
+                if (!DADOS_LOCAL[proximaSemana]) DADOS_LOCAL[proximaSemana] = {};
+                
+                if (DADOS_LOCAL[proximaSemana][proximoDia]) {
+                     const temDadosDestino = Object.values(DADOS_LOCAL[proximaSemana][proximoDia]).some(arr => Array.isArray(arr) && arr.length > 0);
+                     if (temDadosDestino) {
+                         if (!confirm(`O dia seguinte (${proximoDia} - ${proximaSemana}) já possui dados. Deseja sobrescrever?`)) {
+                             return;
+                         }
+                     }
+                }
+
+                DADOS_LOCAL[proximaSemana][proximoDia] = JSON.parse(JSON.stringify(dadosOrigem));
+                localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+                
+                if (proximaSemana === semanaAtual) {
+                    if(confirm(`Copiado com sucesso para ${proximoDia}! Deseja ir para este dia?`)) {
+                        const tab = document.querySelector(`.tab-btn[data-dia="${proximoDia}"]`);
+                        if(tab) tab.click();
+                    }
+                } else {
+                    alert(`Copiado com sucesso para ${proximoDia} da ${proximaSemana}!`);
+                }
                 return;
             }
 
