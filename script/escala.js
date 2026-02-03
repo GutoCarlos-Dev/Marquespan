@@ -1283,10 +1283,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
