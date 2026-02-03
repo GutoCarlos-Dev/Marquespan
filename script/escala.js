@@ -1153,9 +1153,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Preenchimento automático ao selecionar/digitar
     function buscarDadosBoleta() {
-        const semana = selectSemana.value;
         const tipo = filtroBoletaTipo.value;
-        const valor = filtroBoletaValor.value.trim();
+        const valorRaw = filtroBoletaValor.value;
+        const valor = valorRaw ? valorRaw.trim().toUpperCase() : '';
         const dataSelecionada = boletaData ? boletaData.value : null;
 
         // Limpa campos antes de buscar
@@ -1163,40 +1163,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if(boletaModelo) boletaModelo.value = '';
         if(boletaRota) boletaRota.value = '';
 
-        if (!valor || !DADOS_LOCAL[semana] || !dataSelecionada) return;
+        if (!valor || !dataSelecionada) return;
 
-        // Identifica qual dia da semana corresponde à data selecionada
+        // Garante que o cache de datas esteja preenchido
+        if (Object.keys(CACHE_DATAS).length === 0) {
+            preencherCacheDatas();
+        }
+
+        // 1. Identifica qual semana e dia correspondem à data selecionada (busca em todo o calendário)
+        let semanaEncontrada = null;
         let diaEncontrado = null;
-        if (CACHE_DATAS[semana]) {
-            for (const [diaKey, dateObj] of Object.entries(CACHE_DATAS[semana])) {
+
+        for (const [semanaKey, diasObj] of Object.entries(CACHE_DATAS)) {
+            for (const [diaKey, dateObj] of Object.entries(diasObj)) {
                 if (dateObj.toISOString().split('T')[0] === dataSelecionada) {
+                    semanaEncontrada = semanaKey;
                     diaEncontrado = diaKey;
                     break;
                 }
             }
+            if (semanaEncontrada) break;
         }
 
-        if (!diaEncontrado) return; // Data fora da semana selecionada
+        if (!semanaEncontrada || !diaEncontrado) return; // Data não encontrada no calendário
 
-        // Busca apenas no dia específico
-        const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
-        
-        if (DADOS_LOCAL[semana][diaEncontrado]) {
+        // 2. Busca nos dados locais usando a semana e dia encontrados
+        if (DADOS_LOCAL[semanaEncontrada] && DADOS_LOCAL[semanaEncontrada][diaEncontrado]) {
+            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
+            
             for (const s of secoesBusca) {
-                const lista = DADOS_LOCAL[semana][diaEncontrado][s] || [];
+                const lista = DADOS_LOCAL[semanaEncontrada][diaEncontrado][s] || [];
                 for (const item of lista) {
+                    const itemMotorista = item.MOTORISTA ? item.MOTORISTA.toUpperCase().trim() : '';
+                    const itemAuxiliar = item.AUXILIAR ? item.AUXILIAR.toUpperCase().trim() : '';
+                    const itemRota = item.ROTA ? item.ROTA.toUpperCase().trim() : '';
+
                     if (tipo === 'MOTORISTA') {
-                        if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
+                        if (itemMotorista === valor || itemAuxiliar === valor) {
                             if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
                             if(boletaModelo) boletaModelo.value = item.MODELO || '';
                             if(boletaRota) boletaRota.value = item.ROTA || '';
                             return; // Encontrou e preencheu
                         }
                     } else { // ROTA
-                        if (item.ROTA === valor) {
+                        if (itemRota === valor) {
                             if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
                             if(boletaModelo) boletaModelo.value = item.MODELO || '';
-                            if(boletaRota) boletaRota.value = valor;
+                            if(boletaRota) boletaRota.value = valor; // Mantém o valor pesquisado
                             return; // Encontrou e preencheu
                         }
                     }
@@ -1207,6 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (filtroBoletaValor) {
         filtroBoletaValor.addEventListener('input', buscarDadosBoleta);
+        filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
     }
     
     if (boletaData) {
