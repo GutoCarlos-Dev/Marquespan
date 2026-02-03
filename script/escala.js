@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const semanaAtual = getWeekNumber(new Date());
         selectSemana.innerHTML = ''; // Limpa opções existentes
 
-        for (let i = 1; i <= 52; i++) {
+        for (let i = 1; i <= 53; i++) {
             const nomeSemana = `SEMANA ${String(i).padStart(2, '0')}`;
             const option = new Option(nomeSemana, nomeSemana);
             selectSemana.appendChild(option);
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataDia = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
         
         const currentDate = new Date(dataDia);
-        const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
         tituloDia.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabButtons.forEach(btn => {
                 const dia = btn.dataset.dia;
                 const currentDate = dadosSemana ? dadosSemana[dia] : new Date();
-                const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 
                 const diaNome = btn.textContent.split(' ')[0].replace(/\d/g, '').replace(/\//g, '').trim();
                 btn.innerHTML = `${diaNome} <span class="tab-date">${formattedDate}</span>`;
