@@ -1228,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
         
         doc.setFontSize(11);
-        doc.text(`Placa: ${infoPlaca} - Modelo: ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
 
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
