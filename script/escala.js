@@ -1095,6 +1095,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const boletaPlaca = document.getElementById('boletaPlaca');
     const boletaModelo = document.getElementById('boletaModelo');
     const boletaRota = document.getElementById('boletaRota');
+    const boletaData = document.getElementById('boletaData');
 
     if (btnGerarBoleta) {
         btnGerarBoleta.addEventListener('click', () => {
@@ -1108,6 +1109,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(boletaPlaca) boletaPlaca.value = '';
                 if(boletaModelo) boletaModelo.value = '';
                 if(boletaRota) boletaRota.value = '';
+                
+                // Define data padrão (Segunda-feira da semana selecionada)
+                const semana = selectSemana.value;
+                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA']) {
+                    // Ajusta para YYYY-MM-DD
+                    const dateObj = CACHE_DATAS[semana]['SEGUNDA'];
+                    if(boletaData) boletaData.value = dateObj.toISOString().split('T')[0];
+                }
             }
         });
     }
@@ -1143,53 +1152,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Preenchimento automático ao selecionar/digitar
-    if (filtroBoletaValor) {
-        filtroBoletaValor.addEventListener('input', () => {
-            const semana = selectSemana.value;
-            const tipo = filtroBoletaTipo.value;
-            const valor = filtroBoletaValor.value.trim();
+    function buscarDadosBoleta() {
+        const semana = selectSemana.value;
+        const tipo = filtroBoletaTipo.value;
+        const valor = filtroBoletaValor.value.trim();
+        const dataSelecionada = boletaData ? boletaData.value : null;
 
-            if (!valor || !DADOS_LOCAL[semana]) return;
+        // Limpa campos antes de buscar
+        if(boletaPlaca) boletaPlaca.value = '';
+        if(boletaModelo) boletaModelo.value = '';
+        if(boletaRota) boletaRota.value = '';
 
-            // Busca na escala da semana
-            const diasBusca = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
-            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
-            
-            let found = false;
+        if (!valor || !DADOS_LOCAL[semana] || !dataSelecionada) return;
 
-            outerLoop:
-            for (const d of diasBusca) {
-                if (DADOS_LOCAL[semana][d]) {
-                    for (const s of secoesBusca) {
-                        const lista = DADOS_LOCAL[semana][d][s] || [];
-                        for (const item of lista) {
-                            if (tipo === 'MOTORISTA') {
-                                if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
-                                    if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
-                                    if(boletaModelo) boletaModelo.value = item.MODELO || '';
-                                    if(boletaRota) boletaRota.value = item.ROTA || '';
-                                    found = true;
-                                    break outerLoop;
-                                }
-                            } else { // ROTA
-                                if (item.ROTA === valor) {
-                                    if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
-                                    if(boletaModelo) boletaModelo.value = item.MODELO || '';
-                                    if(boletaRota) boletaRota.value = valor;
-                                    found = true;
-                                    break outerLoop;
-                                }
-                            }
+        // Identifica qual dia da semana corresponde à data selecionada
+        let diaEncontrado = null;
+        if (CACHE_DATAS[semana]) {
+            for (const [diaKey, dateObj] of Object.entries(CACHE_DATAS[semana])) {
+                if (dateObj.toISOString().split('T')[0] === dataSelecionada) {
+                    diaEncontrado = diaKey;
+                    break;
+                }
+            }
+        }
+
+        if (!diaEncontrado) return; // Data fora da semana selecionada
+
+        // Busca apenas no dia específico
+        const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
+        
+        if (DADOS_LOCAL[semana][diaEncontrado]) {
+            for (const s of secoesBusca) {
+                const lista = DADOS_LOCAL[semana][diaEncontrado][s] || [];
+                for (const item of lista) {
+                    if (tipo === 'MOTORISTA') {
+                        if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
+                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                            if(boletaRota) boletaRota.value = item.ROTA || '';
+                            return; // Encontrou e preencheu
+                        }
+                    } else { // ROTA
+                        if (item.ROTA === valor) {
+                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                            if(boletaRota) boletaRota.value = valor;
+                            return; // Encontrou e preencheu
                         }
                     }
                 }
             }
-            
-            if (!found && valor.length > 3) {
-                // Se não encontrou e o usuário digitou algo substancial, limpa para não ficar dado antigo
-                // Mas permite edição manual
-            }
-        });
+        }
+    }
+
+    if (filtroBoletaValor) {
+        filtroBoletaValor.addEventListener('input', buscarDadosBoleta);
+    }
+    
+    if (boletaData) {
+        boletaData.addEventListener('change', buscarDadosBoleta);
     }
 
     function atualizarOpcoesBoleta() {
