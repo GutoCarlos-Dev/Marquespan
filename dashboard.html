@@ -207,10 +207,16 @@
 
     async function carregarTotalManutencoes() {
       try {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
         const { count, error } = await supabaseClient
           .from('coletas_manutencao_checklist')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'FINALIZADO');
+          .select('*, coletas_manutencao!inner(data_hora)', { count: 'exact', head: true })
+          .eq('status', 'FINALIZADO')
+          .gte('coletas_manutencao.data_hora', firstDay)
+          .lt('coletas_manutencao.data_hora', nextMonth);
 
         if (error) throw error;
 
