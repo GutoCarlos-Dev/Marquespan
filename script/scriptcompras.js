@@ -458,8 +458,8 @@ const UI = {
     doc.text(`Responsável: ${currentUser}`, 14, 52);
 
     // 3. Tabela
-    const columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
-    const rows = this.cart.items.map(i => [i.cod, i.produto, i.qtd, i.uni || 'UN']);
+    const columns = ['Código', 'Produto', 'Quantidade', 'Unidade', 'Valor Unit.', 'Valor Total'];
+    const rows = this.cart.items.map(i => [i.cod, i.produto, i.qtd, i.uni || 'UN', 'R$ 0,00', 'R$ 0,00']);
 
     doc.autoTable({
       head: [columns],
@@ -621,8 +621,8 @@ const UI = {
              // Fallback simples caso não tenha vencedor (apenas quantidades)
              const { data: recebimentos, error: recErr } = await supabaseClient.from('recebimentos').select('qtd_pedida, qtd_recebida, produtos(nome)').eq('id_cotacao', id);
              if (recErr) throw recErr;
-             columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência'];
-             rows = recebimentos.map(r => [r.produtos?.nome || '', r.qtd_pedida, r.qtd_recebida, (r.qtd_recebida - r.qtd_pedida)]);
+             columns = ['Produto', 'Qtd. Pedida', 'Qtd. Recebida', 'Divergência', 'Preço Unit.', 'Preço Total'];
+             rows = recebimentos.map(r => [r.produtos?.nome || '', r.qtd_pedida, r.qtd_recebida, (r.qtd_recebida - r.qtd_pedida), 'R$ 0,00', 'R$ 0,00']);
         }
       } else if (cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') {
         // Layout para Pedido Aprovado ou Cotação Pendente (Com Preços e Fornecedor)
@@ -670,16 +670,16 @@ const UI = {
              // Fallback caso não tenha vencedor definido (erro de dados)
              const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
              if (itensErr) throw itensErr;
-             columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
-             rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN']);
+             columns = ['Código', 'Produto', 'Quantidade', 'Unidade', 'Preço Unit.', 'Preço Total'];
+             rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN', 'R$ 0,00', 'R$ 0,00']);
         }
       } else {
         // Layout Padrão de Cotação
         const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
         if (itensErr) throw itensErr;
 
-        columns = ['Código', 'Produto', 'Quantidade', 'Unidade'];
-        rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN']);
+        columns = ['Código', 'Produto', 'Quantidade', 'Unidade', 'Preço Unit.', 'Preço Total'];
+        rows = itens.map(i => [i.produtos?.codigo_principal || '', i.produtos?.nome || '', i.quantidade, i.produtos?.unidade_medida || 'UN', 'R$ 0,00', 'R$ 0,00']);
       }
 
       doc.autoTable({
