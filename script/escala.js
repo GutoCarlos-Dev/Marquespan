@@ -1165,6 +1165,12 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Biblioteca PDF não carregada.');
             return;
         }
+        
+        // Garante que as datas estejam carregadas no cache
+        if (Object.keys(CACHE_DATAS).length === 0) {
+            preencherCacheDatas();
+        }
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         
@@ -1189,95 +1195,86 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
 
-        const dadosSemana = DADOS_LOCAL[semana] || {};
-        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
-        const secoes = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
-        
-        const rows = [];
-
-        dias.forEach(dia => {
-            const dadosDia = dadosSemana[dia];
-            if (!dadosDia) return;
-
-            let dataStr = '';
-            if (CACHE_DATAS[semana] && CACHE_DATAS[semana][dia]) {
-                 dataStr = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
-            }
-
-            secoes.forEach(sec => {
-                const itens = dadosDia[sec] || [];
-                itens.forEach(item => {
-                    let match = false;
-                    let info = {};
-
-                    if (sec === 'Faltas') {
-                        if (tipo === 'MOTORISTA') {
-                            if (item.MOTORISTA === valor) {
-                                match = true;
-                                info = { funcao: 'Motorista', obs: `FALTA/AFASTADO: ${item.MOTIVO_MOTORISTA || ''}` };
-                            } else if (item.AUXILIAR === valor) {
-                                match = true;
-                                info = { funcao: 'Auxiliar', obs: `FALTA/AFASTADO: ${item.MOTIVO_AUXILIAR || ''}` };
-                            }
-                        }
-                    } else {
-                        if (tipo === 'ROTA') {
-                            if (item.ROTA === valor) match = true;
-                        } else {
-                            if (item.MOTORISTA === valor) {
-                                match = true;
-                                info = { funcao: 'Motorista', parceiro: item.AUXILIAR || '-' };
-                            } else if (item.AUXILIAR === valor) {
-                                match = true;
-                                info = { funcao: 'Auxiliar', parceiro: item.MOTORISTA || '-' };
-                            }
-                        }
-                    }
-
-                    if (match) {
-                        if (tipo === 'ROTA') {
-                            rows.push([
-                                dia,
-                                dataStr,
-                                item.PLACA || '-',
-                                item.MOTORISTA || '-',
-                                item.AUXILIAR || '-',
-                                item.STATUS || '-'
-                            ]);
-                        } else {
-                            rows.push([
-                                dia,
-                                dataStr,
-                                item.ROTA || (sec === 'Faltas' ? '-' : ''),
-                                item.PLACA || '-',
-                                info.funcao || '-',
-                                info.parceiro || info.obs || '-'
-                            ]);
-                        }
-                    }
-                });
+        // Prepara as datas
+        const datasDia = {};
+        if (CACHE_DATAS[semana]) {
+            const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+            dias.forEach(dia => {
+                if (CACHE_DATAS[semana][dia]) {
+                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+                } else {
+                    datasDia[dia] = '';
+                }
             });
-        });
-
-        let head = [];
-        if (tipo === 'ROTA') {
-            head = [['Dia', 'Data', 'Placa', 'Motorista', 'Auxiliar', 'Status']];
-        } else {
-            head = [['Dia', 'Data', 'Rota', 'Placa', 'Função', 'Parceiro / Obs']];
         }
 
-        if (rows.length === 0) {
-            doc.text('Nenhum registro encontrado para esta seleção.', 105, 50, { align: 'center' });
-        } else {
+        let currentY = 35;
+        const margin = 10;
+        const pageWidth = 210;
+        const contentWidth = pageWidth - (margin * 2);
+        const gap = 5;
+        const colWidth = (contentWidth - gap) / 2;
+
+        // Função auxiliar para desenhar a tabela de um dia
+        const drawDayTable = (diaKey, x, y, width) => {
+            const dateStr = datasDia[diaKey] || '';
+            const diaNome = diaKey === 'TERCA' ? 'TERÇA' : diaKey;
+            
             doc.autoTable({
-                head: head,
-                body: rows,
-                startY: 35,
+                startY: y,
+                margin: { left: x },
+                tableWidth: width,
                 theme: 'grid',
-                headStyles: { fillColor: [0, 105, 55] },
-                styles: { fontSize: 10 }
+                head: [[{ 
+                    content: `${diaNome} - ${dateStr}`, 
+                    colSpan: 4, 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 10 } 
+                }]],
+                body: [
+                    [
+                        { content: 'INICIO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                        { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
+                    ],
+                    [
+                        { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } },
+                        { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
+                    ],
+                    [
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle' } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle' } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle' } }
+                    ]
+                ],
+                styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
+                columnStyles: {
+                    0: { cellWidth: width * 0.2 },
+                    1: { cellWidth: width * 0.3 },
+                    2: { cellWidth: width * 0.2 },
+                    3: { cellWidth: width * 0.3 }
+                }
             });
-        }
+            return doc.lastAutoTable.finalY;
+        };
+
+        // 1. Domingo (Centralizado)
+        const domWidth = colWidth; 
+        const domX = (pageWidth - domWidth) / 2;
+        currentY = drawDayTable('DOMINGO', domX, currentY, domWidth) + 5;
+
+        // 2. Segunda e Terça
+        const ySeg = drawDayTable('SEGUNDA', margin, currentY, colWidth);
+        const yTer = drawDayTable('TERCA', margin + colWidth + gap, currentY, colWidth);
+        currentY = Math.max(ySeg, yTer) + 5;
+
+        // 3. Quarta e Quinta
+        const yQua = drawDayTable('QUARTA', margin, currentY, colWidth);
+        const yQui = drawDayTable('QUINTA', margin + colWidth + gap, currentY, colWidth);
+        currentY = Math.max(yQua, yQui) + 5;
+
+        // 4. Sexta e Sábado
+        const ySex = drawDayTable('SEXTA', margin, currentY, colWidth);
+        const ySab = drawDayTable('SABADO', margin + colWidth + gap, currentY, colWidth);
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
