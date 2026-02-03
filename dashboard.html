@@ -10,6 +10,36 @@
 
   <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css">
+  <style>
+    /* Estilos do Carrossel de Banner */
+    .banner-container {
+      position: relative;
+      width: 100%;
+      height: 300px; /* Altura fixa para evitar pulos na tela */
+      margin-bottom: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .banner-slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+    .banner-slide.active {
+      opacity: 1;
+    }
+    .banner-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
 </head>
 <body>
 
@@ -19,11 +49,19 @@
 
   <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
-    <header class="header">📊 Dashboard Administrativo</header>
+    <header class="header">📊 Cuidar da manutenção é garantir segurança, eficiência e produtividade.</header>
 
     <!-- Banner estilo Carrossel -->
-    <div class="banner-container" style="margin-bottom: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-      <img src="img/Marquespan_banners-caminhao.jpeg" alt="Banner Marquespan" style="width: 100%; height: auto; display: block; object-fit: cover; max-height: 300px;">
+    <div class="banner-container">
+      <div class="banner-slide active">
+        <img src="img/Marquespan_banners-caminhao.jpeg" alt="Banner Marquespan 1">
+      </div>
+      <div class="banner-slide">
+        <img src="img/Marquespan_banners-caminhao2.jpeg" alt="Banner Marquespan 2">
+      </div>
+      <div class="banner-slide">
+        <img src="img/Marquespan_banners-caminhao3.jpeg" alt="Banner Marquespan 3">
+      </div>
     </div>
 
     <section class="dashboard-container">
@@ -114,6 +152,22 @@
     }
 
     carregarTotalManutencoes();
+  </script>
+
+  <!-- Script do Carrossel -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const slides = document.querySelectorAll('.banner-slide');
+      let currentSlide = 0;
+      
+      if(slides.length > 0) {
+        setInterval(() => {
+          slides[currentSlide].classList.remove('active');
+          currentSlide = (currentSlide + 1) % slides.length;
+          slides[currentSlide].classList.add('active');
+        }, 4000); // Troca a cada 4 segundos
+      }
+    });
   </script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
