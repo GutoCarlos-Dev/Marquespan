@@ -12,6 +12,110 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // --- ESTILOS DE PLANILHA (Injetados dinamicamente) ---
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        /* Reset de tabela para estilo planilha */
+        table {
+            border-collapse: collapse !important;
+            width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            background-color: #fff;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Cabeçalhos */
+        th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+            padding: 10px 8px;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Células */
+        td {
+            border: 1px solid #dee2e6;
+            padding: 0 !important; /* Remove padding para input preencher */
+            height: 34px;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        /* Zebra Striping */
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        tbody tr:hover {
+            background-color: #f1f3f5; /* Highlight no hover da linha */
+        }
+
+        /* Inputs estilo planilha (sem borda, preenchimento total) */
+        input.table-input {
+            width: 100%;
+            height: 100%;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 10px;
+            background: transparent;
+            font-size: 13px;
+            color: #212529;
+            outline: none;
+            box-shadow: none !important;
+            margin: 0;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        /* Foco no input parece seleção de célula Excel */
+        input.table-input:focus {
+            background-color: #fff;
+            box-shadow: inset 0 0 0 2px #007bff !important;
+            z-index: 2;
+        }
+
+        /* Células editáveis (divs/tds contenteditable) */
+        td[contenteditable="true"] {
+            padding: 8px 10px !important;
+            outline: none;
+            cursor: text;
+        }
+        td[contenteditable="true"]:focus {
+            background-color: #fff;
+            box-shadow: inset 0 0 0 2px #007bff;
+        }
+
+        /* Botão de excluir na tabela */
+        .btn-acao.excluir {
+            background: transparent;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.5;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .btn-acao.excluir:hover {
+            opacity: 1;
+            background-color: #ffebee;
+        }
+    `;
+    document.head.appendChild(styleSheet);
+
     // --- ELEMENTOS DO DOM ---
     const selectSemana = document.getElementById('escalaSemana');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
