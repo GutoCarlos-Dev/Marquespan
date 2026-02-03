@@ -29,19 +29,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_DATAS = {};
 
     function preencherCacheDatas() {
-        const anoAtual = new Date().getFullYear();
+        // Configuração da Semana 01 de 2026
+        // Início: Domingo, 28/12/2025
+        const baseDate = new Date(Date.UTC(2025, 11, 28)); // 28 de Dezembro de 2025
+
         for (let i = 1; i <= 53; i++) {
-            const semanaStr = `SEMANA ${String(i).padStart(2, '0')}`;
-            const monday = getMondayOfIsoWeek(i, anoAtual);
+            const nomeSemana = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
             
-            CACHE_DATAS[semanaStr] = {
-                'SEGUNDA':  addDays(monday, 0),
-                'TERCA':    addDays(monday, 1),
-                'QUARTA':   addDays(monday, 2),
-                'QUINTA':   addDays(monday, 3),
-                'SEXTA':    addDays(monday, 4),
-                'SABADO':   addDays(monday, 5),
-                'DOMINGO':  addDays(monday, 6)
+            // Calcula o início desta semana (Domingo)
+            const startOfWeek = addDays(baseDate, (i - 1) * 7);
+            
+            CACHE_DATAS[nomeSemana] = {
+                'DOMINGO':  addDays(startOfWeek, 0),
+                'SEGUNDA':  addDays(startOfWeek, 1),
+                'TERCA':    addDays(startOfWeek, 2),
+                'QUARTA':   addDays(startOfWeek, 3),
+                'QUINTA':   addDays(startOfWeek, 4),
+                'SEXTA':    addDays(startOfWeek, 5),
+                'SABADO':   addDays(startOfWeek, 6)
             };
         }
     }
@@ -205,48 +210,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNÇÕES ---
 
-    /**
-     * Calcula o número da semana atual do ano.
-     * @param {Date} d - A data atual.
-     * @returns {number} O número da semana.
-     */
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        return weekNo;
-    }
-
-    /**
-     * Popula o select de semanas com as 52 semanas do ano e seleciona a atual.
-     */
     function carregarSemanas() {
-        const semanaAtual = getWeekNumber(new Date());
+        // Data base: 28/12/2025
+        const baseDate = new Date(Date.UTC(2025, 11, 28));
+        const hoje = new Date();
+        const hojeUTC = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()));
+        
+        const diffTime = hojeUTC - baseDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        let semanaAtual = Math.floor(diffDays / 7) + 1;
+        
+        if (semanaAtual < 1) semanaAtual = 1;
+        if (semanaAtual > 53) semanaAtual = 53;
+
         selectSemana.innerHTML = ''; // Limpa opções existentes
 
         for (let i = 1; i <= 53; i++) {
-            const nomeSemana = `SEMANA ${String(i).padStart(2, '0')}`;
+            const nomeSemana = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
             const option = new Option(nomeSemana, nomeSemana);
             selectSemana.appendChild(option);
         }
-        selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')}`;
-    }
-
-    /**
-     * Gets the date of the Monday of a given ISO week number and year.
-     * @param {number} weekNum The week number (1-53).
-     * @param {number} year The year.
-     * @returns {Date} The date of the Monday of that week.
-     */
-    function getMondayOfIsoWeek(weekNum, year) {
-        // January 4th is always in week 1
-        const d = new Date(Date.UTC(year, 0, 4));
-        // Get the day of week, with Sunday as 7
-        const dayOfWeek = d.getUTCDay() || 7;
-        // Set to the Monday of the week of Jan 4th and add the weeks
-        d.setUTCDate(d.getUTCDate() + (weekNum - 1) * 7 - dayOfWeek + 1);
-        return d;
+        selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')} - 2026`;
     }
 
     /**
