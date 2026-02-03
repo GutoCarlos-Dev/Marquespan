@@ -1188,10 +1188,55 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
+        // Busca informações adicionais (Placa, Modelo, Rota) para o cabeçalho
+        let infoPlaca = '_____';
+        let infoModelo = '_____';
+        let infoRota = '_____';
+
+        if (DADOS_LOCAL[semana]) {
+            const diasBusca = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
+            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
+            
+            outerLoop:
+            for (const d of diasBusca) {
+                if (DADOS_LOCAL[semana][d]) {
+                    for (const s of secoesBusca) {
+                        const lista = DADOS_LOCAL[semana][d][s] || [];
+                        for (const item of lista) {
+                            if (tipo === 'MOTORISTA') {
+                                if (item.MOTORISTA === valor || item.AUXILIAR === valor) {
+                                    infoPlaca = item.PLACA || '_____';
+                                    infoModelo = item.MODELO || '_____';
+                                    infoRota = item.ROTA || '_____';
+                                    break outerLoop;
+                                }
+                            } else { // ROTA
+                                if (item.ROTA === valor) {
+                                    infoPlaca = item.PLACA || '_____';
+                                    infoModelo = item.MODELO || '_____';
+                                    infoRota = valor;
+                                    break outerLoop;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         doc.setFontSize(16);
         doc.text(`Boleta de Controle - ${semana}`, 105, 20, { align: 'center' });
+        doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.text(`Placa: ${infoPlaca} - Modelo: ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
+
         doc.setFontSize(12);
         doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 28, { align: 'center' });
+        doc.setFont(undefined, 'bold');
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
 
@@ -1240,10 +1285,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle' } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle' } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle' } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 35 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
