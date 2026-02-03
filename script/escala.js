@@ -1225,14 +1225,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         doc.setFontSize(16);
-        doc.text(`Boleta de Controle - ${semana}`, 105, 20, { align: 'center' });
         doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
         
         doc.setFontSize(11);
         doc.text(`Placa: ${infoPlaca} - Modelo: ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
 
         doc.setFontSize(12);
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 28, { align: 'center' });
         doc.setFont(undefined, 'bold');
         doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
         doc.setFont(undefined, 'normal');
