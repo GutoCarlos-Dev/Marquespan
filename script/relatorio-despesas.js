@@ -479,3 +479,35 @@ const ReportUI = {
 };
 
 document.addEventListener('DOMContentLoaded', () => ReportUI.init());
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Lógica do botão de limpar rotas
+    const btnLimpar = document.getElementById('btnLimparRotas');
+    if(btnLimpar) {
+        btnLimpar.addEventListener('click', () => {
+            const select = document.getElementById('rotas');
+            if(select) select.selectedIndex = -1; // Limpa a seleção (equivale a Todas)
+        });
+    }
+
+    // Pré-preencher datas
+    const dataInicialInput = document.getElementById('data-inicial');
+    const dataFinalInput = document.getElementById('data-final');
+    
+    if (dataInicialInput && dataFinalInput) {
+        const hoje = new Date();
+        const primeiroDiaDoAno = new Date(hoje.getFullYear(), 0, 1);
+
+        // Função auxiliar para formatar data local YYYY-MM-DD
+        // Evita problemas de fuso horário que o toISOString() pode causar
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        dataFinalInput.value = formatDate(hoje);
+        dataInicialInput.value = formatDate(primeiroDiaDoAno);
+    }
+});

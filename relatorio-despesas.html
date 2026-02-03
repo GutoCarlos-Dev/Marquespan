@@ -140,17 +140,6 @@
 <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/relatorio-despesas.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const btnLimpar = document.getElementById('btnLimparRotas');
-        if(btnLimpar) {
-            btnLimpar.addEventListener('click', () => {
-                const select = document.getElementById('rotas');
-                if(select) select.selectedIndex = -1; // Limpa a seleção (equivale a Todas)
-            });
-        }
-    });
-  </script>
 
 </body>
 </html>
