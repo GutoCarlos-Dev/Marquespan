@@ -113,6 +113,23 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1;
             background-color: #ffebee;
         }
+
+        /* Resizer e Sort Styles */
+        .resizer {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background: rgba(0,0,0,0.05);
+            cursor: col-resize;
+            user-select: none;
+            touch-action: none;
+            z-index: 10;
+        }
+        .resizer:hover, .resizing {
+            background: #007bff;
+        }
     `;
     document.head.appendChild(styleSheet);
 
@@ -128,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileImportarDia = document.getElementById('fileImportarDia');
     const btnSalvar = document.getElementById('btnSalvar');
     const btnPDF = document.getElementById('btnPDF');
+    const globalSearch = document.getElementById('globalSearch');
     
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
@@ -141,6 +159,96 @@ document.addEventListener('DOMContentLoaded', () => {
 
         order.forEach(dia => {
             if (buttonsMap[dia]) container.appendChild(buttonsMap[dia]);
+        });
+    }
+
+    // --- FUNCIONALIDADES DE GRID (Sort, Resize, Search) ---
+    function initGridFeatures() {
+        document.querySelectorAll('.data-grid').forEach(table => {
+            const headers = table.querySelectorAll('th');
+            headers.forEach((th, index) => {
+                // Evita duplicar listeners se a função for chamada novamente
+                if (th.dataset.initialized) return;
+                th.dataset.initialized = 'true';
+
+                // Sort
+                th.style.cursor = 'pointer';
+                th.style.position = 'relative';
+                th.title = "Clique para ordenar";
+                
+                th.addEventListener('click', (e) => {
+                    if(e.target.classList.contains('resizer')) return;
+                    sortTable(table, index);
+                });
+
+                // Resize
+                const resizer = document.createElement('div');
+                resizer.classList.add('resizer');
+                th.appendChild(resizer);
+                createResizableColumn(th, resizer);
+            });
+        });
+    }
+
+    function sortTable(table, colIndex) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        // Ignora linhas de "Carregando..." ou vazias
+        const validRows = rows.filter(r => r.querySelectorAll('td').length > 1);
+        
+        const isAsc = table.dataset.sortOrder === 'asc';
+        const multiplier = isAsc ? 1 : -1;
+
+        validRows.sort((a, b) => {
+            const cellA = a.children[colIndex];
+            const cellB = b.children[colIndex];
+            const valA = getCellValue(cellA);
+            const valB = getCellValue(cellB);
+            return valA.localeCompare(valB, undefined, {numeric: true}) * multiplier;
+        });
+
+        validRows.forEach(row => tbody.appendChild(row));
+        table.dataset.sortOrder = isAsc ? 'desc' : 'asc';
+    }
+
+    function getCellValue(td) {
+        if (!td) return '';
+        const input = td.querySelector('input, select');
+        return (input ? input.value : td.textContent).trim().toLowerCase();
+    }
+
+    function createResizableColumn(th, resizer) {
+        let x = 0;
+        let w = 0;
+        const mouseDownHandler = (e) => {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(th).width);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        };
+        const mouseMoveHandler = (e) => { th.style.width = `${w + (e.clientX - x)}px`; };
+        const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
+        resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+
+    // Inicializa features nas tabelas existentes
+    initGridFeatures();
+
+    // Search Logic
+    if (globalSearch) {
+        globalSearch.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.data-grid tbody tr').forEach(row => {
+                // Pula linhas de mensagem (colspan)
+                if (row.cells.length < 2) return;
+                
+                let text = "";
+                row.querySelectorAll('td').forEach(td => {
+                    text += getCellValue(td) + " ";
+                });
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
         });
     }
 
@@ -471,6 +579,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
             }
         });
+
+        // Re-aplica o filtro de busca se houver texto
+        if (globalSearch && globalSearch.value) {
+            globalSearch.dispatchEvent(new Event('input'));
+        }
     }
 
     /**
