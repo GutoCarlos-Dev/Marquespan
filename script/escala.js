@@ -710,6 +710,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnSalvar) {
         btnSalvar.addEventListener('click', salvarDados);
+
+        // Injeta o botão Limpar Escala dinamicamente
+        const btnLimpar = document.createElement('button');
+        btnLimpar.id = 'btnLimparEscala';
+        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
+        btnLimpar.style.cssText = 'margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;';
+        
+        if (btnSalvar.parentNode) {
+            btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar.nextSibling);
+        }
+
+        btnLimpar.addEventListener('click', () => {
+            const semana = selectSemana.value;
+            if (!semana) return;
+
+            if (confirm(`ATENÇÃO: Tem certeza que deseja limpar TODOS os dados da ${semana}?\n\nEsta ação apagará todos os registros de todos os dias desta semana e não pode ser desfeita.`)) {
+                if (DADOS_LOCAL[semana]) {
+                    delete DADOS_LOCAL[semana];
+                    localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+                    
+                    // Recarrega a visualização do dia atual
+                    const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia || 'SEGUNDA';
+                    carregarDadosDia(diaAtivo, semana);
+                    
+                    alert('Escala limpa com sucesso!');
+                } else {
+                    alert('A escala desta semana já está vazia.');
+                }
+            }
+        });
     }
 
     // Atalho Ctrl+S
