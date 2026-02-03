@@ -10,23 +10,6 @@
 
   <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css">
-  <style>
-    body {
-      background-image: url('img/Marquespan_banners-caminhao.webp');
-      background-size: cover; /* Ajusta a imagem para cobrir toda a área */
-      background-position: center center; /* Centraliza a imagem */
-      background-repeat: no-repeat; /* Evita a repetição da imagem */
-      background-attachment: fixed; /* Mantém a imagem fixa ao rolar a página */
-      min-height: 100vh; /* Garante que o body ocupe a altura total da viewport */
-    }
-
-    /* Para que a imagem de fundo seja visível, o container principal
-       precisa ter um fundo semi-transparente. */
-    .main-content {
-      background-color: rgba(255, 255, 255, 0.92); /* Fundo branco com 92% de opacidade */
-      backdrop-filter: blur(4px); /* Efeito de "vidro fosco" para melhor legibilidade (opcional) */
-    }
-  </style>
 </head>
 <body>
 
@@ -37,6 +20,11 @@
   <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
     <header class="header">📊 Dashboard Administrativo</header>
+
+    <!-- Banner estilo Carrossel -->
+    <div class="banner-container" style="margin-bottom: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <img src="img/Marquespan_banners-caminhao.webp" alt="Banner Marquespan" style="width: 100%; height: auto; display: block; object-fit: cover; max-height: 300px;">
+    </div>
 
     <section class="dashboard-container">
       <div class="card">
