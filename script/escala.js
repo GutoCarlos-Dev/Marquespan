@@ -713,8 +713,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Injeta o botão Limpar Escala dinamicamente
         const btnLimpar = document.createElement('button');
         btnLimpar.id = 'btnLimparEscala';
+        btnLimpar.className = 'btn-custom';
         btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
-        btnLimpar.style.cssText = 'margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;';
+        btnLimpar.style.backgroundColor = '#dc3545';
         
         if (btnSalvar.parentNode) {
             btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar.nextSibling);
