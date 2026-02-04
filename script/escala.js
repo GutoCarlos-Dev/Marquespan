@@ -1071,9 +1071,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
                     ],
                     [
-                        { content: 'HORA\n________:________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
+                        { content: 'HORA\n______:______', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
                         { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
-                        { content: 'HORA\n________:________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
+                        { content: 'HORA\n______:______', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
                         { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } }
                     ]
                 ],
