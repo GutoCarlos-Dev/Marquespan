@@ -154,7 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
         const groupsToCheck = [
             ['placa'],
-            ['rota'],
             ['motorista', 'motorista_ausente'],
             ['auxiliar', 'auxiliar_ausente'],
             ['terceiro']
