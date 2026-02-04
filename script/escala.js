@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
             dias.forEach(dia => {
                 if (CACHE_DATAS[semana][dia]) {
-                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
                 } else {
                     datasDia[dia] = '';
                 }
