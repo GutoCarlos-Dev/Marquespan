@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 15, 5, 40, 10);
+                doc.addImage(base64data, 'PNG', 50, 5, 40, 10);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
