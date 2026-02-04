@@ -33,6 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
         .status-saving { color: #ffc107; font-size: 0.8em; margin-left: 10px; }
         .status-saved { color: #28a745; font-size: 0.8em; margin-left: 10px; }
         .status-error { color: #dc3545; font-size: 0.8em; margin-left: 10px; }
+        .context-menu {
+            position: absolute;
+            display: none;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            z-index: 1000;
+            padding: 5px 0;
+        }
+        .context-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
     `;
     document.head.appendChild(styleSheet);
 
@@ -49,6 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
+
+    // --- ELEMENTOS DINÂMICOS ---
+    const contextMenu = document.createElement('div');
+    contextMenu.id = 'customContextMenu';
+    contextMenu.className = 'context-menu';
+    document.body.appendChild(contextMenu);
     
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
@@ -287,6 +311,30 @@ document.addEventListener('DOMContentLoaded', () => {
         painelEscala.addEventListener('change', handleEdit); // Para inputs
         painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
             if (e.target.isContentEditable) handleEdit(e);
+        });
+
+        // --- CONTEXT MENU (Right-click para Gerar Boleta) ---
+        painelEscala.addEventListener('contextmenu', (e) => {
+            const input = e.target;
+            // Verifica se é um input de motorista/auxiliar e se tem valor
+            if (input.tagName === 'INPUT' && (input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
+                e.preventDefault(); // Previne o menu padrão do navegador
+
+                const nome = input.value.trim();
+
+                // Popula o menu de contexto
+                contextMenu.innerHTML = `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
+                
+                // Posiciona e exibe o menu
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+
+                // Adiciona o listener para o item do menu
+                contextMenu.querySelector('[data-action="gerarBoleta"]').addEventListener('click', () => {
+                    abrirModalBoletaComDados(nome);
+                });
+            }
         });
 
         painelEscala.addEventListener('click', async (e) => {
@@ -672,6 +720,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function abrirModalBoletaComDados(nome) {
+        const modal = document.getElementById('modalBoleta');
+        const tipoSelect = document.getElementById('filtroBoletaTipo');
+        const valorInput = document.getElementById('filtroBoletaValor');
+        const dataInput = document.getElementById('boletaData');
+
+        if (!modal || !tipoSelect || !valorInput || !dataInput) return;
+
+        // Abre o modal
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+
+        // Preenche os campos
+        tipoSelect.value = 'MOTORISTA';
+        valorInput.value = nome;
+
+        // Define a data para o dia que está sendo visualizado na escala
+        const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia;
+        const semanaAtiva = selectSemana.value;
+        if (diaAtivo && semanaAtiva && CACHE_DATAS[semanaAtiva] && CACHE_DATAS[semanaAtiva][diaAtivo]) {
+            dataInput.value = CACHE_DATAS[semanaAtiva][diaAtivo].toISOString().split('T')[0];
+        }
+
+        // Dispara a busca dos dados do veículo
+        buscarDadosBoleta();
+    }
+
     // --- INICIALIZAÇÃO ---
     function carregarSemanas() {
         const baseDate = new Date(Date.UTC(2025, 11, 28));
@@ -807,6 +882,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
     if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
+
+    // Esconde o menu de contexto ao clicar em qualquer outro lugar
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.style.display = 'none';
+        }
+    });
 
     // --- MODAL BOLETA ---
     const modalBoleta = document.getElementById('modalBoleta');
