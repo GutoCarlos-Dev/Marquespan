@@ -1029,15 +1029,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentWidth = halfPageWidth - (margin * 2);
 
         doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0, 0, 255); // Define a cor do texto para azul
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 20);
-        doc.setTextColor(0, 0, 0); // Reseta a cor do texto para preto para os elementos seguintes
+doc.setFont(undefined, 'bold');
 
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 25);
-        doc.setFont(undefined, 'normal');
+// --- LINHA 1 (Placa, Rota) ---
+// Define a cor preta para o texto fixo
+doc.setTextColor(0, 0, 0); 
+let linha1Fixa = `Placa: `;
+let linha1Dados = `${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`;
+
+// Imprime "Placa: " em preto
+doc.text(linha1Fixa, margin, 20);
+
+// Calcula a largura do "Placa: " para posicionar o dado logo após
+let larguraPlaca = doc.getStringUnitWidth(linha1Fixa) * 10 / doc.internal.scaleFactor; // Ajuste o '10' se mudar fontSize
+
+// Imprime o resultado em azul
+doc.setTextColor(0, 0, 255);
+doc.text(linha1Dados, margin + larguraPlaca, 20); // Ajuste o posicionamento conforme sua margem
+
+
+// --- LINHA 2 (Colaborador/Rota Valor) ---
+doc.setTextColor(0, 0, 0); // Preto
+let label = `${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: `;
+doc.text(label, margin, 25);
+
+// Calcula largura do label para colocar o dado em azul
+let larguraLabel = doc.getStringUnitWidth(label) * 10 / doc.internal.scaleFactor;
+
+doc.setTextColor(0, 0, 255); // Azul
+doc.text(`${valor}`, margin + larguraLabel, 25);
+
+// --- Resetar para preto para o restante do documento ---
+doc.setTextColor(0, 0, 0);
+doc.setFont(undefined, 'normal');
 
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
