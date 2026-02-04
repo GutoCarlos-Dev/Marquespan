@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
         /* Reset de tabela para estilo planilha */
-        table { border-collapse: collapse !important; width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        table { border-collapse: collapse !important; width: auto; min-width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); table-layout: fixed; }
+        th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; position: relative; }
         td { border: 1px solid #dee2e6; padding: 0 !important; height: 34px; vertical-align: middle; position: relative; }
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
         tbody tr:nth-child(odd) { background-color: #ffffff; }
@@ -1156,8 +1156,61 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
     if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
 
+    // --- REDIMENSIONAMENTO DE COLUNAS ---
+    function enableColumnResizing() {
+        const sections = Object.keys(SECAO_PARA_DB);
+        sections.forEach(sec => {
+            const tbody = document.getElementById(`tbody${sec}`);
+            if (!tbody) return;
+            const table = tbody.closest('table');
+            if (!table) return;
+            
+            const tableId = `colWidths_${sec}`;
+            const savedWidths = JSON.parse(localStorage.getItem(tableId)) || {};
+            const headers = table.querySelectorAll('th');
+
+            headers.forEach((th, index) => {
+                if (savedWidths[index]) {
+                    th.style.width = savedWidths[index];
+                } else {
+                    // Largura inicial padrão se não houver salvo
+                    if (!th.style.width) th.style.width = '150px';
+                }
+
+                if (!th.querySelector('.resizer')) {
+                    const resizer = document.createElement('div');
+                    resizer.className = 'resizer';
+                    th.appendChild(resizer);
+                    setupResizer(resizer, th, tableId, index);
+                }
+            });
+        });
+    }
+
+    function setupResizer(resizer, th, tableId, index) {
+        let x = 0, w = 0;
+        const mouseDownHandler = (e) => {
+            x = e.clientX;
+            w = parseInt(window.getComputedStyle(th).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        };
+        const mouseMoveHandler = (e) => { th.style.width = `${w + e.clientX - x}px`; };
+        const mouseUpHandler = () => {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+            const saved = JSON.parse(localStorage.getItem(tableId)) || {};
+            saved[index] = th.style.width;
+            localStorage.setItem(tableId, JSON.stringify(saved));
+        };
+        resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+
     // Inicialização
     carregarSemanas();
     preencherCacheDatas();
     carregarListasAuxiliares();
+    enableColumnResizing();
 });
