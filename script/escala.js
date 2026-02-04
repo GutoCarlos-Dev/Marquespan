@@ -123,10 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE DADOS ---
 
     function verificarDuplicidades() {
-        const keysToCheck = ['placa', 'motorista', 'auxiliar', 'terceiro'];
+        // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
+        const groupsToCheck = [
+            ['placa'],
+            ['motorista', 'motorista_ausente'],
+            ['auxiliar', 'auxiliar_ausente'],
+            ['terceiro']
+        ];
         
-        keysToCheck.forEach(key => {
-            const inputs = document.querySelectorAll(`input[data-key="${key}"]`);
+        groupsToCheck.forEach(keys => {
+            const selector = keys.map(k => `input[data-key="${k}"]`).join(', ');
+            const inputs = document.querySelectorAll(selector);
             const valuesMap = new Map();
 
             inputs.forEach(input => {
