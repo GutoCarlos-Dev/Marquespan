@@ -1034,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 27);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 25);
         doc.setFont(undefined, 'normal');
 
         const datasDia = {};
