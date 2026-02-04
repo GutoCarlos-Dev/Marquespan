@@ -1030,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const azul = [0, 0, 255];
         const preto = [0, 0, 0];
+        const vermelho = [255, 0, 0];
         
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
@@ -1055,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setTextColor(...preto);
         doc.text(labelDinamico, margin, 25);
         
-        doc.setTextColor(...azul);
+        doc.setTextColor(...vermelho);
         doc.text(`${valor}`, margin + doc.getTextWidth(labelDinamico), 25);
         
         // Reset para o padrão
