@@ -122,6 +122,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNÇÕES DE DADOS ---
 
+    function verificarDuplicidades() {
+        const keysToCheck = ['placa', 'modelo', 'rota', 'motorista', 'auxiliar', 'terceiro'];
+        
+        keysToCheck.forEach(key => {
+            const inputs = document.querySelectorAll(`input[data-key="${key}"]`);
+            const valuesMap = new Map();
+
+            inputs.forEach(input => {
+                // Reseta estilo
+                input.style.backgroundColor = '';
+                input.style.color = '';
+                input.style.fontWeight = '';
+
+                const val = input.value.trim().toUpperCase();
+                if (val) {
+                    if (!valuesMap.has(val)) valuesMap.set(val, []);
+                    valuesMap.get(val).push(input);
+                }
+            });
+
+            valuesMap.forEach((elements) => {
+                if (elements.length > 1) {
+                    elements.forEach(el => {
+                        el.style.backgroundColor = '#dc3545';
+                        el.style.color = 'white';
+                        el.style.fontWeight = 'bold';
+                    });
+                }
+            });
+        });
+    }
+
     async function adicionarLinhaManual(section) {
         const semana = selectSemana.value;
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
@@ -234,6 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            verificarDuplicidades();
+
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
             alert('Erro ao carregar dados do dia.');
@@ -308,6 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Atualiza cor se for Status
         if (key === 'status') updateInputColor(target);
+
+        verificarDuplicidades();
 
         try {
             const { error } = await supabaseClient
