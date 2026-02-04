@@ -753,34 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarListasAuxiliares();
 });
 
-                    if (json.length > 0) {
-                        // Inicializa o array se não existir
-                        if (!DADOS_LOCAL[semanaAtual][diaAtivo][secaoId]) {
-                            DADOS_LOCAL[semanaAtual][diaAtivo][secaoId] = [];
-                        }
-                        // Adiciona os dados (substituindo ou appendando? Aqui estou appendando)
-                        // Se quiser substituir, use = json;
-                        DADOS_LOCAL[semanaAtual][diaAtivo][secaoId] = json;
-                        importouAlgo = true;
-                    }
-                }
-            });
-
-            if (importouAlgo) {
-                alert(`Dados importados com sucesso para ${diaAtivo}!`);
-            } else {
-                alert('Nenhuma aba correspondente encontrada no arquivo. Verifique se os nomes das abas estão corretos (PADRAO, TRANSFERENCIA CD, etc).');
-            }
-
-            // Recarrega o dia atual para mostrar os dados
-            carregarDadosDia(diaAtivo, semanaAtual);
-            
-            // Limpa o input para permitir importar o mesmo arquivo novamente se necessário
-            e.target.value = '';
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
+                    
     /**
      * Gera o PDF da escala completa da semana.
      */
@@ -1478,4 +1451,3 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarRotas();
     carregarFuncionarios();
     carregarStatus();
-});
