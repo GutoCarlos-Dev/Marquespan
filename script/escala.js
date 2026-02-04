@@ -585,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     }
 
-    // --- GERAÇÃO DE PDF ---
+    // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
     async function gerarPDF() {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
         
@@ -653,12 +653,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (sec.id === 'FALTAS') {
                     itens = itensDiaFaltas;
-                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR'];
-                    body = itens.map(i => [i.motorista_ausente, i.motivo_motorista, i.auxiliar_ausente, i.motivo_auxiliar]);
+                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
+                    body = itens.map(i => [i.motorista_ausente, i.motivo_motorista, i.auxiliar_ausente, i.motivo_auxiliar, '']);
                 } else {
                     itens = itensDiaEscala.filter(d => d.tipo_escala === sec.id);
-                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
-                    body = itens.map(i => [i.placa, i.modelo, i.rota, i.status, i.motorista, i.auxiliar, i.terceiro]);
+                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA'];
+                    body = itens.map(i => [i.placa, i.modelo, i.rota, i.status, i.motorista, i.auxiliar, i.terceiro, '']);
                 }
 
                 if (itens.length === 0) continue;
