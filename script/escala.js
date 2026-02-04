@@ -1049,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 30;
+        let currentY = 29;
         
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
