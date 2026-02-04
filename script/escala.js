@@ -1109,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentY += 7;
         }
 
-        doc.setFontSize(7);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         
         // Campo Nome
