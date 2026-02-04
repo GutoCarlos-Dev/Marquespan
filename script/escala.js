@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 head: [[{ 
                     content: `${diaNome} - ${dateStr}`, 
                     colSpan: 4, 
-                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 9 } 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 8 } 
                 }]],
                 body: [
                     [
@@ -1071,10 +1071,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
                     ],
                     [
-                        { content: 'HORA:      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
-                        { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
-                        { content: 'HORA:      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
-                        { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } }
+                        { content: 'HORA      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
+                        { content: 'ASS________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
+                        { content: 'HORA      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } },
+                        { content: 'ASS________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 10 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
