@@ -33,24 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .status-saving { color: #ffc107; font-size: 0.8em; margin-left: 10px; }
         .status-saved { color: #28a745; font-size: 0.8em; margin-left: 10px; }
         .status-error { color: #dc3545; font-size: 0.8em; margin-left: 10px; }
-        .context-menu {
-            position: absolute;
-            display: none;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            border-radius: 5px;
-            z-index: 1000;
-            padding: 5px 0;
-        }
-        .context-menu-item {
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .context-menu-item:hover {
-            background-color: #f0f0f0;
-        }
     `;
     document.head.appendChild(styleSheet);
 
@@ -67,12 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
-
-    // --- ELEMENTOS DINÂMICOS ---
-    const contextMenu = document.createElement('div');
-    contextMenu.id = 'customContextMenu';
-    contextMenu.className = 'context-menu';
-    document.body.appendChild(contextMenu);
     
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
@@ -145,45 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- FUNÇÕES DE DADOS ---
-
-    function verificarDuplicidades() {
-        // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
-        const groupsToCheck = [
-            ['placa'],
-            ['motorista', 'motorista_ausente'],
-            ['auxiliar', 'auxiliar_ausente'],
-            ['terceiro']
-        ];
-        
-        groupsToCheck.forEach(keys => {
-            const selector = keys.map(k => `input[data-key="${k}"]`).join(', ');
-            const inputs = document.querySelectorAll(selector);
-            const valuesMap = new Map();
-
-            inputs.forEach(input => {
-                // Reseta estilo
-                input.style.backgroundColor = '';
-                input.style.color = '';
-                input.style.fontWeight = '';
-
-                const val = input.value.trim().toUpperCase();
-                if (val) {
-                    if (!valuesMap.has(val)) valuesMap.set(val, []);
-                    valuesMap.get(val).push(input);
-                }
-            });
-
-            valuesMap.forEach((elements) => {
-                if (elements.length > 1) {
-                    elements.forEach(el => {
-                        el.style.backgroundColor = '#dc3545';
-                        el.style.color = 'white';
-                        el.style.fontWeight = 'bold';
-                    });
-                }
-            });
-        });
-    }
 
     async function adicionarLinhaManual(section) {
         const semana = selectSemana.value;
@@ -297,8 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            verificarDuplicidades();
-
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
             alert('Erro ao carregar dados do dia.');
@@ -311,30 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         painelEscala.addEventListener('change', handleEdit); // Para inputs
         painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
             if (e.target.isContentEditable) handleEdit(e);
-        });
-
-        // --- CONTEXT MENU (Right-click para Gerar Boleta) ---
-        painelEscala.addEventListener('contextmenu', (e) => {
-            const input = e.target;
-            // Verifica se é um input de motorista/auxiliar e se tem valor
-            if (input.tagName === 'INPUT' && (input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
-                e.preventDefault(); // Previne o menu padrão do navegador
-
-                const nome = input.value.trim();
-
-                // Popula o menu de contexto
-                contextMenu.innerHTML = `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
-                
-                // Posiciona e exibe o menu
-                contextMenu.style.display = 'block';
-                contextMenu.style.left = `${e.pageX}px`;
-                contextMenu.style.top = `${e.pageY}px`;
-
-                // Adiciona o listener para o item do menu
-                contextMenu.querySelector('[data-action="gerarBoleta"]').addEventListener('click', () => {
-                    abrirModalBoletaComDados(nome);
-                });
-            }
         });
 
         painelEscala.addEventListener('click', async (e) => {
@@ -397,8 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Atualiza cor se for Status
         if (key === 'status') updateInputColor(target);
-
-        verificarDuplicidades();
 
         try {
             const { error } = await supabaseClient
@@ -674,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.save(`Escala_${semana}.pdf`);
     }
 
-        // --- BOLETA ---
+    // --- BOLETA ---
     async function buscarDadosBoleta() {
         const tipo = document.getElementById('filtroBoletaTipo').value;
         const valor = document.getElementById('filtroBoletaValor').value.trim().toUpperCase();
@@ -720,33 +629,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function abrirModalBoletaComDados(nome) {
-        const modal = document.getElementById('modalBoleta');
-        const tipoSelect = document.getElementById('filtroBoletaTipo');
-        const valorInput = document.getElementById('filtroBoletaValor');
-        const dataInput = document.getElementById('boletaData');
-
-        if (!modal || !tipoSelect || !valorInput || !dataInput) return;
-
-        // Abre o modal
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-
-        // Preenche os campos
-        tipoSelect.value = 'MOTORISTA';
-        valorInput.value = nome;
-
-        // Define a data para o dia que está sendo visualizado na escala
-        const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia;
-        const semanaAtiva = selectSemana.value;
-        if (diaAtivo && semanaAtiva && CACHE_DATAS[semanaAtiva] && CACHE_DATAS[semanaAtiva][diaAtivo]) {
-            dataInput.value = CACHE_DATAS[semanaAtiva][diaAtivo].toISOString().split('T')[0];
-        }
-
-        // Dispara a busca dos dados do veículo
-        buscarDadosBoleta();
-    }
-
     // --- INICIALIZAÇÃO ---
     function carregarSemanas() {
         const baseDate = new Date(Date.UTC(2025, 11, 28));
@@ -765,30 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
-
-    // Configuração de Status baseada em status.html
-    const STATUS_CONFIG = {
-        'CNT SP': { bg: '#FF9800', color: 'white' },
-        'ZMRC': { bg: '#F44336', color: 'white' },
-        'ZMRC CPN': { bg: '#B71C1C', color: 'white' },
-        'V': { bg: '#2196F3', color: 'white' },
-        'P': { bg: '#9C27B0', color: 'white' },
-        'R': { bg: '#4CAF50', color: 'white' },
-        'V - RESTR': { bg: '#3F51B5', color: 'white' },
-        'RESTR': { bg: '#795548', color: 'white' },
-        'BGMN': { bg: '#FFEB3B', color: 'black' },
-        'TRI +': { bg: '#E91E63', color: 'white' },
-        '152/257': { bg: '#00BCD4', color: 'black' },
-        '194 TER': { bg: '#009688', color: 'white' },
-        // Status Legados
-        'OK': { bg: '#28a745', color: 'white' },
-        'MANUTENÇÃO': { bg: '#dc3545', color: 'white' },
-        'FALTA': { bg: '#dc3545', color: 'white' },
-        'FERIAS': { bg: '#17a2b8', color: 'white' },
-        'FOLGA': { bg: '#6c757d', color: 'white' },
-        'ATESTADO': { bg: '#ffc107', color: 'black' }
-    };
-
     async function carregarListasAuxiliares() {
         // Veículos
         const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
@@ -813,15 +671,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Status
+        const statusList = ['OK', 'MANUTENÇÃO', 'FALTA', 'FERIAS', 'FOLGA', 'ATESTADO'];
         const dlStatus = document.getElementById('listaStatus');
-        if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
+        if(dlStatus) dlStatus.innerHTML = statusList.map(s => `<option value="${s}">`).join('');
     }
 
     function getStatusStyle(status) {
-        const config = STATUS_CONFIG[status?.toUpperCase()] || STATUS_CONFIG[status];
-        if (config) {
-            return `background-color: ${config.bg}; color: ${config.color}; font-weight: bold; text-align: center;`;
-        }
+        // Exemplo simples, pode expandir
+        if (status === 'OK') return 'color: green; font-weight: bold;';
+        if (['FALTA', 'MANUTENÇÃO'].includes(status)) return 'color: red; font-weight: bold;';
         return '';
     }
     function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
@@ -883,55 +741,437 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
 
-    // Esconde o menu de contexto ao clicar em qualquer outro lugar
-    document.addEventListener('click', (e) => {
-        if (!contextMenu.contains(e.target)) {
-            contextMenu.style.display = 'none';
+    // Boleta Listeners
+    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
+    const boletaData = document.getElementById('boletaData');
+    if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
+    if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
+
+    // Inicialização
+    carregarSemanas();
+    preencherCacheDatas();
+    carregarListasAuxiliares();
+});
+
+                    
+    /**
+     * Gera o PDF da escala completa da semana.
+     */
+    async function gerarPDF() {
+        if (!window.jspdf) {
+            alert('Biblioteca PDF não carregada. Verifique sua conexão.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        // Configuração A4 Paisagem com margens mínimas (5mm)
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        
+        const semana = selectSemana.value;
+        const dadosSemana = DADOS_LOCAL[semana] || {};
+
+        // Tenta carregar o logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                // Logo no canto superior esquerdo
+                doc.addImage(base64data, 'PNG', 5, 5, 40, 15);
+            }
+        } catch (e) {
+            console.warn('Logo não carregado', e);
+        }
+
+        // Cabeçalho do Relatório
+        doc.setFontSize(18);
+        doc.text(`Escala Semanal - ${semana}`, 148.5, 15, { align: 'center' });
+        doc.setFontSize(9);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 292, 10, { align: 'right' });
+
+        let finalY = 25;
+
+        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const secoes = [
+            { id: 'Padrao', title: 'PADRÃO' },
+            { id: 'Transferencia', title: 'TRANSFERÊNCIA CD' },
+            { id: 'Equipamento', title: 'EQUIPAMENTO' },
+            { id: 'Reservas', title: 'RESERVAS' },
+            { id: 'Faltas', title: 'FALTAS / FÉRIAS / AFASTADOS' }
+        ];
+
+        let hasContent = false;
+
+        for (const dia of dias) {
+            const dadosDia = dadosSemana[dia];
+            if (!dadosDia) continue;
+            
+            // Verifica se o dia tem algum dado em qualquer seção
+            const hasData = secoes.some(sec => dadosDia[sec.id] && dadosDia[sec.id].length > 0);
+            if (!hasData) continue;
+
+            hasContent = true;
+
+            // Verifica espaço para o cabeçalho do dia
+            if (finalY > 185) {
+                doc.addPage();
+                finalY = 15;
+            }
+            
+            // Cabeçalho do Dia (Barra Cinza)
+            doc.setFillColor(230, 230, 230);
+            doc.rect(5, finalY, 287, 7, 'F'); // Largura total menos margens (297 - 5 - 5)
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            
+            let dateStr = '';
+            if (CACHE_DATAS[semana] && CACHE_DATAS[semana][dia]) {
+                 dateStr = ' - ' + CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+            }
+            
+            doc.text(`${dia}${dateStr}`, 148.5, finalY + 5, { align: 'center' });
+            finalY += 9;
+
+            for (const sec of secoes) {
+                const itens = dadosDia[sec.id] || [];
+                if (itens.length === 0) continue;
+
+                let columns, body;
+                if (sec.id === 'Faltas') {
+                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR'];
+                    body = itens.map(i => [i.MOTORISTA || '', i.MOTIVO_MOTORISTA || '', i.AUXILIAR || '', i.MOTIVO_AUXILIAR || '']);
+                } else {
+                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
+                    body = itens.map(i => [i.PLACA || '', i.MODELO || '', i.ROTA || '', i.STATUS || '', i.MOTORISTA || '', i.AUXILIAR || '', i.TERCEIRO || '']);
+                }
+
+                // Título da Seção
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 105, 55); // Verde Marquespan
+                doc.text(sec.title, 5, finalY + 3);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: body,
+                    startY: finalY + 4,
+                    margin: { left: 5, right: 5 }, // Margens laterais de 5mm
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' }
+                    },
+                    didDrawPage: (data) => {
+                        // Se a tabela quebrar página, atualiza o finalY
+                        finalY = data.cursor.y;
+                    }
+                });
+
+                finalY = doc.lastAutoTable.finalY + 4;
+            }
+            finalY += 2; // Espaço entre dias
+        }
+
+        if (!hasContent) {
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Nenhum dado encontrado para esta semana.', 148.5, 50, { align: 'center' });
+        }
+
+        doc.save(`Escala_${semana.replace(/\s+/g, '_')}.pdf`);
+    }
+
+    // --- EVENT LISTENERS ---
+
+    // Botão Abrir Escala
+    if (btnAbrirEscala) {
+        btnAbrirEscala.addEventListener('click', () => {
+            const semanaSelecionada = selectSemana.value;
+            if (!semanaSelecionada) {
+                alert('Por favor, selecione uma semana.');
+                return;
+            }
+
+            // Usa o cache para atualizar as abas
+            const dadosSemana = CACHE_DATAS[semanaSelecionada];
+
+            tabButtons.forEach(btn => {
+                const dia = btn.dataset.dia;
+                const currentDate = dadosSemana ? dadosSemana[dia] : new Date();
+                const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+                
+                const diaNome = btn.textContent.split(' ')[0].replace(/\d/g, '').replace(/\//g, '').trim();
+                btn.innerHTML = `${diaNome} <span class="tab-date">${formattedDate}</span>`;
+            });
+            // --- FIM DA NOVA LÓGICA ---
+
+            painelEscala.classList.remove('hidden');
+            
+            // Ativa a primeira aba (DOMINGO) por padrão
+            const abaDomingo = document.querySelector('.tab-btn[data-dia="DOMINGO"]');
+            if (abaDomingo) abaDomingo.click();
+        });
+    }
+
+    // Navegação por Abas
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Remove classe active de todos
+            tabButtons.forEach(b => b.classList.remove('active'));
+            // Adiciona ao clicado
+            e.target.classList.add('active');
+            
+            const dia = e.target.dataset.dia;
+            const semana = selectSemana.value;
+            carregarDadosDia(dia, semana);
+        });
+    });
+
+    if (btnBaixarModelo) {
+        btnBaixarModelo.addEventListener('click', baixarModeloExcel);
+    }
+
+    if (btnImportar && fileImportar) {
+        btnImportar.addEventListener('click', () => fileImportar.click());
+        fileImportar.addEventListener('change', importarExcel);
+    }
+
+    if (btnPDF) {
+        btnPDF.addEventListener('click', gerarPDF);
+    }
+
+    // Listener para o botão de importar específico do dia (Delegado pois o botão é criado dinamicamente)
+    if (painelEscala) {
+        painelEscala.addEventListener('click', (e) => {
+            // Botão Importar Dia
+            const btnImport = e.target.closest('#btnImportarDiaAction');
+            if (btnImport && fileImportarDia) {
+                fileImportarDia.click();
+                return;
+            }
+
+            // Botão Copiar Dia Seguinte
+            const btnCopiar = e.target.closest('#btnCopiarDiaSeguinte');
+            if (btnCopiar) {
+                const semanaAtual = selectSemana.value;
+                const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+                
+                if (!semanaAtual || !diaAtual) return;
+
+                const diasOrdenados = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+                const idxAtual = diasOrdenados.indexOf(diaAtual);
+                
+                let proximaSemana = semanaAtual;
+                let proximoDia = '';
+
+                if (idxAtual === -1) return;
+
+                if (idxAtual < diasOrdenados.length - 1) {
+                    proximoDia = diasOrdenados[idxAtual + 1];
+                } else {
+                    // É Sábado, vai para Domingo da próxima semana
+                    const match = semanaAtual.match(/SEMANA (\d+) - (\d+)/);
+                    if (match) {
+                        let numSemana = parseInt(match[1], 10);
+                        let ano = parseInt(match[2], 10);
+                        
+                        numSemana++;
+                        if (numSemana > 53) {
+                             alert('Limite de semanas atingido.');
+                             return;
+                        }
+                        proximaSemana = `SEMANA ${String(numSemana).padStart(2, '0')} - ${ano}`;
+                        proximoDia = 'DOMINGO';
+                    } else {
+                        return;
+                    }
+                }
+
+                if (!DADOS_LOCAL[semanaAtual] || !DADOS_LOCAL[semanaAtual][diaAtual]) {
+                    alert('Não há dados neste dia para copiar.');
+                    return;
+                }
+
+                const dadosOrigem = DADOS_LOCAL[semanaAtual][diaAtual];
+                const temDadosOrigem = Object.values(dadosOrigem).some(arr => Array.isArray(arr) && arr.length > 0);
+                
+                if (!temDadosOrigem) {
+                    alert('O dia atual está vazio. Nada para copiar.');
+                    return;
+                }
+
+                if (!DADOS_LOCAL[proximaSemana]) DADOS_LOCAL[proximaSemana] = {};
+                
+                if (DADOS_LOCAL[proximaSemana][proximoDia]) {
+                     const temDadosDestino = Object.values(DADOS_LOCAL[proximaSemana][proximoDia]).some(arr => Array.isArray(arr) && arr.length > 0);
+                     if (temDadosDestino) {
+                         if (!confirm(`O dia seguinte (${proximoDia} - ${proximaSemana}) já possui dados. Deseja sobrescrever?`)) {
+                             return;
+                         }
+                     }
+                }
+
+                DADOS_LOCAL[proximaSemana][proximoDia] = JSON.parse(JSON.stringify(dadosOrigem));
+                localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+                
+                if (proximaSemana === semanaAtual) {
+                    if(confirm(`Copiado com sucesso para ${proximoDia}! Deseja ir para este dia?`)) {
+                        const tab = document.querySelector(`.tab-btn[data-dia="${proximoDia}"]`);
+                        if(tab) tab.click();
+                    }
+                } else {
+                    alert(`Copiado com sucesso para ${proximoDia} da ${proximaSemana}!`);
+                }
+                return;
+            }
+
+            // Botão Excluir Linha
+            const btnExcluir = e.target.closest('.btn-acao.excluir');
+            if (btnExcluir) {
+                const tr = btnExcluir.closest('tr');
+                // Encontra a primeira célula editável para pegar os metadados
+                const firstCell = tr.querySelector('td[data-section]');
+                if (firstCell) {
+                    const section = firstCell.dataset.section;
+                    const index = parseInt(firstCell.dataset.row);
+                    const semana = selectSemana.value;
+                    const dia = document.querySelector('.tab-btn.active').dataset.dia;
+
+                    if (confirm('Deseja remover esta linha?')) {
+                        if (DADOS_LOCAL[semana] && DADOS_LOCAL[semana][dia] && DADOS_LOCAL[semana][dia][section]) {
+                            DADOS_LOCAL[semana][dia][section].splice(index, 1);
+                            carregarDadosDia(dia, semana); // Re-renderiza para atualizar índices
+                        }
+                    }
+                }
+            }
+        });
+
+        // Listener para Edição (Input) - Atualiza DADOS_LOCAL em tempo real
+        painelEscala.addEventListener('input', (e) => {
+            const target = e.target;
+            // Verifica se é um elemento editável (input ou contenteditable)
+            if (target.hasAttribute('contenteditable') || target.classList.contains('table-input')) {
+                const section = target.dataset.section;
+                const row = parseInt(target.dataset.row);
+                const key = target.dataset.key;
+                const semana = selectSemana.value;
+                const dia = document.querySelector('.tab-btn.active').dataset.dia;
+                
+                if (DADOS_LOCAL[semana] && DADOS_LOCAL[semana][dia] && DADOS_LOCAL[semana][dia][section]) {
+                    if (DADOS_LOCAL[semana][dia][section][row]) {
+                        const valor = target.value !== undefined ? target.value : target.innerText;
+                        DADOS_LOCAL[semana][dia][section][row][key] = valor;
+
+                        // Auto-preencher Modelo se a Placa for alterada
+                        if (key === 'PLACA') {
+                            const veiculoEncontrado = listaVeiculos.find(v => v.placa === valor);
+                            if (veiculoEncontrado) {
+                                DADOS_LOCAL[semana][dia][section][row]['MODELO'] = veiculoEncontrado.modelo;
+                                // Atualiza o input de modelo na mesma linha visualmente
+                                const tr = target.closest('tr');
+                                const inputModelo = tr.querySelector('input[data-key="MODELO"]');
+                                if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
+                            }
+                        }
+
+                        // Atualiza cor se for Status
+                        if (key === 'STATUS') {
+                            updateInputColor(target);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
+
+    // --- SALVAR ---
+    function salvarDados() {
+        localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+        alert('Dados salvos com sucesso!');
+    }
+
+    if (btnSalvar) {
+        btnSalvar.addEventListener('click', salvarDados);
+
+        // Injeta o botão Limpar Escala dinamicamente
+        const btnLimpar = document.createElement('button');
+        btnLimpar.id = 'btnLimparEscala';
+        btnLimpar.className = 'btn-custom';
+        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
+        btnLimpar.style.backgroundColor = '#dc3545';
+        
+        if (btnSalvar.parentNode) {
+            btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar.nextSibling);
+        }
+
+        btnLimpar.addEventListener('click', () => {
+            const semana = selectSemana.value;
+            if (!semana) return;
+
+            if (confirm(`ATENÇÃO: Tem certeza que deseja limpar TODOS os dados da ${semana}?\n\nEsta ação apagará todos os registros de todos os dias desta semana e não pode ser desfeita.`)) {
+                if (DADOS_LOCAL[semana]) {
+                    delete DADOS_LOCAL[semana];
+                    localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
+                    
+                    // Recarrega a visualização do dia atual
+                    const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia || 'SEGUNDA';
+                    carregarDadosDia(diaAtivo, semana);
+                    
+                    alert('Escala limpa com sucesso!');
+                } else {
+                    alert('A escala desta semana já está vazia.');
+                }
+            }
+        });
+    }
+
+    // Atalho Ctrl+S
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault(); // Previne o salvar padrão do navegador
+            salvarDados();
         }
     });
 
-    // --- MODAL BOLETA ---
+    // --- BOLETA DE HORÁRIO ---
+    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
     const modalBoleta = document.getElementById('modalBoleta');
     const btnCloseModalBoleta = document.getElementById('btnCloseModalBoleta');
-    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
+    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
     const filtroBoletaTipo = document.getElementById('filtroBoletaTipo');
+    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
     const listaBoletaOpcoes = document.getElementById('listaBoletaOpcoes');
-
-    function atualizarOpcoesBoleta() {
-        if (!listaBoletaOpcoes || !filtroBoletaTipo) return;
-        const tipo = filtroBoletaTipo.value;
-        listaBoletaOpcoes.innerHTML = '';
-        
-        if (tipo === 'ROTA') {
-             const options = document.getElementById('listaRotas')?.innerHTML || '';
-             listaBoletaOpcoes.innerHTML = options;
-        } else {
-             const motOptions = document.getElementById('listaMotoristas')?.innerHTML || '';
-             const auxOptions = document.getElementById('listaAuxiliares')?.innerHTML || '';
-             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
-        }
-    }
+    const boletaPlaca = document.getElementById('boletaPlaca');
+    const boletaModelo = document.getElementById('boletaModelo');
+    const boletaRota = document.getElementById('boletaRota');
+    const boletaData = document.getElementById('boletaData');
 
     if (btnGerarBoleta) {
         btnGerarBoleta.addEventListener('click', () => {
             if (modalBoleta) {
                 modalBoleta.classList.remove('hidden');
-                modalBoleta.style.display = 'flex';
+                // Garante que o display flex inline funcione se a classe hidden usar display:none
+                modalBoleta.style.display = 'flex'; 
                 atualizarOpcoesBoleta();
+                // Limpa campos ao abrir
+                if(filtroBoletaValor) filtroBoletaValor.value = '';
+                if(boletaPlaca) boletaPlaca.value = '';
+                if(boletaModelo) boletaModelo.value = '';
+                if(boletaRota) boletaRota.value = '';
                 
-                // Limpa campos
-                const fValor = document.getElementById('filtroBoletaValor');
-                if(fValor) fValor.value = '';
-                ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if(el) el.value = '';
-                });
-
                 // Define data padrão (Segunda-feira da semana selecionada)
                 const semana = selectSemana.value;
-                const bData = document.getElementById('boletaData');
-                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA'] && bData) {
-                    bData.value = CACHE_DATAS[semana]['SEGUNDA'].toISOString().split('T')[0];
+                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA']) {
+                    // Ajusta para YYYY-MM-DD
+                    const dateObj = CACHE_DATAS[semana]['SEGUNDA'];
+                    if(boletaData) boletaData.value = dateObj.toISOString().split('T')[0];
                 }
             }
         });
@@ -945,7 +1185,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
+    
+    // Fechar ao clicar fora
     if (modalBoleta) {
         modalBoleta.addEventListener('click', (e) => {
             if (e.target === modalBoleta) {
@@ -957,21 +1198,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (filtroBoletaTipo) {
         filtroBoletaTipo.addEventListener('change', () => {
-            const fValor = document.getElementById('filtroBoletaValor');
-            if(fValor) fValor.value = '';
+            if (filtroBoletaValor) filtroBoletaValor.value = '';
             atualizarOpcoesBoleta();
-             ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
-            });
+            // Limpa campos automáticos
+            if(boletaPlaca) boletaPlaca.value = '';
+            if(boletaModelo) boletaModelo.value = '';
+            if(boletaRota) boletaRota.value = '';
         });
     }
 
-    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
+    // Preenchimento automático ao selecionar/digitar
+    function buscarDadosBoleta() {
+        const tipo = filtroBoletaTipo.value;
+        const valorRaw = filtroBoletaValor.value;
+        const valor = valorRaw ? valorRaw.trim().toUpperCase() : '';
+        const dataSelecionada = boletaData ? boletaData.value : null;
+
+        // Limpa campos antes de buscar
+        if(boletaPlaca) boletaPlaca.value = '';
+        if(boletaModelo) boletaModelo.value = '';
+        if(boletaRota) boletaRota.value = '';
+
+        if (!valor || !dataSelecionada) return;
+
+        // Garante que o cache de datas esteja preenchido
+        if (Object.keys(CACHE_DATAS).length === 0) {
+            preencherCacheDatas();
+        }
+
+        // 1. Identifica qual semana e dia correspondem à data selecionada (busca em todo o calendário)
+        let semanaEncontrada = null;
+        let diaEncontrado = null;
+
+        for (const [semanaKey, diasObj] of Object.entries(CACHE_DATAS)) {
+            for (const [diaKey, dateObj] of Object.entries(diasObj)) {
+                if (dateObj.toISOString().split('T')[0] === dataSelecionada) {
+                    semanaEncontrada = semanaKey;
+                    diaEncontrado = diaKey;
+                    break;
+                }
+            }
+            if (semanaEncontrada) break;
+        }
+
+        if (!semanaEncontrada || !diaEncontrado) return; // Data não encontrada no calendário
+
+        // 2. Busca nos dados locais usando a semana e dia encontrados
+        if (DADOS_LOCAL[semanaEncontrada] && DADOS_LOCAL[semanaEncontrada][diaEncontrado]) {
+            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
+            
+            for (const s of secoesBusca) {
+                const lista = DADOS_LOCAL[semanaEncontrada][diaEncontrado][s] || [];
+                for (const item of lista) {
+                    const itemMotorista = item.MOTORISTA ? item.MOTORISTA.toUpperCase().trim() : '';
+                    const itemAuxiliar = item.AUXILIAR ? item.AUXILIAR.toUpperCase().trim() : '';
+                    const itemRota = item.ROTA ? item.ROTA.toUpperCase().trim() : '';
+
+                    if (tipo === 'MOTORISTA') {
+                        if (itemMotorista === valor || itemAuxiliar === valor) {
+                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                            if(boletaRota) boletaRota.value = item.ROTA || '';
+                            return; // Encontrou e preencheu
+                        }
+                    } else { // ROTA
+                        if (itemRota === valor) {
+                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
+                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
+                            if(boletaRota) boletaRota.value = valor; // Mantém o valor pesquisado
+                            return; // Encontrou e preencheu
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (filtroBoletaValor) {
+        filtroBoletaValor.addEventListener('input', buscarDadosBoleta);
+        filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
+    }
+    
+    if (boletaData) {
+        boletaData.addEventListener('change', buscarDadosBoleta);
+    }
+
+    function atualizarOpcoesBoleta() {
+        if (!listaBoletaOpcoes) return;
+        const tipo = filtroBoletaTipo.value;
+        listaBoletaOpcoes.innerHTML = '';
+        
+        if (tipo === 'ROTA') {
+             const options = document.getElementById('listaRotas').innerHTML;
+             listaBoletaOpcoes.innerHTML = options;
+        } else {
+             const motOptions = document.getElementById('listaMotoristas').innerHTML;
+             const auxOptions = document.getElementById('listaAuxiliares').innerHTML;
+             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
+        }
+    }
+
     if (btnGerarBoletaPDF) {
         btnGerarBoletaPDF.addEventListener('click', () => {
-            const tipo = document.getElementById('filtroBoletaTipo').value;
-            const valor = document.getElementById('filtroBoletaValor').value.trim();
+            const tipo = filtroBoletaTipo.value;
+            const valor = filtroBoletaValor.value.trim();
             const semana = selectSemana.value;
             
             if (!valor) {
@@ -989,6 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Garante que as datas estejam carregadas no cache
         if (Object.keys(CACHE_DATAS).length === 0) {
             preencherCacheDatas();
         }
@@ -996,6 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         
+        // Logo
         try {
             const response = await fetch('logo.png');
             if (response.ok) {
@@ -1005,33 +1337,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 10, 5, 40, 15);
+                doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
+        // Pega as informações dos campos do modal (que foram preenchidos automaticamente ou manualmente)
         const infoPlaca = document.getElementById('boletaPlaca').value || '_____';
         const infoModelo = document.getElementById('boletaModelo').value || '_____';
         const infoRota = document.getElementById('boletaRota').value || '_____';
 
-        // Configurações de Layout (Metade da Página)
-        const margin = 10;
-        const halfPageWidth = 148.5; // Metade de 297mm
-        const contentWidth = halfPageWidth - (margin * 2);
-
         doc.setFontSize(16);
-        doc.text(`Boleta de Controle - ${semana}`, margin, 25);
+        doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
         
         doc.setFontSize(11);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 32);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
 
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 39);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
         doc.setFont(undefined, 'normal');
 
         doc.setFontSize(9);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, halfPageWidth - margin, 10, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
 
+        // Prepara as datas
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
             const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
@@ -1044,10 +1373,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 45;
+        let currentY = 35;
+        const margin = 10;
+        const pageWidth = 210;
+        const contentWidth = pageWidth - (margin * 2);
         const gap = 5;
         const colWidth = (contentWidth - gap) / 2;
 
+        // Função auxiliar para desenhar a tabela de um dia
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
             const diaNome = diaKey === 'TERCA' ? 'TERÇA' : diaKey;
@@ -1072,10 +1405,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
@@ -1089,32 +1422,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return doc.lastAutoTable.finalY;
         };
 
+        // 1. Domingo (Centralizado)
         const domWidth = colWidth; 
-        const domX = (pageWidth - domWidth) / 2;
+        const domX = margin + (contentWidth - domWidth) / 2;
         currentY = drawDayTable('DOMINGO', domX, currentY, domWidth) + 5;
 
+        // 2. Segunda e Terça
         const ySeg = drawDayTable('SEGUNDA', margin, currentY, colWidth);
         const yTer = drawDayTable('TERCA', margin + colWidth + gap, currentY, colWidth);
         currentY = Math.max(ySeg, yTer) + 5;
 
+        // 3. Quarta e Quinta
         const yQua = drawDayTable('QUARTA', margin, currentY, colWidth);
         const yQui = drawDayTable('QUINTA', margin + colWidth + gap, currentY, colWidth);
         currentY = Math.max(yQua, yQui) + 5;
 
+        // 4. Sexta e Sábado
         const ySex = drawDayTable('SEXTA', margin, currentY, colWidth);
         const ySab = drawDayTable('SABADO', margin + colWidth + gap, currentY, colWidth);
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
 
-    // Boleta Listeners
-    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
-    const boletaData = document.getElementById('boletaData');
-    if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
-    if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
-
-    // Inicialização
+    // --- INICIALIZAÇÃO ---
     carregarSemanas();
     preencherCacheDatas();
-    carregarListasAuxiliares();
-});
+    carregarVeiculos();
+    carregarRotas();
+    carregarFuncionarios();
+    carregarStatus();
