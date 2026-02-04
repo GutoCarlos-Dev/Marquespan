@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     theme: 'grid',
                     styles: { fontSize: 8, cellPadding: 1 },
                     headStyles: { fillColor: [0, 105, 55], textColor: 255 },
-                    alternateRowStyles: { fillColor: [240, 240, 240] },
+                    alternateRowStyles: { fillColor: [220, 220, 220] },
                     didDrawPage: (data) => { finalY = data.cursor.y; },
                     didParseCell: function(data) {
                         if (data.section === 'body' && sec.id !== 'FALTAS' && data.column.index === 3) {
