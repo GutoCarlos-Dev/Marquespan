@@ -885,6 +885,144 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
+    if (btnGerarBoletaPDF) {
+        btnGerarBoletaPDF.addEventListener('click', () => {
+            const tipo = document.getElementById('filtroBoletaTipo').value;
+            const valor = document.getElementById('filtroBoletaValor').value.trim();
+            const semana = selectSemana.value;
+            
+            if (!valor) {
+                alert('Por favor, informe o nome ou rota.');
+                return;
+            }
+            
+            gerarPDFBoleta(semana, tipo, valor);
+        });
+    }
+
+    async function gerarPDFBoleta(semana, tipo, valor) {
+        if (!window.jspdf) {
+            alert('Biblioteca PDF não carregada.');
+            return;
+        }
+        
+        if (Object.keys(CACHE_DATAS).length === 0) {
+            preencherCacheDatas();
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
+            }
+        } catch (e) { console.warn('Logo não carregado', e); }
+
+        const infoPlaca = document.getElementById('boletaPlaca').value || '_____';
+        const infoModelo = document.getElementById('boletaModelo').value || '_____';
+        const infoRota = document.getElementById('boletaRota').value || '_____';
+
+        doc.setFontSize(16);
+        doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+
+        doc.setFontSize(9);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
+
+        const datasDia = {};
+        if (CACHE_DATAS[semana]) {
+            const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+            dias.forEach(dia => {
+                if (CACHE_DATAS[semana][dia]) {
+                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
+                } else {
+                    datasDia[dia] = '';
+                }
+            });
+        }
+
+        let currentY = 35;
+        const margin = 10;
+        const pageWidth = 210;
+        const contentWidth = pageWidth - (margin * 2);
+        const gap = 5;
+        const colWidth = (contentWidth - gap) / 2;
+
+        const drawDayTable = (diaKey, x, y, width) => {
+            const dateStr = datasDia[diaKey] || '';
+            const diaNome = diaKey === 'TERCA' ? 'TERÇA' : diaKey;
+            
+            doc.autoTable({
+                startY: y,
+                margin: { left: x },
+                tableWidth: width,
+                theme: 'grid',
+                head: [[{ 
+                    content: `${diaNome} - ${dateStr}`, 
+                    colSpan: 4, 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 10 } 
+                }]],
+                body: [
+                    [
+                        { content: 'INICIO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                        { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
+                    ],
+                    [
+                        { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } },
+                        { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
+                    ],
+                    [
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } }
+                    ]
+                ],
+                styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
+                columnStyles: {
+                    0: { cellWidth: width * 0.2 },
+                    1: { cellWidth: width * 0.3 },
+                    2: { cellWidth: width * 0.2 },
+                    3: { cellWidth: width * 0.3 }
+                }
+            });
+            return doc.lastAutoTable.finalY;
+        };
+
+        const domWidth = colWidth; 
+        const domX = (pageWidth - domWidth) / 2;
+        currentY = drawDayTable('DOMINGO', domX, currentY, domWidth) + 5;
+
+        const ySeg = drawDayTable('SEGUNDA', margin, currentY, colWidth);
+        const yTer = drawDayTable('TERCA', margin + colWidth + gap, currentY, colWidth);
+        currentY = Math.max(ySeg, yTer) + 5;
+
+        const yQua = drawDayTable('QUARTA', margin, currentY, colWidth);
+        const yQui = drawDayTable('QUINTA', margin + colWidth + gap, currentY, colWidth);
+        currentY = Math.max(yQua, yQui) + 5;
+
+        const ySex = drawDayTable('SEXTA', margin, currentY, colWidth);
+        const ySab = drawDayTable('SABADO', margin + colWidth + gap, currentY, colWidth);
+
+        doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
+    }
+
     // Boleta Listeners
     const filtroBoletaValor = document.getElementById('filtroBoletaValor');
     const boletaData = document.getElementById('boletaData');
