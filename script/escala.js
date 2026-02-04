@@ -1028,40 +1028,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
 
+        const azul = [0, 0, 255];
+        const preto = [0, 0, 0];
+        
         doc.setFontSize(10);
-doc.setFont(undefined, 'bold');
-
-// --- LINHA 1 (Placa, Rota) ---
-// Define a cor preta para o texto fixo
-doc.setTextColor(0, 0, 0); 
-let linha1Fixa = `Placa: `;
-let linha1Dados = `${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`;
-
-// Imprime "Placa: " em preto
-doc.text(linha1Fixa, margin, 20);
-
-// Calcula a largura do "Placa: " para posicionar o dado logo após
-let larguraPlaca = doc.getStringUnitWidth(linha1Fixa) * 10 / doc.internal.scaleFactor; // Ajuste o '10' se mudar fontSize
-
-// Imprime o resultado em azul
-doc.setTextColor(0, 0, 255);
-doc.text(linha1Dados, margin + larguraPlaca, 20); // Ajuste o posicionamento conforme sua margem
-
-
-// --- LINHA 2 (Colaborador/Rota Valor) ---
-doc.setTextColor(0, 0, 0); // Preto
-let label = `${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: `;
-doc.text(label, margin, 25);
-
-// Calcula largura do label para colocar o dado em azul
-let larguraLabel = doc.getStringUnitWidth(label) * 10 / doc.internal.scaleFactor;
-
-doc.setTextColor(0, 0, 255); // Azul
-doc.text(`${valor}`, margin + larguraLabel, 25);
-
-// --- Resetar para preto para o restante do documento ---
-doc.setTextColor(0, 0, 0);
-doc.setFont(undefined, 'normal');
+        doc.setFont(undefined, 'bold');
+        
+        // --- LINHA 1: Placa e Rota ---
+        doc.setTextColor(...preto);
+        doc.text("Placa: ", margin, 20);
+        let currentX = margin + doc.getTextWidth("Placa: ");
+        
+        doc.setTextColor(...azul);
+        doc.text(`${infoPlaca} - ${infoModelo}`, currentX, 20);
+        currentX += doc.getTextWidth(`${infoPlaca} - ${infoModelo}   |   `);
+        
+        doc.setTextColor(...preto);
+        doc.text("Rota: ", currentX, 20);
+        currentX += doc.getTextWidth("Rota: ");
+        
+        doc.setTextColor(...azul);
+        doc.text(`${infoRota}`, currentX, 20);
+        
+        // --- LINHA 2: Dinâmico (Rota ou Colaborador) ---
+        const labelDinamico = `${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: `;
+        doc.setTextColor(...preto);
+        doc.text(labelDinamico, margin, 25);
+        
+        doc.setTextColor(...azul);
+        doc.text(`${valor}`, margin + doc.getTextWidth(labelDinamico), 25);
+        
+        // Reset para o padrão
+        doc.setTextColor(...preto);
+        doc.setFont(undefined, 'normal');
 
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
