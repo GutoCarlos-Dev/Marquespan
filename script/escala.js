@@ -1029,9 +1029,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
 
-        doc.setFontSize(14);
-        doc.text(`Boleta de Controle - ${semana}`, margin, 22);
-        
         doc.setFontSize(10);
         doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 27);
 
