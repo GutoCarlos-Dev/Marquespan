@@ -1101,6 +1101,25 @@ document.addEventListener('DOMContentLoaded', () => {
              currentY = drawDayTable(dia, margin, currentY, contentWidth) + 3;
         }
 
+        // Rodapé com campos para Nome e Assinatura
+        if (currentY + 15 > 200) {
+            doc.addPage();
+            currentY = 20;
+        } else {
+            currentY += 5;
+        }
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        
+        // Campo Nome
+        doc.text('Nome Completo:', margin, currentY);
+        doc.line(margin, currentY + 4, margin + 60, currentY + 4); 
+        
+        // Campo Assinatura
+        doc.text('Assinatura:', margin + 65, currentY);
+        doc.line(margin + 65, currentY + 4, margin + contentWidth, currentY + 4);
+
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
 
