@@ -663,15 +663,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (itens.length === 0) continue;
 
-                doc.setFontSize(9);
+                doc.setFillColor(0, 0, 0);
+                doc.rect(5, finalY, 287, 6, 'F');
+
+                doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.setTextColor(0, 105, 55);
-                doc.text(sec.title, 5, finalY + 3);
+                doc.setTextColor(255, 255, 255);
+                doc.text(sec.title, 148.5, finalY + 4.5, { align: 'center' });
 
                 doc.autoTable({
                     head: [columns],
                     body: body,
-                    startY: finalY + 4,
+                    startY: finalY + 7,
                     margin: { left: 5, right: 5 },
                     theme: 'grid',
                     styles: { fontSize: 8, cellPadding: 1 },
