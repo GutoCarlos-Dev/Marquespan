@@ -647,6 +647,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
+
+    // Configuração de Status baseada em status.html
+    const STATUS_CONFIG = {
+        'CNT SP': { bg: '#FF9800', color: 'white' },
+        'ZMRC': { bg: '#F44336', color: 'white' },
+        'ZMRC CPN': { bg: '#B71C1C', color: 'white' },
+        'V': { bg: '#2196F3', color: 'white' },
+        'P': { bg: '#9C27B0', color: 'white' },
+        'R': { bg: '#4CAF50', color: 'white' },
+        'V - RESTR': { bg: '#3F51B5', color: 'white' },
+        'RESTR': { bg: '#795548', color: 'white' },
+        'BGMN': { bg: '#FFEB3B', color: 'black' },
+        'TRI +': { bg: '#E91E63', color: 'white' },
+        '152/257': { bg: '#00BCD4', color: 'black' },
+        '194 TER': { bg: '#009688', color: 'white' },
+        // Status Legados
+        'OK': { bg: '#28a745', color: 'white' },
+        'MANUTENÇÃO': { bg: '#dc3545', color: 'white' },
+        'FALTA': { bg: '#dc3545', color: 'white' },
+        'FERIAS': { bg: '#17a2b8', color: 'white' },
+        'FOLGA': { bg: '#6c757d', color: 'white' },
+        'ATESTADO': { bg: '#ffc107', color: 'black' }
+    };
+
     async function carregarListasAuxiliares() {
         // Veículos
         const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
@@ -671,15 +695,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Status
-        const statusList = ['OK', 'MANUTENÇÃO', 'FALTA', 'FERIAS', 'FOLGA', 'ATESTADO'];
         const dlStatus = document.getElementById('listaStatus');
-        if(dlStatus) dlStatus.innerHTML = statusList.map(s => `<option value="${s}">`).join('');
+        if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
     }
 
     function getStatusStyle(status) {
-        // Exemplo simples, pode expandir
-        if (status === 'OK') return 'color: green; font-weight: bold;';
-        if (['FALTA', 'MANUTENÇÃO'].includes(status)) return 'color: red; font-weight: bold;';
+        const config = STATUS_CONFIG[status?.toUpperCase()] || STATUS_CONFIG[status];
+        if (config) {
+            return `background-color: ${config.bg}; color: ${config.color}; font-weight: bold; text-align: center;`;
+        }
         return '';
     }
     function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
