@@ -741,6 +741,83 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
 
+    // --- MODAL BOLETA ---
+    const modalBoleta = document.getElementById('modalBoleta');
+    const btnCloseModalBoleta = document.getElementById('btnCloseModalBoleta');
+    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
+    const filtroBoletaTipo = document.getElementById('filtroBoletaTipo');
+    const listaBoletaOpcoes = document.getElementById('listaBoletaOpcoes');
+
+    function atualizarOpcoesBoleta() {
+        if (!listaBoletaOpcoes || !filtroBoletaTipo) return;
+        const tipo = filtroBoletaTipo.value;
+        listaBoletaOpcoes.innerHTML = '';
+        
+        if (tipo === 'ROTA') {
+             const options = document.getElementById('listaRotas')?.innerHTML || '';
+             listaBoletaOpcoes.innerHTML = options;
+        } else {
+             const motOptions = document.getElementById('listaMotoristas')?.innerHTML || '';
+             const auxOptions = document.getElementById('listaAuxiliares')?.innerHTML || '';
+             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
+        }
+    }
+
+    if (btnGerarBoleta) {
+        btnGerarBoleta.addEventListener('click', () => {
+            if (modalBoleta) {
+                modalBoleta.classList.remove('hidden');
+                modalBoleta.style.display = 'flex';
+                atualizarOpcoesBoleta();
+                
+                // Limpa campos
+                const fValor = document.getElementById('filtroBoletaValor');
+                if(fValor) fValor.value = '';
+                ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.value = '';
+                });
+
+                // Define data padrão (Segunda-feira da semana selecionada)
+                const semana = selectSemana.value;
+                const bData = document.getElementById('boletaData');
+                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA'] && bData) {
+                    bData.value = CACHE_DATAS[semana]['SEGUNDA'].toISOString().split('T')[0];
+                }
+            }
+        });
+    }
+
+    if (btnCloseModalBoleta) {
+        btnCloseModalBoleta.addEventListener('click', () => {
+            if (modalBoleta) {
+                modalBoleta.classList.add('hidden');
+                modalBoleta.style.display = 'none';
+            }
+        });
+    }
+
+    if (modalBoleta) {
+        modalBoleta.addEventListener('click', (e) => {
+            if (e.target === modalBoleta) {
+                modalBoleta.classList.add('hidden');
+                modalBoleta.style.display = 'none';
+            }
+        });
+    }
+
+    if (filtroBoletaTipo) {
+        filtroBoletaTipo.addEventListener('change', () => {
+            const fValor = document.getElementById('filtroBoletaValor');
+            if(fValor) fValor.value = '';
+            atualizarOpcoesBoleta();
+             ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+        });
+    }
+
     // Boleta Listeners
     const filtroBoletaValor = document.getElementById('filtroBoletaValor');
     const boletaData = document.getElementById('boletaData');
