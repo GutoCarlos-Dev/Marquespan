@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cálculo automático do total na Entrada
     const calcTotalEntrada = () => {
-        const qtd = parseFloat(document.getElementById('entradaQtdTotal').value) || 0;
-        const vlr = parseFloat(document.getElementById('entradaVlrLitro').value) || 0;
+        const qtd = parseFloat(document.getElementById('entradaQtdTotal').value.replace(',', '.')) || 0;
+        const vlr = parseFloat(document.getElementById('entradaVlrLitro').value.replace(',', '.')) || 0;
         const total = qtd * vlr;
         document.getElementById('entradaTotal').value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         updateLitrosRestantesMobile();
@@ -446,8 +446,8 @@ async function salvarEntrada(e) {
     const dataInput = document.getElementById('entradaData').value;
     const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
     const nota = document.getElementById('entradaNota').value;
-    const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value);
-    const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value);
+    const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value.replace(',', '.')) || 0;
+    const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value.replace(',', '.')) || 0;
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 
@@ -464,7 +464,7 @@ async function salvarEntrada(e) {
 
     for (const linha of linhas) {
         const tanqueId = linha.querySelector('.tanque-select').value;
-        const qtd = parseFloat(linha.querySelector('.tanque-qtd').value);
+        const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
 
         if (!tanqueId || isNaN(qtd) || qtd <= 0) {
             alert('Preencha todos os campos de tanque e quantidade corretamente.');
@@ -483,7 +483,7 @@ async function salvarEntrada(e) {
             tanque_id: parseInt(tanqueId),
             qtd_litros: qtd,
             valor_litro: vlrLitro,
-            valor_total: (qtd * vlrLitro).toFixed(2),
+            valor_total: qtd * vlrLitro,
             usuario: usuario
         });
     }

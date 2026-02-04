@@ -105,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         calculateTotal() {
-            const qtd = parseFloat(this.qtdTotalNotaInput.value) || 0;
-            const vlr = parseFloat(this.vlrLitroInput.value) || 0;
+            const qtd = parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0;
+            const vlr = parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0;
             const total = qtd * vlr;
             
             this.totalInput.value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -473,8 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleFormSubmit(e) {
             e.preventDefault();
 
-            const totalNota = parseFloat(this.qtdTotalNotaInput.value);
-            const vlr = parseFloat(this.vlrLitroInput.value);
+            const totalNota = parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0;
+            const vlr = parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0;
             const notaFiscal = this.notaInput.value;
 
             if (totalNota <= 0 || vlr <= 0) {
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             for (const linha of linhas) {
                 const tanqueId = linha.querySelector('.tanque-select').value;
-                const qtd = parseFloat(linha.querySelector('.tanque-qtd').value);
+                const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
 
                 if (!tanqueId || isNaN(qtd) || qtd <= 0) {
                     alert('Todas as linhas de distribuição devem ter um tanque e uma quantidade válida.');
@@ -556,8 +556,17 @@ document.addEventListener('DOMContentLoaded', () => {
             registros.forEach(reg => {
                 const tr = document.createElement('tr');
                 const dataFormatada = new Date(reg.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-                const totalFormatado = (reg.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                const vlrLitroFormatado = (reg.valor_litro || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                // Formata o valor por litro para exibir mais casas decimais
+                const vlrLitroFormatado = (reg.valor_litro || 0).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 6 // Aumenta o número de casas decimais exibidas
+                });
+                // O valor total também precisa de mais precisão
+                const totalFormatado = (reg.valor_total || 0).toLocaleString('pt-BR', {
+                    style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 6
+                });
                 const tanqueNome = reg.tanques ? reg.tanques.nome : 'Tanque excluído';
 
                 tr.innerHTML = `
