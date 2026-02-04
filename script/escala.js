@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
         const groupsToCheck = [
             ['placa'],
+            ['rota'],
             ['motorista', 'motorista_ausente'],
             ['auxiliar', 'auxiliar_ausente'],
             ['terceiro']
@@ -1015,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 50, 5, 40, 10);
+                doc.addImage(base64data, 'PNG', 10, 5, 40, 15);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
@@ -1028,12 +1029,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
 
+        doc.setFontSize(14);
+        doc.text(`Boleta de Controle - ${semana}`, margin, 22);
+        
         doc.setFontSize(10);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 20);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 27, { styles: { fill: 'blue', fontStyle: 'bold' } });
 
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 25);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 32);
         doc.setFont(undefined, 'normal');
 
         const datasDia = {};
@@ -1041,14 +1045,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
             dias.forEach(dia => {
                 if (CACHE_DATAS[semana][dia]) {
-                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                    datasDia[dia] = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR');
                 } else {
                     datasDia[dia] = '';
                 }
             });
         }
 
-        let currentY = 29;
+        let currentY = 37;
         
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
@@ -1062,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 head: [[{ 
                     content: `${diaNome} - ${dateStr}`, 
                     colSpan: 4, 
-                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 8 } 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 10 } 
                 }]],
                 body: [
                     [
@@ -1070,10 +1074,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
                     ],
                     [
-                        { content: 'HORA\n______:______', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
-                        { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
-                        { content: 'HORA\n______:______', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } },
-                        { content: 'ASS:________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 8 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
@@ -1099,25 +1103,6 @@ document.addEventListener('DOMContentLoaded', () => {
              }
              currentY = drawDayTable(dia, margin, currentY, contentWidth) + 3;
         }
-
-        // Rodapé com campos para Nome e Assinatura
-        if (currentY + 15 > 200) {
-            doc.addPage();
-            currentY = 20;
-        } else {
-            currentY += 7;
-        }
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        
-        // Campo Nome
-        doc.line(margin, currentY, margin + 60, currentY); 
-        doc.text('Nome Completo:', margin, currentY + 5);
-        
-        // Campo Assinatura
-        doc.line(margin + 65, currentY, margin + contentWidth, currentY);
-        doc.text('Assinatura:', margin + 65, currentY + 5);
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
