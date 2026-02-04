@@ -1029,7 +1029,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentWidth = halfPageWidth - (margin * 2);
 
         doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0, 0, 255); // Define a cor do texto para azul
         doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 20);
+        doc.setTextColor(0, 0, 0); // Reseta a cor do texto para preto para os elementos seguintes
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
