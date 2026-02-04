@@ -696,6 +696,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             finalY += 2;
         }
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(`Página ${i} de ${pageCount}`, 292, 205, { align: 'right' });
+        }
+
         doc.save(`Escala_${semana}.pdf`);
     }
 
