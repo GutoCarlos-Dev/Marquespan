@@ -1,4 +1,4 @@
-// Importa o cliente Supabase, assumindo que ele está configurado em supabase.js
+// script/escala.js
 import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuarioLogado) {
         alert('Acesso negado. Por favor, faça login.');
-        window.location.href = 'index.html'; // Redireciona para a página de login na raiz
+        window.location.href = 'index.html';
         return;
     }
 
@@ -16,120 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
         /* Reset de tabela para estilo planilha */
-        table {
-            border-collapse: collapse !important;
-            width: 100%;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 13px;
-            background-color: #fff;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        /* Cabeçalhos */
-        th {
-            background-color: #f8f9fa;
-            color: #495057;
-            font-weight: 600;
-            border: 1px solid #dee2e6;
-            padding: 10px 8px;
-            text-align: left;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-        }
-
-        /* Células */
-        td {
-            border: 1px solid #dee2e6;
-            padding: 0 !important; /* Remove padding para input preencher */
-            height: 34px;
-            vertical-align: middle;
-            position: relative;
-        }
-
-        /* Zebra Striping */
-        tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        tbody tr:nth-child(odd) {
-            background-color: #ffffff;
-        }
-        tbody tr:hover {
-            background-color: #f1f3f5; /* Highlight no hover da linha */
-        }
-
-        /* Inputs estilo planilha (sem borda, preenchimento total) */
-        input.table-input {
-            width: 100%;
-            height: 100%;
-            border: none !important;
-            border-radius: 0 !important;
-            padding: 0 10px;
-            background: transparent;
-            font-size: 13px;
-            color: #212529;
-            outline: none;
-            box-shadow: none !important;
-            margin: 0;
-            display: block;
-            box-sizing: border-box;
-        }
-
-        /* Foco no input parece seleção de célula Excel */
-        input.table-input:focus {
-            background-color: #fff;
-            box-shadow: inset 0 0 0 2px #007bff !important;
-            z-index: 2;
-        }
-
-        /* Células editáveis (divs/tds contenteditable) */
-        td[contenteditable="true"] {
-            padding: 8px 10px !important;
-            outline: none;
-            cursor: text;
-        }
-        td[contenteditable="true"]:focus {
-            background-color: #fff;
-            box-shadow: inset 0 0 0 2px #007bff;
-        }
-
-        /* Botão de excluir na tabela */
-        .btn-acao.excluir {
-            background: transparent;
-            border: none;
-            color: #dc3545;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.5;
-            transition: all 0.2s;
-            font-size: 14px;
-        }
-        .btn-acao.excluir:hover {
-            opacity: 1;
-            background-color: #ffebee;
-        }
-
-        /* Resizer e Sort Styles */
-        .resizer {
-            position: absolute;
-            right: 0;
-            top: 0;
-            height: 100%;
-            width: 5px;
-            background: rgba(0,0,0,0.05);
-            cursor: col-resize;
-            user-select: none;
-            touch-action: none;
-            z-index: 10;
-        }
-        .resizer:hover, .resizing {
-            background: #007bff;
-        }
+        table { border-collapse: collapse !important; width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        td { border: 1px solid #dee2e6; padding: 0 !important; height: 34px; vertical-align: middle; position: relative; }
+        tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        tbody tr:nth-child(odd) { background-color: #ffffff; }
+        tbody tr:hover { background-color: #f1f3f5; }
+        input.table-input { width: 100%; height: 100%; border: none !important; border-radius: 0 !important; padding: 0 10px; background: transparent; font-size: 13px; color: #212529; outline: none; box-shadow: none !important; margin: 0; display: block; box-sizing: border-box; }
+        input.table-input:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff !important; z-index: 2; }
+        td[contenteditable="true"] { padding: 8px 10px !important; outline: none; cursor: text; }
+        td[contenteditable="true"]:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff; }
+        .btn-acao.excluir { background: transparent; border: none; color: #dc3545; cursor: pointer; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; transition: all 0.2s; font-size: 14px; }
+        .btn-acao.excluir:hover { opacity: 1; background-color: #ffebee; }
+        .resizer { position: absolute; right: 0; top: 0; height: 100%; width: 5px; background: rgba(0,0,0,0.05); cursor: col-resize; user-select: none; touch-action: none; z-index: 10; }
+        .resizer:hover, .resizing { background: #007bff; }
+        .status-saving { color: #ffc107; font-size: 0.8em; margin-left: 10px; }
+        .status-saved { color: #28a745; font-size: 0.8em; margin-left: 10px; }
+        .status-error { color: #dc3545; font-size: 0.8em; margin-left: 10px; }
     `;
     document.head.appendChild(styleSheet);
 
@@ -143,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnImportar = document.getElementById('btnImportar');
     const fileImportar = document.getElementById('fileImportar');
     const fileImportarDia = document.getElementById('fileImportarDia');
-    const btnSalvar = document.getElementById('btnSalvar');
+    const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
     
@@ -152,120 +55,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = tabButtons[0].parentNode;
         const order = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
         const buttonsMap = {};
-        
-        tabButtons.forEach(btn => {
-            if (btn.dataset.dia) buttonsMap[btn.dataset.dia] = btn;
-        });
-
-        order.forEach(dia => {
-            if (buttonsMap[dia]) container.appendChild(buttonsMap[dia]);
-        });
-    }
-
-    // --- FUNCIONALIDADES DE GRID (Sort, Resize, Search) ---
-    function initGridFeatures() {
-        document.querySelectorAll('.data-grid').forEach(table => {
-            const headers = table.querySelectorAll('th');
-            headers.forEach((th, index) => {
-                // Evita duplicar listeners se a função for chamada novamente
-                if (th.dataset.initialized) return;
-                th.dataset.initialized = 'true';
-
-                // Sort
-                th.style.cursor = 'pointer';
-                th.style.position = 'relative';
-                th.title = "Clique para ordenar";
-                
-                th.addEventListener('click', (e) => {
-                    if(e.target.classList.contains('resizer')) return;
-                    sortTable(table, index);
-                });
-
-                // Resize
-                const resizer = document.createElement('div');
-                resizer.classList.add('resizer');
-                th.appendChild(resizer);
-                createResizableColumn(th, resizer);
-            });
-        });
-    }
-
-    function sortTable(table, colIndex) {
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        // Ignora linhas de "Carregando..." ou vazias
-        const validRows = rows.filter(r => r.querySelectorAll('td').length > 1);
-        
-        const isAsc = table.dataset.sortOrder === 'asc';
-        const multiplier = isAsc ? 1 : -1;
-
-        validRows.sort((a, b) => {
-            const cellA = a.children[colIndex];
-            const cellB = b.children[colIndex];
-            const valA = getCellValue(cellA);
-            const valB = getCellValue(cellB);
-            return valA.localeCompare(valB, undefined, {numeric: true}) * multiplier;
-        });
-
-        validRows.forEach(row => tbody.appendChild(row));
-        table.dataset.sortOrder = isAsc ? 'desc' : 'asc';
-    }
-
-    function getCellValue(td) {
-        if (!td) return '';
-        const input = td.querySelector('input, select');
-        return (input ? input.value : td.textContent).trim().toLowerCase();
-    }
-
-    function createResizableColumn(th, resizer) {
-        let x = 0;
-        let w = 0;
-        const mouseDownHandler = (e) => {
-            x = e.clientX;
-            w = parseInt(window.getComputedStyle(th).width);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing');
-        };
-        const mouseMoveHandler = (e) => { th.style.width = `${w + (e.clientX - x)}px`; };
-        const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); resizer.classList.remove('resizing'); };
-        resizer.addEventListener('mousedown', mouseDownHandler);
-    }
-
-    // Inicializa features nas tabelas existentes
-    initGridFeatures();
-
-    // Search Logic
-    if (globalSearch) {
-        globalSearch.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.data-grid tbody tr').forEach(row => {
-                // Pula linhas de mensagem (colspan)
-                if (row.cells.length < 2) return;
-                
-                let text = "";
-                row.querySelectorAll('td').forEach(td => {
-                    text += getCellValue(td) + " ";
-                });
-                row.style.display = text.includes(term) ? '' : 'none';
-            });
-        });
+        tabButtons.forEach(btn => { if (btn.dataset.dia) buttonsMap[btn.dataset.dia] = btn; });
+        order.forEach(dia => { if (buttonsMap[dia]) container.appendChild(buttonsMap[dia]); });
     }
 
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
 
     function preencherCacheDatas() {
-        // Configuração da Semana 01 de 2026
-        // Início: Domingo, 28/12/2025
         const baseDate = new Date(Date.UTC(2025, 11, 28)); // 28 de Dezembro de 2025
 
         for (let i = 1; i <= 53; i++) {
             const nomeSemana = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
-            
-            // Calcula o início desta semana (Domingo)
             const startOfWeek = addDays(baseDate, (i - 1) * 7);
-            
             CACHE_DATAS[nomeSemana] = {
                 'DOMINGO':  addDays(startOfWeek, 0),
                 'SEGUNDA':  addDays(startOfWeek, 1),
@@ -284,18 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return result;
     }
 
-    // --- DADOS LOCAIS (Para Importação) ---
-    let DADOS_LOCAL = {}; // Estrutura: { 'SEMANA XX': { 'SEGUNDA': { 'Padrao': [], ... } } }
-    
-    // Tenta carregar dados salvos anteriormente
-    try {
-        const savedData = localStorage.getItem('marquespan_escala_dados');
-        if (savedData) DADOS_LOCAL = JSON.parse(savedData);
-    } catch (e) { console.error('Erro ao carregar dados locais:', e); }
+    // --- MAPA DE SEÇÕES PARA DB ---
+    const SECAO_PARA_DB = {
+        'Padrao': { tabela: 'escala', tipo: 'PADRAO' },
+        'Transferencia': { tabela: 'escala', tipo: 'TRANSFERENCIA' },
+        'Equipamento': { tabela: 'escala', tipo: 'EQUIPAMENTO' },
+        'Reservas': { tabela: 'escala', tipo: 'RESERVA' },
+        'Faltas': { tabela: 'faltas_afastamentos', tipo: null }
+    };
 
     // --- INJEÇÃO DE BOTÕES "ADICIONAR LINHA" ---
-    const sectionsIds = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
-    sectionsIds.forEach(sec => {
+    Object.keys(SECAO_PARA_DB).forEach(sec => {
         const tbody = document.getElementById(`tbody${sec}`);
         if (tbody) {
             const table = tbody.closest('table');
@@ -319,356 +120,638 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function adicionarLinhaManual(section) {
+    // --- FUNÇÕES DE DADOS ---
+
+    async function adicionarLinhaManual(section) {
         const semana = selectSemana.value;
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
-        
         if (!semana || !dia) return;
 
-        if (!DADOS_LOCAL[semana]) DADOS_LOCAL[semana] = {};
-        if (!DADOS_LOCAL[semana][dia]) DADOS_LOCAL[semana][dia] = {};
-        if (!DADOS_LOCAL[semana][dia][section]) DADOS_LOCAL[semana][dia][section] = [];
+        const dataObj = CACHE_DATAS[semana][dia];
+        const dataISO = dataObj.toISOString().split('T')[0];
+        const config = SECAO_PARA_DB[section];
 
-        DADOS_LOCAL[semana][dia][section].push({});
-        localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
-        carregarDadosDia(dia, semana);
-    }
+        const payload = {
+            semana_nome: semana,
+            data_escala: dataISO
+        };
 
-    // --- CACHE DE VEÍCULOS ---
-    let listaVeiculos = [];
-    let listaRotas = [];
+        if (config.tabela === 'escala') {
+            payload.tipo_escala = config.tipo;
+        }
 
-    /**
-     * Carrega a lista de veículos ativos do banco de dados para popular os seletores.
-     */
-    async function carregarVeiculos() {
         try {
-            const { data, error } = await supabaseClient
-                .from('veiculos')
-                .select('placa, modelo')
-                .eq('situacao', 'ativo')
-                .order('placa');
-
+            const { error } = await supabaseClient.from(config.tabela).insert([payload]);
             if (error) throw error;
-            
-            listaVeiculos = data || [];
-            
-            const datalistPlacas = document.getElementById('listaVeiculos');
-            const datalistModelos = document.getElementById('listaModelos');
-
-            if (datalistPlacas) {
-                datalistPlacas.innerHTML = data.map(v => `<option value="${v.placa}">`).join('');
-            }
-
-            if (datalistModelos) {
-                // Filtra modelos únicos e não vazios
-                const modelosUnicos = [...new Set(data.map(v => v.modelo).filter(m => m))];
-                datalistModelos.innerHTML = modelosUnicos.map(m => `<option value="${m}">`).join('');
-            }
-
-        } catch (error) {
-            console.error('Erro ao carregar veículos:', error);
+            carregarDadosDia(dia, semana);
+        } catch (err) {
+            console.error('Erro ao adicionar linha:', err);
+            alert('Erro ao adicionar linha: ' + err.message);
         }
     }
 
-    /**
-     * Carrega a lista de rotas do banco de dados para popular o seletor.
-     */
-    async function carregarRotas() {
-        try {
-            const { data, error } = await supabaseClient
-                .from('rotas')
-                .select('numero')
-                .order('numero');
-
-            if (error) throw error;
-
-            listaRotas = data || [];
-            const datalistRotas = document.getElementById('listaRotas');
-            if (datalistRotas) {
-                const rotasUnicas = [...new Set(data.map(r => r.numero).filter(r => r))];
-                datalistRotas.innerHTML = rotasUnicas.map(r => `<option value="${r}">`).join('');
-            }
-        } catch (error) {
-            console.error('Erro ao carregar rotas:', error);
-        }
-    }
-
-    /**
-     * Carrega a lista de funcionários ativos do banco de dados para popular os seletores.
-     */
-    async function carregarFuncionarios() {
-        try {
-            const { data, error } = await supabaseClient
-                .from('funcionario')
-                .select('nome_completo, funcao')
-                .eq('status', 'Ativo')
-                .order('nome_completo');
-
-            if (error) throw error;
-
-            const datalistMotoristas = document.getElementById('listaMotoristas');
-            const datalistAuxiliares = document.getElementById('listaAuxiliares');
-            const datalistTerceiros = document.getElementById('listaTerceiros');
-
-            if (datalistMotoristas) datalistMotoristas.innerHTML = '';
-            if (datalistAuxiliares) datalistAuxiliares.innerHTML = '';
-            if (datalistTerceiros) datalistTerceiros.innerHTML = '';
-
-            const terceiros = [];
-
-            data.forEach(func => {
-                const nome = func.nome_completo;
-                const funcao = func.funcao;
-
-                if (funcao === 'Motorista') {
-                    if (datalistMotoristas) datalistMotoristas.insertAdjacentHTML('beforeend', `<option value="${nome}">`);
-                    terceiros.push(`(MOT-) ${nome}`);
-                } else if (funcao === 'Auxiliar') {
-                    if (datalistAuxiliares) datalistAuxiliares.insertAdjacentHTML('beforeend', `<option value="${nome}">`);
-                    terceiros.push(`(AUX-) ${nome}`);
-                }
-            });
-            
-            terceiros.sort();
-            if (datalistTerceiros) {
-                datalistTerceiros.innerHTML = terceiros.map(t => `<option value="${t}">`).join('');
-            }
-
-        } catch (error) {
-            console.error('Erro ao carregar funcionários:', error);
-        }
-    }
-
-    // --- CONFIGURAÇÃO DE STATUS ---
-    const STATUS_CONFIG = {
-        'CNT SP': { color: '#FF9800', text: 'white' },
-        'ZMRC': { color: '#F44336', text: 'white' },
-        'ZMRC CPN': { color: '#B71C1C', text: 'white' },
-        'V': { color: '#2196F3', text: 'white' },
-        'P': { color: '#9C27B0', text: 'white' },
-        'R': { color: '#4CAF50', text: 'white' },
-        'V - RESTR': { color: '#3F51B5', text: 'white' },
-        'RESTR': { color: '#795548', text: 'white' },
-        'BGMN': { color: '#FFEB3B', text: 'black' },
-        'TRI +': { color: '#E91E63', text: 'white' },
-        '152/257': { color: '#00BCD4', text: 'black' },
-        '194 TER': { color: '#009688', text: 'white' }
-    };
-
-    function carregarStatus() {
-        const datalist = document.getElementById('listaStatus');
-        if (datalist) {
-            datalist.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
-        }
-    }
-
-    function getStatusStyle(status) {
-        const config = STATUS_CONFIG[status];
-        if (config) {
-            return `background-color: ${config.color}; color: ${config.text}; font-weight: bold;`;
-        }
-        return '';
-    }
-
-    function updateInputColor(input) {
-        const style = getStatusStyle(input.value);
-        input.style.cssText = style;
-    }
-
-    // --- FUNÇÕES ---
-
-    function carregarSemanas() {
-        // Data base: 28/12/2025
-        const baseDate = new Date(Date.UTC(2025, 11, 28));
-        const hoje = new Date();
-        const hojeUTC = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()));
-        
-        const diffTime = hojeUTC - baseDate;
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        let semanaAtual = Math.floor(diffDays / 7) + 1;
-        
-        if (semanaAtual < 1) semanaAtual = 1;
-        if (semanaAtual > 53) semanaAtual = 53;
-
-        selectSemana.innerHTML = ''; // Limpa opções existentes
-
-        for (let i = 1; i <= 53; i++) {
-            const nomeSemana = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
-            const option = new Option(nomeSemana, nomeSemana);
-            selectSemana.appendChild(option);
-        }
-        selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')} - 2026`;
-    }
-
-    /**
-     * Carrega os dados da escala para o dia e semana selecionados.
-     * @param {string} dia - O dia da semana (ex: 'SEGUNDA').
-     * @param {string} semana - A semana selecionada (ex: 'SEMANA 01').
-     */
     async function carregarDadosDia(dia, semana) {
-        // IDs das 5 seções
-        const sections = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
+        const sections = Object.keys(SECAO_PARA_DB);
         sections.forEach(sec => {
             const tbody = document.getElementById(`tbody${sec}`);
             const colspan = sec === 'Faltas' ? 5 : 7;
             if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
-        const coresDia = {
-            'SEGUNDA': '#007bff',
-            'TERCA': '#fd7e14',
-            'QUARTA': '#28a745',
-            'QUINTA': '#6f42c1',
-            'SEXTA': '#dc3545',
-            'SABADO': '#17a2b8',
-            'DOMINGO': '#e83e8c'
-        };
+        const coresDia = { 'SEGUNDA': '#007bff', 'TERCA': '#fd7e14', 'QUARTA': '#28a745', 'QUINTA': '#6f42c1', 'SEXTA': '#dc3545', 'SABADO': '#17a2b8', 'DOMINGO': '#e83e8c' };
         tituloDia.style.color = coresDia[dia] || '#006937';
 
-        // Usa o cache para obter a data sem recalcular
-        const dataDia = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
-        
-        const currentDate = new Date(dataDia);
-        const formattedDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+        const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
+        const dataISO = dataObj.toISOString().split('T')[0];
+        const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
+
         tituloDia.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
                 <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
                 <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala para o Dia Seguinte"><i class="fa-solid fa-copy"></i></button>
+                <span id="status-indicator"></span>
             </div>`;
 
-        // Verifica se há dados locais importados para esta semana e dia
-        const dadosSemana = DADOS_LOCAL[semana];
-        const dadosDia = dadosSemana ? dadosSemana[dia] : null;
+        try {
+            // Busca dados das duas tabelas em paralelo
+            const [resEscala, resFaltas] = await Promise.all([
+                supabaseClient.from('escala').select('*').eq('data_escala', dataISO).order('id'),
+                supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO).order('id')
+            ]);
 
-        sections.forEach(sec => {
-            const tbody = document.getElementById(`tbody${sec}`);
-            if (!tbody) return;
+            if (resEscala.error) throw resEscala.error;
+            if (resFaltas.error) throw resFaltas.error;
 
-            tbody.innerHTML = '';
+            const dadosEscala = resEscala.data;
+            const dadosFaltas = resFaltas.data;
 
-            // Se houver dados importados para esta seção
-            if (dadosDia && dadosDia[sec] && dadosDia[sec].length > 0) {
-                dadosDia[sec].forEach((item, index) => {
-                    const tr = document.createElement('tr');
-                    if (sec === 'Faltas') {
-                        tr.innerHTML = `
-                            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.MOTORISTA || ''}" data-section="${sec}" data-row="${index}" data-key="MOTORISTA" placeholder="Motorista"></td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_MOTORISTA">${item.MOTIVO_MOTORISTA || ''}</td>
-                            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.AUXILIAR || ''}" data-section="${sec}" data-row="${index}" data-key="AUXILIAR" placeholder="Auxiliar"></td>
-                            <td contenteditable="true" data-section="${sec}" data-row="${index}" data-key="MOTIVO_AUXILIAR">${item.MOTIVO_AUXILIAR || ''}</td>
-                            <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
-                        `;
-                    } else {
-                        tr.innerHTML = `
-                            <td><input type="text" list="listaVeiculos" class="table-input" value="${item.PLACA || ''}" data-section="${sec}" data-row="${index}" data-key="PLACA" placeholder="Placa"></td>
-                            <td><input type="text" list="listaModelos" class="table-input" value="${item.MODELO || ''}" data-section="${sec}" data-row="${index}" data-key="MODELO" placeholder="Modelo"></td>
-                            <td><input type="text" list="listaRotas" class="table-input" value="${item.ROTA || ''}" data-section="${sec}" data-row="${index}" data-key="ROTA" placeholder="Rota"></td>
-                            <td><input type="text" list="listaStatus" class="table-input" value="${item.STATUS || ''}" data-section="${sec}" data-row="${index}" data-key="STATUS" placeholder="Status" style="${getStatusStyle(item.STATUS || '')}"></td>
-                            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.MOTORISTA || ''}" data-section="${sec}" data-row="${index}" data-key="MOTORISTA" placeholder="Motorista"></td>
-                            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.AUXILIAR || ''}" data-section="${sec}" data-row="${index}" data-key="AUXILIAR" placeholder="Auxiliar"></td>
-                            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.TERCEIRO || ''}" data-section="${sec}" data-row="${index}" data-key="TERCEIRO" placeholder="Terceiro"></td>
-                        `;
-                    }
-                    tbody.appendChild(tr);
-                });
-            } else {
-                // Se não houver dados, mostra mensagem padrão
-                const colspan = sec === 'Faltas' ? 5 : 7;
-                tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
-            }
-        });
+            // Renderiza cada seção
+            sections.forEach(sec => {
+                const tbody = document.getElementById(`tbody${sec}`);
+                if (!tbody) return;
+                tbody.innerHTML = '';
 
-        // Re-aplica o filtro de busca se houver texto
-        if (globalSearch && globalSearch.value) {
-            globalSearch.dispatchEvent(new Event('input'));
+                let itens = [];
+                if (sec === 'Faltas') {
+                    itens = dadosFaltas;
+                } else {
+                    const tipo = SECAO_PARA_DB[sec].tipo;
+                    itens = dadosEscala.filter(d => d.tipo_escala === tipo);
+                }
+
+                if (itens.length > 0) {
+                    itens.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.dataset.id = item.id; // ID do banco para updates
+                        tr.dataset.tabela = sec === 'Faltas' ? 'faltas_afastamentos' : 'escala';
+
+                        if (sec === 'Faltas') {
+                            tr.innerHTML = `
+                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista_ausente || ''}" data-key="motorista_ausente" placeholder="Motorista"></td>
+                                <td contenteditable="true" data-key="motivo_motorista">${item.motivo_motorista || ''}</td>
+                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar_ausente || ''}" data-key="auxiliar_ausente" placeholder="Auxiliar"></td>
+                                <td contenteditable="true" data-key="motivo_auxiliar">${item.motivo_auxiliar || ''}</td>
+                                <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
+                            `;
+                        } else {
+                            tr.innerHTML = `
+                                <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
+                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo"></td>
+                                <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota"></td>
+                                <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getStatusStyle(item.status || '')}"></td>
+                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
+                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar"></td>
+                                <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro"></td>
+                            `;
+                        }
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    const colspan = sec === 'Faltas' ? 5 : 7;
+                    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
+                }
+            });
+
+        } catch (err) {
+            console.error('Erro ao carregar dados:', err);
+            alert('Erro ao carregar dados do dia.');
         }
     }
 
-    /**
-     * Gera e baixa o modelo Excel para importação.
-     */
-    function baixarModeloExcel() {
-        const wb = XLSX.utils.book_new();
+    // --- EVENTOS DE EDIÇÃO (AUTO-SAVE) ---
+    if (painelEscala) {
+        // Delegação de eventos para inputs e contenteditable
+        painelEscala.addEventListener('change', handleEdit); // Para inputs
+        painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
+            if (e.target.isContentEditable) handleEdit(e);
+        });
 
-        // Definição das colunas padrão para veículos
-        const headersVeiculos = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
-        
-        // 1. PADRÃO
-        const wsPadrao = XLSX.utils.aoa_to_sheet([headersVeiculos]);
-        XLSX.utils.book_append_sheet(wb, wsPadrao, "PADRAO");
+        painelEscala.addEventListener('click', async (e) => {
+            // Botão Excluir
+            const btnExcluir = e.target.closest('.btn-acao.excluir');
+            if (btnExcluir) {
+                const tr = btnExcluir.closest('tr');
+                const id = tr.dataset.id;
+                const tabela = tr.dataset.tabela;
+                
+                if (confirm('Deseja remover esta linha?')) {
+                    try {
+                        const { error } = await supabaseClient.from(tabela).delete().eq('id', id);
+                        if (error) throw error;
+                        tr.remove();
+                    } catch (err) {
+                        console.error('Erro ao excluir:', err);
+                        alert('Erro ao excluir linha.');
+                    }
+                }
+            }
 
-        // 2. TRANSFERÊNCIA CD
-        const wsTransf = XLSX.utils.aoa_to_sheet([headersVeiculos]);
-        XLSX.utils.book_append_sheet(wb, wsTransf, "TRANSFERENCIA CD");
+            // Botão Importar Dia
+            if (e.target.closest('#btnImportarDiaAction')) {
+                fileImportarDia.click();
+            }
 
-        // 3. EQUIPAMENTO
-        const wsEquip = XLSX.utils.aoa_to_sheet([headersVeiculos]);
-        XLSX.utils.book_append_sheet(wb, wsEquip, "EQUIPAMENTO");
-
-        // 4. RESERVAS
-        const wsReservas = XLSX.utils.aoa_to_sheet([headersVeiculos]);
-        XLSX.utils.book_append_sheet(wb, wsReservas, "RESERVAS");
-
-        // 5. FALTAS / FÉRIAS / AFASTADOS
-        // Nota: Excel tem limite de caracteres para nome de aba e não aceita barras. Usaremos um nome simplificado.
-        const headersFaltas = ['MOTORISTA', 'MOTIVO_MOTORISTA', 'AUXILIAR', 'MOTIVO_AUXILIAR'];
-        const wsFaltas = XLSX.utils.aoa_to_sheet([headersFaltas]);
-        XLSX.utils.book_append_sheet(wb, wsFaltas, "FALTAS");
-
-        // Adiciona dados de exemplo na aba PADRAO para orientação
-        XLSX.utils.sheet_add_aoa(wsPadrao, [
-            ['ABC1234', 'TRUCK', 'ROTA 01', 'OK', 'JOAO SILVA', 'MARIA', 'NAO']
-        ], { origin: -1 });
-        
-        XLSX.utils.sheet_add_aoa(wsFaltas, [['CARLOS SOUZA', 'FALTA', 'JOAO PEDRO', 'FERIAS']], { origin: -1 });
-
-        XLSX.writeFile(wb, "Modelo_Importacao_Escala.xlsx");
+            // Botão Copiar Dia Seguinte
+            if (e.target.closest('#btnCopiarDiaSeguinte')) {
+                copiarDiaSeguinte();
+            }
+        });
     }
 
-    /**
-     * Processa o arquivo Excel importado.
-     */
+    async function handleEdit(e) {
+        const target = e.target;
+        const tr = target.closest('tr');
+        if (!tr || !tr.dataset.id) return;
+
+        const id = tr.dataset.id;
+        const tabela = tr.dataset.tabela;
+        const key = target.dataset.key;
+        
+        if (!key) return;
+
+        const valor = target.value !== undefined ? target.value : target.innerText;
+        const statusIndicator = document.getElementById('status-indicator');
+
+        if (statusIndicator) statusIndicator.innerHTML = '<span class="status-saving"><i class="fas fa-spinner fa-spin"></i> Salvando...</span>';
+
+        // Auto-preencher Modelo se a Placa for alterada
+        let extraUpdates = {};
+        if (key === 'placa' && tabela === 'escala') {
+            const veiculoEncontrado = listaVeiculos.find(v => v.placa === valor);
+            if (veiculoEncontrado) {
+                extraUpdates.modelo = veiculoEncontrado.modelo;
+                const inputModelo = tr.querySelector('input[data-key="modelo"]');
+                if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
+            }
+        }
+        // Atualiza cor se for Status
+        if (key === 'status') updateInputColor(target);
+
+        try {
+            const { error } = await supabaseClient
+                .from(tabela)
+                .update({ [key]: valor, ...extraUpdates })
+                .eq('id', id);
+
+            if (error) throw error;
+            if (statusIndicator) {
+                statusIndicator.innerHTML = '<span class="status-saved"><i class="fas fa-check"></i> Salvo</span>';
+                setTimeout(() => statusIndicator.innerHTML = '', 2000);
+            }
+        } catch (err) {
+            console.error('Erro ao salvar:', err);
+            if (statusIndicator) statusIndicator.innerHTML = '<span class="status-error"><i class="fas fa-times"></i> Erro</span>';
+        }
+    }
+
+    async function copiarDiaSeguinte() {
+        const semanaAtual = selectSemana.value;
+        const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semanaAtual || !diaAtual) return;
+
+        const diasOrdenados = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const idxAtual = diasOrdenados.indexOf(diaAtual);
+        
+        let proximaSemana = semanaAtual;
+        let proximoDia = '';
+
+        if (idxAtual < diasOrdenados.length - 1) {
+            proximoDia = diasOrdenados[idxAtual + 1];
+        } else {
+            // Lógica para virar a semana (simplificada, assume padrão de nome)
+            const match = semanaAtual.match(/SEMANA (\d+) - (\d+)/);
+            if (match) {
+                let numSemana = parseInt(match[1], 10) + 1;
+                proximaSemana = `SEMANA ${String(numSemana).padStart(2, '0')} - ${match[2]}`;
+                proximoDia = 'DOMINGO';
+            } else return;
+        }
+
+        const dataOrigem = CACHE_DATAS[semanaAtual][diaAtual].toISOString().split('T')[0];
+        const dataDestino = CACHE_DATAS[proximaSemana][proximoDia].toISOString().split('T')[0];
+
+        if (!confirm(`Copiar dados de ${diaAtual} (${dataOrigem}) para ${proximoDia} (${dataDestino})?`)) return;
+
+        try {
+            // 1. Busca dados origem
+            const [resEscala, resFaltas] = await Promise.all([
+                supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem),
+                supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)
+            ]);
+
+            if (resEscala.error) throw resEscala.error;
+            if (resFaltas.error) throw resFaltas.error;
+
+            if (resEscala.data.length === 0 && resFaltas.data.length === 0) {
+                alert('Dia atual vazio. Nada para copiar.');
+                return;
+            }
+
+            // 2. Prepara dados destino (remove ID e timestamps)
+            const novosEscala = resEscala.data.map(({ id, created_at, updated_at, ...rest }) => ({
+                ...rest,
+                semana_nome: proximaSemana,
+                data_escala: dataDestino
+            }));
+            
+            const novosFaltas = resFaltas.data.map(({ id, created_at, updated_at, ...rest }) => ({
+                ...rest,
+                semana_nome: proximaSemana,
+                data_escala: dataDestino
+            }));
+
+            // 3. Insere
+            if (novosEscala.length > 0) {
+                const { error } = await supabaseClient.from('escala').insert(novosEscala);
+                if (error) throw error;
+            }
+            if (novosFaltas.length > 0) {
+                const { error } = await supabaseClient.from('faltas_afastamentos').insert(novosFaltas);
+                if (error) throw error;
+            }
+
+            alert('Cópia realizada com sucesso!');
+            
+            // Se for na mesma semana, muda a aba
+            if (semanaAtual === proximaSemana) {
+                document.querySelector(`.tab-btn[data-dia="${proximoDia}"]`)?.click();
+            }
+
+        } catch (err) {
+            console.error('Erro ao copiar:', err);
+            alert('Erro ao copiar dados: ' + err.message);
+        }
+    }
+
+    // --- IMPORTAÇÃO EXCEL ---
     async function importarExcel(e) {
         const file = e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
             const data = new Uint8Array(evt.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
 
-            const semanaAtual = selectSemana.value;
-            // Obtém o dia ativo atual da interface (ex: 'SEGUNDA')
-            const diaAtivo = document.querySelector('.tab-btn.active').dataset.dia;
-
-            if (!DADOS_LOCAL[semanaAtual]) DADOS_LOCAL[semanaAtual] = {};
-            if (!DADOS_LOCAL[semanaAtual][diaAtivo]) DADOS_LOCAL[semanaAtual][diaAtivo] = {};
+            const semana = selectSemana.value;
+            const dia = document.querySelector('.tab-btn.active').dataset.dia;
+            const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
 
             // Mapeamento de nomes de abas do Excel para IDs internos das seções
             const mapaAbas = {
-                'PADRAO': 'Padrao',
-                'PADRÃO': 'Padrao',
-                'TRANSFERENCIA CD': 'Transferencia',
-                'TRANSFERÊNCIA CD': 'Transferencia',
-                'EQUIPAMENTO': 'Equipamento',
-                'RESERVAS': 'Reservas',
-                'FALTAS': 'Faltas',
-                'FALTAS / FÉRIAS / AFASTADOS': 'Faltas'
+                'PADRAO': { tipo: 'PADRAO', tabela: 'escala' },
+                'TRANSFERENCIA CD': { tipo: 'TRANSFERENCIA', tabela: 'escala' },
+                'EQUIPAMENTO': { tipo: 'EQUIPAMENTO', tabela: 'escala' },
+                'RESERVAS': { tipo: 'RESERVA', tabela: 'escala' },
+                'FALTAS': { tipo: null, tabela: 'faltas_afastamentos' }
             };
 
-            let importouAlgo = false;
+            const insertsEscala = [];
+            const insertsFaltas = [];
 
             // Itera sobre as abas do arquivo Excel
             workbook.SheetNames.forEach(sheetName => {
                 const nomeNormalizado = sheetName.toUpperCase().trim();
-                const secaoId = mapaAbas[nomeNormalizado];
+                // Tenta match exato ou parcial para Faltas
+                let config = mapaAbas[nomeNormalizado];
+                if (!config && nomeNormalizado.includes('FALTAS')) config = mapaAbas['FALTAS'];
 
-                if (secaoId) {
-                    const worksheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
+                if (config) {
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    json.forEach(row => {
+                        if (config.tabela === 'escala') {
+                            insertsEscala.push({
+                                semana_nome: semana,
+                                data_escala: dataISO,
+                                tipo_escala: config.tipo,
+                                placa: row['PLACA'],
+                                modelo: row['MODELO'],
+                                rota: row['ROTA'],
+                                status: row['STATUS'],
+                                motorista: row['MOTORISTA'],
+                                auxiliar: row['AUXILIAR'],
+                                terceiro: row['TERCEIRO']
+                            });
+                        } else {
+                            insertsFaltas.push({
+                                semana_nome: semana,
+                                data_escala: dataISO,
+                                motorista_ausente: row['MOTORISTA'],
+                                motivo_motorista: row['MOTIVO_MOTORISTA'],
+                                auxiliar_ausente: row['AUXILIAR'],
+                                motivo_auxiliar: row['MOTIVO_AUXILIAR']
+                            });
+                        }
+                    });
+                }
+            });
+
+            try {
+                if (insertsEscala.length > 0) await supabaseClient.from('escala').insert(insertsEscala);
+                if (insertsFaltas.length > 0) await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                
+                alert('Importação concluída!');
+                carregarDadosDia(dia, semana);
+            } catch (err) {
+                console.error('Erro na importação:', err);
+                alert('Erro ao importar dados: ' + err.message);
+            }
+            e.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // --- GERAÇÃO DE PDF ---
+    async function gerarPDF() {
+        if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
+        
+        const semana = selectSemana.value;
+        // Busca dados da semana inteira
+        const { data: dadosEscala } = await supabaseClient.from('escala').select('*').eq('semana_nome', semana);
+        const { data: dadosFaltas } = await supabaseClient.from('faltas_afastamentos').select('*').eq('semana_nome', semana);
+
+        if ((!dadosEscala || dadosEscala.length === 0) && (!dadosFaltas || dadosFaltas.length === 0)) {
+            return alert('Nenhum dado encontrado para esta semana.');
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        // Logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                doc.addImage(base64data, 'PNG', 5, 5, 40, 15);
+            }
+        } catch (e) {}
+
+        doc.setFontSize(18);
+        doc.text(`Escala Semanal - ${semana}`, 148.5, 15, { align: 'center' });
+        doc.setFontSize(9);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 292, 10, { align: 'right' });
+
+        let finalY = 25;
+        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const secoes = [
+            { id: 'PADRAO', title: 'PADRÃO' },
+            { id: 'TRANSFERENCIA', title: 'TRANSFERÊNCIA CD' },
+            { id: 'EQUIPAMENTO', title: 'EQUIPAMENTO' },
+            { id: 'RESERVA', title: 'RESERVAS' },
+            { id: 'FALTAS', title: 'FALTAS / FÉRIAS / AFASTADOS' }
+        ];
+
+        for (const dia of dias) {
+            const dataDia = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+            
+            // Filtra dados para o dia
+            const itensDiaEscala = dadosEscala ? dadosEscala.filter(d => d.data_escala === dataDia) : [];
+            const itensDiaFaltas = dadosFaltas ? dadosFaltas.filter(d => d.data_escala === dataDia) : [];
+
+            if (itensDiaEscala.length === 0 && itensDiaFaltas.length === 0) continue;
+
+            if (finalY > 185) { doc.addPage(); finalY = 15; }
+
+            // Cabeçalho do Dia
+            doc.setFillColor(230, 230, 230);
+            doc.rect(5, finalY, 287, 7, 'F');
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text(`${dia} - ${CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR')}`, 148.5, finalY + 5, { align: 'center' });
+            finalY += 9;
+
+            for (const sec of secoes) {
+                let itens = [];
+                let columns, body;
+
+                if (sec.id === 'FALTAS') {
+                    itens = itensDiaFaltas;
+                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR'];
+                    body = itens.map(i => [i.motorista_ausente, i.motivo_motorista, i.auxiliar_ausente, i.motivo_auxiliar]);
+                } else {
+                    itens = itensDiaEscala.filter(d => d.tipo_escala === sec.id);
+                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'];
+                    body = itens.map(i => [i.placa, i.modelo, i.rota, i.status, i.motorista, i.auxiliar, i.terceiro]);
+                }
+
+                if (itens.length === 0) continue;
+
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 105, 55);
+                doc.text(sec.title, 5, finalY + 3);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: body,
+                    startY: finalY + 4,
+                    margin: { left: 5, right: 5 },
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 1 },
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+                    didDrawPage: (data) => { finalY = data.cursor.y; }
+                });
+                finalY = doc.lastAutoTable.finalY + 4;
+            }
+            finalY += 2;
+        }
+        doc.save(`Escala_${semana}.pdf`);
+    }
+
+    // --- BOLETA ---
+    async function buscarDadosBoleta() {
+        const tipo = document.getElementById('filtroBoletaTipo').value;
+        const valor = document.getElementById('filtroBoletaValor').value.trim().toUpperCase();
+        const data = document.getElementById('boletaData').value;
+
+        if (!valor || !data) return;
+
+        // Limpa campos
+        ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
+        try {
+            let query = supabaseClient
+                .from('escala')
+                .select('placa, modelo, rota') // Seleciona apenas as colunas necessárias
+                .eq('data_escala', data);
+
+            // Constrói a query dinamicamente baseada no tipo de filtro
+            if (tipo === 'MOTORISTA') {
+                // Busca por motorista OU auxiliar
+                query = query.or(`motorista.ilike.%${valor}%,auxiliar.ilike.%${valor}%`);
+            } else if (tipo === 'ROTA') {
+                // Para rotas, uma correspondência exata é mais segura
+                query = query.eq('rota', valor);
+            }
+
+            // Busca o primeiro registro que corresponde aos critérios
+            const { data: res, error } = await query.limit(1).single();
+
+            // Ignora o erro "no rows found", que é esperado se não houver correspondência
+            if (error && error.code !== 'PGRST116') throw error;
+
+            // Se um resultado for encontrado, preenche os campos
+            if (res) {
+                document.getElementById('boletaPlaca').value = res.placa || '';
+                document.getElementById('boletaModelo').value = res.modelo || '';
+                document.getElementById('boletaRota').value = res.rota || '';
+            }
+        } catch (err) {
+            console.error('Erro ao buscar dados para boleta:', err);
+        }
+    }
+
+    // --- INICIALIZAÇÃO ---
+    function carregarSemanas() {
+        const baseDate = new Date(Date.UTC(2025, 11, 28));
+        const hoje = new Date();
+        const diffDays = Math.floor((hoje - baseDate) / (1000 * 60 * 60 * 24));
+        let semanaAtual = Math.floor(diffDays / 7) + 1;
+        if (semanaAtual < 1) semanaAtual = 1;
+
+        selectSemana.innerHTML = '';
+        for (let i = 1; i <= 53; i++) {
+            const nome = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
+            selectSemana.appendChild(new Option(nome, nome));
+        }
+        selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')} - 2026`;
+    }
+
+    // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
+    let listaVeiculos = [];
+    async function carregarListasAuxiliares() {
+        // Veículos
+        const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
+        listaVeiculos = veiculos || [];
+        const dlPlacas = document.getElementById('listaVeiculos');
+        const dlModelos = document.getElementById('listaModelos');
+        if (dlPlacas) dlPlacas.innerHTML = listaVeiculos.map(v => `<option value="${v.placa}">`).join('');
+        if (dlModelos) dlModelos.innerHTML = [...new Set(listaVeiculos.map(v => v.modelo))].map(m => `<option value="${m}">`).join('');
+
+        // Rotas
+        const { data: rotas } = await supabaseClient.from('rotas').select('numero');
+        const dlRotas = document.getElementById('listaRotas');
+        if (dlRotas && rotas) dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(r => `<option value="${r}">`).join('');
+
+        // Funcionários
+        const { data: funcs } = await supabaseClient.from('funcionario').select('nome_completo, funcao').eq('status', 'Ativo');
+        const dlMot = document.getElementById('listaMotoristas');
+        const dlAux = document.getElementById('listaAuxiliares');
+        if (funcs) {
+            if (dlMot) dlMot.innerHTML = funcs.filter(f => f.funcao === 'Motorista').map(f => `<option value="${f.nome_completo}">`).join('');
+            if (dlAux) dlAux.innerHTML = funcs.filter(f => f.funcao === 'Auxiliar').map(f => `<option value="${f.nome_completo}">`).join('');
+        }
+        
+        // Status
+        const statusList = ['OK', 'MANUTENÇÃO', 'FALTA', 'FERIAS', 'FOLGA', 'ATESTADO'];
+        const dlStatus = document.getElementById('listaStatus');
+        if(dlStatus) dlStatus.innerHTML = statusList.map(s => `<option value="${s}">`).join('');
+    }
+
+    function getStatusStyle(status) {
+        // Exemplo simples, pode expandir
+        if (status === 'OK') return 'color: green; font-weight: bold;';
+        if (['FALTA', 'MANUTENÇÃO'].includes(status)) return 'color: red; font-weight: bold;';
+        return '';
+    }
+    function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
+
+    // --- LISTENERS GERAIS ---
+    if (btnAbrirEscala) {
+        btnAbrirEscala.addEventListener('click', () => {
+            if (!selectSemana.value) return alert('Selecione uma semana.');
+            
+            // Atualiza datas nas abas
+            const dadosSemana = CACHE_DATAS[selectSemana.value];
+            tabButtons.forEach(btn => {
+                const dia = btn.dataset.dia;
+                const date = dadosSemana ? dadosSemana[dia] : new Date();
+                const diaNome = btn.textContent.split(' ')[0].trim();
+                btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+            });
+
+            painelEscala.classList.remove('hidden');
+            document.querySelector('.tab-btn[data-dia="DOMINGO"]')?.click();
+        });
+    }
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            tabButtons.forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active'); // Use currentTarget para pegar o botão mesmo se clicar no span
+            carregarDadosDia(e.currentTarget.dataset.dia, selectSemana.value);
+        });
+    });
+
+    if (btnSalvar) {
+        // Botão Salvar agora é apenas visual ou para ações em lote se necessário, pois temos auto-save
+        btnSalvar.style.display = 'none'; // Oculta pois o salvamento é automático
+        
+        // Injeta botão Limpar Semana
+        const btnLimpar = document.createElement('button');
+        btnLimpar.className = 'btn-custom';
+        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Semana';
+        btnLimpar.style.backgroundColor = '#dc3545';
+        btnLimpar.onclick = async () => {
+            const semana = selectSemana.value;
+            if (confirm(`ATENÇÃO: Apagar TODOS os dados da ${semana}?`)) {
+                await supabaseClient.from('escala').delete().eq('semana_nome', semana);
+                await supabaseClient.from('faltas_afastamentos').delete().eq('semana_nome', semana);
+                alert('Semana limpa.');
+                const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+                if(dia) carregarDadosDia(dia, semana);
+            }
+        };
+        if(btnSalvar.parentNode) btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar);
+    }
+
+    if (btnImportar && fileImportar) {
+        btnImportar.addEventListener('click', () => fileImportar.click());
+        fileImportar.addEventListener('change', importarExcel);
+    }
+    if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
+    if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
+    if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
+
+    // Boleta Listeners
+    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
+    const boletaData = document.getElementById('boletaData');
+    if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
+    if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
+
+    // Inicialização
+    carregarSemanas();
+    preencherCacheDatas();
+    carregarListasAuxiliares();
+});
 
                     if (json.length > 0) {
                         // Inicializa o array se não existir
