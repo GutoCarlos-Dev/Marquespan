@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sections = Object.keys(SECAO_PARA_DB);
         sections.forEach(sec => {
             const tbody = document.getElementById(`tbody${sec}`);
-            const colspan = sec === 'Faltas' ? 5 : 7;
+            const colspan = sec === 'Faltas' ? 5 : 8;
             if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
@@ -293,12 +293,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
                                 <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar"></td>
                                 <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro"></td>
+                                <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                             `;
                         }
                         tbody.appendChild(tr);
                     });
                 } else {
-                    const colspan = sec === 'Faltas' ? 5 : 7;
+                    const colspan = sec === 'Faltas' ? 5 : 8;
                     tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
                 }
             });
