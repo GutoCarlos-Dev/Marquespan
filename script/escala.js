@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
 
         doc.setFontSize(18);
-        doc.text(`Escala Semanal - ${semana}`, 148.5, 15, { align: 'center' });
+        doc.text(`Escala - ${semana}`, 148.5, 15, { align: 'center' });
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 292, 10, { align: 'right' });
 
