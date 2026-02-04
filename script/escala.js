@@ -1040,9 +1040,6 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 34);
         doc.setFont(undefined, 'normal');
 
-        doc.setFontSize(9);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, halfPageWidth - margin, 10, { align: 'right' });
-
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
             const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
