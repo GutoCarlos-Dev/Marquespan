@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE DADOS ---
 
     function verificarDuplicidades() {
-        const keysToCheck = ['placa', 'modelo', 'rota', 'motorista', 'auxiliar', 'terceiro'];
+        const keysToCheck = ['placa', 'motorista', 'auxiliar', 'terceiro'];
         
         keysToCheck.forEach(key => {
             const inputs = document.querySelectorAll(`input[data-key="${key}"]`);
