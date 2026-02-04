@@ -1071,10 +1071,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: 'TÉRMINO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [240, 240, 240] } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } }
+                        { content: 'HORA:\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'HORA:\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
