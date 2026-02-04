@@ -871,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnLimpar = document.createElement('button');
         btnLimpar.className = 'btn-custom';
         btnLimpar.classList.add('btn-pdf'); // Adiciona a classe para a cor vermelha padrão
-        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Semana';
+        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
         btnLimpar.onclick = async () => {
             const semana = selectSemana.value;
             if (confirm(`ATENÇÃO: Apagar TODOS os dados da ${semana}?`)) {
