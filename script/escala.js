@@ -33,6 +33,28 @@ document.addEventListener('DOMContentLoaded', () => {
         .status-saving { color: #ffc107; font-size: 0.8em; margin-left: 10px; }
         .status-saved { color: #28a745; font-size: 0.8em; margin-left: 10px; }
         .status-error { color: #dc3545; font-size: 0.8em; margin-left: 10px; }
+        /* Menu de Contexto */
+        .context-menu {
+            position: absolute;
+            display: none;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            z-index: 1000;
+            padding: 5px 0;
+        }
+        .context-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
     `;
     document.head.appendChild(styleSheet);
 
@@ -50,6 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
     
+    // --- ELEMENTOS DINÂMICOS ---
+    const contextMenu = document.createElement('div');
+    contextMenu.id = 'customContextMenu';
+    contextMenu.className = 'context-menu';
+    document.body.appendChild(contextMenu);
+
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
         const container = tabButtons[0].parentNode;
@@ -121,6 +149,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- FUNÇÕES DE DADOS ---
+
+    function verificarDuplicidades() {
+        // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
+        const groupsToCheck = [
+            ['placa'],
+            ['modelo'],
+            ['rota'],
+            ['motorista', 'motorista_ausente'],
+            ['auxiliar', 'auxiliar_ausente'],
+            ['terceiro']
+        ];
+        
+        groupsToCheck.forEach(keys => {
+            const selector = keys.map(k => `input[data-key="${k}"]`).join(', ');
+            const inputs = document.querySelectorAll(selector);
+            const valuesMap = new Map();
+
+            inputs.forEach(input => {
+                // Reseta estilo (mantendo a cor do status se for o caso, mas aqui estamos resetando duplicidade)
+                // Se for status, a cor é gerenciada por updateInputColor, então não resetamos background aqui se for status
+                // Mas status não está em groupsToCheck, então ok.
+                input.style.backgroundColor = '';
+                input.style.color = '';
+                input.style.fontWeight = '';
+
+                const val = input.value.trim().toUpperCase();
+                if (val) {
+                    if (!valuesMap.has(val)) valuesMap.set(val, []);
+                    valuesMap.get(val).push(input);
+                }
+            });
+
+            valuesMap.forEach((elements) => {
+                if (elements.length > 1) {
+                    elements.forEach(el => {
+                        el.style.backgroundColor = '#dc3545';
+                        el.style.color = 'white';
+                        el.style.fontWeight = 'bold';
+                    });
+                }
+            });
+        });
+    }
 
     async function adicionarLinhaManual(section) {
         const semana = selectSemana.value;
@@ -234,6 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            verificarDuplicidades();
+
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
             alert('Erro ao carregar dados do dia.');
@@ -246,6 +319,34 @@ document.addEventListener('DOMContentLoaded', () => {
         painelEscala.addEventListener('change', handleEdit); // Para inputs
         painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
             if (e.target.isContentEditable) handleEdit(e);
+        });
+
+        // --- CONTEXT MENU (Right-click para Gerar Boleta) ---
+        painelEscala.addEventListener('contextmenu', (e) => {
+            const input = e.target;
+            // Verifica se é um input de motorista/auxiliar e se tem valor
+            if (input.tagName === 'INPUT' && (input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
+                e.preventDefault(); // Previne o menu padrão do navegador
+
+                const nome = input.value.trim();
+
+                // Popula o menu de contexto
+                contextMenu.innerHTML = `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
+                
+                // Posiciona e exibe o menu
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+
+                // Adiciona o listener para o item do menu
+                const itemMenu = contextMenu.querySelector('[data-action="gerarBoleta"]');
+                if(itemMenu) {
+                    itemMenu.addEventListener('click', () => {
+                        abrirModalBoletaComDados(nome);
+                        contextMenu.style.display = 'none';
+                    });
+                }
+            }
         });
 
         painelEscala.addEventListener('click', async (e) => {
@@ -308,6 +409,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Atualiza cor se for Status
         if (key === 'status') updateInputColor(target);
+
+        verificarDuplicidades();
 
         try {
             const { error } = await supabaseClient
@@ -629,6 +732,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function abrirModalBoletaComDados(nome) {
+        const modal = document.getElementById('modalBoleta');
+        const tipoSelect = document.getElementById('filtroBoletaTipo');
+        const valorInput = document.getElementById('filtroBoletaValor');
+        const dataInput = document.getElementById('boletaData');
+
+        if (!modal || !tipoSelect || !valorInput || !dataInput) return;
+
+        // Abre o modal
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+
+        // Preenche os campos
+        tipoSelect.value = 'MOTORISTA';
+        valorInput.value = nome;
+
+        // Define a data para o dia que está sendo visualizado na escala
+        const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia;
+        const semanaAtiva = selectSemana.value;
+        if (diaAtivo && semanaAtiva && CACHE_DATAS[semanaAtiva] && CACHE_DATAS[semanaAtiva][diaAtivo]) {
+            dataInput.value = CACHE_DATAS[semanaAtiva][diaAtivo].toISOString().split('T')[0];
+        }
+
+        // Dispara a busca dos dados do veículo
+        buscarDadosBoleta();
+    }
+
     // --- INICIALIZAÇÃO ---
     function carregarSemanas() {
         const baseDate = new Date(Date.UTC(2025, 11, 28));
@@ -647,6 +777,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
+
+    // Configuração de Status baseada em status.html
+    const STATUS_CONFIG = {
+        'CNT SP': { bg: '#FF9800', color: 'white' },
+        'ZMRC': { bg: '#F44336', color: 'white' },
+        'ZMRC CPN': { bg: '#B71C1C', color: 'white' },
+        'V': { bg: '#2196F3', color: 'white' },
+        'P': { bg: '#9C27B0', color: 'white' },
+        'R': { bg: '#4CAF50', color: 'white' },
+        'V - RESTR': { bg: '#3F51B5', color: 'white' },
+        'RESTR': { bg: '#795548', color: 'white' },
+        'BGMN': { bg: '#FFEB3B', color: 'black' },
+        'TRI +': { bg: '#E91E63', color: 'white' },
+        '152/257': { bg: '#00BCD4', color: 'black' },
+        '194 TER': { bg: '#009688', color: 'white' },
+        // Status Legados
+        'OK': { bg: '#28a745', color: 'white' },
+        'MANUTENÇÃO': { bg: '#dc3545', color: 'white' },
+        'FALTA': { bg: '#dc3545', color: 'white' },
+        'FERIAS': { bg: '#17a2b8', color: 'white' },
+        'FOLGA': { bg: '#6c757d', color: 'white' },
+        'ATESTADO': { bg: '#ffc107', color: 'black' }
+    };
+
     async function carregarListasAuxiliares() {
         // Veículos
         const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
@@ -671,15 +825,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Status
-        const statusList = ['OK', 'MANUTENÇÃO', 'FALTA', 'FERIAS', 'FOLGA', 'ATESTADO'];
         const dlStatus = document.getElementById('listaStatus');
-        if(dlStatus) dlStatus.innerHTML = statusList.map(s => `<option value="${s}">`).join('');
+        if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
     }
 
     function getStatusStyle(status) {
-        // Exemplo simples, pode expandir
-        if (status === 'OK') return 'color: green; font-weight: bold;';
-        if (['FALTA', 'MANUTENÇÃO'].includes(status)) return 'color: red; font-weight: bold;';
+        const config = STATUS_CONFIG[status?.toUpperCase()] || STATUS_CONFIG[status];
+        if (config) {
+            return `background-color: ${config.bg}; color: ${config.color}; font-weight: bold; text-align: center;`;
+        }
         return '';
     }
     function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
@@ -741,99 +895,55 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
 
-    // Boleta Listeners
-    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
-    const boletaData = document.getElementById('boletaData');
-    if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
-    if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
-
-    // Inicialização
-    carregarSemanas();
-    preencherCacheDatas();
-    carregarListasAuxiliares();
-});
-
-    // --- SALVAR ---
-    function salvarDados() {
-        localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
-        alert('Dados salvos com sucesso!');
-    }
-
-    if (btnSalvar) {
-        btnSalvar.addEventListener('click', salvarDados);
-
-        // Injeta o botão Limpar Escala dinamicamente
-        const btnLimpar = document.createElement('button');
-        btnLimpar.id = 'btnLimparEscala';
-        btnLimpar.className = 'btn-custom';
-        btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
-        btnLimpar.style.backgroundColor = '#dc3545';
-        
-        if (btnSalvar.parentNode) {
-            btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar.nextSibling);
-        }
-
-        btnLimpar.addEventListener('click', () => {
-            const semana = selectSemana.value;
-            if (!semana) return;
-
-            if (confirm(`ATENÇÃO: Tem certeza que deseja limpar TODOS os dados da ${semana}?\n\nEsta ação apagará todos os registros de todos os dias desta semana e não pode ser desfeita.`)) {
-                if (DADOS_LOCAL[semana]) {
-                    delete DADOS_LOCAL[semana];
-                    localStorage.setItem('marquespan_escala_dados', JSON.stringify(DADOS_LOCAL));
-                    
-                    // Recarrega a visualização do dia atual
-                    const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia || 'SEGUNDA';
-                    carregarDadosDia(diaAtivo, semana);
-                    
-                    alert('Escala limpa com sucesso!');
-                } else {
-                    alert('A escala desta semana já está vazia.');
-                }
-            }
-        });
-    }
-
-    // Atalho Ctrl+S
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-            e.preventDefault(); // Previne o salvar padrão do navegador
-            salvarDados();
+    // Esconde o menu de contexto ao clicar em qualquer outro lugar
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.style.display = 'none';
         }
     });
 
-    // --- BOLETA DE HORÁRIO ---
-    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
+    // --- MODAL BOLETA ---
     const modalBoleta = document.getElementById('modalBoleta');
     const btnCloseModalBoleta = document.getElementById('btnCloseModalBoleta');
-    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
+    const btnGerarBoleta = document.getElementById('btnGerarBoleta');
     const filtroBoletaTipo = document.getElementById('filtroBoletaTipo');
-    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
     const listaBoletaOpcoes = document.getElementById('listaBoletaOpcoes');
-    const boletaPlaca = document.getElementById('boletaPlaca');
-    const boletaModelo = document.getElementById('boletaModelo');
-    const boletaRota = document.getElementById('boletaRota');
-    const boletaData = document.getElementById('boletaData');
+
+    function atualizarOpcoesBoleta() {
+        if (!listaBoletaOpcoes || !filtroBoletaTipo) return;
+        const tipo = filtroBoletaTipo.value;
+        listaBoletaOpcoes.innerHTML = '';
+        
+        if (tipo === 'ROTA') {
+             const options = document.getElementById('listaRotas')?.innerHTML || '';
+             listaBoletaOpcoes.innerHTML = options;
+        } else {
+             const motOptions = document.getElementById('listaMotoristas')?.innerHTML || '';
+             const auxOptions = document.getElementById('listaAuxiliares')?.innerHTML || '';
+             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
+        }
+    }
 
     if (btnGerarBoleta) {
         btnGerarBoleta.addEventListener('click', () => {
             if (modalBoleta) {
                 modalBoleta.classList.remove('hidden');
-                // Garante que o display flex inline funcione se a classe hidden usar display:none
-                modalBoleta.style.display = 'flex'; 
+                modalBoleta.style.display = 'flex';
                 atualizarOpcoesBoleta();
-                // Limpa campos ao abrir
-                if(filtroBoletaValor) filtroBoletaValor.value = '';
-                if(boletaPlaca) boletaPlaca.value = '';
-                if(boletaModelo) boletaModelo.value = '';
-                if(boletaRota) boletaRota.value = '';
                 
+                // Limpa campos
+                const fValor = document.getElementById('filtroBoletaValor');
+                if(fValor) fValor.value = '';
+                ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.value = '';
+                });
+
                 // Define data padrão (Segunda-feira da semana selecionada)
                 const semana = selectSemana.value;
-                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA']) {
-                    // Ajusta para YYYY-MM-DD
-                    const dateObj = CACHE_DATAS[semana]['SEGUNDA'];
-                    if(boletaData) boletaData.value = dateObj.toISOString().split('T')[0];
+                const bData = document.getElementById('boletaData');
+                if (CACHE_DATAS[semana] && CACHE_DATAS[semana]['SEGUNDA'] && bData) {
+                    bData.value = CACHE_DATAS[semana]['SEGUNDA'].toISOString().split('T')[0];
                 }
             }
         });
@@ -847,8 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
-    // Fechar ao clicar fora
+
     if (modalBoleta) {
         modalBoleta.addEventListener('click', (e) => {
             if (e.target === modalBoleta) {
@@ -860,110 +969,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (filtroBoletaTipo) {
         filtroBoletaTipo.addEventListener('change', () => {
-            if (filtroBoletaValor) filtroBoletaValor.value = '';
+            const fValor = document.getElementById('filtroBoletaValor');
+            if(fValor) fValor.value = '';
             atualizarOpcoesBoleta();
-            // Limpa campos automáticos
-            if(boletaPlaca) boletaPlaca.value = '';
-            if(boletaModelo) boletaModelo.value = '';
-            if(boletaRota) boletaRota.value = '';
+             ['boletaPlaca', 'boletaModelo', 'boletaRota'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
         });
     }
 
-    // Preenchimento automático ao selecionar/digitar
-    function buscarDadosBoleta() {
-        const tipo = filtroBoletaTipo.value;
-        const valorRaw = filtroBoletaValor.value;
-        const valor = valorRaw ? valorRaw.trim().toUpperCase() : '';
-        const dataSelecionada = boletaData ? boletaData.value : null;
-
-        // Limpa campos antes de buscar
-        if(boletaPlaca) boletaPlaca.value = '';
-        if(boletaModelo) boletaModelo.value = '';
-        if(boletaRota) boletaRota.value = '';
-
-        if (!valor || !dataSelecionada) return;
-
-        // Garante que o cache de datas esteja preenchido
-        if (Object.keys(CACHE_DATAS).length === 0) {
-            preencherCacheDatas();
-        }
-
-        // 1. Identifica qual semana e dia correspondem à data selecionada (busca em todo o calendário)
-        let semanaEncontrada = null;
-        let diaEncontrado = null;
-
-        for (const [semanaKey, diasObj] of Object.entries(CACHE_DATAS)) {
-            for (const [diaKey, dateObj] of Object.entries(diasObj)) {
-                if (dateObj.toISOString().split('T')[0] === dataSelecionada) {
-                    semanaEncontrada = semanaKey;
-                    diaEncontrado = diaKey;
-                    break;
-                }
-            }
-            if (semanaEncontrada) break;
-        }
-
-        if (!semanaEncontrada || !diaEncontrado) return; // Data não encontrada no calendário
-
-        // 2. Busca nos dados locais usando a semana e dia encontrados
-        if (DADOS_LOCAL[semanaEncontrada] && DADOS_LOCAL[semanaEncontrada][diaEncontrado]) {
-            const secoesBusca = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas'];
-            
-            for (const s of secoesBusca) {
-                const lista = DADOS_LOCAL[semanaEncontrada][diaEncontrado][s] || [];
-                for (const item of lista) {
-                    const itemMotorista = item.MOTORISTA ? item.MOTORISTA.toUpperCase().trim() : '';
-                    const itemAuxiliar = item.AUXILIAR ? item.AUXILIAR.toUpperCase().trim() : '';
-                    const itemRota = item.ROTA ? item.ROTA.toUpperCase().trim() : '';
-
-                    if (tipo === 'MOTORISTA') {
-                        if (itemMotorista === valor || itemAuxiliar === valor) {
-                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
-                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
-                            if(boletaRota) boletaRota.value = item.ROTA || '';
-                            return; // Encontrou e preencheu
-                        }
-                    } else { // ROTA
-                        if (itemRota === valor) {
-                            if(boletaPlaca) boletaPlaca.value = item.PLACA || '';
-                            if(boletaModelo) boletaModelo.value = item.MODELO || '';
-                            if(boletaRota) boletaRota.value = valor; // Mantém o valor pesquisado
-                            return; // Encontrou e preencheu
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (filtroBoletaValor) {
-        filtroBoletaValor.addEventListener('input', buscarDadosBoleta);
-        filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
-    }
-    
-    if (boletaData) {
-        boletaData.addEventListener('change', buscarDadosBoleta);
-    }
-
-    function atualizarOpcoesBoleta() {
-        if (!listaBoletaOpcoes) return;
-        const tipo = filtroBoletaTipo.value;
-        listaBoletaOpcoes.innerHTML = '';
-        
-        if (tipo === 'ROTA') {
-             const options = document.getElementById('listaRotas').innerHTML;
-             listaBoletaOpcoes.innerHTML = options;
-        } else {
-             const motOptions = document.getElementById('listaMotoristas').innerHTML;
-             const auxOptions = document.getElementById('listaAuxiliares').innerHTML;
-             listaBoletaOpcoes.innerHTML = motOptions + auxOptions;
-        }
-    }
-
+    const btnGerarBoletaPDF = document.getElementById('btnGerarBoletaPDF');
     if (btnGerarBoletaPDF) {
         btnGerarBoletaPDF.addEventListener('click', () => {
-            const tipo = filtroBoletaTipo.value;
-            const valor = filtroBoletaValor.value.trim();
+            const tipo = document.getElementById('filtroBoletaTipo').value;
+            const valor = document.getElementById('filtroBoletaValor').value.trim();
             const semana = selectSemana.value;
             
             if (!valor) {
@@ -981,15 +1001,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Garante que as datas estejam carregadas no cache
         if (Object.keys(CACHE_DATAS).length === 0) {
             preencherCacheDatas();
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         
-        // Logo
         try {
             const response = await fetch('logo.png');
             if (response.ok) {
@@ -999,30 +1017,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
+                doc.addImage(base64data, 'PNG', 10, 5, 40, 15);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
-        // Pega as informações dos campos do modal (que foram preenchidos automaticamente ou manualmente)
         const infoPlaca = document.getElementById('boletaPlaca').value || '_____';
         const infoModelo = document.getElementById('boletaModelo').value || '_____';
         const infoRota = document.getElementById('boletaRota').value || '_____';
 
+        // Configurações de Layout (Metade da Página)
+        const margin = 10;
+        const halfPageWidth = 148.5; // Metade de 297mm
+        const contentWidth = halfPageWidth - (margin * 2);
+
         doc.setFontSize(16);
-        doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
+        doc.text(`Boleta de Controle - ${semana}`, margin, 25);
         
         doc.setFontSize(11);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 32);
 
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 39);
         doc.setFont(undefined, 'normal');
 
         doc.setFontSize(9);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, halfPageWidth - margin, 10, { align: 'right' });
 
-        // Prepara as datas
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
             const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
@@ -1035,14 +1056,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 35;
-        const margin = 10;
-        const pageWidth = 210;
-        const contentWidth = pageWidth - (margin * 2);
-        const gap = 5;
-        const colWidth = (contentWidth - gap) / 2;
-
-        // Função auxiliar para desenhar a tabela de um dia
+        let currentY = 45;
+        
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
             const diaNome = diaKey === 'TERCA' ? 'TERÇA' : diaKey;
@@ -1067,10 +1082,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
@@ -1084,32 +1099,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return doc.lastAutoTable.finalY;
         };
 
-        // 1. Domingo (Centralizado)
-        const domWidth = colWidth; 
-        const domX = margin + (contentWidth - domWidth) / 2;
-        currentY = drawDayTable('DOMINGO', domX, currentY, domWidth) + 5;
+        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const pageHeight = 210;
 
-        // 2. Segunda e Terça
-        const ySeg = drawDayTable('SEGUNDA', margin, currentY, colWidth);
-        const yTer = drawDayTable('TERCA', margin + colWidth + gap, currentY, colWidth);
-        currentY = Math.max(ySeg, yTer) + 5;
-
-        // 3. Quarta e Quinta
-        const yQua = drawDayTable('QUARTA', margin, currentY, colWidth);
-        const yQui = drawDayTable('QUINTA', margin + colWidth + gap, currentY, colWidth);
-        currentY = Math.max(yQua, yQui) + 5;
-
-        // 4. Sexta e Sábado
-        const ySex = drawDayTable('SEXTA', margin, currentY, colWidth);
-        const ySab = drawDayTable('SABADO', margin + colWidth + gap, currentY, colWidth);
+        for (const dia of dias) {
+             // Verifica se a próxima tabela caberá na página (estimativa de altura)
+             if (currentY + 45 > pageHeight) {
+                 doc.addPage();
+                 currentY = 10;
+             }
+             currentY = drawDayTable(dia, margin, currentY, contentWidth) + 5;
+        }
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
 
-    // --- INICIALIZAÇÃO ---
+    // Boleta Listeners
+    const filtroBoletaValor = document.getElementById('filtroBoletaValor');
+    const boletaData = document.getElementById('boletaData');
+    if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
+    if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
+
+    // Inicialização
     carregarSemanas();
     preencherCacheDatas();
-    carregarVeiculos();
-    carregarRotas();
-    carregarFuncionarios();
-    carregarStatus();
+    carregarListasAuxiliares();
+});
