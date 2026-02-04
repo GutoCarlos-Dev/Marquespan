@@ -1113,12 +1113,12 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFont(undefined, 'normal');
         
         // Campo Nome
-        doc.text('Nome Completo:', margin, currentY);
-        doc.line(margin, currentY + 4, margin + 60, currentY + 4); 
+        doc.line(margin, currentY, margin + 60, currentY); 
+        doc.text('Nome Completo:', margin, currentY + 4);
         
         // Campo Assinatura
-        doc.text('Assinatura:', margin + 65, currentY);
-        doc.line(margin + 65, currentY + 4, margin + contentWidth, currentY + 4);
+        doc.line(margin + 65, currentY, margin + contentWidth, currentY);
+        doc.text('Assinatura:', margin + 65, currentY + 4);
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
