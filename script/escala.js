@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
+                doc.addImage(base64data, 'PNG', 10, 5, 40, 15);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
@@ -1013,19 +1013,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const infoModelo = document.getElementById('boletaModelo').value || '_____';
         const infoRota = document.getElementById('boletaRota').value || '_____';
 
+        // Configurações de Layout (Metade da Página)
+        const margin = 10;
+        const halfPageWidth = 148.5; // Metade de 297mm
+        const contentWidth = halfPageWidth - (margin * 2);
+
         doc.setFontSize(16);
-        doc.text(`Boleta de Controle - ${semana}`, 105, 15, { align: 'center' });
+        doc.text(`Boleta de Controle - ${semana}`, margin, 25);
         
         doc.setFontSize(11);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, 105, 22, { align: 'center' });
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 32);
 
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, 105, 29, { align: 'center' });
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 39);
         doc.setFont(undefined, 'normal');
 
         doc.setFontSize(9);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 200, 10, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, halfPageWidth - margin, 10, { align: 'right' });
 
         const datasDia = {};
         if (CACHE_DATAS[semana]) {
@@ -1039,10 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 35;
-        const margin = 10;
-        const pageWidth = 210;
-        const contentWidth = pageWidth - (margin * 2);
+        let currentY = 45;
         const gap = 5;
         const colWidth = (contentWidth - gap) / 2;
 
@@ -1070,10 +1072,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 20 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
