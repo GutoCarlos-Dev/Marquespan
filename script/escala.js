@@ -1114,11 +1114,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Campo Nome
         doc.line(margin, currentY, margin + 60, currentY); 
-        doc.text('Nome Completo:', margin, currentY + 4);
+        doc.text('Nome Completo:', margin, currentY + 6);
         
         // Campo Assinatura
         doc.line(margin + 65, currentY, margin + contentWidth, currentY);
-        doc.text('Assinatura:', margin + 65, currentY + 4);
+        doc.text('Assinatura:', margin + 65, currentY + 6);
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
     }
