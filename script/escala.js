@@ -1106,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.addPage();
             currentY = 20;
         } else {
-            currentY += 5;
+            currentY += 6;
         }
 
         doc.setFontSize(7);
