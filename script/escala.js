@@ -78,6 +78,26 @@ document.addEventListener('DOMContentLoaded', () => {
     contextMenu.className = 'context-menu';
     document.body.appendChild(contextMenu);
 
+    // Modal de Orientação do PDF
+    const pdfModal = document.createElement('div');
+    pdfModal.id = 'pdfOrientationModal';
+    pdfModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:2000;';
+    pdfModal.innerHTML = `
+        <div style="background:white;padding:20px;border-radius:8px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;">
+            <h3 style="margin-top:0;color:#333;">Escolha o formato do PDF</h3>
+            <div style="margin:20px 0;display:flex;gap:10px;justify-content:center;">
+                <button id="btnPdfLandscape" style="background:#007bff;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;"><i class="fas fa-image"></i> Horizontal</button>
+                <button id="btnPdfPortrait" style="background:#28a745;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;"><i class="fas fa-file-alt"></i> Vertical</button>
+            </div>
+            <button id="btnPdfCancel" style="background:transparent;border:none;color:#666;cursor:pointer;text-decoration:underline;">Cancelar</button>
+        </div>
+    `;
+    document.body.appendChild(pdfModal);
+
+    // Fechar modal ao clicar fora
+    pdfModal.addEventListener('click', (e) => { if (e.target === pdfModal) pdfModal.style.display = 'none'; });
+    document.getElementById('btnPdfCancel').addEventListener('click', () => pdfModal.style.display = 'none');
+
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
         const container = tabButtons[0].parentNode;
@@ -586,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
-    async function gerarPDF() {
+    async function gerarPDF(orientation = 'landscape') {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
         
         const semana = selectSemana.value;
@@ -599,7 +619,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const doc = new jsPDF({ orientation: orientation, unit: 'mm', format: 'a4' });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const centerX = pageWidth / 2;
+        const rightX = pageWidth - 5; // Margem direita de 5mm
 
         // Logo
         try {
@@ -613,9 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
 
         doc.setFontSize(18);
-        doc.text(`Escala - ${semana}`, 148.5, 15, { align: 'center' });
+        doc.text(`Escala - ${semana}`, centerX, 15, { align: 'center' });
         doc.setFontSize(9);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 292, 10, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, rightX, 10, { align: 'right' });
 
         let finalY = 25;
         const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
@@ -636,15 +661,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (itensDiaEscala.length === 0 && itensDiaFaltas.length === 0) continue;
 
-            if (finalY > 185) { doc.addPage(); finalY = 15; }
+            if (finalY > pageHeight - 25) { doc.addPage(); finalY = 15; }
 
             // Cabeçalho do Dia
             doc.setFillColor(230, 230, 230);
-            doc.rect(5, finalY, 287, 7, 'F');
+            doc.rect(5, finalY, pageWidth - 10, 7, 'F');
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
-            doc.text(`${dia} - ${CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR')}`, 148.5, finalY + 5, { align: 'center' });
+            doc.text(`${dia} - ${CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR')}`, centerX, finalY + 5, { align: 'center' });
             finalY += 9;
 
             for (const sec of secoes) {
@@ -664,12 +689,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (itens.length === 0) continue;
 
                 doc.setFillColor(0, 0, 0);
-                doc.rect(5, finalY, 287, 6, 'F');
+                doc.rect(5, finalY, pageWidth - 10, 6, 'F');
 
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(255, 255, 255);
-                doc.text(sec.title, 148.5, finalY + 4.5, { align: 'center' });
+                doc.text(sec.title, centerX, finalY + 4.5, { align: 'center' });
 
                 doc.autoTable({
                     head: [columns],
@@ -702,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(100);
-            doc.text(`Página ${i} de ${pageCount}`, 292, 205, { align: 'right' });
+            doc.text(`Página ${i} de ${pageCount}`, rightX, pageHeight - 5, { align: 'right' });
         }
 
         doc.save(`Escala_${semana}.pdf`);
@@ -914,7 +939,19 @@ document.addEventListener('DOMContentLoaded', () => {
         fileImportar.addEventListener('change', importarExcel);
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
-    if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
+    if (btnPDF) {
+        btnPDF.addEventListener('click', () => {
+            document.getElementById('pdfOrientationModal').style.display = 'flex';
+        });
+        document.getElementById('btnPdfLandscape').addEventListener('click', () => {
+            document.getElementById('pdfOrientationModal').style.display = 'none';
+            gerarPDF('landscape');
+        });
+        document.getElementById('btnPdfPortrait').addEventListener('click', () => {
+            document.getElementById('pdfOrientationModal').style.display = 'none';
+            gerarPDF('portrait');
+        });
+    }
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
 
     // Esconde o menu de contexto ao clicar em qualquer outro lugar
