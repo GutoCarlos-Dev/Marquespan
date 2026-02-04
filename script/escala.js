@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blob = await response.blob();
                 const reader = new FileReader();
                 const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
-                doc.addImage(base64data, 'PNG', 5, 5, 40, 15);
+                doc.addImage(base64data, 'PNG', 5, 5, 40, 10);
             }
         } catch (e) {}
 
