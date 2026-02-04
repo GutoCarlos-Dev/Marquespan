@@ -1030,11 +1030,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentWidth = halfPageWidth - (margin * 2);
 
         doc.setFontSize(10);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 25);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 20);
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 32);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 27);
         doc.setFont(undefined, 'normal');
 
         const datasDia = {};
