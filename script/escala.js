@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 10, 5, 40, 15);
+                doc.addImage(base64data, 'PNG', 10, 5, 40, 10);
             }
         } catch (e) { console.warn('Logo não carregado', e); }
 
@@ -1032,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFontSize(10);
         doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 27);
 
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 32);
         doc.setFont(undefined, 'normal');
