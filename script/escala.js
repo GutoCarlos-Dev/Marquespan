@@ -1065,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 head: [[{ 
                     content: `${diaNome} - ${dateStr}`, 
                     colSpan: 4, 
-                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 10 } 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 9 } 
                 }]],
                 body: [
                     [
