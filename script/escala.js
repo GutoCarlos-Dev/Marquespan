@@ -1029,15 +1029,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
 
-        doc.setFontSize(16);
-        doc.text(`Boleta de Controle - ${semana}`, margin, 25);
+        doc.setFontSize(14);
+        doc.text(`Boleta de Controle - ${semana}`, margin, 22);
         
-        doc.setFontSize(11);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 32);
+        doc.setFontSize(10);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 28);
 
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 39);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 34);
         doc.setFont(undefined, 'normal');
 
         doc.setFontSize(9);
@@ -1055,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 45;
+        let currentY = 40;
         
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
@@ -1081,10 +1081,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         { content: `DATA: ${dateStr}`, colSpan: 2, styles: { halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } },
-                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 15 } }
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'HORA:\n\n      :      ', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } },
+                        { content: 'ASS:\n\n________________', styles: { halign: 'center', valign: 'middle', minCellHeight: 12 } }
                     ]
                 ],
                 styles: { fontSize: 8, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
@@ -1103,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const dia of dias) {
              // Verifica se a próxima tabela caberá na página (estimativa de altura)
-             if (currentY + 45 > pageHeight) {
+             if (currentY + 35 > pageHeight) {
                  doc.addPage();
                  currentY = 10;
              }
