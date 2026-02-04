@@ -679,7 +679,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     theme: 'grid',
                     styles: { fontSize: 8, cellPadding: 1 },
                     headStyles: { fillColor: [0, 105, 55], textColor: 255 },
-                    didDrawPage: (data) => { finalY = data.cursor.y; }
+                    didDrawPage: (data) => { finalY = data.cursor.y; },
+                    didParseCell: function(data) {
+                        if (data.section === 'body' && sec.id !== 'FALTAS' && data.column.index === 3) {
+                            const status = data.cell.raw;
+                            const config = STATUS_CONFIG[status] || STATUS_CONFIG[status?.toUpperCase()];
+                            if (config) {
+                                data.cell.styles.textColor = config.bg;
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        }
+                    }
                 });
                 finalY = doc.lastAutoTable.finalY + 4;
             }
