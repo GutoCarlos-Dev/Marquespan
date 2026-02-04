@@ -1029,14 +1029,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
 
-
+        doc.setFontSize(14);
+        doc.text(`Boleta de Controle - ${semana}`, margin, 22);
         
         doc.setFontSize(10);
-        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 28);
+        doc.text(`Placa: ${infoPlaca} - ${infoModelo}   |   Rota: ${infoRota}`, margin, 27);
 
         doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 34);
+        doc.text(`${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: ${valor}`, margin, 32);
         doc.setFont(undefined, 'normal');
 
         const datasDia = {};
@@ -1051,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        let currentY = 40;
+        let currentY = 37;
         
         const drawDayTable = (diaKey, x, y, width) => {
             const dateStr = datasDia[diaKey] || '';
@@ -1065,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 head: [[{ 
                     content: `${diaNome} - ${dateStr}`, 
                     colSpan: 4, 
-                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 9 } 
+                    styles: { halign: 'center', fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 10 } 
                 }]],
                 body: [
                     [
@@ -1095,11 +1096,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const dia of dias) {
              // Verifica se a próxima tabela caberá na página (estimativa de altura)
-             if (currentY + 35 > pageHeight) {
+             // Altura estimada da tabela ~25mm. Limite 200mm (210mm - 10mm margem)
+             if (currentY + 25 > 200) {
                  doc.addPage();
                  currentY = 10;
              }
-             currentY = drawDayTable(dia, margin, currentY, contentWidth) + 5;
+             currentY = drawDayTable(dia, margin, currentY, contentWidth) + 3;
         }
 
         doc.save(`Boleta_${valor.replace(/[^a-z0-9]/gi, '_')}_${semana}.pdf`);
