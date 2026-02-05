@@ -756,14 +756,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
     async function gerarPDF(orientation = 'landscape') {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
-        
+
         const semana = selectSemana.value;
-        // Busca dados da semana inteira
-        const { data: dadosEscala } = await supabaseClient.from('escala').select('*').eq('semana_nome', semana);
-        const { data: dadosFaltas } = await supabaseClient.from('faltas_afastamentos').select('*').eq('semana_nome', semana);
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+
+        if (!semana || !dia) {
+            return alert('Nenhuma semana ou dia selecionado para gerar o PDF.');
+        }
+
+        const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+
+        // Busca dados apenas do dia selecionado
+        const { data: dadosEscala, error: escalaError } = await supabaseClient.from('escala').select('*').eq('data_escala', dataISO);
+        const { data: dadosFaltas, error: faltasError } = await supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO);
+
+        if (escalaError || faltasError) {
+            console.error('Erro ao buscar dados do dia:', escalaError || faltasError);
+            return alert('Erro ao carregar dados para o PDF.');
+        }
 
         if ((!dadosEscala || dadosEscala.length === 0) && (!dadosFaltas || dadosFaltas.length === 0)) {
-            return alert('Nenhum dado encontrado para esta semana.');
+            return alert('Nenhum dado encontrado para este dia.');
         }
 
         const { jsPDF } = window.jspdf;
@@ -772,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const centerX = pageWidth / 2;
-        const rightX = pageWidth - 5; // Margem direita de 5mm
+        const rightX = pageWidth - 5;
 
         // Logo
         try {
@@ -785,13 +798,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {}
 
+        const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
+        const formattedDate = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        
         doc.setFontSize(18);
-        doc.text(`Escala - ${semana}`, centerX, 15, { align: 'center' });
+        doc.text(`Escala - ${diaNome} - ${formattedDate}`, centerX, 15, { align: 'center' });
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, rightX, 10, { align: 'right' });
 
         let finalY = 25;
-        const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
         const secoes = [
             { id: 'PADRAO', title: 'PADRÃO' },
             { id: 'TRANSFERENCIA', title: 'TRANSFERÊNCIA CD' },
@@ -800,74 +815,54 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'FALTAS', title: 'FALTAS / FÉRIAS / AFASTADOS' }
         ];
 
-        for (const dia of dias) {
-            const dataDia = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
-            
-            // Filtra dados para o dia
-            const itensDiaEscala = dadosEscala ? dadosEscala.filter(d => d.data_escala === dataDia) : [];
-            const itensDiaFaltas = dadosFaltas ? dadosFaltas.filter(d => d.data_escala === dataDia) : [];
+        for (const sec of secoes) {
+            let itens = [];
+            let columns, body;
 
-            if (itensDiaEscala.length === 0 && itensDiaFaltas.length === 0) continue;
+            if (sec.id === 'FALTAS') {
+                itens = dadosFaltas || [];
+                columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
+                body = itens.map(i => [i.motorista_ausente || '', i.motivo_motorista || '', i.auxiliar_ausente || '', i.motivo_auxiliar || '', '']);
+            } else {
+                itens = (dadosEscala || []).filter(d => d.tipo_escala === sec.id);
+                columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA'];
+                body = itens.map(i => [i.placa || '', i.modelo || '', i.rota || '', i.status || '', i.motorista || '', i.auxiliar || '', i.terceiro || '', '']);
+            }
 
-            if (finalY > pageHeight - 25) { doc.addPage(); finalY = 15; }
+            if (itens.length === 0) continue;
 
-            // Cabeçalho do Dia
-            doc.setFillColor(230, 230, 230);
-            doc.rect(5, finalY, pageWidth - 10, 7, 'F');
-            doc.setFontSize(11);
+            if (finalY > pageHeight - 40) { doc.addPage(); finalY = 15; }
+
+            doc.setFillColor(0, 0, 0);
+            doc.rect(5, finalY, pageWidth - 10, 6, 'F');
+
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(0, 0, 0);
-            doc.text(`${dia} - ${CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR')}`, centerX, finalY + 5, { align: 'center' });
-            finalY += 9;
+            doc.setTextColor(255, 255, 255);
+            doc.text(sec.title, centerX, finalY + 4.5, { align: 'center' });
 
-            for (const sec of secoes) {
-                let itens = [];
-                let columns, body;
-
-                if (sec.id === 'FALTAS') {
-                    itens = itensDiaFaltas;
-                    columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
-                    body = itens.map(i => [i.motorista_ausente, i.motivo_motorista, i.auxiliar_ausente, i.motivo_auxiliar, '']);
-                } else {
-                    itens = itensDiaEscala.filter(d => d.tipo_escala === sec.id);
-                    columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA'];
-                    body = itens.map(i => [i.placa, i.modelo, i.rota, i.status, i.motorista, i.auxiliar, i.terceiro, '']);
-                }
-
-                if (itens.length === 0) continue;
-
-                doc.setFillColor(0, 0, 0);
-                doc.rect(5, finalY, pageWidth - 10, 6, 'F');
-
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(255, 255, 255);
-                doc.text(sec.title, centerX, finalY + 4.5, { align: 'center' });
-
-                doc.autoTable({
-                    head: [columns],
-                    body: body,
-                    startY: finalY + 7,
-                    margin: { left: 5, right: 5 },
-                    theme: 'grid',
-                    styles: { fontSize: 8, cellPadding: 1 },
-                    headStyles: { fillColor: [0, 105, 55], textColor: 255 },
-                    alternateRowStyles: { fillColor: [220, 220, 220] },
-                    didDrawPage: (data) => { finalY = data.cursor.y; },
-                    didParseCell: function(data) {
-                        if (data.section === 'body' && sec.id !== 'FALTAS' && data.column.index === 3) {
-                            const status = data.cell.raw;
-                            const config = STATUS_CONFIG[status] || STATUS_CONFIG[status?.toUpperCase()];
-                            if (config) {
-                                data.cell.styles.textColor = config.bg;
-                                data.cell.styles.fontStyle = 'bold';
-                            }
+            doc.autoTable({
+                head: [columns],
+                body: body,
+                startY: finalY + 7,
+                margin: { left: 5, right: 5 },
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 1 },
+                headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+                alternateRowStyles: { fillColor: [220, 220, 220] },
+                didDrawPage: (data) => { finalY = data.cursor.y; },
+                didParseCell: function(data) {
+                    if (data.section === 'body' && sec.id !== 'FALTAS' && data.column.index === 3) {
+                        const status = data.cell.raw;
+                        const config = STATUS_CONFIG[status] || STATUS_CONFIG[status?.toUpperCase()];
+                        if (config) {
+                            data.cell.styles.textColor = config.bg;
+                            data.cell.styles.fontStyle = 'bold';
                         }
                     }
-                });
-                finalY = doc.lastAutoTable.finalY + 4;
-            }
-            finalY += 2;
+                }
+            });
+            finalY = doc.lastAutoTable.finalY + 4;
         }
 
         const pageCount = doc.internal.getNumberOfPages();
@@ -878,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text(`Página ${i} de ${pageCount}`, rightX, pageHeight - 5, { align: 'right' });
         }
 
-        doc.save(`Escala_${semana}.pdf`);
+        doc.save(`Escala_${semana}_${dia}.pdf`);
     }
 
     // --- FUNÇÕES DO MODAL DE EXPEDIÇÃO ---
