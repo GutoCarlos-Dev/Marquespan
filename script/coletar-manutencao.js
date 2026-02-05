@@ -1479,6 +1479,21 @@ const ColetarManutencaoUI = {
                 }
             };
 
+            // === ATUALIZAÇÃO AUTOMÁTICA DO STATUS DO VEÍCULO ===
+            // Se houver algum item INTERNADO, o veículo fica INTERNADO.
+            // Caso contrário, volta para ativo.
+            const temInternado = itemsToProcess.some(i => i.status === 'INTERNADO');
+            const novaSituacao = temInternado ? 'INTERNADO' : 'ativo';
+
+            const { error: errVeiculo } = await supabaseClient
+                .from('veiculos')
+                .update({ situacao: novaSituacao })
+                .eq('placa', placa);
+
+            if (errVeiculo) {
+                console.error('Erro ao atualizar situação do veículo:', errVeiculo);
+            }
+
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
             this.carregarLancamentos(); // Atualiza a grid
