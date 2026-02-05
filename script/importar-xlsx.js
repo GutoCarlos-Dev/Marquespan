@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 /**
  * Script para Importação de XLSX - Marquespan
  * Lógica específica para interpretar arquivos de importação

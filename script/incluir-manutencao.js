@@ -1,3 +1,4 @@
+import { supabaseClient } from './supabase.js';
 // 📦 Importação do Supabase
 
 // 🔀 Alternância de painéis internos

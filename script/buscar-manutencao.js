@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabase.js';
+
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   const divUsuario = document.getElementById('usuario-logado');

@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabaseClient as supabase } from './supabase.js';
 
 // === CONSTANTES PARA CONTROLE DE MOTIVOS ===
 const MOTIVOS_QUE_ADICIONAM = ['Aumento', 'Aumento+Troca', 'Cliente Novo'];
