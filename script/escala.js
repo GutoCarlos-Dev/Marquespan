@@ -148,8 +148,21 @@ document.addEventListener('DOMContentLoaded', () => {
     pdfModal.id = 'pdfOrientationModal';
     pdfModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:2000;';
     pdfModal.innerHTML = `
-        <div style="background:white;padding:20px;border-radius:8px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;">
-            <h3 style="margin-top:0;color:#333;">Escolha o formato do PDF</h3>
+        <div style="background:white;padding:20px;border-radius:8px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;max-width:400px;">
+            <h3 style="margin-top:0;color:#333;">Gerar PDF da Escala</h3>
+            
+            <div style="text-align:left; margin-bottom:15px; border:1px solid #eee; padding:10px; border-radius:4px;">
+                <p style="margin:0 0 10px 0; font-weight:bold; font-size:0.9em;">Selecione as seções:</p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.85em;">
+                    <label><input type="checkbox" class="pdf-section-chk" value="PADRAO" checked> PADRÃO</label>
+                    <label><input type="checkbox" class="pdf-section-chk" value="TRANSFERENCIA" checked> TRANSFERÊNCIA</label>
+                    <label><input type="checkbox" class="pdf-section-chk" value="EQUIPAMENTO" checked> EQUIPAMENTO</label>
+                    <label><input type="checkbox" class="pdf-section-chk" value="RESERVA" checked> RESERVAS</label>
+                    <label><input type="checkbox" class="pdf-section-chk" value="FALTAS" checked> FALTAS</label>
+                </div>
+            </div>
+
+            <p style="margin-bottom:10px; font-size:0.9em;">Escolha a orientação:</p>
             <div style="margin:20px 0;display:flex;gap:10px;justify-content:center;">
                 <button id="btnPdfLandscape" style="background:#007bff;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;"><i class="fas fa-image"></i> Horizontal</button>
                 <button id="btnPdfPortrait" style="background:#28a745;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;"><i class="fas fa-file-alt"></i> Vertical</button>
@@ -754,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
-    async function gerarPDF(orientation = 'landscape') {
+    async function gerarPDF(orientation = 'portrait', selectedSections = null) {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
 
         const semana = selectSemana.value;
@@ -802,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDate = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         
         doc.setFontSize(18);
-        doc.text(`Escala ${semana} - ${diaNome} - ${formattedDate}`, centerX, 15, { align: 'center' });
+        doc.text(`ESCALA - ${semana} - ${diaNome} - ${formattedDate}`, centerX, 20, { align: 'center' });
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, rightX, 10, { align: 'right' });
 
@@ -815,7 +828,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'FALTAS', title: 'FALTAS / FÉRIAS / AFASTADOS' }
         ];
 
-        for (const sec of secoes) {
+        const secoesFiltradas = selectedSections ? secoes.filter(s => selectedSections.includes(s.id)) : secoes;
+
+        for (const sec of secoesFiltradas) {
             let itens = [];
             let columns, body;
 
@@ -1170,11 +1185,17 @@ document.addEventListener('DOMContentLoaded', () => {
         btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
         btnLimpar.onclick = async () => {
             const semana = selectSemana.value;
-            if (confirm(`ATENÇÃO: Apagar TODOS os dados da ${semana}?`)) {
-                await supabaseClient.from('escala').delete().eq('semana_nome', semana);
-                await supabaseClient.from('faltas_afastamentos').delete().eq('semana_nome', semana);
-                alert('Semana limpa.');
-                const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            if (!semana || !dia) return;
+
+            const dataObj = CACHE_DATAS[semana][dia];
+            const dataISO = dataObj.toISOString().split('T')[0];
+            const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+            if (confirm(`ATENÇÃO: Apagar TODOS os dados do dia ${formattedDate}?`)) {
+                await supabaseClient.from('escala').delete().eq('data_escala', dataISO);
+                await supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO);
+                alert(`Dados do dia ${formattedDate} foram limpos.`);
                 if(dia) carregarDadosDia(dia, semana);
             }
         };
@@ -1191,12 +1212,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('pdfOrientationModal').style.display = 'flex';
         });
         document.getElementById('btnPdfLandscape').addEventListener('click', () => {
+            const selected = Array.from(document.querySelectorAll('.pdf-section-chk:checked')).map(cb => cb.value);
+            if(selected.length === 0) return alert('Selecione pelo menos uma seção.');
             document.getElementById('pdfOrientationModal').style.display = 'none';
-            gerarPDF('landscape');
+            gerarPDF('landscape', selected);
         });
         document.getElementById('btnPdfPortrait').addEventListener('click', () => {
+            const selected = Array.from(document.querySelectorAll('.pdf-section-chk:checked')).map(cb => cb.value);
+            if(selected.length === 0) return alert('Selecione pelo menos uma seção.');
             document.getElementById('pdfOrientationModal').style.display = 'none';
-            gerarPDF('portrait');
+            gerarPDF('portrait', selected);
         });
     }
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
