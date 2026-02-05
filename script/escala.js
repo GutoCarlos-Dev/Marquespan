@@ -1488,50 +1488,63 @@ document.addEventListener('DOMContentLoaded', () => {
             }, {});
             const totalBody = Object.entries(modeloCounts).map(([m, c]) => [m, c]);
 
-            const drawCopy = (startY) => {
-                doc.setFontSize(12);
-                doc.text(`Resumo de Expedição - ${diaNome}`, 10, startY);
+            const margin = 10;
+            const pageMiddleX = 210 / 2;
+            const contentWidth = pageMiddleX - margin - 2.5; // Largura do conteúdo em cada metade
+
+            // --- PARTE ESQUERDA ---
+            doc.setFontSize(12);
+            doc.text(`Resumo de Expedição - ${diaNome}`, margin, 15);
+            doc.setFontSize(8);
+            doc.text(semanaData, margin, 22);
+
+            doc.autoTable({
+                head: [columns], body: body, startY: 30, theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1 },
+                headStyles: { fillColor: [0, 105, 55] },
+                margin: { left: margin }, tableWidth: contentWidth,
+            });
+
+            if (totalBody.length > 0) {
                 doc.setFontSize(8);
-                doc.text(semanaData, 10, startY + 5);
-
+                doc.text("Totais por Modelo:", margin, doc.lastAutoTable.finalY + 5);
                 doc.autoTable({
-                    head: [columns],
-                    body: body,
-                    startY: startY + 8,
-                    theme: 'grid',
-                    styles: { fontSize: 7, cellPadding: 1 },
-                    headStyles: { fillColor: [0, 105, 55] },
-                    margin: { left: 10, right: 10 }
+                    head: [['Modelo', 'Qtd']], body: totalBody, startY: doc.lastAutoTable.finalY + 7,
+                    theme: 'grid', styles: { fontSize: 7, cellPadding: 1 },
+                    headStyles: { fillColor: [100, 100, 100] },
+                    margin: { left: margin }, tableWidth: 60
                 });
-
-                let finalY = doc.lastAutoTable.finalY + 5;
-
-                if (totalBody.length > 0) {
-                    doc.setFontSize(8);
-                    doc.text("Totais por Modelo:", 10, finalY);
-                    doc.autoTable({
-                        head: [['Modelo', 'Qtd']],
-                        body: totalBody,
-                        startY: finalY + 2,
-                        theme: 'grid',
-                        styles: { fontSize: 7, cellPadding: 1 },
-                        headStyles: { fillColor: [100, 100, 100] },
-                        margin: { left: 10 },
-                        tableWidth: 60
-                    });
-                }
-            };
-
-            // Parte Superior
-            drawCopy(10);
+            }
 
             // Linha de Corte
             doc.setLineWidth(0.1);
             doc.setDrawColor(200);
-            doc.line(0, 148.5, 210, 148.5);
+            doc.line(pageMiddleX, 0, pageMiddleX, 297); // Linha vertical no meio
 
-            // Parte Inferior
-            drawCopy(158.5);
+            // --- PARTE DIREITA ---
+            const startX_right = pageMiddleX + 2.5;
+            doc.setFontSize(12);
+            doc.text(`Resumo de Expedição - ${diaNome}`, startX_right, 15);
+            doc.setFontSize(8);
+            doc.text(semanaData, startX_right, 22);
+
+            doc.autoTable({
+                head: [columns], body: body, startY: 30, theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1 },
+                headStyles: { fillColor: [0, 105, 55] },
+                margin: { left: startX_right }, tableWidth: contentWidth,
+            });
+
+            if (totalBody.length > 0) {
+                doc.setFontSize(8);
+                doc.text("Totais por Modelo:", startX_right, doc.lastAutoTable.finalY + 5);
+                doc.autoTable({
+                    head: [['Modelo', 'Qtd']], body: totalBody, startY: doc.lastAutoTable.finalY + 7,
+                    theme: 'grid', styles: { fontSize: 7, cellPadding: 1 },
+                    headStyles: { fillColor: [100, 100, 100] },
+                    margin: { left: startX_right }, tableWidth: 60
+                });
+            }
 
             doc.save(`Expedicao_${diaNome}.pdf`);
         });
