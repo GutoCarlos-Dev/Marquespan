@@ -1,6 +1,9 @@
 // script/escala.js
 import { supabaseClient } from './supabase.js';
 
+// Variável para armazenar os dados da seção PADRÃO do dia atual
+let dadosPadraoDoDia = [];
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
 
@@ -55,6 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
         .context-menu-item:hover {
             background-color: #f0f0f0;
         }
+        /* Modal Expedição */
+        .modal-expedicao {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; justify-content: center;
+            align-items: center; z-index: 2000;
+        }
+        .modal-expedicao-content {
+            background: #fdfdfd; padding: 25px; border-radius: 8px;
+            width: 90%; max-width: 1200px; height: 90vh;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column;
+        }
+        .modal-expedicao-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #006937; padding-bottom: 15px; margin-bottom: 15px;
+        }
+        .modal-expedicao-header h3 { margin: 0; font-size: 1.5rem; color: #006937; }
+        .modal-expedicao-header .close-btn { font-size: 2rem; color: #666; cursor: pointer; background: none; border: none; }
+        .modal-expedicao-subheader { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: #555; }
+        .modal-expedicao-table-container { flex-grow: 1; overflow: auto; }
+        .modal-expedicao-table { width: 100%; border-collapse: collapse; }
+        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .modal-expedicao-table th { background-color: #f2f2f2; }
+        .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; }
+        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; font-weight: bold; text-align: center; }
     `;
     document.head.appendChild(styleSheet);
 
@@ -93,6 +120,46 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     `;
     document.body.appendChild(pdfModal);
+
+    // Modal de Expedição
+    const expedicaoModal = document.createElement('div');
+    expedicaoModal.id = 'modalExpedicao';
+    expedicaoModal.className = 'modal-expedicao';
+    expedicaoModal.innerHTML = `
+        <div class="modal-expedicao-content">
+            <div class="modal-expedicao-header">
+                <h3 id="modalExpedicaoTitulo">Resumo de Expedição</h3>
+                <button class="close-btn" id="modalExpedicaoClose">&times;</button>
+            </div>
+            <div class="modal-expedicao-subheader">
+                <span id="modalExpedicaoDiaSemana"></span>
+                <span id="modalExpedicaoSemanaData"></span>
+            </div>
+            <div class="modal-expedicao-table-container">
+                <table class="modal-expedicao-table">
+                    <thead>
+                        <tr>
+                            <th>Placa</th>
+                            <th>Rota</th>
+                            <th>Status</th>
+                            <th>Motorista</th>
+                        </tr>
+                        <tr id="expedicao-filters">
+                            <td><input type="text" class="filter-input" data-column="placa" placeholder="Filtrar Placa..."></td>
+                            <td><input type="text" class="filter-input" data-column="rota" placeholder="Filtrar Rota..."></td>
+                            <td><input type="text" class="filter-input" data-column="status" placeholder="Filtrar Status..."></td>
+                            <td><input type="text" class="filter-input" data-column="motorista" placeholder="Filtrar Motorista..."></td>
+                        </tr>
+                    </thead>
+                    <tbody id="modalExpedicaoTbody"></tbody>
+                </table>
+            </div>
+            <div class="modal-expedicao-footer" id="modalExpedicaoTotalizador">
+                <!-- Totalizador de modelos será inserido aqui -->
+            </div>
+        </div>
+    `;
+    document.body.appendChild(expedicaoModal);
 
     // Fechar modal ao clicar fora
     pdfModal.addEventListener('click', (e) => { if (e.target === pdfModal) pdfModal.style.display = 'none'; });
@@ -260,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
                 <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
                 <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala para o Dia Seguinte"><i class="fa-solid fa-copy"></i></button>
+                <button id="btnExpedicao" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #ff9800;" title="Resumo de Expedição"><i class="fa-solid fa-truck-ramp-box"></i> Expedição</button>
                 <span id="status-indicator"></span>
             </div>`;
 
@@ -288,6 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const tipo = SECAO_PARA_DB[sec].tipo;
                     itens = dadosEscala.filter(d => d.tipo_escala === tipo);
+                }
+
+                // Armazena os dados da seção PADRÃO para o modal de expedição
+                if (sec === 'Padrao') {
+                    dadosPadraoDoDia = itens;
                 }
 
                 if (itens.length > 0) {
@@ -396,6 +469,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Botão Copiar Dia Seguinte
             if (e.target.closest('#btnCopiarDiaSeguinte')) {
                 copiarDiaSeguinte();
+            }
+
+            // Botão Expedição
+            if (e.target.closest('#btnExpedicao')) {
+                abrirModalExpedicao();
             }
         });
     }
@@ -731,6 +809,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         doc.save(`Escala_${semana}.pdf`);
+    }
+
+    // --- FUNÇÕES DO MODAL DE EXPEDIÇÃO ---
+    function abrirModalExpedicao() {
+        const semana = selectSemana.value;
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semana || !dia) return;
+
+        const dataObj = CACHE_DATAS[semana][dia];
+        const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+        const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
+
+        document.getElementById('modalExpedicaoDiaSemana').textContent = diaNome;
+        document.getElementById('modalExpedicaoSemanaData').textContent = `${semana} - ${formattedDate}`;
+        
+        // Limpa filtros antigos
+        document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => input.value = '');
+
+        renderTabelaExpedicao(dadosPadraoDoDia);
+        calcularTotalizadorModelos(dadosPadraoDoDia);
+
+        document.getElementById('modalExpedicao').style.display = 'flex';
+    }
+
+    function renderTabelaExpedicao(dados) {
+        const tbody = document.getElementById('modalExpedicaoTbody');
+        tbody.innerHTML = '';
+
+        if (!dados || dados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum dado padrão para exibir.</td></tr>';
+            return;
+        }
+
+        dados.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.placa || ''}</td>
+                <td>${item.rota || ''}</td>
+                <td>${item.status || ''}</td>
+                <td>${item.motorista || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function calcularTotalizadorModelos(dados) {
+        const totalizadorEl = document.getElementById('modalExpedicaoTotalizador');
+        if (!dados || dados.length === 0) {
+            totalizadorEl.innerHTML = 'Nenhum modelo para totalizar.';
+            return;
+        }
+
+        const modeloCounts = dados.reduce((acc, item) => {
+            if (item.modelo) {
+                const modelo = item.modelo.trim().toUpperCase();
+                acc[modelo] = (acc[modelo] || 0) + 1;
+            }
+            return acc;
+        }, {});
+
+        if (Object.keys(modeloCounts).length === 0) {
+            totalizadorEl.innerHTML = 'Nenhum modelo informado nos dados.';
+            return;
+        }
+
+        const totalizadorHTML = Object.entries(modeloCounts)
+            .map(([modelo, count]) => `<span>${modelo} | <strong>${count}</strong></span>`)
+            .join(' &nbsp;&nbsp;&nbsp; ');
+
+        totalizadorEl.innerHTML = totalizadorHTML;
     }
 
     // --- BOLETA ---
