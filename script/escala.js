@@ -78,10 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .modal-expedicao-subheader { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: #555; }
         .modal-expedicao-table-container { flex-grow: 1; overflow: auto; }
         .modal-expedicao-table { width: 100%; border-collapse: collapse; }
-        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; }
+        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; vertical-align: top; }
         .modal-expedicao-table th { background-color: #f2f2f2; }
-        .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; }
-        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; font-weight: bold; text-align: center; }
+        .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; height: 100px; }
+        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
+        #modalExpedicaoTotalizador { flex-grow: 1; display: flex; justify-content: center; }
+        .card-acoes { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-acoes h4 { margin: 0; font-size: 0.9em; text-align: center; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .btn-acao-exp { padding: 8px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
+        .btn-acao-exp:hover { opacity: 0.9; }
+        .btn-acao-exp.pdf { background-color: #dc3545; }
+        .btn-acao-exp.fechar { background-color: #6c757d; }
     `;
     document.head.appendChild(styleSheet);
 
@@ -146,18 +153,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th>Motorista</th>
                         </tr>
                         <tr id="expedicao-filters">
-                            <td><select class="filter-input" data-column="placa"><option value="">Todos</option></select></td>
-                            <td><select class="filter-input" data-column="modelo"><option value="">Todos</option></select></td>
-                            <td><select class="filter-input" data-column="rota"><option value="">Todos</option></select></td>
-                            <td><select class="filter-input" data-column="status"><option value="">Todos</option></select></td>
-                            <td><select class="filter-input" data-column="motorista"><option value="">Todos</option></select></td>
+                            <td><select class="filter-input" data-column="placa" multiple></select></td>
+                            <td><select class="filter-input" data-column="modelo" multiple></select></td>
+                            <td><select class="filter-input" data-column="rota" multiple></select></td>
+                            <td><select class="filter-input" data-column="status" multiple></select></td>
+                            <td><select class="filter-input" data-column="motorista" multiple></select></td>
                         </tr>
                     </thead>
                     <tbody id="modalExpedicaoTbody"></tbody>
                 </table>
             </div>
-            <div class="modal-expedicao-footer" id="modalExpedicaoTotalizador">
-                <!-- Totalizador de modelos será inserido aqui -->
+            <div class="modal-expedicao-footer">
+                <div id="modalExpedicaoTotalizador"></div>
+                <div class="card-acoes">
+                    <h4>Ações</h4>
+                    <button id="btnExpedicaoPDF" class="btn-acao-exp pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button id="btnExpedicaoFecharFooter" class="btn-acao-exp fechar"><i class="fas fa-times"></i> Fechar</button>
+                </div>
             </div>
         </div>
     `;
@@ -841,11 +853,8 @@ document.addEventListener('DOMContentLoaded', () => {
         columns.forEach(col => {
             const select = document.querySelector(`#expedicao-filters .filter-input[data-column="${col}"]`);
             if (!select) return;
-            
-            // Mantém a opção "Todos" e remove as outras
-            while (select.options.length > 1) {
-                select.remove(1);
-            }
+
+            select.innerHTML = ''; // Limpa todas as opções anteriores
 
             if (!dados || dados.length === 0) return;
 
@@ -1408,22 +1417,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filtersExpedicao = document.getElementById('expedicao-filters');
     if (filtersExpedicao) {
-        filtersExpedicao.addEventListener('change', (e) => {
+        filtersExpedicao.addEventListener('change', (e) => { // 'change' funciona para <select multiple>
             if (e.target.classList.contains('filter-input')) {
                 const filters = {};
                 document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => {
                     const column = input.dataset.column;
-                    const value = input.value;
-                    if (value) filters[column] = value;
+                    const selectedValues = Array.from(input.selectedOptions).map(opt => opt.value);
+                    if (selectedValues.length > 0) {
+                        filters[column] = selectedValues;
+                    }
                 });
 
                 const filteredData = dadosPadraoDoDia.filter(item => {
-                    return Object.keys(filters).every(key => (item[key] || '').toString() === filters[key]);
+                    return Object.keys(filters).every(key => {
+                        const itemValue = (item[key] || '').toString();
+                        return filters[key].includes(itemValue);
+                    });
                 });
 
                 renderTabelaExpedicao(filteredData);
-                calcularTotalizadorModelos(filteredData);
             }
+        });
+    }
+
+    const btnExpedicaoFecharFooter = document.getElementById('btnExpedicaoFecharFooter');
+    if (btnExpedicaoFecharFooter) {
+        btnExpedicaoFecharFooter.addEventListener('click', () => {
+            document.getElementById('modalExpedicao').style.display = 'none';
+        });
+    }
+
+    const btnExpedicaoPDF = document.getElementById('btnExpedicaoPDF');
+    if (btnExpedicaoPDF) {
+        btnExpedicaoPDF.addEventListener('click', () => {
+            if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
+            
+            // Filtra dados com base nos inputs atuais para gerar o PDF do que está visível
+            const filters = {};
+            document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => {
+                const column = input.dataset.column;
+                const selectedValues = Array.from(input.selectedOptions).map(opt => opt.value);
+                if (selectedValues.length > 0) filters[column] = selectedValues;
+            });
+
+            const dadosFiltrados = dadosPadraoDoDia.filter(item => {
+                return Object.keys(filters).every(key => {
+                    const itemValue = (item[key] || '').toString();
+                    return filters[key].includes(itemValue);
+                });
+            });
+
+            if (dadosFiltrados.length === 0) return alert('Nenhum dado para gerar PDF.');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            
+            const diaNome = document.getElementById('modalExpedicaoDiaSemana').textContent;
+            const semanaData = document.getElementById('modalExpedicaoSemanaData').textContent;
+
+            doc.setFontSize(16);
+            doc.text(`Resumo de Expedição - ${diaNome}`, 14, 15);
+            doc.setFontSize(10);
+            doc.text(semanaData, 14, 22);
+
+            const columns = ['Placa', 'Modelo', 'Rota', 'Status', 'Motorista'];
+            const body = dadosFiltrados.map(d => [d.placa, d.modelo, d.rota, d.status, d.motorista]);
+
+            doc.autoTable({
+                head: [columns],
+                body: body,
+                startY: 30,
+                theme: 'grid',
+                styles: { fontSize: 9, cellPadding: 2 },
+                headStyles: { fillColor: [0, 105, 55] }
+            });
+
+            doc.save(`Expedicao_${diaNome}.pdf`);
         });
     }
 
