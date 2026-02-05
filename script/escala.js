@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .btn-acao-exp { padding: 8px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
         .btn-acao-exp:hover { opacity: 0.9; }
         .btn-acao-exp.pdf { background-color: #dc3545; }
+        .btn-acao-exp.xlsx { background-color: #28a745; }
         .btn-acao-exp.fechar { background-color: #6c757d; }
     `;
     document.head.appendChild(styleSheet);
@@ -168,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-acoes">
                     <h4>Ações</h4>
                     <button id="btnExpedicaoPDF" class="btn-acao-exp pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button id="btnExpedicaoXLSX" class="btn-acao-exp xlsx"><i class="fas fa-file-excel"></i> XLSX</button>
                     <button id="btnExpedicaoFecharFooter" class="btn-acao-exp fechar"><i class="fas fa-times"></i> Fechar</button>
                 </div>
             </div>
@@ -1514,6 +1516,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fontSize: 6,
                         fontStyle: 'bold'
                     },
+                    alternateRowStyles: { fillColor: [235, 247, 235] },
                     columnStyles: {
                         0: { cellWidth: 18 }, // Placa
                         1: { cellWidth: 22 }, // Modelo
@@ -1536,6 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         startY: finalY + 2,
                         theme: 'grid',
                         styles: { fontSize: 6, cellPadding: 0.5 },
+                        alternateRowStyles: { fillColor: [235, 247, 235] },
                         headStyles: { fillColor: [100, 100, 100], fontSize: 6 },
                         margin: { left: startX },
                         tableWidth: 40
@@ -1557,6 +1561,74 @@ document.addEventListener('DOMContentLoaded', () => {
             drawSide(pageMiddleX + margin);
 
             doc.save(`Expedicao_${diaNome}.pdf`);
+        });
+    }
+
+    const btnExpedicaoXLSX = document.getElementById('btnExpedicaoXLSX');
+    if (btnExpedicaoXLSX) {
+        btnExpedicaoXLSX.addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX não carregada.');
+
+            // Filtra dados com base nos inputs atuais
+            const filters = {};
+            document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => {
+                const column = input.dataset.column;
+                const selectedValues = Array.from(input.selectedOptions).map(opt => opt.value);
+                if (selectedValues.length > 0) filters[column] = selectedValues;
+            });
+
+            const dadosFiltrados = dadosPadraoDoDia.filter(item => {
+                return Object.keys(filters).every(key => {
+                    const itemValue = (item[key] || '').toString();
+                    return filters[key].includes(itemValue);
+                });
+            });
+
+            if (dadosFiltrados.length === 0) return alert('Nenhum dado para gerar XLSX.');
+
+            const diaNome = document.getElementById('modalExpedicaoDiaSemana').textContent;
+            const semanaData = document.getElementById('modalExpedicaoSemanaData').textContent;
+            
+            const wsData = [];
+            
+            // Cabeçalho duplicado (Esquerda | Separador | Direita)
+            wsData.push([`Resumo de Expedição - ${diaNome}`, null, null, null, null, null, `Resumo de Expedição - ${diaNome}`]);
+            wsData.push([semanaData, null, null, null, null, null, semanaData]);
+            wsData.push([]); // Linha em branco
+            
+            const headers = ['Placa', 'Modelo', 'Rota', 'Status', 'Motorista'];
+            wsData.push([...headers, '', ...headers]);
+            
+            // Dados duplicados
+            dadosFiltrados.forEach(item => {
+                const rowLeft = [item.placa, item.modelo, item.rota, item.status, item.motorista];
+                wsData.push([...rowLeft, '', ...rowLeft]);
+            });
+            
+            wsData.push([]); // Linha em branco
+            
+            // Totais duplicados
+            const modeloCounts = dadosFiltrados.reduce((acc, item) => {
+                if (item.modelo) {
+                    const modelo = item.modelo.trim().toUpperCase();
+                    acc[modelo] = (acc[modelo] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            const totalBody = Object.entries(modeloCounts).map(([m, c]) => [m, c]);
+            
+            if (totalBody.length > 0) {
+                wsData.push(['Totais por Modelo', null, null, null, null, null, 'Totais por Modelo']);
+                wsData.push(['Modelo', 'Qtd', null, null, null, null, 'Modelo', 'Qtd']);
+                totalBody.forEach(row => {
+                    wsData.push([row[0], row[1], null, null, null, null, row[0], row[1]]);
+                });
+            }
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Expedicao");
+            XLSX.writeFile(wb, `Expedicao_${diaNome}.xlsx`);
         });
     }
 
