@@ -49,9 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const nomeUsuario = localStorage.getItem('usuarioLogado');
+  // Correção: Parse do JSON para exibir apenas o nome
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
   const divUsuario = document.getElementById('usuario-logado');
-  if (nomeUsuario && divUsuario) {
-    divUsuario.textContent = `👤 Olá, ${nomeUsuario}`;
+  if (usuarioLogado && usuarioLogado.nome && divUsuario) {
+    divUsuario.textContent = `👤 Olá, ${usuarioLogado.nome}`;
   }
 });

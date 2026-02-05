@@ -5,7 +5,13 @@ document.addEventListener('DOMContentLoaded', function() {
   fetch('menu.html')
     .then(response => response.text())
     .then(async data => {
-      document.body.insertAdjacentHTML('afterbegin', data);
+      // Correção: Inserir no container específico em vez do body
+      const menuContainer = document.getElementById('menu-container');
+      if (menuContainer) {
+        menuContainer.innerHTML = data;
+      } else {
+        document.body.insertAdjacentHTML('afterbegin', data);
+      }
  
       // Inicializar funcionalidades do menu após carregamento
       let usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
