@@ -106,6 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
+
+    // Modal Copiar Escala
+    const modalCopiarEscala = document.getElementById('modalCopiarEscala');
+    const btnCloseModalCopiar = document.getElementById('btnCloseModalCopiar');
+    const btnConfirmarCopia = document.getElementById('btnConfirmarCopia');
+    const dataDestinoCopia = document.getElementById('dataDestinoCopia');
+    const textoOrigemCopia = document.getElementById('textoOrigemCopia');
     
     // --- ELEMENTOS DINÂMICOS ---
     const contextMenu = document.createElement('div');
@@ -343,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
                 <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
-                <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala para o Dia Seguinte"><i class="fa-solid fa-copy"></i></button>
+                <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala"><i class="fa-solid fa-copy"></i></button>
                 <button id="btnExpedicao" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #ff9800;" title="Resumo de Expedição"><i class="fa-solid fa-truck-ramp-box"></i> Expedição</button>
                 <span id="status-indicator"></span>
             </div>`;
@@ -483,9 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileImportarDia.click();
             }
 
-            // Botão Copiar Dia Seguinte
+            // Botão Copiar Escala (Abre Modal)
             if (e.target.closest('#btnCopiarDiaSeguinte')) {
-                copiarDiaSeguinte();
+                abrirModalCopia();
             }
 
             // Botão Expedição
@@ -544,39 +551,80 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function copiarDiaSeguinte() {
+    function abrirModalCopia() {
         const semanaAtual = selectSemana.value;
         const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
         if (!semanaAtual || !diaAtual) return;
 
-        const diasOrdenados = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
-        const idxAtual = diasOrdenados.indexOf(diaAtual);
-        
-        let proximaSemana = semanaAtual;
-        let proximoDia = '';
+        const dataObj = CACHE_DATAS[semanaAtual][diaAtual];
+        const formattedDate = dataObj.toLocaleDateString('pt-BR');
 
-        if (idxAtual < diasOrdenados.length - 1) {
-            proximoDia = diasOrdenados[idxAtual + 1];
-        } else {
-            // Lógica para virar a semana (simplificada, assume padrão de nome)
-            const match = semanaAtual.match(/SEMANA (\d+) - (\d+)/);
-            if (match) {
-                let numSemana = parseInt(match[1], 10) + 1;
-                proximaSemana = `SEMANA ${String(numSemana).padStart(2, '0')} - ${match[2]}`;
-                proximoDia = 'DOMINGO';
-            } else return;
+        if (textoOrigemCopia) textoOrigemCopia.textContent = `Copiando escala de: ${formattedDate}`;
+        
+        // Sugere o dia seguinte como padrão
+        const diaSeguinte = new Date(dataObj);
+        diaSeguinte.setDate(diaSeguinte.getDate() + 1);
+        if (dataDestinoCopia) dataDestinoCopia.value = diaSeguinte.toISOString().split('T')[0];
+
+        if (modalCopiarEscala) modalCopiarEscala.classList.remove('hidden');
+    }
+
+    if (btnCloseModalCopiar) {
+        btnCloseModalCopiar.addEventListener('click', () => {
+            modalCopiarEscala.classList.add('hidden');
+        });
+    }
+    
+    if (modalCopiarEscala) {
+        modalCopiarEscala.addEventListener('click', (e) => {
+            if (e.target === modalCopiarEscala) modalCopiarEscala.classList.add('hidden');
+        });
+    }
+
+    if (btnConfirmarCopia) {
+        btnConfirmarCopia.addEventListener('click', confirmarCopia);
+    }
+
+    async function confirmarCopia() {
+        const semanaAtual = selectSemana.value;
+        const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+        const dataDestino = dataDestinoCopia.value;
+
+        if (!semanaAtual || !diaAtual || !dataDestino) {
+            alert('Dados inválidos.');
+            return;
         }
 
-        const dataOrigem = CACHE_DATAS[semanaAtual][diaAtual].toISOString().split('T')[0];
-        const dataDestino = CACHE_DATAS[proximaSemana][proximoDia].toISOString().split('T')[0];
+        const dataOrigemObj = CACHE_DATAS[semanaAtual][diaAtual];
+        const dataOrigemISO = dataOrigemObj.toISOString().split('T')[0];
 
-        if (!confirm(`Copiar dados de ${diaAtual} (${dataOrigem}) para ${proximoDia} (${dataDestino})?`)) return;
+        if (dataOrigemISO === dataDestino) {
+            alert('A data de destino deve ser diferente da data de origem.');
+            return;
+        }
+
+        // Calcular semana de destino
+        const baseDate = new Date(Date.UTC(2025, 11, 28));
+        const destDateObj = new Date(dataDestino);
+        const destDateUTC = new Date(Date.UTC(destDateObj.getFullYear(), destDateObj.getMonth(), destDateObj.getDate()));
+        
+        const diffInMs = destDateUTC.getTime() - baseDate.getTime();
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+        let weekNumber = Math.floor(diffInDays / 7) + 1;
+        if (weekNumber < 1) weekNumber = 1;
+        
+        const semanaDestino = `SEMANA ${String(weekNumber).padStart(2, '0')} - 2026`;
+
+        if (!confirm(`Confirmar cópia para ${new Date(dataDestino).toLocaleDateString('pt-BR')} (${semanaDestino})?`)) return;
+
+        btnConfirmarCopia.disabled = true;
+        btnConfirmarCopia.textContent = 'Copiando...';
 
         try {
             // 1. Busca dados origem
             const [resEscala, resFaltas] = await Promise.all([
-                supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem),
-                supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)
+                supabaseClient.from('escala').select('*').eq('data_escala', dataOrigemISO),
+                supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigemISO)
             ]);
 
             if (resEscala.error) throw resEscala.error;
@@ -590,13 +638,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Prepara dados destino (remove ID e timestamps)
             const novosEscala = resEscala.data.map(({ id, created_at, updated_at, ...rest }) => ({
                 ...rest,
-                semana_nome: proximaSemana,
+                semana_nome: semanaDestino,
                 data_escala: dataDestino
             }));
             
             const novosFaltas = resFaltas.data.map(({ id, created_at, updated_at, ...rest }) => ({
                 ...rest,
-                semana_nome: proximaSemana,
+                semana_nome: semanaDestino,
                 data_escala: dataDestino
             }));
 
@@ -611,15 +659,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             alert('Cópia realizada com sucesso!');
+            modalCopiarEscala.classList.add('hidden');
             
-            // Se for na mesma semana, muda a aba
-            if (semanaAtual === proximaSemana) {
-                document.querySelector(`.tab-btn[data-dia="${proximoDia}"]`)?.click();
+            // Se a data de destino estiver na semana atual selecionada, muda a aba
+            if (semanaDestino === selectSemana.value) {
+                const dayOfWeek = destDateUTC.getUTCDay(); // 0 = Domingo
+                const diasMap = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+                const diaNome = diasMap[dayOfWeek];
+                document.querySelector(`.tab-btn[data-dia="${diaNome}"]`)?.click();
+            } else {
+                if (confirm(`Cópia feita para ${semanaDestino}. Deseja ir para essa semana?`)) {
+                    selectSemana.value = semanaDestino;
+                    btnAbrirEscala.click();
+                }
             }
 
         } catch (err) {
             console.error('Erro ao copiar:', err);
             alert('Erro ao copiar dados: ' + err.message);
+        } finally {
+            btnConfirmarCopia.disabled = false;
+            btnConfirmarCopia.textContent = 'Copiar';
         }
     }
 
