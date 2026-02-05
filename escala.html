@@ -214,6 +214,7 @@
             <div id="painelEscala" class="hidden">
                 <!-- Abas dos Dias -->
                 <div class="tabs-container">
+                    <button class="tab-btn" data-tab="planejamento">PLANEJAMENTO</button>
                     <button class="tab-btn active" data-dia="SEGUNDA">SEGUNDA</button>
                     <button class="tab-btn" data-dia="TERCA">TERÇA</button>
                     <button class="tab-btn" data-dia="QUARTA">QUARTA</button>
@@ -223,8 +224,8 @@
                     <button class="tab-btn" data-dia="DOMINGO">DOMINGO</button>
                 </div>
 
-                <!-- Conteúdo da Aba -->
-                <div class="card tab-content-card">
+                <!-- Conteúdo da Aba (Dias) -->
+                <div id="conteudoDias" class="card tab-content-card">
                     <h3 id="tituloDia" style="margin-bottom: 15px; color: #006937;"><i class="fa-solid fa-calendar-day"></i> SEGUNDA</h3>
                     
                     <!-- 1. PADRÃO -->
@@ -334,6 +335,47 @@
                         </table>
                     </div>
 
+                </div>
+
+                <!-- Conteúdo da Aba (Planejamento) -->
+                <div id="conteudoPlanejamento" class="card tab-content-card hidden">
+                    <h3 style="margin-bottom: 15px; color: #006937;"><i class="fa-solid fa-calendar-week"></i> PLANEJAMENTO SEMANAL</h3>
+                    <div class="table-scroll-container">
+                        <table class="data-grid" id="tabelaPlanejamento">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="min-width: 80px;">PLACA</th>
+                                    <th rowspan="2" style="min-width: 100px;">MODELO</th>
+                                    <th colspan="2" style="text-align: center;">DOMINGO</th>
+                                    <th colspan="2" style="text-align: center;">SEGUNDA</th>
+                                    <th colspan="2" style="text-align: center;">TERÇA</th>
+                                    <th colspan="2" style="text-align: center;">QUARTA</th>
+                                    <th colspan="2" style="text-align: center;">QUINTA</th>
+                                    <th colspan="2" style="text-align: center;">SEXTA</th>
+                                    <th colspan="2" style="text-align: center;">SÁBADO</th>
+                                    <th rowspan="2" style="min-width: 150px;">MOTORISTA</th>
+                                    <th rowspan="2" style="min-width: 150px;">AUXILIAR</th>
+                                    <th rowspan="2" style="min-width: 100px;">TERCEIRO</th>
+                                    <th rowspan="2" style="width: 40px;"></th>
+                                </tr>
+                                <tr>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                    <th style="min-width: 60px;">ROTA</th><th style="min-width: 80px;">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyPlanejamento">
+                                <!-- Linhas serão adicionadas aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button id="btnAdicionarLinhaPlanejamento" class="btn-custom" style="background-color: #28a745;"><i class="fas fa-plus"></i> Adicionar Linha</button>
+                    </div>
                 </div>
             </div>
 

@@ -228,9 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reordenar abas visualmente para começar com Domingo
     if (tabButtons.length > 0) {
         const container = tabButtons[0].parentNode;
-        const order = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+        const order = ['PLANEJAMENTO', 'DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
         const buttonsMap = {};
-        tabButtons.forEach(btn => { if (btn.dataset.dia) buttonsMap[btn.dataset.dia] = btn; });
+        tabButtons.forEach(btn => { 
+            if (btn.dataset.dia) buttonsMap[btn.dataset.dia] = btn; 
+            if (btn.dataset.tab) buttonsMap[btn.dataset.tab.toUpperCase()] = btn;
+        });
         order.forEach(dia => { if (buttonsMap[dia]) container.appendChild(buttonsMap[dia]); });
     }
 
@@ -556,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Auto-preencher Modelo se a Placa for alterada
         let extraUpdates = {};
-        if (key === 'placa' && tabela === 'escala') {
+        if (key === 'placa' && (tabela === 'escala' || tabela === 'planejamento_semanal')) {
             const placaBusca = String(valor).trim().toUpperCase();
             const veiculoEncontrado = listaVeiculos.find(v => v.placa === placaBusca);
             if (veiculoEncontrado) {
@@ -1148,6 +1151,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
 
     // --- LISTENERS GERAIS ---
+    const btnAdicionarLinhaPlanejamento = document.getElementById('btnAdicionarLinhaPlanejamento');
+    if (btnAdicionarLinhaPlanejamento) {
+        btnAdicionarLinhaPlanejamento.addEventListener('click', adicionarLinhaPlanejamento);
+    }
+
     if (btnAbrirEscala) {
         btnAbrirEscala.addEventListener('click', () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
@@ -1155,10 +1163,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Atualiza datas nas abas
             const dadosSemana = CACHE_DATAS[selectSemana.value];
             tabButtons.forEach(btn => {
-                const dia = btn.dataset.dia;
-                const date = dadosSemana ? dadosSemana[dia] : new Date();
-                const diaNome = btn.textContent.split(' ')[0].trim();
-                btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+                const dia = btn.dataset.dia; // Pode ser undefined para a aba 'PLANEJAMENTO'
+                // Apenas processa botões que representam um dia da semana
+                if (dia) {
+                    const date = dadosSemana ? dadosSemana[dia] : new Date();
+                    const diaNome = btn.textContent.split(' ')[0].trim();
+                    btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+                }
             });
 
             painelEscala.classList.remove('hidden');
@@ -1169,8 +1180,22 @@ document.addEventListener('DOMContentLoaded', () => {
     tabButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             tabButtons.forEach(b => b.classList.remove('active'));
-            e.currentTarget.classList.add('active'); // Use currentTarget para pegar o botão mesmo se clicar no span
-            carregarDadosDia(e.currentTarget.dataset.dia, selectSemana.value);
+            e.currentTarget.classList.add('active');
+            
+            const dia = e.currentTarget.dataset.dia;
+            const tab = e.currentTarget.dataset.tab;
+            const painelDias = document.getElementById('conteudoDias');
+            const painelPlan = document.getElementById('conteudoPlanejamento');
+
+            if (tab === 'planejamento') {
+                if(painelDias) painelDias.classList.add('hidden');
+                if(painelPlan) painelPlan.classList.remove('hidden');
+                carregarPlanejamento(selectSemana.value);
+            } else {
+                if(painelPlan) painelPlan.classList.add('hidden');
+                if(painelDias) painelDias.classList.remove('hidden');
+                if(dia) carregarDadosDia(dia, selectSemana.value);
+            }
         });
     });
 
@@ -1930,6 +1955,82 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('Erro na verificação de internados:', err);
         }
+    }
+
+    async function adicionarLinhaPlanejamento() {
+        const tbody = document.getElementById('tbodyPlanejamento');
+        if (!tbody) return;
+        
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana.');
+
+        try {
+            // Cria o registro no banco primeiro para obter o ID
+            const { data, error } = await supabaseClient
+                .from('planejamento_semanal')
+                .insert([{ semana_nome: semana }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            
+            renderLinhaPlanejamento(data, tbody);
+        } catch (err) {
+            console.error('Erro ao adicionar linha de planejamento:', err);
+            alert('Erro ao criar linha no banco de dados.');
+        }
+    }
+
+    async function carregarPlanejamento(semana) {
+        const tbody = document.getElementById('tbodyPlanejamento');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;">Carregando...</td></tr>';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('planejamento_semanal')
+                .select('*')
+                .eq('semana_nome', semana)
+                .order('id');
+
+            if (error) throw error;
+
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                 // Opcional: mostrar mensagem de vazio ou deixar em branco
+            }
+            data.forEach(item => renderLinhaPlanejamento(item, tbody));
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+        }
+    }
+
+    function renderLinhaPlanejamento(item, tbody) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = item.id;
+        tr.dataset.tabela = 'planejamento_semanal';
+
+        const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+        let diasHtml = '';
+        
+        dias.forEach(dia => {
+            diasHtml += `
+                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota"></td>
+                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getStatusStyle(item[dia + '_status'] || '')}"></td>
+            `;
+        });
+
+        tr.innerHTML = `
+            <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
+            <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly></td>
+            ${diasHtml}
+            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
+            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar"></td>
+            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro"></td>
+            <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
     }
 
     // Inicialização
