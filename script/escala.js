@@ -1470,27 +1470,68 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dadosFiltrados.length === 0) return alert('Nenhum dado para gerar PDF.');
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             
             const diaNome = document.getElementById('modalExpedicaoDiaSemana').textContent;
             const semanaData = document.getElementById('modalExpedicaoSemanaData').textContent;
 
-            doc.setFontSize(16);
-            doc.text(`Resumo de Expedição - ${diaNome}`, 14, 15);
-            doc.setFontSize(10);
-            doc.text(semanaData, 14, 22);
-
             const columns = ['Placa', 'Modelo', 'Rota', 'Status', 'Motorista'];
             const body = dadosFiltrados.map(d => [d.placa, d.modelo, d.rota, d.status, d.motorista]);
 
-            doc.autoTable({
-                head: [columns],
-                body: body,
-                startY: 30,
-                theme: 'grid',
-                styles: { fontSize: 9, cellPadding: 2 },
-                headStyles: { fillColor: [0, 105, 55] }
-            });
+            // Calcular totais para o PDF
+            const modeloCounts = dadosFiltrados.reduce((acc, item) => {
+                if (item.modelo) {
+                    const modelo = item.modelo.trim().toUpperCase();
+                    acc[modelo] = (acc[modelo] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            const totalBody = Object.entries(modeloCounts).map(([m, c]) => [m, c]);
+
+            const drawCopy = (startY) => {
+                doc.setFontSize(12);
+                doc.text(`Resumo de Expedição - ${diaNome}`, 10, startY);
+                doc.setFontSize(8);
+                doc.text(semanaData, 10, startY + 5);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: body,
+                    startY: startY + 8,
+                    theme: 'grid',
+                    styles: { fontSize: 7, cellPadding: 1 },
+                    headStyles: { fillColor: [0, 105, 55] },
+                    margin: { left: 10, right: 10 }
+                });
+
+                let finalY = doc.lastAutoTable.finalY + 5;
+
+                if (totalBody.length > 0) {
+                    doc.setFontSize(8);
+                    doc.text("Totais por Modelo:", 10, finalY);
+                    doc.autoTable({
+                        head: [['Modelo', 'Qtd']],
+                        body: totalBody,
+                        startY: finalY + 2,
+                        theme: 'grid',
+                        styles: { fontSize: 7, cellPadding: 1 },
+                        headStyles: { fillColor: [100, 100, 100] },
+                        margin: { left: 10 },
+                        tableWidth: 60
+                    });
+                }
+            };
+
+            // Parte Superior
+            drawCopy(10);
+
+            // Linha de Corte
+            doc.setLineWidth(0.1);
+            doc.setDrawColor(200);
+            doc.line(0, 148.5, 210, 148.5);
+
+            // Parte Inferior
+            drawCopy(158.5);
 
             doc.save(`Expedicao_${diaNome}.pdf`);
         });
