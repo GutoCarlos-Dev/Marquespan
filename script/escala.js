@@ -19,13 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
         /* Reset de tabela para estilo planilha */
-        table { border-collapse: collapse !important; width: auto; min-width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); table-layout: fixed; }
+        table { border-collapse: collapse !important; width: auto; min-width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); table-layout: fixed; }
         th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; position: relative; }
         td { border: 1px solid #dee2e6; padding: 0 !important; height: 34px; vertical-align: middle; position: relative; }
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
         tbody tr:nth-child(odd) { background-color: #ffffff; }
         tbody tr:hover { background-color: #f1f3f5; }
-        input.table-input { width: 100%; height: 100%; border: none !important; border-radius: 0 !important; padding: 0 10px; background: transparent; font-size: 13px; color: #212529; outline: none; box-shadow: none !important; margin: 0; display: block; box-sizing: border-box; }
+        input.table-input { width: 100%; height: 100%; border: none !important; border-radius: 0 !important; padding: 0 10px; background: transparent; font-size: 11px; color: #212529; outline: none; box-shadow: none !important; margin: 0; display: block; box-sizing: border-box; }
         input.table-input:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff !important; z-index: 2; }
         td[contenteditable="true"] { padding: 8px 10px !important; outline: none; cursor: text; }
         td[contenteditable="true"]:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff; }
@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-acoes">
                     <h4>Ações</h4>
                     <button id="btnExpedicaoPDF" class="btn-acao-exp pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button id="btnExpedicaoPDFConferencia" class="btn-acao-exp pdf" style="background-color: #17a2b8;"><i class="fas fa-clipboard-check"></i> PDF Conferência</button>
                     <button id="btnExpedicaoXLSX" class="btn-acao-exp xlsx"><i class="fas fa-file-excel"></i> XLSX</button>
                     <button id="btnExpedicaoFecharFooter" class="btn-acao-exp fechar"><i class="fas fa-times"></i> Fechar</button>
                 </div>
@@ -396,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             tr.innerHTML = `
                                 <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
-                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo"></td>
+                                <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly></td>
                                 <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota"></td>
                                 <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getStatusStyle(item.status || '')}"></td>
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
@@ -924,6 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
         totalizadorHTML += '<tbody>';
 
         totalizadorHTML += Object.entries(modeloCounts)
+            .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([modelo, count]) => `<tr><td style="border: 1px solid #ccc; padding: 5px 8px;">${modelo}</td><td style="border: 1px solid #ccc; padding: 5px 8px; text-align: center;"><strong>${count}</strong></td></tr>`)
             .join('');
         totalizadorHTML += '</tbody></table>';
@@ -1585,6 +1587,98 @@ document.addEventListener('DOMContentLoaded', () => {
             drawSide(pageMiddleX + margin);
 
             doc.save(`Expedicao_${diaNome}.pdf`);
+        });
+    }
+
+    const btnExpedicaoPDFConferencia = document.getElementById('btnExpedicaoPDFConferencia');
+    if (btnExpedicaoPDFConferencia) {
+        btnExpedicaoPDFConferencia.addEventListener('click', () => {
+            if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
+            
+            const filters = {};
+            document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => {
+                const column = input.dataset.column;
+                const selectedValues = Array.from(input.selectedOptions).map(opt => opt.value);
+                if (selectedValues.length > 0) filters[column] = selectedValues;
+            });
+
+            const dadosFiltrados = dadosPadraoDoDia.filter(item => {
+                return Object.keys(filters).every(key => {
+                    const itemValue = (item[key] || '').toString();
+                    return filters[key].includes(itemValue);
+                });
+            });
+
+            if (dadosFiltrados.length === 0) return alert('Nenhum dado para gerar PDF.');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            const diaNome = document.getElementById('modalExpedicaoDiaSemana').textContent;
+            const semanaData = document.getElementById('modalExpedicaoSemanaData').textContent;
+
+            const columns = ['Placa', 'Modelo', 'Rota', 'Status', 'Motorista', 'Assinatura', 'Conferente'];
+            const body = dadosFiltrados.map(d => [d.placa, d.modelo, d.rota, d.status, d.motorista, '', '']);
+
+            const modeloCounts = dadosFiltrados.reduce((acc, item) => {
+                if (item.modelo) {
+                    const modelo = item.modelo.trim().toUpperCase();
+                    acc[modelo] = (acc[modelo] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            const totalBody = Object.entries(modeloCounts).map(([m, c]) => [m, c]);
+
+            const margin = 10;
+            const pageWidth = 210;
+            const contentWidth = pageWidth - (margin * 2);
+
+            doc.setFontSize(14);
+            doc.text(`Conferência de Expedição - ${diaNome}`, margin, 15);
+            doc.setFontSize(10);
+            doc.text(semanaData, margin, 20);
+
+            doc.autoTable({
+                head: [columns],
+                body: body,
+                startY: 25,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
+                headStyles: { fillColor: [0, 105, 55], fontSize: 8, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [235, 247, 235] }, // Verde claro igual ao PDF de Expedição
+                columnStyles: {
+                    0: { cellWidth: 25 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 40 },
+                    5: { cellWidth: 30 }, // Assinatura
+                    6: { cellWidth: 'auto' } // Conferente
+                },
+                margin: { left: margin, right: margin, bottom: 15 },
+                tableWidth: contentWidth
+            });
+
+            let finalY = doc.lastAutoTable.finalY + 5;
+
+            if (totalBody.length > 0) {
+                if (finalY + 20 > 280) { doc.addPage(); finalY = 15; }
+                doc.setFontSize(10);
+                doc.text("Totais por Modelo:", margin, finalY);
+                doc.autoTable({
+                    head: [['Modelo', 'Qtd']],
+                    body: totalBody,
+                    startY: finalY + 2,
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 1 },
+                    alternateRowStyles: { fillColor: [235, 247, 235] }, // Verde claro também nos totais
+                    headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
+                    margin: { left: margin },
+                    tableWidth: 60
+                });
+            }
+
+            doc.save(`Conferencia_Expedicao_${diaNome}.pdf`);
         });
     }
 
