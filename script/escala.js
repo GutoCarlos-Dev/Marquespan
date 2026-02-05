@@ -1285,6 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const margin = 10;
         const halfPageWidth = 148.5; // Metade de 297mm
         const contentWidth = halfPageWidth - (margin * 2);
+        const centerX = halfPageWidth / 2; // Centro da primeira metade da página
 
         const azul = [0, 0, 255];
         const preto = [0, 0, 0];
@@ -1294,28 +1295,43 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFont(undefined, 'bold');
         
         // --- LINHA 1: Placa e Rota ---
+        const l1_label1 = "Placa: ";
+        const l1_value1 = `${infoPlaca} - ${infoModelo}`;
+        const l1_sep = "   |   ";
+        const l1_label2 = "Rota: ";
+        const l1_value2 = `${infoRota}`;
+
+        const totalWidth1 = doc.getTextWidth(l1_label1) + doc.getTextWidth(l1_value1) + doc.getTextWidth(l1_sep) + doc.getTextWidth(l1_label2) + doc.getTextWidth(l1_value2);
+        let currentX = centerX - (totalWidth1 / 2);
+
         doc.setTextColor(...preto);
-        doc.text("Placa: ", margin, 20);
-        let currentX = margin + doc.getTextWidth("Placa: ");
-        
+        doc.text(l1_label1, currentX, 20);
+        currentX += doc.getTextWidth(l1_label1);
+
         doc.setTextColor(...azul);
-        doc.text(`${infoPlaca} - ${infoModelo}`, currentX, 20);
-        currentX += doc.getTextWidth(`${infoPlaca} - ${infoModelo}   |   `);
-        
+        doc.text(l1_value1, currentX, 20);
+        currentX += doc.getTextWidth(l1_value1);
+
         doc.setTextColor(...preto);
-        doc.text("Rota: ", currentX, 20);
-        currentX += doc.getTextWidth("Rota: ");
-        
+        doc.text(l1_sep, currentX, 20);
+        currentX += doc.getTextWidth(l1_sep);
+
+        doc.setTextColor(...preto);
+        doc.text(l1_label2, currentX, 20);
+        currentX += doc.getTextWidth(l1_label2);
+
         doc.setTextColor(...azul);
-        doc.text(`${infoRota}`, currentX, 20);
+        doc.text(l1_value2, currentX, 20);
         
         // --- LINHA 2: Dinâmico (Rota ou Colaborador) ---
-        const labelDinamico = `${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: `;
+        const l2_label = `${tipo === 'ROTA' ? 'Rota' : 'Colaborador'}: `;
+        const l2_value = `${valor}`;
+        const totalWidth2 = doc.getTextWidth(l2_label) + doc.getTextWidth(l2_value);
+        currentX = centerX - (totalWidth2 / 2);
         doc.setTextColor(...preto);
-        doc.text(labelDinamico, margin, 25);
-        
+        doc.text(l2_label, currentX, 25);
         doc.setTextColor(...vermelho);
-        doc.text(`${valor}`, margin + doc.getTextWidth(labelDinamico), 25);
+        doc.text(l2_value, currentX + doc.getTextWidth(l2_label), 25);
         
         // Reset para o padrão
         doc.setTextColor(...preto);
