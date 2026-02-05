@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDate = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         
         doc.setFontSize(18);
-        doc.text(`Escala - ${diaNome} - ${formattedDate}`, centerX, 15, { align: 'center' });
+        doc.text(`Escala ${semana} - ${diaNome} - ${formattedDate}`, centerX, 15, { align: 'center' });
         doc.setFontSize(9);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, rightX, 10, { align: 'right' });
 
