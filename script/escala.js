@@ -513,7 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-preencher Modelo se a Placa for alterada
         let extraUpdates = {};
         if (key === 'placa' && tabela === 'escala') {
-            const veiculoEncontrado = listaVeiculos.find(v => v.placa === valor);
+            const placaBusca = String(valor).trim().toUpperCase();
+            const veiculoEncontrado = listaVeiculos.find(v => v.placa === placaBusca);
             if (veiculoEncontrado) {
                 extraUpdates.modelo = veiculoEncontrado.modelo;
                 const inputModelo = tr.querySelector('input[data-key="modelo"]');
@@ -1722,7 +1723,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const placasInternadas = new Set(veiculos.map(v => v.placa.trim().toUpperCase()));
-            const corInternado = '#004085'; // Cor do texto INTERNADO (azul escuro)
+            const corFundoInternado = '#004085'; // Cor do fundo INTERNADO (azul escuro)
+            const corTextoInternado = '#FFFFFF'; // Cor do texto INTERNADO (branco)
 
             const aplicarEstilo = () => {
                 // Seleciona inputs na primeira coluna (PLACA) de todas as tabelas de dados
@@ -1730,10 +1732,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputs.forEach(input => {
                     const placa = input.value.trim().toUpperCase();
                     if (placasInternadas.has(placa)) {
-                        input.style.color = corInternado;
+                        input.style.backgroundColor = corFundoInternado;
+                        input.style.color = corTextoInternado;
                         input.style.fontWeight = 'bold';
                     } else {
                         // Reseta para o padrão se não for internado
+                        input.style.backgroundColor = '';
                         input.style.color = '';
                         input.style.fontWeight = '';
                     }
