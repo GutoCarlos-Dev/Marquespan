@@ -2012,12 +2012,26 @@ document.addEventListener('DOMContentLoaded', () => {
         tr.dataset.tabela = 'planejamento_semanal';
 
         const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+        
+        // Cores de fundo para as células de cada dia
+        const coresDia = {
+            'domingo': '#ffcccc', // Vermelho
+            'segunda': '#cce5ff', // Azul
+            'terca': '#fff3cd',   // Amarelo
+            'quarta': '#d4edda',  // Verde
+            'quinta': '#ffdfcc',  // Salmão
+            'sexta': '#f2f2f2',   // Cinza Claro
+            'sabado': '#e0d6cc'   // Marrom
+        };
+
         let diasHtml = '';
         
         dias.forEach(dia => {
+            const bg = coresDia[dia];
+            const styleTd = `style="background-color: ${bg};"`;
             diasHtml += `
-                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota"></td>
-                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getStatusStyle(item[dia + '_status'] || '')}"></td>
+                <td ${styleTd}><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota"></td>
+                <td ${styleTd}><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getStatusStyle(item[dia + '_status'] || '')}"></td>
             `;
         });
 
