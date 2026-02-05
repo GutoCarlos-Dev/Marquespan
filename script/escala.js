@@ -557,13 +557,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!semanaAtual || !diaAtual) return;
 
         const dataObj = CACHE_DATAS[semanaAtual][diaAtual];
-        const formattedDate = dataObj.toLocaleDateString('pt-BR');
+        const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
         if (textoOrigemCopia) textoOrigemCopia.textContent = `Copiando escala de: ${formattedDate}`;
         
         // Sugere o dia seguinte como padrão
         const diaSeguinte = new Date(dataObj);
-        diaSeguinte.setDate(diaSeguinte.getDate() + 1);
+        diaSeguinte.setUTCDate(diaSeguinte.getUTCDate() + 1);
         if (dataDestinoCopia) dataDestinoCopia.value = diaSeguinte.toISOString().split('T')[0];
 
         if (modalCopiarEscala) modalCopiarEscala.classList.remove('hidden');
