@@ -1528,7 +1528,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         3: { cellWidth: 15 }, // Status
                         4: { cellWidth: 'auto' } // Motorista
                     },
-                    margin: { left: startX },
+                    // Define a margem inferior para 10mm (1cm)
+                    margin: { left: startX, bottom: 10 }, 
                     tableWidth: contentWidth,
                 });
 
@@ -1545,11 +1546,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         styles: { fontSize: 6, cellPadding: 0.5 },
                         alternateRowStyles: { fillColor: [235, 247, 235] },
                         headStyles: { fillColor: [100, 100, 100], fontSize: 6 },
-                        margin: { left: startX },
+                        // Define a margem inferior para 10mm (1cm) também para os totais
+                        margin: { left: startX, bottom: 10 }, 
                         tableWidth: 40
                     });
                 }
             };
+
 
             // Lado Esquerdo
             drawSide(margin);
