@@ -837,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
 
-        document.getElementById('modalExpedicaoDiaSemana').textContent = diaNome;
+        document.getElementById('modalExpedicaoDiaSemana').innerHTML = `${diaNome} <span id="expedicaoQtdTotal" style="color: red; font-weight: bold;"></span>`;
         document.getElementById('modalExpedicaoSemanaData').textContent = `${semana} - ${formattedDate}`;
         
         // Limpa filtros antigos
@@ -875,6 +875,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTabelaExpedicao(dados) {
         const tbody = document.getElementById('modalExpedicaoTbody');
         tbody.innerHTML = '';
+
+        // Atualiza o totalizador no cabeçalho
+        const qtdEl = document.getElementById('expedicaoQtdTotal');
+        if (qtdEl) qtdEl.textContent = `( ${dados ? dados.length : 0} )`;
 
         if (!dados || dados.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum dado padrão para exibir.</td></tr>';
