@@ -1488,63 +1488,73 @@ document.addEventListener('DOMContentLoaded', () => {
             }, {});
             const totalBody = Object.entries(modeloCounts).map(([m, c]) => [m, c]);
 
-            const margin = 10;
+            const margin = 5;
             const pageMiddleX = 210 / 2;
-            const contentWidth = pageMiddleX - margin - 2.5; // Largura do conteúdo em cada metade
+            const contentWidth = pageMiddleX - (margin * 2);
 
-            // --- PARTE ESQUERDA ---
-            doc.setFontSize(12);
-            doc.text(`Resumo de Expedição - ${diaNome}`, margin, 15);
-            doc.setFontSize(8);
-            doc.text(semanaData, margin, 22);
+            const drawSide = (startX) => {
+                doc.setFontSize(10);
+                doc.text(`Resumo de Expedição - ${diaNome}`, startX, 10);
+                doc.setFontSize(7);
+                doc.text(semanaData, startX, 14);
 
-            doc.autoTable({
-                head: [columns], body: body, startY: 30, theme: 'grid',
-                styles: { fontSize: 7, cellPadding: 1 },
-                headStyles: { fillColor: [0, 105, 55] },
-                margin: { left: margin }, tableWidth: contentWidth,
-            });
-
-            if (totalBody.length > 0) {
-                doc.setFontSize(8);
-                doc.text("Totais por Modelo:", margin, doc.lastAutoTable.finalY + 5);
                 doc.autoTable({
-                    head: [['Modelo', 'Qtd']], body: totalBody, startY: doc.lastAutoTable.finalY + 7,
-                    theme: 'grid', styles: { fontSize: 7, cellPadding: 1 },
-                    headStyles: { fillColor: [100, 100, 100] },
-                    margin: { left: margin }, tableWidth: 60
+                    head: [columns],
+                    body: body,
+                    startY: 18,
+                    theme: 'grid',
+                    styles: { 
+                        fontSize: 6, 
+                        cellPadding: 0.5,
+                        overflow: 'linebreak',
+                        valign: 'middle'
+                    },
+                    headStyles: { 
+                        fillColor: [0, 105, 55],
+                        fontSize: 6,
+                        fontStyle: 'bold'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 18 }, // Placa
+                        1: { cellWidth: 22 }, // Modelo
+                        2: { cellWidth: 15 }, // Rota
+                        3: { cellWidth: 15 }, // Status
+                        4: { cellWidth: 'auto' } // Motorista
+                    },
+                    margin: { left: startX },
+                    tableWidth: contentWidth,
                 });
-            }
+
+                let finalY = doc.lastAutoTable.finalY + 3;
+
+                if (totalBody.length > 0) {
+                    doc.setFontSize(7);
+                    doc.text("Totais por Modelo:", startX, finalY);
+                    doc.autoTable({
+                        head: [['Modelo', 'Qtd']],
+                        body: totalBody,
+                        startY: finalY + 2,
+                        theme: 'grid',
+                        styles: { fontSize: 6, cellPadding: 0.5 },
+                        headStyles: { fillColor: [100, 100, 100], fontSize: 6 },
+                        margin: { left: startX },
+                        tableWidth: 40
+                    });
+                }
+            };
+
+            // Lado Esquerdo
+            drawSide(margin);
 
             // Linha de Corte
             doc.setLineWidth(0.1);
             doc.setDrawColor(200);
-            doc.line(pageMiddleX, 0, pageMiddleX, 297); // Linha vertical no meio
+            doc.setLineDash([3, 3], 0);
+            doc.line(pageMiddleX, 0, pageMiddleX, 297);
+            doc.setLineDash([], 0);
 
-            // --- PARTE DIREITA ---
-            const startX_right = pageMiddleX + 2.5;
-            doc.setFontSize(12);
-            doc.text(`Resumo de Expedição - ${diaNome}`, startX_right, 15);
-            doc.setFontSize(8);
-            doc.text(semanaData, startX_right, 22);
-
-            doc.autoTable({
-                head: [columns], body: body, startY: 30, theme: 'grid',
-                styles: { fontSize: 7, cellPadding: 1 },
-                headStyles: { fillColor: [0, 105, 55] },
-                margin: { left: startX_right }, tableWidth: contentWidth,
-            });
-
-            if (totalBody.length > 0) {
-                doc.setFontSize(8);
-                doc.text("Totais por Modelo:", startX_right, doc.lastAutoTable.finalY + 5);
-                doc.autoTable({
-                    head: [['Modelo', 'Qtd']], body: totalBody, startY: doc.lastAutoTable.finalY + 7,
-                    theme: 'grid', styles: { fontSize: 7, cellPadding: 1 },
-                    headStyles: { fillColor: [100, 100, 100] },
-                    margin: { left: startX_right }, tableWidth: 60
-                });
-            }
+            // Lado Direito
+            drawSide(pageMiddleX + margin);
 
             doc.save(`Expedicao_${diaNome}.pdf`);
         });
