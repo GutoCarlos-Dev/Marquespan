@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .modal-expedicao-subheader { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: #555; }
         .modal-expedicao-table-container { flex-grow: 1; overflow: auto; }
         .modal-expedicao-table { width: 100%; border-collapse: collapse; }
-        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; }
         .modal-expedicao-table th { background-color: #f2f2f2; }
         .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; }
         .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; font-weight: bold; text-align: center; }
@@ -140,15 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <thead>
                         <tr>
                             <th>Placa</th>
+                            <th>Modelo</th>
                             <th>Rota</th>
                             <th>Status</th>
                             <th>Motorista</th>
                         </tr>
                         <tr id="expedicao-filters">
-                            <td><input type="text" class="filter-input" data-column="placa" placeholder="Filtrar Placa..."></td>
-                            <td><input type="text" class="filter-input" data-column="rota" placeholder="Filtrar Rota..."></td>
-                            <td><input type="text" class="filter-input" data-column="status" placeholder="Filtrar Status..."></td>
-                            <td><input type="text" class="filter-input" data-column="motorista" placeholder="Filtrar Motorista..."></td>
+                            <td><select class="filter-input" data-column="placa"><option value="">Todos</option></select></td>
+                            <td><select class="filter-input" data-column="modelo"><option value="">Todos</option></select></td>
+                            <td><select class="filter-input" data-column="rota"><option value="">Todos</option></select></td>
+                            <td><select class="filter-input" data-column="status"><option value="">Todos</option></select></td>
+                            <td><select class="filter-input" data-column="motorista"><option value="">Todos</option></select></td>
                         </tr>
                     </thead>
                     <tbody id="modalExpedicaoTbody"></tbody>
@@ -827,10 +829,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // Limpa filtros antigos
         document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => input.value = '');
 
+        popularFiltrosExpedicao(dadosPadraoDoDia);
         renderTabelaExpedicao(dadosPadraoDoDia);
         calcularTotalizadorModelos(dadosPadraoDoDia);
 
         document.getElementById('modalExpedicao').style.display = 'flex';
+    }
+
+    function popularFiltrosExpedicao(dados) {
+        const columns = ['placa', 'modelo', 'rota', 'status', 'motorista'];
+        columns.forEach(col => {
+            const select = document.querySelector(`#expedicao-filters .filter-input[data-column="${col}"]`);
+            if (!select) return;
+            
+            // Mantém a opção "Todos" e remove as outras
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+
+            if (!dados || dados.length === 0) return;
+
+            // Extrai valores únicos, não nulos e ordena
+            const values = [...new Set(dados.map(item => item[col]).filter(v => v != null && v !== ''))].sort();
+            
+            values.forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                select.appendChild(option);
+            });
+        });
     }
 
     function renderTabelaExpedicao(dados) {
@@ -838,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '';
 
         if (!dados || dados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum dado padrão para exibir.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum dado padrão para exibir.</td></tr>';
             return;
         }
 
@@ -846,6 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${item.placa || ''}</td>
+                <td>${item.modelo || ''}</td>
                 <td>${item.rota || ''}</td>
                 <td>${item.status || ''}</td>
                 <td>${item.motorista || ''}</td>
@@ -874,9 +903,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const totalizadorHTML = Object.entries(modeloCounts)
-            .map(([modelo, count]) => `<span>${modelo} | <strong>${count}</strong></span>`)
-            .join(' &nbsp;&nbsp;&nbsp; ');
+        let totalizadorHTML = '<table style="margin: 0 auto; border-collapse: collapse; width: auto; min-width: 300px; font-size: 0.9em;">';
+        totalizadorHTML += '<thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ccc; padding: 6px;">Modelo</th><th style="border: 1px solid #ccc; padding: 6px;">Quantidade</th></tr></thead>';
+        totalizadorHTML += '<tbody>';
+
+        totalizadorHTML += Object.entries(modeloCounts)
+            .map(([modelo, count]) => `<tr><td style="border: 1px solid #ccc; padding: 5px 8px;">${modelo}</td><td style="border: 1px solid #ccc; padding: 5px 8px; text-align: center;"><strong>${count}</strong></td></tr>`)
+            .join('');
+        totalizadorHTML += '</tbody></table>';
 
         totalizadorEl.innerHTML = totalizadorHTML;
     }
@@ -1363,6 +1397,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const boletaData = document.getElementById('boletaData');
     if (filtroBoletaValor) filtroBoletaValor.addEventListener('change', buscarDadosBoleta);
     if (boletaData) boletaData.addEventListener('change', buscarDadosBoleta);
+
+    // --- LISTENERS MODAL EXPEDIÇÃO ---
+    const btnCloseExpedicao = document.getElementById('modalExpedicaoClose');
+    if (btnCloseExpedicao) {
+        btnCloseExpedicao.addEventListener('click', () => {
+            document.getElementById('modalExpedicao').style.display = 'none';
+        });
+    }
+
+    const filtersExpedicao = document.getElementById('expedicao-filters');
+    if (filtersExpedicao) {
+        filtersExpedicao.addEventListener('change', (e) => {
+            if (e.target.classList.contains('filter-input')) {
+                const filters = {};
+                document.querySelectorAll('#expedicao-filters .filter-input').forEach(input => {
+                    const column = input.dataset.column;
+                    const value = input.value;
+                    if (value) filters[column] = value;
+                });
+
+                const filteredData = dadosPadraoDoDia.filter(item => {
+                    return Object.keys(filters).every(key => (item[key] || '').toString() === filters[key]);
+                });
+
+                renderTabelaExpedicao(filteredData);
+                calcularTotalizadorModelos(filteredData);
+            }
+        });
+    }
 
     // --- REDIMENSIONAMENTO DE COLUNAS ---
     function enableColumnResizing() {
