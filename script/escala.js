@@ -1634,7 +1634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentWidth = pageWidth - (margin * 2);
 
             doc.setFontSize(14);
-            doc.text(`Conferência de Expedição - ${diaNome}`, margin, 15);
+            doc.text(`Reconferência de Expedição - ${diaNome}`, margin, 15);
             doc.setFontSize(10);
             doc.text(semanaData, margin, 20);
 
