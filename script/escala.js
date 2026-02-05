@@ -1707,9 +1707,65 @@ document.addEventListener('DOMContentLoaded', () => {
         resizer.addEventListener('mousedown', mouseDownHandler);
     }
 
+    // Função para destacar veículos com status INTERNADO
+    async function destacarVeiculosInternados() {
+        try {
+            // Busca todas as placas com situação INTERNADO
+            const { data: veiculos, error } = await supabaseClient
+                .from('veiculos')
+                .select('placa')
+                .eq('situacao', 'INTERNADO');
+
+            if (error) {
+                console.error('Erro ao buscar veículos internados:', error);
+                return;
+            }
+
+            const placasInternadas = new Set(veiculos.map(v => v.placa.trim().toUpperCase()));
+            const corInternado = '#004085'; // Cor do texto INTERNADO (azul escuro)
+
+            const aplicarEstilo = () => {
+                // Seleciona inputs na primeira coluna (PLACA) de todas as tabelas de dados
+                const inputs = document.querySelectorAll('.data-grid tbody tr td:first-child input');
+                inputs.forEach(input => {
+                    const placa = input.value.trim().toUpperCase();
+                    if (placasInternadas.has(placa)) {
+                        input.style.color = corInternado;
+                        input.style.fontWeight = 'bold';
+                    } else {
+                        // Reseta para o padrão se não for internado
+                        input.style.color = '';
+                        input.style.fontWeight = '';
+                    }
+                });
+            };
+
+            // Aplica inicialmente
+            aplicarEstilo();
+
+            // Observa mudanças nas tabelas (para quando os dados são carregados ou linhas adicionadas)
+            const observer = new MutationObserver(aplicarEstilo);
+            const tbodies = document.querySelectorAll('.data-grid tbody');
+            tbodies.forEach(tbody => {
+                observer.observe(tbody, { childList: true, subtree: true });
+            });
+
+            // Reaplica ao digitar (caso mude a placa manualmente)
+            document.addEventListener('input', (e) => {
+                if (e.target.matches('.data-grid tbody tr td:first-child input')) {
+                    aplicarEstilo();
+                }
+            });
+
+        } catch (err) {
+            console.error('Erro na verificação de internados:', err);
+        }
+    }
+
     // Inicialização
     carregarSemanas();
     preencherCacheDatas();
     carregarListasAuxiliares();
     enableColumnResizing();
+    destacarVeiculosInternados();
 });
