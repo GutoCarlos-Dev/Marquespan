@@ -125,11 +125,11 @@
           <div class="form-grid-layout">
             <div class="form-group">
               <label for="retirada-responsavel">Retirado Por (Nome Legível)</label>
-              <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?">
+              <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?" oninput="this.value = this.value.toUpperCase()">
             </div>
             <div class="form-group">
               <label for="retirada-observacao">Observação / Motivo</label>
-              <input type="text" id="retirada-observacao" placeholder="Opcional">
+              <input type="text" id="retirada-observacao" placeholder="Opcional" oninput="this.value = this.value.toUpperCase()">
             </div>
           </div>
           <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
