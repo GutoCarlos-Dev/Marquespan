@@ -4,7 +4,7 @@ let produtosCache = []; // Cache para datalists
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inicialização
-    carregarEstoqueGeral();
+    document.getElementById('grid-estoque-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #666;">Utilize os filtros e clique em "Buscar" para visualizar o estoque.</td></tr>';
     carregarProdutosParaDatalist();
 
     // Navegação por Abas
