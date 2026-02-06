@@ -81,8 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; vertical-align: top; }
         .modal-expedicao-table th { background-color: #f2f2f2; }
         .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; height: 100px; }
-        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
-        #modalExpedicaoTotalizador { flex-grow: 1; display: flex; justify-content: center; }
+        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-start; max-height: 30vh; }
+        #modalExpedicaoTotalizador { flex-grow: 1; display: flex; justify-content: center; overflow-y: auto; max-height: 100%; }
         .card-acoes { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card-acoes h4 { margin: 0; font-size: 0.9em; text-align: center; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .btn-acao-exp { padding: 8px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let totalizadorHTML = '<table style="margin: 0 auto; border-collapse: collapse; width: auto; min-width: 300px; font-size: 0.9em;">';
-        totalizadorHTML += '<thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ccc; padding: 6px;">Modelo</th><th style="border: 1px solid #ccc; padding: 6px;">Quantidade</th></tr></thead>';
+        totalizadorHTML += '<thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ccc; padding: 6px; position: sticky; top: 0; background-color: #f2f2f2; z-index: 1;">Modelo</th><th style="border: 1px solid #ccc; padding: 6px; position: sticky; top: 0; background-color: #f2f2f2; z-index: 1;">Quantidade</th></tr></thead>';
         totalizadorHTML += '<tbody>';
 
         totalizadorHTML += Object.entries(modeloCounts)
