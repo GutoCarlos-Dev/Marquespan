@@ -811,7 +811,7 @@ const UI = {
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
       // Query base
-      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome)').order('updated_at',{ascending:false});
+      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))').order('updated_at',{ascending:false});
       if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
@@ -828,6 +828,13 @@ const UI = {
         const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && c.status === 'Aprovada';
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
+        
+        let winnerDisplay = winnerName;
+        if ((c.status === 'Aprovada' || c.status === 'Recebido') && c.cotacao_itens && c.cotacao_itens.length > 0) {
+            const itemsTooltip = c.cotacao_itens.map(i => `${i.quantidade}x ${i.produtos?.nome || 'Produto desconhecido'}`).join('\n');
+            winnerDisplay = `<span title="${itemsTooltip}" style="cursor: help; text-decoration: underline dotted;">${winnerName}</span>`;
+        }
+
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
         const notaFiscal = c.nota_fiscal || 'N/A';
         // status select para permitir alteração e registro de data/usuário
@@ -846,7 +853,7 @@ const UI = {
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerName}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
