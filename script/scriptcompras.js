@@ -1544,6 +1544,43 @@ const UI = {
         // O método 'insert' do SupabaseService espera um único objeto ou um array para uma única chamada.
         for (const item of itens) {
           await SupabaseService.insert('recebimentos', item);
+
+          // --- ATUALIZAÇÃO AUTOMÁTICA DE ESTOQUE ---
+          try {
+            // 1. Busca o estoque atual do produto
+            const { data: produto, error: erroBusca } = await supabaseClient
+                .from('produtos')
+                .select('quantidade_em_estoque')
+                .eq('id', item.id_produto)
+                .single();
+
+            if (!erroBusca && produto) {
+                const qtdAtual = parseFloat(produto.quantidade_em_estoque) || 0;
+                const novaQtd = qtdAtual + parseFloat(item.qtd_recebida);
+
+                // 2. Atualiza a tabela 'produtos' com a nova quantidade
+                await supabaseClient
+                    .from('produtos')
+                    .update({ quantidade_em_estoque: novaQtd })
+                    .eq('id', item.id_produto);
+
+                // 3. Registra no histórico de movimentações (para a aba Relatórios do Estoque Geral)
+                const usuarioLogado = this._getCurrentUser();
+                // Tenta inserir, mas não trava se a tabela de movimentações ainda não existir ou der erro
+                await supabaseClient.from('movimentacoes_estoque').insert({
+                    produto_id: item.id_produto,
+                    tipo_movimentacao: 'ENTRADA',
+                    quantidade: item.qtd_recebida,
+                    quantidade_anterior: qtdAtual,
+                    quantidade_nova: novaQtd,
+                    usuario: usuarioLogado ? usuarioLogado.nome : 'Sistema',
+                    observacao: `Recebimento Compras - Cotação ${cotacaoId} ${notaFiscal ? '- NF ' + notaFiscal : ''}`
+                }).then(({ error }) => { if(error) console.warn('Erro ao registrar histórico:', error.message); });
+            }
+          } catch (errEstoque) {
+            console.error(`Erro ao atualizar estoque do produto ${item.id_produto}:`, errEstoque);
+          }
+          // ------------------------------------------
         }
         
         // 6. Preparar o payload para atualizar a cotação principal
