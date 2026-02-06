@@ -499,7 +499,19 @@ async function carregarRelatorioMovimentacoes() {
     try {
         let query = supabaseClient
             .from('movimentacoes_estoque')
-            .select('*, produtos(nome, codigo_principal)')
+            .select(`
+                id,
+                data_movimentacao,
+                tipo_movimentacao,
+                quantidade,
+                quantidade_anterior,
+                quantidade_nova,
+                usuario,
+                destinatario,
+                observacao,
+                withdrawal_id,
+                produtos ( nome, codigo_principal )
+            `)
             .order('data_movimentacao', { ascending: false })
             .limit(100);
 
