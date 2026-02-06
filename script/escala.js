@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .btn-acao-exp.pdf { background-color: #dc3545; }
         .btn-acao-exp.xlsx { background-color: #28a745; }
         .btn-acao-exp.fechar { background-color: #6c757d; }
+        /* Estilos de Seleção Múltipla */
+        .selected-cell { outline: 2px solid #007bff !important; box-shadow: 0 0 5px rgba(0,123,255,0.5) !important; z-index: 10; }
+        .selected-header { background-color: #cce5ff !important; color: #004085 !important; }
     `;
     document.head.appendChild(styleSheet);
 
@@ -126,10 +129,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCellTarget = null;
 
     colorPickerInput.addEventListener('input', (e) => {
-        if (currentHeaderTarget) {
-            setColumnColor(currentHeaderTarget, e.target.value);
+        const color = e.target.value;
+        const selectedHeaders = document.querySelectorAll('.selected-header');
+        const selectedCells = document.querySelectorAll('.selected-cell');
+
+        if (selectedHeaders.length > 0) {
+            selectedHeaders.forEach(th => setColumnColor(th, color));
+        } else if (currentHeaderTarget) {
+            setColumnColor(currentHeaderTarget, color);
+        }
+
+        if (selectedCells.length > 0) {
+            selectedCells.forEach(input => {
+                const tr = input.closest('tr');
+                if (tr) {
+                    setCellColor({
+                        tabela: tr.dataset.tabela,
+                        id: tr.dataset.id,
+                        key: input.dataset.key,
+                        element: input
+                    }, color);
+                }
+            });
         } else if (currentCellTarget) {
-            setCellColor(currentCellTarget, e.target.value);
+            setCellColor(currentCellTarget, color);
         }
     });
 
@@ -146,12 +169,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     window.resetColumnColor = () => {
-        if (currentHeaderTarget) setColumnColor(currentHeaderTarget, null);
+        const selectedHeaders = document.querySelectorAll('.selected-header');
+        if (selectedHeaders.length > 0) {
+            selectedHeaders.forEach(th => setColumnColor(th, null));
+        } else if (currentHeaderTarget) {
+            setColumnColor(currentHeaderTarget, null);
+        }
         contextMenu.style.display = 'none';
     };
 
     window.resetCellColor = () => {
-        if (currentCellTarget) setCellColor(currentCellTarget, null);
+        const selectedCells = document.querySelectorAll('.selected-cell');
+        if (selectedCells.length > 0) {
+            selectedCells.forEach(input => {
+                const tr = input.closest('tr');
+                if (tr) {
+                    setCellColor({
+                        tabela: tr.dataset.tabela,
+                        id: tr.dataset.id,
+                        key: input.dataset.key,
+                        element: input
+                    }, null);
+                }
+            });
+        } else if (currentCellTarget) {
+            setCellColor(currentCellTarget, null);
+        }
         contextMenu.style.display = 'none';
     };
 
@@ -526,10 +569,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const th = target.closest('th');
             if (th) {
                 e.preventDefault();
+                
+                // Lógica de Seleção no Clique Direito
+                if (!th.classList.contains('selected-header')) {
+                    if (!e.ctrlKey) {
+                        document.querySelectorAll('.selected-header').forEach(el => el.classList.remove('selected-header'));
+                        document.querySelectorAll('.selected-cell').forEach(el => el.classList.remove('selected-cell'));
+                    }
+                    th.classList.add('selected-header');
+                }
                 currentHeaderTarget = th;
                 
+                const count = document.querySelectorAll('.selected-header').length;
+                const text = count > 1 ? `Pintar ${count} Colunas...` : 'Escolher Cor...';
+
                 contextMenu.innerHTML = `
-                    <div class="context-menu-item" onclick="triggerColorPicker()"><i class="fas fa-palette" style="margin-right: 8px; color: #007bff;"></i>Escolher Cor...</div>
+                    <div class="context-menu-item" onclick="triggerColorPicker()"><i class="fas fa-palette" style="margin-right: 8px; color: #007bff;"></i>${text}</div>
                     <div class="context-menu-item" onclick="resetColumnColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor</div>
                 `;
                 
@@ -546,6 +601,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (input && tr && tr.dataset.id) {
                 e.preventDefault(); // Previne o menu padrão do navegador
                 
+                // Lógica de Seleção no Clique Direito
+                if (!input.classList.contains('selected-cell')) {
+                    if (!e.ctrlKey) {
+                        document.querySelectorAll('.selected-cell').forEach(el => el.classList.remove('selected-cell'));
+                        document.querySelectorAll('.selected-header').forEach(el => el.classList.remove('selected-header'));
+                    }
+                    input.classList.add('selected-cell');
+                }
+
                 currentCellTarget = {
                     tabela: tr.dataset.tabela,
                     id: tr.dataset.id,
@@ -553,8 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     element: input
                 };
 
+                const count = document.querySelectorAll('.selected-cell').length;
+                const text = count > 1 ? `Pintar ${count} Células...` : 'Pintar Célula...';
+
                 let menuHTML = `
-                    <div class="context-menu-item" onclick="triggerCellColorPicker()"><i class="fas fa-fill-drip" style="margin-right: 8px; color: #e83e8c;"></i>Pintar Célula...</div>
+                    <div class="context-menu-item" onclick="triggerCellColorPicker()"><i class="fas fa-fill-drip" style="margin-right: 8px; color: #e83e8c;"></i>${text}</div>
                     <div class="context-menu-item" onclick="resetCellColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor Célula</div>
                 `;
 
@@ -584,6 +651,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         painelEscala.addEventListener('click', async (e) => {
+            // Lógica de Seleção Múltipla com CTRL
+            const input = e.target.closest('input.table-input');
+            const th = e.target.closest('th');
+            
+            if (input || th) {
+                if (e.ctrlKey) {
+                    if (input) input.classList.toggle('selected-cell');
+                    if (th) th.classList.toggle('selected-header');
+                } else {
+                    // Se clicar sem CTRL, limpa outras seleções (comportamento padrão de grid)
+                    document.querySelectorAll('.selected-cell').forEach(el => el !== input && el.classList.remove('selected-cell'));
+                    document.querySelectorAll('.selected-header').forEach(el => el !== th && el.classList.remove('selected-header'));
+                    
+                    if (input) input.classList.add('selected-cell');
+                    if (th) th.classList.add('selected-header');
+                }
+            }
+
             // Botão Excluir
             const btnExcluir = e.target.closest('.btn-acao.excluir');
             if (btnExcluir) {
