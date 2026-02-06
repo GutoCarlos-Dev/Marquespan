@@ -77,7 +77,8 @@ function preencherDadosProduto(valorInput, prefixo) {
 
     if (produto) {
         document.getElementById(`${prefixo}-produto-id`).value = produto.id;
-        document.getElementById(`${prefixo}-estoque-atual`).value = `${produto.quantidade_em_estoque} ${produto.unidade_medida || 'UN'}`;
+        const qtd = parseFloat(produto.quantidade_em_estoque) || 0;
+        document.getElementById(`${prefixo}-estoque-atual`).value = `${qtd} ${produto.unidade_medida || 'UN'}`;
     } else {
         document.getElementById(`${prefixo}-produto-id`).value = '';
         document.getElementById(`${prefixo}-estoque-atual`).value = '';
@@ -132,13 +133,14 @@ function renderizarEstoque(lista) {
 
     lista.forEach(item => {
         const row = document.createElement('tr');
-        const qtdClass = item.quantidade_em_estoque <= 0 ? 'estoque-baixo' : 'quantidade-destaque';
+        const qtd = parseFloat(item.quantidade_em_estoque) || 0;
+        const qtdClass = qtd <= 0 ? 'estoque-baixo' : 'quantidade-destaque';
         
         row.innerHTML = `
             <td>${item.codigo_principal || '-'}</td>
             <td>${item.nome}</td>
             <td>${item.unidade_medida || 'UN'}</td>
-            <td style="text-align: center;" class="${qtdClass}">${item.quantidade_em_estoque}</td>
+            <td style="text-align: center;" class="${qtdClass}">${qtd}</td>
         `;
         gridBody.appendChild(row);
     });
