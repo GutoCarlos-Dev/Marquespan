@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             tr.innerHTML = `
                                 <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
-                                <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly></td>
+                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo"></td>
                                 <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota"></td>
                                 <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getStatusStyle(item.status || '')}"></td>
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
