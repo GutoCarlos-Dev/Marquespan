@@ -172,20 +172,37 @@
 
       <!-- ABA 4: RELATÓRIOS -->
       <section id="tab-relatorios" class="tab-content hidden">
-        <div class="card">
-          <h2 style="margin-bottom: 20px;">Histórico de Movimentações</h2>
-          <div class="filtros-container" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-            <input type="date" id="relatorio-data-ini">
-            <input type="date" id="relatorio-data-fim">
-            <select id="relatorio-tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-              <option value="">Todos os Tipos</option>
-              <option value="ENTRADA">Entrada</option>
-              <option value="SAIDA">Saída (Retirada)</option>
-              <option value="BATIMENTO">Batimento (Ajuste)</option>
-            </select>
-            <button id="btn-buscar-relatorio" class="btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+        <!-- Card de Filtros Compacto -->
+        <div class="card" style="max-width: 900px; margin: 0 auto 20px auto; padding: 15px; border-left: 4px solid #006937;">
+          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+            <i class="fas fa-filter"></i> Filtros de Pesquisa
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
+            <div>
+              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Data Início</label>
+              <input type="date" id="relatorio-data-ini" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Data Fim</label>
+              <input type="date" id="relatorio-data-fim" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Tipo</label>
+              <select id="relatorio-tipo" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">Todos os Tipos</option>
+                <option value="ENTRADA">Entrada</option>
+                <option value="SAIDA">Saída (Retirada)</option>
+                <option value="BATIMENTO">Batimento (Ajuste)</option>
+              </select>
+            </div>
+            <div>
+              <button id="btn-buscar-relatorio" class="btn-primary" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center;"><i class="fas fa-search"></i> Filtrar</button>
+            </div>
           </div>
-          
+        </div>
+
+        <div class="card">
+          <h2 style="margin-bottom: 20px; font-size: 1.2em; color: #333;">Histórico de Movimentações</h2>
           <div class="table-responsive">
             <table class="data-grid">
               <thead>
