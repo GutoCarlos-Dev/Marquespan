@@ -528,6 +528,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE DADOS ---
 
     function verificarDuplicidades() {
+        // Determina o escopo de busca (apenas o painel visível) para não pegar dados de outras abas
+        const painelDias = document.getElementById('conteudoDias');
+        const painelPlan = document.getElementById('conteudoPlanejamento');
+        let scope = document;
+
+        if (painelDias && !painelDias.classList.contains('hidden')) {
+            scope = painelDias;
+        } else if (painelPlan && !painelPlan.classList.contains('hidden')) {
+            scope = painelPlan;
+        }
+
         // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
         const groupsToCheck = [
             ['placa'],
@@ -538,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         groupsToCheck.forEach(keys => {
             const selector = keys.map(k => `input[data-key="${k}"]`).join(', ');
-            const inputs = document.querySelectorAll(selector);
+            const inputs = scope.querySelectorAll(selector);
             const valuesMap = new Map();
 
             inputs.forEach(input => {
