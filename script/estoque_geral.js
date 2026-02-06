@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listeners - Relatórios
     document.getElementById('btn-buscar-relatorio').addEventListener('click', carregarRelatorioMovimentacoes);
+    document.getElementById('grid-relatorio-body').addEventListener('click', handleRelatorioActions);
 });
 
 // --- FUNÇÕES AUXILIARES ---
@@ -269,6 +270,8 @@ async function handleRegistrarSaida() {
 
     if (!confirm(`Confirma a saída de ${itensRetirada.length} itens para ${responsavel}?`)) return;
 
+    const withdrawalId = crypto.randomUUID(); // Gera um ID único para este lote de retirada
+
     try {
         for (const item of itensRetirada) {
             const novaQtd = item.estoque_antes - item.qtd;
@@ -288,7 +291,8 @@ async function handleRegistrarSaida() {
                 quantidade_nova: novaQtd,
                 usuario: getCurrentUser(),
                 destinatario: responsavel,
-                observacao: observacao
+                observacao: observacao,
+                withdrawal_id: withdrawalId // Adiciona o ID do lote a cada item
             });
         }
 
@@ -387,6 +391,41 @@ async function gerarReciboPDF(dados) {
     doc.save(`Recibo_Retirada_${new Date().getTime()}.pdf`);
 }
 
+async function gerarPdfHistorico(withdrawalId) {
+    const { data: movimentos, error } = await supabaseClient
+        .from('movimentacoes_estoque')
+        .select('*, produtos(codigo_principal, nome)')
+        .eq('withdrawal_id', withdrawalId);
+
+    if (error) throw error;
+    if (!movimentos || movimentos.length === 0) {
+        throw new Error('Nenhum movimento encontrado para este recibo.');
+    }
+
+    const primeiroMovimento = movimentos[0];
+
+    const dadosRecibo = {
+        itens: movimentos.map(mov => ({
+            codigo: mov.produtos?.codigo_principal || '-',
+            nome: mov.produtos?.nome || 'Produto não encontrado',
+            qtd: Math.abs(mov.quantidade)
+        })),
+        responsavel: primeiroMovimento.destinatario,
+        observacao: primeiroMovimento.observacao,
+        data: new Date(primeiroMovimento.data_movimentacao)
+    };
+
+    await gerarReciboPDF(dadosRecibo);
+}
+
+async function handleRelatorioActions(e) {
+    const btn = e.target.closest('.btn-pdf-relatorio');
+    if (btn) {
+        const withdrawalId = btn.dataset.withdrawalId;
+        if (withdrawalId) await gerarPdfHistorico(withdrawalId).catch(err => alert('Erro ao gerar PDF: ' + err.message));
+    }
+}
+
 // --- ABA 3: BATIMENTO (CONTAGEM) ---
 
 async function handleBatimento(e) {
@@ -451,7 +490,7 @@ async function handleBatimento(e) {
 
 async function carregarRelatorioMovimentacoes() {
     const tbody = document.getElementById('grid-relatorio-body');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
 
     const dataIni = document.getElementById('relatorio-data-ini').value;
     const dataFim = document.getElementById('relatorio-data-fim').value;
@@ -474,7 +513,7 @@ async function carregarRelatorioMovimentacoes() {
 
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhuma movimentação encontrada.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhuma movimentação encontrada.</td></tr>';
             return;
         }
 
@@ -488,6 +527,11 @@ async function carregarRelatorioMovimentacoes() {
             if (mov.tipo_movimentacao === 'SAIDA') corTipo = 'red';
             if (mov.tipo_movimentacao === 'BATIMENTO') corTipo = 'orange';
 
+            let acoesHtml = '';
+            if (mov.tipo_movimentacao === 'SAIDA' && mov.withdrawal_id) {
+                acoesHtml = `<button class="btn-pdf btn-pdf-relatorio" data-withdrawal-id="${mov.withdrawal_id}" title="Visualizar Recibo PDF" style="padding: 4px 8px; font-size: 0.8em;"><i class="fas fa-file-pdf"></i></button>`;
+            }
+
             tr.innerHTML = `
                 <td>${dataFormatada}</td>
                 <td>${produtoNome}</td>
@@ -497,12 +541,13 @@ async function carregarRelatorioMovimentacoes() {
                 <td>${mov.quantidade_nova || '-'}</td>
                 <td>${mov.usuario || '-'}</td>
                 <td>${mov.destinatario ? `Dest: ${mov.destinatario}` : ''} ${mov.observacao || ''}</td>
+                <td>${acoesHtml}</td>
             `;
             tbody.appendChild(tr);
         });
 
     } catch (error) {
         console.error('Erro no relatório:', error);
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar relatório.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:red;">Erro ao carregar relatório.</td></tr>';
     }
 }
