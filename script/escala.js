@@ -266,6 +266,109 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCancelarCopia) btnCancelarCopia.addEventListener('click', () => modalCopiarEscala.style.display = 'none');
     modalCopiarEscala.addEventListener('click', (e) => { if (e.target === modalCopiarEscala) modalCopiarEscala.style.display = 'none'; });
 
+    // Modal Copiar Planejamento para Semana
+    const modalCopiarPlanejamento = document.createElement('div');
+    modalCopiarPlanejamento.id = 'modalCopiarPlanejamento';
+    modalCopiarPlanejamento.className = 'modal-expedicao';
+    modalCopiarPlanejamento.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:2000;';
+    modalCopiarPlanejamento.innerHTML = `
+        <div style="background:white;padding:20px;border-radius:8px;width:350px;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;text-align:center;">
+            <h3 style="margin-top:0;color:#333;">Copiar Planejamento para Escala</h3>
+            <p style="color:#666;font-size:0.9em;margin-bottom:15px;">Selecione a semana de destino para aplicar este planejamento.</p>
+            <div style="margin-bottom:15px;text-align:left;">
+                <label style="display:block;margin-bottom:5px;font-weight:bold;font-size:0.9em;">Semana Destino:</label>
+                <select id="selectSemanaDestinoPlan" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></select>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="btnConfirmarCopiaPlan" style="background:#28a745;color:white;padding:8px 15px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Aplicar</button>
+                <button id="btnCancelarCopiaPlan" style="background:transparent;border:1px solid #ccc;color:#666;padding:8px 15px;border-radius:4px;cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modalCopiarPlanejamento);
+
+    const btnCopiarPlanejamento = document.getElementById('btnCopiarPlanejamento');
+    const btnCancelarCopiaPlan = document.getElementById('btnCancelarCopiaPlan');
+    const btnConfirmarCopiaPlan = document.getElementById('btnConfirmarCopiaPlan');
+
+    if (btnCopiarPlanejamento) {
+        btnCopiarPlanejamento.addEventListener('click', () => {
+            const selectDest = document.getElementById('selectSemanaDestinoPlan');
+            // Copia as opções do seletor principal de semanas
+            selectDest.innerHTML = selectSemana.innerHTML;
+            selectDest.value = selectSemana.value;
+            modalCopiarPlanejamento.style.display = 'flex';
+        });
+    }
+
+    if (btnCancelarCopiaPlan) {
+        btnCancelarCopiaPlan.addEventListener('click', () => modalCopiarPlanejamento.style.display = 'none');
+    }
+
+    if (btnConfirmarCopiaPlan) {
+        btnConfirmarCopiaPlan.addEventListener('click', async () => {
+            const sourceWeek = selectSemana.value;
+            const targetWeek = document.getElementById('selectSemanaDestinoPlan').value;
+
+            if (!sourceWeek || !targetWeek) return;
+            if (!confirm(`Confirma aplicar o planejamento da ${sourceWeek} na escala da ${targetWeek}?`)) return;
+
+            try {
+                // 1. Busca o planejamento da semana atual
+                const { data: planData, error } = await supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .eq('semana_nome', sourceWeek);
+
+                if (error) throw error;
+                if (!planData || planData.length === 0) {
+                    alert('O planejamento desta semana está vazio.');
+                    return;
+                }
+
+                const inserts = [];
+                const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+
+                // 2. Transforma o planejamento em registros de escala diária
+                planData.forEach(row => {
+                    dias.forEach(dia => {
+                        const rota = row[`${dia.toLowerCase()}_rota`];
+                        const status = row[`${dia.toLowerCase()}_status`];
+
+                        // Só cria registro se houver rota ou status definido para o dia
+                        if (rota || status) {
+                            const dataEscala = CACHE_DATAS[targetWeek][dia].toISOString().split('T')[0];
+                            inserts.push({
+                                semana_nome: targetWeek,
+                                data_escala: dataEscala,
+                                tipo_escala: 'PADRAO', // Assume que planejamento vai para PADRAO
+                                placa: row.placa,
+                                modelo: row.modelo,
+                                motorista: row.motorista,
+                                auxiliar: row.auxiliar,
+                                terceiro: row.terceiro,
+                                rota: rota,
+                                status: status
+                            });
+                        }
+                    });
+                });
+
+                if (inserts.length > 0) {
+                    const { error: insertError } = await supabaseClient.from('escala').insert(inserts);
+                    if (insertError) throw insertError;
+                    alert('Planejamento aplicado à escala com sucesso!');
+                    modalCopiarPlanejamento.style.display = 'none';
+                } else {
+                    alert('Nenhum dado válido encontrado no planejamento para copiar.');
+                }
+
+            } catch (err) {
+                console.error('Erro ao copiar planejamento:', err);
+                alert('Erro ao copiar planejamento: ' + err.message);
+            }
+        });
+    }
 
     // Modal de Orientação do PDF
     const pdfModal = document.createElement('div');
