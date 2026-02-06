@@ -14,11 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             // Remove active de todos
-            tabButtons.forEach(b => b.classList.remove('active'));
+            tabButtons.forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             
             // Ativa o clicado
             btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
             const tabId = btn.dataset.tab;
             document.getElementById(tabId).classList.remove('hidden');
 
