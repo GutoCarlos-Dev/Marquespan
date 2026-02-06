@@ -1566,8 +1566,8 @@ const UI = {
 
                 // 3. Registra no histórico de movimentações (para a aba Relatórios do Estoque Geral)
                 const usuarioLogado = this._getCurrentUser();
-                // Tenta inserir, mas não trava se a tabela de movimentações ainda não existir ou der erro
-                await supabaseClient.from('movimentacoes_estoque').insert({
+                
+                const { error: histError } = await supabaseClient.from('movimentacoes_estoque').insert({
                     produto_id: item.id_produto,
                     tipo_movimentacao: 'ENTRADA',
                     quantidade: item.qtd_recebida,
@@ -1575,7 +1575,9 @@ const UI = {
                     quantidade_nova: novaQtd,
                     usuario: usuarioLogado ? usuarioLogado.nome : 'Sistema',
                     observacao: `Recebimento Compras - Cotação ${cotacaoId} ${notaFiscal ? '- NF ' + notaFiscal : ''}`
-                }).then(({ error }) => { if(error) console.warn('Erro ao registrar histórico:', error.message); });
+                });
+
+                if (histError) console.warn('Erro ao registrar histórico:', histError.message);
             }
           } catch (errEstoque) {
             console.error(`Erro ao atualizar estoque do produto ${item.id_produto}:`, errEstoque);
