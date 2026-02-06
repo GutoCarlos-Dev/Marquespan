@@ -1,6 +1,8 @@
 import { supabaseClient } from './supabase.js';
 
 let produtosCache = []; // Cache para datalists
+let itensRetirada = []; // Carrinho de retirada
+let dadosUltimaRetirada = null; // Para gerar PDF após salvar
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inicialização
@@ -23,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ações específicas ao abrir abas
             if (tabId === 'tab-relatorios') {
                 carregarRelatorioMovimentacoes();
+            } else if (tabId === 'tab-retirada') {
+                iniciarRelogioRetirada();
             }
         });
     });
@@ -33,7 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listeners - Retirada
     document.getElementById('retirada-produto').addEventListener('change', (e) => preencherDadosProduto(e.target.value, 'retirada'));
-    document.getElementById('form-retirada').addEventListener('submit', handleRetirada);
+    document.getElementById('btn-adicionar-item-retirada').addEventListener('click', handleAddItemRetirada);
+    document.getElementById('btn-registrar-saida').addEventListener('click', handleRegistrarSaida);
+    document.getElementById('btn-gerar-pdf-saida').addEventListener('click', handleGerarPDFSaida);
+    // Delegação de eventos para remover item do grid
+    document.getElementById('grid-itens-retirada').addEventListener('click', handleRemoveItemRetirada);
 
     // Listeners - Batimento
     document.getElementById('batimento-produto').addEventListener('change', (e) => preencherDadosProduto(e.target.value, 'batimento'));
@@ -156,63 +164,149 @@ function limparFiltros() {
 
 // --- ABA 2: RETIRADA DO ESTOQUE ---
 
-async function handleRetirada(e) {
-    e.preventDefault();
-    
+function iniciarRelogioRetirada() {
+    const updateTime = () => {
+        const now = new Date();
+        document.getElementById('retirada-data').textContent = now.toLocaleDateString('pt-BR');
+        document.getElementById('retirada-hora').textContent = now.toLocaleTimeString('pt-BR');
+        document.getElementById('retirada-usuario-logado').textContent = getCurrentUser();
+    };
+    updateTime();
+    setInterval(updateTime, 1000);
+}
+
+function handleAddItemRetirada() {
     const produtoId = document.getElementById('retirada-produto-id').value;
-    const qtdRetirada = parseFloat(document.getElementById('retirada-quantidade').value);
-    const responsavel = document.getElementById('retirada-responsavel').value.trim();
-    const observacao = document.getElementById('retirada-observacao').value.trim();
-    const produtoNome = document.getElementById('retirada-produto').value;
-
-    if (!produtoId) return alert('Selecione um produto válido da lista.');
-    if (qtdRetirada <= 0) return alert('A quantidade deve ser maior que zero.');
-
-    // 1. Verificar estoque atual
-    const produto = produtosCache.find(p => p.id == produtoId);
-    if (!produto) return alert('Produto não encontrado no cache.');
+    const produtoInput = document.getElementById('retirada-produto');
+    const qtdInput = document.getElementById('retirada-quantidade');
+    const estoqueInput = document.getElementById('retirada-estoque-atual');
     
-    if (produto.quantidade_em_estoque < qtdRetirada) {
-        return alert(`Estoque insuficiente! Disponível: ${produto.quantidade_em_estoque}. Tentativa: ${qtdRetirada}.`);
+    const qtdRetirada = parseFloat(qtdInput.value);
+    const produtoNome = produtoInput.value;
+
+    if (!produtoId) return alert('Selecione um produto válido.');
+    if (isNaN(qtdRetirada) || qtdRetirada <= 0) return alert('Informe uma quantidade válida.');
+
+    const produto = produtosCache.find(p => p.id == produtoId);
+    if (!produto) return alert('Produto não encontrado.');
+
+    const estoqueAtual = parseFloat(produto.quantidade_em_estoque) || 0;
+
+    // Verifica se já tem no carrinho para somar a validação
+    const itemNoCarrinho = itensRetirada.find(i => i.id === produtoId);
+    const qtdJaNoCarrinho = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
+
+    if ((qtdRetirada + qtdJaNoCarrinho) > estoqueAtual) {
+        return alert(`Estoque insuficiente! Disponível: ${estoqueAtual}. Tentativa total: ${qtdRetirada + qtdJaNoCarrinho}.`);
     }
 
-    const novaQtd = parseFloat(produto.quantidade_em_estoque) - qtdRetirada;
+    if (itemNoCarrinho) {
+        itemNoCarrinho.qtd += qtdRetirada;
+    } else {
+        itensRetirada.push({
+            id: produtoId,
+            codigo: produto.codigo_principal,
+            nome: produto.nome,
+            qtd: qtdRetirada,
+            estoque_antes: estoqueAtual
+        });
+    }
+
+    renderGridRetirada();
+    
+    // Limpa campos
+    produtoInput.value = '';
+    document.getElementById('retirada-produto-id').value = '';
+    qtdInput.value = '';
+    estoqueInput.value = '';
+    produtoInput.focus();
+}
+
+function renderGridRetirada() {
+    const tbody = document.getElementById('grid-itens-retirada');
+    tbody.innerHTML = '';
+    
+    if (itensRetirada.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum item adicionado.</td></tr>';
+        document.getElementById('total-itens-retirada').textContent = '0';
+        return;
+    }
+
+    itensRetirada.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.codigo || '-'}</td>
+            <td>${item.nome}</td>
+            <td style="text-align: center;">${item.qtd}</td>
+            <td style="text-align: center;">
+                <button class="btn-acao-remover" data-index="${index}" style="background:none; border:none; color:#dc3545; cursor:pointer;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('total-itens-retirada').textContent = itensRetirada.length;
+}
+
+function handleRemoveItemRetirada(e) {
+    const btn = e.target.closest('.btn-acao-remover');
+    if (btn) {
+        const index = btn.dataset.index;
+        itensRetirada.splice(index, 1);
+        renderGridRetirada();
+    }
+}
+
+async function handleRegistrarSaida() {
+    if (itensRetirada.length === 0) return alert('Adicione itens antes de registrar a saída.');
+    
+    const responsavel = document.getElementById('retirada-responsavel').value.trim();
+    const observacao = document.getElementById('retirada-observacao').value.trim();
+
+    if (!responsavel) return alert('Informe quem está retirando o material.');
+
+    if (!confirm(`Confirma a saída de ${itensRetirada.length} itens para ${responsavel}?`)) return;
 
     try {
-        // 2. Atualizar Produto
-        const { error: updateError } = await supabaseClient
-            .from('produtos')
-            .update({ quantidade_em_estoque: novaQtd })
-            .eq('id', produtoId);
+        for (const item of itensRetirada) {
+            const novaQtd = item.estoque_antes - item.qtd;
 
-        if (updateError) throw updateError;
+            // 1. Atualizar Produto
+            await supabaseClient
+                .from('produtos')
+                .update({ quantidade_em_estoque: novaQtd })
+                .eq('id', item.id);
 
-        // 3. Registrar Movimentação
-        const { error: movError } = await supabaseClient
-            .from('movimentacoes_estoque')
-            .insert([{
-                produto_id: produtoId,
+            // 2. Registrar Movimentação
+            await supabaseClient.from('movimentacoes_estoque').insert({
+                produto_id: item.id,
                 tipo_movimentacao: 'SAIDA',
-                quantidade: -qtdRetirada, // Negativo para saída
-                quantidade_anterior: produto.quantidade_em_estoque,
+                quantidade: -item.qtd,
+                quantidade_anterior: item.estoque_antes,
                 quantidade_nova: novaQtd,
                 usuario: getCurrentUser(),
                 destinatario: responsavel,
                 observacao: observacao
-            }]);
+            });
+        }
 
-        if (movError) throw movError;
-
-        // 4. Gerar PDF
-        gerarReciboPDF(produtoNome, qtdRetirada, responsavel, observacao);
-
-        alert('Retirada registrada com sucesso!');
-        e.target.reset();
-        document.getElementById('retirada-estoque-atual').value = '';
+        alert('Saída registrada com sucesso!');
         
-        // Atualizar dados
+        // Habilitar PDF e salvar dados temporários
+        dadosUltimaRetirada = { itens: [...itensRetirada], responsavel, observacao, data: new Date() };
+        document.getElementById('btn-gerar-pdf-saida').disabled = false;
+        document.getElementById('btn-gerar-pdf-saida').style.cursor = 'pointer';
+        document.getElementById('btn-gerar-pdf-saida').style.backgroundColor = '#006937';
+        document.getElementById('btn-gerar-pdf-saida').style.borderColor = '#006937';
+        document.getElementById('btn-registrar-saida').disabled = true;
+        document.getElementById('btn-registrar-saida').style.backgroundColor = '#6c757d';
+
+        // Limpar carrinho e atualizar dados
+        itensRetirada = [];
+        renderGridRetirada();
         await carregarProdutosParaDatalist();
-        carregarEstoqueGeral();
 
     } catch (error) {
         console.error('Erro na retirada:', error);
@@ -220,10 +314,17 @@ async function handleRetirada(e) {
     }
 }
 
-function gerarReciboPDF(produto, qtd, responsavel, obs) {
+function handleGerarPDFSaida() {
+    if (!dadosUltimaRetirada) return;
+    gerarReciboPDF(dadosUltimaRetirada);
+}
+
+function gerarReciboPDF(dados) {
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    
+    const { itens, responsavel, observacao, data } = dados;
 
     // Cabeçalho
     doc.setFontSize(18);
@@ -238,23 +339,37 @@ function gerarReciboPDF(produto, qtd, responsavel, obs) {
     doc.line(20, 60, 190, 60);
     
     doc.setFontSize(14);
-    doc.text('Detalhes do Material:', 20, 70);
-    doc.setFontSize(12);
-    doc.text(`Produto: ${produto}`, 20, 85);
-    doc.text(`Quantidade Retirada: ${qtd}`, 20, 95);
-    if(obs) doc.text(`Observação: ${obs}`, 20, 105);
+    doc.text('Itens Retirados:', 20, 70);
+    
+    // Tabela de Itens
+    const tableColumn = ["Código", "Produto", "Qtd"];
+    const tableRows = itens.map(item => [item.codigo || '-', item.nome, item.qtd]);
 
-    doc.line(20, 115, 190, 115);
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 75,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 105, 55] }
+    });
+
+    let finalY = doc.lastAutoTable.finalY + 10;
+
+    if(observacao) {
+        doc.setFontSize(12);
+        doc.text(`Observação: ${observacao}`, 20, finalY);
+        finalY += 10;
+    }
 
     // Assinaturas
-    doc.text('Declaro que recebi o material acima descrito em perfeitas condições.', 20, 130);
+    doc.text('Declaro que recebi o material acima descrito em perfeitas condições.', 20, finalY + 10);
 
-    doc.line(20, 170, 90, 170);
-    doc.text('Atendente (Assinatura)', 20, 175);
+    doc.line(20, finalY + 40, 90, finalY + 40);
+    doc.text('Atendente (Assinatura)', 20, finalY + 45);
 
-    doc.line(110, 170, 180, 170);
-    doc.text(responsavel, 110, 175);
-    doc.text('(Retirado Por)', 110, 182);
+    doc.line(110, finalY + 40, 180, finalY + 40);
+    doc.text(responsavel, 110, finalY + 45);
+    doc.text('(Retirado Por)', 110, finalY + 52);
 
     doc.save(`Recibo_Retirada_${new Date().getTime()}.pdf`);
 }

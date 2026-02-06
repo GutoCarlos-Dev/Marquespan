@@ -61,39 +61,81 @@
 
       <!-- ABA 2: RETIRADA DO ESTOQUE -->
       <section id="tab-retirada" class="tab-content hidden">
-        <div class="card">
-          <h2 style="margin-bottom: 20px; color: #006937;">Registrar Retirada (Consumo)</h2>
-          <form id="form-retirada">
-            <div class="form-grid-layout">
-              <div class="form-group">
-                <label for="retirada-produto">Produto</label>
-                <input type="text" id="retirada-produto" list="lista-produtos-retirada" placeholder="Digite para buscar..." required autocomplete="off">
-                <datalist id="lista-produtos-retirada"></datalist>
-                <input type="hidden" id="retirada-produto-id">
-              </div>
-              <div class="form-group">
-                <label>Estoque Atual</label>
-                <input type="text" id="retirada-estoque-atual" readonly style="background-color: #e9ecef; font-weight: bold;">
-              </div>
+        <!-- Card Superior: Informações -->
+        <div class="card" style="background-color: #e9ecef; border-left: 5px solid #006937; margin-bottom: 15px; padding: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <i class="fas fa-user-circle"></i> <strong>Usuário:</strong> <span id="retirada-usuario-logado">...</span>
             </div>
-            <div class="form-grid-layout">
-              <div class="form-group">
-                <label for="retirada-quantidade">Quantidade a Retirar</label>
-                <input type="number" id="retirada-quantidade" min="0.01" step="0.01" required>
-              </div>
-              <div class="form-group">
-                <label for="retirada-responsavel">Retirado Por (Nome Legível)</label>
-                <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?" required>
-              </div>
+            <div>
+              <i class="fas fa-calendar-alt"></i> <strong>Data:</strong> <span id="retirada-data">...</span>
+              <i class="fas fa-clock" style="margin-left: 10px;"></i> <span id="retirada-hora">...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Área de Adição de Produtos -->
+        <div class="card">
+          <h3 style="margin-bottom: 15px; color: #006937;">Adicionar Produtos</h3>
+          <div class="form-grid-layout" style="align-items: end;">
+            <div class="form-group" style="flex: 2;">
+              <label for="retirada-produto">Produto</label>
+              <input type="text" id="retirada-produto" list="lista-produtos-retirada" placeholder="Digite para buscar..." autocomplete="off">
+              <datalist id="lista-produtos-retirada"></datalist>
+              <input type="hidden" id="retirada-produto-id">
+            </div>
+            <div class="form-group">
+              <label>Estoque Atual</label>
+              <input type="text" id="retirada-estoque-atual" readonly style="background-color: #f8f9fa; font-weight: bold; color: #006937;">
+            </div>
+            <div class="form-group">
+              <label for="retirada-quantidade">Qtd. Retirada</label>
+              <input type="number" id="retirada-quantidade" min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+              <button id="btn-adicionar-item-retirada" class="btn-primary" style="width: 100%;"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Itens (Carrinho) -->
+        <div class="card" style="min-height: 250px; display: flex; flex-direction: column;">
+          <div class="table-responsive" style="flex-grow: 1;">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Produto</th>
+                  <th style="text-align: center;">Qtd.</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="grid-itens-retirada">
+                <!-- Itens adicionados via JS -->
+              </tbody>
+            </table>
+          </div>
+          <div style="text-align: right; margin-top: 10px; font-size: 1.1em; padding: 10px; background: #f8f9fa; border-top: 2px solid #006937;">
+            <strong>Total de Itens:</strong> <span id="total-itens-retirada" style="font-weight: bold; color: #006937;">0</span>
+          </div>
+        </div>
+
+        <!-- Card de Ação (Finalizar) -->
+        <div class="card">
+          <div class="form-grid-layout">
+            <div class="form-group">
+              <label for="retirada-responsavel">Retirado Por (Nome Legível)</label>
+              <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?">
             </div>
             <div class="form-group">
               <label for="retirada-observacao">Observação / Motivo</label>
               <input type="text" id="retirada-observacao" placeholder="Opcional">
             </div>
-            <div class="form-actions" style="margin-top: 20px;">
-              <button type="submit" class="btn-primary"><i class="fas fa-check-circle"></i> Confirmar Retirada e Gerar Recibo</button>
-            </div>
-          </form>
+          </div>
+          <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="btn-registrar-saida" class="btn-primary" style="background-color: #dc3545; border-color: #dc3545;"><i class="fas fa-save"></i> Registrar Saída</button>
+            <button id="btn-gerar-pdf-saida" class="btn-primary" disabled style="background-color: #6c757d; border-color: #6c757d; cursor: not-allowed;"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+          </div>
         </div>
       </section>
 
