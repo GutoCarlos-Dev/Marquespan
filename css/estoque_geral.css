@@ -1,0 +1,65 @@
+/* Estilos específicos para Estoque Geral */
+
+.painel-navegacao {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.painel-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-weight: 600;
+    color: #555;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.painel-btn:hover {
+    background: #e2e6ea;
+}
+
+.painel-btn.active {
+    background: #006937;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.form-grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.quantidade-destaque {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #006937;
+}
+
+.estoque-baixo {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.card-resumo-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #006937;
+    margin-bottom: 15px;
+}
+
+.btn-pdf {
+    background-color: #dc3545;
+    color: white;
+}

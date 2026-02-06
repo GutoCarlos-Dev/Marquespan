@@ -5,41 +5,166 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estoque Geral - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/style_estoque.css" /> <!-- Pode reutilizar ou criar um novo CSS -->
+  <link rel="stylesheet" href="css/estoque_geral.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
+  <!-- Bibliotecas para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <div class="container">
     <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container"></div>
+
     <div class="main-content">
       <header class="header">📦 Estoque Geral</header>
 
-      <div class="card">
-        <div class="filtros-container">
-          <input type="text" id="filtro-codigo" placeholder="Buscar por Código...">
-          <input type="text" id="filtro-nome" placeholder="Buscar por Nome...">
-          <button id="btn-buscar-estoque" class="btn-primary">Buscar</button>
-          <button id="btn-limpar-filtros" class="btn-muted">Limpar</button>
-        </div>
+      <!-- Navegação por Abas -->
+      <div class="painel-navegacao">
+        <button class="painel-btn active" data-tab="tab-estoque-atual"><i class="fas fa-boxes"></i> Estoque Atual</button>
+        <button class="painel-btn" data-tab="tab-retirada"><i class="fas fa-dolly"></i> Retirada do Estoque</button>
+        <button class="painel-btn" data-tab="tab-batimento"><i class="fas fa-clipboard-check"></i> Batimento</button>
+        <button class="painel-btn" data-tab="tab-relatorios"><i class="fas fa-chart-line"></i> Relatórios</button>
       </div>
 
-      <div class="card">
-        <div class="grid-container">
-          <div class="grid-header">
-            <div>Código</div>
-            <div>Nome do Produto</div>
-            <div>Unidade</div>
-            <div>Quantidade em Estoque</div>
+      <!-- ABA 1: ESTOQUE ATUAL -->
+      <section id="tab-estoque-atual" class="tab-content">
+        <div class="card">
+          <div class="filtros-container" style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="text" id="filtro-codigo" placeholder="Buscar por Código..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="text" id="filtro-nome" placeholder="Buscar por Nome..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex-grow: 1;">
+            <button id="btn-buscar-estoque" class="btn-primary"><i class="fas fa-search"></i> Buscar</button>
+            <button id="btn-limpar-filtros" class="btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
           </div>
-          <div id="grid-estoque-body" class="grid-body">
-            <!-- Dados serão carregados aqui -->
+          
+          <div class="table-responsive">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Nome do Produto</th>
+                  <th>Unidade</th>
+                  <th style="text-align: center;">Quantidade em Estoque</th>
+                </tr>
+              </thead>
+              <tbody id="grid-estoque-body">
+                <!-- Dados serão carregados aqui -->
+              </tbody>
+            </table>
+          </div>
+          <div class="grid-footer" style="margin-top: 10px; text-align: right;">
+            Total de Itens Listados: <span id="total-itens" style="font-weight: bold;">0</span>
           </div>
         </div>
-        <div class="grid-footer">
-          Total de Itens: <span id="total-itens">0</span>
+      </section>
+
+      <!-- ABA 2: RETIRADA DO ESTOQUE -->
+      <section id="tab-retirada" class="tab-content hidden">
+        <div class="card">
+          <h2 style="margin-bottom: 20px; color: #006937;">Registrar Retirada (Consumo)</h2>
+          <form id="form-retirada">
+            <div class="form-grid-layout">
+              <div class="form-group">
+                <label for="retirada-produto">Produto</label>
+                <input type="text" id="retirada-produto" list="lista-produtos-retirada" placeholder="Digite para buscar..." required autocomplete="off">
+                <datalist id="lista-produtos-retirada"></datalist>
+                <input type="hidden" id="retirada-produto-id">
+              </div>
+              <div class="form-group">
+                <label>Estoque Atual</label>
+                <input type="text" id="retirada-estoque-atual" readonly style="background-color: #e9ecef; font-weight: bold;">
+              </div>
+            </div>
+            <div class="form-grid-layout">
+              <div class="form-group">
+                <label for="retirada-quantidade">Quantidade a Retirar</label>
+                <input type="number" id="retirada-quantidade" min="0.01" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="retirada-responsavel">Retirado Por (Nome Legível)</label>
+                <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="retirada-observacao">Observação / Motivo</label>
+              <input type="text" id="retirada-observacao" placeholder="Opcional">
+            </div>
+            <div class="form-actions" style="margin-top: 20px;">
+              <button type="submit" class="btn-primary"><i class="fas fa-check-circle"></i> Confirmar Retirada e Gerar Recibo</button>
+            </div>
+          </form>
         </div>
-      </div>
+      </section>
+
+      <!-- ABA 3: BATIMENTO (CONTAGEM) -->
+      <section id="tab-batimento" class="tab-content hidden">
+        <div class="card">
+          <h2 style="margin-bottom: 20px; color: #006937;">Batimento de Estoque (Ajuste)</h2>
+          <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">Use esta função para corrigir a quantidade em estoque após uma contagem física.</p>
+          <form id="form-batimento">
+            <div class="form-grid-layout">
+              <div class="form-group">
+                <label for="batimento-produto">Produto</label>
+                <input type="text" id="batimento-produto" list="lista-produtos-batimento" placeholder="Digite para buscar..." required autocomplete="off">
+                <datalist id="lista-produtos-batimento"></datalist>
+                <input type="hidden" id="batimento-produto-id">
+              </div>
+              <div class="form-group">
+                <label>Estoque no Sistema</label>
+                <input type="text" id="batimento-estoque-atual" readonly style="background-color: #e9ecef;">
+              </div>
+            </div>
+            <div class="form-grid-layout">
+              <div class="form-group">
+                <label for="batimento-nova-quantidade">Quantidade Contada (Real)</label>
+                <input type="number" id="batimento-nova-quantidade" min="0" step="0.01" required style="border: 2px solid #006937;">
+              </div>
+            </div>
+            <div class="form-actions" style="margin-top: 20px;">
+              <button type="submit" class="btn-primary" style="background-color: #fd7e14; border-color: #fd7e14;"><i class="fas fa-sync-alt"></i> Atualizar Estoque</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ABA 4: RELATÓRIOS -->
+      <section id="tab-relatorios" class="tab-content hidden">
+        <div class="card">
+          <h2 style="margin-bottom: 20px;">Histórico de Movimentações</h2>
+          <div class="filtros-container" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+            <input type="date" id="relatorio-data-ini">
+            <input type="date" id="relatorio-data-fim">
+            <select id="relatorio-tipo" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              <option value="">Todos os Tipos</option>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída (Retirada)</option>
+              <option value="BATIMENTO">Batimento (Ajuste)</option>
+            </select>
+            <button id="btn-buscar-relatorio" class="btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Produto</th>
+                  <th>Tipo</th>
+                  <th>Qtd. Mov.</th>
+                  <th>Saldo Anterior</th>
+                  <th>Saldo Novo</th>
+                  <th>Usuário</th>
+                  <th>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody id="grid-relatorio-body">
+                <!-- Dados carregados via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
     </div>
   </div>
