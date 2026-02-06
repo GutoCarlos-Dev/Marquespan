@@ -4,6 +4,9 @@ import { supabaseClient } from './supabase.js';
 // Variável para armazenar os dados da seção PADRÃO do dia atual
 let dadosPadraoDoDia = [];
 
+const COLUMN_COLORS_KEY = 'marquespan_column_colors';
+const CELL_COLORS_KEY = 'marquespan_cell_colors';
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
 
@@ -22,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         table { border-collapse: collapse !important; width: auto; min-width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); table-layout: fixed; }
         th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; position: relative; }
         td { border: 1px solid #dee2e6; padding: 0 !important; height: 34px; vertical-align: middle; position: relative; }
-        tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        tbody tr:nth-child(even) { background-color: #ffffff; }
         tbody tr:nth-child(odd) { background-color: #ffffff; }
         tbody tr:hover { background-color: #f1f3f5; }
         input.table-input { width: 100%; height: 100%; border: none !important; border-radius: 0 !important; padding: 0 10px; background: transparent; font-size: 11px; color: #212529; outline: none; box-shadow: none !important; margin: 0; display: block; box-sizing: border-box; }
@@ -112,6 +115,45 @@ document.addEventListener('DOMContentLoaded', () => {
     contextMenu.id = 'customContextMenu';
     contextMenu.className = 'context-menu';
     document.body.appendChild(contextMenu);
+
+    // Input de cor oculto para seleção
+    const colorPickerInput = document.createElement('input');
+    colorPickerInput.type = 'color';
+    colorPickerInput.style.display = 'none';
+    document.body.appendChild(colorPickerInput);
+
+    let currentHeaderTarget = null;
+    let currentCellTarget = null;
+
+    colorPickerInput.addEventListener('input', (e) => {
+        if (currentHeaderTarget) {
+            setColumnColor(currentHeaderTarget, e.target.value);
+        } else if (currentCellTarget) {
+            setCellColor(currentCellTarget, e.target.value);
+        }
+    });
+
+    window.triggerColorPicker = () => {
+        currentCellTarget = null;
+        colorPickerInput.click();
+        contextMenu.style.display = 'none';
+    };
+
+    window.triggerCellColorPicker = () => {
+        currentHeaderTarget = null;
+        colorPickerInput.click();
+        contextMenu.style.display = 'none';
+    };
+    
+    window.resetColumnColor = () => {
+        if (currentHeaderTarget) setColumnColor(currentHeaderTarget, null);
+        contextMenu.style.display = 'none';
+    };
+
+    window.resetCellColor = () => {
+        if (currentCellTarget) setCellColor(currentCellTarget, null);
+        contextMenu.style.display = 'none';
+    };
 
     // Modal Copiar Escala
     const modalCopiarEscala = document.createElement('div');
@@ -434,21 +476,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (sec === 'Faltas') {
                             tr.innerHTML = `
-                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista_ausente || ''}" data-key="motorista_ausente" placeholder="Motorista"></td>
-                                <td contenteditable="true" data-key="motivo_motorista">${item.motivo_motorista || ''}</td>
-                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar_ausente || ''}" data-key="auxiliar_ausente" placeholder="Auxiliar"></td>
-                                <td contenteditable="true" data-key="motivo_auxiliar">${item.motivo_auxiliar || ''}</td>
+                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista_ausente || ''}" data-key="motorista_ausente" placeholder="Motorista" style="${getCellStyle('faltas_afastamentos', item.id, 'motorista_ausente')}"></td>
+                                <td contenteditable="true" data-key="motivo_motorista" style="${getCellStyle('faltas_afastamentos', item.id, 'motivo_motorista')}">${item.motivo_motorista || ''}</td>
+                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar_ausente || ''}" data-key="auxiliar_ausente" placeholder="Auxiliar" style="${getCellStyle('faltas_afastamentos', item.id, 'auxiliar_ausente')}"></td>
+                                <td contenteditable="true" data-key="motivo_auxiliar" style="${getCellStyle('faltas_afastamentos', item.id, 'motivo_auxiliar')}">${item.motivo_auxiliar || ''}</td>
                                 <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                             `;
                         } else {
                             tr.innerHTML = `
-                                <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
-                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo"></td>
-                                <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota"></td>
-                                <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getStatusStyle(item.status || '')}"></td>
-                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
-                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar"></td>
-                                <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro"></td>
+                                <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('escala', item.id, 'placa')}"></td>
+                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" style="${getCellStyle('escala', item.id, 'modelo')}"></td>
+                                <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota" style="${getCellStyle('escala', item.id, 'rota')}"></td>
+                                <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getCellStyle('escala', item.id, 'status', item.status)}"></td>
+                                <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('escala', item.id, 'motorista')}"></td>
+                                <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('escala', item.id, 'auxiliar')}"></td>
+                                <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('escala', item.id, 'terceiro')}"></td>
                                 <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
                             `;
                         }
@@ -478,15 +520,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- CONTEXT MENU (Right-click para Gerar Boleta) ---
         painelEscala.addEventListener('contextmenu', (e) => {
-            const input = e.target;
-            // Verifica se é um input de motorista/auxiliar e se tem valor
-            if (input.tagName === 'INPUT' && (input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
+            const target = e.target;
+            
+            // 1. Verifica se é Header (TH) para pintar coluna
+            const th = target.closest('th');
+            if (th) {
+                e.preventDefault();
+                currentHeaderTarget = th;
+                
+                contextMenu.innerHTML = `
+                    <div class="context-menu-item" onclick="triggerColorPicker()"><i class="fas fa-palette" style="margin-right: 8px; color: #007bff;"></i>Escolher Cor...</div>
+                    <div class="context-menu-item" onclick="resetColumnColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor</div>
+                `;
+                
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+                return;
+            }
+
+            // 2. Verifica se é Célula (Input) para pintar célula ou gerar boleta
+            const input = target.closest('input.table-input');
+            const tr = target.closest('tr');
+
+            if (input && tr && tr.dataset.id) {
                 e.preventDefault(); // Previne o menu padrão do navegador
+                
+                currentCellTarget = {
+                    tabela: tr.dataset.tabela,
+                    id: tr.dataset.id,
+                    key: input.dataset.key,
+                    element: input
+                };
 
-                const nome = input.value.trim();
+                let menuHTML = `
+                    <div class="context-menu-item" onclick="triggerCellColorPicker()"><i class="fas fa-fill-drip" style="margin-right: 8px; color: #e83e8c;"></i>Pintar Célula...</div>
+                    <div class="context-menu-item" onclick="resetCellColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor Célula</div>
+                `;
 
-                // Popula o menu de contexto
-                contextMenu.innerHTML = `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
+                // Adiciona opção de Boleta se aplicável
+                if ((input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
+                    const nome = input.value.trim();
+                    menuHTML += `<div class="context-menu-item-separator" style="border-bottom:1px solid #eee; margin: 4px 0;"></div>`;
+                    menuHTML += `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
+                }
+
+                contextMenu.innerHTML = menuHTML;
                 
                 // Posiciona e exibe o menu
                 contextMenu.style.display = 'block';
@@ -497,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const itemMenu = contextMenu.querySelector('[data-action="gerarBoleta"]');
                 if(itemMenu) {
                     itemMenu.addEventListener('click', () => {
-                        abrirModalBoletaComDados(nome);
+                        abrirModalBoletaComDados(itemMenu.dataset.nome);
                         contextMenu.style.display = 'none';
                     });
                 }
@@ -767,6 +846,91 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = '';
         };
         reader.readAsArrayBuffer(file);
+    }
+
+    async function importarExcelPlanejamento(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+            const semana = selectSemana.value;
+            if (!semana) return alert('Selecione uma semana.');
+
+            const inserts = [];
+            const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+            const diasExcel = {
+                'DOMINGO': 'DOMINGO', 'SEGUNDA': 'SEGUNDA', 'TERCA': 'TERÇA', 
+                'QUARTA': 'QUARTA', 'QUINTA': 'QUINTA', 'SEXTA': 'SEXTA', 'SABADO': 'SÁBADO'
+            };
+
+            json.forEach(row => {
+                const rowUpper = {};
+                Object.keys(row).forEach(k => rowUpper[k.toUpperCase().trim()] = row[k]);
+
+                const item = {
+                    semana_nome: semana,
+                    placa: rowUpper['PLACA'],
+                    modelo: rowUpper['MODELO'],
+                    motorista: rowUpper['MOTORISTA'],
+                    auxiliar: rowUpper['AUXILIAR'],
+                    terceiro: rowUpper['TERCEIRO']
+                };
+
+                dias.forEach(dia => {
+                    const diaEx = diasExcel[dia.toUpperCase()] || dia.toUpperCase();
+                    const rotaKey = Object.keys(rowUpper).find(k => k.includes(diaEx) && k.includes('ROTA'));
+                    const statusKey = Object.keys(rowUpper).find(k => k.includes(diaEx) && k.includes('STATUS'));
+                    if (rotaKey) item[`${dia.toLowerCase()}_rota`] = rowUpper[rotaKey];
+                    if (statusKey) item[`${dia.toLowerCase()}_status`] = rowUpper[statusKey];
+                });
+
+                if (item.placa) inserts.push(item);
+            });
+
+            if (inserts.length > 0 && confirm(`Importar ${inserts.length} registros para o Planejamento?`)) {
+                try {
+                    const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
+                    if (error) throw error;
+                    alert('Importação concluída!');
+                    carregarPlanejamento(semana);
+                } catch (err) {
+                    console.error('Erro na importação:', err);
+                    alert('Erro: ' + err.message);
+                }
+            }
+            e.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function baixarModeloPlanejamento() {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX não carregada.');
+
+        const headers = [
+            'PLACA', 'MODELO', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO',
+            'DOMINGO ROTA', 'DOMINGO STATUS',
+            'SEGUNDA ROTA', 'SEGUNDA STATUS',
+            'TERÇA ROTA', 'TERÇA STATUS',
+            'QUARTA ROTA', 'QUARTA STATUS',
+            'QUINTA ROTA', 'QUINTA STATUS',
+            'SEXTA ROTA', 'SEXTA STATUS',
+            'SÁBADO ROTA', 'SÁBADO STATUS'
+        ];
+
+        const data = [
+            { 'PLACA': 'EXEMPLO', 'MODELO': 'VUC', 'MOTORISTA': 'NOME', 'AUXILIAR': '', 'TERCEIRO': '', 'DOMINGO ROTA': '', 'DOMINGO STATUS': 'FOLGA', 'SEGUNDA ROTA': '101', 'SEGUNDA STATUS': 'OK' }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+        XLSX.writeFile(wb, "Modelo_Planejamento.xlsx");
     }
 
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
@@ -1249,6 +1413,19 @@ document.addEventListener('DOMContentLoaded', () => {
             gerarPDF('portrait', selected);
         });
     }
+
+    const btnImportarPlanejamento = document.getElementById('btnImportarPlanejamento');
+    const fileImportarPlanejamento = document.getElementById('fileImportarPlanejamento');
+    if (btnImportarPlanejamento && fileImportarPlanejamento) {
+        btnImportarPlanejamento.addEventListener('click', () => fileImportarPlanejamento.click());
+        fileImportarPlanejamento.addEventListener('change', importarExcelPlanejamento);
+    }
+
+    const btnModeloPlanejamento = document.getElementById('btnModeloPlanejamento');
+    if (btnModeloPlanejamento) {
+        btnModeloPlanejamento.addEventListener('click', baixarModeloPlanejamento);
+    }
+
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
 
     // Esconde o menu de contexto ao clicar em qualquer outro lugar
@@ -1849,23 +2026,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- REDIMENSIONAMENTO DE COLUNAS ---
     function enableColumnResizing() {
-        const sections = Object.keys(SECAO_PARA_DB);
-        sections.forEach(sec => {
-            const tbody = document.getElementById(`tbody${sec}`);
-            if (!tbody) return;
-            const table = tbody.closest('table');
+        const tableConfigs = [
+            ...Object.keys(SECAO_PARA_DB).map(sec => ({
+                element: document.getElementById(`tbody${sec}`)?.closest('table'),
+                id: `colWidths_${sec}`
+            })),
+            {
+                element: document.getElementById('tabelaPlanejamento'),
+                id: 'colWidths_planejamento'
+            }
+        ];
+
+        tableConfigs.forEach(({ element: table, id: tableId }) => {
             if (!table) return;
-            
-            const tableId = `colWidths_${sec}`;
+
             const savedWidths = JSON.parse(localStorage.getItem(tableId)) || {};
-            const headers = table.querySelectorAll('th');
+            // Seleciona todos os 'th' que não têm colspan, pois são as colunas que contêm dados na tbody
+            const headers = table.querySelectorAll('th:not([colspan])');
 
             headers.forEach((th, index) => {
+                // Não adicionar resizer em colunas de ação vazias ou colunas sem texto
+                if (th.textContent.trim() === '' && !th.querySelector('i')) return;
+
+                // Usamos o índice como chave, pois é relativo a cada tabela
                 if (savedWidths[index]) {
                     th.style.width = savedWidths[index];
-                } else {
-                    // Largura inicial padrão se não houver salvo
-                    if (!th.style.width) th.style.width = '150px';
+                } else if (!th.style.width) {
+                    // Define uma largura inicial padrão se não houver nada salvo
+                    if (th.textContent.trim().toUpperCase() === 'AÇÕES' || th.textContent.trim() === '') {
+                        th.style.width = '60px';
+                    } else {
+                        th.style.width = '150px';
+                    }
                 }
 
                 if (!th.querySelector('.resizer')) {
@@ -1881,13 +2073,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupResizer(resizer, th, tableId, index) {
         let x = 0, w = 0;
         const mouseDownHandler = (e) => {
+            e.preventDefault(); // Previne seleção de texto ao arrastar
             x = e.clientX;
             w = parseInt(window.getComputedStyle(th).width, 10);
             document.addEventListener('mousemove', mouseMoveHandler);
             document.addEventListener('mouseup', mouseUpHandler);
             resizer.classList.add('resizing');
         };
-        const mouseMoveHandler = (e) => { th.style.width = `${w + e.clientX - x}px`; };
+        const mouseMoveHandler = (e) => {
+            th.style.width = `${w + e.clientX - x}px`;
+        };
         const mouseUpHandler = () => {
             document.removeEventListener('mousemove', mouseMoveHandler);
             document.removeEventListener('mouseup', mouseUpHandler);
@@ -1897,6 +2092,124 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(tableId, JSON.stringify(saved));
         };
         resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+
+    // --- PINTURA DE COLUNAS ---
+    function setColumnColor(th, color) {
+        const table = th.closest('table');
+        const tbody = table.querySelector('tbody');
+        const tbodyId = tbody ? tbody.id : null;
+        
+        if (!tbodyId) return;
+
+        const colInfo = getEffectiveColumnIndex(th);
+        const startIndex = colInfo.index;
+        const span = colInfo.span;
+
+        const colors = JSON.parse(localStorage.getItem(COLUMN_COLORS_KEY) || '{}');
+        if (!colors[tbodyId]) colors[tbodyId] = {};
+
+        for (let i = 0; i < span; i++) {
+            const idx = startIndex + i;
+            if (color) {
+                colors[tbodyId][idx] = color;
+            } else {
+                delete colors[tbodyId][idx];
+            }
+        }
+
+        localStorage.setItem(COLUMN_COLORS_KEY, JSON.stringify(colors));
+        updateColumnColorsStyle();
+    }
+
+    function getCellStyle(tabela, id, key, valueForStatus = null) {
+        let style = '';
+        // 1. Estilo de Status (se houver)
+        if (key === 'status' && valueForStatus) {
+             style += getStatusStyle(valueForStatus);
+        }
+        // 2. Cor da Célula Salva (Sobrescreve background)
+        const allColors = JSON.parse(localStorage.getItem(CELL_COLORS_KEY) || '{}');
+        const savedColor = allColors[`${tabela}_${id}_${key}`];
+        if (savedColor) {
+            style += `background-color: ${savedColor} !important;`;
+        }
+        return style;
+    }
+
+    function setCellColor(targetInfo, color) {
+        const { tabela, id, key, element } = targetInfo;
+        const allColors = JSON.parse(localStorage.getItem(CELL_COLORS_KEY) || '{}');
+        const uniqueKey = `${tabela}_${id}_${key}`;
+        
+        if (color) {
+            allColors[uniqueKey] = color;
+            element.style.setProperty('background-color', color, 'important');
+        } else {
+            delete allColors[uniqueKey];
+            element.style.backgroundColor = '';
+            if (key === 'status') updateInputColor(element); // Restaura cor do status se necessário
+        }
+        localStorage.setItem(CELL_COLORS_KEY, JSON.stringify(allColors));
+    }
+
+    function getEffectiveColumnIndex(th) {
+        const table = th.closest('table');
+        const rows = Array.from(table.tHead.rows);
+        
+        // Caso simples: apenas uma linha de cabeçalho
+        if (rows.length <= 1) return { index: th.cellIndex + 1, span: th.colSpan || 1 };
+
+        // Caso complexo (Planejamento): Mapear a matriz do cabeçalho
+        const matrix = [];
+        const maxCols = 100; 
+        for(let r=0; r<rows.length; r++) matrix[r] = new Array(maxCols).fill(null);
+
+        for(let r=0; r<rows.length; r++) {
+            const row = rows[r];
+            let currentCol = 0;
+            for(let c=0; c<row.cells.length; c++) {
+                const cell = row.cells[c];
+                while(matrix[r][currentCol]) currentCol++; // Pula slots ocupados
+
+                const rowspan = cell.rowSpan || 1;
+                const colspan = cell.colSpan || 1;
+
+                if (cell === th) {
+                    return { index: currentCol + 1, span: colspan };
+                }
+
+                for(let rs=0; rs<rowspan; rs++) {
+                    for(let cs=0; cs<colspan; cs++) {
+                        matrix[r+rs][currentCol+cs] = true;
+                    }
+                }
+            }
+        }
+        return { index: th.cellIndex + 1, span: th.colSpan || 1 };
+    }
+
+    function updateColumnColorsStyle() {
+        let styleEl = document.getElementById('dynamic-column-colors');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'dynamic-column-colors';
+            document.head.appendChild(styleEl);
+        }
+
+        const colors = JSON.parse(localStorage.getItem(COLUMN_COLORS_KEY) || '{}');
+        let css = '';
+
+        Object.keys(colors).forEach(tbodyId => {
+            const colColors = colors[tbodyId];
+            Object.keys(colColors).forEach(colIndex => {
+                const color = colColors[colIndex];
+                // Aplica cor às células de dados (TD)
+                css += `#${tbodyId} > tr > td:nth-child(${colIndex}) { background-color: ${color} !important; }\n`;
+            });
+        });
+
+        styleEl.textContent = css;
     }
 
     // Função para destacar veículos com status INTERNADO
@@ -2016,18 +2329,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         dias.forEach(dia => {
             diasHtml += `
-                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota"></td>
-                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getStatusStyle(item[dia + '_status'] || '')}"></td>
+                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getCellStyle('planejamento_semanal', item.id, dia + '_rota')}"></td>
+                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status')}"></td>
             `;
         });
 
         tr.innerHTML = `
-            <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa"></td>
-            <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly></td>
+            <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('planejamento_semanal', item.id, 'placa')}"></td>
+            <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'modelo')}"></td>
             ${diasHtml}
-            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista"></td>
-            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar"></td>
-            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro"></td>
+            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
+            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('planejamento_semanal', item.id, 'auxiliar')}"></td>
+            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('planejamento_semanal', item.id, 'terceiro')}"></td>
             <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
@@ -2038,5 +2351,6 @@ document.addEventListener('DOMContentLoaded', () => {
     preencherCacheDatas();
     carregarListasAuxiliares();
     enableColumnResizing();
+    updateColumnColorsStyle(); // Carrega cores salvas
     destacarVeiculosInternados();
 });

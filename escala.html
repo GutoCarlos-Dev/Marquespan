@@ -122,7 +122,7 @@
 
         /* Estilo Zebrado para as Tabelas */
         .data-grid tbody tr:nth-child(even) {
-            background-color: #cecece; /* Cinza */
+            background-color: #ffffff; /* Branco */
         }
         .data-grid tbody tr:nth-child(odd) {
             background-color: #ffffff; /* Branco */
@@ -339,7 +339,18 @@
 
                 <!-- Conteúdo da Aba (Planejamento) -->
                 <div id="conteudoPlanejamento" class="card tab-content-card hidden">
-                    <h3 style="margin-bottom: 15px; color: #006937;"><i class="fa-solid fa-calendar-week"></i> PLANEJAMENTO SEMANAL</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #006937;"><i class="fa-solid fa-calendar-week"></i> PLANEJAMENTO SEMANAL</h3>
+                        <div>
+                            <input type="file" id="fileImportarPlanejamento" accept=".xlsx, .xls" style="display: none;">
+                            <button id="btnModeloPlanejamento" class="btn-custom" style="font-size: 0.9em; padding: 6px 12px; background-color: #6c757d; margin-right: 5px; display: inline-flex;">
+                                <i class="fa-solid fa-download"></i> Modelo
+                            </button>
+                            <button id="btnImportarPlanejamento" class="btn-custom btn-import" style="font-size: 0.9em; padding: 6px 12px;">
+                                <i class="fa-solid fa-file-import"></i> Importar XLSX
+                            </button>
+                        </div>
+                    </div>
                     <div class="table-scroll-container">
                         <table class="data-grid" id="tabelaPlanejamento">
                             <thead>
