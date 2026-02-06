@@ -319,27 +319,40 @@ function handleGerarPDFSaida() {
     gerarReciboPDF(dadosUltimaRetirada);
 }
 
-function gerarReciboPDF(dados) {
+async function gerarReciboPDF(dados) {
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
     const { itens, responsavel, observacao, data } = dados;
 
+    // --- Adicionar Logo ---
+    try {
+        const response = await fetch('logo.png');
+        if (response.ok) {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+            doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
+        }
+    } catch (e) {
+        console.warn('Logo não carregado', e);
+    }
+
     // Cabeçalho
     doc.setFontSize(18);
-    doc.text('RECIBO DE RETIRADA DE MATERIAL', 105, 20, { align: 'center' });
+    doc.text('RECIBO DE RETIRADA DE MATERIAL', 105, 35, { align: 'center' });
     
     doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 20, 40);
-    doc.text(`Atendente: ${getCurrentUser()}`, 20, 50);
+    doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 20, 50);
+    doc.text(`Atendente: ${getCurrentUser()}`, 20, 60);
     
     // Detalhes
     doc.setLineWidth(0.5);
-    doc.line(20, 60, 190, 60);
+    doc.line(20, 65, 190, 65);
     
     doc.setFontSize(14);
-    doc.text('Itens Retirados:', 20, 70);
+    doc.text('Itens Retirados:', 20, 75);
     
     // Tabela de Itens
     const tableColumn = ["Código", "Produto", "Qtd"];
@@ -348,7 +361,7 @@ function gerarReciboPDF(dados) {
     doc.autoTable({
         head: [tableColumn],
         body: tableRows,
-        startY: 75,
+        startY: 80,
         theme: 'grid',
         headStyles: { fillColor: [0, 105, 55] }
     });
