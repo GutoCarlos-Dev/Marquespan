@@ -339,21 +339,19 @@
 
                 <!-- Conteúdo da Aba (Planejamento) -->
                 <div id="conteudoPlanejamento" class="card tab-content-card hidden">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0; color: #006937;"><i class="fa-solid fa-calendar-week"></i> PLANEJAMENTO SEMANAL</h3>
-                        <div>
-                            <input type="file" id="fileImportarPlanejamento" accept=".xlsx, .xls" style="display: none;">
-                            <button id="btnCopiarPlanejamento" class="btn-custom" style="font-size: 0.9em; padding: 6px 12px; background-color: #17a2b8; margin-right: 5px; display: inline-flex;">
-                                <i class="fa-solid fa-copy"></i> Copiar para Semana
-                            </button>
-                            <button id="btnModeloPlanejamento" class="btn-custom" style="font-size: 0.9em; padding: 6px 12px; background-color: #6c757d; margin-right: 5px; display: inline-flex;">
-                                <i class="fa-solid fa-download"></i> Modelo
-                            </button>
-                            <button id="btnImportarPlanejamento" class="btn-custom btn-import" style="font-size: 0.9em; padding: 6px 12px;">
-                                <i class="fa-solid fa-file-import"></i> Importar XLSX
-                            </button>
-                        </div>
-                    </div>
+                    <h3 style="margin-bottom: 15px; color: #006937; display: flex; align-items: center; gap: 10px;">
+                        <span><i class="fa-solid fa-calendar-week"></i> PLANEJAMENTO SEMANAL</span>
+                        <input type="file" id="fileImportarPlanejamento" accept=".xlsx, .xls" style="display: none;">
+                        <button id="btnCopiarPlanejamento" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar para Semana">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                        <button id="btnModeloPlanejamento" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #6c757d; color: white;" title="Baixar Modelo">
+                            <i class="fa-solid fa-download"></i>
+                        </button>
+                        <button id="btnImportarPlanejamento" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #28a745; color: white;" title="Importar XLSX">
+                            <i class="fa-solid fa-file-import"></i>
+                        </button>
+                    </h3>
                     <div class="table-scroll-container">
                         <table class="data-grid" id="tabelaPlanejamento">
                             <thead>
