@@ -6,6 +6,7 @@ let dadosPadraoDoDia = [];
 
 const COLUMN_COLORS_KEY = 'marquespan_column_colors';
 const CELL_COLORS_KEY = 'marquespan_cell_colors';
+const SAVED_COLORS_KEY = 'marquespan_saved_colors';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
@@ -128,8 +129,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHeaderTarget = null;
     let currentCellTarget = null;
 
-    colorPickerInput.addEventListener('input', (e) => {
-        const color = e.target.value;
+    // Funções para Cores Salvas
+    function getSavedColors() {
+        return JSON.parse(localStorage.getItem(SAVED_COLORS_KEY) || '[]');
+    }
+
+    function saveColorToPalette(color) {
+        let colors = getSavedColors();
+        // Remove se já existe para mover para o topo
+        colors = colors.filter(c => c !== color);
+        colors.unshift(color);
+        if (colors.length > 10) colors.pop(); // Mantém as últimas 10
+        localStorage.setItem(SAVED_COLORS_KEY, JSON.stringify(colors));
+    }
+
+    function getSavedColorsHTML() {
+        const colors = getSavedColors();
+        if (colors.length === 0) return '';
+        
+        let html = '<div style="padding: 8px 15px; border-top: 1px solid #eee;"><div style="font-size: 11px; color: #666; margin-bottom: 5px;">Cores Recentes:</div><div style="display: flex; gap: 5px; flex-wrap: wrap;">';
+        colors.forEach(c => {
+            html += `<div onclick="applySavedColor('${c}')" style="width: 20px; height: 20px; background-color: ${c}; border: 1px solid #ccc; cursor: pointer; border-radius: 3px;" title="${c}"></div>`;
+        });
+        html += '</div></div>';
+        return html;
+    }
+
+    // Função unificada para aplicar cor
+    function applyColor(color) {
         const selectedHeaders = document.querySelectorAll('.selected-header');
         const selectedCells = document.querySelectorAll('.selected-cell');
 
@@ -154,6 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentCellTarget) {
             setCellColor(currentCellTarget, color);
         }
+    }
+
+    colorPickerInput.addEventListener('input', (e) => {
+        const color = e.target.value;
+        saveColorToPalette(color);
+        applyColor(color);
     });
 
     window.triggerColorPicker = () => {
@@ -168,6 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.style.display = 'none';
     };
     
+    window.applySavedColor = (color) => {
+        saveColorToPalette(color); // Move para o topo da lista
+        applyColor(color);
+        contextMenu.style.display = 'none';
+    };
+
     window.resetColumnColor = () => {
         const selectedHeaders = document.querySelectorAll('.selected-header');
         if (selectedHeaders.length > 0) {
@@ -586,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contextMenu.innerHTML = `
                     <div class="context-menu-item" onclick="triggerColorPicker()"><i class="fas fa-palette" style="margin-right: 8px; color: #007bff;"></i>${text}</div>
                     <div class="context-menu-item" onclick="resetColumnColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor</div>
+                    ${getSavedColorsHTML()}
                 `;
                 
                 contextMenu.style.display = 'block';
@@ -632,6 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     menuHTML += `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
                 }
 
+                menuHTML += getSavedColorsHTML();
                 contextMenu.innerHTML = menuHTML;
                 
                 // Posiciona e exibe o menu
