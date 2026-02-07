@@ -2362,8 +2362,12 @@ const ColetarManutencaoUI = {
                 return;
             }
 
-            // Ordenação Forçada para Agrupamento
+            // Ordenação
+            const col = this.currentReportSort.column;
+            const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
+
             data.sort((a, b) => {
+                // 1. Agrupamento (Prioritário para manter o layout do PDF)
                 if (tipoAgrupamento === 'OFICINA') {
                     const oficinaA = a.oficinas ? a.oficinas.nome : 'ZZZ'; // ZZZ para ir para o final
                     const oficinaB = b.oficinas ? b.oficinas.nome : 'ZZZ';
@@ -2375,10 +2379,27 @@ const ColetarManutencaoUI = {
                     if (a.item > b.item) return 1;
                 }
                 
-                // Ordenação secundária por data (decrescente)
-                const dateA = new Date(a.coletas_manutencao.data_hora);
-                const dateB = new Date(b.coletas_manutencao.data_hora);
-                return dateB - dateA;
+                // 2. Ordenação do Grid (Secundária)
+                let valA, valB;
+
+                if (col === 'data_hora') {
+                    valA = new Date(a.coletas_manutencao.data_hora);
+                    valB = new Date(b.coletas_manutencao.data_hora);
+                } else if (['semana', 'placa', 'modelo'].includes(col)) {
+                    valA = a.coletas_manutencao[col];
+                    valB = b.coletas_manutencao[col];
+                } else if (col === 'oficina') {
+                    valA = a.oficinas ? a.oficinas.nome : '';
+                    valB = b.oficinas ? b.oficinas.nome : '';
+                } else {
+                    valA = a[col] || '';
+                    valB = b[col] || '';
+                }
+
+                if (valA < valB) return -1 * dir;
+                if (valA > valB) return 1 * dir;
+
+                return 0;
             });
 
             const { jsPDF } = window.jspdf;
