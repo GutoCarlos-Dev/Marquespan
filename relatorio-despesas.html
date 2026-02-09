@@ -87,16 +87,20 @@
             </div>
 
             <div class="card" id="resultados-container" style="display: none;">
-                <div class="card-header">
-                    <!-- O título agora é um caption da tabela -->
-                    <div class="report-actions">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Resultados da Busca</h2>
+                        <span style="font-size: 1rem; font-weight: normal; background-color: #f0f8ff; padding: 5px 10px; border-radius: 8px; border: 1px solid #cce5ff;">
+                            Qtd: <strong id="total-registros" style="color: #0056b3;">0</strong> | Valor Total: <strong id="valor-total-geral" style="color: #28a745;">R$ 0,00</strong>
+                        </span>
+                    </div>
+                    <div class="report-actions" style="margin-bottom: 0;">
                         <button id="btnExportarXLSX" class="btn-success"><i class="fas fa-file-excel"></i> Exportar para Excel</button>
                         <button id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> Exportar para PDF</button>
                     </div>
                 </div>
                 <div class="table-scroll-container">
                 <table class="data-grid" aria-label="Resultados da Busca">
-                    <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Resultados da Busca</caption>
                     <thead>
                         <!-- Cabecalho da tabela -->
                         <tr>
@@ -125,13 +129,21 @@
             <div class="card" id="graficos-container" style="display: none;">
                 <h2>Análise Gráfica dos Resultados</h2>
                 <div class="charts-grid">
-                    <div class="chart-card">
+                    <div class="chart-card" style="background-color: #e7f1ff;">
                         <h3>Despesas por Rota</h3>
                         <canvas id="grafico-despesas-rota"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card" style="background-color: #d4edda;">
                         <h3>Top 5 Hotéis com Maiores Despesas</h3>
                         <canvas id="grafico-despesas-hotel"></canvas>
+                    </div>
+                    <div class="chart-card" style="background-color: #fff3cd;">
+                        <h3>Evolução Mensal das Despesas</h3>
+                        <canvas id="grafico-despesas-mensal"></canvas>
+                    </div>
+                    <div class="chart-card" style="background-color: #f8d7da;">
+                        <h3>Top 10 Gastos Funcionários (Dupla)</h3>
+                        <canvas id="grafico-despesas-funcionarios"></canvas>
                     </div>
                 </div>
             </div>

@@ -26,7 +26,7 @@ class SupabaseService {
                 data_checkin, numero_rota, hoteis:hoteis(nome), qtd_diarias, valor_diaria, valor_energia, valor_total,
                 funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
                 funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
-                nota_fiscal
+                nota_fiscal, tipo_quarto
             `)
             .gte('data_checkin', startDate)
             .lte('data_checkin', endDate)
@@ -66,6 +66,8 @@ const ReportUI = {
 
         this.graficoRotasInstance = null;
         this.graficoHoteisInstance = null;
+        this.graficoMensalInstance = null;
+        this.graficoFuncionariosInstance = null;
         this.reportData = [];
         this.currentSort = { key: null, direction: 'asc' };
     },
@@ -242,6 +244,15 @@ const ReportUI = {
         this.tabelaResultadosBody.innerHTML = '';
         if (tfoot) tfoot.innerHTML = '';
 
+        // Atualiza os totais no cabeçalho do card
+        const totalRegistros = dados.length;
+        const valorTotalGeral = dados.reduce((acc, item) => acc + (item.valor_total || 0), 0);
+
+        const elTotalRegistros = document.getElementById('total-registros');
+        const elValorTotalGeral = document.getElementById('valor-total-geral');
+        if (elTotalRegistros) elTotalRegistros.textContent = totalRegistros;
+        if (elValorTotalGeral) elValorTotalGeral.textContent = this.formatCurrency(valorTotalGeral);
+
         this.graficosContainer.style.display = 'none';
 
         if (dados.length === 0) {
@@ -258,6 +269,7 @@ const ReportUI = {
             const funcionariosDisplay = (func1 && func2) ? `<strong>${func1}</strong><br><small>${func2}</small>` : (func1 || 'N/A');
 
             const tr = document.createElement('tr');
+            tr.title = `Tipo de Quarto: ${item.tipo_quarto || 'Não informado'}`;
             tr.innerHTML = `
                 <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td>${item.numero_rota}</td>
@@ -334,6 +346,135 @@ const ReportUI = {
                 }]
             },
             options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
+
+        // Gráfico de Evolução Mensal
+        this.renderizarGraficoMensal(dados);
+
+        // Gráfico de Top 10 Funcionários
+        this.renderizarGraficoFuncionarios(dados);
+    },
+
+    renderizarGraficoMensal(dados) {
+        const canvas = document.getElementById('grafico-despesas-mensal');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const despesasPorMes = {};
+        dados.forEach(item => {
+            if (item.data_checkin) {
+                const date = new Date(item.data_checkin + 'T00:00:00');
+                // Chave YYYY-MM para ordenação correta
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                // Label para exibição
+                const label = date.toLocaleString('pt-BR', { month: 'short', year: 'numeric' });
+                
+                if (!despesasPorMes[key]) {
+                    despesasPorMes[key] = { label: label, valor: 0 };
+                }
+                despesasPorMes[key].valor += item.valor_total;
+            }
+        });
+
+        const sortedKeys = Object.keys(despesasPorMes).sort();
+        const labels = sortedKeys.map(key => despesasPorMes[key].label);
+        const data = sortedKeys.map(key => despesasPorMes[key].valor);
+
+        if (this.graficoMensalInstance) this.graficoMensalInstance.destroy();
+
+        this.graficoMensalInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Evolução Mensal',
+                    data: data,
+                    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    renderizarGraficoFuncionarios(dados) {
+        const canvas = document.getElementById('grafico-despesas-funcionarios');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const despesasPorDupla = {};
+        dados.forEach(item => {
+            const func1 = item.funcionario1?.nome || 'N/A';
+            const func2 = item.funcionario2?.nome || '';
+            const dupla = func2 ? `${func1} & ${func2}` : func1;
+            
+            if (!despesasPorDupla[dupla]) {
+                despesasPorDupla[dupla] = 0;
+            }
+            despesasPorDupla[dupla] += item.valor_total || 0;
+        });
+
+        const sortedDuplas = Object.entries(despesasPorDupla)
+            .sort(([, valorA], [, valorB]) => valorB - valorA)
+            .slice(0, 10);
+
+        const labels = sortedDuplas.map(([nome]) => nome);
+        const data = sortedDuplas.map(([, valor]) => valor);
+
+        if (this.graficoFuncionariosInstance) this.graficoFuncionariosInstance.destroy();
+
+        this.graficoFuncionariosInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Gasto',
+                    data: data,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Gráfico de barras horizontais para facilitar a leitura dos nomes
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { beginAtZero: true } },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
     },
 
