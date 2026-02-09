@@ -11,6 +11,97 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Estilos aprimorados para botões e campos */
+    .btn-pneu {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: white;
+    }
+    .btn-pneu:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .btn-pneu:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-add-item { background: linear-gradient(135deg, #28a745 0%, #218838 100%); }
+    .btn-add-item:hover { background: linear-gradient(135deg, #34ce57 0%, #28a745 100%); }
+
+    .btn-pneu-save { background: linear-gradient(135deg, #007bff 0%, #0069d9 100%); }
+    .btn-pneu-save:hover { background: linear-gradient(135deg, #3395ff 0%, #007bff 100%); }
+
+    .btn-pneu-cancel { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+    .btn-pneu-cancel:hover { background: linear-gradient(135deg, #ff4d5a 0%, #dc3545 100%); }
+
+    .btn-buscar { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+    .btn-buscar:hover { background: linear-gradient(135deg, #1fc8db 0%, #17a2b8 100%); }
+
+    /* Estilização dos campos de formulário */
+    .form-group-pneu input,
+    .form-group-pneu select,
+    .form-group-pneu textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        background-color: #fff;
+    }
+
+    .form-group-pneu input:focus,
+    .form-group-pneu select:focus,
+    .form-group-pneu textarea:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .form-group-pneu label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    /* Ajuste para o grid de instalação múltipla */
+    .instalacao-grid-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+
+    /* Centralizar e limitar largura do formulário */
+    #formConsumoPneu {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    #formConsumoPneu .form-group-pneu {
+        margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">

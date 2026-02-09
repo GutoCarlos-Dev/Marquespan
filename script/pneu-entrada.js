@@ -210,6 +210,30 @@ async function handleSalvarLancamento() {
         if (error) throw error;
 
         alert('Lançamento salvo com sucesso!');
+        // --- NOVA LÓGICA: Geração Automática e Relatório ---
+        if (confirm('Lançamento salvo! Deseja gerar automaticamente os códigos de marca de fogo para estes itens?')) {
+            let gerouAlgum = false;
+            for (const item of insertedData) {
+                if (item.quantidade > 0) {
+                    try {
+                        await gerarCodigosMarcaFogo(item.id, item.quantidade);
+                        gerouAlgum = true;
+                    } catch (e) {
+                        console.error(`Erro ao gerar código para item ${item.id}:`, e);
+                    }
+                }
+            }
+            if (gerouAlgum) {
+                alert('Códigos gerados com sucesso!');
+                if (confirm('Deseja baixar o relatório com todos os códigos desta Nota Fiscal?')) {
+                    await gerarRelatorioCompletoNF(cabecalho.nota_fiscal);
+                }
+            }
+        } else {
+            alert('Lançamento salvo com sucesso!');
+        }
+        // ---------------------------------------------------
+
         clearFormCompleto();
         await carregarEntradas();
 
@@ -566,6 +590,17 @@ function createModal(lancamento, codigos) {
     };
     modalContent.querySelector('.modal-pneu-footer').prepend(btnGerarPDF);
 
+    // Adiciona o botão de gerar Relatório Completo da NF
+    if (lancamento.nota_fiscal) {
+        const btnGerarNF = document.createElement('button');
+        btnGerarNF.className = 'btn-pneu btn-pneu-primary';
+        btnGerarNF.style.marginRight = '10px';
+        btnGerarNF.style.backgroundColor = '#6f42c1'; // Roxo para destaque
+        btnGerarNF.innerHTML = '<i class="fas fa-list-alt"></i> Relatório NF';
+        btnGerarNF.onclick = () => gerarRelatorioCompletoNF(lancamento.nota_fiscal);
+        modalContent.querySelector('.modal-pneu-footer').prepend(btnGerarNF);
+    }
+
     modal.appendChild(modalContent);
     return modal;
 }
@@ -705,4 +740,108 @@ if (!document.getElementById('pneu-modal-styles')) {
         .uppercase { text-transform: uppercase; }
     `;
     document.head.appendChild(style);
+}
+
+// --- NOVAS FUNÇÕES PARA RELATÓRIO POR NOTA FISCAL ---
+
+async function gerarRelatorioCompletoNF(notaFiscal) {
+    try {
+        // Busca todos os lançamentos desta NF e seus códigos
+        const { data: lancamentos, error } = await supabaseClient
+            .from('pneus')
+            .select(`
+                *,
+                marcas_fogo_pneus (
+                    id,
+                    codigo_marca_fogo
+                )
+            `)
+            .eq('nota_fiscal', notaFiscal);
+
+        if (error) throw error;
+
+        if (!lancamentos || lancamentos.length === 0) {
+            alert('Nenhum dado encontrado para esta NF.');
+            return;
+        }
+
+        // Verifica se existem códigos gerados
+        const temCodigos = lancamentos.some(l => l.marcas_fogo_pneus && l.marcas_fogo_pneus.length > 0);
+        if (!temCodigos) {
+            alert('Não há códigos gerados para esta NF.');
+            return;
+        }
+
+        await gerarPDFUnificado(notaFiscal, lancamentos);
+
+    } catch (e) {
+        console.error('Erro ao gerar relatório NF:', e);
+        alert('Erro ao gerar relatório da NF.');
+    }
+}
+
+async function gerarPDFUnificado(notaFiscal, lancamentos) {
+    if (!window.jspdf) {
+        alert('Biblioteca PDF não carregada.');
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Logo
+    try {
+        const response = await fetch('logo.png');
+        if (response.ok) {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+            doc.addImage(base64data, 'PNG', 150, 12, 45, 15);
+        }
+    } catch (e) { console.warn('Logo não carregado'); }
+
+    doc.setFontSize(18);
+    doc.text('Relatório de Códigos - Nota Fiscal', 14, 20);
+    doc.setFontSize(14);
+    doc.text(`NF: ${notaFiscal}`, 14, 28);
+    doc.setFontSize(10);
+    doc.text(`Data Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 34);
+
+    let y = 45;
+
+    lancamentos.forEach(lanc => {
+        if (lanc.marcas_fogo_pneus && lanc.marcas_fogo_pneus.length > 0) {
+            // Verifica quebra de página
+            if (y > 270) { doc.addPage(); y = 20; }
+            
+            // Cabeçalho do Item
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${lanc.marca} ${lanc.modelo} (${lanc.tipo}) - Qtd: ${lanc.quantidade}`, 14, y);
+            y += 6;
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            // Grid de Códigos
+            const codigos = lanc.marcas_fogo_pneus.map(c => c.codigo_marca_fogo).sort();
+            let x = 14;
+            
+            codigos.forEach((codigo, index) => {
+                if (y > 280) { doc.addPage(); y = 20; }
+                doc.text(codigo, x, y);
+                x += 35; // Largura da coluna
+                
+                // Quebra de linha a cada 5 códigos
+                if ((index + 1) % 5 === 0) {
+                    x = 14;
+                    y += 6;
+                }
+            });
+            
+            y += 10; // Espaço entre itens
+            if (x !== 14) y += 6; // Se a última linha não estava cheia, adiciona quebra
+        }
+    });
+
+    doc.save(`Relatorio_NF_${notaFiscal}.pdf`);
 }

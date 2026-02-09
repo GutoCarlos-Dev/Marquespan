@@ -9,6 +9,99 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    /* Estilos aprimorados para botões */
+    button {
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .btn-filtrar {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn-filtrar:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+
+    .btn-add-lista {
+        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn-add-lista:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+
+    .btn-registrar {
+        background: linear-gradient(135deg, #007bff 0%, #0069d9 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .btn-registrar:hover { transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+
+    .btn-limpar {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .btn-limpar:hover { transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+
+    /* Centralizar e limitar largura dos cards de formulário */
+    .card-saida {
+        max-width: 800px;
+        margin: 0 auto 20px auto; /* Centraliza e dá espaço inferior */
+    }
+
+    /* Estilização dos campos de formulário */
+    input[type="text"],
+    input[type="number"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        background-color: #fff;
+        box-sizing: border-box; /* Garante que padding não aumente a largura total */
+        font-family: inherit; /* Garante fonte consistente */
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+        display: block;
+        margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
 
