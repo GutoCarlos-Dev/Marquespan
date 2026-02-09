@@ -66,7 +66,7 @@ const ReportUI = {
 
         this.graficoRotasInstance = null;
         this.graficoHoteisInstance = null;
-        this.graficoMensalInstance = null;
+        this.graficoDiarioInstance = null;
         this.graficoFuncionariosInstance = null;
         this.reportData = [];
         this.currentSort = { key: null, direction: 'asc' };
@@ -348,46 +348,46 @@ const ReportUI = {
             options: { responsive: true, plugins: { legend: { position: 'top' } } }
         });
 
-        // Gráfico de Evolução Mensal
-        this.renderizarGraficoMensal(dados);
+        // Gráfico de Evolução Diária
+        this.renderizarGraficoDiario(dados);
 
         // Gráfico de Top 10 Funcionários
         this.renderizarGraficoFuncionarios(dados);
     },
 
-    renderizarGraficoMensal(dados) {
-        const canvas = document.getElementById('grafico-despesas-mensal');
+    renderizarGraficoDiario(dados) {
+        const canvas = document.getElementById('grafico-despesas-diario');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
 
-        const despesasPorMes = {};
+        const despesasPorDia = {};
         dados.forEach(item => {
             if (item.data_checkin) {
                 const date = new Date(item.data_checkin + 'T00:00:00');
-                // Chave YYYY-MM para ordenação correta
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                // Label para exibição
-                const label = date.toLocaleString('pt-BR', { month: 'short', year: 'numeric' });
+                // Chave YYYY-MM-DD para ordenação correta
+                const key = date.toISOString().split('T')[0];
+                // Label para exibição DD/MM/YYYY
+                const label = date.toLocaleDateString('pt-BR');
                 
-                if (!despesasPorMes[key]) {
-                    despesasPorMes[key] = { label: label, valor: 0 };
+                if (!despesasPorDia[key]) {
+                    despesasPorDia[key] = { label: label, valor: 0 };
                 }
-                despesasPorMes[key].valor += item.valor_total;
+                despesasPorDia[key].valor += item.valor_total;
             }
         });
 
-        const sortedKeys = Object.keys(despesasPorMes).sort();
-        const labels = sortedKeys.map(key => despesasPorMes[key].label);
-        const data = sortedKeys.map(key => despesasPorMes[key].valor);
+        const sortedKeys = Object.keys(despesasPorDia).sort();
+        const labels = sortedKeys.map(key => despesasPorDia[key].label);
+        const data = sortedKeys.map(key => despesasPorDia[key].valor);
 
-        if (this.graficoMensalInstance) this.graficoMensalInstance.destroy();
+        if (this.graficoDiarioInstance) this.graficoDiarioInstance.destroy();
 
-        this.graficoMensalInstance = new Chart(ctx, {
+        this.graficoDiarioInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Evolução Mensal',
+                    label: 'Evolução Diária',
                     data: data,
                     backgroundColor: 'rgba(255, 193, 7, 0.2)',
                     borderColor: 'rgba(255, 193, 7, 1)',
