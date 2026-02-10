@@ -38,8 +38,9 @@
               <label for="filtroStatus">Status</label>
               <select id="filtroStatus">
                 <option value="">Todos</option>
-                <option value="REALIZADO">Realizado</option>
-                <option value="PENDENTE">Pendente</option>
+                <option value="ABERTA">Aberta</option>
+                <option value="FECHADA">Fechada</option>
+                <option value="EM_ANDAMENTO">Em Andamento</option>
               </select>
             </div>
             <div class="form-group">
@@ -52,7 +53,7 @@
             </div>
             <div class="form-actions-inline">
               <button id="btnBuscar" class="btn-primary"><i class="fas fa-search"></i> Buscar</button>
-              <button id="btnNovoLancamento" class="btn-success"><i class="fas fa-plus"></i> Novo</button>
+              <button id="btnNovoLancamento" class="btn-success"><i class="fas fa-plus"></i> Nova Lista</button>
               <button id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> PDF</button>
             </div>
           </div>
@@ -64,14 +65,9 @@
             <table class="data-grid" id="tabelaEngraxe">
               <thead>
                 <tr>
-                  <th>Placa</th>
-                  <th>Modelo</th>
-                  <th>Marca</th>
-                  <th>Plaquinha</th>
-                  <th>SEG</th>
-                  <th>KM Realizado</th>
-                  <th>Data Realizado</th>
-                  <th>Próximo (Data/KM)</th>
+                  <th>Data/Hora</th>
+                  <th>Nome da Lista</th>
+                  <th>Usuário Criou</th>
                   <th>Status</th>
                   <th>Ações</th>
                 </tr>
@@ -86,30 +82,42 @@
     </div>
   </div>
 
-  <!-- Modal Lançamento -->
+  <!-- Modal Detalhes da Lista -->
   <div id="modalEngraxe" class="panel-backdrop hidden">
-    <div class="panel">
+    <div class="panel" style="max-width: 900px; width: 95%;">
       <div class="panel-header">
-        <h3><i class="fas fa-edit"></i> Lançamento de Engraxe</h3>
+        <h3 id="modalTitle"><i class="fas fa-list"></i> Detalhes da Lista</h3>
         <button class="close-button" id="btnCloseModal">&times;</button>
       </div>
       <div class="panel-body">
-        <form id="formEngraxe">
-          <input type="hidden" id="engraxeId">
-          <div class="form-grid-modal">
-            <div class="form-group"><label for="placa">Placa *</label><input type="text" id="placa" list="listaVeiculos" required autocomplete="off" style="text-transform: uppercase;"><datalist id="listaVeiculos"></datalist></div>
-            <div class="form-group"><label for="modelo">Modelo</label><input type="text" id="modelo" readonly></div>
-            <div class="form-group"><label for="marca">Marca</label><input type="text" id="marca" readonly></div>
-            <div class="form-group"><label for="plaquinha">Plaquinha (ID)</label><input type="text" id="plaquinha"></div>
-            <div class="form-group"><label for="seg">SEG</label><input type="text" id="seg"></div>
-            <div class="form-group"><label for="km_realizado">KM Atual *</label><input type="number" id="km_realizado" required></div>
-            <div class="form-group"><label for="data_realizado">Data Realizado *</label><input type="date" id="data_realizado" required></div>
-            <div class="form-group"><label for="status">Status *</label><select id="status" required><option value="REALIZADO">REALIZADO</option><option value="PENDENTE">PENDENTE</option></select></div>
-            <div class="form-group"><label for="proximo_km">Próximo KM (Estimado)</label><input type="number" id="proximo_km"></div>
-            <div class="form-group"><label for="proximo_data">Próxima Data (Estimada)</label><input type="date" id="proximo_data"></div>
-          </div>
-          <div class="form-actions" style="margin-top: 20px; justify-content: flex-end;"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button></div>
-        </form>
+        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="filtroModalInput" placeholder="Filtrar por Marca ou Modelo..." style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <button id="btnImportarListaModal" class="btn-primary" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
+                <i class="fas fa-file-import"></i> Importar
+            </button>
+            <input type="file" id="fileImportarListaModal" accept=".xlsx, .xls" style="display: none;">
+        </div>
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="data-grid">
+                <thead>
+                    <tr>
+                        <th>PLACA</th>
+                        <th>MODELO</th>
+                        <th>MARCA</th>
+                        <th>REALIZADO</th>
+                        <th>PRÓXIMO</th>
+                        <th>PLAQ</th>
+                        <th>STATUS</th>
+                        <th>SEG</th>
+                        <th>KM</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyModalItens">
+                    <!-- Itens carregados via JS -->
+                </tbody>
+            </table>
+        </div>
       </div>
     </div>
   </div>

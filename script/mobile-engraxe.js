@@ -1,69 +1,124 @@
 import { supabaseClient } from './supabase.js';
 
-let veiculosCache = [];
+let listaAtualId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('data_realizado').value = new Date().toISOString().split('T')[0];
-    await carregarVeiculos();
-    await carregarHistorico();
-    document.getElementById('formMobileEngraxe').addEventListener('submit', salvarEngraxeMobile);
+    carregarListasMobile();
+    document.getElementById('btnVoltarMobile').addEventListener('click', voltarParaListas);
 });
 
-async function carregarVeiculos() {
-    try {
-        const { data, error } = await supabaseClient.from('veiculos').select('placa, modelo, marca').eq('situacao', 'ativo').order('placa');
-        if (error) throw error;
-        veiculosCache = data;
-        const datalist = document.getElementById('listaVeiculos');
-        datalist.innerHTML = '';
-        data.forEach(v => { const option = document.createElement('option'); option.value = v.placa; datalist.appendChild(option); });
-    } catch (error) { console.error('Erro ao carregar veículos:', error); }
-}
-
-async function salvarEngraxeMobile(e) {
-    e.preventDefault();
-    const placa = document.getElementById('placa').value.toUpperCase();
-    const veiculo = veiculosCache.find(v => v.placa === placa);
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
-    const dados = {
-        placa: placa,
-        modelo: veiculo ? veiculo.modelo : '',
-        marca: veiculo ? veiculo.marca : '',
-        plaquinha: document.getElementById('plaquinha').value,
-        seg: document.getElementById('seg').value,
-        km_realizado: document.getElementById('km_realizado').value,
-        data_realizado: document.getElementById('data_realizado').value,
-        status: document.getElementById('status').value,
-        km_proximo: document.getElementById('proximo_km').value || null,
-        data_proximo: document.getElementById('proximo_data').value || null,
-        usuario: usuario
-    };
+async function carregarListasMobile() {
+    const container = document.getElementById('listaDeListas');
+    container.innerHTML = '<p style="text-align: center;">Carregando listas...</p>';
 
     try {
-        const { error } = await supabaseClient.from('controle_engraxe').insert([dados]);
-        if (error) throw error;
-        alert('Engraxe registrado com sucesso!');
-        document.getElementById('formMobileEngraxe').reset();
-        document.getElementById('data_realizado').value = new Date().toISOString().split('T')[0];
-        carregarHistorico();
-    } catch (error) { console.error('Erro ao salvar:', error); alert('Erro ao salvar: ' + error.message); }
-}
+        const { data, error } = await supabaseClient
+            .from('engraxe_listas')
+            .select('*')
+            .eq('status', 'ABERTA')
+            .order('created_at', { ascending: false });
 
-async function carregarHistorico() {
-    const container = document.getElementById('listaHistorico');
-    container.innerHTML = '<p style="text-align: center;">Atualizando...</p>';
-    try {
-        const { data, error } = await supabaseClient.from('controle_engraxe').select('*').order('created_at', { ascending: false }).limit(10);
         if (error) throw error;
+
         container.innerHTML = '';
-        if (!data || data.length === 0) { container.innerHTML = '<p style="text-align: center;">Nenhum registro recente.</p>'; return; }
-        data.forEach(item => {
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="text-align: center;">Nenhuma lista aberta.</p>';
+            return;
+        }
+
+        data.forEach(lista => {
             const div = document.createElement('div');
-            const statusClass = item.status === 'REALIZADO' ? 'realizado' : 'pendente';
-            const dataFmt = new Date(item.data_realizado).toLocaleDateString('pt-BR');
-            div.className = `historico-card ${statusClass}`;
-            div.innerHTML = `<div class="card-top"><span class="card-placa">${item.placa}</span><span class="card-date">${dataFmt}</span></div><div class="card-details">KM: ${item.km_realizado} | Status: <strong>${item.status}</strong></div>`;
+            div.className = 'historico-card';
+            div.style.cursor = 'pointer';
+            div.onclick = () => abrirListaMobile(lista.id, lista.nome);
+            div.innerHTML = `
+                <div class="card-top">
+                    <span class="card-placa">${lista.nome}</span>
+                    <span class="card-date">${new Date(lista.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div class="card-details" style="text-align: right; color: #006937; font-weight: bold;">
+                    Toque para abrir <i class="fas fa-chevron-right"></i>
+                </div>
+            `;
             container.appendChild(div);
         });
-    } catch (error) { console.error('Erro ao carregar histórico:', error); container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar.</p>'; }
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar.</p>';
+    }
+}
+
+async function abrirListaMobile(id, nome) {
+    listaAtualId = id;
+    document.getElementById('viewSelecaoLista').classList.add('hidden');
+    document.getElementById('viewExecucaoMobile').classList.remove('hidden');
+    document.getElementById('tituloListaMobile').textContent = nome;
+    carregarItensMobile(id);
+}
+
+async function carregarItensMobile(id) {
+    const container = document.getElementById('listaItensMobile');
+    container.innerHTML = 'Carregando itens...';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('engraxe_itens')
+            .select('*')
+            .eq('lista_id', id)
+            .order('placa');
+
+        if (error) throw error;
+
+        container.innerHTML = '';
+        data.forEach(item => {
+            const isDone = item.status === 'REALIZADO';
+            const div = document.createElement('div');
+            div.className = `historico-card ${isDone ? 'realizado' : 'pendente'}`;
+            
+            div.innerHTML = `
+                <div class="card-top">
+                    <span class="card-placa">${item.placa}</span>
+                    <span class="card-date">${item.modelo}</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <input type="number" id="km-mob-${item.id}" placeholder="KM" value="${item.km || ''}" ${isDone ? 'disabled' : ''} style="width: 100px; padding: 5px;">
+                </div>
+                ${isDone 
+                    ? `<div style="color: green; font-weight: bold;"><i class="fas fa-check"></i> REALIZADO</div>`
+                    : `<button class="btn-primary btn-block" onclick="marcarRealizadoMobile('${item.id}')">DAR OK</button>`
+                }
+            `;
+            container.appendChild(div);
+        });
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+window.marcarRealizadoMobile = async function(itemId) {
+    const km = document.getElementById(`km-mob-${itemId}`).value;
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+
+    try {
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .update({
+                status: 'REALIZADO',
+                km: km ? parseInt(km) : null,
+                data_realizado: new Date().toISOString(),
+                usuario_realizou: usuario
+            })
+            .eq('id', itemId);
+
+        if (error) throw error;
+        carregarItensMobile(listaAtualId);
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+function voltarParaListas() {
+    document.getElementById('viewExecucaoMobile').classList.add('hidden');
+    document.getElementById('viewSelecaoLista').classList.remove('hidden');
+    carregarListasMobile();
 }
