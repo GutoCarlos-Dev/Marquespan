@@ -1,0 +1,27 @@
+body { background-color: #f4f4f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding-bottom: 20px; }
+.mobile-header { background-color: #006937; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100; }
+.header-content { display: flex; align-items: center; gap: 10px; }
+.mobile-logo { height: 30px; background: white; border-radius: 4px; padding: 2px; }
+.mobile-header h1 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+.btn-desktop-link { color: white; font-size: 1.2rem; text-decoration: none; }
+.mobile-container { padding: 15px; max-width: 600px; margin: 0 auto; }
+.mobile-panel { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 20px; }
+.panel-header { background-color: #f8f9fa; padding: 12px 15px; border-bottom: 1px solid #eee; }
+.panel-header h3 { margin: 0; font-size: 1.1rem; color: #333; }
+.panel-body { padding: 15px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 0.9rem; }
+.form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+.form-row-mobile { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-block { width: 100%; display: block; }
+.btn-large { padding: 12px; font-size: 1.1rem; font-weight: bold; }
+.historico-list { display: flex; flex-direction: column; gap: 10px; }
+.historico-card { background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.historico-card.realizado { border-left-color: #28a745; }
+.historico-card.pendente { border-left-color: #ffc107; }
+.card-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.card-placa { font-weight: bold; font-size: 1.1rem; }
+.card-date { color: #666; font-size: 0.9rem; }
+.card-details { font-size: 0.9rem; color: #555; }
+details { background-color: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #eee; }
+summary { cursor: pointer; font-weight: bold; color: #006937; }
