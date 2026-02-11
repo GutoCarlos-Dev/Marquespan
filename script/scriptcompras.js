@@ -811,7 +811,7 @@ const UI = {
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
       // Query base
-      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))').order('updated_at',{ascending:false});
+      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))').order('updated_at',{ascending:false});
       if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
@@ -837,6 +837,10 @@ const UI = {
 
         const totalValue = c.valor_total_vencedor ? `R$ ${parseFloat(c.valor_total_vencedor).toFixed(2)}` : 'N/A';
         const notaFiscal = c.nota_fiscal || 'N/A';
+        
+        const dataRecebimento = c.data_recebimento ? new Date(c.data_recebimento).toLocaleString('pt-BR') : '-';
+        const usuarioRecebimento = c.usuario_recebimento || '-';
+
         // status select para permitir alteração e registro de data/usuário
         const statusSelectId = `status-select-${c.id}`;
         const initialStatus = c.status || 'Pendente';
@@ -853,7 +857,7 @@ const UI = {
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -1593,7 +1597,11 @@ const UI = {
         }
         
         // 6. Preparar o payload para atualizar a cotação principal
-        const updatePayload = { status: 'Recebido' };
+        const updatePayload = { 
+            status: 'Recebido',
+            data_recebimento: new Date().toISOString(),
+            usuario_recebimento: this._getCurrentUser()?.nome || 'Sistema'
+        };
         // Apenas atualiza o valor se ele foi recalculado (ou seja, se novoValorTotal não for nulo)
         if (novoValorTotal !== null) {
           updatePayload.valor_total_vencedor = novoValorTotal;
