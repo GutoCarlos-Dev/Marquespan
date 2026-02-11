@@ -250,8 +250,9 @@ function handleSort(column) {
   const modelo = document.getElementById('campo-modelo')?.value.trim();
   const tipo = document.getElementById('campo-tipo')?.value;
   const situacao = document.getElementById('campo-situacao')?.value;
+  const filial = document.getElementById('campo-filial')?.value;
 
-  if (placa || modelo || tipo || situacao) buscarVeiculos();
+  if (placa || modelo || tipo || situacao || filial) buscarVeiculos();
   else carregarVeiculos();
 }
 
@@ -299,6 +300,7 @@ async function buscarVeiculos() {
   const modelo = document.getElementById('campo-modelo')?.value.trim();
   const tipo = document.getElementById('campo-tipo')?.value;
   const situacao = document.getElementById('campo-situacao')?.value;
+  const filial = document.getElementById('campo-filial')?.value;
 
   let query = supabaseClient.from('veiculos').select('*').order(currentSort.column, { ascending: currentSort.direction === 'asc' });
 
@@ -306,6 +308,7 @@ async function buscarVeiculos() {
   if (modelo) query = query.ilike('modelo', `%${modelo}%`);
   if (tipo) query = query.eq('tipo', tipo);
   if (situacao) query = query.eq('situacao', situacao);
+  if (filial) query = query.eq('filial', filial);
 
   const { data, error } = await query;
 
