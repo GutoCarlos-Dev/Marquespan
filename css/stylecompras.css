@@ -173,6 +173,7 @@ input:focus, select:focus, textarea:focus {
 .status-Aprovada{background:#e9f5e9;color:#1b7a1b}
 .status-Rejeitada{background:#ffe9e9;color:#a00}
 .status-Recebido{background:#e7f4ff;color:#0b5a88}
+.status-Recebido-Parcial{background:#d1ecf1;color:#0c5460}
 
 /* Permanent compact import panel */
 .import-panel{position:fixed;bottom:20px;right:20px;width:420px;max-width:92%;background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:2147483647}
@@ -185,6 +186,7 @@ input:focus, select:focus, textarea:focus {
 .quotation-status-select.status-Aprovada{background:#e9f5e9;color:#1b7a1b}
 .quotation-status-select.status-Rejeitada{background:#ffe9e9;color:#a00}
 .quotation-status-select.status-Recebido{background:#e7f4ff;color:#0b5a88}
+.quotation-status-select.status-Recebido-Parcial{background:#d1ecf1;color:#0c5460}
 /* Carrinho styling */
 #cartTable .btn-remove{background:var(--danger);color:#fff;border:none;padding:6px 10px;border-radius:6px; height: 32px; font-size: 0.85rem;}
 #cartTable .btn-remove:hover{background:var(--brand-dark)}

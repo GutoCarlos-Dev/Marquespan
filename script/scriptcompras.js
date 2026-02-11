@@ -139,6 +139,8 @@ const UI = {
     this.recebimentoPanel = document.getElementById('recebimentoPanel');
     this.btnSalvarRecebimento = document.getElementById('btnSalvarRecebimento');
     this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
+    this.nfContainer = document.getElementById('nfContainer');
+    this.btnAddNF = document.getElementById('btnAddNF');
   },
   
 
@@ -181,13 +183,13 @@ const UI = {
 
     // Novo painel de recebimento
     this.recebimentoPanel?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoPanel());
-    this.recebimentoPanelBackdrop?.addEventListener('click', e=>{ if(e.target===this.recebimentoPanelBackdrop) this.closeRecebimentoPanel() });
 
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', () => {
         if(this.detailPanel.dataset.id) this.exportSavedQuotationPdf(this.detailPanel.dataset.id, 'print');
     });
     this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
+    this.btnAddNF?.addEventListener('click', ()=>this.addNFInput());
     
     // Correção: Adiciona o evento para o botão de PDF dentro do painel de detalhes
     this.btnGeneratePdf?.addEventListener('click', () => {
@@ -526,6 +528,7 @@ const UI = {
         'Pendente':  { titulo: 'Cotação - Logística',      color: [179, 107, 0] }, // Laranja/Marrom
         'Aprovada':  { titulo: 'Pedido - Logística',       color: [27, 122, 27] }, // Verde
         'Rejeitada': { titulo: 'Cotação Rejeitada',        color: [170, 0, 0]   }, // Vermelho
+        'Recebido Parcial': { titulo: 'Recebimento Parcial', color: [11, 90, 136] }, // Azul
         'Recebido':  { titulo: 'Recebimento - Logística',  color: [11, 90, 136]  }  // Azul
       };
 
@@ -559,7 +562,7 @@ const UI = {
       let columns = [];
       let rows = [];
 
-      if (cotacao.status === 'Recebido') {
+      if (cotacao.status === 'Recebido' || cotacao.status === 'Recebido Parcial') {
         // Layout para Cotação Recebida (Com valores e verificação de divergência)
         if (cotacao.id_fornecedor_vencedor) {
              // Buscar orçamento e preços do vencedor para calcular valores finais
@@ -825,7 +828,6 @@ const UI = {
       const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
 
       data.forEach(c=>{ // Corrigido: &gt; para >
-        const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && c.status === 'Aprovada';
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         
@@ -845,15 +847,17 @@ const UI = {
         const statusSelectId = `status-select-${c.id}`;
         const initialStatus = c.status || 'Pendente';
         const isRecebido = initialStatus === 'Recebido';
-        const statusClass = `quotation-status-select status-${initialStatus}`;
+        const statusClass = `quotation-status-select status-${initialStatus.replace(/\s+/g, '-')}`;
         // Desabilita o seletor se o status for 'Recebido' ou se o usuário for do nível 'estoque'
-        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}" ${isRecebido || nivelUsuario === 'estoque' ? 'disabled' : ''}><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido">Recebido</option></select>`; // Corrigido: &lt; e &gt;
+        const statusSelect = `<select class="${statusClass}" id="${statusSelectId}" data-id="${c.id}" ${isRecebido || nivelUsuario === 'estoque' ? 'disabled' : ''}><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Rejeitada">Rejeitada</option><option value="Recebido Parcial">Recebido Parcial</option><option value="Recebido">Recebido</option></select>`;
         const dateToShow = c.updated_at || c.data_cotacao;
         const formattedDate = dateToShow ? new Date(dateToShow).toLocaleString('pt-BR') : 'N/D';
         const usuarioCell = c.usuario || 'N/D';
 
         const btnPdfHtml = `<button class="btn-action btn-pdf" data-id="${c.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>`;
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
+        // Permite receber se estiver Aprovada ou Recebido Parcial
+        const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
@@ -1001,10 +1005,41 @@ const UI = {
   async openRecebimentoPanel(id) {
     try {
       // Busca dados da cotação incluindo o vencedor para pegar os preços
-      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id, codigo_cotacao, id_fornecedor_vencedor').eq('id', id).single();
+      const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id, codigo_cotacao, id_fornecedor_vencedor, nota_fiscal').eq('id', id).single();
       if (cotErr) throw cotErr;
 
       const { data: itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(id, nome)').eq('id_cotacao', id);
+
+      // Reset NF inputs e preenche com dados existentes
+      if(this.nfContainer) {
+          this.nfContainer.innerHTML = '';
+          const nfs = cotacao.nota_fiscal ? cotacao.nota_fiscal.split(',').map(s => s.trim()).filter(s => s) : [];
+          
+          if (nfs.length > 0) {
+              nfs.forEach(nf => {
+                  const div = document.createElement('div');
+                  div.className = 'form-group';
+                  div.style.marginTop = '10px';
+                  div.innerHTML = `<label>Nota Fiscal:</label><input type="text" class="nota-fiscal-input" value="${nf}" placeholder="Digite o número da NF">`;
+                  this.nfContainer.appendChild(div);
+              });
+          } else {
+              this.nfContainer.innerHTML = `
+                <div class="form-group">
+                    <label>Nota Fiscal:</label>
+                    <input type="text" class="nota-fiscal-input" placeholder="Digite o número da NF">
+                </div>`;
+          }
+      }
+
+      // Buscar recebimentos anteriores para calcular o que falta
+      const { data: recebimentosAnteriores } = await supabaseClient.from('recebimentos').select('id_produto, qtd_recebida').eq('id_cotacao', id);
+      const recebidoMap = {};
+      if (recebimentosAnteriores) {
+        recebimentosAnteriores.forEach(r => {
+            recebidoMap[r.id_produto] = (recebidoMap[r.id_produto] || 0) + r.qtd_recebida;
+        });
+      }
 
       // Busca preços e frete se houver vencedor
       let priceMap = new Map();
@@ -1029,7 +1064,7 @@ const UI = {
       }
 
       document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
-      this.renderRecebimentoItems(itens, id, priceMap, frete);
+      this.renderRecebimentoItems(itens, id, priceMap, frete, recebidoMap);
       this.recebimentoPanelBackdrop?.classList.remove('hidden');
     } catch (e) {
       console.error('Erro ao abrir painel de recebimento', e);
@@ -1075,13 +1110,19 @@ const UI = {
       if(totalDisplay) totalDisplay.textContent = totalGeral.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
   },
 
-  renderRecebimentoItems(itens, cotacaoId, priceMap = new Map(), frete = 0) {
+  renderRecebimentoItems(itens, cotacaoId, priceMap = new Map(), frete = 0, recebidoMap = {}) {
     if (!this.recebimentoItemsContainer) return;
     this.recebimentoItemsContainer.innerHTML = '';
     this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
     this.recebimentoItemsContainer.dataset.frete = frete;
 
     itens.forEach(item => {
+      const qtdJaRecebida = recebidoMap[item.produtos.id] || 0;
+      const qtdRestante = Math.max(0, item.quantidade - qtdJaRecebida);
+      
+      // Se já recebeu tudo, mostra 0 no input, mas permite edição caso queira receber extra (divergência positiva)
+      const inputValue = qtdRestante;
+
       const div = document.createElement('div');
       div.className = 'recebimento-item';
       div.dataset.itemId = item.produtos.id;
@@ -1093,10 +1134,10 @@ const UI = {
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
             <label for="qtd-recebida-${item.produtos.id}" style="margin:0;">${item.produtos.nome}</label>
-            <span style="font-size:0.85em; color:#666;">Pedido: ${item.quantidade}</span>
+            <span style="font-size:0.85em; color:#666;">Pedido: ${item.quantidade} | Já Rec.: ${qtdJaRecebida}</span>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
-            <input type="number" class="qtd-recebida" id="qtd-recebida-${item.produtos.id}" placeholder="Qtd" value="${item.quantidade}" min="0" style="flex:1;" />
+            <input type="number" class="qtd-recebida" id="qtd-recebida-${item.produtos.id}" placeholder="Qtd" value="${inputValue}" min="0" style="flex:1;" />
             <div class="item-divergencia" style="font-weight:bold; font-size:0.9em; width:40px; text-align:center; color:#28a745;">OK</div>
             <div class="item-total" style="font-size:0.9em; width:100px; text-align:right;">R$ 0,00</div>
         </div>
@@ -1133,6 +1174,15 @@ const UI = {
       }
     }
 
+  },
+
+  addNFInput(){
+    if(!this.nfContainer) return;
+    const div = document.createElement('div');
+    div.className = 'form-group';
+    div.style.marginTop = '10px';
+    div.innerHTML = `<input type="text" class="nota-fiscal-input" placeholder="Digite o número da NF">`;
+    this.nfContainer.appendChild(div);
   },
 
   _getCurrentUser() {
@@ -1492,7 +1542,6 @@ const UI = {
 
   async salvarRecebimento(){
     const cotacaoId = this.recebimentoItemsContainer.dataset.cotacaoId;
-    const notaFiscal = document.getElementById('notaFiscalRecebimento').value.trim();
 
     // Validação robusta para garantir que o ID da cotação é um UUID válido.
     if (!cotacaoId || cotacaoId.length < 36) {
@@ -1511,7 +1560,7 @@ const UI = {
           id_cotacao: cotacaoId,
           id_produto: idProduto,
           qtd_recebida: qtd,
-          qtd_pedida: qtdPedida, // Re-adicionado: Registra a quantidade original do pedido
+          qtd_pedida: qtdPedida, // Registra a quantidade original do pedido
           data_recebimento: new Date().toISOString()
         });
       }
@@ -1519,37 +1568,12 @@ const UI = {
     if(itens.length) {
       try {
         // 1. Buscar dados da cotação e do orçamento vencedor
-        const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor').eq('id', cotacaoId).single();
+        const { data: cotacao, error: cotErr } = await supabaseClient.from('cotacoes').select('id_fornecedor_vencedor, valor_total_vencedor, nota_fiscal').eq('id', cotacaoId).single();
         if (cotErr || !cotacao) throw new Error('Cotação não encontrada para recalcular valores.');
 
-        let novoValorTotal = null; // Inicia como nulo para garantir o recálculo
-
-        // Apenas recalcula o valor se houver um fornecedor vencedor definido
-        if (cotacao.id_fornecedor_vencedor) {
-          const { data: orcamento, error: orcErr } = await supabaseClient.from('cotacao_orcamentos').select('id, valor_frete').eq('id_cotacao', cotacaoId).eq('id_fornecedor', cotacao.id_fornecedor_vencedor).single();
-          
-          // Se houver um orçamento vencedor, prossiga com o recálculo
-          if (orcamento && !orcErr) {
-            const { data: precos, error: precosErr } = await supabaseClient.from('orcamento_item_precos').select('id_produto, preco_unitario').eq('id_orcamento', orcamento.id);
-            if (precosErr) throw new Error('Erro ao buscar preços do vencedor.');
-
-            const precosMap = new Map(precos.map(p => [String(p.id_produto).trim(), parseFloat(p.preco_unitario)]));
-            
-            let valorCalculado = 0;
-            itens.forEach(itemRecebido => {
-              const precoUnitario = precosMap.get(String(itemRecebido.id_produto).trim());
-              if (precoUnitario) {
-                valorCalculado += itemRecebido.qtd_recebida * precoUnitario;
-              }
-            });
-
-            const frete = parseFloat(orcamento.valor_frete) || 0;
-            valorCalculado += frete;
-            novoValorTotal = valorCalculado; // Atualiza o valor total com o novo cálculo
-          }
-        } else {
-          console.warn(`Cotação ${cotacaoId} não possui fornecedor vencedor. O valor total não será recalculado.`);
-        }
+        // NÃO recalculamos o valor total do pedido (valor_total_vencedor) em recebimentos parciais
+        // para não perder o valor original acordado. O valor total só deve mudar se houver renegociação.
+        // let novoValorTotal = null; 
 
         // Correção: Itera sobre os itens e insere cada um individualmente.
         // O método 'insert' do SupabaseService espera um único objeto ou um array para uma única chamada.
@@ -1596,17 +1620,42 @@ const UI = {
           // ------------------------------------------
         }
         
+        // Verificar se o pedido foi totalmente recebido para definir o status
+        // Busca todos os itens do pedido
+        const { data: todosItens } = await supabaseClient.from('cotacao_itens').select('id_produto, quantidade').eq('id_cotacao', cotacaoId);
+        // Busca todos os recebimentos (incluindo os novos)
+        const { data: todosRecebimentos } = await supabaseClient.from('recebimentos').select('id_produto, qtd_recebida').eq('id_cotacao', cotacaoId);
+        
+        const totalRecebidoMap = {};
+        todosRecebimentos?.forEach(r => {
+            totalRecebidoMap[r.id_produto] = (totalRecebidoMap[r.id_produto] || 0) + r.qtd_recebida;
+        });
+
+        let statusFinal = 'Recebido'; // Assume que finalizou
+        // Se algum item tiver recebido menos que o pedido, então é Parcial
+        if (todosItens) {
+            for (const item of todosItens) {
+                const recebido = totalRecebidoMap[item.id_produto] || 0;
+                if (recebido < item.quantidade) {
+                    statusFinal = 'Recebido Parcial';
+                    break;
+                }
+            }
+        }
+
         // 6. Preparar o payload para atualizar a cotação principal
         const updatePayload = { 
-            status: 'Recebido',
+            status: statusFinal,
             data_recebimento: new Date().toISOString(),
             usuario_recebimento: this._getCurrentUser()?.nome || 'Sistema'
         };
-        // Apenas atualiza o valor se ele foi recalculado (ou seja, se novoValorTotal não for nulo)
-        if (novoValorTotal !== null) {
-          updatePayload.valor_total_vencedor = novoValorTotal;
+        
+        // Lógica para Múltiplas Notas Fiscais: Usa os valores dos inputs (permite edição)
+        const nfInputs = document.querySelectorAll('.nota-fiscal-input');
+        if (nfInputs.length > 0) {
+            const newNFs = Array.from(nfInputs).map(i => i.value.trim()).filter(v => v !== '');
+            updatePayload.nota_fiscal = newNFs.join(', ');
         }
-        if (notaFiscal) updatePayload.nota_fiscal = notaFiscal;
 
         // Atualizar a cotação com o novo status e o valor recalculado
         await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
