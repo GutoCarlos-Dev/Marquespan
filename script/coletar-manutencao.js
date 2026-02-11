@@ -1929,15 +1929,28 @@ const ColetarManutencaoUI = {
         this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
         
         try {
-            // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
-            // O !inner força que o registro pai exista e obedeça aos filtros aplicados nele
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select('*, coletas_manutencao!inner(*), oficinas(nome)');
-
-            // Filtro automático por nível
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+
+            // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
+            // O !inner força que o registro pai exista e obedeça aos filtros aplicados nele
+            let selectQuery = '*, coletas_manutencao!inner(*), oficinas(nome)';
+            
+            // Se houver filial definida, precisamos fazer o join com veiculos para filtrar
+            if (filialUsuario) {
+                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial)), oficinas(nome)';
+            }
+
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select(selectQuery);
+
+            if (filialUsuario) {
+                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
+            }
+
+            // Filtro automático por nível
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
@@ -2219,14 +2232,25 @@ const ColetarManutencaoUI = {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
         try {
-            // Mesma lógica de query do buscarRelatorio para consistência
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select('*, coletas_manutencao!inner(*)');
-
-            // Filtro automático por nível
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+
+            // Mesma lógica de query do buscarRelatorio para consistência
+            let selectQuery = '*, coletas_manutencao!inner(*)';
+            if (filialUsuario) {
+                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial))';
+            }
+
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select(selectQuery);
+
+            if (filialUsuario) {
+                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
+            }
+
+            // Filtro automático por nível
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
@@ -2353,14 +2377,25 @@ const ColetarManutencaoUI = {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
         try {
-            // Mesma lógica de query para consistência
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select('*, coletas_manutencao!inner(*), oficinas(nome)');
-
-            // Filtro automático por nível
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+
+            // Mesma lógica de query para consistência
+            let selectQuery = '*, coletas_manutencao!inner(*), oficinas(nome)';
+            if (filialUsuario) {
+                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial)), oficinas(nome)';
+            }
+
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select(selectQuery);
+
+            if (filialUsuario) {
+                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
+            }
+
+            // Filtro automático por nível
             if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
             if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
