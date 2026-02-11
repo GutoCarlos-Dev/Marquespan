@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // O correto é migrar o cadastro de usuários para usar `supabase.auth.signUp()`.
         const { data: userData, error: userError } = await supabaseClient
           .from('usuarios')
-          .select('id, nome, nivel, senha') // Seleciona o ID, nome, nível e senha
+          .select('id, nome, nivel, senha, filial') // Seleciona também a filial
           .eq('nome', usuario)
           .single();
 
@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
           id: userData.id, // Adiciona o ID do usuário
           nome: userData.nome,
           nivel: userData.nivel,
+          filial: userData.filial // Salva a filial no perfil local
         };
         localStorage.setItem('usuarioLogado', JSON.stringify(perfilUsuario));
         alert(`✅ Bem-vindo, ${userData.nome}!`);

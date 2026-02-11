@@ -52,6 +52,7 @@ async function cadastrarUsuario(event) {
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
   const nivel = document.getElementById('nivel').value.trim().toLowerCase();
+  const filial = document.getElementById('filial').value;
   const senha = document.getElementById('senha').value.trim();
 
   if (!nome || !nomecompleto || !email || !nivel || !senha) {
@@ -66,6 +67,7 @@ async function cadastrarUsuario(event) {
       p_nomecompleto: nomecompleto,
       p_email: email,
       p_nivel: nivel,
+      p_filial: filial,
       p_senha: senha
     });
 
@@ -98,6 +100,7 @@ async function editarUsuario(id) {
   document.getElementById('nome').value = data.nome;
   document.getElementById('nomecompleto').value = data.nomecompleto;
   document.getElementById('email').value = data.email;
+  if (document.getElementById('filial')) document.getElementById('filial').value = data.filial || "";
   
   // CORREÇÃO: Seleção robusta do nível (Case Insensitive)
   const nivelSelect = document.getElementById('nivel');
@@ -133,10 +136,11 @@ async function atualizarUsuario(event) {
   const nomecompleto = document.getElementById('nomecompleto').value.trim();
   const email = document.getElementById('email').value.trim();
   const nivel = document.getElementById('nivel').value.trim().toLowerCase();
+  const filial = document.getElementById('filial').value;
   const senha = document.getElementById('senha').value.trim();
 
   // Preparar dados para update, só incluir senha se não estiver vazia
-  const updateData = { nome, nomecompleto, email, nivel };
+  const updateData = { nome, nomecompleto, email, nivel, filial };
   if (senha) {
     updateData.senha = senha;
   }

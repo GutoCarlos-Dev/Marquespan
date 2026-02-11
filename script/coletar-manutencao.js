@@ -1194,10 +1194,19 @@ const ColetarManutencaoUI = {
     // Carrega a lista de veículos para o datalist
     async carregarVeiculos() {
         try {
-            const { data, error } = await supabaseClient
+            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+            let query = supabaseClient
                 .from('veiculos')
                 .select('placa, modelo')
+                .eq('situacao', 'ativo') // Garante que só traga veículos ativos
                 .order('placa');
+
+            // Filtra por filial se o usuário tiver uma definida. Se não, mostra todos.
+            if (usuario && usuario.filial) {
+                query = query.eq('filial', usuario.filial);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
 
             this.veiculosList.innerHTML = '';
@@ -1540,6 +1549,7 @@ const ColetarManutencaoUI = {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
             const nomeUsuario = usuarioLogado ? usuarioLogado.nome : '';
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
             const isRestricted = ['mecanica_externa', 'moleiro'].includes(nivel);
             let roleFilterItem = null;
             if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
@@ -1549,9 +1559,15 @@ const ColetarManutencaoUI = {
             let data = [];
 
             // 1. Query principal na tabela pai (coletas_manutencao)
+            // Utilizamos !inner no join com veiculos para filtrar pela filial do veículo
             let query = supabaseClient
                 .from('coletas_manutencao')
-                .select('*');
+                .select('*, veiculos!inner(filial)');
+
+            // Filtra pela filial do usuário, se houver. Se não tiver, mostra tudo.
+            if (filialUsuario) {
+                query = query.eq('veiculos.filial', filialUsuario);
+            }
 
             // Filtro para usuários específicos (ROMO e MOLEIRO) verem apenas seus lançamentos
             if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nomeUsuario.toUpperCase() === 'ROMO DIESEL' || nivel === 'mecanica_externa' ||nomeUsuario.toUpperCase() === 'MOLEIRO' || nomeUsuario.toUpperCase() === 'TREVO DE MOLAS' || nivel === 'moleiro')) {
