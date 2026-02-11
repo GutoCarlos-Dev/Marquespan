@@ -427,7 +427,6 @@ const ColetarManutencaoUI = {
         }
 
         this.btnCloseModal.addEventListener('click', () => this.fecharModal());
-        this.modal.addEventListener('click', (e) => { if (e.target === this.modal) this.fecharModal(); });
         this.coletaPlacaInput.addEventListener('change', () => this.preencherModeloVeiculo());
         this.formColeta.addEventListener('submit', (e) => this.registrarColeta(e));
         
