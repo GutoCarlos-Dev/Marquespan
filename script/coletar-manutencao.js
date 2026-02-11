@@ -20,7 +20,12 @@ const ColetarManutencaoUI = {
         this.carregarFiltrosDinamicos();
         this.aplicarRestricoesPerfil(); // Aplica restrições de UI antes de carregar dados
         this.carregarLancamentos(); // Carrega a lista ao iniciar
-        this.carregarChecklistDinamico(); // Carrega o checklist dinâmico (Desktop e Mobile)
+        this.carregarChecklistDinamico().then(() => {
+            // Verifica se o modal deve ser reaberto após atualização da página
+            if (sessionStorage.getItem('marquespan_modal_coleta_open') === 'true') {
+                this.abrirModal();
+            }
+        });
     },
 
     cacheDOM() {
@@ -650,6 +655,7 @@ const ColetarManutencaoUI = {
 
     // Abre o modal de lançamento de manutenção
     abrirModal() {
+        sessionStorage.setItem('marquespan_modal_coleta_open', 'true');
         this.editingId = null; // Reseta o ID de edição para criar um novo
         this.formColeta.reset();
         this.preencherDadosPadrao();
@@ -785,6 +791,7 @@ const ColetarManutencaoUI = {
 
     // Fecha o modal de lançamento de manutenção
     fecharModal() {
+        sessionStorage.removeItem('marquespan_modal_coleta_open');
         this.modal.classList.add('hidden');
     },
 
