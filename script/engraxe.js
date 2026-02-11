@@ -1,7 +1,21 @@
 import { supabaseClient } from './supabase.js';
 
+// Chaves para armazenamento local
+const LOCAL_LISTAS_KEY = 'engraxe_listas_local';
+const LOCAL_ITENS_KEY = 'engraxe_itens_local';
+
 let currentListItems = [];
 let currentListId = null;
+
+// Funções auxiliares para LocalStorage
+function getLocalData(key) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+}
+
+function setLocalData(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -29,6 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnImportar.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleImportarListaModal);
     }
+
+    // Limpar Lista no modal
+    const btnLimparLista = document.getElementById('btnLimparListaModal');
+    if (btnLimparLista) {
+        btnLimparLista.addEventListener('click', limparListaAtual);
+    }
 });
 
 async function criarNovaLista() {
@@ -39,20 +59,20 @@ async function criarNovaLista() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
 
     try {
-        // 1. Criar a Lista
-        const { data: lista, error: erroLista } = await supabaseClient
-            .from('engraxe_listas')
-            .insert([{
-                nome: nomeFinal,
-                usuario: usuario,
-                status: 'ABERTA'
-            }])
-            .select()
-            .single();
+        // 1. Criar a Lista LOCALMENTE
+        const novaLista = {
+            id: Date.now().toString(), // ID único baseado em timestamp
+            nome: nomeFinal,
+            usuario: usuario,
+            status: 'ABERTA',
+            created_at: new Date().toISOString()
+        };
 
-        if (erroLista) throw erroLista;
+        const listas = getLocalData(LOCAL_LISTAS_KEY);
+        listas.push(novaLista);
+        setLocalData(LOCAL_LISTAS_KEY, listas);
 
-        // 2. Buscar Veículos Ativos
+        // 2. Buscar Veículos Ativos (Mantém Supabase para origem dos dados mestre)
         const { data: veiculos, error: erroVeiculos } = await supabaseClient
             .from('veiculos')
             .select('placa, modelo, marca')
@@ -65,22 +85,28 @@ async function criarNovaLista() {
             return;
         }
 
-        // 3. Criar Itens da Lista
+        // 3. Criar Itens da Lista LOCALMENTE
         const itensParaInserir = veiculos.map(v => ({
-            lista_id: lista.id,
+            id: crypto.randomUUID(), // Gera ID único para o item
+            lista_id: novaLista.id,
             placa: v.placa,
             modelo: v.modelo,
             marca: v.marca,
-            status: 'PENDENTE'
+            status: 'PENDENTE',
+            data_realizado: null,
+            data_proximo: null,
+            plaquinha: '',
+            seg: '',
+            km: null,
+            motivo: null,
+            usuario_realizou: null
         }));
 
-        const { error: erroItens } = await supabaseClient
-            .from('engraxe_itens')
-            .insert(itensParaInserir);
+        const itens = getLocalData(LOCAL_ITENS_KEY);
+        const novosItens = itens.concat(itensParaInserir);
+        setLocalData(LOCAL_ITENS_KEY, novosItens);
 
-        if (erroItens) throw erroItens;
-
-        alert('Lista criada com sucesso!');
+        alert('Lista criada localmente com sucesso!');
         carregarListas();
 
     } catch (error) {
@@ -91,24 +117,23 @@ async function criarNovaLista() {
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyEngraxe');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando listas...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando listas locais...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
     const status = document.getElementById('filtroStatus').value;
 
     try {
-        let query = supabaseClient
-            .from('engraxe_listas')
-            .select('*')
-            .order('created_at', { ascending: false });
+        // Carregar do LocalStorage
+        let data = getLocalData(LOCAL_LISTAS_KEY);
 
-        if (dataIni) query = query.gte('created_at', `${dataIni}T00:00:00`);
-        if (dataFim) query = query.lte('created_at', `${dataFim}T23:59:59`);
-        if (status) query = query.eq('status', status);
+        // Filtragem no cliente
+        if (dataIni) data = data.filter(l => l.created_at >= `${dataIni}T00:00:00`);
+        if (dataFim) data = data.filter(l => l.created_at <= `${dataFim}T23:59:59`);
+        if (status) data = data.filter(l => l.status === status);
 
-        const { data, error } = await query;
-        if (error) throw error;
+        // Ordenação
+        data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         renderizarTabelaListas(data);
     } catch (error) {
@@ -147,17 +172,14 @@ window.abrirLista = async function(id, nome) {
     document.getElementById('modalTitle').textContent = `Lista: ${nome}`;
     currentListId = id;
     const tbodyModal = document.getElementById('tbodyModalItens');
-    tbodyModal.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando itens...</td></tr>';
+    tbodyModal.innerHTML = '<tr><td colspan="10" style="text-align: center;">Carregando itens locais...</td></tr>';
     
     document.getElementById('modalEngraxe').classList.remove('hidden');
 
     try {
-        const { data, error } = await supabaseClient
-            .from('engraxe_itens')
-            .select('*')
-            .eq('lista_id', id);
-
-        if (error) throw error;
+        // Carregar itens do LocalStorage
+        const allItens = getLocalData(LOCAL_ITENS_KEY);
+        const data = allItens.filter(i => i.lista_id === id);
 
         currentListItems = data;
         renderizarItensModal(data);
@@ -247,20 +269,24 @@ window.salvarItemIndividual = async function(id) {
             usuario_realizou: usuario
         };
 
-        const { error } = await supabaseClient
-            .from('engraxe_itens')
-            .update(updateData)
-            .eq('id', id);
-
-        if (error) throw error;
-
-        // Atualiza array local
-        const itemIndex = currentListItems.findIndex(i => i.id === id);
-        if (itemIndex > -1) {
-            currentListItems[itemIndex] = { ...currentListItems[itemIndex], ...updateData };
-        }
+        // Atualizar no LocalStorage
+        const allItens = getLocalData(LOCAL_ITENS_KEY);
+        const index = allItens.findIndex(i => i.id === id);
         
-        alert('Item atualizado!');
+        if (index !== -1) {
+            allItens[index] = { ...allItens[index], ...updateData };
+            setLocalData(LOCAL_ITENS_KEY, allItens);
+            
+            // Atualiza array local da view
+            const viewIndex = currentListItems.findIndex(i => i.id === id);
+            if (viewIndex > -1) {
+                currentListItems[viewIndex] = { ...currentListItems[viewIndex], ...updateData };
+            }
+            
+            alert('Item atualizado localmente!');
+        } else {
+            alert('Item não encontrado no armazenamento local.');
+        }
     } catch (error) {
         console.error('Erro ao salvar item:', error);
         alert('Erro ao salvar item.');
@@ -270,8 +296,11 @@ window.salvarItemIndividual = async function(id) {
 window.excluirItemLista = async function(id) {
     if (!confirm('Tem certeza que deseja remover este item da lista?')) return;
     try {
-        const { error } = await supabaseClient.from('engraxe_itens').delete().eq('id', id);
-        if (error) throw error;
+        // Remover do LocalStorage
+        let allItens = getLocalData(LOCAL_ITENS_KEY);
+        allItens = allItens.filter(i => i.id !== id);
+        setLocalData(LOCAL_ITENS_KEY, allItens);
+
         // Remove do array local e re-renderiza
         currentListItems = currentListItems.filter(i => i.id !== id);
         renderizarItensModal(currentListItems);
@@ -297,38 +326,87 @@ async function handleImportarListaModal(e) {
     reader.onload = async (evt) => {
         try {
             const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            // Ler com cellDates: true para garantir datas corretas
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            
+            let allItensParaInserir = [];
 
-            if (json.length === 0) return alert('Arquivo vazio.');
-
-            const itensParaInserir = json.map(row => {
-                // Normaliza chaves para maiúsculo
-                const r = {};
-                Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
-
-                return {
-                    lista_id: currentListId,
-                    placa: r['PLACA'] || 'SEM PLACA',
-                    modelo: r['MODELO'] || '',
-                    marca: r['MARCA'] || '',
-                    plaquinha: r['PLAQ'] || r['PLAQUINHA'] || '',
-                    seg: r['SEG'] || '',
-                    km: r['KM'] ? parseInt(r['KM']) : null,
-                    status: 'PENDENTE'
-                };
-            }).filter(i => i.placa !== 'SEM PLACA');
-
-            if (itensParaInserir.length > 0) {
-                const { error } = await supabaseClient.from('engraxe_itens').insert(itensParaInserir);
-                if (error) throw error;
+            // Itera sobre todas as abas (ACCELO, VOLVO, etc.)
+            workbook.SheetNames.forEach(sheetName => {
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                 
-                alert(`${itensParaInserir.length} itens importados com sucesso!`);
-                // Recarrega a lista
-                const { data } = await supabaseClient.from('engraxe_itens').select('*').eq('lista_id', currentListId);
-                currentListItems = data || [];
+                const itensSheet = json.map(row => {
+                    // Normaliza chaves para maiúsculo
+                    const r = {};
+                    Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+
+                    // Normalização de Status
+                    let statusRaw = (r['STATUS'] || 'PENDENTE').toString().toUpperCase().trim();
+                    let status = 'PENDENTE';
+                    if (['REALIZADO', 'FEITO', 'OK'].includes(statusRaw)) status = 'REALIZADO';
+                    if (['NÃO REALIZADO', 'NAO REALIZADO'].includes(statusRaw)) status = 'NAO_REALIZADO';
+
+                    // Formatação de Data Robusta
+                    const formatDate = (val) => {
+                        if (!val) return null;
+                        
+                        // Se já for objeto Date (graças ao cellDates: true)
+                        if (val instanceof Date) {
+                            // Garante UTC para evitar problemas de fuso horário (dia anterior)
+                            return new Date(Date.UTC(val.getFullYear(), val.getMonth(), val.getDate())).toISOString();
+                        }
+
+                        // Se for string
+                        if (typeof val === 'string') {
+                            const cleanVal = val.trim();
+                            // Tenta formato PT-BR DD/MM/YYYY
+                            if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(cleanVal)) {
+                                const parts = cleanVal.split('/');
+                                // Cria data (Mês é 0-indexado)
+                                const d = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
+                                if (!isNaN(d.getTime())) return d.toISOString();
+                            }
+                            
+                            // Tenta parse normal (YYYY-MM-DD ou ISO)
+                            const d = new Date(cleanVal);
+                            if (!isNaN(d.getTime())) return d.toISOString();
+                        }
+
+                        return null;
+                    };
+
+                    return {
+                        id: crypto.randomUUID(),
+                        lista_id: currentListId,
+                        placa: r['PLACA'] || 'SEM PLACA',
+                        modelo: r['MODELO'] || '',
+                        marca: r['MARCA'] || '',
+                        plaquinha: r['PLAQ'] || r['PLAQUINHA'] || '',
+                        seg: r['SEG'] || '',
+                        km: r['KM'] ? parseInt(r['KM']) : null,
+                        data_realizado: formatDate(r['REALIZADO']),
+                        data_proximo: formatDate(r['PRÓXIMO'] || r['PROXIMO']),
+                        status: status,
+                        motivo: null
+                    };
+                }).filter(i => i.placa !== 'SEM PLACA');
+
+                allItensParaInserir = allItensParaInserir.concat(itensSheet);
+            });
+
+            if (allItensParaInserir.length > 0) {
+                // Salvar no LocalStorage
+                const itens = getLocalData(LOCAL_ITENS_KEY);
+                const novosItens = itens.concat(allItensParaInserir);
+                setLocalData(LOCAL_ITENS_KEY, novosItens);
+                
+                alert(`${allItensParaInserir.length} itens importados localmente com sucesso!`);
+                
+                // Exibe apenas os itens importados na tela
+                currentListItems = allItensParaInserir;
                 renderizarItensModal(currentListItems);
+            } else {
+                alert('Nenhum item válido encontrado no arquivo.');
             }
 
         } catch (err) {
@@ -338,6 +416,25 @@ async function handleImportarListaModal(e) {
         e.target.value = ''; // Limpa input
     };
     reader.readAsArrayBuffer(file);
+}
+
+async function limparListaAtual() {
+    if (!currentListId) return;
+    if (!confirm('Tem certeza que deseja remover TODOS os itens desta lista? Esta ação não pode ser desfeita.')) return;
+
+    try {
+        // Remover do LocalStorage
+        let allItens = getLocalData(LOCAL_ITENS_KEY);
+        const novosItens = allItens.filter(i => i.lista_id !== currentListId);
+        setLocalData(LOCAL_ITENS_KEY, novosItens);
+
+        // Atualiza view
+        currentListItems = [];
+        renderizarItensModal(currentListItems);
+    } catch (error) {
+        console.error('Erro ao limpar lista:', error);
+        alert('Erro ao limpar lista.');
+    }
 }
 
 function fecharModal() {
