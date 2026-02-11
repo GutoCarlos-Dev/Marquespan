@@ -408,6 +408,7 @@ const ColetarManutencaoUI = {
         // DELEGAÇÃO DE EVENTOS: Para funcionar com itens criados dinamicamente
         // Listener para mudança de cor no status
         this.formColeta.addEventListener('change', (e) => {
+            this.salvarRascunho(); // Salva rascunho a cada alteração
             if (e.target.classList.contains('checklist-status')) {
                 this.updateStatusColor(e.target);
             }
@@ -416,13 +417,19 @@ const ColetarManutencaoUI = {
         // Automação do status ao digitar detalhes
         this.formColeta.addEventListener('input', (e) => {
             if (e.target.classList.contains('checklist-details')) {
+                // Correção do cursor pulando para o final
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
                 e.target.value = e.target.value.toUpperCase();
+                e.target.setSelectionRange(start, end);
+
                 const statusSelect = e.target.closest('.checklist-item').querySelector('.checklist-status');
                 if (statusSelect && statusSelect.value === "") {
                     statusSelect.value = "PENDENTE";
                     this.updateStatusColor(statusSelect);
                 }
             }
+            this.salvarRascunho(); // Salva rascunho a cada digitação
         });
 
         if (this.modalImportacao) {
@@ -660,6 +667,7 @@ const ColetarManutencaoUI = {
         this.formColeta.reset();
         this.preencherDadosPadrao();
         if (this.coletaValorTotalInput) this.coletaValorTotalInput.value = 'R$ 0,00';
+        // Carrega veículos e tenta restaurar rascunho se houver (para casos de refresh)
         this.carregarVeiculos();
         this.fixStatusOptions();
         
@@ -703,6 +711,7 @@ const ColetarManutencaoUI = {
 
         this.aplicarRestricoesDeNivelNoModal();
         this.modal.classList.remove('hidden');
+        this.restaurarRascunho(); // Restaura dados se houver um rascunho salvo
     },
 
     // Atualiza a cor de fundo de um select de status com base no valor selecionado
@@ -792,6 +801,7 @@ const ColetarManutencaoUI = {
     // Fecha o modal de lançamento de manutenção
     fecharModal() {
         sessionStorage.removeItem('marquespan_modal_coleta_open');
+        this.limparRascunho(); // Limpa o rascunho ao fechar/cancelar
         this.modal.classList.add('hidden');
     },
 
@@ -1502,6 +1512,7 @@ const ColetarManutencaoUI = {
 
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
+            this.limparRascunho(); // Limpa rascunho após sucesso
             this.carregarLancamentos(); // Atualiza a grid
             
             // Se a aba de relatório estiver visível, atualiza ela também
@@ -2617,6 +2628,90 @@ const ColetarManutencaoUI = {
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
+    },
+
+    // --- FUNÇÕES DE RASCUNHO (PERSISTÊNCIA) ---
+
+    salvarRascunho() {
+        // Não salva rascunho se estiver em modo de edição de um registro existente
+        if (this.editingId) return;
+
+        const data = {
+            placa: this.coletaPlacaInput.value,
+            km: document.getElementById('coletaKm').value,
+            semana: document.getElementById('coletaSemana').value,
+            dataHora: this.coletaDataHoraInput.value,
+            usuario: this.coletaUsuarioInput.value,
+            checklist: []
+        };
+
+        document.querySelectorAll('.checklist-item').forEach(item => {
+            data.checklist.push({
+                item: item.dataset.item,
+                detalhes: item.querySelector('.checklist-details').value,
+                status: item.querySelector('.checklist-status').value,
+                oficina: item.querySelector('.oficina-selector')?.value || '',
+                valor: item.querySelector('.checklist-valor')?.value || ''
+            });
+        });
+
+        const extraInput = document.getElementById('extra-eletrica-interna')?.querySelector('input');
+        if (extraInput) data.extraPecas = extraInput.value;
+
+        sessionStorage.setItem('marquespan_coleta_draft', JSON.stringify(data));
+    },
+
+    restaurarRascunho() {
+        // Não restaura se estiver editando um registro existente
+        if (this.editingId) return;
+
+        const saved = sessionStorage.getItem('marquespan_coleta_draft');
+        if (!saved) return;
+
+        try {
+            const data = JSON.parse(saved);
+            if (data.placa) {
+                this.coletaPlacaInput.value = data.placa;
+                this.preencherModeloVeiculo();
+            }
+            if (data.km) document.getElementById('coletaKm').value = data.km;
+            if (data.semana) document.getElementById('coletaSemana').value = data.semana;
+            if (data.dataHora) this.coletaDataHoraInput.value = data.dataHora;
+            if (data.usuario) this.coletaUsuarioInput.value = data.usuario;
+
+            if (data.checklist) {
+                data.checklist.forEach(savedItem => {
+                    const div = document.querySelector(`.checklist-item[data-item="${savedItem.item}"]`);
+                    if (div) {
+                        div.querySelector('.checklist-details').value = savedItem.detalhes || '';
+                        const statusSelect = div.querySelector('.checklist-status');
+                        statusSelect.value = savedItem.status || '';
+                        // Dispara evento change para atualizar visibilidade de campos dependentes (oficina, valor)
+                        statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        
+                        const oficinaSelect = div.querySelector('.oficina-selector');
+                        if (oficinaSelect && savedItem.oficina) oficinaSelect.value = savedItem.oficina;
+                        
+                        const valorInput = div.querySelector('.checklist-valor');
+                        if (valorInput && savedItem.valor) valorInput.value = savedItem.valor;
+                    }
+                });
+            }
+
+            if (data.extraPecas) {
+                const extraDiv = document.getElementById('extra-eletrica-interna');
+                if (extraDiv && !extraDiv.classList.contains('hidden')) {
+                    extraDiv.querySelector('input').value = data.extraPecas;
+                }
+            }
+            this.calcularValorTotal();
+        } catch (e) {
+            console.error("Erro ao restaurar rascunho", e);
+        }
+    },
+
+    limparRascunho() {
+        sessionStorage.removeItem('marquespan_coleta_draft');
     }
 };
 
