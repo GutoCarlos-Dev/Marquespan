@@ -209,10 +209,20 @@ const ColetarManutencaoUI = {
                 .from('oficinas')
                 .select('id, nome, filial, item_verificador_id');
 
+            // Pega a filial do usuário logado para filtrar as oficinas
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
+
             // Agrupar oficinas por item_verificador para acesso rápido
             const oficinasPorItem = {};
             if (oficinas) {
-                oficinas.forEach(oficina => {
+                // Filtra as oficinas pela filial do usuário. Se o usuário não tiver filial, mostra todas.
+                // Oficinas sem filial definida são consideradas "globais" e aparecem para todos.
+                const oficinasFiltradas = filialUsuario
+                    ? oficinas.filter(of => !of.filial || of.filial === filialUsuario)
+                    : oficinas;
+
+                oficinasFiltradas.forEach(oficina => {
                     const key = oficina.item_verificador_id; 
                     if (!oficinasPorItem[key]) oficinasPorItem[key] = [];
                     oficinasPorItem[key].push(oficina);
@@ -377,11 +387,26 @@ const ColetarManutencaoUI = {
 
             // Carregar Oficinas
             const { data: oficinas } = await supabaseClient.from('oficinas').select('nome, filial').order('nome');
-            if (oficinas) {
+            
+            // Filtra oficinas pela filial do usuário logado
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
+            
+            const oficinasFiltradas = filialUsuario && oficinas 
+                ? oficinas.filter(o => !o.filial || o.filial === filialUsuario)
+                : oficinas;
+
+            if (oficinasFiltradas) {
                 // Filtro Lançamento
                 if (this.searchOficinaInput) this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
                 
-                oficinas.forEach(o => {
+                // Limpa opções anteriores do filtro de relatório (mantendo o botão de limpar se existir)
+                if (this.filtroOficinaOptions) {
+                    const labels = this.filtroOficinaOptions.querySelectorAll('label');
+                    labels.forEach(l => l.remove());
+                }
+
+                oficinasFiltradas.forEach(o => {
                     const texto = o.nome;
                     if (this.searchOficinaInput) this.searchOficinaInput.add(new Option(texto, texto));
                     
