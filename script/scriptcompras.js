@@ -528,7 +528,7 @@ const UI = {
         'Pendente':  { titulo: 'Cotação - Logística',      color: [179, 107, 0] }, // Laranja/Marrom
         'Aprovada':  { titulo: 'Pedido - Logística',       color: [27, 122, 27] }, // Verde
         'Rejeitada': { titulo: 'Cotação Rejeitada',        color: [170, 0, 0]   }, // Vermelho
-        'Recebido Parcial': { titulo: 'Recebimento Parcial', color: [11, 90, 136] }, // Azul
+        'Recebido Parcial': { titulo: 'Recebimento Parcial', color: [37, 12, 96] }, // Roxo
         'Recebido':  { titulo: 'Recebimento - Logística',  color: [11, 90, 136]  }  // Azul
       };
 
