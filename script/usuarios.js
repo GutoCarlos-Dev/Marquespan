@@ -255,6 +255,24 @@ async function carregarNiveisDisponiveis() {
   });
 }
 
+/**
+ * Carrega as filiais cadastradas no banco de dados.
+ */
+async function carregarFiliais() {
+  const select = document.getElementById('filial');
+  if (!select) return;
+
+  const { data, error } = await supabaseClient.from('filiais').select('*').order('nome');
+  if (error) return console.error('Erro ao carregar filiais:', error);
+
+  data.forEach(f => {
+    const option = document.createElement('option');
+    option.value = f.sigla; // Usa a sigla (SP, MG) como valor para manter compatibilidade
+    option.textContent = f.nome;
+    select.appendChild(option);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnAtualizarLista')?.addEventListener('click', mostrarUsuarios);
   document.getElementById('termoBusca')?.addEventListener('input', mostrarUsuarios);
@@ -268,5 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btnAdicionarNovo')?.addEventListener('click', prepararNovoCadastro);
   carregarNiveisDisponiveis();
+  carregarFiliais(); // Chama o carregamento das filiais
   mostrarUsuarios();
 });

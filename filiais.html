@@ -1,0 +1,57 @@
+<!-- filiais.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestão de Filiais</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="main-content">
+    <header class="header">🏢 Gestão de Filiais</header>
+
+    <section class="section">
+      <div class="card">
+        <h3>Cadastrar Nova Filial</h3>
+        <form id="formFilial" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+          <input type="hidden" id="filialId">
+          <div class="form-group" style="flex: 1; min-width: 200px;">
+            <label for="filialNome">Nome da Filial</label>
+            <input type="text" id="filialNome" placeholder="Ex: Matriz SP" required>
+          </div>
+          <div class="form-group" style="width: 100px;">
+            <label for="filialSigla">Sigla</label>
+            <input type="text" id="filialSigla" placeholder="Ex: SP" maxlength="3" style="text-transform: uppercase;" required>
+          </div>
+          <div class="form-group">
+            <button type="submit" id="btnSalvar" class="btn-success"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnCancelar" class="btn-secondary hidden" onclick="limparFormulario()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h3>Filiais Cadastradas</h3>
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Sigla</th>
+              <th style="width: 100px;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaFiliais">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/filiais.js"></script>
+</body>
+</html>

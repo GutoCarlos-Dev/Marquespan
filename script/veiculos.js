@@ -43,12 +43,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // � Carrega veículos ao iniciar
   carregarVeiculos();
+  carregarFiliaisFiltro(); // Carrega as filiais nos selects
 
   // Eventos de ordenação
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => handleSort(th.dataset.sort));
   });
 });
+
+// Função para carregar filiais nos selects de filtro e importação
+async function carregarFiliaisFiltro() {
+    const selectFiltro = document.getElementById('campo-filial');
+    const selectImport = document.getElementById('importFilial');
+    
+    const { data, error } = await supabaseClient.from('filiais').select('*').order('nome');
+    if (error) return console.error('Erro ao carregar filiais:', error);
+
+    data.forEach(f => {
+        const option = new Option(f.nome, f.sigla); // Texto: Nome, Valor: Sigla
+        if (selectFiltro) selectFiltro.add(option.cloneNode(true));
+        if (selectImport) selectImport.add(option.cloneNode(true));
+    });
+}
 
 // 🔄 Expõe a função de atualização para a janela filha (cadastro-veiculo.html)
 window.refreshGrid = function() {
