@@ -155,7 +155,7 @@ body {
     }
 
     #login-container img {
-        max-width: 130px; /* Logo ajustado para telas pequenas */
+        max-width: 200px; /* Logo ajustado para telas pequenas */
         margin-bottom: 15px;
     }
     
