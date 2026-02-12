@@ -1,210 +1,218 @@
-/* Estilos Gerais / Desktop */
+/* css/coletar-KM.css - Estilo Glassmorphism */
 
-/* Cards mais compactos e limpos */
-.card {
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  padding: 12px 15px;
-  margin-bottom: 15px;
-  border: 1px solid #e0e0e0;
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.card-header h2 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #34495e;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
 }
 
-/* Inputs e Selects Profissionais */
-input[type="text"],
-input[type="number"],
-input[type="datetime-local"],
-select {
-  width: 100%;
-  padding: 5px 10px;
-  font-size: 0.85rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  height: 32px; /* Altura fixa compacta */
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background-color: #fff;
-  color: #495057;
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
 }
 
-input:focus, select:focus {
-  border-color: #006937;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 105, 55, 0.1);
+.glass-panel h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
 }
 
-input[readonly] {
-  background-color: #f8f9fa;
-  color: #6c757d;
-  cursor: default;
-}
-
-label {
-  display: block;
-  margin-bottom: 3px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #555;
-  text-transform: uppercase;
-}
-
-/* Grids de Layout */
+/* Layout Superior */
 .top-cards-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr; /* Mais espaço para ações */
-  gap: 15px;
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 20px;
 }
 
+@media (max-width: 992px) {
+    .top-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.actions-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Formulários */
 .form-grid-header {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
 }
 
-/* Grid de Adicionar Veículo - 5 colunas na primeira linha */
 .form-grid-item {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  align-items: end;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
 }
 
 .full-width {
-  grid-column: 1 / -1;
-  margin-top: 5px;
+    grid-column: 1 / -1;
 }
 
-/* Botões de Ação */
-.actions-body {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  height: 100%; /* Alinha verticalmente com o card vizinho */
+.form-group {
+    display: flex;
+    flex-direction: column;
 }
 
-.actions-body button {
-  flex: 1;
-  white-space: nowrap;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-weight: 600;
+.form-group label {
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.form-buttons {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+/* Inputs Glass */
+.glass-input {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    color: #333;
 }
 
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
 
-/* Estilos para Tabela com Scroll e Cabeçalho Fixo */
+/* Botões Glass */
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
+}
+
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+/* Tabela Glass */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
 .table-scroll-container {
-  max-height: 350px; /* Altura ajustada */
-  overflow-y: auto;  /* Barra de rolagem vertical */
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
-.table-scroll-container table thead th {
-  position: sticky;
-  top: 0;
-  background-color: #f1f3f5;
-  color: #495057;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  padding: 8px 10px;
-  border-bottom: 2px solid #dee2e6;
-  z-index: 2;
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
-.data-grid td {
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  border-bottom: 1px solid #e9ecef;
-  vertical-align: middle;
+.glass-table th {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-th.sortable { cursor: pointer; user-select: none; }
-th.sortable:hover { background-color: #e9ecef; }
-
-/* Estilos do Modal de Edição (Desktop) */
-#modalEdicao {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.glass-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+    vertical-align: middle;
 }
 
-#modalEdicao.hidden {
-  display: none !important;
+.glass-table tr:hover {
+    background: rgba(0, 105, 55, 0.05);
 }
 
-/* Responsividade Desktop Menor */
-@media (max-width: 1200px) {
-  .form-grid-item { grid-template-columns: repeat(3, 1fr); }
+/* Botões de Ação na Tabela */
+.btn-action {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+    margin: 0 5px;
 }
+
+.btn-edit { color: #007bff; }
+.btn-edit:hover { color: #0056b3; }
+
+.btn-delete { color: #dc3545; }
+.btn-delete:hover { color: #bd2130; }
+
+/* Utilitários */
+.hidden { display: none !important; }
+.panel-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.sortable { cursor: pointer; }
+.sortable:hover { background-color: rgba(0,0,0,0.02); }
 
 /* =========================================
    ESTILOS PARA O MODO APP / RESPONSIVO
    ========================================= */
 @media (max-width: 768px) {
-  body {
-    background-color: #f0f2f5; /* Fundo cinza claro para aparência de app */
-  }
-
-  .container {
-    display: block; /* Remove grid/flex para empilhar */
-  }
-
-  #menu-container {
-    display: none; /* Oculta menu lateral */
-  }
-
-  .main-content {
-    padding: 10px;
-    margin-left: 0;
-  }
-
-  .header {
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-  }
-
-  .header span {
-    font-size: 1.2rem;
-  }
-
-  /* Empilha os grids em uma coluna única */
   .top-cards-grid,
   .form-grid-header,
   .form-grid-item {
@@ -212,140 +220,16 @@ th.sortable:hover { background-color: #e9ecef; }
     gap: 15px;
   }
 
-  /* Oculta o card de ações no modo app */
-  .card-acoes {
-    display: none;
-  }
-
-  .card {
+  .glass-panel {
     padding: 15px;
-    margin-bottom: 15px;
   }
 
-  .card-header h2 {
-    font-size: 1.1rem;
-  }
-
-  /* Inputs e Botões maiores para facilitar o toque */
-  input[type="text"],
-  input[type="number"],
-  input[type="datetime-local"],
-  select {
-    padding: 14px;
-    font-size: 1rem;
-    height: auto;
-  }
-
-  .btn-primary,
-  .btn-secondary,
-  .btn-success {
+  .btn-glass {
     width: 100%;
-    padding: 15px;
-    font-size: 1.1rem;
     margin-bottom: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
   }
 
   .actions-body {
     flex-direction: column;
   }
-
-  .card-footer-actions {
-    flex-direction: column;
-  }
-
-  /* Tabela com rolagem horizontal para não quebrar o layout */
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .data-grid {
-    white-space: nowrap;
-  }
-}
-
-/* =========================================
-   FORÇAR MODO APP (VIA BOTÃO)
-   ========================================= */
-body.app-mode {
-  background-color: #f0f2f5;
-}
-
-body.app-mode .container {
-  display: block !important;
-}
-
-body.app-mode #menu-container {
-  display: none !important;
-}
-
-body.app-mode .main-content {
-  padding: 10px;
-  margin-left: 0;
-}
-
-body.app-mode .header {
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-}
-
-body.app-mode .top-cards-grid,
-body.app-mode .form-grid-header,
-body.app-mode .form-grid-item {
-  grid-template-columns: 1fr !important;
-  gap: 15px;
-}
-
-/* Oculta o card de ações ao forçar o modo app */
-body.app-mode .card-acoes {
-  display: none;
-}
-
-body.app-mode .card {
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-body.app-mode input[type="text"],
-body.app-mode input[type="number"],
-body.app-mode input[type="datetime-local"],
-body.app-mode select {
-  padding: 14px;
-  font-size: 1rem;
-  height: auto;
-}
-
-body.app-mode .btn-primary,
-body.app-mode .btn-secondary,
-body.app-mode .btn-success {
-  width: 100%;
-  padding: 15px !important;
-  font-size: 1.1rem;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-body.app-mode .actions-body,
-body.app-mode .card-footer-actions {
-  flex-direction: column !important;
-}
-
-body.app-mode .table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-body.app-mode .data-grid {
-  white-space: nowrap;
-}
-
-/* Campo de busca ajustado para o tamanho do texto */
-#searchItemColetado {
-  width: 250px;
 }

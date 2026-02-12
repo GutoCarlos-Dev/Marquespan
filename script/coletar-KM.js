@@ -263,8 +263,8 @@ function renderizarTabela() {
             <td data-label="Observação">${item.observacao || ''}</td>
             <td class="actions-cell">
                 <div style="display: flex; gap: 5px; justify-content: center;">
-                    <button type="button" class="btn-primary btn-edit-item" data-index="${index}" title="Editar Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-edit"></i></button>
-                    <button type="button" class="btn-danger btn-delete-item" data-index="${index}" title="Remover Item" style="padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-glass btn-blue btn-edit-item" data-index="${index}" title="Editar Item" style="padding: 8px 12px; min-width: 40px;"><i class="fas fa-edit"></i></button>
+                    <button type="button" class="btn-glass btn-red btn-delete-item" data-index="${index}" title="Remover Item" style="padding: 8px 12px; min-width: 40px;"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
         `;
@@ -435,10 +435,10 @@ async function carregarHistorico() {
                 <td data-label="Data">${dataDisplay}</td>
                 <td data-label="Responsável">${grupo.usuario || '-'}</td>
                 <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
-                <td data-label="Ações" style="text-align: right;">
-                    <button type="button" class="btn-primary" style="padding: 6px 10px; margin-right: 5px;" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote"><i class="fas fa-edit"></i></button>
-                    ${btnDelete}
-                </td>
+                    <td data-label="Ações" class="actions-cell">
+                        <button type="button" class="btn-glass btn-blue" style="padding: 6px 10px; margin-right: 5px;" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote"><i class="fas fa-edit"></i></button>
+                        ${btnDelete ? btnDelete.replace('btn-danger', 'btn-glass btn-red') : ''}
+                    </td>
             `;
             tbody.appendChild(tr);
         });
@@ -470,8 +470,8 @@ function prepararEdicaoItem(index) {
         submitBtn.dataset.originalHtml = submitBtn.innerHTML; // Salva o conteúdo original do botão
     }
     submitBtn.innerHTML = '<i class="fas fa-sync-alt"></i> ATUALIZAR VEÍCULO';
-    submitBtn.classList.remove('btn-primary');
-    submitBtn.classList.add('btn-update');
+    submitBtn.classList.remove('btn-green'); // Remove apenas a cor verde
+    submitBtn.classList.add('btn-blue'); // Adiciona a cor azul, mantendo btn-glass
 
     // No modo mobile, abre o modal de lançamento
     const modal = document.getElementById('modalLancamento');

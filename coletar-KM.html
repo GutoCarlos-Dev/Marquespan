@@ -15,151 +15,144 @@
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-  <div class="container">
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-    <div class="main-content">
-      <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-tachometer-alt"></i> Coletar KM</span>
-        <a href="mobile-coletar-km.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
-      </header>
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h1><i class="fas fa-tachometer-alt"></i> Coleta de Quilometragem</h1>
+      <a href="mobile-coletar-km.html" class="btn-glass btn-blue" style="font-size: 0.9rem; padding: 8px 15px; text-decoration: none; color: white; border-radius: 12px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
+    </header>
 
-      <section class="section">
-        <!-- Grid de Cards Superiores -->
-        <div class="top-cards-grid">
-            <!-- Card de Informações -->
-            <div class="card">
-              <div class="card-header">
-                <h2>Informações Atuais</h2>
+    <!-- Grid de Cards Superiores -->
+    <div class="top-cards-grid">
+        <!-- Card de Informações -->
+        <section class="glass-panel">
+          <h3><i class="fas fa-info-circle"></i> Informações da Coleta</h3>
+            <form id="formCabecalhoColeta" class="form-grid-header">
+              <div class="form-group">
+                <label for="coletaData">Data da Coleta</label>
+                <input type="datetime-local" id="coletaData" required class="glass-input">
               </div>
-              <div class="card-body">
-                <form id="formCabecalhoColeta" class="form-grid-header">
-                  <div class="form-group">
-                    <label for="coletaData">Data da Coleta</label>
-                    <input type="datetime-local" id="coletaData" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="coletaResponsavel">Responsável</label>
-                    <input type="text" id="coletaResponsavel" readonly>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <!-- Card de Ações -->
-            <div class="card card-acoes">
-              <div class="card-header">
-                <h2>Ações</h2>
-              </div>
-              <div class="card-body actions-body">
-                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
-                <button type="button" id="btnImportar" class="btn-primary"><i class="fas fa-file-import"></i> Importar</button>
-                <button type="button" id="btnExportar" class="btn-success"><i class="fas fa-file-export"></i> Exportar XLSX</button>
-                <button type="button" id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-              </div>
-            </div>
-        </div>
-
-        <!-- Card de Adicionar Veículo -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Adicionar Veículo</h2>
-          </div>
-          <div class="card-body">
-            <form id="formItemColeta">
-              <div class="form-grid-item">
-                <div class="form-group">
-                  <label for="itemPlaca">Placa</label>
-                  <input type="text" id="itemPlaca" list="listaVeiculos" placeholder="Digite a placa..." required autocomplete="off">
-                  <datalist id="listaVeiculos"></datalist>
-                </div>
-                <div class="form-group">
-                  <label for="itemModelo">Modelo</label>
-                  <input type="text" id="itemModelo" readonly placeholder="Automático">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmAnterior">KM Anterior</label>
-                  <input type="number" id="itemKmAnterior" placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmProxima">KM Próxima Troca</label>
-                  <input type="number" id="itemKmProxima" placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group">
-                  <label for="itemKmAtual">KM Atual</label>
-                  <input type="number" id="itemKmAtual" required placeholder="0" inputmode="numeric">
-                </div>
-
-                <div class="form-group full-width">
-                  <label for="itemObservacao">Observação</label>
-                  <input type="text" id="itemObservacao" placeholder="Observações gerais...">
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-primary" style="height: 32px; padding: 0 20px;"><i class="fas fa-plus"></i> Adicionar</button>
+              <div class="form-group">
+                <label for="coletaResponsavel">Responsável</label>
+                <input type="text" id="coletaResponsavel" readonly class="glass-input">
               </div>
             </form>
-          </div>
-        </div>
+        </section>
 
-        <!-- Grid de Itens Coletados -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Itens Coletados (<span id="contadorItens">0</span>)</h2>
+        <!-- Card de Ações -->
+        <section class="glass-panel">
+          <h3><i class="fas fa-cogs"></i> Ações</h3>
+          <div class="actions-body">
+            <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
+            <button type="button" id="btnImportar" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar</button>
+            <button type="button" id="btnExportar" class="btn-glass btn-green"><i class="fas fa-file-export"></i> Exportar XLSX</button>
+            <button type="button" id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
           </div>
-          <div style="margin-bottom: 10px;">
-            <input type="text" id="searchItemColetado" placeholder="🔍 Buscar placa na lista..." autocomplete="off">
-          </div>
-          <div class="table-responsive table-scroll-container">
-            <table class="data-grid">
-              <thead>
-                <tr>
-                  <th class="sortable" data-sort="placa">Placa <i class="fas fa-sort"></i></th>
-                  <th class="sortable" data-sort="modelo">Modelo <i class="fas fa-sort"></i></th>
-                  <th class="sortable" data-sort="km_anterior">KM Anterior <i class="fas fa-sort"></i></th>
-                  <th class="sortable" data-sort="km_atual">KM Atual <i class="fas fa-sort"></i></th>
-                  <th class="sortable" data-sort="km_proxima_troca">KM Próx. Troca <i class="fas fa-sort"></i></th>
-                  <th class="sortable" data-sort="observacao">Observação <i class="fas fa-sort"></i></th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tableBodyItens">
-                <!-- Preenchido via JS -->
-              </tbody>
-            </table>
-          </div>
-          <div class="card-footer-actions">
-            <button type="button" id="btnCancelarColeta" class="btn-danger" style="margin-right: 10px;"><i class="fas fa-times"></i> CANCELAR</button>
-            <button type="button" id="btnSalvarColeta" class="btn-success"><i class="fas fa-save"></i> SALVAR COLETA COMPLETA</button>
-          </div>
-        </div>
-
-        <!-- Grid de Histórico de Coletas Salvas -->
-        <div class="card">
-          <div class="card-header">
-            <h2><i class="fas fa-history"></i> Histórico de Coletas Salvas</h2>
-            <button id="btnAtualizarHistoricoDesktop" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; height: 28px;"><i class="fas fa-sync-alt"></i> Atualizar</button>
-          </div>
-          <div class="table-responsive">
-            <table class="data-grid">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Responsável</th>
-                  <th>Qtd. Veículos</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tableBodyHistorico">
-                <!-- Preenchido via JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+        </section>
     </div>
-  </div>
 
-  <script type="module" src="./script/menu.js" defer></script>
+    <!-- Card de Adicionar Veículo -->
+    <section class="glass-panel">
+      <h3><i class="fas fa-plus-circle"></i> Adicionar Veículo</h3>
+      <form id="formItemColeta">
+        <div class="form-grid-item">
+          <div class="form-group">
+            <label for="itemPlaca">Placa</label>
+            <input type="text" id="itemPlaca" list="listaVeiculos" placeholder="Digite a placa..." required autocomplete="off" class="glass-input">
+            <datalist id="listaVeiculos"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="itemModelo">Modelo</label>
+            <input type="text" id="itemModelo" readonly placeholder="Automático" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="itemKmAnterior">KM Anterior</label>
+            <input type="number" id="itemKmAnterior" placeholder="0" inputmode="numeric" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="itemKmProxima">KM Próxima Troca</label>
+            <input type="number" id="itemKmProxima" placeholder="0" inputmode="numeric" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="itemKmAtual">KM Atual</label>
+            <input type="number" id="itemKmAtual" required placeholder="0" inputmode="numeric" class="glass-input">
+          </div>
+
+          <div class="form-group full-width">
+            <label for="itemObservacao">Observação</label>
+            <input type="text" id="itemObservacao" placeholder="Observações gerais..." class="glass-input">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 15px;">
+          <button type="submit" class="btn-glass btn-green"><i class="fas fa-plus"></i> Adicionar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Grid de Itens Coletados -->
+    <section class="glass-panel">
+      <h3><i class="fas fa-list"></i> Itens Coletados (<span id="contadorItens">0</span>)</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <input type="text" id="searchItemColetado" placeholder="🔍 Buscar placa na lista..." autocomplete="off" class="glass-input">
+      </div>
+      <div class="table-responsive table-scroll-container">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="modelo">MODELO <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="km_anterior">KM ANT. <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="km_atual">KM ATUAL <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="km_proxima_troca">PRÓX. TROCA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="observacao">OBSERVAÇÃO <i class="fas fa-sort"></i></th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyItens">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" id="btnCancelarColeta" class="btn-glass btn-red"><i class="fas fa-times"></i> CANCELAR</button>
+        <button type="button" id="btnSalvarColeta" class="btn-glass btn-green"><i class="fas fa-save"></i> SALVAR COLETA COMPLETA</button>
+      </div>
+    </section>
+
+    <!-- Grid de Histórico de Coletas Salvas -->
+    <section class="glass-panel">
+      <div class="panel-header-actions">
+        <h3><i class="fas fa-history"></i> Histórico de Coletas Salvas</h3>
+        <button id="btnAtualizarHistoricoDesktop" class="btn-glass btn-blue" style="padding: 6px 12px; font-size: 0.8rem;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th>DATA</th>
+              <th>RESPONSÁVEL</th>
+              <th>QTD. VEÍCULOS</th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyHistorico">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <script type="module" src="./script/menu.js"></script>
   <script type="module" src="./script/coletar-KM.js"></script>
 </body>
 </html>
