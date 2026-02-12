@@ -14,18 +14,22 @@
 
   <!-- Biblioteca para ler arquivos Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 </head>
 <body>
 
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
   <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-truck"></i> Gestão de Veículos</h1>
+    </header>
+
     <div class="veiculos-top-grid">
       <!-- Card 1: Gestão de Veículos (Filtros) -->
-      <section class="gestao-veiculos card">
-        <h1 class="header-title"><i class="fas fa-car"></i> Gestão de Veículos</h1>
-        
+      <section class="glass-panel">
+        <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
         <div class="filtros-container">
           <div class="form-group-filter">
             <label for="campo-filial">Filial</label>
@@ -43,29 +47,29 @@
           </div>
           <div class="form-group-filter">
             <label for="campo-tipo">Tipo</label>
-            <div class="custom-multiselect" style="position: relative; width: 100%;">
-              <div id="campo-tipo-display" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+            <div class="custom-multiselect">
+              <div id="campo-tipo-display" class="glass-input">
                 <span id="campo-tipo-text">Todos os Tipos</span>
-                <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
+                <i class="fas fa-chevron-down"></i>
               </div>
-              <div id="campo-tipo-options" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background-color: #f9f9f9;">
-                  <button type="button" id="btn-limpar-tipo" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85em; font-weight: bold;">Limpar Selecionados</button>
+              <div id="campo-tipo-options" class="glass-dropdown hidden">
+                <div class="dropdown-header">
+                  <button type="button" id="btn-limpar-tipo">Limpar Selecionados</button>
                 </div>
-                <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
-                  <input type="checkbox" class="filtro-tipo-checkbox" value="MUNKC" style="margin-right: 8px;"> MUNKC
+                <label class="dropdown-item">
+                  <input type="checkbox" class="filtro-tipo-checkbox" value="MUNKC"> MUNKC
                 </label>                
-                <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
-                  <input type="checkbox" class="filtro-tipo-checkbox" value="SEMI-REBOQUE" style="margin-right: 8px;"> SEMI-REBOQUE
+                <label class="dropdown-item">
+                  <input type="checkbox" class="filtro-tipo-checkbox" value="SEMI-REBOQUE"> SEMI-REBOQUE
                 </label>
-                <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
-                  <input type="checkbox" class="filtro-tipo-checkbox" value="HR/VAN" style="margin-right: 8px;"> HR/VAN
+                <label class="dropdown-item">
+                  <input type="checkbox" class="filtro-tipo-checkbox" value="HR/VAN"> HR/VAN
                 </label>
-                <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
-                  <input type="checkbox" class="filtro-tipo-checkbox" value="OPERACIONAL" style="margin-right: 8px;"> OPERACIONAL
+                <label class="dropdown-item">
+                  <input type="checkbox" class="filtro-tipo-checkbox" value="OPERACIONAL"> OPERACIONAL
                 </label>
-                <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
-                  <input type="checkbox" class="filtro-tipo-checkbox" value="RESERVA" style="margin-right: 8px;"> RESERVA
+                <label class="dropdown-item">
+                  <input type="checkbox" class="filtro-tipo-checkbox" value="RESERVA"> RESERVA
                 </label>
               </div>
             </div>
@@ -84,26 +88,25 @@
       </section>
 
       <!-- Card 2: Ações -->
-      <section class="acoes-card card">
-        <h1 class="header-title"><i class="fas fa-cogs"></i> Ações</h1>
+      <section class="glass-panel acoes-panel">
+        <h3><i class="fas fa-cogs"></i> Ações</h3>
         <div class="acoes-grid">
-          <button type="button" id="btn-buscar" class="btn-std btn-primary"><i class="fas fa-search"></i> Buscar</button>
-          <button type="button" id="btn-novo-veiculo" class="btn-std btn-success"><i class="fas fa-plus"></i> Novo Veículo</button>
-          <button type="button" id="btn-importar-massa" class="btn-std btn-info"><i class="fas fa-file-import"></i> Importar</button>
-          <button type="button" id="btn-exportar-xls" class="btn-std btn-secondary"><i class="fas fa-file-excel"></i> Excel</button>
-          <button type="button" class="btn-std btn-secondary"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" id="btn-buscar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          <button type="button" id="btn-novo-veiculo" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo</button>
+          <button type="button" id="btn-importar-massa" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar</button>
+          <button type="button" id="btn-exportar-xls" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Excel</button>
         </div>
       </section>
     </div>
 
     <!-- ✅ Grid com rolagem horizontal -->
-    <div class="card veiculos-grid-card">
-      <div class="card-header veiculos-grid-header">
-        <h2 class="veiculos-grid-title"><i class="fas fa-list"></i> Lista de Veículos</h2>
+    <div class="glass-panel">
+      <div class="panel-header">
+        <h2><i class="fas fa-list"></i> Lista de Veículos</h2>
         <span id="grid-records-count" class="veiculos-count-badge"></span>
       </div>
       <div class="table-responsive veiculos-table-container">
-        <table class="data-grid veiculos-data-table">
+        <table class="glass-table">
           <thead class="veiculos-table-head">
             <tr>
               <th data-sort="filial" class="veiculos-table-th sortable">FILIAL <i class="fas fa-sort"></i></th>
@@ -131,27 +134,27 @@
   <!-- 🚀 Scripts -->
 
   <!-- Modal para Importação em Massa -->
-  <div id="modalImportacao" class="panel-backdrop hidden">
-    <div class="panel" style="max-width: 500px;">
-        <div class="panel-header">
+  <div id="modalImportacao" class="modal-backdrop hidden">
+    <div class="glass-modal">
+        <div class="modal-header">
             <h3><i class="fas fa-file-import"></i> Importação em Massa de Veículos</h3>
             <button class="close-button">&times;</button>
         </div>
-        <div class="panel-body">
+        <div class="modal-body">
             <form id="formImportacao">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="importFilial" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Filial para todos os veículos *</label>
-                    <select id="importFilial" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px;">
+                <div class="form-group">
+                    <label for="importFilial">Filial para todos os veículos *</label>
+                    <select id="importFilial" required>
                       <option value="">Selecione a Filial</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="arquivoImportacao" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Selecione o Arquivo (.xlsx)</label>
-                    <p style="font-size: 0.85rem; color: #6c757d; margin-top: 0; margin-bottom: 5px;">O arquivo deve conter as colunas: PLACA, MODELO.</p>
-                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px;">
+                <div class="form-group">
+                    <label for="arquivoImportacao">Selecione o Arquivo (.xlsx)</label>
+                    <p class="helper-text">O arquivo deve conter as colunas: PLACA, MODELO.</p>
+                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required>
                 </div>
-                <div class="form-actions" style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                    <button type="submit" class="btn-success"><i class="fas fa-check"></i> Processar Arquivo</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-check"></i> Processar Arquivo</button>
                 </div>
             </form>
         </div>
@@ -160,56 +163,5 @@
 
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/veiculos.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Lógica para o Multiselect de Tipo
-      const display = document.getElementById('campo-tipo-display');
-      const options = document.getElementById('campo-tipo-options');
-      const text = document.getElementById('campo-tipo-text');
-      const checkboxes = document.querySelectorAll('.filtro-tipo-checkbox');
-      const btnLimpar = document.getElementById('btn-limpar-tipo');
-      const hiddenInput = document.getElementById('campo-tipo');
-
-      if (display && options) {
-        // Alternar dropdown
-        display.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isVisible = options.style.display === 'block';
-          options.style.display = isVisible ? 'none' : 'block';
-        });
-
-        // Fechar ao clicar fora
-        document.addEventListener('click', (e) => {
-          if (!display.contains(e.target) && !options.contains(e.target)) {
-            options.style.display = 'none';
-          }
-        });
-
-        // Atualizar seleção
-        const updateSelection = () => {
-          const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-          if (selected.length === 0) {
-            text.textContent = 'Todos os Tipos';
-          } else if (selected.length === 1) {
-            text.textContent = Array.from(checkboxes).find(cb => cb.checked).parentElement.textContent.trim();
-          } else {
-            text.textContent = `${selected.length} selecionados`;
-          }
-          if (hiddenInput) hiddenInput.value = selected.join(',');
-        };
-
-        checkboxes.forEach(cb => cb.addEventListener('change', updateSelection));
-
-        // Botão Limpar
-        if (btnLimpar) {
-          btnLimpar.addEventListener('click', (e) => {
-            e.stopPropagation();
-            checkboxes.forEach(cb => cb.checked = false);
-            updateSelection();
-          });
-        }
-      }
-    });
-  </script>
 </body>
 </html>

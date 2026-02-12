@@ -1,417 +1,193 @@
 import { supabaseClient } from './supabase.js';
 
-let gridBody;
-let currentSort = { column: 'placa', direction: 'asc' };
-
-// 🚀 Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-  gridBody = document.getElementById('grid-veiculos-body');
-  const btnBuscar = document.getElementById('btn-buscar');
-  const btnNovoVeiculo = document.getElementById('btn-novo-veiculo');
-  const btnImportarMassa = document.getElementById('btn-importar-massa');
-  const modalImportacao = document.getElementById('modalImportacao');
-  const formImportacao = document.getElementById('formImportacao');
-  const btnCloseModalImportacao = modalImportacao?.querySelector('.close-button');
-  const btnExportarXLS = document.getElementById('btn-exportar-xls');
-
-
-  // 🔍 Buscar veículos
-  btnBuscar?.addEventListener('click', () => {
-    buscarVeiculos();
-  });
-
-  // ➕ Abrir modal de cadastro
-  btnNovoVeiculo?.addEventListener('click', () => {
-    abrirCadastroVeiculo();
-  });
-
-  // 📥 Eventos de Importação
-  btnImportarMassa?.addEventListener('click', () => abrirModalImportacao());
-  btnCloseModalImportacao?.addEventListener('click', () => fecharModalImportacao());
-  modalImportacao?.addEventListener('click', (e) => {
-      if (e.target === modalImportacao) {
-          fecharModalImportacao();
-      }
-  });
-  formImportacao?.addEventListener('submit', (e) => handleImport(e));
-
-  // 📤 Exportar XLS
-  btnExportarXLS?.addEventListener('click', exportarXLS);
-
-  // DELEGAÇÃO DE EVENTOS: Gerencia cliques na tabela (Editar/Excluir)
-  gridBody?.addEventListener('click', handleGridClick);
-
-  // � Carrega veículos ao iniciar
-  carregarVeiculos();
-  carregarFiliaisFiltro(); // Carrega as filiais nos selects
-
-  // Eventos de ordenação
-  document.querySelectorAll('th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => handleSort(th.dataset.sort));
-  });
+    initFilters();
+    carregarVeiculos();
+    setupEventListeners();
 });
 
-// Função para carregar filiais nos selects de filtro e importação
-async function carregarFiliaisFiltro() {
-    const selectFiltro = document.getElementById('campo-filial');
-    const selectImport = document.getElementById('importFilial');
-    
-    const { data, error } = await supabaseClient.from('filiais').select('*').order('nome');
-    if (error) return console.error('Erro ao carregar filiais:', error);
+// --- Inicialização e Eventos ---
+function setupEventListeners() {
+    // Botão Buscar
+    document.getElementById('btn-buscar').addEventListener('click', carregarVeiculos);
 
-    data.forEach(f => {
-        const option = new Option(f.nome, f.sigla); // Texto: Nome, Valor: Sigla
-        if (selectFiltro) selectFiltro.add(option.cloneNode(true));
-        if (selectImport) selectImport.add(option.cloneNode(true));
+    // Botão Novo Veículo (Abre em nova janela/aba conforme padrão de cadastro)
+    document.getElementById('btn-novo-veiculo').addEventListener('click', () => {
+        window.open('cadastro-veiculo.html', 'CadastroVeiculo', 'width=800,height=700');
+    });
+
+    // Botão Importar
+    document.getElementById('btn-importar-massa').addEventListener('click', () => {
+        document.getElementById('modalImportacao').classList.remove('hidden');
+    });
+
+    // Fechar Modal
+    document.querySelector('.close-button').addEventListener('click', () => {
+        document.getElementById('modalImportacao').classList.add('hidden');
+    });
+
+    // Botão Exportar Excel
+    document.getElementById('btn-exportar-xls').addEventListener('click', exportarExcel);
+
+    // Multiselect Tipo
+    const display = document.getElementById('campo-tipo-display');
+    const options = document.getElementById('campo-tipo-options');
+    const btnLimpar = document.getElementById('btn-limpar-tipo');
+
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.classList.toggle('hidden');
+        options.style.display = options.classList.contains('hidden') ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!display.contains(e.target) && !options.contains(e.target)) {
+            options.classList.add('hidden');
+            options.style.display = 'none';
+        }
+    });
+
+    btnLimpar.addEventListener('click', () => {
+        document.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => cb.checked = false);
+        updateMultiselectText();
+    });
+
+    document.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateMultiselectText);
     });
 }
 
-// 🔄 Expõe a função de atualização para a janela filha (cadastro-veiculo.html)
-window.refreshGrid = function() {
-  console.log('Grid de veículos será atualizada...');
-  carregarVeiculos();
-};
-
-// Gerencia cliques nos botões dentro da tabela
-function handleGridClick(e) {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-
-  const id = btn.dataset.id;
-  if (!id) return;
-
-  if (btn.classList.contains('editar')) {
-    editarVeiculo(id);
-  } else if (btn.classList.contains('excluir')) {
-    excluirVeiculo(id);
-  }
-}
-
-// ➕ Abre a janela para um novo cadastro
-function abrirCadastroVeiculo() {
-  const largura = 900;
-  const altura = 700;
-  const esquerda = (window.screen.width - largura) / 2;
-  const topo = (window.screen.height - altura) / 2;
-
-  window.open(
-    'cadastro-veiculo.html',
-    'CadastroVeiculo',
-    `width=${largura},height=${altura},left=${esquerda},top=${topo},resizable=yes,scrollbars=yes`
-  );
-}
-
-function abrirModalImportacao() {
-    const modal = document.getElementById('modalImportacao');
-    if (modal) {
-        modal.classList.remove('hidden');
-        document.getElementById('formImportacao').reset();
-    }
-}
-
-function fecharModalImportacao() {
-    const modal = document.getElementById('modalImportacao');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
-async function handleImport(e) {
-    e.preventDefault();
-    const btnSubmit = e.target.querySelector('button[type="submit"]');
-    const originalText = btnSubmit.innerHTML;
+function updateMultiselectText() {
+    const selected = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
+    const text = document.getElementById('campo-tipo-text');
     
-    const filial = document.getElementById('importFilial').value;
-    const arquivo = document.getElementById('arquivoImportacao').files[0];
-
-    if (!filial) {
-        alert('Por favor, selecione uma filial.');
-        return;
+    if (selected.length === 0) {
+        text.textContent = 'Todos os Tipos';
+    } else if (selected.length === 1) {
+        text.textContent = selected[0];
+    } else {
+        text.textContent = `${selected.length} selecionados`;
     }
-    if (!arquivo) {
-        alert('Por favor, selecione um arquivo .xlsx.');
-        return;
-    }
+    // Salva no input oculto para uso na busca
+    document.getElementById('campo-tipo').value = selected.join(',');
+}
 
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+async function initFilters() {
+    // Carregar Filiais (Exemplo estático ou do banco)
+    const selectFilial = document.getElementById('campo-filial');
+    // Se tiver tabela de filiais, carregar aqui. Por enquanto, mantém as opções estáticas ou adiciona dinamicamente.
+}
+
+// --- Carregamento de Dados ---
+async function carregarVeiculos() {
+    const tbody = document.getElementById('grid-veiculos-body');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     try {
-        const data = await arquivo.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        let query = supabaseClient.from('veiculos').select('*');
 
-        if (json.length === 0) {
-            throw new Error("O arquivo está vazio ou em um formato inválido.");
+        // Filtros
+        const filial = document.getElementById('campo-filial').value;
+        const placa = document.getElementById('campo-placa').value.trim();
+        const modelo = document.getElementById('campo-modelo').value.trim();
+        const situacao = document.getElementById('campo-situacao').value;
+        const tipos = document.getElementById('campo-tipo').value;
+
+        if (filial) query = query.eq('filial', filial);
+        if (placa) query = query.ilike('placa', `%${placa}%`);
+        if (modelo) query = query.ilike('modelo', `%${modelo}%`);
+        if (situacao) query = query.eq('situacao', situacao);
+        if (tipos) {
+            const tiposArray = tipos.split(',');
+            query = query.in('tipo', tiposArray);
         }
 
-        // 1. Buscar todas as placas existentes de uma vez para otimizar
-        const { data: existingVehicles, error: fetchError } = await supabaseClient
-            .from('veiculos')
-            .select('placa');
-        
-        if (fetchError) throw fetchError;
+        const { data, error } = await query.order('placa', { ascending: true });
 
-        const existingPlates = new Set(existingVehicles.map(v => v.placa));
-        
-        const veiculosParaInserir = [];
-        let duplicados = 0;
+        if (error) throw error;
 
-        // 2. Processar cada linha do Excel
-        for (const row of json) {
-            const normalizedRow = {};
-            for (const key in row) {
-                normalizedRow[key.toUpperCase()] = row[key];
-            }
+        renderTable(data);
+        document.getElementById('grid-records-count').textContent = `${data.length} veículos`;
 
-            const placa = normalizedRow['PLACA']?.toString().trim().toUpperCase();
-            const modelo = normalizedRow['MODELO']?.toString().trim();
-
-            if (!placa || !modelo) {
-                console.warn('Linha ignorada por falta de PLACA ou MODELO:', row);
-                continue;
-            }
-
-            if (existingPlates.has(placa)) {
-                duplicados++;
-            } else {
-                veiculosParaInserir.push({ 
-                    placa, 
-                    modelo, 
-                    filial, 
-                    situacao: 'ativo',
-                    marca: 'NÃO INFORMADA', // Valor padrão para evitar erro de constraint
-                    tipo: 'OUTROS',         // Valor padrão para evitar erro de constraint em 'tipo'
-                    anofab: new Date().getFullYear(), // Valor padrão (ano atual)
-                    anomod: new Date().getFullYear(), // Valor padrão (ano atual)
-                    qtdtanque: 1            // Valor padrão mínimo
-                });
-                existingPlates.add(placa); // Evita duplicatas dentro do mesmo arquivo
-            }
-        }
-
-        // 3. Inserir os novos veículos em lote
-        if (veiculosParaInserir.length > 0) {
-            const { error: insertError } = await supabaseClient.from('veiculos').insert(veiculosParaInserir);
-            if (insertError) throw insertError;
-        }
-
-        alert(`Importação concluída!\n\n- ${veiculosParaInserir.length} veículos novos importados.\n- ${duplicados} placas duplicadas foram ignoradas.`);
-        
-        fecharModalImportacao();
-        carregarVeiculos(); // Atualiza a grid
-    } catch (error) {
-        console.error('Erro durante a importação:', error);
-        alert(`Ocorreu um erro: ${error.message}`);
-    } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = originalText;
+    } catch (err) {
+        console.error('Erro ao carregar veículos:', err);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
-async function exportarXLS() {
-  try {
-    const { data, error } = await supabaseClient
-      .from('veiculos')
-      .select('*')
-      .order('placa');
+function renderTable(data) {
+    const tbody = document.getElementById('grid-veiculos-body');
+    tbody.innerHTML = '';
 
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      alert('Não há dados para exportar.');
-      return;
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum veículo encontrado.</td></tr>';
+        return;
     }
 
-    // Formata os dados para o Excel
-    const dadosFormatados = data.map(v => ({
-      'Filial': v.filial || '',
-      'Placa': v.placa || '',
-      'Marca': v.marca || '',
-      'Modelo': v.modelo || '',
-      'Renavan': v.renavan || '',
-      'Tipo': v.tipo || '',
-      'Situação': v.situacao || '',
-      'Ano Fab.': v.anofab || '',
-      'Ano Mod.': v.anomod || '',
-      'Chassi': v.chassi || '',
-      'Qtd Tanque': v.qtdtanque || '',
-      'QRCode': v.qrcode || ''
-    }));
+    data.forEach(v => {
+        const tr = document.createElement('tr');
+        
+        let badgeClass = 'badge-inativo';
+        if (v.situacao === 'ativo') badgeClass = 'badge-ativo';
+        if (v.situacao === 'INTERNADO') badgeClass = 'badge-internado';
 
-    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Veiculos");
+        tr.innerHTML = `
+            <td>${v.filial || '-'}</td>
+            <td style="font-weight:bold;">${v.placa}</td>
+            <td>${v.modelo || '-'}</td>
+            <td>${v.renavan || '-'}</td>
+            <td>${v.tipo || '-'}</td>
+            <td><span class="badge ${badgeClass}">${v.situacao || 'Indefinido'}</span></td>
+            <td>${v.qrcode ? '<i class="fas fa-qrcode"></i>' : '-'}</td>
+            <td>
+                <button class="btn-icon btn-edit" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Event Listeners para botões de edição
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            // Abre a tela de cadastro passando o ID na URL para edição
+            window.open(`cadastro-veiculo.html?id=${id}`, 'EdicaoVeiculo', 'width=800,height=700');
+        });
+    });
+}
+
+// --- Exportação ---
+function exportarExcel() {
+    const table = document.querySelector('.glass-table');
+    if (!table) return;
+
+    // Clona a tabela para remover colunas indesejadas (Ações)
+    const clone = table.cloneNode(true);
+    const rows = clone.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        if (row.cells.length > 0) {
+            row.deleteCell(-1); // Remove última coluna (Ações)
+        }
+    });
+
+    const wb = XLSX.utils.table_to_book(clone, { sheet: "Veiculos" });
     XLSX.writeFile(wb, "Veiculos_Marquespan.xlsx");
-
-  } catch (error) {
-    console.error('Erro ao exportar:', error);
-    alert('Erro ao exportar dados.');
-  }
 }
 
-function handleSort(column) {
-  if (currentSort.column === column) {
-    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-  } else {
-    currentSort.column = column;
-    currentSort.direction = 'asc';
-  }
-  updateSortIcons();
-  
-  // Recarrega os dados com a nova ordenação
-  const placa = document.getElementById('campo-placa')?.value.trim();
-  const modelo = document.getElementById('campo-modelo')?.value.trim();
-  const tipo = document.getElementById('campo-tipo')?.value;
-  const situacao = document.getElementById('campo-situacao')?.value;
-  const filial = document.getElementById('campo-filial')?.value;
-
-  if (placa || modelo || tipo || situacao || filial) buscarVeiculos();
-  else carregarVeiculos();
-}
-
-function updateSortIcons() {
-  document.querySelectorAll('th[data-sort] i').forEach(icon => {
-    icon.className = 'fas fa-sort'; // Reset
-    const th = icon.parentElement;
-    if (th.dataset.sort === currentSort.column) {
-      icon.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+// --- Estilos Adicionais para Botões de Ação na Tabela ---
+const style = document.createElement('style');
+style.innerHTML = `
+    .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #006937;
+        font-size: 1.1rem;
+        transition: color 0.2s;
     }
-  });
-}
-
-// 📦 Carregar todos os veículos
-async function carregarVeiculos() {
-  if (!gridBody) return;
-  const countSpan = document.getElementById('grid-records-count');
-  if (countSpan) countSpan.textContent = ''; // Limpa o contador durante o carregamento
-  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Carregando veículos...</td></tr>';
-
-  const { data, error } = await supabaseClient
-    .from('veiculos')
-    .select('*')
-    .order(currentSort.column, { ascending: currentSort.direction === 'asc' });
-
-  if (error) {
-    console.error('Erro ao carregar veículos:', error);
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao carregar dados.</td></tr>';
-    if (countSpan) countSpan.textContent = 'Erro';
-    return;
-  }
-
-  renderizarVeiculos(data);
-}
-
-
-// 🔍 Buscar veículos por placa
-async function buscarVeiculos() {
-  if (!gridBody) return;
-  const countSpan = document.getElementById('grid-records-count');
-  if (countSpan) countSpan.textContent = ''; // Limpa o contador durante a busca
-  gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #666;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Buscando...</td></tr>';
-
-  const placa = document.getElementById('campo-placa')?.value.trim().toUpperCase();
-  const modelo = document.getElementById('campo-modelo')?.value.trim();
-  const tipo = document.getElementById('campo-tipo')?.value;
-  const situacao = document.getElementById('campo-situacao')?.value;
-  const filial = document.getElementById('campo-filial')?.value;
-
-  let query = supabaseClient.from('veiculos').select('*').order(currentSort.column, { ascending: currentSort.direction === 'asc' });
-
-  if (placa) query = query.ilike('placa', `%${placa}%`);
-  if (modelo) query = query.ilike('modelo', `%${modelo}%`);
-  if (tipo) query = query.eq('tipo', tipo);
-  if (situacao) query = query.eq('situacao', situacao);
-  if (filial) query = query.eq('filial', filial);
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao buscar veículos:', error);
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Erro ao buscar dados.</td></tr>';
-    if (countSpan) countSpan.textContent = 'Erro';
-    return;
-  }
-
-  renderizarVeiculos(data);
-}
-
-
-// 🧱 Renderiza os veículos na grid
-function renderizarVeiculos(lista) {
-  gridBody.innerHTML = '';
-  const countSpan = document.getElementById('grid-records-count');
-
-  if (!lista || lista.length === 0) {
-    gridBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 30px; color: #888;">Nenhum veículo encontrado.</td></tr>';
-    if (countSpan) countSpan.textContent = '0 Registros';
-    return;
-  }
-
-  // Atualiza o contador de registros
-  if (countSpan) {
-    const recordText = lista.length === 1 ? 'Registro' : 'Registros';
-    countSpan.textContent = `${lista.length} ${recordText}`;
-  }
-
-  lista.forEach(veiculo => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.filial || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.placa}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.modelo || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.renavan || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.tipo || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.situacao || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${veiculo.qrcode || '-'}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <div class="acoes" style="display: flex; gap: 5px;">
-          <button class="btn-acao editar" data-id="${veiculo.id}" title="Editar">
-            <i class="fas fa-pen"></i>
-          </button>
-          <button class="btn-acao excluir" data-id="${veiculo.id}" title="Excluir">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </td>
-    `;
-    gridBody.appendChild(tr);
-  });
-}
-
-
-// ✏️ Editar veículo
-function editarVeiculo(id) {
-  const largura = 900;
-  const altura = 700;
-  const esquerda = (window.screen.width - largura) / 2;
-  const topo = (window.screen.height - altura) / 2;
-
-  // Passa apenas o ID, que é o que a página de cadastro espera
-  window.open(
-    `cadastro-veiculo.html?id=${id}`,
-    'EditarVeiculo',
-    `width=${largura},height=${altura},left=${esquerda},top=${top},resizable=yes,scrollbars=yes`
-  );
-}
-
-// 🗑️ Excluir veículo
-async function excluirVeiculo(id) {
-  const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
-  if (!confirmar) return;
-
-  const { error } = await supabaseClient
-    .from('veiculos')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error("Erro ao excluir veículo:", error);
-    alert("❌ Erro ao excluir. Tente novamente.");
-  } else {
-    alert("✅ Veículo excluído com sucesso!");
-    carregarVeiculos(); // Atualiza a grid
-  }
-}
+    .btn-icon:hover {
+        color: #004d29;
+    }
+`;
+document.head.appendChild(style);
