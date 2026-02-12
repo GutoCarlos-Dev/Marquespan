@@ -15,86 +15,93 @@
       <!-- O menu será injetado aqui pelo menu.js -->
     </div>
     <div class="main-content">
-      <header class="header"><i class="fas fa-route"></i> Cadastro de Rotas</header>
+      <header class="header glass-header">
+        <h1><i class="fas fa-route"></i> Cadastro de Rotas</h1>
+      </header>
 
-      <section id="sectionCadastrarRotas" class="section">
-        <div class="form-container">
-          <form id="formCadastrarRota">
-            <fieldset>
-              <legend>Formulário de Rota</legend>
-              <input type="hidden" id="rotaEditingId">
-              <div class="form-group">
-                <label for="rotaNumero">Número da Rota</label>
-                <input type="text" id="rotaNumero" required>
+      <section id="sectionCadastrarRotas" class="glass-panel">
+        <h3><i class="fas fa-plus-circle"></i> Formulário de Rota</h3>
+        <form id="formCadastrarRota">
+          <input type="hidden" id="rotaEditingId">
+          <div class="rotas-layout">
+              <!-- Card de Campos -->
+              <div class="glass-panel-inner">
+                  <div class="form-grid">
+                      <div class="form-group">
+                          <label for="rotaNumero">Número da Rota</label>
+                          <input type="text" id="rotaNumero" required class="glass-input" placeholder="Ex: 101">
+                      </div>
+                      <div class="form-group">
+                          <label for="rotaSemana">Semana</label>
+                          <select id="rotaSemana" required class="glass-input">
+                          <option value="" disabled selected>-- Selecione --</option>
+                          <option value="SEGUNDA">SEGUNDA</option>
+                          <option value="TERÇA">TERÇA</option>
+                          <option value="QUARTA">QUARTA</option>
+                          <option value="QUINTA">QUINTA</option>
+                          <option value="SEXTA">SEXTA</option>
+                          <option value="EXTRA">EXTRA</option>
+                          <option value="AVULSA">AVULSA</option>
+                          </select>
+                      </div>
+                      <div class="form-group">
+                          <label for="rotaResponsavel">Responsável</label>
+                          <input type="text" id="rotaResponsavel" required class="glass-input" placeholder="Nome do Motorista/Responsável">
+                      </div>
+                      <div class="form-group">
+                          <label for="rotaSupervisor">Supervisor</label>
+                          <input type="text" id="rotaSupervisor" class="glass-input" placeholder="Nome do Supervisor">
+                      </div>
+                      <div class="form-group">
+                          <label for="rotaCidades">Cidades</label>
+                          <input type="text" id="rotaCidades" required class="glass-input" placeholder="Cidades atendidas">
+                      </div>
+                      <div class="form-group">
+                          <label for="rotaDias">Dias</label>
+                          <input type="number" id="rotaDias" required class="glass-input" placeholder="Qtd dias">
+                      </div>
+                  </div>
               </div>
-              <div class="form-group">
-                <label for="rotaSemana">Semana</label>
-                <select id="rotaSemana" required>
-                  <option value="" disabled selected>-- Selecione --</option>
-                  <option value="SEGUNDA">SEGUNDA</option>
-                  <option value="TERÇA">TERÇA</option>
-                  <option value="QUARTA">QUARTA</option>
-                  <option value="QUINTA">QUINTA</option>
-                  <option value="SEXTA">SEXTA</option>
-                  <option value="EXTRA">EXTRA</option>
-                  <option value="AVULSA">AVULSA</option>
-                </select>
+
+              <!-- Card de Botões -->
+              <div class="glass-panel-inner actions-panel">
+                  <div class="form-actions-vertical">
+                      <button type="submit" id="btnSubmitRota" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Rota</button>
+                      <button type="button" id="btnImportarLista" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Lista</button>
+                      <button type="button" id="btnClearRotaForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+                      <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
+                  </div>
               </div>
-              <div class="form-group">
-                <label for="rotaResponsavel">Responsável</label>
-                <input type="text" id="rotaResponsavel" required>
-              </div>
-              <div class="form-group">
-                <label for="rotaSupervisor">Supervisor</label>
-                <input type="text" id="rotaSupervisor">
-              </div>
-              <div class="form-group">
-                <label for="rotaCidades">Cidades</label>
-                <input type="text" id="rotaCidades" required>
-              </div>
-              <div class="form-group">
-                <label for="rotaDias">Dias</label>
-                <input type="number" id="rotaDias" required>
-              </div>
-              <div class="form-buttons">
-                <button type="submit" id="btnSubmitRota">Cadastrar Rota</button>
-                <button type="button" id="btnClearRotaForm">Limpar</button>
-                <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
-                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
-              </div>
-            </fieldset>
-          </form>
+          </div>
+        </form>
+
+        <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+        <h3><i class="fas fa-list"></i> Rotas Cadastradas</h3>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <input type="text" id="searchRotaInput" placeholder="🔍 Buscar por responsável, número ou cidades..." class="glass-input">
         </div>
 
-        <div class="card">
-          <div class="search-bar">
-            <input type="text" id="searchRotaInput" placeholder="Buscar por responsável ou cidades...">
-          </div>
-          <!-- Adicionado um container para a barra de rolagem -->
-          <div class="table-scroll-container">
-            <!-- A classe table-responsive pode ser mantida se tiver outros estilos,
-                 mas a rolagem será controlada por table-scroll-container -->
-            <table class="data-grid" aria-label="Rotas Cadastradas">
-              <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Rotas Cadastradas</caption>
-              <thead>
+        <div class="table-responsive rotas-table-container">
+            <table class="glass-table data-grid">
+                <thead>
                 <tr>
-                  <th scope="col" data-field="numero">Número</th>
-                  <th scope="col" data-field="semana">Semana</th>
-                  <th scope="col" data-field="responsavel">Responsável</th>
-                  <th scope="col" data-field="supervisor">Supervisor</th>
-                  <th scope="col" data-field="cidades">Cidades</th>
-                  <th scope="col" data-field="dias">Dias</th>
-                  <th scope="col">Ações</th>
+                    <th data-field="numero">NÚMERO <i class="fas fa-sort"></i></th>
+                    <th data-field="semana">SEMANA <i class="fas fa-sort"></i></th>
+                    <th data-field="responsavel">RESPONSÁVEL <i class="fas fa-sort"></i></th>
+                    <th data-field="supervisor">SUPERVISOR <i class="fas fa-sort"></i></th>
+                    <th data-field="cidades">CIDADES</th>
+                    <th data-field="dias">DIAS</th>
+                    <th style="width: 100px;">AÇÕES</th>
                 </tr>
-              </thead>
-              <tbody id="rotasTableBody"></tbody>
+                </thead>
+                <tbody id="rotasTableBody"></tbody>
             </table>
-          </div>
         </div>
 
         <!-- Card para o Resumo por Supervisor -->
-        <div class="card" style="margin-top: 20px;">
-            <h3 class="header" style="font-size: 1.2rem; margin-bottom: 15px;"><i class="fas fa-chart-pie"></i> Resumo por Supervisor</h3>
+        <div class="glass-panel" style="margin-top: 20px;">
+            <h3><i class="fas fa-chart-pie"></i> Resumo por Supervisor</h3>
             <div id="rotaSummary" class="summary-container">
                 <!-- O conteúdo do resumo será inserido aqui pelo JavaScript -->
             </div>

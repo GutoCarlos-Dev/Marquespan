@@ -23,9 +23,9 @@ class HotelManager {
         this.importFileInput = document.getElementById('importFile');
 
         // Painel de Quartos
-        this.quartosPanelBackdrop = document.getElementById('quartosPanelBackdrop');
-        this.quartosPanel = document.getElementById('quartosPanel');
-        this.quartosPanelTitle = document.getElementById('quartosPanelTitle');
+        this.quartosPanelBackdrop = document.getElementById('modalQuartos');
+        this.quartosPanel = document.querySelector('#modalQuartos .glass-modal');
+        this.quartosPanelTitle = document.getElementById('modalHotelName');
         this.listaQuartos = document.getElementById('listaQuartos');
         this.formQuarto = document.getElementById('formCadastrarQuarto');
         this.quartoHotelIdInput = document.getElementById('quartoHotelId');
@@ -39,7 +39,7 @@ class HotelManager {
         this.searchHotelInput.addEventListener('input', () => this.renderHotels());
 
         // Eventos do painel de quartos
-        this.quartosPanel.querySelector('.close-button').addEventListener('click', () => this.closeQuartosPanel());
+        document.getElementById('btnCloseModalQuartos').addEventListener('click', () => this.closeQuartosPanel());
         this.quartosPanelBackdrop.addEventListener('click', (e) => {
             if (e.target === this.quartosPanelBackdrop) this.closeQuartosPanel();
         });
@@ -80,9 +80,9 @@ class HotelManager {
                 <td>${hotel.telefone || ''}</td>
                 <td>${hotel.responsavel || ''}</td>
                 <td>
-                    <button class="btn-action btn-edit" data-id="${hotel.id}">Editar</button>
-                    <button class="btn-action btn-delete" data-id="${hotel.id}">Excluir</button>
-                    <button class="btn-action btn-manage-rooms" data-id="${hotel.id}" data-name="${hotel.nome}">Gerenciar Quartos</button>
+                    <button class="btn-icon info btn-manage-rooms" data-id="${hotel.id}" data-name="${hotel.nome}" title="Gerenciar Quartos"><i class="fas fa-bed"></i></button>
+                    <button class="btn-icon edit btn-edit" data-id="${hotel.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete btn-delete" data-id="${hotel.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             this.hotelTableBody.appendChild(tr);
@@ -140,16 +140,16 @@ class HotelManager {
         const target = e.target;
         const id = target.dataset.id;
 
-        if (target.classList.contains('btn-edit')) {
+        if (target.closest('.btn-edit')) {
             const { data, error } = await supabaseClient.from('hoteis').select('*').eq('id', id).single();
             if (data) this.fillHotelForm(data);
-        } else if (target.classList.contains('btn-delete')) {
+        } else if (target.closest('.btn-delete')) {
             if (confirm('Tem certeza que deseja excluir este hotel?')) {
                 const { error } = await supabaseClient.from('hoteis').delete().eq('id', id);
                 if (error) alert('Erro ao excluir: ' + error.message);
                 else this.renderHotels();
             }
-        } else if (target.classList.contains('btn-manage-rooms')) {
+        } else if (target.closest('.btn-manage-rooms')) {
             this.openQuartosPanel(id, target.dataset.name);
         }
     }
@@ -162,13 +162,13 @@ class HotelManager {
         document.getElementById('hotelEndereco').value = hotel.endereco;
         document.getElementById('hotelTelefone').value = hotel.telefone || '';
         document.getElementById('hotelResponsavel').value = hotel.responsavel || '';
-        this.btnSubmitHotel.textContent = 'Atualizar Hotel';
+        this.btnSubmitHotel.innerHTML = '<i class="fas fa-save"></i> Atualizar Hotel';
     }
 
     clearHotelForm() {
         this.formHotel.reset();
         this.hotelEditingId.value = '';
-        this.btnSubmitHotel.textContent = 'Cadastrar Hotel';
+        this.btnSubmitHotel.innerHTML = '<i class="fas fa-save"></i> Salvar Hotel';
     }
 
     // --- Lógica para Importação ---
@@ -341,8 +341,8 @@ Atenção:
                 div.innerHTML = `
                     <span class="quarto-item-name"><i class="fas fa-bed"></i> ${quarto.nome_quarto}</span>
                     <div>
-                        <button class="btn-edit-quarto" data-id="${quarto.id}" data-nome="${quarto.nome_quarto}" title="Editar quarto" style="background: #ffc107; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-right: 5px;"><i class="fas fa-pen"></i></button>
-                        <button class="btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
+                        <button class="btn-icon edit btn-edit-quarto" data-id="${quarto.id}" data-nome="${quarto.nome_quarto}" title="Editar quarto"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon delete btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 `;
                 this.listaQuartos.appendChild(div);
@@ -370,7 +370,7 @@ Atenção:
             } else {
                 this.quartoNomeInput.value = '';
                 this.editingQuartoId = null;
-                this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Adicionar';
+                this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i>';
                 await this.renderQuartos(hotelId);
             }
         } else {
@@ -392,7 +392,7 @@ Atenção:
         const target = e.target.closest('button');
         if (!target) return;
 
-        if (target.classList.contains('btn-delete-quarto')) {
+        if (target.closest('.btn-delete-quarto')) {
             const quartoId = target.dataset.id;
             const hotelId = this.quartoHotelIdInput.value;
 
@@ -404,7 +404,7 @@ Atenção:
                     await this.renderQuartos(hotelId);
                 }
             }
-        } else if (target.classList.contains('btn-edit-quarto')) {
+        } else if (target.closest('.btn-edit-quarto')) {
             this.prepararEdicaoQuarto(target.dataset.id, target.dataset.nome);
         }
     }
@@ -412,7 +412,7 @@ Atenção:
     prepararEdicaoQuarto(id, nome) {
         this.editingQuartoId = id;
         this.quartoNomeInput.value = nome;
-        this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Atualizar';
+        this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-check"></i>';
         this.quartoNomeInput.focus();
     }
 }
