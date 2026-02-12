@@ -4,47 +4,65 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configurar Permissões - Marquespan</title>
+  <!-- ✅ CSS modularizado -->
   <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="css/permissoes.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    <div class="main-content">
-      <header class="header">🔑 Configurar Permissões de Acesso</header>
 
-      <div class="card permissoes-container">
-        <div>
-          <h3 class="permissoes-titulo-coluna"><i class="fas fa-users-cog"></i> Níveis de Usuário</h3>
-          <ul id="lista-niveis" class="niveis-lista">
-            <li class="loading-state">Carregando níveis...</li>
-          </ul>
-          <!-- Formulário para adicionar novo nível -->
-          <div class="novo-nivel-form">
-            <input type="text" id="novo-nivel-input" placeholder="Nome do novo nível">
-            <button id="btn-adicionar-nivel" title="Adicionar novo nível"><i class="fas fa-plus"></i></button>
-          </div>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-        </div>
-        <div>
-          <div class="paginas-header">
-            <h3 class="permissoes-titulo-coluna"><i class="fas fa-file-alt"></i> Páginas Acessíveis para: <span id="nivel-selecionado"></span></h3>
-            <div class="pagina-item-master">
-              <input type="checkbox" id="marcar-todos">
-              <label for="marcar-todos">Marcar/Desmarcar Todos</label>
-            </div>
-          </div>
-          <div id="grid-paginas" class="paginas-grid">
-            <div class="loading-state">Selecione um nível para ver as páginas.</div>
-          </div>
-          <button id="btnSalvarPermissoes" class="btn-primary" style="margin-top: 20px;"><i class="fas fa-save"></i> Salvar Permissões</button>
+  <!-- 🧩 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-key"></i> Configurar Permissões de Acesso</h1>
+    </header>
+
+    <section class="glass-panel permissoes-container">
+      <!-- Coluna Esquerda: Níveis -->
+      <div>
+        <h3 class="permissoes-titulo-coluna"><i class="fas fa-users-cog"></i> Níveis de Usuário</h3>
+        <ul id="lista-niveis" class="niveis-lista">
+          <li class="loading-state">Carregando níveis...</li>
+        </ul>
+        
+        <!-- Formulário para adicionar novo nível -->
+        <div class="novo-nivel-form">
+          <input type="text" id="novo-nivel-input" placeholder="Nome do novo nível" class="glass-input">
+          <button id="btn-adicionar-nivel" title="Adicionar novo nível" class="btn-icon-glass"><i class="fas fa-plus"></i></button>
         </div>
       </div>
-    </div>
-  </div>
-  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+
+      <!-- Coluna Direita: Páginas -->
+      <div>
+        <div class="paginas-header">
+          <h3 class="permissoes-titulo-coluna" style="margin-bottom: 0; border: none;"><i class="fas fa-file-alt"></i> Acessos para: <span id="nivel-selecionado" style="font-weight: 800;">...</span></h3>
+          <div class="pagina-item-master" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="marcar-todos" class="custom-checkbox">
+            <label for="marcar-todos" class="checkbox-label" style="font-weight: 600;">Marcar Todos</label>
+          </div>
+        </div>
+        
+        <div id="grid-paginas" class="paginas-grid">
+          <div class="loading-state" style="padding: 20px; text-align: center; color: #666;">Selecione um nível para ver as páginas.</div>
+        </div>
+        
+        <div style="margin-top: 25px; text-align: right;">
+            <button id="btnSalvarPermissoes" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Permissões</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    © 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/permissoes.js"></script>
 </body>

@@ -1,120 +1,226 @@
-/* css/permissoes.css */
+/* css/permissoes.css - Estilo Glassmorphism */
 
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
+}
+
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
+}
+
+/* Layout Específico de Permissões */
 .permissoes-container {
     display: grid;
-    grid-template-columns: 250px 1fr;
+    grid-template-columns: 300px 1fr;
     gap: 30px;
-}
-
-.permissoes-titulo-coluna {
-    font-size: 1.2rem;
-    color: var(--brand-dark);
-    border-bottom: 2px solid var(--brand-light);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.niveis-lista {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.niveis-lista li {
-    padding: 12px 15px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    font-weight: 500;
-    color: #333;
-}
-
-.niveis-lista li:hover {
-    background-color: #e9f5e9;
-    color: var(--brand-dark);
-}
-
-.niveis-lista li.active {
-    background-color: var(--brand);
-    color: white;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0, 128, 0, 0.2);
-}
-
-.paginas-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.paginas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
-    background-color: #fdfdfd;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
-}
-
-.pagina-item, .pagina-item-master {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #f9f9f9;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #eee;
-    transition: box-shadow 0.2s ease;
-}
-
-.pagina-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-}
-
-.custom-checkbox {
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--brand-light);
-    border-radius: 4px;
-    cursor: pointer;
-    position: relative;
-    transition: background-color 0.2s ease;
-}
-
-.custom-checkbox:checked {
-    background-color: var(--brand);
-    border-color: var(--brand-dark);
-}
-
-.custom-checkbox:checked::after {
-    content: '✔';
-    font-size: 14px;
-    color: white;
-    position: absolute;
-    top: -2px;
-    left: 2px;
-}
-
-.checkbox-label {
-    cursor: pointer;
-    user-select: none;
-}
-
-.loading-state {
-    color: #888;
-    font-style: italic;
+    align-items: start;
 }
 
 @media (max-width: 768px) {
     .permissoes-container {
         grid-template-columns: 1fr;
     }
+}
+
+.permissoes-titulo-coluna {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+
+/* Lista de Níveis */
+.niveis-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.niveis-lista li {
+    padding: 15px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: background 0.2s;
+    font-weight: 500;
+}
+
+.niveis-lista li:last-child {
+    border-bottom: none;
+}
+
+.niveis-lista li:hover {
+    background-color: #f8f9fa;
+}
+
+.niveis-lista li.active {
+    background-color: rgba(0, 105, 55, 0.1);
+    color: var(--primary-color);
+    font-weight: 700;
+    border-left: 4px solid var(--primary-color);
+}
+
+/* Formulário Novo Nível */
+.novo-nivel-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.glass-input {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
+
+.btn-icon-glass {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    width: 42px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.btn-icon-glass:hover {
+    transform: scale(1.05);
+    background: #004d29;
+}
+
+/* Grid de Páginas */
+.paginas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+
+.paginas-header h3 {
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+.paginas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.pagina-item {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.pagina-item:hover {
+    background: #fff;
+    border-color: rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Checkboxes Customizados */
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.checkbox-label {
+    cursor: pointer;
+    font-size: 0.95rem;
+    user-select: none;
+}
+
+/* Botões Glass */
+.btn-glass {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
+}
+
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+
+.loading-state {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
 }
