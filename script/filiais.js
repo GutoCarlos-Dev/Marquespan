@@ -1,86 +1,120 @@
-// script/filiais.js
 import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     carregarFiliais();
-    document.getElementById('formFilial').addEventListener('submit', salvarFilial);
+    setupEventListeners();
 });
+
+function setupEventListeners() {
+    document.getElementById('formFilial').addEventListener('submit', salvarFilial);
+    
+    document.getElementById('btnCancelar').addEventListener('click', () => {
+        limparFormulario();
+    });
+}
 
 async function carregarFiliais() {
     const tbody = document.getElementById('tabelaFiliais');
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Carregando...</td></tr>';
 
-    const { data, error } = await supabaseClient
-        .from('filiais')
-        .select('*')
-        .order('nome');
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('*')
+            .order('nome', { ascending: true });
 
-    if (error) {
-        console.error(error);
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar.</td></tr>';
+        if (error) throw error;
+
+        renderTable(data);
+    } catch (err) {
+        console.error('Erro ao carregar filiais:', err);
+        // Fallback se a tabela não existir ou erro
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+    }
+}
+
+function renderTable(filiais) {
+    const tbody = document.getElementById('tabelaFiliais');
+    tbody.innerHTML = '';
+
+    if (!filiais || filiais.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhuma filial cadastrada.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = '';
-    data.forEach(filial => {
+    filiais.forEach(f => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${filial.nome}</td>
-            <td><strong>${filial.sigla}</strong></td>
+            <td>${f.nome}</td>
+            <td><strong>${f.sigla}</strong></td>
             <td>
-                <button onclick="editarFilial('${filial.id}', '${filial.nome}', '${filial.sigla}')" class="btn-icon-small text-primary"><i class="fas fa-pen"></i></button>
-                <button onclick="excluirFilial('${filial.id}')" class="btn-icon-small text-danger"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
             </td>
         `;
+
+        // Eventos
+        tr.querySelector('.edit').addEventListener('click', () => editarFilial(f));
+        tr.querySelector('.delete').addEventListener('click', () => excluirFilial(f.id));
+
         tbody.appendChild(tr);
     });
 }
 
 async function salvarFilial(e) {
     e.preventDefault();
+
     const id = document.getElementById('filialId').value;
     const nome = document.getElementById('filialNome').value.trim();
     const sigla = document.getElementById('filialSigla').value.trim().toUpperCase();
 
-    const payload = { nome, sigla };
-    let error;
-
-    if (id) {
-        const res = await supabaseClient.from('filiais').update(payload).eq('id', id);
-        error = res.error;
-    } else {
-        const res = await supabaseClient.from('filiais').insert([payload]);
-        error = res.error;
+    if (!nome || !sigla) {
+        alert('Preencha todos os campos.');
+        return;
     }
 
-    if (error) {
-        alert('Erro ao salvar: ' + error.message);
-    } else {
+    try {
+        let error;
+        if (id) {
+            // Update
+            const response = await supabaseClient.from('filiais').update({ nome, sigla }).eq('id', id);
+            error = response.error;
+        } else {
+            // Insert
+            const response = await supabaseClient.from('filiais').insert([{ nome, sigla }]);
+            error = response.error;
+        }
+
+        if (error) throw error;
+
         alert('Filial salva com sucesso!');
         limparFormulario();
         carregarFiliais();
+
+    } catch (err) {
+        console.error('Erro ao salvar filial:', err);
+        alert('Erro ao salvar: ' + err.message);
     }
 }
 
-window.editarFilial = function(id, nome, sigla) {
-    document.getElementById('filialId').value = id;
-    document.getElementById('filialNome').value = nome;
-    document.getElementById('filialSigla').value = sigla;
-    document.getElementById('btnSalvar').innerHTML = '<i class="fas fa-sync"></i> Atualizar';
+function editarFilial(filial) {
+    document.getElementById('filialId').value = filial.id;
+    document.getElementById('filialNome').value = filial.nome;
+    document.getElementById('filialSigla').value = filial.sigla;
     document.getElementById('btnCancelar').classList.remove('hidden');
-};
+}
 
-window.excluirFilial = async function(id) {
-    if (confirm('Tem certeza? Isso não afetará veículos já cadastrados, mas removerá a opção da lista.')) {
-        const { error } = await supabaseClient.from('filiais').delete().eq('id', id);
-        if (error) alert('Erro ao excluir: ' + error.message);
-        else carregarFiliais();
-    }
-};
+async function excluirFilial(id) {
+    if (!confirm('Tem certeza que deseja excluir esta filial?')) return;
 
-window.limparFormulario = function() {
+    const { error } = await supabaseClient.from('filiais').delete().eq('id', id);
+    if (error) return alert('Erro ao excluir: ' + error.message);
+    
+    carregarFiliais();
+}
+
+function limparFormulario() {
     document.getElementById('formFilial').reset();
     document.getElementById('filialId').value = '';
-    document.getElementById('btnSalvar').innerHTML = '<i class="fas fa-save"></i> Salvar';
     document.getElementById('btnCancelar').classList.add('hidden');
-};
+}

@@ -1,46 +1,48 @@
-<!-- filiais.html -->
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Gestão de Filiais</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="css/filiais.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="main-content">
-    <header class="header">🏢 Gestão de Filiais</header>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-    <section class="section">
-      <div class="card">
-        <h3>Cadastrar Nova Filial</h3>
-        <form id="formFilial" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-          <input type="hidden" id="filialId">
-          <div class="form-group" style="flex: 1; min-width: 200px;">
-            <label for="filialNome">Nome da Filial</label>
-            <input type="text" id="filialNome" placeholder="Ex: Matriz SP" required>
-          </div>
-          <div class="form-group" style="width: 100px;">
-            <label for="filialSigla">Sigla</label>
-            <input type="text" id="filialSigla" placeholder="Ex: SP" maxlength="3" style="text-transform: uppercase;" required>
-          </div>
-          <div class="form-group">
-            <button type="submit" id="btnSalvar" class="btn-success"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" id="btnCancelar" class="btn-secondary hidden" onclick="limparFormulario()">Cancelar</button>
-          </div>
-        </form>
-      </div>
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-building"></i> Gestão de Filiais</h1>
+    </header>
 
-      <div class="card" style="margin-top: 20px;">
-        <h3>Filiais Cadastradas</h3>
-        <table class="data-grid">
+    <section class="glass-panel">
+      <h3><i class="fas fa-plus-circle"></i> Cadastrar Nova Filial</h3>
+      <form id="formFilial">
+        <input type="hidden" id="filialId">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="filialNome">Nome da Filial</label>
+                <input type="text" id="filialNome" placeholder="Ex: Matriz SP" required class="glass-input">
+            </div>
+            <div class="form-group">
+                <label for="filialSigla">Sigla</label>
+                <input type="text" id="filialSigla" placeholder="Ex: SP" maxlength="3" style="text-transform: uppercase;" required class="glass-input">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" id="btnCancelar" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="submit" id="btnSalvar" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="glass-panel">
+      <h3><i class="fas fa-list"></i> Filiais Cadastradas</h3>
+      <div class="table-responsive filiais-table-container">
+        <table class="glass-table">
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Sigla</th>
-              <th style="width: 100px;">Ações</th>
+              <th>NOME</th>
+              <th>SIGLA</th>
+              <th style="width: 120px;">AÇÕES</th>
             </tr>
           </thead>
           <tbody id="tabelaFiliais">
@@ -49,7 +51,12 @@
         </table>
       </div>
     </section>
-  </div>
+  </main>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
 
   <script type="module" src="./script/menu.js"></script>
   <script type="module" src="./script/filiais.js"></script>
