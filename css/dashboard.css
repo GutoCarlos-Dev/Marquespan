@@ -1,39 +1,137 @@
-/* 📊 Cards do dashboard */
-.dashboard-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  padding: 20px;
+/* css/dashboard.css */
+
+/* Variáveis para o tema Glassmorphism */
+:root {
+    --glass-bg-light: rgba(255, 255, 255, 0.7);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --card-radius: 20px;
 }
 
-.buscar-veiculos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  max-width: 600px;
-  margin: 0 auto;
+/* Header com estilo Glass */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--card-radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 🧩 Card visual */
-.card {
-  background-color: #fff;
-  border-left: 6px solid #4CAF50;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: transform 0.2s;
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
-.card:hover {
-  transform: translateY(-5px);
+.glass-header p {
+    margin: 5px 0 0 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
 }
 
-.card h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
+/* Banner Carrossel */
+.banner-container {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    margin-bottom: 30px;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+    border: var(--glass-border);
 }
 
-.card p {
-  font-size: 16px;
-  color: #555;
+.banner-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.banner-slide.active {
+    opacity: 1;
+}
+
+.banner-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Grid de KPIs */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+/* Cards KPI com Glassmorphism */
+.glass-card {
+    background: var(--glass-bg-light);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--card-radius);
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: var(--glass-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+    background: rgba(255, 255, 255, 0.85);
+}
+
+/* Ícones KPI */
+.kpi-icon {
+    font-size: 2rem;
+    width: 65px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Cores dos Cards (Gradientes Suaves) */
+.glass-card.blue .kpi-icon { background: linear-gradient(135deg, #007bff, #0056b3); }
+.glass-card.green .kpi-icon { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.glass-card.orange .kpi-icon { background: linear-gradient(135deg, #fd7e14, #d65b00); }
+.glass-card.cyan .kpi-icon { background: linear-gradient(135deg, #17a2b8, #117a8b); }
+.glass-card.red .kpi-icon { background: linear-gradient(135deg, #dc3545, #bd2130); }
+.glass-card.purple .kpi-icon { background: linear-gradient(135deg, #6f42c1, #553098); }
+
+/* Texto KPI */
+.kpi-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.kpi-info p {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #222;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
