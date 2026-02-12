@@ -1,557 +1,450 @@
 import { supabaseClient } from './supabase.js';
 
-let produtosCache = []; // Cache para datalists
-let itensRetirada = []; // Carrinho de retirada
-let dadosUltimaRetirada = null; // Para gerar PDF após salvar
+const EstoqueGeralUI = {
+    init() {
+        this.cacheDOM();
+        this.bindEvents();
+        this.checkUser();
+        this.initTabs();
+        
+        // Carrega dados iniciais
+        this.carregarEstoque();
+        this.carregarListaProdutosDatalist();
+        this.updateTime();
+        setInterval(() => this.updateTime(), 60000);
+    },
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Inicialização
-    document.getElementById('grid-estoque-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #666;">Utilize os filtros e clique em "Buscar" para visualizar o estoque.</td></tr>';
-    carregarProdutosParaDatalist();
+    cacheDOM() {
+        // Abas
+        this.tabs = document.querySelectorAll('.painel-btn');
+        this.tabContents = document.querySelectorAll('.tab-content');
 
-    // Navegação por Abas
-    const tabButtons = document.querySelectorAll('.painel-btn');
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active de todos
-            tabButtons.forEach(b => {
-                b.classList.remove('active');
-                b.setAttribute('aria-selected', 'false');
-            });
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            
-            // Ativa o clicado
-            btn.classList.add('active');
-            btn.setAttribute('aria-selected', 'true');
-            const tabId = btn.dataset.tab;
-            document.getElementById(tabId).classList.remove('hidden');
+        // Aba Estoque Atual
+        this.gridEstoqueBody = document.getElementById('grid-estoque-body');
+        this.filtroCodigo = document.getElementById('filtro-codigo');
+        this.filtroNome = document.getElementById('filtro-nome');
+        this.btnBuscarEstoque = document.getElementById('btn-buscar-estoque');
+        this.btnLimparFiltros = document.getElementById('btn-limpar-filtros');
+        this.totalItens = document.getElementById('total-itens');
 
-            // Ações específicas ao abrir abas
-            if (tabId === 'tab-relatorios') {
-                carregarRelatorioMovimentacoes();
-            } else if (tabId === 'tab-retirada') {
-                iniciarRelogioRetirada();
-            }
+        // Aba Retirada
+        this.retiradaUsuario = document.getElementById('retirada-usuario-logado');
+        this.retiradaData = document.getElementById('retirada-data');
+        this.retiradaHora = document.getElementById('retirada-hora');
+        this.retiradaProdutoInput = document.getElementById('retirada-produto');
+        this.retiradaProdutoId = document.getElementById('retirada-produto-id');
+        this.retiradaEstoqueAtual = document.getElementById('retirada-estoque-atual');
+        this.retiradaQuantidade = document.getElementById('retirada-quantidade');
+        this.btnAdicionarItemRetirada = document.getElementById('btn-adicionar-item-retirada');
+        this.gridItensRetirada = document.getElementById('grid-itens-retirada');
+        this.totalItensRetirada = document.getElementById('total-itens-retirada');
+        this.retiradaResponsavel = document.getElementById('retirada-responsavel');
+        this.retiradaObservacao = document.getElementById('retirada-observacao');
+        this.btnRegistrarSaida = document.getElementById('btn-registrar-saida');
+        this.listaProdutosRetirada = document.getElementById('lista-produtos-retirada');
+
+        // Aba Batimento
+        this.formBatimento = document.getElementById('form-batimento');
+        this.batimentoProdutoInput = document.getElementById('batimento-produto');
+        this.batimentoProdutoId = document.getElementById('batimento-produto-id');
+        this.batimentoEstoqueAtual = document.getElementById('batimento-estoque-atual');
+        this.batimentoNovaQuantidade = document.getElementById('batimento-nova-quantidade');
+        this.listaProdutosBatimento = document.getElementById('lista-produtos-batimento');
+
+        // Aba Relatórios
+        this.relatorioDataIni = document.getElementById('relatorio-data-ini');
+        this.relatorioDataFim = document.getElementById('relatorio-data-fim');
+        this.relatorioTipo = document.getElementById('relatorio-tipo');
+        this.relatorioBusca = document.getElementById('relatorio-busca'); // Novo campo
+        this.btnBuscarRelatorio = document.getElementById('btn-buscar-relatorio');
+        this.gridRelatorioBody = document.getElementById('grid-relatorio-body');
+
+        // Variáveis de Estado
+        this.carrinhoRetirada = [];
+        this.produtosCache = [];
+    },
+
+    bindEvents() {
+        // Navegação
+        this.tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => this.switchTab(e.currentTarget));
         });
-    });
 
-    // Listeners - Estoque Atual
-    document.getElementById('btn-buscar-estoque').addEventListener('click', carregarEstoqueGeral);
-    document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
+        // Estoque Atual
+        this.btnBuscarEstoque.addEventListener('click', () => this.carregarEstoque());
+        this.btnLimparFiltros.addEventListener('click', () => {
+            this.filtroCodigo.value = '';
+            this.filtroNome.value = '';
+            this.carregarEstoque();
+        });
 
-    // Listeners - Retirada
-    document.getElementById('retirada-produto').addEventListener('change', (e) => preencherDadosProduto(e.target.value, 'retirada'));
-    document.getElementById('btn-adicionar-item-retirada').addEventListener('click', handleAddItemRetirada);
-    document.getElementById('btn-registrar-saida').addEventListener('click', handleRegistrarSaida);
-    document.getElementById('btn-gerar-pdf-saida').addEventListener('click', handleGerarPDFSaida);
-    // Delegação de eventos para remover item do grid
-    document.getElementById('grid-itens-retirada').addEventListener('click', handleRemoveItemRetirada);
+        // Retirada - Autocomplete e Seleção
+        this.retiradaProdutoInput.addEventListener('input', (e) => this.handleProdutoInput(e, 'retirada'));
+        this.retiradaProdutoInput.addEventListener('change', (e) => this.handleProdutoSelect(e, 'retirada'));
+        this.btnAdicionarItemRetirada.addEventListener('click', () => this.adicionarItemRetirada());
+        this.gridItensRetirada.addEventListener('click', (e) => this.removerItemRetirada(e));
+        this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
 
-    // Listeners - Batimento
-    document.getElementById('batimento-produto').addEventListener('change', (e) => preencherDadosProduto(e.target.value, 'batimento'));
-    document.getElementById('form-batimento').addEventListener('submit', handleBatimento);
+        // Batimento
+        this.batimentoProdutoInput.addEventListener('input', (e) => this.handleProdutoInput(e, 'batimento'));
+        this.batimentoProdutoInput.addEventListener('change', (e) => this.handleProdutoSelect(e, 'batimento'));
+        this.formBatimento.addEventListener('submit', (e) => this.registrarBatimento(e));
 
-    // Listeners - Relatórios
-    document.getElementById('btn-buscar-relatorio').addEventListener('click', carregarRelatorioMovimentacoes);
-    document.getElementById('grid-relatorio-body').addEventListener('click', handleRelatorioActions);
-});
+        // Relatórios
+        this.btnBuscarRelatorio.addEventListener('click', () => this.carregarRelatorio());
+    },
 
-// --- FUNÇÕES AUXILIARES ---
+    checkUser() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (usuario) {
+            this.retiradaUsuario.textContent = usuario.nome;
+        }
+    },
 
-function getCurrentUser() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-    return usuario ? usuario.nome : 'Sistema';
-}
+    updateTime() {
+        const now = new Date();
+        this.retiradaData.textContent = now.toLocaleDateString('pt-BR');
+        this.retiradaHora.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    },
 
-async function carregarProdutosParaDatalist() {
-    try {
-        const { data, error } = await supabaseClient
+    initTabs() {
+        // Define datas padrão para relatório (Mês atual)
+        const date = new Date();
+        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        
+        this.relatorioDataIni.value = firstDay.toISOString().split('T')[0];
+        this.relatorioDataFim.value = lastDay.toISOString().split('T')[0];
+    },
+
+    switchTab(clickedTab) {
+        this.tabs.forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+        });
+        this.tabContents.forEach(c => c.classList.add('hidden'));
+
+        clickedTab.classList.add('active');
+        clickedTab.setAttribute('aria-selected', 'true');
+        const targetId = clickedTab.dataset.tab;
+        document.getElementById(targetId).classList.remove('hidden');
+
+        if (targetId === 'tab-relatorios') {
+            this.carregarRelatorio();
+        }
+    },
+
+    // --- LÓGICA DE ESTOQUE ATUAL ---
+
+    async carregarEstoque() {
+        this.gridEstoqueBody.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+        
+        let query = supabaseClient
             .from('produtos')
-            .select('id, codigo_principal, nome, quantidade_em_estoque, unidade_medida')
+            .select('id, codigo_principal, nome, unidade_medida, quantidade_em_estoque')
             .order('nome');
 
-        if (error) throw error;
-
-        produtosCache = data || [];
-        
-        const options = produtosCache.map(p => `<option value="${p.codigo_principal} - ${p.nome}">`).join('');
-        document.getElementById('lista-produtos-retirada').innerHTML = options;
-        document.getElementById('lista-produtos-batimento').innerHTML = options;
-
-    } catch (error) {
-        console.error('Erro ao carregar produtos:', error);
-    }
-}
-
-function preencherDadosProduto(valorInput, prefixo) {
-    // Formato esperado: "CODIGO - NOME"
-    const codigo = valorInput.split(' - ')[0];
-    const produto = produtosCache.find(p => p.codigo_principal === codigo || `${p.codigo_principal} - ${p.nome}` === valorInput);
-
-    if (produto) {
-        document.getElementById(`${prefixo}-produto-id`).value = produto.id;
-        const qtd = parseFloat(produto.quantidade_em_estoque) || 0;
-        document.getElementById(`${prefixo}-estoque-atual`).value = `${qtd} ${produto.unidade_medida || 'UN'}`;
-    } else {
-        document.getElementById(`${prefixo}-produto-id`).value = '';
-        document.getElementById(`${prefixo}-estoque-atual`).value = '';
-    }
-}
-
-// --- ABA 1: ESTOQUE ATUAL ---
-
-async function carregarEstoqueGeral() {
-    const gridBody = document.getElementById('grid-estoque-body');
-    gridBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando estoque...</td></tr>';
-
-    const filtroCodigo = document.getElementById('filtro-codigo').value.trim();
-    const filtroNome = document.getElementById('filtro-nome').value.trim();
-
-    try {
-        let query = supabaseClient
-            .from('produtos') // Usando a tabela produtos diretamente
-            .select('*')
-            .order('nome', { ascending: true });
-
-        if (filtroCodigo) {
-            query = query.ilike('codigo_principal', `%${filtroCodigo}%`);
+        if (this.filtroCodigo.value.trim()) {
+            query = query.ilike('codigo_principal', `%${this.filtroCodigo.value.trim()}%`);
         }
-        if (filtroNome) {
-            query = query.ilike('nome', `%${filtroNome}%`);
+        if (this.filtroNome.value.trim()) {
+            query = query.ilike('nome', `%${this.filtroNome.value.trim()}%`);
         }
-
-        const { data: estoque, error } = await query;
-
-        if (error) {
-            throw error;
-        }
-
-        renderizarEstoque(estoque || []);
-
-    } catch (error) {
-        console.error('Erro ao carregar estoque geral:', error);
-        gridBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
-    }
-}
-
-function renderizarEstoque(lista) {
-    const gridBody = document.getElementById('grid-estoque-body');
-    gridBody.innerHTML = '';
-
-    if (lista.length === 0) {
-        gridBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item encontrado.</td></tr>';
-        document.getElementById('total-itens').textContent = '0';
-        return;
-    }
-
-    lista.forEach(item => {
-        const row = document.createElement('tr');
-        const qtd = parseFloat(item.quantidade_em_estoque) || 0;
-        const qtdClass = qtd <= 0 ? 'estoque-baixo' : 'quantidade-destaque';
-        
-        row.innerHTML = `
-            <td>${item.codigo_principal || '-'}</td>
-            <td>${item.nome}</td>
-            <td>${item.unidade_medida || 'UN'}</td>
-            <td style="text-align: center;" class="${qtdClass}">${qtd}</td>
-        `;
-        gridBody.appendChild(row);
-    });
-
-    document.getElementById('total-itens').textContent = lista.length;
-}
-
-function limparFiltros() {
-    document.getElementById('filtro-codigo').value = '';
-    document.getElementById('filtro-nome').value = '';
-    carregarEstoqueGeral();
-}
-
-// --- ABA 2: RETIRADA DO ESTOQUE ---
-
-function iniciarRelogioRetirada() {
-    const updateTime = () => {
-        const now = new Date();
-        document.getElementById('retirada-data').textContent = now.toLocaleDateString('pt-BR');
-        document.getElementById('retirada-hora').textContent = now.toLocaleTimeString('pt-BR');
-        document.getElementById('retirada-usuario-logado').textContent = getCurrentUser();
-    };
-    updateTime();
-    setInterval(updateTime, 1000);
-}
-
-function handleAddItemRetirada() {
-    const produtoId = document.getElementById('retirada-produto-id').value;
-    const produtoInput = document.getElementById('retirada-produto');
-    const qtdInput = document.getElementById('retirada-quantidade');
-    const estoqueInput = document.getElementById('retirada-estoque-atual');
-    
-    const qtdRetirada = parseFloat(qtdInput.value);
-    const produtoNome = produtoInput.value;
-
-    if (!produtoId) return alert('Selecione um produto válido.');
-    if (isNaN(qtdRetirada) || qtdRetirada <= 0) return alert('Informe uma quantidade válida.');
-
-    const produto = produtosCache.find(p => p.id == produtoId);
-    if (!produto) return alert('Produto não encontrado.');
-
-    const estoqueAtual = parseFloat(produto.quantidade_em_estoque) || 0;
-
-    // Verifica se já tem no carrinho para somar a validação
-    const itemNoCarrinho = itensRetirada.find(i => i.id === produtoId);
-    const qtdJaNoCarrinho = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
-
-    if ((qtdRetirada + qtdJaNoCarrinho) > estoqueAtual) {
-        return alert(`Estoque insuficiente! Disponível: ${estoqueAtual}. Tentativa total: ${qtdRetirada + qtdJaNoCarrinho}.`);
-    }
-
-    if (itemNoCarrinho) {
-        itemNoCarrinho.qtd += qtdRetirada;
-    } else {
-        itensRetirada.push({
-            id: produtoId,
-            codigo: produto.codigo_principal,
-            nome: produto.nome,
-            qtd: qtdRetirada,
-            estoque_antes: estoqueAtual
-        });
-    }
-
-    renderGridRetirada();
-    
-    // Limpa campos
-    produtoInput.value = '';
-    document.getElementById('retirada-produto-id').value = '';
-    qtdInput.value = '';
-    estoqueInput.value = '';
-    produtoInput.focus();
-}
-
-function renderGridRetirada() {
-    const tbody = document.getElementById('grid-itens-retirada');
-    tbody.innerHTML = '';
-    
-    if (itensRetirada.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum item adicionado.</td></tr>';
-        document.getElementById('total-itens-retirada').textContent = '0';
-        return;
-    }
-
-    itensRetirada.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${item.codigo || '-'}</td>
-            <td>${item.nome}</td>
-            <td style="text-align: center;">${item.qtd}</td>
-            <td style="text-align: center;">
-                <button class="btn-acao-remover" data-index="${index}" style="background:none; border:none; color:#dc3545; cursor:pointer;">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    document.getElementById('total-itens-retirada').textContent = itensRetirada.length;
-}
-
-function handleRemoveItemRetirada(e) {
-    const btn = e.target.closest('.btn-acao-remover');
-    if (btn) {
-        const index = btn.dataset.index;
-        itensRetirada.splice(index, 1);
-        renderGridRetirada();
-    }
-}
-
-async function handleRegistrarSaida() {
-    if (itensRetirada.length === 0) return alert('Adicione itens antes de registrar a saída.');
-    
-    const responsavel = document.getElementById('retirada-responsavel').value.trim();
-    const observacao = document.getElementById('retirada-observacao').value.trim();
-
-    if (!responsavel) return alert('Informe quem está retirando o material.');
-
-    if (!confirm(`Confirma a saída de ${itensRetirada.length} itens para ${responsavel}?`)) return;
-
-    const withdrawalId = crypto.randomUUID(); // Gera um ID único para este lote de retirada
-
-    try {
-        for (const item of itensRetirada) {
-            const novaQtd = item.estoque_antes - item.qtd;
-
-            // 1. Atualizar Produto
-            await supabaseClient
-                .from('produtos')
-                .update({ quantidade_em_estoque: novaQtd })
-                .eq('id', item.id);
-
-            // 2. Registrar Movimentação
-            await supabaseClient.from('movimentacoes_estoque').insert({
-                produto_id: item.id,
-                tipo_movimentacao: 'SAIDA',
-                quantidade: -item.qtd,
-                quantidade_anterior: item.estoque_antes,
-                quantidade_nova: novaQtd,
-                usuario: getCurrentUser(),
-                destinatario: responsavel,
-                observacao: observacao,
-                withdrawal_id: withdrawalId // Adiciona o ID do lote a cada item
-            });
-        }
-
-        alert('Saída registrada com sucesso!');
-        
-        // Habilitar PDF e salvar dados temporários
-        dadosUltimaRetirada = { itens: [...itensRetirada], responsavel, observacao, data: new Date() };
-        document.getElementById('btn-gerar-pdf-saida').disabled = false;
-        document.getElementById('btn-gerar-pdf-saida').style.cursor = 'pointer';
-        document.getElementById('btn-gerar-pdf-saida').style.backgroundColor = '#006937';
-        document.getElementById('btn-gerar-pdf-saida').style.borderColor = '#006937';
-        document.getElementById('btn-registrar-saida').disabled = true;
-        document.getElementById('btn-registrar-saida').style.backgroundColor = '#6c757d';
-
-        // Limpar carrinho e atualizar dados
-        itensRetirada = [];
-        renderGridRetirada();
-        await carregarProdutosParaDatalist();
-
-    } catch (error) {
-        console.error('Erro na retirada:', error);
-        alert('Erro ao registrar retirada: ' + error.message);
-    }
-}
-
-function handleGerarPDFSaida() {
-    if (!dadosUltimaRetirada) return;
-    gerarReciboPDF(dadosUltimaRetirada);
-}
-
-async function gerarReciboPDF(dados) {
-    if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    const { itens, responsavel, observacao, data } = dados;
-
-    // --- Adicionar Logo ---
-    try {
-        const response = await fetch('logo.png');
-        if (response.ok) {
-            const blob = await response.blob();
-            const reader = new FileReader();
-            const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
-            doc.addImage(base64data, 'PNG', 10, 10, 40, 15);
-        }
-    } catch (e) {
-        console.warn('Logo não carregado', e);
-    }
-
-    // Cabeçalho
-    doc.setFontSize(18);
-    doc.text('RECIBO DE RETIRADA DE MATERIAL', 105, 35, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 20, 50);
-    doc.text(`Atendente: ${getCurrentUser()}`, 20, 60);
-    
-    // Detalhes
-    doc.setLineWidth(0.5);
-    doc.line(20, 65, 190, 65);
-    
-    doc.setFontSize(14);
-    doc.text('Itens Retirados:', 20, 75);
-    
-    // Tabela de Itens
-    const tableColumn = ["Código", "Produto", "Qtd"];
-    const tableRows = itens.map(item => [item.codigo || '-', item.nome, item.qtd]);
-
-    doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 80,
-        theme: 'grid',
-        headStyles: { fillColor: [0, 105, 55] }
-    });
-
-    let finalY = doc.lastAutoTable.finalY + 10;
-
-    if(observacao) {
-        doc.setFontSize(12);
-        doc.text(`Observação: ${observacao}`, 20, finalY);
-        finalY += 10;
-    }
-
-    // Assinaturas
-    doc.text('Declaro que recebi o material acima descrito em perfeitas condições.', 20, finalY + 10);
-
-    doc.line(20, finalY + 40, 90, finalY + 40);
-    doc.text('Atendente (Assinatura)', 20, finalY + 45);
-
-    doc.line(110, finalY + 40, 180, finalY + 40);
-    doc.text(responsavel, 110, finalY + 45);
-    doc.text('(Retirado Por)', 110, finalY + 52);
-
-    doc.save(`Recibo_Retirada_${new Date().getTime()}.pdf`);
-}
-
-async function gerarPdfHistorico(withdrawalId) {
-    const { data: movimentos, error } = await supabaseClient
-        .from('movimentacoes_estoque')
-        .select('*, produtos(codigo_principal, nome)')
-        .eq('withdrawal_id', withdrawalId);
-
-    if (error) throw error;
-    if (!movimentos || movimentos.length === 0) {
-        throw new Error('Nenhum movimento encontrado para este recibo.');
-    }
-
-    const primeiroMovimento = movimentos[0];
-
-    const dadosRecibo = {
-        itens: movimentos.map(mov => ({
-            codigo: mov.produtos?.codigo_principal || '-',
-            nome: mov.produtos?.nome || 'Produto não encontrado',
-            qtd: Math.abs(mov.quantidade)
-        })),
-        responsavel: primeiroMovimento.destinatario,
-        observacao: primeiroMovimento.observacao,
-        data: new Date(primeiroMovimento.data_movimentacao)
-    };
-
-    await gerarReciboPDF(dadosRecibo);
-}
-
-async function handleRelatorioActions(e) {
-    const btn = e.target.closest('.btn-pdf-relatorio');
-    if (btn) {
-        const withdrawalId = btn.dataset.withdrawalId;
-        if (withdrawalId) await gerarPdfHistorico(withdrawalId).catch(err => alert('Erro ao gerar PDF: ' + err.message));
-    }
-}
-
-// --- ABA 3: BATIMENTO (CONTAGEM) ---
-
-async function handleBatimento(e) {
-    e.preventDefault();
-
-    const produtoId = document.getElementById('batimento-produto-id').value;
-    const novaQtd = parseFloat(document.getElementById('batimento-nova-quantidade').value);
-    
-    if (!produtoId) return alert('Selecione um produto válido.');
-    if (isNaN(novaQtd) || novaQtd < 0) return alert('Informe uma quantidade válida.');
-
-    const produto = produtosCache.find(p => p.id == produtoId);
-    if (!produto) return alert('Produto não encontrado.');
-
-    const qtdAnterior = parseFloat(produto.quantidade_em_estoque);
-    const diferenca = novaQtd - qtdAnterior;
-
-    if (diferenca === 0) return alert('A quantidade informada é igual à atual. Nenhuma alteração necessária.');
-
-    if (!confirm(`Confirmar ajuste de estoque?\n\nAnterior: ${qtdAnterior}\nNova: ${novaQtd}\nDiferença: ${diferenca > 0 ? '+' : ''}${diferenca}`)) {
-        return;
-    }
-
-    try {
-        // 1. Atualizar Produto
-        const { error: updateError } = await supabaseClient
-            .from('produtos')
-            .update({ quantidade_em_estoque: novaQtd })
-            .eq('id', produtoId);
-
-        if (updateError) throw updateError;
-
-        // 2. Registrar Movimentação (Batimento)
-        const { error: movError } = await supabaseClient
-            .from('movimentacoes_estoque')
-            .insert([{
-                produto_id: produtoId,
-                tipo_movimentacao: 'BATIMENTO',
-                quantidade: diferenca, // Registra a diferença para manter histórico lógico
-                quantidade_anterior: qtdAnterior,
-                quantidade_nova: novaQtd,
-                usuario: getCurrentUser(),
-                observacao: 'Ajuste manual de estoque (Contagem)'
-            }]);
-
-        if (movError) throw movError;
-
-        alert('Estoque atualizado com sucesso!');
-        e.target.reset();
-        document.getElementById('batimento-estoque-atual').value = '';
-        
-        await carregarProdutosParaDatalist();
-        carregarEstoqueGeral();
-
-    } catch (error) {
-        console.error('Erro no batimento:', error);
-        alert('Erro ao atualizar estoque: ' + error.message);
-    }
-}
-
-// --- ABA 4: RELATÓRIOS ---
-
-async function carregarRelatorioMovimentacoes() {
-    const tbody = document.getElementById('grid-relatorio-body');
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
-
-    const dataIni = document.getElementById('relatorio-data-ini').value;
-    const dataFim = document.getElementById('relatorio-data-fim').value;
-    const tipo = document.getElementById('relatorio-tipo').value;
-
-    try {
-        let query = supabaseClient
-            .from('movimentacoes_estoque')
-            .select('id, data_movimentacao, tipo_movimentacao, quantidade, quantidade_anterior, quantidade_nova, usuario, destinatario, observacao, withdrawal_id, produtos(nome, codigo_principal)')
-            .order('data_movimentacao', { ascending: false })
-            .limit(100);
-
-        if (dataIni) query = query.gte('data_movimentacao', `${dataIni}T00:00:00`);
-        if (dataFim) query = query.lte('data_movimentacao', `${dataFim}T23:59:59`);
-        if (tipo) query = query.eq('tipo_movimentacao', tipo);
 
         const { data, error } = await query;
 
-        if (error) throw error;
-
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhuma movimentação encontrada.</td></tr>';
+        if (error) {
+            console.error(error);
+            this.gridEstoqueBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar estoque.</td></tr>';
             return;
         }
 
-        data.forEach(mov => {
-            const tr = document.createElement('tr');
-            const dataFormatada = new Date(mov.data_movimentacao).toLocaleString('pt-BR');
-            const produtoNome = mov.produtos ? `${mov.produtos.codigo_principal} - ${mov.produtos.nome}` : 'Produto Excluído';
-            
-            let corTipo = 'black';
-            if (mov.tipo_movimentacao === 'ENTRADA') corTipo = 'green';
-            if (mov.tipo_movimentacao === 'SAIDA') corTipo = 'red';
-            if (mov.tipo_movimentacao === 'BATIMENTO') corTipo = 'orange';
+        this.gridEstoqueBody.innerHTML = '';
+        this.totalItens.textContent = data.length;
 
-            let acoesHtml = '';
-            if (mov.tipo_movimentacao === 'SAIDA' && mov.withdrawal_id) {
-                acoesHtml = `<button class="btn-pdf btn-pdf-relatorio" data-withdrawal-id="${mov.withdrawal_id}" title="Visualizar Recibo PDF" style="padding: 4px 8px; font-size: 0.8em;"><i class="fas fa-file-pdf"></i></button>`;
+        data.forEach(p => {
+            const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.codigo_principal || '-'}</td>
+                <td>${p.nome}</td>
+                <td>${p.unidade_medida || 'UN'}</td>
+                <td style="text-align: center; font-weight: bold; color: ${qtd <= 0 ? 'red' : 'green'}">${qtd}</td>
+            `;
+            this.gridEstoqueBody.appendChild(tr);
+        });
+    },
+
+    // --- LÓGICA COMPARTILHADA (PRODUTOS) ---
+
+    async carregarListaProdutosDatalist() {
+        const { data } = await supabaseClient
+            .from('produtos')
+            .select('id, codigo_principal, nome, quantidade_em_estoque')
+            .order('nome');
+        
+        if (data) {
+            this.produtosCache = data;
+            const options = data.map(p => `<option value="${p.nome} (${p.codigo_principal})" data-id="${p.id}" data-estoque="${p.quantidade_em_estoque}">`).join('');
+            this.listaProdutosRetirada.innerHTML = options;
+            this.listaProdutosBatimento.innerHTML = options;
+        }
+    },
+
+    handleProdutoInput(e, context) {
+        // Limpa ID se o usuário alterar o texto
+        if (context === 'retirada') {
+            this.retiradaProdutoId.value = '';
+            this.retiradaEstoqueAtual.value = '';
+        } else {
+            this.batimentoProdutoId.value = '';
+            this.batimentoEstoqueAtual.value = '';
+        }
+    },
+
+    handleProdutoSelect(e, context) {
+        const val = e.target.value;
+        const listId = context === 'retirada' ? 'lista-produtos-retirada' : 'lista-produtos-batimento';
+        const list = document.getElementById(listId);
+        
+        // Encontra a opção selecionada no datalist
+        let selectedOption;
+        for (let i = 0; i < list.options.length; i++) {
+            if (list.options[i].value === val) {
+                selectedOption = list.options[i];
+                break;
+            }
+        }
+
+        if (selectedOption) {
+            const id = selectedOption.dataset.id;
+            const estoque = selectedOption.dataset.estoque;
+            
+            if (context === 'retirada') {
+                this.retiradaProdutoId.value = id;
+                this.retiradaEstoqueAtual.value = estoque;
+                this.retiradaQuantidade.focus();
+            } else {
+                this.batimentoProdutoId.value = id;
+                this.batimentoEstoqueAtual.value = estoque;
+                this.batimentoNovaQuantidade.focus();
+            }
+        }
+    },
+
+    // --- LÓGICA DE RETIRADA ---
+
+    adicionarItemRetirada() {
+        const id = this.retiradaProdutoId.value;
+        const nomeCompleto = this.retiradaProdutoInput.value;
+        const qtd = parseFloat(this.retiradaQuantidade.value);
+        const estoqueAtual = parseFloat(this.retiradaEstoqueAtual.value);
+
+        if (!id || !nomeCompleto) return alert('Selecione um produto válido.');
+        if (isNaN(qtd) || qtd <= 0) return alert('Informe uma quantidade válida.');
+        if (qtd > estoqueAtual) return alert(`Quantidade indisponível. Estoque atual: ${estoqueAtual}`);
+
+        // Extrai código e nome limpo
+        const match = nomeCompleto.match(/(.*) \((.*)\)$/);
+        const nome = match ? match[1] : nomeCompleto;
+        const codigo = match ? match[2] : '-';
+
+        this.carrinhoRetirada.push({ id, codigo, nome, qtd, estoqueAtual });
+        this.renderCarrinhoRetirada();
+        
+        // Limpa campos
+        this.retiradaProdutoInput.value = '';
+        this.retiradaProdutoId.value = '';
+        this.retiradaEstoqueAtual.value = '';
+        this.retiradaQuantidade.value = '';
+        this.retiradaProdutoInput.focus();
+    },
+
+    removerItemRetirada(e) {
+        if (e.target.closest('.btn-remove-item')) {
+            const index = e.target.closest('.btn-remove-item').dataset.index;
+            this.carrinhoRetirada.splice(index, 1);
+            this.renderCarrinhoRetirada();
+        }
+    },
+
+    renderCarrinhoRetirada() {
+        this.gridItensRetirada.innerHTML = '';
+        this.carrinhoRetirada.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.codigo}</td>
+                <td>${item.nome}</td>
+                <td class="text-center">${item.qtd}</td>
+                <td class="text-center"><button class="btn-danger btn-sm btn-remove-item" data-index="${index}"><i class="fas fa-trash"></i></button></td>
+            `;
+            this.gridItensRetirada.appendChild(tr);
+        });
+        this.totalItensRetirada.textContent = this.carrinhoRetirada.length;
+    },
+
+    async registrarSaida() {
+        if (this.carrinhoRetirada.length === 0) return alert('Adicione itens para retirada.');
+        const responsavel = this.retiradaResponsavel.value.trim();
+        if (!responsavel) return alert('Informe o nome do responsável pela retirada.');
+
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+        const observacao = this.retiradaObservacao.value.trim();
+        const obsFinal = `Retirado por: ${responsavel}. ${observacao}`;
+
+        try {
+            for (const item of this.carrinhoRetirada) {
+                const novaQtd = item.estoqueAtual - item.qtd;
+
+                // 1. Atualiza Produto
+                const { error: prodError } = await supabaseClient
+                    .from('produtos')
+                    .update({ quantidade_em_estoque: novaQtd })
+                    .eq('id', item.id);
+                
+                if (prodError) throw prodError;
+
+                // 2. Registra Movimentação
+                const { error: movError } = await supabaseClient
+                    .from('movimentacoes_estoque')
+                    .insert({
+                        produto_id: item.id,
+                        tipo_movimentacao: 'SAIDA',
+                        quantidade: item.qtd,
+                        quantidade_anterior: item.estoqueAtual,
+                        quantidade_nova: novaQtd,
+                        usuario: usuarioLogado,
+                        observacao: obsFinal
+                    });
+
+                if (movError) throw movError;
             }
 
-            tr.innerHTML = `
-                <td>${dataFormatada}</td>
-                <td>${produtoNome}</td>
-                <td style="color: ${corTipo}; font-weight: bold;">${mov.tipo_movimentacao}</td>
-                <td>${mov.quantidade}</td>
-                <td>${mov.quantidade_anterior || '-'}</td>
-                <td>${mov.quantidade_nova || '-'}</td>
-                <td>${mov.usuario || '-'}</td>
-                <td>${mov.destinatario ? `Dest: ${mov.destinatario}` : ''} ${mov.observacao || ''}</td>
-                <td>${acoesHtml}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+            alert('✅ Saída registrada com sucesso!');
+            this.carrinhoRetirada = [];
+            this.renderCarrinhoRetirada();
+            this.retiradaResponsavel.value = '';
+            this.retiradaObservacao.value = '';
+            
+            // Atualiza dados
+            this.carregarEstoque();
+            this.carregarListaProdutosDatalist();
 
-    } catch (error) {
-        console.error('Erro no relatório:', error);
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:red;">Erro ao carregar relatório.</td></tr>';
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao registrar saída: ' + error.message);
+        }
+    },
+
+    // --- LÓGICA DE BATIMENTO ---
+
+    async registrarBatimento(e) {
+        e.preventDefault();
+        const id = this.batimentoProdutoId.value;
+        const qtdReal = parseFloat(this.batimentoNovaQuantidade.value);
+        const estoqueSistema = parseFloat(this.batimentoEstoqueAtual.value);
+
+        if (!id) return alert('Selecione um produto.');
+        if (isNaN(qtdReal) || qtdReal < 0) return alert('Informe uma quantidade válida.');
+
+        const diferenca = qtdReal - estoqueSistema;
+        if (diferenca === 0) return alert('A quantidade informada é igual ao estoque atual. Nenhuma alteração necessária.');
+
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+
+        try {
+            // 1. Atualiza Produto
+            const { error: prodError } = await supabaseClient
+                .from('produtos')
+                .update({ quantidade_em_estoque: qtdReal })
+                .eq('id', id);
+            
+            if (prodError) throw prodError;
+
+            // 2. Registra Movimentação
+            const { error: movError } = await supabaseClient
+                .from('movimentacoes_estoque')
+                .insert({
+                    produto_id: id,
+                    tipo_movimentacao: 'BATIMENTO',
+                    quantidade: Math.abs(diferenca), // Registra o valor absoluto da diferença
+                    quantidade_anterior: estoqueSistema,
+                    quantidade_nova: qtdReal,
+                    usuario: usuarioLogado,
+                    observacao: `Ajuste de Estoque (Batimento). Diferença: ${diferenca > 0 ? '+' : ''}${diferenca}`
+                });
+
+            if (movError) throw movError;
+
+            alert('✅ Estoque ajustado com sucesso!');
+            this.formBatimento.reset();
+            this.batimentoProdutoId.value = '';
+            
+            this.carregarEstoque();
+            this.carregarListaProdutosDatalist();
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao realizar batimento: ' + error.message);
+        }
+    },
+
+    // --- LÓGICA DE RELATÓRIOS ---
+
+    async carregarRelatorio() {
+        this.gridRelatorioBody.innerHTML = '<tr><td colspan="9" class="text-center">Carregando histórico...</td></tr>';
+
+        let query = supabaseClient
+            .from('movimentacoes_estoque')
+            .select('*, produtos(nome, codigo_principal, unidade_medida)')
+            .order('created_at', { ascending: false });
+
+        if (this.relatorioDataIni.value) query = query.gte('created_at', this.relatorioDataIni.value + 'T00:00:00');
+        if (this.relatorioDataFim.value) query = query.lte('created_at', this.relatorioDataFim.value + 'T23:59:59');
+        if (this.relatorioTipo.value) query = query.eq('tipo_movimentacao', this.relatorioTipo.value);
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error(error);
+            this.gridRelatorioBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao carregar relatório.</td></tr>';
+            return;
+        }
+
+        // Filtro de texto no front-end (para buscar em campos relacionados ou observação)
+        const termoBusca = this.relatorioBusca.value.trim().toLowerCase();
+        const dadosFiltrados = termoBusca ? data.filter(m => 
+            (m.produtos?.nome || '').toLowerCase().includes(termoBusca) ||
+            (m.observacao || '').toLowerCase().includes(termoBusca) ||
+            (m.produtos?.codigo_principal || '').toLowerCase().includes(termoBusca)
+        ) : data;
+
+        if (dadosFiltrados.length === 0) {
+            this.gridRelatorioBody.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum registro encontrado.</td></tr>';
+            return;
+        }
+
+        this.gridRelatorioBody.innerHTML = '';
+        dadosFiltrados.forEach(m => {
+            const tr = document.createElement('tr');
+            const tipoClass = m.tipo_movimentacao === 'ENTRADA' ? 'text-success' : (m.tipo_movimentacao === 'SAIDA' ? 'text-danger' : 'text-warning');
+            
+            tr.innerHTML = `
+                <td>${new Date(m.created_at).toLocaleString('pt-BR')}</td>
+                <td>${m.produtos?.nome || 'Produto Excluído'}</td>
+                <td class="${tipoClass}" style="font-weight:bold;">${m.tipo_movimentacao}</td>
+                <td>${m.quantidade}</td>
+                <td>${m.quantidade_anterior}</td>
+                <td>${m.quantidade_nova}</td>
+                <td>${m.usuario}</td>
+                <td style="font-size: 0.85em; color: #555;">${m.observacao || '-'}</td>
+                <td>-</td>
+            `;
+            this.gridRelatorioBody.appendChild(tr);
+        });
     }
-}
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    EstoqueGeralUI.init();
+});
