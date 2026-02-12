@@ -115,21 +115,22 @@ class FuncionarioManager {
         this.nomeCompletoInput.value = funcionario.nome_completo || '';
         this.cpfInput.value = funcionario.cpf || '';
         this.funcaoSelect.value = funcionario.funcao;
-        this.statusSelect.value = funcionario.status || 'Ativo'; // Garante um valor padrão
+        this.statusSelect.value = funcionario.status || 'Ativo';
 
-        this.btnSubmit.textContent = 'Atualizar Funcionário';
+        this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Atualizar';
+        this.btnClearForm.classList.remove('hidden');
         this.form.scrollIntoView({ behavior: 'smooth' });
     }
 
     clearForm() {
         this.form.reset();
         this.editingIdInput.value = '';
-        this.btnSubmit.textContent = 'Cadastrar Funcionário';
-        this.statusSelect.value = 'Ativo'; // Garante que o padrão seja 'Ativo' ao limpar
+        this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        this.btnClearForm.classList.add('hidden');
+        this.statusSelect.value = 'Ativo';
     }
 
     handleImportClick() {
-        // Aciona o clique no input de arquivo oculto
         this.importFileInput.click();
     }
 
@@ -157,7 +158,6 @@ class FuncionarioManager {
                 console.error('Erro ao processar o arquivo XLSX:', error);
                 alert('Ocorreu um erro ao ler a planilha. Verifique se o formato está correto.');
             } finally {
-                // Limpa o valor do input para permitir a importação do mesmo arquivo novamente
                 this.importFileInput.value = '';
             }
         };
@@ -165,17 +165,11 @@ class FuncionarioManager {
     }
 
     async processImportedData(importedRows) {
-        if (!confirm(`Foram encontrados ${importedRows.length} funcionários na planilha. Deseja continuar?
-
-Atenção:
-1. Funcionários existentes (identificados pelo CPF) serão ATUALIZADOS.
-2. Novos funcionários serão CADASTRADOS como "Ativo".`)) {
+        if (!confirm(`Foram encontrados ${importedRows.length} funcionários na planilha. Deseja continuar?`)) {
             return;
         }
 
         try {
-            // Prepara o payload para o upsert.
-            // Filtra linhas que não têm CPF, pois é nossa chave de conflito.
             const upsertPayload = importedRows.map(row => {
                 const cpf = String(row.CPF || '').trim();
                 if (!cpf) return null;
@@ -185,31 +179,23 @@ Atenção:
                     nome_completo: row['Nome Completo'],
                     cpf: cpf,
                     funcao: row.Função,
-                    // Ao atualizar, o status não é modificado. Ao inserir, o padrão do BD ou 'Ativo' será usado.
-                    // Para garantir que novos sejam 'Ativo', podemos definir um padrão na tabela ou aqui.
-                    // O upsert do Supabase não permite definir um valor apenas na inserção.
-                    // A lógica aqui assume que você quer atualizar os dados do funcionário se ele já existir.
-                    // Se o status não estiver na planilha, ele não será alterado no update.
-                    // Para novos, o status será 'Ativo'.
                     status: row.Status || 'Ativo'
                 };
-            }).filter(Boolean); // Remove as entradas nulas (sem CPF)
+            }).filter(Boolean);
 
             if (upsertPayload.length === 0) {
                 return alert('Nenhum funcionário com CPF válido encontrado na planilha.');
             }
 
-            // Executa o upsert. O Supabase irá inserir ou atualizar com base na coluna 'cpf'.
-            // Isso requer que a coluna 'cpf' tenha uma constraint UNIQUE.
             const { error } = await supabaseClient.from('funcionario').upsert(upsertPayload, { onConflict: 'cpf' });
 
             if (error) throw error;
 
-            alert(`Importação concluída! ${upsertPayload.length} registros de funcionários foram processados.`);
-            this.renderGrid(); // Atualiza a tabela na tela
+            alert(`Importação concluída! ${upsertPayload.length} registros processados.`);
+            this.renderGrid();
         } catch (error) {
             console.error('Erro detalhado no processamento:', error);
-            alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+            alert('Erro ao processar os dados: ' + error.message);
         }
     }
 
@@ -244,8 +230,7 @@ Atenção:
         } else {
             data.forEach(func => {
                 const tr = document.createElement('tr');
-                // Adiciona uma classe para estilizar o status se desejar
-                const statusClass = func.status === 'Ativo' ? 'status-ativo' : 'status-desligado';
+                const statusClass = func.status === 'Ativo' ? 'status-ativo' : (func.status === 'Desligado' ? 'status-desligado' : 'status-afastado');
                 tr.innerHTML = `
                     <td>${func.nome}</td>
                     <td>${func.nome_completo || ''}</td>
@@ -253,8 +238,8 @@ Atenção:
                     <td>${func.funcao}</td>
                     <td><span class="status-badge ${statusClass}">${func.status}</span></td>
                     <td>
-                        <button class="btn-action btn-edit" data-id="${func.id}">Editar</button>
-                        <button class="btn-action btn-delete" data-id="${func.id}">Excluir</button>
+                        <button class="btn-icon edit btn-edit" data-id="${func.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete btn-delete" data-id="${func.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 this.tableBody.appendChild(tr);
@@ -279,26 +264,11 @@ Atenção:
         this.summaryDiv.innerHTML = `
             <h3>Resumo</h3>
             <table>
-                <tr>
-                    <th>Total de Funcionários</th>
-                    <td>${total}</td>
-                </tr>
-                <tr>
-                    <th>Ativos</th>
-                    <td>${ativos}</td>
-                </tr>
-                <tr>
-                    <th>Desligados</th>
-                    <td>${desligados}</td>
-                </tr>
-                <tr>
-                    <th>Motoristas (Ativos)</th>
-                    <td>${motoristas}</td>
-                </tr>
-                <tr>
-                    <th>Auxiliares (Ativos)</th>
-                    <td>${auxiliares}</td>
-                </tr>
+                <tr><th>Total de Funcionários</th><td>${total}</td></tr>
+                <tr><th>Ativos</th><td>${ativos}</td></tr>
+                <tr><th>Desligados/Afastados</th><td>${desligados}</td></tr>
+                <tr><th>Motoristas (Ativos)</th><td>${motoristas}</td></tr>
+                <tr><th>Auxiliares (Ativos)</th><td>${auxiliares}</td></tr>
             </table>
         `;
     }

@@ -3,92 +3,112 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Funcionário - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/funcionario.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <title>Cadastro de Funcionários - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/funcionario.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" href="logo.png" type="image/png">
+  <!-- Biblioteca XLSX para importação -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    <div class="main-content">
-      <header class="header"><i class="fas fa-user-tie"></i> Cadastro de Funcionário</header>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-      <section id="sectionCadastrarFuncionario" class="section">
-        <div class="form-container">
-          <form id="formCadastrarFuncionario" class="form-grid-layout">
-            <fieldset>
-              <legend>Formulário de Funcionário</legend>
-              <input type="hidden" id="funcionarioEditingId">
-              <div class="form-group">
-                <label for="funcionarioNome">Nome</label>
-                <input type="text" id="funcionarioNome" required>
-              </div>
-              <div class="form-group">
-                <label for="funcionarioNomeCompleto">Nome Completo</label>
-                <input type="text" id="funcionarioNomeCompleto">
-              </div>
-              <div class="form-group">
-                <label for="funcionarioCpf">CPF</label>
-                <input type="text" id="funcionarioCpf">
-              </div>
-              <div class="form-group">
-                <label for="funcionarioFuncao">Função</label>
-                <select id="funcionarioFuncao" required>
-                  <option value="" disabled selected>-- Selecione --</option>
-                  <option value="Motorista">Motorista</option>
-                  <option value="Auxiliar">Auxiliar</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="funcionarioStatus">Status</label>
-                <select id="funcionarioStatus" required>
-                  <option value="Ativo" selected>Ativo</option>
-                  <option value="Desligado">Desligado</option>
-                </select>
-              </div>
-              <div class="form-buttons">
-                <button type="submit" id="btnSubmitFuncionario">Cadastrar Funcionário</button>
-                <button type="button" id="btnClearFuncionarioForm">Limpar</button>
-                <button type="button" id="btnImportarLista" class="btn-import">Importar Lista</button>
-                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
-              </div>
-            </fieldset>
-          </form>
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-users"></i> Cadastro de Funcionários</h1>
+    </header>
+
+    <section id="sectionCadastrarFuncionario" class="glass-panel">
+      <h3><i class="fas fa-user-plus"></i> Formulário de Funcionário</h3>
+      <form id="formCadastrarFuncionario">
+        <input type="hidden" id="funcionarioEditingId">
+        
+        <div class="funcionario-layout">
+            <!-- Card de Campos -->
+            <div class="glass-panel-inner">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="funcionarioNome">Nome</label>
+                        <input type="text" id="funcionarioNome" required class="glass-input" placeholder="Primeiro Nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="funcionarioNomeCompleto">Nome Completo</label>
+                        <input type="text" id="funcionarioNomeCompleto" class="glass-input" placeholder="Nome Completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="funcionarioCpf">CPF</label>
+                        <input type="text" id="funcionarioCpf" class="glass-input" placeholder="000.000.000-00">
+                    </div>
+                    <div class="form-group">
+                        <label for="funcionarioFuncao">Função</label>
+                        <select id="funcionarioFuncao" required class="glass-input">
+                          <option value="" disabled selected>-- Selecione --</option>
+                          <option value="Motorista">Motorista</option>
+                          <option value="Auxiliar">Auxiliar</option>
+                          <option value="Conferente">Conferente</option>
+                          <option value="Supervisor">Supervisor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="funcionarioStatus">Status</label>
+                        <select id="funcionarioStatus" required class="glass-input">
+                          <option value="Ativo" selected>Ativo</option>
+                          <option value="Desligado">Desligado</option>
+                          <option value="Ferias">Férias</option>
+                          <option value="Afastado">Afastado</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Botões -->
+            <div class="glass-panel-inner actions-panel">
+                <div class="form-actions-vertical">
+                    <button type="submit" id="btnSubmitFuncionario" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+                    <button type="button" id="btnImportarLista" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Lista</button>
+                    <button type="button" id="btnClearFuncionarioForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+                    <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
+                </div>
+            </div>
         </div>
+      </form>
 
-        <div class="card">
-          <div class="search-bar">
-            <input type="text" id="searchFuncionarioInput" placeholder="Buscar por nome, CPF ou função...">
-          </div>
-          <div class="table-scroll-container">
-            <table class="data-grid" aria-label="Funcionários Cadastrados">
-              <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Funcionários Cadastrados</caption>
+      <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+      <h3><i class="fas fa-list"></i> Funcionários Cadastrados</h3>
+      <div class="form-group" style="margin-bottom: 15px;">
+          <input type="text" id="searchFuncionarioInput" placeholder="🔍 Buscar por nome, CPF ou função..." class="glass-input">
+      </div>
+
+      <div class="table-responsive funcionario-table-container">
+          <table class="glass-table data-grid">
               <thead>
-                <tr>
-                  <th data-field="nome">Nome</th>
-                  <th data-field="nome_completo">Nome Completo</th>
+              <tr>
+                  <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
+                  <th data-field="nome_completo">NOME COMPLETO <i class="fas fa-sort"></i></th>
                   <th data-field="cpf">CPF</th>
-                  <th data-field="funcao">Função</th>
-                  <th data-field="status">Status</th>
-                  <th>Ações</th>
-                </tr>
+                  <th data-field="funcao">FUNÇÃO <i class="fas fa-sort"></i></th>
+                  <th data-field="status">STATUS</th>
+                  <th style="width: 120px;">AÇÕES</th>
+              </tr>
               </thead>
               <tbody id="funcionarioTableBody"></tbody>
-            </table>
-          </div>
-          <!-- Novo campo de resumo abaixo do grid -->
-          <div id="funcionarioSummary" class="funcionario-summary">
-            <!-- O conteúdo será gerado pelo JS -->
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
+          </table>
+      </div>
+      
+      <!-- Resumo -->
+      <div id="funcionarioSummary" class="funcionario-summary" style="margin-top: 20px;"></div>
+    </section>
+  </main>
+
+  <!-- 🦶 Rodapé -->
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/menu.js"></script>
   <script type="module" src="script/funcionario.js"></script>
 </body>
 </html>

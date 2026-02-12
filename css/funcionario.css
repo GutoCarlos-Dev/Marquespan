@@ -1,203 +1,240 @@
-/* Estilos específicos para a seção de Cadastro de Funcionário */
+/* css/funcionario.css - Estilo Glassmorphism */
 
-#sectionCadastrarFuncionario h2,
-#sectionCadastrarFuncionario h3 {
-    color: #333;
-    border-bottom: 2px solid #f0f0f0;
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
+}
+
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
+}
+
+.glass-panel h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
     padding-bottom: 10px;
-    margin-top: 20px;
+}
+
+/* Layout Interno do Formulário */
+.funcionario-layout {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 20px;
     margin-bottom: 20px;
 }
 
-/* Mantém o padrão do formulário */
-#sectionCadastrarFuncionario .form-container {
-    background-color: #fff;
+@media (max-width: 992px) {
+    .funcionario-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.glass-panel-inner {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    max-width: 600px; /* Define uma largura máxima para deixar o formulário menor */
-    margin: 0 auto;   /* Centraliza o formulário na página */
 }
 
-#formCadastrarFuncionario {
+.actions-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Formulário */
+.form-grid {
     display: grid;
-    /* Cria um layout responsivo para os campos do formulário */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
-    align-items: center;
 }
 
-#formCadastrarFuncionario .form-group {
+.form-group {
     display: flex;
     flex-direction: column;
 }
 
-#formCadastrarFuncionario label {
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
+.form-group label {
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-#formCadastrarFuncionario input,
-#formCadastrarFuncionario select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+/* Inputs Glass */
+.glass-input {
     width: 100%;
-    box-sizing: border-box;
-    transition: border-color 0.3s;
-}
-
-#formCadastrarFuncionario input:focus,
-#formCadastrarFuncionario select:focus {
-    border-color: #007bff;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
     outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
-/* Estilo para os botões do formulário */
-#formCadastrarFuncionario button {
-    padding: 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s;
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
 }
 
-#btnSubmitFuncionario {
-    background-color: #28a745; /* Verde */
-    color: white;
-}
-
-#btnSubmitFuncionario:hover {
-    background-color: #218838;
-}
-
-#btnClearFuncionarioForm {
-    background-color: #6c757d; /* Cinza */
-    color: white;
-}
-
-#btnClearFuncionarioForm:hover {
-    background-color: #5a6268;
-}
-
-.btn-import {
-    background-color: #007bff; /* Azul */
-    color: white;
-}
-
-.btn-import:hover {
-    background-color: #0056b3;
-}
-
-/* Agrupa os botões em uma linha no final do formulário */
-.form-buttons {
-    grid-column: 1 / -1; /* Ocupa todas as colunas */
+/* Botões Glass */
+.form-actions-vertical {
     display: flex;
+    flex-direction: column;
     gap: 10px;
-    justify-content: flex-start;
 }
 
-/* Mantém o padrão da barra de busca e da tabela (data-grid) */
-#sectionCadastrarFuncionario .search-bar {
-    margin-bottom: 15px;
-}
-
-#searchFuncionarioInput {
+.btn-glass {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
 }
 
-/* Container para rolagem da tabela */
-.table-scroll-container {
-    max-height: 400px; /* Altura máxima antes de ativar a rolagem */
-    overflow-y: auto; /* Ativa a rolagem vertical */
-    border: 1px solid #e0e0e0; /* Borda para o container de rolagem */
-    border-radius: 8px;
-    margin-bottom: 20px;
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
 }
 
-/* Estilos para a barra de rolagem */
-.table-scroll-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+/* Tabela Glass */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
 }
 
-.table-scroll-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+.funcionario-table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
-.table-scroll-container::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
-.table-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Garante que o cabeçalho da tabela não role com o corpo */
-.data-grid thead {
+.glass-table th {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    white-space: nowrap;
     position: sticky;
     top: 0;
-    background-color: #f8f9fa; /* Cor de fundo para o cabeçalho fixo */
-    z-index: 1; /* Garante que o cabeçalho fique acima do conteúdo da tabela */
+    z-index: 10;
 }
 
-/* Estilos para cabeçalhos de tabela ordenáveis */
-.data-grid thead th[data-field] {
+.glass-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+}
+
+.glass-table tr:hover {
+    background: rgba(0, 105, 55, 0.05);
+}
+
+/* Botões de Ação na Tabela */
+.btn-icon {
+    background: none;
+    border: none;
     cursor: pointer;
-    position: relative;
-    padding-right: 20px; /* Espaço para o ícone de ordenação */
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none; /* IE 10+ */
-    user-select: none; /* Padrão */
-}
-
-.data-grid thead th[data-field]::after {
-    content: ' \2195'; /* Seta para cima e para baixo (↕) */
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
+    font-size: 1.1rem;
     transition: color 0.2s;
+    margin: 0 5px;
 }
 
-.data-grid thead th[data-field]:hover::after {
-    color: #333;
+.btn-icon.edit { color: #007bff; }
+.btn-icon.edit:hover { color: #0056b3; }
+
+.btn-icon.delete { color: #dc3545; }
+.btn-icon.delete:hover { color: #bd2130; }
+
+/* Badges de Status */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+    display: inline-block;
 }
 
-.data-grid thead th.sort-asc::after {
-    content: ' \25B2'; /* Seta para cima (▲) */
-    color: #007bff;
-}
+.status-ativo { background-color: #28a745; }
+.status-desligado { background-color: #dc3545; }
+.status-ferias { background-color: #ffc107; color: #333; }
+.status-afastado { background-color: #6c757d; }
 
-.data-grid thead th.sort-desc::after {
-    content: ' \25BC'; /* Seta para baixo (▼) */
-    color: #007bff;
-}
-
-/* Estilos para o resumo de funcionários */
+/* Resumo */
 .funcionario-summary {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
     padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .funcionario-summary h3 {
-    color: #333;
     margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    font-size: 1rem;
+    color: #555;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
     padding-bottom: 10px;
 }
 
@@ -206,33 +243,11 @@
     border-collapse: collapse;
 }
 
-.funcionario-summary th,
-.funcionario-summary td {
-    border: 1px solid #ddd;
-    padding: 10px;
+.funcionario-summary th, .funcionario-summary td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
     text-align: left;
+    font-size: 0.9rem;
 }
 
-.funcionario-summary th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    color: #495057;
-}
-
-/* Estilos para os badges de status */
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    color: white;
-    text-transform: uppercase;
-}
-
-.status-ativo {
-    background-color: #28a745; /* Verde */
-}
-
-.status-desligado {
-    background-color: #dc3545; /* Vermelho */
-}
+.hidden { display: none !important; }

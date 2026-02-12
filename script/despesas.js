@@ -150,9 +150,10 @@ const DespesasUI = {
 
         // Bloqueia o botão para evitar duplo clique
         if (this.btnSubmit.disabled) return;
+        
+        const originalText = this.btnSubmit.innerHTML;
         this.btnSubmit.disabled = true;
-        const spinner = this.btnSubmit.querySelector('.fa-spinner');
-        if (spinner) spinner.style.display = 'inline-block';
+        this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
         // Pega o valor total calculado e converte de volta para número
         const valorTotalString = this.valorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
@@ -206,10 +207,16 @@ const DespesasUI = {
         } catch (err) {
             console.error('Erro ao salvar despesa:', err);
             alert(`❌ Erro ao salvar despesa: ${err.message}`);
-        } finally {
+            // Restaura o botão apenas em caso de erro, pois clearForm já reseta em caso de sucesso
             this.btnSubmit.disabled = false;
-            const spinner = this.btnSubmit.querySelector('.fa-spinner');
-            if (spinner) spinner.style.display = 'none';
+            this.btnSubmit.innerHTML = originalText;
+        } finally {
+            // Em caso de sucesso, clearForm já reabilita o botão.
+            // Em caso de erro, restauramos acima.
+            // Se precisar garantir, podemos reabilitar aqui se ainda estiver desabilitado e não foi limpo.
+            if (this.btnSubmit.disabled && this.editingIdInput.value) {
+                 this.btnSubmit.disabled = false;
+            }
         }
     },
 
@@ -217,7 +224,9 @@ const DespesasUI = {
         this.form.reset();
         this.editingIdInput.value = '';
         // Restaura o botão com o ícone de spinner oculto
-        this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin" style="display:none; margin-right: 8px;"></i>Cadastrar Despesa';
+        this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar Despesa';
+        this.btnClearForm.innerHTML = '<i class="fas fa-eraser"></i> Limpar';
+        this.btnSubmit.disabled = false;
         this.valorTotalInput.value = ''; // Limpa o campo de valor total
         this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
         this.tipoQuartoSelect.disabled = true;
@@ -257,7 +266,8 @@ const DespesasUI = {
             await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto); // Correto
 
             this.calcularValorTotal(); // Recalcula o total ao carregar
-            this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin" style="display:none; margin-right: 8px;"></i>Atualizar Despesa';
+            this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Atualizar Despesa';
+            this.btnClearForm.innerHTML = '<i class="fas fa-times"></i> Cancelar';
             this.form.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
             console.error('Erro ao carregar despesa para edição:', err);
@@ -265,20 +275,21 @@ const DespesasUI = {
     },
 
     async handleTableClick(e) {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        const id = btn.dataset.id;
+        const target = e.target;
+        const id = target.closest('button')?.dataset.id;
+        
+        if (!id) return;
 
-        if (btn.classList.contains('btn-delete')) {
+        if (target.closest('.btn-delete')) {
             if (confirm('Tem certeza que deseja excluir esta despesa?')) {
                 try {
                     await supabaseClient.from('despesas').delete().eq('id', id);
                     this.renderGrid();
                 } catch (err) {
-                    alert('❌ Não foi possível excluir a despesa.');
+                    alert('❌ Não foi possível excluir a despesa: ' + err.message);
                 }
             }
-        } else if (btn.classList.contains('btn-edit')) {
+        } else if (target.closest('.btn-edit')) {
             this.loadForEditing(id);
         }
     },
@@ -374,8 +385,8 @@ const DespesasUI = {
                     <td>${(d.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                     <td>
-                        <button class="btn-edit" data-id="${d.id}">Editar</button>
-                        <button class="btn-delete" data-id="${d.id}">Excluir</button>
+                        <button class="btn-icon edit btn-edit" data-id="${d.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete btn-delete" data-id="${d.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -493,7 +504,7 @@ const DespesasUI = {
 
             this.currentHotelId = hotel.id;
             this.tituloHotelQuartos.textContent = `Gerenciar Quartos: ${hotel.nome}`;
-            this.modalQuartos.style.display = 'block';
+            this.modalQuartos.classList.remove('hidden');
             this.listarQuartosNoModal();
         } catch (err) {
             console.error(err);
@@ -502,7 +513,7 @@ const DespesasUI = {
     },
 
     fecharModalQuartos() {
-        this.modalQuartos.style.display = 'none';
+        this.modalQuartos.classList.add('hidden');
         this.novoTipoQuartoInput.value = '';
         this.editingQuartoId = null;
         this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-plus"></i>';
@@ -533,8 +544,8 @@ const DespesasUI = {
                 li.innerHTML = `
                     <span>${q.nome_quarto}</span>
                     <div>
-                        <button type="button" class="btn-edit-quarto" data-id="${q.id}" data-nome="${q.nome_quarto}" style="background: #ffc107; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-right: 5px;"><i class="fas fa-pen"></i></button>
-                        <button type="button" class="btn-delete-quarto" data-id="${q.id}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="btn-icon edit btn-edit-quarto" data-id="${q.id}" data-nome="${q.nome_quarto}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="btn-icon delete btn-delete-quarto" data-id="${q.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
                 this.listaQuartosEdicao.appendChild(li);

@@ -76,7 +76,6 @@ class HotelManager {
                 <td>${hotel.razao_social || ''}</td>
                 <td>${hotel.nome || ''}</td>
                 <td>${hotel.cnpj || ''}</td>
-                <td>${hotel.endereco}</td>
                 <td>${hotel.telefone || ''}</td>
                 <td>${hotel.responsavel || ''}</td>
                 <td>
@@ -137,20 +136,21 @@ class HotelManager {
     }
 
     async handleHotelTableClick(e) {
-        const target = e.target;
-        const id = target.dataset.id;
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
 
-        if (target.closest('.btn-edit')) {
+        if (btn.classList.contains('btn-edit')) {
             const { data, error } = await supabaseClient.from('hoteis').select('*').eq('id', id).single();
             if (data) this.fillHotelForm(data);
-        } else if (target.closest('.btn-delete')) {
+        } else if (btn.classList.contains('btn-delete')) {
             if (confirm('Tem certeza que deseja excluir este hotel?')) {
                 const { error } = await supabaseClient.from('hoteis').delete().eq('id', id);
                 if (error) alert('Erro ao excluir: ' + error.message);
                 else this.renderHotels();
             }
-        } else if (target.closest('.btn-manage-rooms')) {
-            this.openQuartosPanel(id, target.dataset.name);
+        } else if (btn.classList.contains('btn-manage-rooms')) {
+            this.openQuartosPanel(id, btn.dataset.name);
         }
     }
 
@@ -298,7 +298,7 @@ Atenção:
 
     async openQuartosPanel(hotelId, hotelName) {
         this.quartoHotelIdInput.value = hotelId;
-        this.quartosPanelTitle.textContent = `Gerenciar Quartos - ${hotelName}`;
+        this.quartosPanelTitle.textContent = hotelName;
         this.quartosPanelBackdrop.classList.remove('hidden');
         await this.renderQuartos(hotelId);
     }
