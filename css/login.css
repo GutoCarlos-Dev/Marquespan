@@ -1,102 +1,171 @@
-/* Estilo profissional para tela inicial */
-body, html {
-    height: 100%;
+/* Reset básico */
+* {
+    box-sizing: border-box;
     margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #f0f1f0 0%, #017707 100%);
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #fff;
-    padding: 1rem; /* Adicionado para espaçamento em telas pequenas */
-    box-sizing: border-box;
+    min-height: 100vh;
+    /* Fundo com gradiente verde Marquespan */
+    background: linear-gradient(135deg, #004d29 0%, #008545 100%);
+    background-size: cover;
+    background-repeat: no-repeat;
 }
+
+/* Container com Efeito de Vidro (Glassmorphism) */
 #login-container {
-    background: white;
-    color: #333;
-    padding: 2rem 3rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    width: 100%;
-    max-width: 320px; /* Largura máxima para evitar excesso em telas grandes */
+    background: rgba(255, 255, 255, 0.15); /* Branco translúcido */
+    backdrop-filter: blur(20px); /* Desfoque estilo iOS */
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Borda sutil */
+    border-radius: 24px; /* Bordas bem arredondadas */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); /* Sombra suave */
+    padding: 40px;
+    width: 90%;
+    max-width: 380px;
     text-align: center;
-    box-sizing: border-box;
+    color: #ffffff;
+    transition: transform 0.3s ease;
 }
+
+#login-container:hover {
+    transform: translateY(-2px);
+}
+
+/* Logo */
 #login-container img {
-    max-width: 180px;
-    width: 100%; /* Responsivo */
-    height: auto;
-    margin-bottom: 1rem;
+    max-width: 200px;
+    margin-bottom: 20px;
+    /* Sombra no logo para destacar do fundo */
+    filter: drop-shadow(0 4px 6px rgb(255, 255, 255));
 }
+
+/* Título */
 #login-container h2 {
-    margin-bottom: 1.5rem;
+    margin-bottom: 30px;
     font-weight: 600;
-    font-size: 1.5rem; /* Tamanho relativo */
+    letter-spacing: 0.5px;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-form {
+
+/* Formulário */
+#login-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-}
-label {
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-input[type="text"], input[type="password"] {
-    padding: 0.75rem; /* Aumentado para melhor toque */
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1rem;
-    width: 100%;
-    box-sizing: border-box;
-}
-button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 100%;
-    box-sizing: border-box;
-}
-button:hover {
-    background-color: #3e7441;
+    gap: 15px;
 }
 
-/* Media queries para responsividade */
+#login-form label {
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 12px;
+    margin-bottom: -10px;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Inputs estilo iOS */
+#login-form input {
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#login-form input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+#login-form input:focus {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #fff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* Botão estilo iOS */
+#login-form button {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 16px;
+    border: none;
+    background: #ffffff; /* Botão branco para contraste */
+    color: #006937; /* Texto verde da marca */
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+#login-form button:hover {
+    transform: scale(1.02);
+    background: #f0f0f0;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+#login-form button:active {
+    transform: scale(0.98);
+}
+
+/* Rodapé do Login */
+.login-footer {
+    margin-top: 25px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+.login-footer a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    border-bottom: 1px dashed rgba(255,255,255,0.5);
+    transition: all 0.2s;
+}
+
+.login-footer a:hover {
+    border-bottom: 1px solid #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+/* === Responsividade para Celulares === */
 @media (max-width: 480px) {
     #login-container {
-        padding: 1.5rem 2rem; /* Reduzido para telas pequenas */
-        margin: 0 1rem; /* Margem lateral */
+        padding: 30px 20px; /* Reduz o espaçamento interno para ganhar espaço */
+        width: 92%; /* Ocupa mais largura da tela */
+        border-radius: 20px;
     }
-    #login-container img {
-        max-width: 120px; /* Logo menor em telas pequenas */
-    }
-    #login-container h2 {
-        font-size: 1.25rem; /* Título menor */
-    }
-    input[type="text"], input[type="password"] {
-        padding: 0.625rem; /* Ajuste para toque */
-        font-size: 0.9rem;
-    }
-    button {
-        padding: 0.625rem;
-        font-size: 0.9rem;
-    }
-}
 
-@media (max-width: 320px) {
-    #login-container {
-        padding: 1rem 1.5rem;
-    }
-    #login-container img {
-        max-width: 100px;
-    }
     #login-container h2 {
-        font-size: 1.1rem;
+        font-size: 1.3rem; /* Título levemente menor */
+        margin-bottom: 20px;
+    }
+
+    #login-container img {
+        max-width: 130px; /* Logo ajustado para telas pequenas */
+        margin-bottom: 15px;
+    }
+    
+    /* Ajuste importante para iOS: font-size 16px previne zoom automático ao focar */
+    #login-form input {
+        padding: 12px;
+        font-size: 16px; 
+    }
+
+    #login-form button {
+        padding: 12px;
     }
 }
