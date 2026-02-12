@@ -31,9 +31,14 @@ const DespesasUI = {
         this.tableBody = document.getElementById('despesaTableBody');
         this.searchInput = document.getElementById('searchDespesaInput');
 
-        // Datalists
-        this.rotasList = document.getElementById('rotasList');
-        this.hoteisList = document.getElementById('hoteisList');
+        // Dropdowns Multiselect
+        this.despesaRotaDisplay = document.getElementById('despesaRotaDisplay');
+        this.despesaRotaOptions = document.getElementById('despesaRotaOptions');
+        this.despesaRotaText = document.getElementById('despesaRotaText');
+        this.despesaHotelDisplay = document.getElementById('despesaHotelDisplay');
+        this.despesaHotelOptions = document.getElementById('despesaHotelOptions');
+        this.despesaHotelText = document.getElementById('despesaHotelText');
+
         this.funcionarios1List = document.getElementById('funcionarios1List');
         this.funcionarios2List = document.getElementById('funcionarios2List');
         this.btnAdicionarHotel = document.getElementById('btnAdicionarHotel');
@@ -68,9 +73,11 @@ const DespesasUI = {
         this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
 
         // Listener para carregar tipos de quarto quando um hotel é selecionado
-        document.getElementById('despesaHotelInput').addEventListener('change', (e) => {
-            this.loadTiposQuarto(e.target.value);
-            this.btnGerenciarQuartos.disabled = !e.target.value;
+        // Como agora é multiselect, vamos monitorar mudanças nos checkboxes de hotel
+        // Se houver apenas 1 hotel selecionado, carrega os quartos. Se mais de 1 ou 0, desabilita.
+        // A lógica será tratada dentro do evento de change do container de opções.
+        this.despesaHotelOptions.addEventListener('change', () => {
+            this.handleHotelSelectionChange();
         });
 
         // Listeners do Modal de Quartos
@@ -93,11 +100,64 @@ const DespesasUI = {
         document.querySelectorAll('th[data-key]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.key));
         });
+
+        // Inicializa eventos dos Multiselects
+        this.setupMultiselect(this.despesaRotaDisplay, this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', 'btnLimparSelecaoRota');
+        this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', 'btnLimparSelecaoHotel');
+    },
+
+    setupMultiselect(display, options, textSpan, checkboxClass, clearBtnId) {
+        // Toggle visibility
+        display.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = options.classList.contains('hidden');
+            // Fecha outros dropdowns se houver
+            document.querySelectorAll('.glass-dropdown').forEach(d => d.classList.add('hidden'));
+            if (isHidden) options.classList.remove('hidden');
+        });
+
+        // Fechar ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!display.contains(e.target) && !options.contains(e.target)) {
+                options.classList.add('hidden');
+            }
+        });
+
+        // Atualizar texto ao selecionar
+        options.addEventListener('change', (e) => {
+            if (e.target.classList.contains(checkboxClass)) {
+                this.updateMultiselectText(options, textSpan, checkboxClass);
+            }
+        });
+
+        // Botão Limpar
+        const btnClear = document.getElementById(clearBtnId);
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                const checkboxes = options.querySelectorAll(`.${checkboxClass}`);
+                checkboxes.forEach(cb => cb.checked = false);
+                this.updateMultiselectText(options, textSpan, checkboxClass);
+                // Dispara evento de change para atualizar dependências (ex: quartos)
+                options.dispatchEvent(new Event('change'));
+            });
+        }
+    },
+
+    updateMultiselectText(optionsContainer, textSpan, checkboxClass) {
+        const checked = Array.from(optionsContainer.querySelectorAll(`.${checkboxClass}:checked`));
+        if (checked.length === 0) {
+            textSpan.textContent = 'Selecione...';
+        } else if (checked.length === 1) {
+            // Pega o texto do label pai
+            textSpan.textContent = checked[0].parentElement.textContent.trim();
+        } else {
+            textSpan.textContent = `${checked.length} selecionados`;
+        }
     },
 
     async loadInitialData() {
         this.renderGrid();
-        this.loadDatalists();
+        await this.loadDatalists();
     },
 
     abrirCadastroHotel() {
@@ -161,12 +221,12 @@ const DespesasUI = {
 
         try {
             // --- Correção: Buscar IDs antes de salvar ---
-            const hotelNome = document.getElementById('despesaHotelInput').value;
+            // Pega valores dos multiselects
+            const rotasSelecionadas = this.getSelectedValues(this.despesaRotaOptions, 'rota-checkbox');
+            const hoteisSelecionados = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox'); // Retorna IDs
+
             const func1NomeCompleto = document.getElementById('despesaFuncionario1Input').value;
             const func2NomeCompleto = document.getElementById('despesaFuncionario2Input').value;
-
-            const { data: hotel } = await supabaseClient.from('hoteis').select('id').eq('nome', hotelNome).single();
-            if (!hotel) throw new Error(`Hotel "${hotelNome}" não encontrado no cadastro.`);
 
             const { data: func1 } = await supabaseClient.from('funcionario').select('id').eq('nome_completo', func1NomeCompleto).single();
             if (!func1) throw new Error(`Funcionário "${func1NomeCompleto}" não encontrado no cadastro.`);
@@ -178,10 +238,16 @@ const DespesasUI = {
                 func2Id = func2.id;
             }
 
+            // Lógica para Hotel: O banco espera um único ID (id_hotel).
+            // Se o usuário selecionar múltiplos, usaremos o primeiro como principal.
+            // (Idealmente o banco deveria suportar N:N, mas mantendo a estrutura atual)
+            const hotelId = hoteisSelecionados.length > 0 ? hoteisSelecionados[0] : null;
+            if (!hotelId) throw new Error("Selecione pelo menos um hotel.");
+
             const payload = {
                 id: this.editingIdInput.value || undefined,
-                numero_rota: document.getElementById('despesaRotaInput').value,
-                id_hotel: hotel.id, // Salva o ID do hotel
+                numero_rota: rotasSelecionadas.join(', '), // Salva rotas como string separada por vírgula
+                id_hotel: hotelId, // Salva o ID do primeiro hotel selecionado
                 id_funcionario1: func1.id, // Salva o ID do funcionário 1
                 id_funcionario2: func2Id, // Salva o ID do funcionário 2
                 tipo_quarto: this.tipoQuartoSelect.value,
@@ -220,6 +286,11 @@ const DespesasUI = {
         }
     },
 
+    getSelectedValues(container, checkboxClass) {
+        const checkboxes = container.querySelectorAll(`.${checkboxClass}:checked`);
+        return Array.from(checkboxes).map(cb => cb.value);
+    },
+
     clearForm() {
         this.form.reset();
         this.editingIdInput.value = '';
@@ -232,6 +303,14 @@ const DespesasUI = {
         this.tipoQuartoSelect.disabled = true;
         this.btnGerenciarQuartos.disabled = true;
         this.formaPagamentoSelect.value = "";
+        
+        // Limpa Multiselects
+        this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => cb.checked = false);
+        this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
+        
+        this.despesaHotelOptions.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
+        this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
+        
     },
 
     async loadForEditing(id) {
@@ -246,10 +325,23 @@ const DespesasUI = {
             if (error) throw error;
 
             this.editingIdInput.value = despesa.id;
-            document.getElementById('despesaRotaInput').value = despesa.numero_rota;
-            // Correção: Adiciona verificação para evitar erro se a relação não retornar dados.
-            // O Supabase retorna o objeto da relação com o nome da tabela (ex: hoteis) ou o alias que demos (ex: funcionario1).
-            document.getElementById('despesaHotelInput').value = despesa.hoteis?.nome || ''; // Correto
+            
+            // Preenche Rota (Multiselect)
+            const rotas = (despesa.numero_rota || '').split(',').map(s => s.trim());
+            this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => {
+                cb.checked = rotas.includes(cb.value);
+            });
+            this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
+
+            // Preenche Hotel (Multiselect)
+            // O banco só guarda 1 ID, então selecionamos esse ID
+            if (despesa.id_hotel) {
+                const hotelCb = this.despesaHotelOptions.querySelector(`.hotel-checkbox[value="${despesa.id_hotel}"]`);
+                if (hotelCb) hotelCb.checked = true;
+            }
+            this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
+            this.handleHotelSelectionChange(); // Atualiza quartos
+
             document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome_completo || '';
             document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome_completo || '';
             this.qtdDiariasInput.value = despesa.qtd_diarias;
@@ -412,12 +504,26 @@ const DespesasUI = {
             // Carregar Rotas
             const { data: rotas, error: rotasError } = await supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
             if (rotasError) throw rotasError;
-            this.rotasList.innerHTML = rotas.map(r => `<option value="${r.numero}"></option>`).join('');
+            
+            // Popula Dropdown de Rotas
+            this.despesaRotaOptions.querySelectorAll('label').forEach(l => l.remove()); // Limpa anteriores
+            rotas.forEach(r => {
+                const label = document.createElement('label');
+                label.className = 'dropdown-item';
+                label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}"> ${r.numero}`;
+                this.despesaRotaOptions.appendChild(label);
+            });
 
             // Carregar Hotéis
-            const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('nome').order('nome', { ascending: true });
+            const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('id, nome').order('nome', { ascending: true });
             if (hoteisError) throw hoteisError;
-            this.hoteisList.innerHTML = hoteis.map(h => `<option value="${h.nome}"></option>`).join('');
+            this.despesaHotelOptions.querySelectorAll('label').forEach(l => l.remove());
+            hoteis.forEach(h => {
+                const label = document.createElement('label');
+                label.className = 'dropdown-item';
+                label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}"> ${h.nome}`;
+                this.despesaHotelOptions.appendChild(label);
+            });
 
             // Carregar Funcionários (Motoristas) para o campo 1
             const { data: motoristas, error: motoristasError } = await supabaseClient
@@ -443,35 +549,32 @@ const DespesasUI = {
         }
     },
 
-    async loadTiposQuarto(nomeHotel, selectedTipo) {
+    handleHotelSelectionChange() {
+        const selectedIds = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        
+        if (selectedIds.length === 1) {
+            // Se apenas 1 hotel selecionado, carrega os quartos dele
+            this.loadTiposQuarto(selectedIds[0]);
+            this.btnGerenciarQuartos.disabled = false;
+        } else {
+            // Se 0 ou >1, desabilita seleção de quarto (pois quarto depende de 1 hotel específico)
+            this.tipoQuartoSelect.innerHTML = '<option value="">Selecione apenas um hotel</option>';
+            this.tipoQuartoSelect.disabled = true;
+            this.btnGerenciarQuartos.disabled = true;
+        }
+    },
+
+    async loadTiposQuarto(hotelId, selectedTipo) {
         // Lógica para carregar os tipos de quarto de um hotel específico
         this.tipoQuartoSelect.disabled = true;
         this.tipoQuartoSelect.innerHTML = '<option value="">Carregando...</option>';
 
-        if (!nomeHotel) {
-            this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
-            return;
-        }
-
         try {
-            // 1. Busca o ID do hotel pelo nome para garantir a referência correta (Padrão do Hotel)
-            const { data: hotel, error: hotelError } = await supabaseClient
-                .from('hoteis')
-                .select('id')
-                .eq('nome', nomeHotel.trim()) // Busca pelo nome exato
-                .limit(1) // Garante que apenas um resultado seja retornado para evitar erro 406
-                .single();
-
-            if (hotelError || !hotel) {
-                this.tipoQuartoSelect.innerHTML = '<option value="">Hotel não encontrado</option>';
-                return;
-            }
-
             // 2. Busca os quartos vinculados a esse ID (Mesma lógica usada no modal e na página de hotéis)
             const { data: quartos, error: quartosError } = await supabaseClient
                 .from('hotel_quartos')
                 .select('nome_quarto')
-                .eq('id_hotel', hotel.id)
+                .eq('id_hotel', hotelId)
                 .order('nome_quarto');
 
             if (quartosError) throw quartosError;
@@ -492,14 +595,15 @@ const DespesasUI = {
     // --- Funções do Modal de Gerenciamento de Quartos ---
 
     async abrirModalQuartos() {
-        const hotelNome = document.getElementById('despesaHotelInput').value.trim();
-        if (!hotelNome) {
-            alert('Selecione um hotel primeiro.');
+        const selectedIds = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        if (selectedIds.length !== 1) {
+            alert('Selecione exatamente um hotel para gerenciar quartos.');
             return;
         }
+        const hotelId = selectedIds[0];
 
         try {
-            const { data: hotel, error } = await supabaseClient.from('hoteis').select('id, nome').eq('nome', hotelNome).limit(1).single();
+            const { data: hotel, error } = await supabaseClient.from('hoteis').select('id, nome').eq('id', hotelId).single();
             if (error || !hotel) throw new Error('Hotel não encontrado.');
 
             this.currentHotelId = hotel.id;
@@ -584,8 +688,7 @@ const DespesasUI = {
             this.novoTipoQuartoInput.value = '';
             await this.listarQuartosNoModal();
             // Atualiza o select principal
-            const hotelNome = document.getElementById('despesaHotelInput').value;
-            this.loadTiposQuarto(hotelNome, nomeQuarto);
+            this.loadTiposQuarto(this.currentHotelId, nomeQuarto);
         } catch (err) {
             console.error(err);
             alert('Erro ao salvar quarto.');
@@ -601,8 +704,7 @@ const DespesasUI = {
 
             await this.listarQuartosNoModal();
             // Atualiza o select principal
-            const hotelNome = document.getElementById('despesaHotelInput').value;
-            this.loadTiposQuarto(hotelNome);
+            this.loadTiposQuarto(this.currentHotelId);
         } catch (err) {
             console.error(err);
             alert('Erro ao excluir quarto.');

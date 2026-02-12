@@ -1,157 +1,148 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Despesas - Sistema de Frota</title>
-    <link rel="stylesheet" href="css/index.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="css/relatorio-despesas.css">
-    <link rel="icon" href="logo.png" type="image/png">
-    <!-- Bibliotecas para exportação -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
-  </head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Despesas - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/relatorio-despesas.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="logo.png" type="image/png">
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS para exportação Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- jsPDF para exportação PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
 <body>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-    <div id="menu-container"></div>
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-chart-pie"></i> Relatório de Despesas</h1>
+    </header>
 
-    <div class="main-content">
-        <header>
-            <h1>Relatório de Despesas</h1>
-        </header>
+    <!-- Filtros -->
+    <section class="glass-panel">
+      <h3><i class="fas fa-filter"></i> Filtros</h3>
+      <form id="formFiltros">
+        <div class="filtros-grid">
+          <div class="form-group">
+            <label for="dataInicio">Data Início</label>
+            <input type="date" id="dataInicio" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="dataFim">Data Fim</label>
+            <input type="date" id="dataFim" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="filtroRota">Rota</label>
+            <input type="text" id="filtroRota" placeholder="Todas" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="filtroHotel">Hotel</label>
+            <input type="text" id="filtroHotel" placeholder="Todos" class="glass-input">
+          </div>
+          <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button type="submit" id="btnFiltrar" class="btn-glass btn-blue" style="width: 100%;"><i class="fas fa-search"></i> Filtrar</button>
+          </div>
+        </div>
+      </form>
+    </section>
 
-        <main>
-            <div class="card" id="card-filtro-despesas">
-                <form id="filtro-despesas-form">
-                    <fieldset>
-                        <legend>Filtrar Despesas</legend>
-                        <table class="filter-layout-table">
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div class="form-group">
-                                            <label for="data-inicial">Período Inicial</label>
-                                            <input type="date" id="data-inicial" name="data-inicial" required>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-group">
-                                            <label for="data-final">Período Final</label>
-                                            <input type="date" id="data-final" name="data-final" required>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="form-group">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                                <label for="rotas" style="margin-bottom: 0;">Rotas (selecione uma ou mais)</label>
-                                                <button type="button" id="btnLimparRotas" style="background: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; color: #495057; cursor: pointer; font-size: 0.8rem; padding: 2px 8px;" title="Limpar seleção para buscar todas">Limpar / Todas</button>
-                                            </div>
-                                            <select id="rotas" name="rotas" multiple size="5">
-                                                <!-- Opções serão preenchidas pelo JavaScript -->
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-group">
-                                            <label for="hotel">Hotel</label>
-                                            <input type="text" id="hotel" name="hotel" list="hoteisList" placeholder="Todos os hotéis">
-                                            <datalist id="hoteisList"></datalist>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2">
-                                        <div class="form-group">
-                                            <label for="valor-acima-de">Valor Diária acima de...</label>
-                                            <input type="text" id="valor-acima-de" name="valor-acima-de" placeholder="R$ 0,00">
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2">
-                                        <div class="form-actions">
-                                            <button type="submit" class="btn">Buscar</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </fieldset>
-                </form>
-            </div>
+    <!-- Resultados da Busca (Grid) -->
+    <section class="glass-panel">
+      <div class="panel-header-actions">
+        <h3><i class="fas fa-list"></i> Resultados da Busca</h3>
+        <div class="acoes-grid-header">
+            <button id="btnExportarExcel" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+            <button id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+        </div>
+      </div>
+      
+      <div class="resumo-busca">
+        <strong>Qtd: <span id="totalQtd">0</span></strong> | 
+        <strong>Valor Total: <span id="totalValor">R$ 0,00</span></strong>
+      </div>
 
-            <div class="card" id="resultados-container" style="display: none;">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <h2 style="margin: 0; font-size: 1.5rem; color: #333;">Resultados da Busca</h2>
-                        <span style="font-size: 1rem; font-weight: normal; background-color: #f0f8ff; padding: 5px 10px; border-radius: 8px; border: 1px solid #cce5ff;">
-                            Qtd: <strong id="total-registros" style="color: #0056b3;">0</strong> | Valor Total: <strong id="valor-total-geral" style="color: #28a745;">R$ 0,00</strong>
-                        </span>
-                    </div>
-                    <div class="report-actions" style="margin-bottom: 0;">
-                        <button id="btnExportarXLSX" class="btn-success"><i class="fas fa-file-excel"></i> Exportar para Excel</button>
-                        <button id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> Exportar para PDF</button>
-                    </div>
-                </div>
-                <div class="table-scroll-container">
-                <table class="data-grid" aria-label="Resultados da Busca">
-                    <thead>
-                        <!-- Cabecalho da tabela -->
-                        <tr>
-                            <th scope="col" data-key="data_checkin">Data <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="numero_rota">Rota <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="hotel">Nome do Hotel <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="qtd_diarias">Qtd. Diárias <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="valor_diaria">Valor Diária <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="valor_energia">Valor Energia <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="valor_total">Valor Total <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="funcionarios">Funcionários <i class="fas fa-sort"></i></th>
-                            <th scope="col" data-key="nota_fiscal">Nota Fiscal <i class="fas fa-sort"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabela-resultados">
-                        <!-- Os resultados da busca serão inseridos aqui via JavaScript -->
-                    </tbody>
-                    <tfoot>
-                        <!-- O total geral será inserido aqui -->
-                    </tfoot>
-                </table>
-                </div>
-            </div>
+      <div class="table-responsive">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th>DATA</th>
+              <th>ROTA</th>
+              <th>HOTEL</th>
+              <th>FUNCIONÁRIOS</th>
+              <th>VALOR</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyResultados">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-            <!-- Seção de Gráficos -->
-            <div class="card" id="graficos-container" style="display: none;">
-                <h2>Análise Gráfica dos Resultados</h2>
-                <div class="charts-grid">
-                    <div class="chart-card" style="background-color: #e7f1ff;">
-                        <h3>Despesas por Rota</h3>
-                        <canvas id="grafico-despesas-rota"></canvas>
-                    </div>
-                    <div class="chart-card" style="background-color: #d4edda;">
-                        <h3>Top 5 Hotéis com Maiores Despesas</h3>
-                        <canvas id="grafico-despesas-hotel"></canvas>
-                    </div>
-                    <div class="chart-card" style="background-color: #fff3cd;">
-                        <h3>Evolução Diária das Despesas</h3>
-                        <canvas id="grafico-despesas-diario"></canvas>
-                    </div>
-                    <div class="chart-card" style="background-color: #f8d7da;">
-                        <h3>Top 10 Gastos Funcionários (Dupla)</h3>
-                        <canvas id="grafico-despesas-funcionarios"></canvas>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-<footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
+    <!-- Dashboard (KPIs e Gráficos) -->
+    <section class="glass-panel">
+      <h3><i class="fas fa-tachometer-alt"></i> Dashboard</h3>
+      
+      <!-- KPIs -->
+      <div class="kpi-container">
+        <div class="kpi-card">
+          <div class="kpi-icon green"><i class="fas fa-dollar-sign"></i></div>
+          <div class="kpi-info">
+            <span>Custo Total</span>
+            <strong id="kpiCustoTotal">R$ 0,00</strong>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon blue"><i class="fas fa-bed"></i></div>
+          <div class="kpi-info">
+            <span>Total Diárias</span>
+            <strong id="kpiTotalDiarias">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="charts-scroll-container">
+        <div class="chart-card">
+          <h4>Custos por Hotel</h4>
+          <div class="chart-wrapper"><canvas id="chartHoteis"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Custos por Rota</h4>
+          <div class="chart-wrapper"><canvas id="chartRotas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Qtd. Despesas por Rota</h4>
+          <div class="chart-wrapper"><canvas id="chartDespesasPorRota"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Top 5 Hotéis (Custo)</h4>
+          <div class="chart-wrapper"><canvas id="chartTopHoteis"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Evolução Diária (Custo)</h4>
+          <div class="chart-wrapper"><canvas id="chartEvolucaoDiaria"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>Top 10 Gastos (Duplas)</h4>
+          <div class="chart-wrapper"><canvas id="chartTopFuncionarios"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="./script/menu.js"></script>
   <script type="module" src="script/relatorio-despesas.js"></script>
-
 </body>
 </html>

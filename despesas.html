@@ -33,16 +33,28 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Rota</label>
-                            <input type="text" id="despesaRotaInput" list="rotasList" class="glass-input" placeholder="Número da Rota">
-                            <datalist id="rotasList"></datalist>
+                            <div class="custom-multiselect">
+                                <div id="despesaRotaDisplay" class="glass-input multiselect-display">
+                                    <span id="despesaRotaText">Selecione...</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div id="despesaRotaOptions" class="glass-dropdown hidden">
+                                    <div class="dropdown-header"><button type="button" id="btnLimparSelecaoRota">Limpar</button></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Hotel</label>
                             <div class="input-group-append">
-                                <input type="text" id="despesaHotelInput" list="hoteisList" class="glass-input" placeholder="Nome do Hotel">
+                                <div id="despesaHotelDisplay" class="glass-input multiselect-display" style="flex-grow: 1;">
+                                    <span id="despesaHotelText">Selecione...</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
                                 <button type="button" id="btnAdicionarHotel" class="btn-icon-append" title="Novo Hotel"><i class="fas fa-plus"></i></button>
                             </div>
-                            <datalist id="hoteisList"></datalist>
+                            <div id="despesaHotelOptions" class="glass-dropdown hidden">
+                                <div class="dropdown-header"><button type="button" id="btnLimparSelecaoHotel">Limpar</button></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Tipo de Quarto</label>

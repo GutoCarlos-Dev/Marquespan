@@ -1,654 +1,373 @@
 import { supabaseClient } from './supabase.js';
 
-class SupabaseService {
-    static async fetchRotas() {
-        const { data, error } = await supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
-        if (error) {
-            console.error('Erro ao buscar rotas:', error);
-            return [];
-        }
-        return data;
-    }
-
-    static async fetchHoteis() {
-        const { data, error } = await supabaseClient.from('hoteis').select('id, nome').order('nome', { ascending: true });
-        if (error) {
-            console.error('Erro ao buscar hotéis:', error);
-            return [];
-        }
-        return data;
-    }
-
-    static async fetchDespesas(startDate, endDate, rotas, hotelId, valorMinimo) {
-        let query = supabaseClient
-            .from('despesas')
-            .select(`
-                data_checkin, numero_rota, hoteis:hoteis(nome), qtd_diarias, valor_diaria, valor_energia, valor_total,
-                funcionario1:funcionario!despesas_id_funcionario1_fkey(nome),
-                funcionario2:funcionario!despesas_id_funcionario2_fkey(nome),
-                nota_fiscal, tipo_quarto
-            `)
-            .gte('data_checkin', startDate)
-            .lte('data_checkin', endDate)
-            .order('data_checkin', { ascending: false });
-
-        if (rotas && rotas.length > 0) query = query.in('numero_rota', rotas);
-        if (hotelId) query = query.eq('id_hotel', hotelId);
-        if (valorMinimo) query = query.gte('valor_diaria', valorMinimo);
-
-        const { data, error } = await query;
-        if (error) {
-            console.error('Erro ao buscar despesas:', error);
-            return [];
-        }
-        return data;
-    }
-}
-
-const ReportUI = {
+const RelatorioDespesasUI = {
     init() {
         this.cacheDOM();
         this.bindEvents();
-        this.popularFiltros();
+        this.setDefaultDates();
+        this.carregarDados();
+        this.filteredData = []; // Armazena dados filtrados para exportação
+        this.chartHoteis = null;
+        this.chartRotas = null;
+        this.chartDespesasPorRota = null;
+        this.chartTopHoteis = null;
+        this.chartEvolucaoDiaria = null;
+        this.chartTopFuncionarios = null;
+        
+        this.iniciarRolagemAutomatica();
     },
 
     cacheDOM() {
-        this.formFiltro = document.getElementById('filtro-despesas-form');
-        this.btnBuscar = this.formFiltro.querySelector('button[type="submit"]');
-        this.resultadosContainer = document.getElementById('resultados-container');
-        this.graficosContainer = document.getElementById('graficos-container');
-        this.tabelaResultadosBody = document.getElementById('tabela-resultados');
-        this.rotasSelect = document.getElementById('rotas');
-        this.hoteisList = document.getElementById('hoteisList');
-        this.valorAcimaDeInput = document.getElementById('valor-acima-de');
-        this.btnExportarXLSX = document.getElementById('btnExportarXLSX');
+        this.formFiltros = document.getElementById('formFiltros');
+        this.dataInicio = document.getElementById('dataInicio');
+        this.dataFim = document.getElementById('dataFim');
+        this.filtroRota = document.getElementById('filtroRota');
+        this.filtroHotel = document.getElementById('filtroHotel');
+        this.kpiCustoTotal = document.getElementById('kpiCustoTotal');
+        this.kpiTotalDiarias = document.getElementById('kpiTotalDiarias');
+        this.chartHoteisCanvas = document.getElementById('chartHoteis');
+        this.chartRotasCanvas = document.getElementById('chartRotas');
+        this.chartDespesasPorRotaCanvas = document.getElementById('chartDespesasPorRota');
+        this.chartTopHoteisCanvas = document.getElementById('chartTopHoteis');
+        this.chartEvolucaoDiariaCanvas = document.getElementById('chartEvolucaoDiaria');
+        this.chartTopFuncionariosCanvas = document.getElementById('chartTopFuncionarios');
+        
+        this.btnExportarExcel = document.getElementById('btnExportarExcel');
         this.btnExportarPDF = document.getElementById('btnExportarPDF');
-
-        this.graficoRotasInstance = null;
-        this.graficoHoteisInstance = null;
-        this.graficoDiarioInstance = null;
-        this.graficoFuncionariosInstance = null;
-        this.reportData = [];
-        this.currentSort = { key: null, direction: 'asc' };
+        this.totalQtd = document.getElementById('totalQtd');
+        this.totalValor = document.getElementById('totalValor');
+        this.tableBodyResultados = document.getElementById('tableBodyResultados');
     },
 
     bindEvents() {
-        this.formFiltro.addEventListener('submit', (e) => this.handleFormSubmit(e));
-        this.valorAcimaDeInput.addEventListener('input', (e) => {
-            this.formatCurrencyInput(e.target);
+        this.formFiltros.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.carregarDados();
         });
-        this.btnExportarXLSX.addEventListener('click', () => this.exportarXLSX());
-        this.btnExportarPDF.addEventListener('click', () => this.exportarPDF());
-
-        // Event listener para ordenação da tabela
-        const thead = document.querySelector('.data-grid thead');
-        if (thead) {
-            thead.addEventListener('click', (e) => {
-                const th = e.target.closest('th');
-                if (th && th.dataset.key) {
-                    this.handleSort(th.dataset.key);
-                }
-            });
-        }
+        this.btnExportarExcel?.addEventListener('click', () => this.exportarExcel());
+        this.btnExportarPDF?.addEventListener('click', () => this.exportarPDF());
     },
 
-    setLoading(button, isLoading) {
-        if (isLoading) {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-        } else {
-            button.disabled = false;
-            button.innerHTML = button.dataset.originalText || button.innerHTML;
-        }
+    setDefaultDates() {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        this.dataInicio.value = firstDay.toISOString().split('T')[0];
+        this.dataFim.value = lastDay.toISOString().split('T')[0];
     },
 
-    formatCurrency(value) {
-        return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    },
+    async carregarDados() {
+        try {
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+            let query = supabaseClient
+                .from('despesas')
+                .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
+                .gte('data_checkin', this.dataInicio.value)
+                .lte('data_checkin', this.dataFim.value);
 
-    formatCurrencyInput(input) {
-        let value = input.value.replace(/\D/g, '');
-        if (value === '') {
-            input.value = '';
-            return;
-        }
-        const numberValue = parseFloat(value) / 100;
-        input.value = numberValue.toLocaleString('pt-BR', {
-            style: 'currency', currency: 'BRL'
-        });
-    },
-
-    async popularFiltros() {
-        const [rotas, hoteis] = await Promise.all([
-            SupabaseService.fetchRotas(),
-            SupabaseService.fetchHoteis()
-        ]);
-
-        this.rotasSelect.innerHTML = '';
-        // Ordena as rotas numericamente, pois o banco de dados pode retornar uma ordenação de texto (ex: 1, 10, 2).
-        rotas.sort((a, b) => {
-            // Usa localeCompare com numeric: true para ordenar corretamente misturas de números e letras (ex: 3, 30, 283B)
-            return String(a.numero).localeCompare(String(b.numero), 'pt-BR', { numeric: true });
-        });
-        rotas.forEach(rota => {
-            const option = new Option(rota.numero, rota.numero);
-            this.rotasSelect.appendChild(option);
-        });
-
-        this.hoteisList.innerHTML = '';
-        hoteis.forEach(hotel => {
-            const option = document.createElement('option');
-            option.value = hotel.nome;
-            option.dataset.id = hotel.id;
-            this.hoteisList.appendChild(option);
-        });
-    },
-
-    getValueFromDatalist(inputId) {
-        const input = document.getElementById(inputId);
-        const datalist = document.getElementById(input.getAttribute('list'));
-        const inputValue = input.value;
-
-        for (const option of datalist.options) {
-            if (option.value === inputValue) return option.dataset.id;
-        }
-        return null;
-    },
-
-    async handleFormSubmit(e) {
-        e.preventDefault();
-        this.btnBuscar.dataset.originalText = this.btnBuscar.innerHTML;
-        this.setLoading(this.btnBuscar, true);
-
-        const rotasSelecionadas = Array.from(this.rotasSelect.selectedOptions).map(opt => opt.value);
-        const hotelId = this.getValueFromDatalist('hotel');
-        const dataInicial = document.getElementById('data-inicial').value;
-        const dataFinal = document.getElementById('data-final').value;
-
-        const valorAcimaDeString = this.valorAcimaDeInput.value;
-        let valorAcimaDe = null;
-        if (valorAcimaDeString) {
-            valorAcimaDe = parseFloat(valorAcimaDeString.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || null;
-        }
-
-        if (!dataInicial || !dataFinal) {
-            alert('Por favor, selecione as datas de início e fim.');
-            this.setLoading(this.btnBuscar, false);
-            return;
-        }
-
-        this.tabelaResultadosBody.innerHTML = '<tr><td colspan="8">Buscando...</td></tr>';
-        this.graficosContainer.style.display = 'none';
-        this.resultadosContainer.style.display = 'block';
-
-        this.reportData = await SupabaseService.fetchDespesas(dataInicial, dataFinal, rotasSelecionadas, hotelId, valorAcimaDe);
-        this.renderizarTabela(this.reportData);
-        this.setLoading(this.btnBuscar, false);
-    },
-
-    handleSort(key) {
-        if (this.currentSort.key === key) {
-            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            this.currentSort.key = key;
-            this.currentSort.direction = 'asc';
-        }
-        this.sortData();
-        this.updateHeaderIcons();
-        this.renderizarTabela(this.reportData);
-    },
-
-    sortData() {
-        const key = this.currentSort.key;
-        const direction = this.currentSort.direction === 'asc' ? 1 : -1;
-
-        this.reportData.sort((a, b) => {
-            let valA = this.getValueByKey(a, key);
-            let valB = this.getValueByKey(b, key);
-
-            if (valA === null || valA === undefined) valA = '';
-            if (valB === null || valB === undefined) valB = '';
-
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-
-            if (valA < valB) return -1 * direction;
-            if (valA > valB) return 1 * direction;
-            return 0;
-        });
-    },
-
-    getValueByKey(item, key) {
-        switch (key) {
-            case 'hotel': return item.hoteis?.nome;
-            case 'funcionarios': return item.funcionario1?.nome;
-            default: return item[key];
-        }
-    },
-
-    updateHeaderIcons() {
-        const ths = document.querySelectorAll('.data-grid th');
-        ths.forEach(th => {
-            const icon = th.querySelector('i');
-            if (icon) {
-                icon.className = 'fas fa-sort'; // Reset
-                if (th.dataset.key === this.currentSort.key) {
-                    icon.className = this.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-                }
+            if (this.filtroRota.value) {
+                query = query.ilike('numero_rota', `%${this.filtroRota.value}%`);
             }
-        });
-    },
-
-    renderizarTabela(dados) {
-        const tfoot = this.tabelaResultadosBody.parentElement.querySelector('tfoot');
-        this.tabelaResultadosBody.innerHTML = '';
-        if (tfoot) tfoot.innerHTML = '';
-
-        // Atualiza os totais no cabeçalho do card
-        const totalRegistros = dados.length;
-        const valorTotalGeral = dados.reduce((acc, item) => acc + (item.valor_total || 0), 0);
-
-        const elTotalRegistros = document.getElementById('total-registros');
-        const elValorTotalGeral = document.getElementById('valor-total-geral');
-        if (elTotalRegistros) elTotalRegistros.textContent = totalRegistros;
-        if (elValorTotalGeral) elValorTotalGeral.textContent = this.formatCurrency(valorTotalGeral);
-
-        this.graficosContainer.style.display = 'none';
-
-        if (dados.length === 0) {
-            this.tabelaResultadosBody.innerHTML = '<tr><td colspan="9">Nenhuma despesa encontrada para os filtros selecionados.</td></tr>';
-            if (tfoot) tfoot.style.display = 'none';
-            return;
-        }
-
-        let totalGeral = 0;
-        dados.forEach(item => {
-            totalGeral += item.valor_total;
-            const func1 = item.funcionario1?.nome;
-            const func2 = item.funcionario2?.nome;
-            const funcionariosDisplay = (func1 && func2) ? `<strong>${func1}</strong><br><small>${func2}</small>` : (func1 || 'N/A');
-
-            const tr = document.createElement('tr');
-            tr.title = `Tipo de Quarto: ${item.tipo_quarto || 'Não informado'}`;
-            tr.innerHTML = `
-                <td>${new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                <td>${item.numero_rota}</td>
-                <td>${item.hoteis?.nome || 'N/A'}</td>
-                <td>${item.qtd_diarias || 'N/A'}</td>
-                <td>${this.formatCurrency(item.valor_diaria)}</td>
-                <td>${this.formatCurrency(item.valor_energia)}</td>
-                <td>${this.formatCurrency(item.valor_total)}</td>
-                <td>${funcionariosDisplay}</td>
-                <td>${item.nota_fiscal || ''}</td>
-            `;
-            this.tabelaResultadosBody.appendChild(tr);
-        });
-
-        if (tfoot) {
-            tfoot.style.display = 'table-footer-group';
-            tfoot.innerHTML = `
-                <tr>
-                    <td colspan="6"><strong>Total Geral</strong></td>
-                    <td><strong>${this.formatCurrency(totalGeral)}</strong></td>
-                    <td colspan="2"></td>
-                </tr>
-            `;
-        }
-
-        this.graficosContainer.style.display = 'block';
-        this.renderizarGraficos(dados);
-    },
-
-    renderizarGraficos(dados) {
-        // Gráfico de Despesas por Rota
-        const despesasPorRota = dados.reduce((acc, item) => {
-            const rota = `Rota ${item.numero_rota || 'N/A'}`;
-            acc[rota] = (acc[rota] || 0) + item.valor_total;
-            return acc;
-        }, {});
-
-        if (this.graficoRotasInstance) this.graficoRotasInstance.destroy();
-        this.graficoRotasInstance = new Chart(document.getElementById('grafico-despesas-rota').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: Object.keys(despesasPorRota),
-                datasets: [{
-                    label: 'Total Gasto (R$)',
-                    data: Object.values(despesasPorRota),
-                    backgroundColor: 'rgba(0, 86, 179, 0.7)',
-                    borderColor: 'rgba(0, 86, 179, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
-
-        // Gráfico de Top 5 Hotéis
-        const despesasPorHotel = dados.reduce((acc, item) => {
-            const hotel = item.hoteis?.nome || 'Hotel não especificado';
-            acc[hotel] = (acc[hotel] || 0) + item.valor_total;
-            return acc;
-        }, {});
-
-        const top5Hoteis = Object.entries(despesasPorHotel).sort(([, a], [, b]) => b - a).slice(0, 5);
-
-        if (this.graficoHoteisInstance) this.graficoHoteisInstance.destroy();
-        this.graficoHoteisInstance = new Chart(document.getElementById('grafico-despesas-hotel').getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: top5Hoteis.map(([nome]) => nome),
-                datasets: [{
-                    label: 'Total Gasto (R$)',
-                    data: top5Hoteis.map(([, valor]) => valor),
-                    backgroundColor: ['#0056b3', '#007bff', '#4da2ff', '#99caff', '#cce5ff'],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'top' } } }
-        });
-
-        // Gráfico de Evolução Diária
-        this.renderizarGraficoDiario(dados);
-
-        // Gráfico de Top 10 Funcionários
-        this.renderizarGraficoFuncionarios(dados);
-    },
-
-    renderizarGraficoDiario(dados) {
-        const canvas = document.getElementById('grafico-despesas-diario');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-
-        const despesasPorDia = {};
-        dados.forEach(item => {
-            if (item.data_checkin) {
-                const date = new Date(item.data_checkin + 'T00:00:00');
-                // Chave YYYY-MM-DD para ordenação correta
-                const key = date.toISOString().split('T')[0];
-                // Label para exibição DD/MM/YYYY
-                const label = date.toLocaleDateString('pt-BR');
-                
-                if (!despesasPorDia[key]) {
-                    despesasPorDia[key] = { label: label, valor: 0 };
-                }
-                despesasPorDia[key].valor += item.valor_total;
-            }
-        });
-
-        const sortedKeys = Object.keys(despesasPorDia).sort();
-        const labels = sortedKeys.map(key => despesasPorDia[key].label);
-        const data = sortedKeys.map(key => despesasPorDia[key].valor);
-
-        if (this.graficoDiarioInstance) this.graficoDiarioInstance.destroy();
-
-        this.graficoDiarioInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Evolução Diária',
-                    data: data,
-                    backgroundColor: 'rgba(255, 193, 7, 0.2)',
-                    borderColor: 'rgba(255, 193, 7, 1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                        }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    },
-
-    renderizarGraficoFuncionarios(dados) {
-        const canvas = document.getElementById('grafico-despesas-funcionarios');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-
-        const despesasPorDupla = {};
-        dados.forEach(item => {
-            const func1 = item.funcionario1?.nome || 'N/A';
-            const func2 = item.funcionario2?.nome || '';
-            const dupla = func2 ? `${func1} & ${func2}` : func1;
             
-            if (!despesasPorDupla[dupla]) {
-                despesasPorDupla[dupla] = 0;
+            if (this.filtroHotel.value) {
+                // Filtro em tabela relacionada requer !inner se for obrigatório, mas aqui é busca textual
+                // Supabase postgrest-js filter on foreign table:
+                // .ilike('hoteis.nome', ...) works if joined correctly
+                // Simplificação: Filtramos no JS para evitar complexidade de query aninhada dinâmica
             }
-            despesasPorDupla[dupla] += item.valor_total || 0;
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            let filteredData = data;
+            if (this.filtroHotel.value) {
+                const term = this.filtroHotel.value.toLowerCase();
+                filteredData = data.filter(d => d.hoteis?.nome?.toLowerCase().includes(term));
+            }
+            this.filteredData = filteredData;
+
+            this.atualizarKPIs(filteredData);
+            this.renderizarGraficos(filteredData);
+            this.renderizarTabela(filteredData);
+            
+        } catch (err) {
+            console.error('Erro ao carregar relatório:', err);
+            alert('Erro ao carregar dados.');
+        }
+    },
+
+    atualizarKPIs(data) {
+        const totalCusto = data.reduce((acc, item) => acc + (item.valor_total || 0), 0);
+        const totalDiarias = data.reduce((acc, item) => acc + (item.qtd_diarias || 0), 0);
+
+        this.kpiCustoTotal.textContent = totalCusto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        this.kpiTotalDiarias.textContent = totalDiarias;
+    },
+
+    renderizarGraficos(data) {
+        // Agrupar por Hotel
+        const hotelMap = {};
+        const rotaMap = {};
+
+        data.forEach(item => {
+            const hotel = item.hoteis?.nome || 'N/A';
+            hotelMap[hotel] = (hotelMap[hotel] || 0) + (item.valor_total || 0);
+
+            const rota = item.numero_rota || 'N/A';
+            rotaMap[rota] = (rotaMap[rota] || 0) + (item.valor_total || 0);
         });
 
-        const sortedDuplas = Object.entries(despesasPorDupla)
-            .sort(([, valorA], [, valorB]) => valorB - valorA)
-            .slice(0, 10);
+        this.criarGrafico(this.chartHoteisCanvas, 'pie', Object.keys(hotelMap), Object.values(hotelMap), 'Custos por Hotel');
+        this.criarGrafico(this.chartRotasCanvas, 'bar', Object.keys(rotaMap), Object.values(rotaMap), 'Custos por Rota');
+        this.renderChartDespesasPorRota(data);
+        this.renderChartTopHoteis(data);
+        this.renderChartEvolucaoDiaria(data);
+        this.renderChartTopFuncionarios(data);
+    },
 
-        const labels = sortedDuplas.map(([nome]) => nome);
-        const data = sortedDuplas.map(([, valor]) => valor);
+    renderChartDespesasPorRota(data) {
+        const rotaCounts = data.reduce((acc, item) => {
+            const rota = item.numero_rota || 'N/A';
+            acc[rota] = (acc[rota] || 0) + 1;
+            return acc;
+        }, {});
+        const sortedRotas = Object.entries(rotaCounts).sort(([,a], [,b]) => b - a).slice(0, 15);
+        this.criarGrafico(this.chartDespesasPorRotaCanvas, 'bar', sortedRotas.map(([k]) => k), sortedRotas.map(([,v]) => v), 'Qtd. Despesas');
+    },
 
-        if (this.graficoFuncionariosInstance) this.graficoFuncionariosInstance.destroy();
+    renderChartTopHoteis(data) {
+        const hotelCosts = data.reduce((acc, item) => {
+            const hotel = item.hoteis?.nome || 'N/A';
+            acc[hotel] = (acc[hotel] || 0) + (item.valor_total || 0);
+            return acc;
+        }, {});
+        const sortedHoteis = Object.entries(hotelCosts).sort(([,a], [,b]) => b - a).slice(0, 5);
+        this.criarGrafico(this.chartTopHoteisCanvas, 'doughnut', sortedHoteis.map(([k]) => k), sortedHoteis.map(([,v]) => v), 'Top 5 Hotéis');
+    },
 
-        this.graficoFuncionariosInstance = new Chart(ctx, {
-            type: 'bar',
+    renderChartEvolucaoDiaria(data) {
+        const dailyCosts = data.reduce((acc, item) => {
+            const date = item.data_checkin;
+            if (date) acc[date] = (acc[date] || 0) + (item.valor_total || 0);
+            return acc;
+        }, {});
+        const sortedDates = Object.keys(dailyCosts).sort((a, b) => new Date(a) - new Date(b));
+        const values = sortedDates.map(date => dailyCosts[date]);
+        this.criarGrafico(this.chartEvolucaoDiariaCanvas, 'line', sortedDates.map(d => new Date(d+'T00:00:00').toLocaleDateString('pt-BR')), values, 'Custo Diário');
+    },
+
+    renderChartTopFuncionarios(data) {
+        const duplaCosts = data.reduce((acc, item) => {
+            const func1 = item.funcionario1?.nome_completo;
+            const func2 = item.funcionario2?.nome_completo;
+            if (func1) {
+                const key = func2 ? [func1, func2].sort().join(' & ') : func1;
+                acc[key] = (acc[key] || 0) + (item.valor_total || 0);
+            }
+            return acc;
+        }, {});
+        const sortedDuplas = Object.entries(duplaCosts).sort(([,a], [,b]) => b - a).slice(0, 10);
+        this.criarGrafico(this.chartTopFuncionariosCanvas, 'bar', sortedDuplas.map(([k]) => k), sortedDuplas.map(([,v]) => v), 'Top 10 Gastos', { indexAxis: 'y' });
+    },
+
+    criarGrafico(canvas, type, labels, values, label, options = {}) {
+        // Destruir gráfico anterior se existir
+        if (canvas.chartInstance) {
+            canvas.chartInstance.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        canvas.chartInstance = new Chart(ctx, {
+            type: type,
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Total Gasto',
-                    data: data,
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
-                    borderColor: 'rgba(220, 53, 69, 1)',
+                    label: label,
+                    data: values,
+                    backgroundColor: ['#006937', '#28a745', '#007bff', '#17a2b8', '#ffc107', '#dc3545', '#6c757d'],
                     borderWidth: 1
                 }]
             },
             options: {
-                indexAxis: 'y', // Gráfico de barras horizontais para facilitar a leitura dos nomes
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } },
-                plugins: {
-                    legend: { display: false }
-                }
+                ...options
             }
         });
     },
 
-    getExportData() {
-        return this.reportData.map(item => {
-            const func1 = item.funcionario1?.nome || '';
-            const func2 = item.funcionario2?.nome || '';
-            const funcionarios = (func1 && func2) ? `${func1} / ${func2}` : func1;
+    renderizarTabela(data) {
+        this.tableBodyResultados.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+            this.totalQtd.textContent = '0';
+            this.totalValor.textContent = 'R$ 0,00';
+            return;
+        }
 
-            return {
-                'Data': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
-                'Rota': item.numero_rota,
-                'Hotel': item.hoteis?.nome || 'N/A',
-                'Qtd Diarias': item.qtd_diarias,
-                'Valor Diaria': item.valor_diaria,
-                'Valor Energia': item.valor_energia || 0,
-                'Valor Total': item.valor_total,
-                'Funcionários': funcionarios,
-                'Nota Fiscal': item.nota_fiscal || ''
-            };
+        let totalValor = 0;
+
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            const dataCheckin = new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR');
+            
+            let funcionariosHtml = '';
+            if (item.funcionario1?.nome_completo) {
+                funcionariosHtml += `<strong>${item.funcionario1.nome_completo}</strong>`;
+            }
+            if (item.funcionario2?.nome_completo) {
+                if (funcionariosHtml) funcionariosHtml += '<br>';
+                funcionariosHtml += `<small style="color: #555;">${item.funcionario2.nome_completo}</small>`;
+            }
+
+            const valor = item.valor_total || 0;
+            totalValor += valor;
+
+            tr.innerHTML = `
+                <td>${dataCheckin}</td>
+                <td>${item.numero_rota || '-'}</td>
+                <td>${item.hoteis?.nome || '-'}</td>
+                <td>${funcionariosHtml || '-'}</td>
+                <td>${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+            `;
+            this.tableBodyResultados.appendChild(tr);
         });
+
+        this.totalQtd.textContent = data.length;
+        this.totalValor.textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     },
 
-    exportarXLSX() {
-        if (this.reportData.length === 0) return alert("Não há dados para exportar.");
+    exportarExcel() {
+        if (this.filteredData.length === 0) return alert('Sem dados para exportar.');
 
-        const dataToExport = this.getExportData();
-        const totalGeral = this.reportData.reduce((sum, item) => sum + item.valor_total, 0);
+        const dadosExportacao = this.filteredData.map(item => ({
+            'Data Check-in': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
+            'Rota': item.numero_rota,
+            'Hotel': item.hoteis?.nome,
+            'Funcionários': [item.funcionario1?.nome_completo, item.funcionario2?.nome_completo].filter(Boolean).join(', '),
+            'Valor Total': item.valor_total,
+            'Qtd Diárias': item.qtd_diarias,
+            'Nota Fiscal': item.nota_fiscal || ''
+        }));
 
-        dataToExport.push({
-            'Data': 'TOTAL GERAL', 'Rota': '', 'Hotel': '', 'Qtd Diarias': '',
-            'Valor Diaria': '', 'Valor Energia': '', 'Valor Total': totalGeral, 'Funcionários': '', 'Nota Fiscal': ''
-        });
-
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        worksheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 20 }];
-
-        // Aplica formatação de moeda
-        dataToExport.forEach((row, index) => {
-            ['E', 'F', 'G'].forEach(col => { // Colunas Valor Diaria, Energia e Valor Total
-                const cellRef = `${col}${index + 2}`;
-                if (worksheet[cellRef] && typeof worksheet[cellRef].v === 'number') {
-                    worksheet[cellRef].t = 'n';
-                    worksheet[cellRef].z = 'R$ #,##0.00';
-                }
-            });
-        });
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "RelatorioDespesas");
-        XLSX.writeFile(workbook, "Relatorio_de_Despesas.xlsx");
+        const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Despesas");
+        XLSX.writeFile(wb, `Relatorio_Despesas_${new Date().toISOString().slice(0,10)}.xlsx`);
     },
 
-    async exportarPDF() {
-        if (this.reportData.length === 0) return alert("Não há dados para exportar.");
+    exportarPDF() {
+        if (this.filteredData.length === 0) return alert('Sem dados para exportar.');
+        if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape' });
-
-        // 1. Carregar a imagem do logo e converter para JPEG com fundo branco (Correção do fundo preto)
-        const getLogoBase64 = async () => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.src = 'logo.png';
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#FFFFFF'; // Fundo branco
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/jpeg'));
-                };
-                img.onerror = () => {
-                    console.warn('Logo não encontrado');
-                    resolve(null);
-                };
-            });
-        };
-
-        const logoBase64 = await getLogoBase64();
-
-        // 2. Adiciona o logo (agora JPEG com fundo branco)
-        if (logoBase64) {
-            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
-        }
-
-        const dataToExport = this.getExportData();
-        const totalGeral = this.reportData.reduce((sum, item) => sum + item.valor_total, 0);
+        const doc = new jsPDF();
 
         doc.setFontSize(18);
-        doc.text("Relatório de Despesas", 14, 28); // Ajusta a posição Y do título para baixo do logo
+        doc.text('Relatório de Despesas', 14, 22);
+        doc.setFontSize(10);
+        doc.text(`Período: ${new Date(this.dataInicio.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFim.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 30);
+
+        const tableColumn = ["Data", "Rota", "Hotel", "Funcionários", "Valor"];
+        const tableRows = this.filteredData.map(item => [
+            new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
+            item.numero_rota,
+            item.hoteis?.nome || '-',
+            { func1: item.funcionario1?.nome_completo || '', func2: item.funcionario2?.nome_completo || '' },
+            (item.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        ]);
+
+        // Adiciona linha de total
+        const totalValor = this.filteredData.reduce((acc, item) => acc + (item.valor_total || 0), 0);
+        tableRows.push(['', '', '', 'TOTAL GERAL', totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
 
         doc.autoTable({
-            head: [['Data', 'Rota', 'Hotel', 'Qtd Diárias', 'Valor Diária', 'Valor Energia', 'Valor Total', 'Funcionários', 'Nota Fiscal']],
-            body: dataToExport.map(item => [item.Data, item.Rota, item.Hotel, item['Qtd Diarias'], this.formatCurrency(item['Valor Diaria']), this.formatCurrency(item['Valor Energia']), this.formatCurrency(item['Valor Total']), item.Funcionários, item['Nota Fiscal']]),
-            foot: [['Total Geral', '', '', '', '', '', this.formatCurrency(totalGeral), '', '']],
-            startY: 35, // Ajusta o início da tabela
-            showFoot: 'lastPage', // Correção: Total Geral apenas na última página
-            styles: { fontSize: 8, cellPadding: 2 }, // Fonte reduzida para evitar quebras de linha
-            headStyles: { fillColor: [0, 105, 55] }, // Cor verde da Marquespan
-            footStyles: { fillColor: [233, 236, 239], textColor: [52, 58, 64], fontStyle: 'bold' },
-            columnStyles: {
-                0: { cellWidth: 22 }, // Data
-                1: { cellWidth: 15 }, // Rota
-                2: { cellWidth: 40 }, // Hotel
-                3: { cellWidth: 15, halign: 'center' }, // Qtd Diarias
-                4: { halign: 'right', cellWidth: 28 }, // Valor Diaria (Largura fixa para não quebrar)
-                5: { halign: 'right', cellWidth: 28 }, // Valor Energia
-                6: { halign: 'right', cellWidth: 32 }, // Valor Total (Largura fixa para não quebrar)
-                7: { cellWidth: 'auto' }, // Funcionários (Flexível)
-                8: { cellWidth: 25 }  // Nota Fiscal
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [0, 105, 55] },
+            columnStyles: { 
+                4: { halign: 'right', fontStyle: 'bold', cellWidth: 40 } 
+            },
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const raw = data.cell.raw;
+                    if (raw && typeof raw === 'object') {
+                        // Define o texto para cálculo de altura da linha, mas não para desenho
+                        data.cell.text = raw.func1 + (raw.func2 ? '\n' + raw.func2 : '');
+                    }
+                }
+            },
+            willDrawCell: function(data) {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const raw = data.cell.raw;
+                    if (raw && typeof raw === 'object') {
+                        // Limpa o texto para que o autoTable desenhe apenas as bordas/fundo
+                        data.cell.text = '';
+                    }
+                }
+            },
+            didDrawCell: function(data) {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const raw = data.cell.raw;
+                    if (raw && typeof raw === 'object') {
+                        const doc = data.doc;
+                        const x = data.cell.x + data.cell.padding('left');
+                        let y = data.cell.y + data.cell.padding('top') + 3;
+                        
+                        doc.setFont(undefined, 'bold');
+                        doc.setFontSize(8);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(String(raw.func1), x, y);
+                        
+                        if (raw.func2) {
+                            doc.setFont(undefined, 'normal');
+                            doc.setFontSize(6); // Fonte menor para o segundo funcionário
+                            doc.text(String(raw.func2), x, y + 3.5);
+                        }
+                    }
+                }
             }
         });
 
-        // Adicionar rodapé com paginação profissional
-        const pageCount = doc.internal.getNumberOfPages();
-        const pageWidth = doc.internal.pageSize.width;
-        const pageHeight = doc.internal.pageSize.height;
-        const dateStr = new Date().toLocaleString('pt-BR');
+        doc.save(`Relatorio_Despesas_${new Date().toISOString().slice(0,10)}.pdf`);
+    },
 
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            
-            // Linha separadora sutil
-            doc.setDrawColor(200, 200, 200);
-            doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+    iniciarRolagemAutomatica() {
+        const wrapper = document.querySelector('.charts-scroll-container');
+        if (!wrapper) return;
 
-            doc.setFontSize(8);
-            doc.setTextColor(100);
+        let direction = 1; // 1 = direita, -1 = esquerda
+        const speed = 0.5; // Velocidade suave (pixels por frame)
 
-            // Data de geração à esquerda
-            doc.text(`Gerado em: ${dateStr}`, 14, pageHeight - 10);
-
-            // Paginação à direita
-            doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
-        }
-
-        doc.save('Relatorio_de_Despesas.pdf');
+        const step = () => {
+            // Verifica se chegou ao fim ou ao início com tolerância
+            if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) {
+                direction = -1;
+            } else if (wrapper.scrollLeft <= 0) {
+                direction = 1;
+            }
+            wrapper.scrollLeft += speed * direction;
+            requestAnimationFrame(step);
+        };
+        
+        // Inicia o loop de animação
+        requestAnimationFrame(step);
+        
+        // Pausar ao passar o mouse
+        wrapper.addEventListener('mouseenter', () => direction = 0);
+        wrapper.addEventListener('mouseleave', () => {
+            // Recalcula direção baseado na posição atual para retomar
+            if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 10) direction = -1;
+            else direction = 1;
+        });
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => ReportUI.init());
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Lógica do botão de limpar rotas
-    const btnLimpar = document.getElementById('btnLimparRotas');
-    if(btnLimpar) {
-        btnLimpar.addEventListener('click', () => {
-            const select = document.getElementById('rotas');
-            if(select) select.selectedIndex = -1; // Limpa a seleção (equivale a Todas)
-        });
-    }
-
-    // Pré-preencher datas
-    const dataInicialInput = document.getElementById('data-inicial');
-    const dataFinalInput = document.getElementById('data-final');
-    
-    if (dataInicialInput && dataFinalInput) {
-        const hoje = new Date();
-        const primeiroDiaDoAno = new Date(hoje.getFullYear(), 0, 1);
-
-        // Função auxiliar para formatar data local YYYY-MM-DD
-        // Evita problemas de fuso horário que o toISOString() pode causar
-        const formatDate = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-
-        dataFinalInput.value = formatDate(hoje);
-        dataInicialInput.value = formatDate(primeiroDiaDoAno);
-    }
+    RelatorioDespesasUI.init();
 });
