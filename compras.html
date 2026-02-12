@@ -1,329 +1,269 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compras - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/stylecompras.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="icon" href="logo.png" type="image/png">
-  <!-- Dependências (jsPDF, SheetJS) são carregadas no fim do body -->
-  <style>
-    @media print {
-      /* Esconde tudo por padrão */
-      body * {
-        visibility: hidden;
-      }
-      /* Mostra apenas o painel de detalhes e seu conteúdo */
-      #detailPanel, #detailPanel * {
-        visibility: visible;
-      }
-      /* Posiciona o painel de detalhes para ocupar a página inteira */
-      #detailPanel {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 1cm;
-        box-shadow: none;
-        border: none;
-      }
-      /* Esconde os botões de ação dentro do painel */
-      .panel-footer { display: none; }
-    }
-/* Estilos para botões de ação na tabela (Padrão Visual) */
-    .btn-action {
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: white;
-      transition: all 0.2s ease;
-      margin-right: 4px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .btn-action:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-      opacity: 0.95;
-    }
-    .btn-view { background-color: #17a2b8; } /* Azul Info */
-    .btn-edit { background-color: #ffc107; color: #212529; } /* Amarelo Alerta */
-    .btn-delete { background-color: #dc3545; } /* Vermelho Perigo */
-    .btn-receive { background-color: #28a745; } /* Verde Sucesso */
-    .btn-pdf { background-color: #6f42c1; } /* Roxo para PDF (Distinto do Excluir) */
-
-  </style>
+  <title>Gestão de Compras - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/compras.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    <div class="main-content">
-      <header class="header">🛒 Compras</header>
 
-    <!-- Navegação por abas, seguindo o padrão do projeto -->
-    <div class="painel-navegacao" role="tablist" id="menu-compras">
-      <button class="painel-btn active" data-secao="sectionRealizarCotacoes" aria-selected="true">
-        <i class="fas fa-plus-circle"></i> Realizar Cotações/Pedidos
-      </button>
-      <button class="painel-btn" data-secao="sectionCotacoesSalvas" aria-selected="false">
-        <i class="fas fa-shopping-cart"></i> Pedido de Compra
-      </button>
-      <button class="painel-btn" data-secao="sectionCadastrarProdutos" aria-selected="false">
-        <i class="fas fa-box"></i> Cadastrar Produtos
-      </button>
-      <button class="painel-btn" data-secao="sectionCadastrarFornecedor" aria-selected="false">
-        <i class="fas fa-truck"></i> Cadastrar Fornecedor
-      </button>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-shopping-cart"></i> Gestão de Compras</h1>
+    </header>
+
+    <!-- Navegação por Abas -->
+    <div class="painel-navegacao" id="menu-compras">
+      <button class="painel-btn active" data-secao="sectionRealizarCotacoes"><i class="fas fa-file-invoice-dollar"></i> Realizar Cotação</button>
+      <button class="painel-btn" data-secao="sectionCotacoesSalvas"><i class="fas fa-history"></i> Cotações Salvas</button>
+      <button class="painel-btn" data-secao="sectionCadastrarProdutos"><i class="fas fa-box"></i> Produtos</button>
+      <button class="painel-btn" data-secao="sectionCadastrarFornecedor"><i class="fas fa-truck"></i> Fornecedores</button>
     </div>
 
-      <!-- REALIZAR COTAÇÕES -->
-      <section id="sectionRealizarCotacoes" class="section">
-        <div class="card card-header">
-          <h2>Realizar Cotações/Pedidos</h2>
-          <div class="code-and-actions">
-            <input type="text" id="quotationCode" readonly aria-label="Código da Cotação" />
-            <div class="actions">
-              <button id="btnExportPdf" class="btn-primary btn-inline" title="Exportar PDF"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-              <button id="btnRegistrarCotacoes" class="btn-primary btn-inline" title="Registrar Cotação"><i class="fas fa-save"></i> Registrar</button>
+    <!-- SEÇÃO: REALIZAR COTAÇÃO -->
+    <section id="sectionRealizarCotacoes" class="glass-panel">
+      <div class="cotacao-header">
+        <h3>Nova Cotação</h3>
+        <input type="text" id="quotationCode" readonly placeholder="Código" class="glass-input code-input">
+      </div>
+
+      <div class="quotation-layout">
+        <!-- Card Esquerdo: Adicionar Produtos -->
+        <div class="quotation-card left-card">
+            <h4><i class="fas fa-cart-plus"></i> Produtos</h4>
+            
+            <div class="form-grid compact-form-grid">
+                <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                    <input type="text" id="cartProductInput" list="productList" placeholder="Buscar Produto..." class="glass-input compact-input">
+                    <datalist id="productList"></datalist>
+                </div>
+                <div class="form-group" style="width: 70px; margin-bottom: 0;">
+                    <input type="number" id="cartQtd" placeholder="Qtd" min="1" class="glass-input compact-input">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <button id="btnAddToCart" class="btn-glass btn-green compact-btn"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
-          </div>
+
+            <div class="table-responsive cart-table-container compact-table-container">
+                <table class="glass-table compact-table">
+                    <thead>
+                        <tr>
+                            <th>CÓD</th>
+                            <th>PROD</th>
+                            <th>QTD</th>
+                            <th>UN</th>
+                            <th style="width: 40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody"></tbody>
+                </table>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <button id="btnClearCart" class="btn-glass btn-red compact-btn"><i class="fas fa-trash"></i> Limpar</button>
+            </div>
         </div>
 
-        <div class="card grid-2">
-          <div>
-            <h3>Adicionar Produto</h3>
-            <div class="form-row">
-              <div class="form-group" style="flex: 3;">
-                <input type="text" id="cartProductInput" list="productList" placeholder="Buscar produto..." aria-label="Produtos">
-                <datalist id="productList"></datalist>
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <input type="number" id="cartQtd" placeholder="Qtd" min="1" aria-label="Quantidade" />
-              </div>
-              <div class="form-group" style="flex: 0 0 auto;">
-                <button id="btnAddToCart" class="btn-primary" title="Adicionar"><i class="fas fa-plus"></i></button>
-              </div>
+        <!-- Card Direito: Fornecedores -->
+        <div class="quotation-card right-card">
+            <h4><i class="fas fa-store"></i> Fornecedores</h4>
+            <div id="orccardrow" class="suppliers-grid">
+                <!-- Preenchido via JS -->
             </div>
-            <div style="text-align: right; margin-bottom: 10px;">
-              <button id="btnClearCart" class="btn-muted btn-sm"><i class="fas fa-trash"></i> Limpar</button>
-            </div>
-
-            <h3 style="margin-top:18px">Carrinho</h3>
-            <div class="table-responsive">
-              <table id="cartTable" class="data-grid" aria-label="Carrinho de Produtos">
-                <thead>
-                  <tr><th>Código</th><th>Produto</th><th>Qtd</th><th>Un</th><th>Ações</th></tr>
-                </thead>
-                <tbody id="cartBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <h3>Orçamentos por Fornecedor</h3>
-            <div class="card-row" id="orccardrow">
-              <!-- Empresas geradas dinamicamente pelo JS -->
-            </div>
-          </div>
         </div>
-      </section>
+      </div>
 
-      <!-- COTAÇÕES SALVAS -->
-      <section id="sectionCotacoesSalvas" class="section hidden">
-        <div class="card card-header">
-          <h2>Pedidos de Compra</h2>
-          <div class="search-row">
-            <input type="text" id="searchQuotation" placeholder="Buscar por código" aria-label="Buscar cotação" />
-            <select id="filterStatus" aria-label="Filtrar status">
-              <option value="Todas">Todas</option>
-              <option value="Pendente">Pendente</option>
-              <option value="Aprovada">Aprovada</option>
-              <option value="Rejeitada">Rejeitada</option>
-              <option value="Recebido Parcial">Recebido Parcial</option>
-              <option value="Recebido">Recebido</option>
+      <div class="form-actions" style="margin-top: 20px;">
+        <button id="btnExportPdf" class="btn-glass btn-blue"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+        <button id="btnRegistrarCotacoes" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Cotação</button>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: COTAÇÕES SALVAS -->
+    <section id="sectionCotacoesSalvas" class="glass-panel hidden">
+      <div class="panel-header-actions">
+        <h3>Histórico de Cotações</h3>
+        <div class="filtros-inline">
+            <input type="text" id="searchQuotation" placeholder="Buscar cotação..." class="glass-input">
+            <select id="filterStatus" class="glass-input">
+                <option value="Todas">Todas</option>
+                <option value="Pendente">Pendente</option>
+                <option value="Aprovada">Aprovada</option>
+                <option value="Recebido">Recebido</option>
             </select>
-            <button id="btnSearchQuotation" class="btn-inline btn-primary">Buscar</button>
-          </div>
+            <button id="btnSearchQuotation" class="btn-glass btn-blue"><i class="fas fa-search"></i></button>
         </div>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table compact-table data-grid">
+            <thead>
+                <tr>
+                    <th data-field="codigo_cotacao">CÓDIGO <i class="fas fa-sort"></i></th>
+                    <th data-field="updated_at">DATA <i class="fas fa-sort"></i></th>
+                    <th data-field="usuario">USUÁRIO <i class="fas fa-sort"></i></th>
+                    <th>VENCEDOR</th>
+                    <th data-field="valor_total_vencedor">VALOR <i class="fas fa-sort"></i></th>
+                    <th data-field="nota_fiscal">NF <i class="fas fa-sort"></i></th>
+                    <th data-field="data_recebimento">DATA REC. <i class="fas fa-sort"></i></th>
+                    <th data-field="usuario_recebimento">USUÁRIO REC. <i class="fas fa-sort"></i></th>
+                    <th data-field="status">STATUS <i class="fas fa-sort"></i></th>
+                    <th>AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody id="savedQuotationsTableBody"></tbody>
+        </table>
+      </div>
+    </section>
 
-        <div class="card">
-          <div class="table-responsive">
-            <table class="data-grid" aria-label="Cotações Salvas">
-              <thead>
-                <tr><th>Código</th><th>Data/Hora</th><th>Usuário</th><th>Vencedor</th><th>Valor Total</th><th>Nota Fiscal</th><th>Data/Hora (Rec.)</th><th>Usuário (Rec.)</th><th>Status</th><th>Ações</th></tr>
-              </thead>
-              <tbody id="savedQuotationsTableBody"></tbody>
-            </table>
-          </div>
+    <!-- SEÇÃO: PRODUTOS -->
+    <section id="sectionCadastrarProdutos" class="glass-panel hidden">
+      <div class="panel-header-actions">
+        <h3>Cadastro de Produtos</h3>
+        <div class="acoes-grid-header">
+            <button id="btnOpenImportExportModal" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar/Exportar</button>
         </div>
-      </section>
+      </div>
+      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr auto;">
+        <input type="text" id="produtoCodigo1" placeholder="Cód. Principal" class="glass-input">
+        <input type="text" id="produtoCodigo2" placeholder="Cód. Secundário" class="glass-input">
+        <input type="text" id="produtoNome" placeholder="Nome do Produto" required class="glass-input">
+        <input type="text" id="produtoUnidade" placeholder="UN (KG, LT...)" class="glass-input">
+        <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green">Cadastrar</button>
+      </form>
+      
+      <div class="form-group" style="margin-top: 15px;">
+        <input type="text" id="searchProdutoInput" placeholder="🔍 Buscar produto..." class="glass-input">
+      </div>
 
-      <!-- CADASTRAR PRODUTOS -->
-      <section id="sectionCadastrarProdutos" class="section hidden">
-        <div class="card card-header"><h2>Cadastrar Produtos</h2></div>
-        <div class="card grid-2">
-          <form id="formCadastrarProduto">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="produtoCodigo1">Código 1</label>
-                <input type="text" id="produtoCodigo1" required />
-              </div>
-              <div class="form-group">
-                <label for="produtoCodigo2">Código 2</label>
-                <input type="text" id="produtoCodigo2" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="produtoNome">Nome do Produto</label>
-              <input type="text" id="produtoNome" required />
-            </div>
-            <div class="form-group">
-              <label for="produtoUnidade">Unidade</label>
-              <select id="produtoUnidade">
-                <option value="">Padrão (UN)</option>
-                <option value="UN">UN</option>
-                <option value="KG">KG</option>
-                <option value="M">M</option>
-                <option value="L">L</option>
-                <option value="PC">PC</option>
-              </select>
-            </div>
-            <div class="row" style="margin-top: 15px;">
-              <button type="submit" id="btnSubmitProduto" class="btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
-              <button type="button" id="btnOpenImportExportModal" class="btn-muted"><i class="fas fa-file-excel"></i> Import/Export</button>
-            </div>
-          </form>
+      <div class="table-responsive produtos-table-container">
+        <table class="glass-table data-grid">
+            <thead>
+                <tr>
+                    <th data-field="codigo_principal">CÓDIGO</th>
+                    <th data-field="codigo_secundario">CÓD. SEC.</th>
+                    <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
+                    <th data-field="unidade_medida">UN</th>
+                    <th>AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody id="produtosTableBody"></tbody>
+        </table>
+      </div>
+    </section>
 
-          <div class="table-responsive">
-            <div class="form-group" style="margin-bottom: 10px;">
-              <label for="searchProdutoInput" style="display: block; margin-bottom: 5px;">Buscar Produto:</label>
-              <input type="text" id="searchProdutoInput" placeholder="Digite o nome ou código do produto..." style="width: 100%;">
-            </div>
-            <table class="data-grid" aria-label="Produtos Cadastrados">
-              <thead><tr>
-                <th data-field="codigo_principal">Cod1 <i class="fas fa-sort"></i></th>
-                <th data-field="codigo_secundario">Cod2 <i class="fas fa-sort"></i></th>
-                <th data-field="nome">Nome <i class="fas fa-sort"></i></th>
-                <th data-field="unidade_medida">Unidade <i class="fas fa-sort"></i></th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="produtosTableBody"></tbody>
-            </table>
-          </div>
+    <!-- SEÇÃO: FORNECEDORES -->
+    <section id="sectionCadastrarFornecedor" class="glass-panel hidden">
+      <div class="panel-header-actions">
+        <h3>Cadastro de Fornecedores</h3>
+        <div class="acoes-grid-header">
+            <button id="btnOpenImportExportFornecedor" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar/Exportar</button>
         </div>
-      </section>
+      </div>
+      <form id="formCadastrarFornecedor" class="form-grid" style="grid-template-columns: 2fr 1fr auto;">
+        <input type="text" id="fornecedorNome" placeholder="Nome do Fornecedor" required class="glass-input">
+        <input type="text" id="fornecedorTelefone" placeholder="Telefone" class="glass-input">
+        <button type="submit" id="btnSubmitFornecedor" class="btn-glass btn-green">Cadastrar</button>
+      </form>
 
-      <!-- CADASTRAR FORNECEDOR -->
-      <section id="sectionCadastrarFornecedor" class="section hidden">
-        <div class="card card-header"><h2>Cadastrar Fornecedor</h2></div>
-        <div class="card grid-2">
-          <form id="formCadastrarFornecedor">
-            <div class="form-group">
-              <label for="fornecedorNome">Nome do Fornecedor</label>
-              <input type="text" id="fornecedorNome" required />
-            </div>
-            <div class="form-group">
-              <label for="fornecedorTelefone">Telefone</label>
-              <input type="text" id="fornecedorTelefone" />
-            </div>
-            <div class="row" style="margin-top: 15px;">
-              <button type="submit" id="btnSubmitFornecedor" class="btn-primary"><i class="fas fa-save"></i> Cadastrar</button>
-              <button type="button" id="btnOpenImportExportFornecedor" class="btn-muted"><i class="fas fa-file-excel"></i> Import/Export</button>
-            </div>
-          </form>
+      <div class="form-group" style="margin-top: 15px;">
+        <input type="text" id="searchFornecedorInput" placeholder="🔍 Buscar fornecedor..." class="glass-input">
+      </div>
 
-          <div class="table-responsive">
-            <div class="form-group" style="margin-bottom: 10px;">
-              <label for="searchFornecedorInput" style="display: block; margin-bottom: 5px;">Buscar Fornecedor:</label>
-              <input type="text" id="searchFornecedorInput" placeholder="Digite o nome do fornecedor..." style="width: 100%;">
-            </div>
-            <table class="data-grid" aria-label="Fornecedores Cadastrados">
-              <thead><tr>
-                <th data-field="nome">Nome <i class="fas fa-sort"></i></th>
-                <th data-field="telefone">Telefone <i class="fas fa-sort"></i></th>
-                <th>Ações</th>
-              </tr></thead>
-              <tbody id="fornecedoresTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <div class="table-responsive fornecedores-table-container">
+        <table class="glass-table data-grid">
+            <thead>
+                <tr>
+                    <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
+                    <th data-field="telefone">TELEFONE</th>
+                    <th>AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody id="fornecedoresTableBody"></tbody>
+        </table>
+      </div>
+    </section>
 
-    </div>
-  </div>
+  </main>
 
-  <!-- Modals (permanecem inalterados) -->
-  <!-- Painel permanente de Import/Export (compacto, canto inferior direito) -->
-  <div id="importPanel" class="import-panel hidden" role="region" aria-label="Importar Produtos">
+  <!-- Painéis Flutuantes (Modais) -->
+  
+  <!-- Import/Export Panel -->
+  <div id="importPanel" class="import-panel hidden">
     <div class="panel-header">
-      <h3>Importar / Exportar Produtos</h3>
-      <button class="close-button" aria-label="Fechar">×</button>
+        <h3>Importar/Exportar</h3>
+        <button class="close-button">&times;</button>
     </div>
     <div class="panel-body">
-      <label>Arquivo Excel (colunas: <strong id="importExpectedColumns">COD1, COD2, PRODUTO</strong>)</label>
-      <input type="file" id="importExcelFile" accept=".xlsx,.xls" />
-      <p class="muted">Você pode arrastar e soltar o arquivo aqui ou selecionar pelo botão. A importação irá ignorar duplicatas.</p>
-      <div id="importStatus" class="import-status" aria-live="polite"></div>
-      <div id="importPreview" class="import-preview hidden"></div>
-      <div class="row" style="margin-top:10px;">
-        <button id="btnImportProducts" class="btn-primary">Pré-visualizar</button>
-        <button id="btnConfirmImport" class="btn-success hidden">Confirmar Importação</button>
-        <button id="btnExportProducts" class="btn-muted">Exportar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Painel Lateral de Detalhes da Cotação -->
-  <div id="detailPanelBackdrop" class="panel-backdrop hidden">
-    <div id="detailPanel" class="panel-lateral" role="dialog" aria-modal="true">
-      <div class="panel-header">
-        <h2 id="quotationDetailTitle">Detalhes da Cotação</h2>
-        <button class="close-button" aria-label="Fechar">&times;</button>
-      </div>
-      <div id="quotationDetailBody" class="panel-body"></div>
-      <div class="panel-footer">
-        <button id="btnPrintQuotation" class="btn-muted"><i class="fas fa-print"></i> Imprimir</button>
-        <button id="btnGeneratePdf" class="btn-primary"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Painel Lateral de Recebimento -->
-  <div id="recebimentoPanelBackdrop" class="panel-backdrop hidden">
-    <div id="recebimentoPanel" class="panel-lateral" role="dialog" aria-modal="true">
-      <div class="panel-header">
-        <h2 id="recebimentoPanelTitle">Recebimento de Itens</h2>
-        <button class="close-button" aria-label="Fechar">×</button>
-      </div>
-      <div class="panel-body">
-        <p>Confirme as quantidades recebidas para a cotação.</p>
-        <div id="recebimentoItems">
-          <!-- Itens para recebimento serão populados aqui -->
+        <div class="upload-section">
+            <label>Importar Excel (.xlsx)</label>
+            <input type="file" id="importExcelFile" accept=".xlsx" class="glass-input">
+            <div id="importStatus" class="import-status"></div>
+            <div id="importPreview" class="import-preview"></div>
+            <button id="btnImportProducts" class="btn-glass btn-blue" style="width:100%; margin-top:10px;">Visualizar</button>
+            <button id="btnConfirmImport" class="btn-glass btn-green" style="width:100%; margin-top:5px;">Confirmar Importação</button>
         </div>
-        <div id="nfContainer" style="margin-top: 20px;">
-            <div class="form-group">
-                <label>Nota Fiscal:</label>
-                <input type="text" class="nota-fiscal-input" placeholder="Digite o número da NF">
+        <hr>
+        <button id="btnExportProducts" class="btn-glass btn-orange" style="width:100%;">Baixar Modelo / Exportar</button>
+    </div>
+  </div>
+
+  <!-- Detalhes Cotação -->
+  <div id="detailPanelBackdrop" class="modal-backdrop hidden">
+    <div id="detailPanel" class="glass-modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3 id="quotationDetailTitle">Detalhes</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div id="quotationDetailBody" class="modal-body"></div>
+        <div class="modal-footer" style="margin-top: 15px; text-align: right;">
+            <button id="btnPrintQuotation" class="btn-glass btn-blue"><i class="fas fa-print"></i> Imprimir</button>
+            <button id="btnGeneratePdf" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+    </div>
+  </div>
+
+  <!-- Painel Recebimento -->
+  <div id="recebimentoPanelBackdrop" class="modal-backdrop hidden">
+    <div id="recebimentoPanel" class="glass-modal" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3 id="recebimentoPanelTitle">Recebimento</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="nfContainer">
+                <div class="form-group">
+                    <label>Nota Fiscal:</label>
+                    <input type="text" class="nota-fiscal-input glass-input" placeholder="Digite o número da NF">
+                </div>
             </div>
+            <button id="btnAddNF" class="btn-glass btn-sm btn-blue" style="margin-bottom: 15px;">+ Add NF</button>
+            
+            <div id="recebimentoItems" class="recebimento-items-container"></div>
         </div>
-        <button id="btnAddNF" class="btn-muted btn-sm" style="width: 100%; margin-top: 5px;"><i class="fas fa-plus"></i> Adicionar outra Nota</button>
-        <button id="btnSalvarRecebimento" class="btn-primary" style="width: 100%; margin-top: 20px;">Salvar Recebimento</button>
-      </div>
+        <div class="modal-footer" style="margin-top: 15px; text-align: right;">
+            <button id="btnSalvarRecebimento" class="btn-glass btn-green">Salvar Recebimento</button>
+        </div>
     </div>
   </div>
-  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script type="module" src="./script/scriptcompras.js"></script>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/compras.js"></script>
 </body>
 </html>

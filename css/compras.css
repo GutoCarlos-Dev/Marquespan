@@ -1,0 +1,333 @@
+/* css/compras.css - Estilo Glassmorphism */
+
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
+}
+
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
+}
+
+.glass-panel h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+
+/* Navegação por Abas */
+.painel-navegacao {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.painel-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    color: #555;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.painel-btn:hover {
+    background: #fff;
+    transform: translateY(-2px);
+}
+
+.painel-btn.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 10px rgba(0, 105, 55, 0.3);
+}
+
+/* Inputs Glass */
+.glass-input {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
+
+/* Botões Glass */
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
+}
+
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+.btn-orange { background: linear-gradient(135deg, #fd7e14, #d65b00); }
+
+/* Tabela Glass */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.glass-table th {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.glass-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+}
+
+.glass-table tr:hover {
+    background: rgba(0, 105, 55, 0.05);
+}
+
+/* Layout Específico de Compras */
+.quotation-layout {
+    display: grid;
+    grid-template-columns: 35% 63%;
+    gap: 2%;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .quotation-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quotation-card {
+    background: #f8f9fa;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.cotacao-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.code-input {
+    width: 150px;
+    text-align: center;
+    font-weight: bold;
+    color: var(--primary-color);
+    border: 2px solid rgba(0, 105, 55, 0.2);
+}
+
+/* Compact Form Grid for Cart */
+.compact-form-grid {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+/* Compact Inputs */
+.compact-input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    height: 32px;
+}
+
+.compact-btn {
+    padding: 0 12px;
+    height: 32px;
+    font-size: 0.85rem;
+}
+
+/* Compact Table */
+.compact-table th, .compact-table td {
+    padding: 6px 4px;
+    font-size: 0.8rem;
+}
+
+.compact-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.suppliers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.form-grid {
+    display: grid;
+    gap: 15px;
+    align-items: center;
+}
+
+.company-card {
+    background: #f8f9fa;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.company-card:hover {
+    background: #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.company-card h4 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.company-card .form-group {
+    margin-bottom: 5px;
+}
+
+.company-card textarea {
+    width: 100%;
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    resize: vertical;
+    min-height: 40px;
+    font-size: 0.8rem;
+}
+
+.price-entry {
+    background: #fff;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    margin-bottom: 2px;
+}
+
+.price-entry label {
+    font-size: 0.75rem;
+    color: #666;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.winner-selector {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Utilitários */
+.hidden { display: none !important; }
+.panel-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.filtros-inline { display: flex; gap: 10px; }
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; }
+.btn-action { padding: 5px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.85rem; color: white; }
+.btn-view { background: #17a2b8; }
+.btn-edit { background: #ffc107; color: #333; }
+.btn-delete { background: #dc3545; }
+.btn-receive { background: #28a745; }
+.btn-pdf { background: #dc3545; }
+
+/* Status Badges */
+.status { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+.status-Pendente { background: #fff3cd; color: #856404; }
+.status-Aprovada { background: #d4edda; color: #155724; }
+.status-Rejeitada { background: #f8d7da; color: #721c24; }
+.status-Recebido { background: #cce5ff; color: #004085; }
+
+/* Modais */
+.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+.glass-modal { background: white; border-radius: 20px; padding: 30px; width: 90%; max-width: 600px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.close-button { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+.import-panel { position: fixed; bottom: 20px; right: 20px; width: 350px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1500; }
