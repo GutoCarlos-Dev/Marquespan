@@ -1,439 +1,360 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coletar Manutenção - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/coletar-manutencao.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- Biblioteca para Exportação Excel -->
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/coletar-manutencao.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Bibliotecas para Exportação PDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <!-- Biblioteca para Gráficos -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="icon" href="logo.png" type="image/png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    <div class="main-content">
-      <header class="header header-flex">
-        <span><i class="fas fa-wrench"></i> Coletar Manutenção</span>
-        <a href="mobile-coletar.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
-      </header>
 
-      <!-- Navegação por abas -->
-      <div class="painel-navegacao" role="tablist" id="menu-coletar-manutencao">
-        <button class="painel-btn active" data-secao="sectionLancamento" aria-selected="true">
-          <i class="fas fa-edit"></i> Lançamento
-        </button>
-        <button class="painel-btn" data-secao="sectionGerarArquivo" aria-selected="false">
-          <i class="fas fa-file-alt"></i> Gerar Arquivo
-        </button>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h1><i class="fas fa-tools"></i> Coleta de Manutenção</h1>
+      <button id="btnModoApp" class="btn-glass btn-blue" onclick="window.location.href='mobile-coletar.html'"><i class="fas fa-mobile-alt"></i> MODO APP</button>
+    </header>
+
+    <!-- Navegação por Abas -->
+    <div class="painel-navegacao" id="menu-coletar-manutencao">
+      <button class="painel-btn active" data-secao="sectionLancamento"><i class="fas fa-list"></i> Lançamentos</button>
+      <button class="painel-btn" data-secao="sectionGerarArquivo"><i class="fas fa-file-alt"></i> Relatórios e Gráficos</button>
+    </div>
+
+    <!-- SEÇÃO: LANÇAMENTOS -->
+    <section id="sectionLancamento" class="glass-panel">
+      <h3><i class="fas fa-clipboard-list"></i> Manutenções Lançadas</h3>
+      
+      <div class="lancamentos-layout">
+        <!-- Card de Filtros -->
+        <div class="glass-panel-inner">
+            <h4><i class="fas fa-filter"></i> Filtros</h4>
+            <div class="filtros-container">
+                <div class="form-group-filter">
+                    <label>Placa</label>
+                    <input type="text" id="searchPlaca" placeholder="Buscar Placa..." class="glass-input">
+                </div>
+                <div class="form-group-filter">
+                    <label>Item</label>
+                    <select id="searchItem" class="glass-input">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="form-group-filter">
+                    <label>Oficina</label>
+                    <select id="searchOficina" class="glass-input">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="form-group-filter">
+                    <label>Status</label>
+                    <select id="searchStatus" class="glass-input">
+                        <option value="">Todos</option>
+                        <option value="PENDENTE">PENDENTE</option>
+                        <option value="FINALIZADO">FINALIZADO</option>
+                        <option value="INTERNADO">INTERNADO</option>
+                        <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
+                        <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
+                        <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
+                    </select>
+                </div>
+                <div class="form-group-filter" style="align-self: flex-end;">
+                    <button id="btnFiltrarLancamentos" class="btn-glass btn-blue" style="width: 100%;"><i class="fas fa-search"></i> Filtrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Ações -->
+        <div class="glass-panel-inner actions-panel">
+            <h4><i class="fas fa-cogs"></i> Ações</h4>
+            <div class="acoes-grid-vertical">
+                <button id="btnAdicionarLancamento" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo Lançamento</button>
+                <button id="btnImportarMassa" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar XLSX</button>
+            </div>
+        </div>
       </div>
 
-      <!-- SEÇÃO: LANÇAMENTO -->
-      <section id="sectionLancamento" class="section">
-        <div class="card">
-          <div class="card-header">
-            <h2>Coleta de Informações da Manutenção</h2>
-          </div>
-          <div class="card-body" style="padding: 20px;">
-            <button type="button" id="btnAdicionarLancamento" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Lançamento</button>
-            <button type="button" id="btnImportarMassa" class="btn-success" style="margin-left: 10px;"><i class="fas fa-file-import"></i> Importar em Massa</button>
-          </div>
-        </div>
-        
-        <!-- Filtros e Ações -->
-        <div class="layout-row">
-            <!-- Card Filtros -->
-            <div class="card card-filters-lancamento">
-                <div class="card-header">
-                    <h2><i class="fas fa-filter"></i> Filtros</h2>
+      <!-- Legenda de Cores -->
+      <div class="status-legend-container">
+        <span class="legend-item"><span class="legend-color" style="background-color: #d4edda; border-color: #155724;"></span> FINALIZADO</span>
+        <span class="legend-item"><span class="legend-color" style="background-color: #f8d7da; border-color: #721c24;"></span> PENDENTE</span>
+        <span class="legend-item"><span class="legend-color" style="background-color: #cce5ff; border-color: #004085;"></span> INTERNADO</span>
+        <span class="legend-item"><span class="legend-color" style="background-color: #fff3cd; border-color: #856404;"></span> CHECK-IN OFICINA</span>
+        <span class="legend-item"><span class="legend-color" style="background-color: #ffe0b2; border-color: #d35400;"></span> CHECK-IN ROTA</span>
+        <span class="legend-item"><span class="legend-color" style="background-color: #d4edda; border-color: #0b3314; font-weight: bold;"></span> FINALIZADO ROTA</span>
+      </div>
+
+      <!-- Tabela -->
+      <div class="table-responsive manutencao-table-container">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th data-sort="data_hora">DATA/HORA <i class="fas fa-sort"></i></th>
+              <th data-sort="semana">SEMANA <i class="fas fa-sort"></i></th>
+              <th data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
+              <th data-sort="usuario">USUÁRIO <i class="fas fa-sort"></i></th>
+              <th>VALOR TOTAL</th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyLancamentos">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: RELATÓRIOS -->
+    <section id="sectionGerarArquivo" class="glass-panel hidden">
+      <h3><i class="fas fa-chart-bar"></i> Relatórios e Análises</h3>
+      
+      <form id="formExportacao">
+        <div class="lancamentos-layout">
+            <!-- Card de Filtros -->
+            <div class="glass-panel-inner">
+                <h4><i class="fas fa-filter"></i> Filtros</h4>
+                <div class="filtros-container">
+                    <div class="form-group-filter">
+                        <label>Semana</label>
+                        <input type="text" id="filtroSemana" placeholder="Ex: 01" class="glass-input">
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Placa</label>
+                        <input type="text" id="filtroPlaca" placeholder="Ex: ABC1234" class="glass-input">
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Data Início</label>
+                        <input type="date" id="filtroDataIni" class="glass-input">
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Data Fim</label>
+                        <input type="date" id="filtroDataFim" class="glass-input">
+                    </div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div class="form-group">
-                            <label for="searchPlaca" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Placa</label>
-                            <input type="text" id="searchPlaca" placeholder="Buscar placa..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+
+                <!-- Filtros Avançados (Multiselect) -->
+                <div class="filtros-avancados-grid">
+                    <!-- Item -->
+                    <div class="custom-multiselect">
+                        <label>Itens</label>
+                        <div id="filtroItemDisplay" class="glass-input multiselect-display">
+                            <span id="filtroItemText">Todos</span>
+                            <i class="fas fa-chevron-down"></i>
                         </div>
-                        <div class="form-group">
-                            <label for="searchItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificador</label>
-                            <select id="searchItem" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">Todos</option>
-                            </select>
+                        <div id="filtroItemOptions" class="glass-dropdown hidden">
+                            <div class="dropdown-header"><button type="button" id="btnLimparSelecaoItem">Limpar</button></div>
+                            <!-- Opções via JS -->
                         </div>
-                        <div class="form-group">
-                            <label for="searchOficina" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Oficina</label>
-                            <select id="searchOficina" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">Todas</option>
-                            </select>
+                    </div>
+
+                    <!-- Oficina -->
+                    <div class="custom-multiselect">
+                        <label>Oficinas</label>
+                        <div id="filtroOficinaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroOficinaText">Todas</span>
+                            <i class="fas fa-chevron-down"></i>
                         </div>
-                        <div class="form-group">
-                            <label for="searchStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
-                            <select id="searchStatus" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">Todos</option>
-                                <option value="FINALIZADO">FINALIZADO</option>
-                                <option value="PENDENTE">PENDENTE</option>
-                                <option value="INTERNADO">INTERNADO</option>
-                                <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
-                                <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
-                                <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
-                            </select>
+                        <div id="filtroOficinaOptions" class="glass-dropdown hidden">
+                            <div class="dropdown-header"><button type="button" id="btnLimparSelecaoOficina">Limpar</button></div>
+                            <!-- Opções via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="custom-multiselect">
+                        <label>Status</label>
+                        <div id="filtroStatusDisplay" class="glass-input multiselect-display">
+                            <span id="filtroStatusText">Todos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroStatusOptions" class="glass-dropdown hidden">
+                            <div class="dropdown-header"><button type="button" id="btnLimparTudo">Limpar</button></div> <!-- Reusing ID for simplicity or create new -->
+                            <label class="dropdown-item" style="background-color: #f8d7da; color: #721c24;"><input type="checkbox" class="filtro-status-checkbox" value="PENDENTE"> PENDENTE</label>
+                            <label class="dropdown-item" style="background-color: #d4edda; color: #155724;"><input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO"> FINALIZADO</label>
+                            <label class="dropdown-item" style="background-color: #cce5ff; color: #004085;"><input type="checkbox" class="filtro-status-checkbox" value="INTERNADO"> INTERNADO</label>
+                            <label class="dropdown-item" style="background-color: #fff3cd; color: #856404;"><input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN OFICINA"> CHECK-IN OFICINA</label>
+                            <label class="dropdown-item" style="background-color: #ffe0b2; color: #d35400;"><input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN ROTA"> CHECK-IN ROTA</label>
+                            <label class="dropdown-item" style="background-color: #d4edda; color: #0b3314; font-weight: bold;"><input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO ROTA"> FINALIZADO ROTA</label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Card Ações -->
-            <div class="card card-actions">
-                <div class="card-header">
-                    <h2><i class="fas fa-cogs"></i> Ações</h2>
-                </div>
-                <div class="card-body" style="padding: 20px; display: flex; align-items: center; justify-content: center;">
-                    <button type="button" id="btnFiltrarLancamentos" class="action-btn btn-buscar" style="width: 100%;">
-                        <i class="fas fa-filter"></i> Filtrar
-                    </button>
+            <!-- Card de Ações -->
+            <div class="glass-panel-inner actions-panel">
+                <h4><i class="fas fa-cogs"></i> Ações</h4>
+                <div class="acoes-grid-vertical">
+                    <button type="button" id="btnBuscarRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar Resultados</button>
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    <button type="button" id="btnExportarPDFServicos" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF (Serviços)</button>
+                    <button type="button" id="btnExportarPDFOficina" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF (Oficina)</button>
                 </div>
             </div>
         </div>
+      </form>
 
-        <!-- Grid de Lançamentos Recentes -->
-        <div class="card" style="margin-top: 20px;">
-          <div class="card-header">
-            <h2><i class="fas fa-list"></i> Manutenções Lançadas (Semana Atual)</h2>
-          </div>
-          <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-            <table class="data-grid">
-              <thead style="position: sticky; top: 0; background-color: #fff; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);">
+      <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+      <!-- Tabela de Resultados -->
+      <div class="panel-header">
+        <h3>Resultados da Busca <span id="contadorResultados" style="font-size: 0.8em; color: #666;"></span></h3>
+      </div>
+      <div class="table-responsive manutencao-table-container">
+        <table class="glass-table data-grid">
+            <thead>
                 <tr>
-                  <th data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
-                  <th data-sort="semana" style="cursor: pointer;">Semana <i class="fas fa-sort"></i></th>
-                  <th data-sort="placa" style="cursor: pointer;">Placa <i class="fas fa-sort"></i></th>
-                  <th data-sort="usuario" style="cursor: pointer;">Usuário <i class="fas fa-sort"></i></th>
-                  <th>Valor Total</th>
-                  <th>Ações</th>
+                    <th data-sort="data_hora">DATA <i class="fas fa-sort"></i></th>
+                    <th data-sort="semana">SEM <i class="fas fa-sort"></i></th>
+                    <th data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
+                    <th data-sort="modelo">MODELO <i class="fas fa-sort"></i></th>
+                    <th data-sort="item">ITEM <i class="fas fa-sort"></i></th>
+                    <th data-sort="status">STATUS <i class="fas fa-sort"></i></th>
+                    <th data-sort="oficina">OFICINA <i class="fas fa-sort"></i></th>
+                    <th>DETALHES</th>
+                    <th>PEÇAS</th>
+                    <th>VALOR</th>
+                    <th>AÇÕES</th>
                 </tr>
-              </thead>
-              <tbody id="tableBodyLancamentos">
-                <!-- Preenchido via JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+            </thead>
+            <tbody id="tableBodyRelatorio"></tbody>
+        </table>
+      </div>
 
-      <!-- SEÇÃO: GERAR ARQUIVO -->
-      <section id="sectionGerarArquivo" class="section hidden">
-        <form id="formExportacao" class="layout-row">
-            
-            <!-- Card de Filtros (Campos) -->
-            <div class="card card-filters-arquivo">
-                <div class="card-header">
-                    <h2><i class="fas fa-filter"></i> Filtros de Busca</h2>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="grid-2col">
-                        <div class="form-group">
-                            <label for="filtroSemana" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Semana</label>
-                            <input type="text" id="filtroSemana" placeholder="Ex: 01" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroPlaca" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Placa</label>
-                            <input type="text" id="filtroPlaca" placeholder="AAA0000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroDataIni" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Data Inicial</label>
-                            <input type="date" id="filtroDataIni" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroDataFim" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Data Final</label>
-                            <input type="date" id="filtroDataFim" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroItem" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Item Verificador</label>
-                            <div class="custom-multiselect" style="position: relative;">
-                                <div id="filtroItemDisplay" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
-                                    <span id="filtroItemText">Todos</span>
-                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
-                                </div>
-                                <div id="filtroItemOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                    <!-- Botão Limpar Selecionados dentro do Dropdown -->
-                                    <div style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background-color: #f9f9f9;">
-                                        <button type="button" id="btnLimparSelecaoItem" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85em; font-weight: bold;">Limpar Selecionados</button>
-                                    </div>
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroOficina" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Oficina</label>
-                            <div class="custom-multiselect" style="position: relative;">
-                                <div id="filtroOficinaDisplay" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
-                                    <span id="filtroOficinaText">Todas</span>
-                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
-                                </div>
-                                <div id="filtroOficinaOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                    <div style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background-color: #f9f9f9;">
-                                        <button type="button" id="btnLimparSelecaoOficina" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85em; font-weight: bold;">Limpar Selecionados</button>
-                                    </div>
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="filtroStatus" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Status</label>
-                            <div class="custom-multiselect" style="position: relative;">
-                                <div id="filtroStatusDisplay" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; display: flex; justify-content: space-between; align-items: center;">
-                                    <span id="filtroStatusText">Todos</span>
-                                    <i class="fas fa-chevron-down" style="font-size: 0.8em; color: #666;"></i>
-                                </div>
-                                <div id="filtroStatusOptions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="PENDENTE" style="margin-right: 8px;"> PENDENTE
-                                    </label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO" style="margin-right: 8px;"> FINALIZADO
-                                    </label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="INTERNADO" style="margin-right: 8px;"> INTERNADO
-                                    </label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN OFICINA" style="margin-right: 8px;"> CHECK-IN OFICINA
-                                    </label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="CHECK-IN ROTA" style="margin-right: 8px;"> CHECK-IN ROTA
-                                    </label>
-                                    <label style="display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
-                                        <input type="checkbox" class="filtro-status-checkbox" value="FINALIZADO ROTA" style="margin-right: 8px;"> FINALIZADO ROTA
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      <!-- Gráficos (Movido para baixo da tabela) -->
+      <div id="graficos-container" style="display: none; margin-top: 30px;">
+        <div class="graficos-grid">
+            <div class="grafico-card glass-panel">
+                <h4>Status das Manutenções</h4>
+                <div class="chart-wrapper"><canvas id="grafico-status"></canvas></div>
             </div>
-
-            <!-- Card de Ações (Botões) -->
-            <div class="card card-actions-arquivo">
-                <div class="card-header">
-                    <h2><i class="fas fa-cogs"></i> Ações</h2>
-                </div>
-                <div class="card-body" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
-                    <button type="button" id="btnBuscarRelatorio" class="action-btn btn-buscar"><i class="fas fa-search"></i> Buscar</button>
-                    <button type="submit" class="action-btn btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
-                    <button type="button" id="btnExportarPDFServicos" class="action-btn btn-pdf"><i class="fas fa-file-pdf"></i> PDF (Serviços)</button>
-                    <button type="button" id="btnExportarPDFOficina" class="action-btn btn-pdf"><i class="fas fa-file-pdf"></i> PDF (Oficina)</button>
-                    <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 5px 0;">
-                    <button type="button" id="btnLimparTudo" class="action-btn btn-limpar"><i class="fas fa-eraser"></i> Limpar Tudo</button>
-                </div>
+            <div class="grafico-card glass-panel">
+                <h4>Top Itens/Serviços</h4>
+                <div class="chart-wrapper"><canvas id="grafico-itens"></canvas></div>
             </div>
-        </form>
-
-        <!-- Grid de Resultados do Relatório -->
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-header">
-                <h3>Resultados da Busca <span id="contadorResultados" style="font-size: 0.8em; color: #666;">(0)</span></h3>
-            </div>
-            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                <table class="data-grid">
-                    <thead style="position: sticky; top: 0; background-color: #fff; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);">
-                        <tr>
-                            <th data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
-                            <th data-sort="semana" style="cursor: pointer;">Semana <i class="fas fa-sort"></i></th>
-                            <th data-sort="placa" style="cursor: pointer;">Placa <i class="fas fa-sort"></i></th>
-                            <th data-sort="modelo" style="cursor: pointer;">Modelo <i class="fas fa-sort"></i></th>
-                            <th data-sort="item" style="cursor: pointer;">Item <i class="fas fa-sort"></i></th>
-                            <th data-sort="status" style="cursor: pointer;">Status <i class="fas fa-sort"></i></th>
-                            <th data-sort="oficina" style="cursor: pointer;">Oficina <i class="fas fa-sort"></i></th>
-                            <th data-sort="detalhes" style="cursor: pointer;">Detalhes <i class="fas fa-sort"></i></th>
-                            <th data-sort="pecas_usadas" style="cursor: pointer;">Peças Usadas <i class="fas fa-sort"></i></th>
-                            <th>Valor</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBodyRelatorio">
-                        <tr><td colspan="9" class="text-center">Utilize os filtros acima para buscar.</td></tr>
-                    </tbody>
-                </table>
+            <div class="grafico-card glass-panel">
+                <h4>Manutenções por Oficina</h4>
+                <div class="chart-wrapper"><canvas id="grafico-oficinas"></canvas></div>
             </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Seção de Gráficos -->
-        <div class="card" id="graficos-container" style="margin-top: 20px; display: none;">
-            <div class="card-header">
-                <h3>Análise Gráfica dos Resultados</h3>
-            </div>
-            <div class="card-body" style="padding: 20px;">
-                <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
-                    <div class="chart-card" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <h4 style="text-align: center; margin-bottom: 15px;">Status das Manutenções</h4>
-                        <div style="height: 300px; position: relative;">
-                            <canvas id="grafico-status"></canvas>
-                        </div>
-                    </div>
-                    <div class="chart-card" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <h4 style="text-align: center; margin-bottom: 15px;">Serviços</h4>
-                        <div style="height: 300px; position: relative;">
-                            <canvas id="grafico-itens"></canvas>
-                        </div>
-                    </div>
-                    <div class="chart-card" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <h4 style="text-align: center; margin-bottom: 15px;">Manutenções por Oficina</h4>
-                        <div style="height: 300px; position: relative;">
-                            <canvas id="grafico-oficinas"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-      </section>
+  </main>
 
-    </div>
-  </div>
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 Marquespan. Todos os direitos reservados.
+  </footer>
 
-  <!-- Modal para Lançamento de Manutenção -->
-  <div id="modalLancamento" class="panel-backdrop hidden">
-    <div class="panel" style="max-width: 800px;">
-        <div class="panel-header">
-            <h3><i class="fas fa-wrench"></i> Novo Lançamento de Coleta</h3>
+  <!-- MODAL LANÇAMENTO -->
+  <div id="modalLancamento" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Lançamento de Manutenção</h3>
             <button class="close-button">&times;</button>
         </div>
-        <div class="panel-body">
+        <div class="modal-body">
             <form id="formLancamentoColeta">
-                <!-- Seção 1: Veículo (Azul) -->
-                <fieldset class="form-fieldset fieldset-veiculo">
-                    <legend><i class="fas fa-car"></i> Veículo</legend>
-                    <div class="form-grid-coleta">
+                <div class="lancamento-top-grid">
+                    <!-- Card 1: Dados Gerais -->
+                    <div class="modal-card">
+                        <h4><i class="fas fa-info-circle"></i> Dados Gerais</h4>
                         <div class="form-group">
-                            <label for="coletaPlaca">Placa</label>
-                            <input type="text" id="coletaPlaca" list="veiculosList" required>
+                            <label>Semana</label>
+                            <input type="text" id="coletaSemana" class="glass-input" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Data/Hora</label>
+                            <input type="datetime-local" id="coletaDataHora" class="glass-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Usuário</label>
+                            <input type="text" id="coletaUsuario" class="glass-input" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Veículo -->
+                    <div class="modal-card">
+                        <h4><i class="fas fa-truck"></i> Veículo</h4>
+                        <div class="form-group">
+                            <label>Placa</label>
+                            <input type="text" id="coletaPlaca" list="veiculosList" class="glass-input" required placeholder="AAA0000">
                             <datalist id="veiculosList"></datalist>
                         </div>
                         <div class="form-group">
-                            <label for="coletaKm">Km</label>
-                            <input type="number" id="coletaKm" required>
+                            <label>Modelo</label>
+                            <input type="text" id="coletaModelo" class="glass-input" readonly>
                         </div>
                         <div class="form-group">
-                            <label for="coletaModelo">Modelo</label>
-                            <input type="text" id="coletaModelo" readonly>
+                            <label>KM</label>
+                            <input type="number" id="coletaKm" class="glass-input" placeholder="0">
                         </div>
                     </div>
-                </fieldset>
+                </div>
 
-                <!-- Seção 2: Detalhes (Verde) -->
-                <fieldset class="form-fieldset fieldset-detalhes">
-                    <legend><i class="fas fa-info-circle"></i> Detalhes</legend>
-                    <div class="form-grid-coleta">
-                        <div class="form-group">
-                            <label for="coletaSemana">Semana</label>
-                            <input type="text" id="coletaSemana" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="coletaDataHora">Data/Hora</label>
-                            <input type="datetime-local" id="coletaDataHora" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="coletaUsuario">Usuário</label>
-                            <input type="text" id="coletaUsuario" required readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="coletaValorTotal">Valor Total</label>
-                            <input type="text" id="coletaValorTotal" readonly value="R$ 0,00" style="font-weight: bold; color: #28a745; background-color: #e9ecef;">
-                        </div>
-                    </div>
-                </fieldset>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Valor Total</label>
+                    <input type="text" id="coletaValorTotal" class="glass-input" readonly placeholder="R$ 0,00" style="font-weight: bold; color: var(--primary-color);">
+                </div>
 
-                <!-- Seção 3: Checklist (Amarelo/Laranja) -->
-                <fieldset class="form-fieldset fieldset-checklist">
-                    <legend><i class="fas fa-list-check"></i> Checklist de Manutenção</legend>
-                    <div class="checklist-container" id="checklistContainer">
-                        <p style="text-align: center; padding: 10px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Carregando itens do checklist...</p>
-                    </div>
-                </fieldset>
+                <hr style="margin: 15px 0; border-color: rgba(0,0,0,0.1);">
+                
+                <h4>Checklist de Serviços</h4>
+                <div id="checklistContainer" class="checklist-container">
+                    <!-- Itens gerados via JS -->
+                </div>
 
-                <div class="form-actions" style="justify-content: flex-end; margin-top: 20px;">
-                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Registrar</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Lançamento</button>
                 </div>
             </form>
         </div>
     </div>
   </div>
 
-  <!-- Modal para Importação em Massa -->
-  <div id="modalImportacaoMassa" class="panel-backdrop hidden">
-    <div class="panel" style="max-width: 500px;">
-        <div class="panel-header">
+  <!-- MODAL IMPORTAÇÃO -->
+  <div id="modalImportacaoMassa" class="modal-backdrop hidden">
+    <div class="glass-modal">
+        <div class="modal-header">
             <h3><i class="fas fa-file-import"></i> Importação em Massa</h3>
             <button class="close-button">&times;</button>
         </div>
-        <div class="panel-body">
+        <div class="modal-body">
             <form id="formImportacaoMassa">
                 <div class="form-group">
-                    <label for="tipoImportacao">Tipo de Arquivo</label>
-                    <select id="tipoImportacao" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="">Selecione...</option>
-                        <option value="MOLEIRO">MOLEIRO</option>
-                        <option value="MECANICA_EXTERNA">MECANICA EXTERNA</option>
-                        <option value="GERAL">GERAL</option>
+                    <label>Tipo de Importação</label>
+                    <select id="tipoImportacao" class="glass-input">
+                        <option value="GERAL">Geral (Padrão)</option>
+                        <option value="MOLEIRO">Moleiro</option>
+                        <option value="MECANICA_EXTERNA">Mecânica Externa</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="arquivoImportacao">Selecione o Arquivo (.xlsx)</label>
-                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <label>Arquivo Excel (.xlsx)</label>
+                    <input type="file" id="arquivoImportacao" accept=".xlsx" class="glass-input" required>
                 </div>
-                <div class="form-actions" style="justify-content: flex-end; margin-top: 20px;">
-                    <button type="submit" class="btn-success"><i class="fas fa-check"></i> Processar Arquivo</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-check"></i> Processar Arquivo</button>
                 </div>
             </form>
         </div>
     </div>
   </div>
 
-  <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script>
-    // Função global para alternar o menu lateral no mobile
-    window.toggleSidebar = function() {
-      const sidebar = document.getElementById('sidebar');
-      if (sidebar) {
-        sidebar.classList.toggle('mobile-open');
-      }
-    };
-  </script>
-  <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/coletar-manutencao.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // === Correção Visual para Status "FINALIZADO ROTA" ===
-        function aplicarCorStatusFinalizadoRota() {
-            const cells = document.querySelectorAll('#tableBodyLancamentos td');
-            cells.forEach(cell => {
-                if (cell.textContent.trim() === 'FINALIZADO ROTA') {
-                    // Aplica estilo na célula ou no badge/span se existir
-                    const badge = cell.querySelector('.badge') || cell.querySelector('span');
-                    if (badge) {
-                        badge.classList.add('badge-finalizado-rota');
-                        badge.style.backgroundColor = '#006400';
-                        badge.style.color = 'white';
-                    } else {
-                        cell.classList.add('status-finalizado-rota');
-                        cell.style.color = '#006400';
-                        cell.style.fontWeight = 'bold';
-                    }
-                }
-            });
-        }
+  <!-- Botão Flutuante Mobile -->
+  <button id="btnAdicionarItem" class="fab-btn"><i class="fas fa-plus"></i></button>
 
-        // Monitora mudanças na tabela para reaplicar a cor quando os dados forem carregados/filtrados
-        const observerTabela = new MutationObserver(aplicarCorStatusFinalizadoRota);
-        const tabelaAlvo = document.getElementById('tableBodyLancamentos');
-        if (tabelaAlvo) {
-            observerTabela.observe(tabelaAlvo, { childList: true, subtree: true });
-        }
-    });
-  </script>
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/coletar-manutencao.js"></script>
 </body>
 </html>

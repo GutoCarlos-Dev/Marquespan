@@ -8,7 +8,6 @@ const ColetarManutencaoUI = {
         this.injectStyles();
         this.bindEvents();
         this.initTabs();
-        this.renderLegend();
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
@@ -17,8 +16,12 @@ const ColetarManutencaoUI = {
         this.chartStatus = null; // Instância do gráfico de status
         this.chartItems = null; // Instância do gráfico de itens
         this.chartOficinas = null; // Instância do novo gráfico de oficinas
-        this.carregarFiltrosDinamicos();
-        this.aplicarRestricoesPerfil(); // Aplica restrições de UI antes de carregar dados
+        
+        // Carrega filtros e depois aplica restrições
+        this.carregarFiltrosDinamicos().then(() => {
+            this.aplicarRestricoesPerfil(); 
+        });
+        
         this.carregarLancamentos(); // Carrega a lista ao iniciar
         this.carregarChecklistDinamico().then(() => {
             // Verifica se o modal deve ser reaberto após atualização da página
@@ -44,6 +47,8 @@ const ColetarManutencaoUI = {
         this.veiculosList = document.getElementById('veiculosList');
         this.coletaValorTotalInput = document.getElementById('coletaValorTotal');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
+        
+        // Filtros Lançamento
         this.searchPlacaInput = document.getElementById('searchPlaca');
         this.searchItemInput = document.getElementById('searchItem');
         this.searchOficinaInput = document.getElementById('searchOficina');
@@ -132,6 +137,33 @@ const ColetarManutencaoUI = {
                 color: #d35400 !important;
                 border: 1px solid #ffcc80 !important;
             }
+            
+            /* Estilos para as opções dentro do dropdown */
+            option[value="PENDENTE"] {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+            option[value="FINALIZADO"] {
+                background-color: #d4edda;
+                color: #155724;
+            }
+            option[value="INTERNADO"] {
+                background-color: #cce5ff;
+                color: #004085;
+            }
+            option[value="CHECK-IN OFICINA"] {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+            option[value="CHECK-IN ROTA"] {
+                background-color: #ffe0b2;
+                color: #d35400;
+            }
+            option[value="FINALIZADO ROTA"] {
+                background-color: #d4edda;
+                color: #0b3314;
+                font-weight: bold;
+            }
         `;
         document.head.appendChild(style);
     },
@@ -164,14 +196,14 @@ const ColetarManutencaoUI = {
             // Ocultar filtros de Item e Oficina
             const searchItem = document.getElementById('searchItem');
             if (searchItem) {
-                const wrapper = searchItem.closest('.form-group');
+                const wrapper = searchItem.closest('.form-group-filter'); // Corrigido para a nova classe
                 if (wrapper) wrapper.style.display = 'none';
                 else searchItem.style.display = 'none';
             }
 
             const searchOficina = document.getElementById('searchOficina');
             if (searchOficina) {
-                const wrapper = searchOficina.closest('.form-group');
+                const wrapper = searchOficina.closest('.form-group-filter'); // Corrigido para a nova classe
                 if (wrapper) wrapper.style.display = 'none';
                 else searchOficina.style.display = 'none';
             }
@@ -232,6 +264,10 @@ const ColetarManutencaoUI = {
             container.innerHTML = '';
 
             itens.forEach(item => {
+                // Wrapper para garantir zebragem correta
+                const wrapper = document.createElement('div');
+                wrapper.className = 'checklist-row-wrapper';
+
                 const div = document.createElement('div');
                 div.className = 'checklist-item';
                 div.dataset.item = item.descricao; // Mantém compatibilidade com scripts existentes
@@ -265,7 +301,7 @@ const ColetarManutencaoUI = {
                         <input type="text" class="checklist-valor" placeholder="R$ 0,00" value="R$ 0,00" style="width: 100%; padding: 5px; border: 1px solid #28a745; border-radius: 4px; color: #155724; font-weight: bold;">
                     </div>
                 `;
-                container.appendChild(div);
+                wrapper.appendChild(div);
 
                 // Lógica para mostrar/ocultar o seletor de oficina
                 const statusSelect = div.querySelector('.checklist-status');
@@ -324,7 +360,7 @@ const ColetarManutencaoUI = {
                         <label style="font-weight: bold; color: #0056b3; display: block; margin-bottom: 5px;"><i class="fas fa-cogs"></i> Peças Usadas (Mecanica/Elétrica):</label>
                         <input type="text" class="checklist-pecas" placeholder="Informe as peças utilizadas..." style="width: 100%; padding: 8px; border: 1px solid #99caff; border-radius: 4px;" oninput="this.value = this.value.toUpperCase()">
                     `;
-                    container.appendChild(extraDiv);
+                    wrapper.appendChild(extraDiv);
                     
                     statusSelect.addEventListener('change', (e) => {
                          if (e.target.value === 'FINALIZADO') {
@@ -335,6 +371,8 @@ const ColetarManutencaoUI = {
                          }
                     });
                 }
+
+                container.appendChild(wrapper);
             });
 
             // Aplica restrições de nível após carregar os itens
@@ -364,63 +402,77 @@ const ColetarManutencaoUI = {
     async carregarFiltrosDinamicos() {
         try {
             // Carregar Itens Verificadores
-            const { data: itens } = await supabaseClient.from('itens_verificacao').select('descricao').order('descricao');
-            if (itens) {
-                // Filtro Lançamento
+            const { data: itens, error: errItens } = await supabaseClient.from('itens_verificacao').select('descricao').order('descricao');
+            
+            if (errItens) {
+                console.error('Erro ao carregar itens para filtro:', errItens);
+            } else if (itens && itens.length > 0) {
+                // Filtro Lançamento (Select)
                 if (this.searchItemInput) {
                     this.searchItemInput.innerHTML = '<option value="">Todos</option>';
-                    itens.forEach(i => this.searchItemInput.add(new Option(i.descricao, i.descricao)));
+                    itens.forEach(i => {
+                        if(i.descricao) this.searchItemInput.add(new Option(i.descricao, i.descricao));
+                    });
                 }
-                // Filtro Relatório (Checkbox)
-                const containerItem = this.filtroItemOptions.querySelector('div') ? this.filtroItemOptions : null; // Mantém o botão limpar se existir
-                // Limpa apenas os labels, mantendo o botão de limpar
-                const labels = this.filtroItemOptions.querySelectorAll('label');
-                labels.forEach(l => l.remove());
                 
-                itens.forEach(i => {
-                    const label = document.createElement('label');
-                    label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
-                    label.innerHTML = `<input type="checkbox" class="filtro-item-checkbox" value="${i.descricao}" style="margin-right: 8px;"> ${i.descricao}`;
-                    this.filtroItemOptions.appendChild(label);
-                });
+                // Filtro Relatório (Checkbox)
+                if (this.filtroItemOptions) {
+                    // Limpa apenas os labels, mantendo o botão de limpar
+                    const labels = this.filtroItemOptions.querySelectorAll('label');
+                    labels.forEach(l => l.remove());
+                    
+                    itens.forEach(i => {
+                        if(i.descricao) {
+                            const label = document.createElement('label');
+                            label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
+                            label.innerHTML = `<input type="checkbox" class="filtro-item-checkbox" value="${i.descricao}" style="margin-right: 8px;"> ${i.descricao}`;
+                            this.filtroItemOptions.appendChild(label);
+                        }
+                    });
+                }
             }
 
             // Carregar Oficinas
-            const { data: oficinas } = await supabaseClient.from('oficinas').select('nome, filial').order('nome');
+            const { data: oficinas, error: errOficinas } = await supabaseClient.from('oficinas').select('nome, filial').order('nome');
             
-            // Filtra oficinas pela filial do usuário logado
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
-            
-            const oficinasFiltradas = filialUsuario && oficinas 
-                ? oficinas.filter(o => !o.filial || o.filial === filialUsuario)
-                : oficinas;
-
-            if (oficinasFiltradas) {
-                // Filtro Lançamento
-                if (this.searchOficinaInput) this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
+            if (errOficinas) {
+                console.error('Erro ao carregar oficinas para filtro:', errOficinas);
+            } else {
+                // Filtra oficinas pela filial do usuário logado
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+                const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
                 
-                // Limpa opções anteriores do filtro de relatório (mantendo o botão de limpar se existir)
-                if (this.filtroOficinaOptions) {
-                    const labels = this.filtroOficinaOptions.querySelectorAll('label');
-                    labels.forEach(l => l.remove());
-                }
+                const oficinasFiltradas = filialUsuario && oficinas 
+                    ? oficinas.filter(o => !o.filial || o.filial === filialUsuario)
+                    : oficinas;
 
-                oficinasFiltradas.forEach(o => {
-                    const texto = o.nome;
-                    if (this.searchOficinaInput) this.searchOficinaInput.add(new Option(texto, texto));
+                if (oficinasFiltradas && oficinasFiltradas.length > 0) {
+                    // Filtro Lançamento (Select)
+                    if (this.searchOficinaInput) {
+                        this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
+                        oficinasFiltradas.forEach(o => {
+                            if(o.nome) this.searchOficinaInput.add(new Option(o.nome, o.nome));
+                        });
+                    }
                     
                     // Filtro Relatório (Checkbox)
                     if (this.filtroOficinaOptions) {
-                        const label = document.createElement('label');
-                        label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
-                        label.innerHTML = `<input type="checkbox" class="filtro-oficina-checkbox" value="${o.nome}" style="margin-right: 8px;"> ${texto}`;
-                        this.filtroOficinaOptions.appendChild(label);
+                        const labels = this.filtroOficinaOptions.querySelectorAll('label');
+                        labels.forEach(l => l.remove());
+
+                        oficinasFiltradas.forEach(o => {
+                            if(o.nome) {
+                                const label = document.createElement('label');
+                                label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
+                                label.innerHTML = `<input type="checkbox" class="filtro-oficina-checkbox" value="${o.nome}" style="margin-right: 8px;"> ${o.nome}`;
+                                this.filtroOficinaOptions.appendChild(label);
+                            }
+                        });
                     }
-                });
+                }
             }
         } catch (e) {
-            console.error('Erro ao carregar filtros dinâmicos:', e);
+            console.error('Erro crítico ao carregar filtros dinâmicos:', e);
         }
     },
 
@@ -533,15 +585,17 @@ const ColetarManutencaoUI = {
         // Eventos do Multi-Select de Itens
         if (this.filtroItemDisplay) {
             this.filtroItemDisplay.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.filtroItemOptions.style.display = this.filtroItemOptions.style.display === 'block' ? 'none' : 'block';
+                e.stopPropagation(); // Impede que o clique feche imediatamente
+                const isVisible = this.filtroItemOptions.classList.contains('hidden');
+                if (isVisible) this.filtroItemOptions.classList.remove('hidden');
+                else this.filtroItemOptions.classList.add('hidden');
             });
 
             // Fechar ao clicar fora
             document.addEventListener('click', (e) => {
-                if (this.filtroItemOptions && this.filtroItemOptions.style.display === 'block') {
+                if (this.filtroItemOptions && !this.filtroItemOptions.classList.contains('hidden')) {
                     if (!this.filtroItemDisplay.contains(e.target) && !this.filtroItemOptions.contains(e.target)) {
-                        this.filtroItemOptions.style.display = 'none';
+                        this.filtroItemOptions.classList.add('hidden');
                     }
                 }
             });
@@ -560,13 +614,15 @@ const ColetarManutencaoUI = {
         if (this.filtroOficinaDisplay) {
             this.filtroOficinaDisplay.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.filtroOficinaOptions.style.display = this.filtroOficinaOptions.style.display === 'block' ? 'none' : 'block';
+                const isVisible = this.filtroOficinaOptions.classList.contains('hidden');
+                if (isVisible) this.filtroOficinaOptions.classList.remove('hidden');
+                else this.filtroOficinaOptions.classList.add('hidden');
             });
 
             document.addEventListener('click', (e) => {
-                if (this.filtroOficinaOptions && this.filtroOficinaOptions.style.display === 'block') {
+                if (this.filtroOficinaOptions && !this.filtroOficinaOptions.classList.contains('hidden')) {
                     if (!this.filtroOficinaDisplay.contains(e.target) && !this.filtroOficinaOptions.contains(e.target)) {
-                        this.filtroOficinaOptions.style.display = 'none';
+                        this.filtroOficinaOptions.classList.add('hidden');
                     }
                 }
             });
@@ -584,14 +640,16 @@ const ColetarManutencaoUI = {
         if (this.filtroStatusDisplay) {
             this.filtroStatusDisplay.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.filtroStatusOptions.style.display = this.filtroStatusOptions.style.display === 'block' ? 'none' : 'block';
+                const isVisible = this.filtroStatusOptions.classList.contains('hidden');
+                if (isVisible) this.filtroStatusOptions.classList.remove('hidden');
+                else this.filtroStatusOptions.classList.add('hidden');
             });
 
             // Fechar ao clicar fora
             document.addEventListener('click', (e) => {
-                if (this.filtroStatusOptions && this.filtroStatusOptions.style.display === 'block') {
+                if (this.filtroStatusOptions && !this.filtroStatusOptions.classList.contains('hidden')) {
                     if (!this.filtroStatusDisplay.contains(e.target) && !this.filtroStatusOptions.contains(e.target)) {
-                        this.filtroStatusOptions.style.display = 'none';
+                        this.filtroStatusOptions.classList.add('hidden');
                     }
                 }
             });
@@ -646,7 +704,7 @@ const ColetarManutencaoUI = {
     // Inicializa a navegação por abas
     initTabs() {
         const buttons = document.querySelectorAll('#menu-coletar-manutencao .painel-btn');
-        const sections = document.querySelectorAll('.main-content .section');
+        const sections = document.querySelectorAll('.main-content > section.glass-panel');
 
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -658,31 +716,6 @@ const ColetarManutencaoUI = {
                 document.getElementById(targetId)?.classList.remove('hidden');
             });
         });
-    },
-
-    // Renderiza a legenda de cores para os status
-    renderLegend() {
-        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        for (const h of headings) {
-            if (h.textContent.includes('Manutenções Lançadas (Semana Atual)') || h.textContent.includes('Resultados da Busca')) {
-                if (h.querySelector('.status-legend')) continue;
-
-                const legend = document.createElement('span');
-                legend.className = 'status-legend';
-                legend.style.cssText = 'font-size: 0.65em; margin-left: 15px; font-weight: normal; vertical-align: middle; display: inline-flex; align-items: center;';
-                
-                legend.innerHTML = `
-                    <span title="Manutenção concluída." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #155724; margin-right: 4px;"></span><span style="color:#155724;">FINALIZADO</span></span>
-                    <span title="Veículo sem direcionamento." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #f8d7da; border: 1px solid #721c24; margin-right: 4px;"></span><span style="color:#721c24;">PENDENTE</span></span>
-                    <span title="Veículo está na oficina, necessitando de mais dias para reparo." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #cce5ff; border: 1px solid #004085; margin-right: 4px;"></span><span style="color:#004085;">INTERNADO</span></span>
-                    <span title="Veículo deu entrada na oficina!" style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #fff3cd; border: 1px solid #856404; margin-right: 4px;"></span><span style="color:#856404;">CHECK-IN OFICINA</span></span>
-                    <span title="Veículo está em rota e deu entrada na oficina da região que está!" style="cursor: help; display: inline-flex; align-items: center;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #ffe0b2; border: 1px solid #d35400; margin-right: 4px;"></span><span style="color:#d35400;">CHECK-IN ROTA  </span></span>
-                    <span title="Manutenção concluída em Rota." style="cursor: help; display: inline-flex; align-items: center; margin-right: 12px;"><span style="display:inline-block; width: 12px; height: 12px; background-color: #d4edda; border: 1px solid #0b3314; margin-right: 4px;"></span><span style="color:#0b3314; font-weight: bold;"> FINALIZADO ROTA</span></span>
-                `;
-                
-                h.appendChild(legend);
-            }
-        }
     },
 
     // Abre o modal de lançamento de manutenção
@@ -2671,7 +2704,48 @@ const ColetarManutencaoUI = {
                 headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    // Ajuste automático
+                    // Ajuste automático das colunas
+                },
+                willDrawCell: function(data) {
+                    // Verifica se é o corpo da tabela e a coluna de Detalhes
+                    // Se agrupado por OFICINA, Detalhes é índice 5. Se padrão, é índice 7.
+                    const indexDetalhes = tipoAgrupamento === 'OFICINA' ? 5 : 7;
+                    
+                    if (data.section === 'body' && data.column.index === indexDetalhes) {
+                        const text = String(data.cell.raw || '');
+                        const regex = /(\( <-- FINALIZADO(?: ROTA)? \))/g;
+
+                        // Se contiver o marcador, desenha manualmente
+                        if (regex.test(text)) {
+                            const parts = text.split(regex);
+                            const cellWidth = data.cell.width - data.cell.padding('left') - data.cell.padding('right');
+                            const startX = data.cell.x + data.cell.padding('left');
+                            let cursorX = startX;
+                            // Ajuste fino da posição Y para alinhar com o texto padrão (aproximado)
+                            let cursorY = data.cell.y + data.cell.padding('top') + 3; 
+                            const lineHeight = 3.5; // Espaçamento para fonte tamanho 8
+
+                            doc.setFontSize(8);
+
+                            parts.forEach(part => {
+                                const isMarker = regex.test(part);
+                                doc.setTextColor(isMarker ? '#ff0000' : '#000000'); // Vermelho para o marcador, Preto para o resto
+                                
+                                // Divide por palavras para fazer a quebra de linha manual
+                                const words = part.split(/(\s+)/); 
+                                words.forEach(word => {
+                                    const wordWidth = doc.getTextWidth(word);
+                                    if (cursorX + wordWidth > startX + cellWidth) {
+                                        cursorX = startX;
+                                        cursorY += lineHeight;
+                                    }
+                                    doc.text(word, cursorX, cursorY);
+                                    cursorX += wordWidth;
+                                });
+                            });
+                            return false; // Impede a renderização padrão da célula
+                        }
+                    }
                 }
             });
 
