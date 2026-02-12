@@ -1,291 +1,204 @@
 import { supabaseClient } from './supabase.js';
 
-async function mostrarUsuarios() {
-  const termo = document.getElementById('termoBusca').value.trim().toLowerCase();
-  const corpoTabela = document.getElementById('corpoTabelaUsuarios');
-  corpoTabela.innerHTML = '';
+document.addEventListener('DOMContentLoaded', () => {
+    carregarUsuarios();
+    carregarNiveis();
+    setupEventListeners();
+});
 
-  let { data, error } = await supabaseClient
-    .from('usuarios')
-    .select('id, nome, nomecompleto, email, nivel');
-
-  if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="6">Erro ao carregar usuários.</td></tr>';
-    return;
-  }
-
-  if (termo) {
-    data = data.filter(u =>
-      u.id.toString().toLowerCase().includes(termo) ||
-      u.nome.toLowerCase().includes(termo) ||
-      u.nomecompleto.toLowerCase().includes(termo) ||
-      u.email.toLowerCase().includes(termo)
-    );
-  }
-
-  if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="6">Nenhum usuário encontrado.</td></tr>';
-    return;
-  }
-
-  data.forEach(usuario => {
-    const linha = document.createElement('tr');
-    linha.innerHTML = `
-      <td>${usuario.id}</td>
-      <td>${usuario.nome}</td>
-      <td>${usuario.nomecompleto}</td>
-      <td>${usuario.email}</td>
-      <td>${usuario.nivel}</td>
-      <td>
-        <button onclick="editarUsuario('${usuario.id}')">✏️</button>
-        <button onclick="excluirUsuario('${usuario.id}')">🗑️</button>
-      </td>
-    `;
-    corpoTabela.appendChild(linha);
-  });
-}
-
-async function cadastrarUsuario(event) {
-  event.preventDefault(); // evita recarregar a página
-
-  const nome = document.getElementById('nome').value.trim();
-  const nomecompleto = document.getElementById('nomecompleto').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
-  const filial = document.getElementById('filial').value;
-  const senha = document.getElementById('senha').value.trim();
-
-  if (!nome || !nomecompleto || !email || !nivel || !senha) {
-    alert('⚠️ Preencha todos os campos.');
-    return;
-  }
-
-  // Modificação: Chamar a função RPC 'criar_novo_usuario' em vez de insert direto
-  const { error } = await supabaseClient
-    .rpc('criar_novo_usuario', {
-      p_nome: nome,
-      p_nomecompleto: nomecompleto,
-      p_email: email,
-      p_nivel: nivel,
-      p_filial: filial,
-      p_senha: senha
+function setupEventListeners() {
+    // Botão Novo Usuário
+    document.getElementById('btnAdicionarNovo').addEventListener('click', () => {
+        document.getElementById('cadastro').classList.remove('hidden');
+        document.getElementById('busca').classList.add('hidden');
+        limparFormulario();
     });
 
-  if (error) {
-    console.error(error);
-    // Mensagem de erro mais detalhada para o desenvolvedor
-    alert(`❌ Erro ao cadastrar usuário: ${error.message}`);
-    return;
-  }
+    // Botão Cancelar
+    document.getElementById('btnCancelar').addEventListener('click', () => {
+        document.getElementById('cadastro').classList.add('hidden');
+        document.getElementById('busca').classList.remove('hidden');
+        limparFormulario();
+    });
 
-  alert('✅ Usuário cadastrado com sucesso!');
-  document.getElementById('formUsuario').reset();
-  window.mostrarSecao('busca');
-  mostrarUsuarios();
+    // Botão Atualizar Lista
+    document.getElementById('btnAtualizarLista').addEventListener('click', carregarUsuarios);
+
+    // Form Submit
+    document.getElementById('formUsuario').addEventListener('submit', salvarUsuario);
+
+    // Busca em tempo real
+    document.getElementById('termoBusca').addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase();
+        const linhas = document.querySelectorAll('#corpoTabelaUsuarios tr');
+        
+        linhas.forEach(linha => {
+            const texto = linha.textContent.toLowerCase();
+            linha.style.display = texto.includes(termo) ? '' : 'none';
+        });
+    });
 }
 
+async function carregarNiveis() {
+    const selectNivel = document.getElementById('nivel');
+    try {
+        const { data, error } = await supabaseClient
+            .from('nivel_permissoes')
+            .select('nivel')
+            .order('nivel');
 
-async function editarUsuario(id) {
-  const { data, error } = await supabaseClient
-    .from('usuarios')
-    .select('*')
-    .eq('id', id)
-    .single();
+        if (error) throw error;
 
-  if (error || !data) {
-    alert('❌ Erro ao carregar usuário.');
-    return;
-  }
+        // Limpa opções exceto a primeira
+        selectNivel.innerHTML = '<option value="" disabled selected>Selecione o nível</option>';
+        
+        // Adiciona "Administrador" manualmente se não vier do banco, pois é padrão
+        const niveis = new Set(data.map(n => n.nivel));
+        niveis.add('Administrador');
 
-  document.getElementById('nome').value = data.nome;
-  document.getElementById('nomecompleto').value = data.nomecompleto;
-  document.getElementById('email').value = data.email;
-  if (document.getElementById('filial')) document.getElementById('filial').value = data.filial || "";
-  
-  // CORREÇÃO: Seleção robusta do nível (Case Insensitive)
-  const nivelSelect = document.getElementById('nivel');
-  const nivelBanco = (data.nivel || '').trim();
-  
-  // Busca a opção correspondente ignorando case para garantir que o valor correto seja selecionado
-  const option = Array.from(nivelSelect.options).find(opt => opt.value.toLowerCase() === nivelBanco.toLowerCase());
-  if (option) {
-      nivelSelect.value = option.value;
-  } else {
-      nivelSelect.value = nivelBanco; // Fallback para atribuição direta
-  }
+        Array.from(niveis).sort().forEach(nivel => {
+            const option = document.createElement('option');
+            option.value = nivel;
+            option.textContent = nivel;
+            selectNivel.appendChild(option);
+        });
 
-  // Não carregar senha por segurança; deixar campo vazio para alteração opcional
-  document.getElementById('senha').value = '';
-  document.getElementById('formUsuario').dataset.usuarioId = data.id;
-
-  document.getElementById('btnSalvar').classList.add('hidden');
-  document.getElementById('btnAtualizar').classList.remove('hidden');
-  window.mostrarSecao('cadastro');
+    } catch (err) {
+        console.error('Erro ao carregar níveis:', err);
+        // Fallback básico
+        selectNivel.innerHTML += '<option value="Administrador">Administrador</option><option value="Usuario">Usuário</option>';
+    }
 }
 
-async function atualizarUsuario(event) {
-  event.preventDefault();
-  const id = document.getElementById('formUsuario').dataset.usuarioId;
-  
-  if (!id) {
-    alert('Erro: ID do usuário não encontrado para atualização.');
-    return;
-  }
+async function carregarUsuarios() {
+    const tbody = document.getElementById('corpoTabelaUsuarios');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
-  const nome = document.getElementById('nome').value.trim();
-  const nomecompleto = document.getElementById('nomecompleto').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const nivel = document.getElementById('nivel').value.trim().toLowerCase();
-  const filial = document.getElementById('filial').value;
-  const senha = document.getElementById('senha').value.trim();
+    try {
+        const { data, error } = await supabaseClient
+            .from('usuarios')
+            .select('*')
+            .order('nome', { ascending: true });
 
-  // Preparar dados para update, só incluir senha se não estiver vazia
-  const updateData = { nome, nomecompleto, email, nivel, filial };
-  if (senha) {
-    updateData.senha = senha;
-  }
+        if (error) throw error;
 
-  console.log('Tentando atualizar usuário ID:', id, updateData);
+        renderTable(data);
+    } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+    }
+}
 
-  // Adicionado .select() para confirmar a atualização e verificar erros
-  const { data, error } = await supabaseClient
-    .from('usuarios')
-    .update(updateData)
-    .eq('id', id)
-    .select();
+function renderTable(usuarios) {
+    const tbody = document.getElementById('corpoTabelaUsuarios');
+    tbody.innerHTML = '';
 
-  if (error) {
-    console.error(error);
-    alert(`❌ Erro ao atualizar usuário: ${error.message}\n\nDica: Verifique se a tabela 'usuarios' tem permissão (RLS) para UPDATE.`);
-    return;
-  }
+    if (usuarios.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+        return;
+    }
 
-  if (!data || data.length === 0) {
-    console.warn('Update retornou lista vazia. Possível bloqueio de RLS.');
-    alert('⚠️ Nenhuma alteração foi salva.\n\nMotivo provável: O banco de dados bloqueou a edição (RLS) ou o usuário não existe mais.');
-    return;
-  }
+    usuarios.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${u.id}</td>
+            <td>${u.nome}</td>
+            <td>${u.nomecompleto || u.nome_completo || '-'}</td>
+            <td>${u.email || '-'}</td>
+            <td>${u.nivel || '-'}</td>
+            <td>${u.filial || 'Todas'}</td>
+            <td>
+                <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
 
-  alert('✅ Usuário atualizado com sucesso!');
-  document.getElementById('formUsuario').reset();
-  document.getElementById('btnSalvar').classList.remove('hidden');
-  document.getElementById('btnAtualizar').classList.add('hidden');
-  document.getElementById('formUsuario').dataset.usuarioId = '';
-  window.mostrarSecao('busca');
-  mostrarUsuarios();
+        // Eventos dos botões
+        tr.querySelector('.edit').addEventListener('click', () => editarUsuario(u));
+        tr.querySelector('.delete').addEventListener('click', () => excluirUsuario(u.id));
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function salvarUsuario(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('usuarioId').value;
+    const nome = document.getElementById('nome').value;
+    const nomecompleto = document.getElementById('nomecompleto').value;
+    const email = document.getElementById('email').value;
+    const nivel = document.getElementById('nivel').value;
+    const filial = document.getElementById('filial').value;
+    const senha = document.getElementById('senha').value;
+
+    const usuarioData = {
+        nome,
+        nomecompleto, // ou nome_completo dependendo do banco, ajustando conforme necessidade
+        email,
+        nivel,
+        filial: filial || null
+    };
+
+    // Só envia a senha se ela foi preenchida (para update) ou se é novo cadastro
+    if (senha) {
+        usuarioData.senha = senha;
+    }
+
+    try {
+        let error;
+        if (id) {
+            // Update
+            const response = await supabaseClient.from('usuarios').update(usuarioData).eq('id', id);
+            error = response.error;
+        } else {
+            // Insert
+            if (!senha) return alert('Senha é obrigatória para novos usuários.');
+            const response = await supabaseClient.from('usuarios').insert([usuarioData]);
+            error = response.error;
+        }
+
+        if (error) throw error;
+
+        alert('Usuário salvo com sucesso!');
+        document.getElementById('btnCancelar').click(); // Volta para a lista
+        carregarUsuarios();
+
+    } catch (err) {
+        console.error('Erro ao salvar usuário:', err);
+        alert('Erro ao salvar: ' + err.message);
+    }
+}
+
+function editarUsuario(usuario) {
+    document.getElementById('usuarioId').value = usuario.id;
+    document.getElementById('nome').value = usuario.nome;
+    document.getElementById('nomecompleto').value = usuario.nomecompleto || usuario.nome_completo || '';
+    document.getElementById('email').value = usuario.email || '';
+    document.getElementById('nivel').value = usuario.nivel;
+    document.getElementById('filial').value = usuario.filial || '';
+    document.getElementById('senha').value = ''; // Senha fica vazia para não alterar
+
+    document.getElementById('cadastro').classList.remove('hidden');
+    document.getElementById('busca').classList.add('hidden');
 }
 
 async function excluirUsuario(id) {
-  const confirmar = confirm('Tem certeza que deseja excluir este usuário?');
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
-  if (!confirmar) return;
-
-  console.log('Tentando excluir usuário ID:', id);
-
-  // Adicionado .select() para garantir que sabemos se algo foi deletado
-  const { data, error } = await supabaseClient
-    .from('usuarios')
-    .delete()
-    .eq('id', id)
-    .select();
-
-  if (error) {
-    console.error('Erro ao excluir:', error);
-    alert(`❌ Erro ao excluir usuário: ${error.message}\n\nDica: Verifique se existem registros vinculados a este usuário ou se há permissão (RLS) para DELETE.`);
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    console.warn('Delete retornou lista vazia. Possível bloqueio de RLS.');
-    alert('⚠️ O usuário não foi excluído.\n\nMotivo provável: O banco de dados bloqueou a exclusão (RLS).');
-    return;
-  }
-
-  alert('✅ Usuário excluído com sucesso!');
-  mostrarUsuarios();
-}
-
-// Expor funções para o escopo global (window) para que os botões no HTML possam chamá-las
-window.mostrarUsuarios = mostrarUsuarios;
-window.cadastrarUsuario = cadastrarUsuario;
-window.editarUsuario = editarUsuario;
-window.atualizarUsuario = atualizarUsuario;
-window.excluirUsuario = excluirUsuario;
- 
-function prepararNovoCadastro() {
-    document.getElementById('formUsuario').reset();
-    document.getElementById('btnSalvar').classList.remove('hidden');
-    document.getElementById('btnAtualizar').classList.add('hidden');
-    document.getElementById('formUsuario').dataset.usuarioId = '';
-    mostrarSecao('cadastro');
-}
-window.prepararNovoCadastro = prepararNovoCadastro;
- 
- 
-function mostrarSecao(id) {
-  document.querySelectorAll('.secao').forEach(sec => sec.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-}
-window.mostrarSecao = mostrarSecao;
-
-/**
- * Carrega os níveis de permissão do banco de dados e preenche o select.
- */
-async function carregarNiveisDisponiveis() {
-  const nivelSelect = document.getElementById('nivel');
-  if (!nivelSelect) return;
-
-  const { data, error } = await supabaseClient
-    .from('nivel_permissoes')
-    .select('nivel')
-    .order('nivel', { ascending: true });
-
-  if (error) {
-    console.error('Erro ao carregar níveis:', error);
-    return;
-  }
-
-  data.forEach(item => {
-    const option = document.createElement('option');
-    option.value = (item.nivel || '').toLowerCase();
-    // Formata para Capitalize (Primeira maiúscula, resto minúscula) para exibição amigável
-    const texto = item.nivel || '';
-    option.textContent = texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
-    nivelSelect.appendChild(option);
-  });
-}
-
-/**
- * Carrega as filiais cadastradas no banco de dados.
- */
-async function carregarFiliais() {
-  const select = document.getElementById('filial');
-  if (!select) return;
-
-  const { data, error } = await supabaseClient.from('filiais').select('*').order('nome');
-  if (error) return console.error('Erro ao carregar filiais:', error);
-
-  data.forEach(f => {
-    const option = document.createElement('option');
-    option.value = f.sigla; // Usa a sigla (SP, MG) como valor para manter compatibilidade
-    option.textContent = f.nome;
-    select.appendChild(option);
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btnAtualizarLista')?.addEventListener('click', mostrarUsuarios);
-  document.getElementById('termoBusca')?.addEventListener('input', mostrarUsuarios);
-  document.getElementById('formUsuario')?.addEventListener('submit', (e) => {
-    const id = document.getElementById('formUsuario').dataset.usuarioId;
-    if (id) {
-      atualizarUsuario(e);
-    } else {
-      cadastrarUsuario(e);
+    try {
+        const { error } = await supabaseClient.from('usuarios').delete().eq('id', id);
+        if (error) throw error;
+        
+        alert('Usuário excluído com sucesso!');
+        carregarUsuarios();
+    } catch (err) {
+        console.error('Erro ao excluir:', err);
+        alert('Erro ao excluir: ' + err.message);
     }
-  });
-  document.getElementById('btnAdicionarNovo')?.addEventListener('click', prepararNovoCadastro);
-  carregarNiveisDisponiveis();
-  carregarFiliais(); // Chama o carregamento das filiais
-  mostrarUsuarios();
-});
+}
+
+function limparFormulario() {
+    document.getElementById('formUsuario').reset();
+    document.getElementById('usuarioId').value = '';
+}

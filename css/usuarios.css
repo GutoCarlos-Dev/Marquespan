@@ -1,231 +1,198 @@
-/* 🧱 Blocos principais */
-.secao {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+/* css/usuarios.css - Estilo Glassmorphism */
+
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
 }
 
-/* 🧩 Títulos */
-.secao h3 {
-  font-size: 18px;
-  color: #2e7d32;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #c8e6c9;
-  padding-bottom: 5px;
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* ✏️ Campos */
-input[type="text"],
-input[type="password"] {
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 100%;
-  margin-bottom: 10px;
-  box-sizing: border-box;
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
 }
 
-/* 🖱️ Botões */
-.botoes-form button {
-  padding: 10px 20px;
-  font-weight: bold;
-  font-size: 14px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  margin-right: 10px;
-  transition: background 0.3s ease;
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
 }
 
-.botoes-form button[type="submit"],
-.botoes-form button#btnSalvar {
-  background-color: #4CAF50;
-  color: white;
+.glass-panel h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
 }
 
-.botoes-form button#btnAtualizar {
-  background-color: #3498db;
-  color: white;
+.panel-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
 }
 
-.botoes-form button:hover {
-  opacity: 0.9;
+.panel-header-actions h3 {
+    margin: 0;
+    border: none;
+    padding: 0;
 }
 
-.botoes-form button[type="button"] {
-  background-color: #e0e0e0;
-  color: #333;
-}
-
-/* 🧩 Grid de usuários */
-.tabela-usuarios {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-.tabela-usuarios th,
-.tabela-usuarios td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-
-.tabela-usuarios th {
-  background-color: #f1f8e9;
-  color: #2e7d32;
-}
-
-.tabela-usuarios tbody tr:hover {
-  background-color: #f9fbe7;
-}
-
-/* Estilos para padronização profissional do formulário */
-.form-container {
-  background-color: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
-  max-width: 700px; /* Diminui a largura do formulário */
-  margin-left: auto; /* Centraliza horizontalmente */
-  margin-right: auto; /* Centraliza horizontalmente */
-}
-.form-fieldset {
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 20px;
-  margin: 0;
-}
-.form-fieldset legend {
-  font-weight: bold;
-  color: #333;
-  padding: 0 10px;
-  font-size: 1.1em;
-}
+/* Formulário */
 .form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
 }
+
 .form-group {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
+
 .form-group label {
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #555;
-}
-.form-group input, .form-group select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-}
-.form-group input:focus, .form-group select:focus {
-  border-color: #007bff;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
-}
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
-}
-.btn-success {
-  background-color: #28a745;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn-success:hover { background-color: #218838; }
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn-secondary:hover { background-color: #5a6268; }
-
-/* Card estilo padrão */
-.card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  padding: 20px;
-  margin-bottom: 20px;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-color);
 }
 
-@media (max-width: 768px) {
-  .form-grid { grid-template-columns: 1fr; }
+/* Inputs e Selects Glass */
+input[type="text"], input[type="email"], input[type="password"], select, .glass-input {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
-/* --- Estilos para Grid com Rolagem e Cabeçalho Fixo --- */
-
-/* Container que define a altura máxima e a rolagem */
-.table-scroll-container {
-  max-height: 450px; /* Ajuste conforme necessário */
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+input:focus, select:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
 }
 
-/* Estilização da barra de rolagem (Webkit) */
-.table-scroll-container::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.table-scroll-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-.table-scroll-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-.table-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+/* Botões Glass */
+.form-actions, .acoes-grid-header {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
 }
 
-/* Cabeçalho Fixo */
-.data-grid thead {
-  position: sticky;
-  top: 0;
-  background-color: #f8f9fa; /* Cor de fundo para não ficar transparente ao rolar */
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-/* Estilos para ordenação */
-.data-grid thead th[data-sort] {
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s;
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
 }
-.data-grid thead th[data-sort]:hover {
-  background-color: #e2e6ea;
+
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+/* Tabela Glass */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
 }
-.data-grid thead th[data-sort] i {
-  margin-left: 5px;
-  color: #999;
-  font-size: 0.8em;
+
+.usuarios-table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.glass-table th {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.glass-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+}
+
+.glass-table tr:hover {
+    background: rgba(0, 105, 55, 0.05);
+}
+
+/* Botões de Ação na Tabela */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+    margin: 0 5px;
+}
+
+.btn-icon.edit { color: #007bff; }
+.btn-icon.edit:hover { color: #0056b3; }
+
+.btn-icon.delete { color: #dc3545; }
+.btn-icon.delete:hover { color: #bd2130; }
+
+/* Utilitários */
+.hidden {
+    display: none !important;
 }
