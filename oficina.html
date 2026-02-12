@@ -5,122 +5,119 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Oficinas - Marquespan</title>
   <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/buttons.css" />
   <link rel="stylesheet" href="css/oficina.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    <div class="main-content">
-      <header class="header"><i class="fas fa-wrench"></i> Gestão de Oficina</header>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
 
-      <!-- Navegação por abas -->
-      <div class="painel-navegacao" role="tablist">
-        <button class="painel-btn active" data-tab="sectionCadastrarOficina">Oficina</button>
-        <button class="painel-btn" data-tab="sectionCadastrarItem">Item Verificador</button>
-      </div>
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-wrench"></i> Gestão de Oficina</h1>
+    </header>
 
-      <section id="sectionCadastrarOficina" class="section">
-        <div class="form-container">
-          <form id="formCadastrarOficina" class="form-grid-layout">
-            <fieldset>
-              <legend>Formulário de Oficina</legend>
-              <input type="hidden" id="oficinaEditingId">
-              
-              <div class="form-group">
+    <!-- Navegação por abas -->
+    <div class="painel-navegacao" role="tablist">
+      <button class="painel-btn active" data-tab="sectionCadastrarOficina"><i class="fas fa-building"></i> Oficinas</button>
+      <button class="painel-btn" data-tab="sectionCadastrarItem"><i class="fas fa-list-check"></i> Itens Verificadores</button>
+    </div>
+
+    <!-- SEÇÃO: OFICINAS -->
+    <section id="sectionCadastrarOficina" class="glass-panel">
+      <h3><i class="fas fa-plus-circle"></i> Cadastrar/Editar Oficina</h3>
+      <form id="formCadastrarOficina">
+        <input type="hidden" id="oficinaEditingId">
+        <div class="form-grid">
+            <div class="form-group">
                 <label for="oficinaNome">Nome da Oficina</label>
-                <input type="text" id="oficinaNome" required placeholder="Ex: Oficina Central">
-              </div>
-
-              <div class="form-group">
+                <input type="text" id="oficinaNome" required placeholder="Ex: Oficina Central" class="glass-input">
+            </div>
+            <div class="form-group">
                 <label for="oficinaFilial">Filial</label>
-                <select id="oficinaFilial" required>
+                <select id="oficinaFilial" required class="glass-input">
                   <option value="SP" selected>SP</option>
                   <option value="MG">MG</option>
                   <option value="MS">MS</option>
                   <option value="PR">PR</option>
                 </select>
-              </div>
-
-              <div class="form-group">
+            </div>
+            <div class="form-group">
                 <label for="oficinaItemVerificador">Item Verificador</label>
-                <select id="oficinaItemVerificador" required>
+                <select id="oficinaItemVerificador" class="glass-input">
                   <option value="">Carregando...</option>
                 </select>
-              </div>
-
-              <div class="form-buttons">
-                <button type="submit" id="btnSubmitOficina" class="btn-submit">Cadastrar Oficina</button>
-                <button type="button" id="btnClearOficinaForm" class="btn-clear">Limpar</button>
-              </div>
-            </fieldset>
-          </form>
+            </div>
         </div>
-
-        <div class="card">
-          <div class="search-bar">
-            <input type="text" id="searchOficinaInput" placeholder="Buscar por nome ou filial...">
-          </div>
-          <div class="table-scroll-container" style="max-height: 500px; overflow-y: auto;">
-            <table class="data-grid" aria-label="Oficinas Cadastradas">
-              <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Oficinas Cadastradas</caption>
-              <thead>
-                <tr>
-                  <th data-field="nome">Nome</th>
-                  <th data-field="filial">Filial</th>
-                  <th data-field="item_verificador">Item Verificador</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="oficinaTableBody"></tbody>
-            </table>
-          </div>
+        <div class="form-actions">
+            <button type="button" id="btnClearOficinaForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="submit" id="btnSubmitOficina" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
         </div>
-      </section>
+      </form>
 
-      <!-- Seção Cadastro de Item Verificador -->
-      <section id="sectionCadastrarItem" class="section hidden">
-        <div class="form-container">
-          <form id="formCadastrarItem" class="form-grid-layout">
-            <fieldset>
-              <legend>Formulário de Item Verificador</legend>
-              <input type="hidden" id="itemEditingId">
-              
-              <div class="form-group">
+      <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+      <h3><i class="fas fa-list"></i> Oficinas Cadastradas</h3>
+      <div class="form-group" style="margin-bottom: 15px;">
+        <input type="text" id="searchOficinaInput" placeholder="🔍 Buscar oficina..." class="glass-input">
+      </div>
+      <div class="table-responsive oficina-table-container">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>NOME</th>
+              <th>FILIAL</th>
+              <th>ITEM VERIFICADOR</th>
+              <th style="width: 120px;">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="oficinaTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: ITENS VERIFICADORES -->
+    <section id="sectionCadastrarItem" class="glass-panel hidden">
+      <h3><i class="fas fa-plus-circle"></i> Cadastrar Item Verificador</h3>
+      <form id="formCadastrarItem">
+        <input type="hidden" id="itemEditingId">
+        <div class="form-grid">
+            <div class="form-group">
                 <label for="itemDescricao">Descrição do Item</label>
-                <input type="text" id="itemDescricao" required placeholder="Ex: Checklist Padrão">
-              </div>
-
-              <div class="form-buttons">
-                <button type="submit" id="btnSubmitItem" class="btn-submit">Cadastrar Item</button>
-                <button type="button" id="btnClearItemForm" class="btn-clear">Limpar</button>
-              </div>
-            </fieldset>
-          </form>
+                <input type="text" id="itemDescricao" required placeholder="Ex: Checklist Padrão" class="glass-input">
+            </div>
         </div>
-
-        <div class="card">
-          <div class="table-scroll-container" style="max-height: 500px; overflow-y: auto;">
-            <table class="data-grid" aria-label="Itens Verificadores Cadastrados">
-              <caption style="font-size: 1.5rem; font-weight: bold; margin-bottom: 10px;">Itens Verificadores</caption>
-              <thead>
-                <tr>
-                  <th data-field="descricao">Descrição</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="itemTableBody"></tbody>
-            </table>
-          </div>
+        <div class="form-actions">
+            <button type="button" id="btnClearItemForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="submit" id="btnSubmitItem" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
         </div>
-      </section>
+      </form>
 
-    </div>
-  </div>
+      <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+      <h3><i class="fas fa-list"></i> Itens Cadastrados</h3>
+      <div class="table-responsive item-table-container">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>DESCRIÇÃO</th>
+              <th style="width: 120px;">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="itemTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 🦶 Rodapé -->
   <footer class="footer">© 2025 Marquespan. Todos os direitos reservados.</footer>
-  <script type="module" src="./script/menu.js" defer></script>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/menu.js"></script>
   <script type="module" src="script/oficina.js"></script>
 </body>
 </html>
