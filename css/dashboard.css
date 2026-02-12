@@ -135,3 +135,33 @@
     color: #222;
     text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
+
+/* Referência de Layout (Baseado no index.css / layout.css) */
+.main-content {
+    margin-left: 290px; /* 270px do menu + 20px de espaço */
+    padding: 30px;
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px 10px;
+    }
+}
+
+/* Rodapé com estilo Glass */
+.footer {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #333;
+    padding: 15px;
+    background: var(--glass-bg-light);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--glass-shadow);
+}
