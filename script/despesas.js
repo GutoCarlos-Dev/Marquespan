@@ -105,20 +105,20 @@ const DespesasUI = {
 
         // Inicializa eventos dos Multiselects
         if (this.despesaRotaDisplay && this.despesaRotaOptions) {
-            this.setupMultiselect(this.despesaRotaDisplay, this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', 'btnLimparSelecaoRota');
+            this.setupMultiselect(this.despesaRotaDisplay, this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
         }
         if (this.despesaHotelDisplay && this.despesaHotelOptions) {
-            this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', 'btnLimparSelecaoHotel');
+            this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
         }
     },
 
-    setupMultiselect(display, options, textSpan, checkboxClass, clearBtnId) {
+    setupMultiselect(display, options, textSpan, checkboxClass) {
         // Toggle visibility
         display.addEventListener('click', (e) => {
             e.stopPropagation();
             const isHidden = options.classList.contains('hidden');
             // Fecha outros dropdowns se houver
-            document.querySelectorAll('.glass-dropdown').forEach(d => d.classList.add('hidden'));
+            document.querySelectorAll('.custom-options').forEach(d => d.classList.add('hidden'));
             if (isHidden) options.classList.remove('hidden');
         });
 
@@ -135,18 +135,6 @@ const DespesasUI = {
                 this.updateMultiselectText(options, textSpan, checkboxClass);
             }
         });
-
-        // Botão Limpar
-        const btnClear = document.getElementById(clearBtnId);
-        if (btnClear) {
-            btnClear.addEventListener('click', () => {
-                const checkboxes = options.querySelectorAll(`.${checkboxClass}`);
-                checkboxes.forEach(cb => cb.checked = false);
-                this.updateMultiselectText(options, textSpan, checkboxClass);
-                // Dispara evento de change para atualizar dependências (ex: quartos)
-                options.dispatchEvent(new Event('change'));
-            });
-        }
     },
 
     updateMultiselectText(optionsContainer, textSpan, checkboxClass) {
@@ -513,12 +501,39 @@ const DespesasUI = {
             
             // Popula Dropdown de Rotas
             if (this.despesaRotaOptions) {
-                this.despesaRotaOptions.querySelectorAll('label').forEach(l => l.remove()); // Limpa anteriores
+                this.despesaRotaOptions.innerHTML = ''; // Limpa anteriores
+                
+                // Container Sticky para busca e limpar
+                const stickyContainer = document.createElement('div');
+                stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+                // Input de Busca
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Buscar rota...';
+                searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+                searchInput.onclick = (e) => e.stopPropagation();
+                searchInput.addEventListener('input', (e) => {
+                     const term = e.target.value.toLowerCase();
+                     const options = this.despesaRotaOptions.querySelectorAll('label.custom-option');
+                     options.forEach(opt => {
+                         const text = opt.textContent.toLowerCase();
+                         opt.style.display = text.includes(term) ? 'block' : 'none';
+                     });
+                });
+                stickyContainer.appendChild(searchInput);
+
+                // Botão para limpar seleção
+                const btnLimpar = this.criarBotaoLimpar(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', searchInput);
+                stickyContainer.appendChild(btnLimpar);
+                
+                this.despesaRotaOptions.appendChild(stickyContainer);
+
                 if (rotas) {
                     rotas.forEach(r => {
                         const label = document.createElement('label');
-                        label.className = 'dropdown-item';
-                        label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}"> ${r.numero}`;
+                        label.className = 'custom-option';
+                        label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}" style="margin-right: 8px;"> ${r.numero}`;
                         this.despesaRotaOptions.appendChild(label);
                     });
                 }
@@ -529,12 +544,39 @@ const DespesasUI = {
             if (hoteisError) throw hoteisError;
             
             if (this.despesaHotelOptions) {
-                this.despesaHotelOptions.querySelectorAll('label').forEach(l => l.remove());
+                this.despesaHotelOptions.innerHTML = '';
+
+                // Container Sticky para busca e limpar
+                const stickyContainer = document.createElement('div');
+                stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+                // Input de Busca
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Buscar hotel...';
+                searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+                searchInput.onclick = (e) => e.stopPropagation();
+                searchInput.addEventListener('input', (e) => {
+                     const term = e.target.value.toLowerCase();
+                     const options = this.despesaHotelOptions.querySelectorAll('label.custom-option');
+                     options.forEach(opt => {
+                         const text = opt.textContent.toLowerCase();
+                         opt.style.display = text.includes(term) ? 'block' : 'none';
+                     });
+                });
+                stickyContainer.appendChild(searchInput);
+
+                // Botão para limpar seleção
+                const btnLimpar = this.criarBotaoLimpar(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', searchInput);
+                stickyContainer.appendChild(btnLimpar);
+                
+                this.despesaHotelOptions.appendChild(stickyContainer);
+
                 if (hoteis) {
                     hoteis.forEach(h => {
                         const label = document.createElement('label');
-                        label.className = 'dropdown-item';
-                        label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}"> ${h.nome}`;
+                        label.className = 'custom-option';
+                        label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}" style="margin-right: 8px;"> ${h.nome}`;
                         this.despesaHotelOptions.appendChild(label);
                     });
                 }
@@ -562,6 +604,21 @@ const DespesasUI = {
             console.error('Erro ao carregar datalists:', err);
             alert('❌ Não foi possível carregar as listas de sugestões. Verifique o console.');
         }
+    },
+
+    criarBotaoLimpar(optionsContainer, textSpan, checkboxClass, searchInput) {
+        const btnLimpar = document.createElement('div');
+        btnLimpar.className = 'custom-option';
+        btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer;';
+        btnLimpar.textContent = 'Limpar Seleção';
+        btnLimpar.onclick = (e) => {
+            e.stopPropagation();
+            optionsContainer.querySelectorAll(`.${checkboxClass}`).forEach(cb => cb.checked = false);
+            this.updateMultiselectText(optionsContainer, textSpan, checkboxClass);
+            if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+            optionsContainer.dispatchEvent(new Event('change')); // Dispara evento para atualizar dependências
+        };
+        return btnLimpar;
     },
 
     handleHotelSelectionChange() {
