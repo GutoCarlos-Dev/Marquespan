@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
 let veiculosData = [];
+let currentSort = { column: null, direction: 'asc' };
 
 document.addEventListener('DOMContentLoaded', () => {
     carregarFiliais();
@@ -8,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarVeiculos();
     setupEventListeners();
     setupMultiselect();
+    setupSorting();
 });
 
 function setupEventListeners() {
@@ -58,21 +60,26 @@ async function carregarFiliais() {
     }
 }
 
-async function carregarTipos() {
+function carregarTipos() {
     const container = document.getElementById('campo-tipo-options');
     if (!container) return;
-
-    // Tipos fixos conforme a página de cadastro
+    
+    // Lista fixa conforme solicitado
     const tipos = ['HR/VAN', 'MUNKC', 'SEMI-REBOQUE', 'OPERACIONAL', 'RESERVA'];
     
-    // Mantém o cabeçalho (botão limpar)
-    const header = container.querySelector('.dropdown-header');
-    container.innerHTML = '';
-    if (header) container.appendChild(header);
+    // Reconstrói o HTML do zero para garantir que o cabeçalho e itens existam
+    container.innerHTML = `
+        <div class="dropdown-header" style="padding: 8px; border-bottom: 1px solid #eee; margin-bottom: 5px;">
+            <button type="button" id="btn-limpar-tipo" style="width: 100%; padding: 5px; cursor: pointer; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">Limpar Selecionados</button>
+        </div>
+    `;
 
     tipos.forEach(tipo => {
         const label = document.createElement('label');
         label.className = 'dropdown-item';
+        label.style.display = 'block'; // Garante visibilidade
+        label.style.padding = '6px 10px';
+        label.style.cursor = 'pointer';
         label.innerHTML = `<input type="checkbox" class="filtro-tipo-checkbox" value="${tipo}"> ${tipo}`;
         container.appendChild(label);
     });
@@ -150,7 +157,8 @@ function setupMultiselect() {
     const display = document.getElementById('campo-tipo-display');
     const options = document.getElementById('campo-tipo-options');
     const text = document.getElementById('campo-tipo-text');
-    const btnLimpar = document.getElementById('btn-limpar-tipo');
+    // Busca o botão novamente pois ele foi recriado em carregarTipos()
+    const btnLimpar = document.getElementById('btn-limpar-tipo'); 
 
     if (!display || !options) return;
 
@@ -179,7 +187,8 @@ function setupMultiselect() {
     });
 
     if (btnLimpar) {
-        btnLimpar.addEventListener('click', () => {
+        btnLimpar.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita fechar o dropdown ao clicar em limpar
             options.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => cb.checked = false);
             text.textContent = 'Todos os Tipos';
         });
@@ -221,4 +230,44 @@ async function handleImportacao(e) {
     e.preventDefault();
     // Implementação básica de importação se necessário
     alert('Funcionalidade de importação em desenvolvimento.');
+}
+
+function setupSorting() {
+    const headers = document.querySelectorAll('th.sortable');
+    headers.forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.dataset.sort;
+            ordenarVeiculos(column);
+        });
+        th.style.cursor = 'pointer';
+    });
+}
+
+function ordenarVeiculos(column) {
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+
+    document.querySelectorAll('th.sortable i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+    });
+    
+    const activeTh = document.querySelector(`th[data-sort="${column}"] i`);
+    if (activeTh) {
+        activeTh.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
+
+    veiculosData.sort((a, b) => {
+        let valA = (a[column] || '').toString().toLowerCase();
+        let valB = (b[column] || '').toString().toLowerCase();
+
+        if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    renderizarTabela(veiculosData);
 }
