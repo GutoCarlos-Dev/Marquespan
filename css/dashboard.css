@@ -95,6 +95,7 @@
     transform: translateY(-5px);
     box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
     background: rgba(255, 255, 255, 0.85);
+    z-index: 100;
 }
 
 /* Ícones KPI */

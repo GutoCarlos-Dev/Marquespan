@@ -19,78 +19,84 @@
     <div id="menu-container"></div>
     
     <div class="main-content">
-      <header class="header header-flex">
+      <header class="header glass-header header-flex">
         <span><i class="fas fa-chart-line"></i> Monitoramento de Manutenção (Real-Time)</span>
         <div class="header-controls">
             <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
-            <button id="btn-toggle-sidebar" class="btn-refresh" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
-            <button id="btn-fullscreen" class="btn-refresh" title="Tela Cheia"><i class="fas fa-expand"></i></button>
-            <button id="btn-refresh" class="btn-refresh" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+            <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+            <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
+            <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
         </div>
       </header>
 
       <section class="section">
         <!-- Filtros de Período -->
-        <div class="filter-bar">
+        <div class="filter-bar glass-panel" style="display: flex; align-items: flex-end; gap: 15px; padding: 15px; margin-bottom: 20px;">
+            <div class="form-group">
+                <label for="filtroFilial">Filial:</label>
+                <select id="filtroFilial" class="glass-input">
+                    <option value="">Todas</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label for="dataInicial">De:</label>
-                <input type="date" id="dataInicial">
+                <input type="date" id="dataInicial" class="glass-input">
             </div>
             <div class="form-group">
                 <label for="dataFinal">Até:</label>
-                <input type="date" id="dataFinal">
+                <input type="date" id="dataFinal" class="glass-input">
             </div>
-            <button id="btn-aplicar-filtro" class="btn-primary">Aplicar Filtro</button>
+            <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
         </div>
 
         <!-- KPIs (Indicadores Chave) -->
         <div class="kpi-grid">
-            <div class="kpi-card red" id="card-total-frota" style="position: relative; cursor: help;">
+            <div class="kpi-card glass-card red" id="card-total-frota" style="position: relative; cursor: help;">
                 <div class="kpi-icon"><i class="fas fa-truck"></i></div>
                 <div class="kpi-info">
                     <h3>Total Frota</h3>
                     <p id="kpi-total-frota">0</p>
                 </div>
                 <!-- Tooltip para detalhamento -->
-                <div id="tooltip-frota" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 1000; min-width: 220px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                <div id="tooltip-frota" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 220px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
                     <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Detalhamento por Tipo</div>
                     <div id="tooltip-frota-content">Carregando...</div>
                 </div>
             </div>
-            <div class="kpi-card orange">
+            <div class="kpi-card glass-card orange">
                 <div class="kpi-icon"><i class="fas fa-tools"></i></div>
                 <div class="kpi-info">
                     <h3>Total Manutenções</h3>
                     <p id="kpi-total-qtd">0</p>
                 </div>
             </div>
-            <div class="kpi-card green">
+            <div class="kpi-card glass-card green">
                 <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
                 <div class="kpi-info">
                     <h3>Gasto Total (Período)</h3>
                     <p id="kpi-total-valor">R$ 0,00</p>
                 </div>
             </div>
-            <div class="kpi-card blue1" id="card-internados" style="position: relative; cursor: help;">
+            <div class="kpi-card glass-card blue" id="card-internados" style="position: relative; cursor: help;">
                 <div class="kpi-icon"><i class="fas fa-hospital"></i></div>
                 <div class="kpi-info">
                     <h3>Veículos Internados</h3>
                     <p id="kpi-internados">0</p>
                 </div>
                 <!-- Tooltip para detalhamento -->
-                <div id="tooltip-internados" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 1000; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                <div id="tooltip-internados" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
                     <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas Internadas</div>
                     <div id="tooltip-internados-content">Carregando...</div>
                 </div>
             </div>
-            <div class="kpi-card green">
+            <div class="kpi-card glass-card green">
                 <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
                 <div class="kpi-info">
                     <h3>Finalizados Hoje</h3>
                     <p id="kpi-finalizados-hoje">0</p>
                 </div>
             </div>
-            <div class="kpi-card red">
+            <div class="kpi-card glass-card red">
                 <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
                 <div class="kpi-info">
                     <h3>Total Pendentes</h3>
@@ -102,7 +108,7 @@
         <!-- Grid de Gráficos -->
         <div class="charts-dashboard">
             <!-- Linha 1 -->
-            <div class="chart-container wide">
+            <div class="chart-container glass-panel wide">
                 <h3><i class="fas fa-calendar-alt"></i> Evolução de Manutenções (Quantidade vs Tempo)</h3>
                 <div class="chart-wrapper">
                     <canvas id="chartEvolucao"></canvas>
@@ -113,44 +119,44 @@
         <!-- Container de Gráficos com Rolagem Horizontal (Marquee) -->
         <div class="marquee-wrapper">
             <div class="marquee-track" id="marqueeTrack">
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-gas-pump"></i> Nível dos Tanques de Combustível</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartNivelTanques"></canvas>
                     </div>
                 </div>
                 <!-- Os gráficos abaixo serão embaralhados via JS -->
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-truck"></i> Top 10 Veículos com Maior Custo</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartTopPlacas"></canvas>
                     </div>
                 </div>
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-building"></i> Gastos por Oficina/Empresa</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartOficinas"></canvas>
                     </div>
                 </div>
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-chart-pie"></i> Distribuição de Status</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartStatus"></canvas>
                     </div>
                 </div>
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-clipboard-list"></i> Top 10 Serviços Mais Frequentes</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartTopServicosFreq"></canvas>
                     </div>
                 </div>
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-file-invoice-dollar"></i> Top 10 Serviços por Custo Total</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartTopServicosCusto"></canvas>
                     </div>
                 </div>
-                <div class="chart-container marquee-item">
+                <div class="chart-container glass-panel marquee-item">
                     <h3><i class="fas fa-exclamation-triangle"></i> Veículos Pendentes/Internados</h3>
                     <div class="chart-wrapper">
                         <canvas id="chartPendentesInternados"></canvas>
@@ -172,37 +178,43 @@
         const tooltipContent = document.getElementById('tooltip-frota-content');
 
         if (cardFrota && tooltipFrota) {
-            // Carregar dados de tipos de veículos
-            let detalhesHtml = 'Carregando...';
-            
-            try {
-                const { data, error } = await supabaseClient
-                    .from('veiculos')
-                    .select('tipo');
-
-                if (!error && data) {
-                    const counts = {};
-                    data.forEach(v => {
-                        const tipo = v.tipo ? v.tipo.toUpperCase() : 'NÃO DEFINIDO';
-                        counts[tipo] = (counts[tipo] || 0) + 1;
-                    });
-
-                    detalhesHtml = '<ul style="list-style: none; padding: 0; margin: 0;">';
-                    Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([tipo, qtd]) => {
-                        detalhesHtml += `<li style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #444;">
-                            <span style="color: #ddd;">${tipo}</span> <strong style="color: #fff;">${qtd}</strong>
-                        </li>`;
-                    });
-                    detalhesHtml += '</ul>';
-                }
-            } catch (err) {
-                console.error('Erro ao carregar detalhes da frota:', err);
-                detalhesHtml = 'Erro ao carregar dados.';
-            }
-
-            cardFrota.addEventListener('mouseenter', () => {
-                tooltipContent.innerHTML = detalhesHtml;
+            cardFrota.addEventListener('mouseenter', async () => {
                 tooltipFrota.style.display = 'block';
+                tooltipContent.innerHTML = 'Carregando...';
+                
+                const filial = document.getElementById('filtroFilial').value;
+                
+                try {
+                    let query = supabaseClient.from('veiculos').select('tipo');
+                    
+                    if (filial) {
+                        query = query.eq('filial', filial);
+                    }
+                    
+                    const { data, error } = await query;
+
+                    if (!error && data) {
+                        const counts = {};
+                        data.forEach(v => {
+                            const tipo = v.tipo ? v.tipo.toUpperCase() : 'NÃO DEFINIDO';
+                            counts[tipo] = (counts[tipo] || 0) + 1;
+                        });
+
+                        let detalhesHtml = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([tipo, qtd]) => {
+                            detalhesHtml += `<li style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #444;">
+                                <span style="color: #ddd;">${tipo}</span> <strong style="color: #fff;">${qtd}</strong>
+                            </li>`;
+                        });
+                        detalhesHtml += '</ul>';
+                        tooltipContent.innerHTML = detalhesHtml;
+                    } else {
+                        tooltipContent.innerHTML = 'Erro ao carregar dados.';
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar detalhes da frota:', err);
+                    tooltipContent.innerHTML = 'Erro ao carregar dados.';
+                }
             });
 
             cardFrota.addEventListener('mouseleave', () => {
@@ -223,14 +235,16 @@
                 try {
                     const dataIni = document.getElementById('dataInicial').value;
                     const dataFim = document.getElementById('dataFinal').value;
+                    const filial = document.getElementById('filtroFilial').value;
 
                     let query = supabaseClient
                         .from('coletas_manutencao_checklist')
-                        .select('coletas_manutencao!inner(placa, data_hora), oficinas(nome)')
+                        .select('coletas_manutencao!inner(placa, data_hora, veiculos!inner(filial)), oficinas(nome)')
                         .eq('status', 'INTERNADO');
 
                     if (dataIni) query = query.gte('coletas_manutencao.data_hora', dataIni + 'T00:00:00');
                     if (dataFim) query = query.lte('coletas_manutencao.data_hora', dataFim + 'T23:59:59');
+                    if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
 
                     const { data, error } = await query;
 

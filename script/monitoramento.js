@@ -27,6 +27,7 @@ let refreshTimer;
 document.addEventListener('DOMContentLoaded', () => {
     randomizarGraficos(); // Embaralha a ordem antes de iniciar
     initDashboard();
+    carregarFiliais();
     iniciarRolagemAutomatica(); // Inicia a animação
 });
 
@@ -136,21 +137,25 @@ async function carregarDados() {
 
     const dtIni = document.getElementById('dataInicial').value;
     const dtFim = document.getElementById('dataFinal').value;
+    const filial = document.getElementById('filtroFilial').value;
 
-    carregarTotalFrota(); // Busca total da frota (sem filtros)
+    carregarTotalFrota(filial); // Busca total da frota
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
-    carregarKPIsDetalhados(dtIni, dtFim); // Busca KPIs com contagem exata
+    carregarKPIsDetalhados(dtIni, dtFim, filial); // Busca KPIs com contagem exata
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('coletas_manutencao_checklist')
             .select(`
                 *,
                 coletas_manutencao!inner (
                     id,
                     data_hora,
-                    placa
+                    placa,
+                    veiculos!inner (
+                        filial
+                    )
                 ),
                 oficinas (
                     nome
@@ -158,6 +163,12 @@ async function carregarDados() {
             `)
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) {
+            query = query.eq('coletas_manutencao.veiculos.filial', filial);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -176,28 +187,36 @@ async function carregarDados() {
     }
 }
 
-async function carregarKPIsDetalhados(dtIni, dtFim) {
+async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
     try {
         // 1. Total Pendentes (Contar Itens/Serviços)
         // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
-        const { count: countPendentes, error: errPendentes } = await supabaseClient
+        let queryPendentes = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
             .in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO'])
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryPendentes = queryPendentes.eq('coletas_manutencao.veiculos.filial', filial);
+
+        const { count: countPendentes, error: errPendentes } = await queryPendentes;
 
         if (!errPendentes) {
             document.getElementById('kpi-pendentes').textContent = countPendentes || 0;
         }
 
         // 2. Veículos Internados (Contar Itens)
-        const { count: countInternados, error: errInternados } = await supabaseClient
+        let queryInternados = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
             .eq('status', 'INTERNADO')
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryInternados = queryInternados.eq('coletas_manutencao.veiculos.filial', filial);
+
+        const { count: countInternados, error: errInternados } = await queryInternados;
 
         if (!errInternados) {
             document.getElementById('kpi-internados').textContent = countInternados || 0;
@@ -209,34 +228,46 @@ async function carregarKPIsDetalhados(dtIni, dtFim) {
         const hojeIni = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
         const hojeFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
 
-        const { count: countFinalizados, error: errFinalizados } = await supabaseClient
+        let queryFinalizados = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id)', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
             .in('status', ['FINALIZADO', 'FINALIZADO ROTA', 'OK'])
             .gte('coletas_manutencao.data_hora', hojeIni)
             .lte('coletas_manutencao.data_hora', hojeFim);
+
+        if (filial) queryFinalizados = queryFinalizados.eq('coletas_manutencao.veiculos.filial', filial);
+
+        const { count: countFinalizados, error: errFinalizados } = await queryFinalizados;
 
         if (!errFinalizados) {
             document.getElementById('kpi-finalizados-hoje').textContent = countFinalizados || 0;
         }
 
         // 4. Total Manutenções (Contar Cabeçalhos/Veículos Atendidos)
-        const { count: countManutencoes, error: errManutencoes } = await supabaseClient
+        let queryManutencoes = supabaseClient
             .from('coletas_manutencao')
-            .select('*', { count: 'exact', head: true })
+            .select('*, veiculos!inner(filial)', { count: 'exact', head: true })
             .gte('data_hora', `${dtIni}T00:00:00`)
             .lte('data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryManutencoes = queryManutencoes.eq('veiculos.filial', filial);
+
+        const { count: countManutencoes, error: errManutencoes } = await queryManutencoes;
 
         if (!errManutencoes) {
             document.getElementById('kpi-total-qtd').textContent = countManutencoes || 0;
         }
 
         // 5. Gasto Total (Soma dos valores)
-        const { data: dataValores, error: errValores } = await supabaseClient
+        let queryValores = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('valor, coletas_manutencao!inner(id)')
+            .select('valor, coletas_manutencao!inner(id, veiculos!inner(filial))')
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryValores = queryValores.eq('coletas_manutencao.veiculos.filial', filial);
+
+        const { data: dataValores, error: errValores } = await queryValores;
 
         if (!errValores && dataValores) {
             const totalValor = dataValores.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
@@ -248,11 +279,15 @@ async function carregarKPIsDetalhados(dtIni, dtFim) {
     }
 }
 
-async function carregarTotalFrota() {
+async function carregarTotalFrota(filial) {
     try {
-        const { count, error } = await supabaseClient
+        let query = supabaseClient
             .from('veiculos')
             .select('*', { count: 'exact', head: true });
+
+        if (filial) query = query.eq('filial', filial);
+
+        const { count, error } = await query;
 
         if (error) throw error;
 
@@ -260,6 +295,30 @@ async function carregarTotalFrota() {
         if (kpi) kpi.textContent = count;
     } catch (error) {
         console.error('Erro ao carregar total da frota:', error);
+    }
+}
+
+async function carregarFiliais() {
+    const select = document.getElementById('filtroFilial');
+    if (!select) return;
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('filial')
+            .not('filial', 'is', null);
+            
+        if (data) {
+            const filiais = [...new Set(data.map(v => v.filial))].sort();
+            filiais.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erro ao carregar filiais", err);
     }
 }
 

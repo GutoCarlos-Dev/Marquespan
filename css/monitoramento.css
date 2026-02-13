@@ -97,12 +97,12 @@
     opacity: 0.7;
 }
 
-.kpi-card.blue .kpi-icon { color: #007bff; }
-.kpi-card.blue1 .kpi-icon { color: #0cabf5; }
-.kpi-card.green .kpi-icon { color: #28a745; }
-.kpi-card.orange .kpi-icon { color: #fd7e14; }
+.kpi-card.blue .kpi-icon { color: #ffffff; }
+.kpi-card.blue1 .kpi-icon { color: #ffffff; }
+.kpi-card.green .kpi-icon { color: #ffffff; }
+.kpi-card.orange .kpi-icon { color: #ffffff; }
 .kpi-card.purple .kpi-icon { color: #6f42c1; }
-.kpi-card.red .kpi-icon { color: #ff0019; }
+.kpi-card.red .kpi-icon { color: #ffffff; }
 
 .kpi-info h3 {
     margin: 0;
