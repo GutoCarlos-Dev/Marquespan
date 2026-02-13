@@ -51,7 +51,9 @@
 
 /* 🦶 Rodapé Global */
 .footer {
-  width: 100%;
+  width: 100%; /* Tenta ocupar tudo */
+  max-width: 1200px; /* Mas trava em 1200px (exemplo) */
+  margin: 20px auto; /* Centraliza na tela */
   text-align: center;
   padding: 15px;
   background-color: #f8f9fa;
