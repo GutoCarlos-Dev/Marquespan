@@ -48,3 +48,15 @@
 
 /* 🧾 Estilos gerais para painéis/modais */
 @import url("panel.css");
+
+/* 🦶 Rodapé Global */
+.footer {
+  width: 100%;
+  text-align: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-top: 20px;
+  box-sizing: border-box;
+}

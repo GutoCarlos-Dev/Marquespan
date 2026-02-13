@@ -529,7 +529,7 @@ const RelatorioDespesasUI = {
         if (!wrapper) return;
 
         let direction = 1; // 1 = direita, -1 = esquerda
-        const speed = 0.5; // Velocidade suave (pixels por frame)
+        const speed = 1; // Velocidade suave (pixels por frame)
 
         const step = () => {
             // Verifica se chegou ao fim ou ao início com tolerância
@@ -544,7 +544,7 @@ const RelatorioDespesasUI = {
         
         // Inicia o loop de animação
         requestAnimationFrame(step);
-        
+
         // Pausar ao passar o mouse
         wrapper.addEventListener('mouseenter', () => direction = 0);
         wrapper.addEventListener('mouseleave', () => {
