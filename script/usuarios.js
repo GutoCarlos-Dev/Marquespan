@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
     carregarUsuarios();
     carregarNiveis();
+    carregarFiliais();
     setupEventListeners();
 });
 
@@ -67,6 +68,34 @@ async function carregarNiveis() {
         console.error('Erro ao carregar níveis:', err);
         // Fallback básico
         selectNivel.innerHTML += '<option value="Administrador">Administrador</option><option value="Usuario">Usuário</option>';
+    }
+}
+
+async function carregarFiliais() {
+    const selectFilial = document.getElementById('filial');
+    if (!selectFilial) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+
+        if (error) throw error;
+
+        // Mantém a opção padrão e adiciona as do banco
+        selectFilial.innerHTML = '<option value="" selected>Todas (Acesso Global)</option>';
+
+        if (data) {
+            data.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f.sigla || f.nome;
+                option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                selectFilial.appendChild(option);
+            });
+        }
+    } catch (err) {
+        console.error('Erro ao carregar filiais:', err);
     }
 }
 

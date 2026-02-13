@@ -1,113 +1,117 @@
 import { supabaseClient } from './supabase.js';
 
+let veiculosData = [];
+
 document.addEventListener('DOMContentLoaded', () => {
-    initFilters();
+    carregarFiliais();
+    carregarTipos();
     carregarVeiculos();
     setupEventListeners();
+    setupMultiselect();
 });
 
-// --- Inicialização e Eventos ---
 function setupEventListeners() {
-    // Botão Buscar
     document.getElementById('btn-buscar').addEventListener('click', carregarVeiculos);
-
-    // Botão Novo Veículo (Abre em nova janela/aba conforme padrão de cadastro)
-    document.getElementById('btn-novo-veiculo').addEventListener('click', () => {
-        window.open('cadastro-veiculo.html', 'CadastroVeiculo', 'width=800,height=700');
-    });
-
-    // Botão Importar
+    document.getElementById('btn-novo-veiculo').addEventListener('click', abrirModalNovoVeiculo);
     document.getElementById('btn-importar-massa').addEventListener('click', () => {
         document.getElementById('modalImportacao').classList.remove('hidden');
     });
-
-    // Fechar Modal
-    document.querySelector('.close-button').addEventListener('click', () => {
+    document.getElementById('btn-exportar-xls').addEventListener('click', exportarExcel);
+    
+    // Fechar modal de importação
+    document.querySelector('#modalImportacao .close-button').addEventListener('click', () => {
         document.getElementById('modalImportacao').classList.add('hidden');
     });
 
-    // Botão Exportar Excel
-    document.getElementById('btn-exportar-xls').addEventListener('click', exportarExcel);
-
-    // Multiselect Tipo
-    const display = document.getElementById('campo-tipo-display');
-    const options = document.getElementById('campo-tipo-options');
-    const btnLimpar = document.getElementById('btn-limpar-tipo');
-
-    display.addEventListener('click', (e) => {
-        e.stopPropagation();
-        options.classList.toggle('hidden');
-        options.style.display = options.classList.contains('hidden') ? 'none' : 'block';
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!display.contains(e.target) && !options.contains(e.target)) {
-            options.classList.add('hidden');
-            options.style.display = 'none';
-        }
-    });
-
-    btnLimpar.addEventListener('click', () => {
-        document.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => cb.checked = false);
-        updateMultiselectText();
-    });
-
-    document.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => {
-        cb.addEventListener('change', updateMultiselectText);
-    });
+    // Form de importação
+    document.getElementById('formImportacao').addEventListener('submit', handleImportacao);
 }
 
-function updateMultiselectText() {
-    const selected = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
-    const text = document.getElementById('campo-tipo-text');
+async function carregarFiliais() {
+    const select = document.getElementById('campo-filial');
+    const selectImport = document.getElementById('importFilial');
     
-    if (selected.length === 0) {
-        text.textContent = 'Todos os Tipos';
-    } else if (selected.length === 1) {
-        text.textContent = selected[0];
-    } else {
-        text.textContent = `${selected.length} selecionados`;
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+
+        if (error) throw error;
+
+        // Limpa opções exceto a primeira
+        select.innerHTML = '<option value="">Todas</option>';
+        if (selectImport) selectImport.innerHTML = '<option value="">Selecione a Filial</option>';
+
+        if (data) {
+            data.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f.sigla || f.nome;
+                option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                
+                select.appendChild(option.cloneNode(true));
+                if (selectImport) selectImport.appendChild(option.cloneNode(true));
+            });
+        }
+    } catch (err) {
+        console.error('Erro ao carregar filiais:', err);
     }
-    // Salva no input oculto para uso na busca
-    document.getElementById('campo-tipo').value = selected.join(',');
 }
 
-async function initFilters() {
-    // Carregar Filiais (Exemplo estático ou do banco)
-    const selectFilial = document.getElementById('campo-filial');
-    // Se tiver tabela de filiais, carregar aqui. Por enquanto, mantém as opções estáticas ou adiciona dinamicamente.
+async function carregarTipos() {
+    const container = document.getElementById('campo-tipo-options');
+    if (!container) return;
+
+    // Tipos fixos conforme a página de cadastro
+    const tipos = ['HR/VAN', 'MUNKC', 'SEMI-REBOQUE', 'OPERACIONAL', 'RESERVA'];
+    
+    // Mantém o cabeçalho (botão limpar)
+    const header = container.querySelector('.dropdown-header');
+    container.innerHTML = '';
+    if (header) container.appendChild(header);
+
+    tipos.forEach(tipo => {
+        const label = document.createElement('label');
+        label.className = 'dropdown-item';
+        label.innerHTML = `<input type="checkbox" class="filtro-tipo-checkbox" value="${tipo}"> ${tipo}`;
+        container.appendChild(label);
+    });
 }
 
-// --- Carregamento de Dados ---
 async function carregarVeiculos() {
     const tbody = document.getElementById('grid-veiculos-body');
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
-    try {
-        let query = supabaseClient.from('veiculos').select('*');
+    const filial = document.getElementById('campo-filial').value;
+    const placa = document.getElementById('campo-placa').value.trim();
+    const modelo = document.getElementById('campo-modelo').value.trim();
+    const situacao = document.getElementById('campo-situacao').value;
+    
+    // Tipos selecionados
+    const tiposSelecionados = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
 
-        // Filtros
-        const filial = document.getElementById('campo-filial').value;
-        const placa = document.getElementById('campo-placa').value.trim();
-        const modelo = document.getElementById('campo-modelo').value.trim();
-        const situacao = document.getElementById('campo-situacao').value;
-        const tipos = document.getElementById('campo-tipo').value;
+    try {
+        let query = supabaseClient
+            .from('veiculos')
+            .select('*')
+            .order('placa');
 
         if (filial) query = query.eq('filial', filial);
         if (placa) query = query.ilike('placa', `%${placa}%`);
         if (modelo) query = query.ilike('modelo', `%${modelo}%`);
         if (situacao) query = query.eq('situacao', situacao);
-        if (tipos) {
-            const tiposArray = tipos.split(',');
-            query = query.in('tipo', tiposArray);
-        }
+        if (tiposSelecionados.length > 0) query = query.in('tipo', tiposSelecionados);
 
-        const { data, error } = await query.order('placa', { ascending: true });
+        const { data, error } = await query;
 
         if (error) throw error;
 
-        renderTable(data);
-        document.getElementById('grid-records-count').textContent = `${data.length} veículos`;
+        veiculosData = data;
+        renderizarTabela(data);
+        
+        // Atualiza contador
+        const contador = document.getElementById('grid-records-count');
+        if (contador) contador.textContent = `${data.length} veículos`;
 
     } catch (err) {
         console.error('Erro ao carregar veículos:', err);
@@ -115,79 +119,106 @@ async function carregarVeiculos() {
     }
 }
 
-function renderTable(data) {
+function renderizarTabela(veiculos) {
     const tbody = document.getElementById('grid-veiculos-body');
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    if (veiculos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum veículo encontrado.</td></tr>';
         return;
     }
 
-    data.forEach(v => {
+    veiculos.forEach(v => {
         const tr = document.createElement('tr');
-        
-        let badgeClass = 'badge-inativo';
-        if (v.situacao === 'ativo') badgeClass = 'badge-ativo';
-        if (v.situacao === 'INTERNADO') badgeClass = 'badge-internado';
-
         tr.innerHTML = `
             <td>${v.filial || '-'}</td>
             <td style="font-weight:bold;">${v.placa}</td>
             <td>${v.modelo || '-'}</td>
             <td>${v.renavan || '-'}</td>
             <td>${v.tipo || '-'}</td>
-            <td><span class="badge ${badgeClass}">${v.situacao || 'Indefinido'}</span></td>
-            <td>${v.qrcode ? '<i class="fas fa-qrcode"></i>' : '-'}</td>
+            <td><span class="status-badge ${v.situacao === 'ativo' ? 'status-ativo' : 'status-inativo'}">${v.situacao || '-'}</span></td>
+            <td>${v.qrcode ? '<i class="fas fa-qrcode" title="Possui QR Code"></i>' : '-'}</td>
             <td>
-                <button class="btn-icon btn-edit" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon edit" onclick="editarVeiculo('${v.id}')" title="Editar"><i class="fas fa-edit"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
-
-    // Event Listeners para botões de edição
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.currentTarget.dataset.id;
-            // Abre a tela de cadastro passando o ID na URL para edição
-            window.open(`cadastro-veiculo.html?id=${id}`, 'EdicaoVeiculo', 'width=800,height=700');
-        });
-    });
 }
 
-// --- Exportação ---
-function exportarExcel() {
-    const table = document.querySelector('.glass-table');
-    if (!table) return;
+function setupMultiselect() {
+    const display = document.getElementById('campo-tipo-display');
+    const options = document.getElementById('campo-tipo-options');
+    const text = document.getElementById('campo-tipo-text');
+    const btnLimpar = document.getElementById('btn-limpar-tipo');
 
-    // Clona a tabela para remover colunas indesejadas (Ações)
-    const clone = table.cloneNode(true);
-    const rows = clone.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-        if (row.cells.length > 0) {
-            row.deleteCell(-1); // Remove última coluna (Ações)
+    if (!display || !options) return;
+
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.classList.toggle('hidden');
+    });
+
+    // Fechar ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!display.contains(e.target) && !options.contains(e.target)) {
+            options.classList.add('hidden');
         }
     });
 
-    const wb = XLSX.utils.table_to_book(clone, { sheet: "Veiculos" });
-    XLSX.writeFile(wb, "Veiculos_Marquespan.xlsx");
+    // Atualizar texto ao selecionar
+    options.addEventListener('change', () => {
+        const checked = options.querySelectorAll('.filtro-tipo-checkbox:checked');
+        if (checked.length === 0) {
+            text.textContent = 'Todos os Tipos';
+        } else if (checked.length === 1) {
+            text.textContent = checked[0].value;
+        } else {
+            text.textContent = `${checked.length} selecionados`;
+        }
+    });
+
+    if (btnLimpar) {
+        btnLimpar.addEventListener('click', () => {
+            options.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => cb.checked = false);
+            text.textContent = 'Todos os Tipos';
+        });
+    }
 }
 
-// --- Estilos Adicionais para Botões de Ação na Tabela ---
-const style = document.createElement('style');
-style.innerHTML = `
-    .btn-icon {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: #006937;
-        font-size: 1.1rem;
-        transition: color 0.2s;
+function abrirModalNovoVeiculo() {
+    const width = 800;
+    const height = 600;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+    window.open('cadastro-veiculo.html', 'NovoVeiculo', `width=${width},height=${height},top=${top},left=${left}`);
+}
+
+window.editarVeiculo = function(id) {
+    const width = 800;
+    const height = 600;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+    window.open(`cadastro-veiculo.html?id=${id}`, 'EditarVeiculo', `width=${width},height=${height},top=${top},left=${left}`);
+}
+
+window.refreshGrid = function() {
+    carregarVeiculos();
+}
+
+function exportarExcel() {
+    if (veiculosData.length === 0) {
+        alert('Sem dados para exportar.');
+        return;
     }
-    .btn-icon:hover {
-        color: #004d29;
-    }
-`;
-document.head.appendChild(style);
+    const ws = XLSX.utils.json_to_sheet(veiculosData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Veiculos");
+    XLSX.writeFile(wb, "veiculos.xlsx");
+}
+
+async function handleImportacao(e) {
+    e.preventDefault();
+    // Implementação básica de importação se necessário
+    alert('Funcionalidade de importação em desenvolvimento.');
+}
