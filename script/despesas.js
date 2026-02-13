@@ -76,9 +76,11 @@ const DespesasUI = {
         // Como agora é multiselect, vamos monitorar mudanças nos checkboxes de hotel
         // Se houver apenas 1 hotel selecionado, carrega os quartos. Se mais de 1 ou 0, desabilita.
         // A lógica será tratada dentro do evento de change do container de opções.
-        this.despesaHotelOptions.addEventListener('change', () => {
-            this.handleHotelSelectionChange();
-        });
+        if (this.despesaHotelOptions) {
+            this.despesaHotelOptions.addEventListener('change', () => {
+                this.handleHotelSelectionChange();
+            });
+        }
 
         // Listeners do Modal de Quartos
         this.btnGerenciarQuartos.addEventListener('click', () => this.abrirModalQuartos());
@@ -102,8 +104,12 @@ const DespesasUI = {
         });
 
         // Inicializa eventos dos Multiselects
-        this.setupMultiselect(this.despesaRotaDisplay, this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', 'btnLimparSelecaoRota');
-        this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', 'btnLimparSelecaoHotel');
+        if (this.despesaRotaDisplay && this.despesaRotaOptions) {
+            this.setupMultiselect(this.despesaRotaDisplay, this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', 'btnLimparSelecaoRota');
+        }
+        if (this.despesaHotelDisplay && this.despesaHotelOptions) {
+            this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', 'btnLimparSelecaoHotel');
+        }
     },
 
     setupMultiselect(display, options, textSpan, checkboxClass, clearBtnId) {
@@ -506,24 +512,33 @@ const DespesasUI = {
             if (rotasError) throw rotasError;
             
             // Popula Dropdown de Rotas
-            this.despesaRotaOptions.querySelectorAll('label').forEach(l => l.remove()); // Limpa anteriores
-            rotas.forEach(r => {
-                const label = document.createElement('label');
-                label.className = 'dropdown-item';
-                label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}"> ${r.numero}`;
-                this.despesaRotaOptions.appendChild(label);
-            });
+            if (this.despesaRotaOptions) {
+                this.despesaRotaOptions.querySelectorAll('label').forEach(l => l.remove()); // Limpa anteriores
+                if (rotas) {
+                    rotas.forEach(r => {
+                        const label = document.createElement('label');
+                        label.className = 'dropdown-item';
+                        label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}"> ${r.numero}`;
+                        this.despesaRotaOptions.appendChild(label);
+                    });
+                }
+            }
 
             // Carregar Hotéis
             const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('id, nome').order('nome', { ascending: true });
             if (hoteisError) throw hoteisError;
-            this.despesaHotelOptions.querySelectorAll('label').forEach(l => l.remove());
-            hoteis.forEach(h => {
-                const label = document.createElement('label');
-                label.className = 'dropdown-item';
-                label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}"> ${h.nome}`;
-                this.despesaHotelOptions.appendChild(label);
-            });
+            
+            if (this.despesaHotelOptions) {
+                this.despesaHotelOptions.querySelectorAll('label').forEach(l => l.remove());
+                if (hoteis) {
+                    hoteis.forEach(h => {
+                        const label = document.createElement('label');
+                        label.className = 'dropdown-item';
+                        label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}"> ${h.nome}`;
+                        this.despesaHotelOptions.appendChild(label);
+                    });
+                }
+            }
 
             // Carregar Funcionários (Motoristas) para o campo 1
             const { data: motoristas, error: motoristasError } = await supabaseClient
