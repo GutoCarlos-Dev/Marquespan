@@ -73,9 +73,6 @@ const DespesasUI = {
         this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
 
         // Listener para carregar tipos de quarto quando um hotel é selecionado
-        // Como agora é multiselect, vamos monitorar mudanças nos checkboxes de hotel
-        // Se houver apenas 1 hotel selecionado, carrega os quartos. Se mais de 1 ou 0, desabilita.
-        // A lógica será tratada dentro do evento de change do container de opções.
         if (this.despesaHotelOptions) {
             this.despesaHotelOptions.addEventListener('change', () => {
                 this.handleHotelSelectionChange();
@@ -159,65 +156,47 @@ const DespesasUI = {
         window.location.href = `hotel.html?redirect=despesas.html`;
     },
 
-    /**
-     * Calcula o valor total com base na diária, energia e quantidade de dias.
-     */
     calcularValorTotal() {
         const qtdDiarias = parseFloat(this.qtdDiariasInput.value) || 0;
         const valorDiaria = parseFloat(this.valorDiariaInput.value) || 0;
         const valorEnergia = parseFloat(this.valorEnergiaInput.value) || 0;
 
-        // Fórmula corrigida: (Valor da Diária * Quantidade de Diárias) + Valor da Energia
         const valorTotal = (valorDiaria * qtdDiarias) + valorEnergia;
 
-        // Formata o valor como moeda brasileira (BRL) e exibe no campo
         this.valorTotalInput.value = valorTotal.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL'
         });
     },
 
-    /**
-     * Calcula a data de checkout com base na data de check-in e na quantidade de diárias.
-     */
     calcularCheckout() {
         const checkinDate = this.checkinInput.value;
         const diarias = parseInt(this.qtdDiariasInput.value);
 
-        // Verifica se a data de check-in é válida e se a quantidade de diárias é um número positivo
         if (checkinDate && !isNaN(diarias) && diarias > 0) {
-            // Cria um objeto Date a partir da string 'YYYY-MM-DD' para evitar problemas de fuso horário
             const data = new Date(checkinDate + 'T00:00:00');
-            
-            // Adiciona o número de diárias à data de check-in
             data.setDate(data.getDate() + diarias);
-            
-            // Formata a data de volta para 'YYYY-MM-DD' e a define no campo de checkout
             this.checkoutInput.value = data.toISOString().split('T')[0];
         } else {
-            this.checkoutInput.value = ''; // Limpa o campo se os dados forem inválidos
+            this.checkoutInput.value = '';
         }
     },
 
     async handleFormSubmit(e) {
         e.preventDefault();
 
-        // Bloqueia o botão para evitar duplo clique
         if (this.btnSubmit.disabled) return;
         
         const originalText = this.btnSubmit.innerHTML;
         this.btnSubmit.disabled = true;
         this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
-        // Pega o valor total calculado e converte de volta para número
         const valorTotalString = this.valorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
         const valorTotal = parseFloat(valorTotalString) || 0;
 
         try {
-            // --- Correção: Buscar IDs antes de salvar ---
-            // Pega valores dos multiselects
             const rotasSelecionadas = this.getSelectedValues(this.despesaRotaOptions, 'rota-checkbox');
-            const hoteisSelecionados = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox'); // Retorna IDs
+            const hoteisSelecionados = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
 
             const func1NomeCompleto = document.getElementById('despesaFuncionario1Input').value;
             const func2NomeCompleto = document.getElementById('despesaFuncionario2Input').value;
@@ -232,18 +211,15 @@ const DespesasUI = {
                 func2Id = func2.id;
             }
 
-            // Lógica para Hotel: O banco espera um único ID (id_hotel).
-            // Se o usuário selecionar múltiplos, usaremos o primeiro como principal.
-            // (Idealmente o banco deveria suportar N:N, mas mantendo a estrutura atual)
             const hotelId = hoteisSelecionados.length > 0 ? hoteisSelecionados[0] : null;
             if (!hotelId) throw new Error("Selecione pelo menos um hotel.");
 
             const payload = {
                 id: this.editingIdInput.value || undefined,
-                numero_rota: rotasSelecionadas.join(', '), // Salva rotas como string separada por vírgula
-                id_hotel: hotelId, // Salva o ID do primeiro hotel selecionado
-                id_funcionario1: func1.id, // Salva o ID do funcionário 1
-                id_funcionario2: func2Id, // Salva o ID do funcionário 2
+                numero_rota: rotasSelecionadas.join(', '),
+                id_hotel: hotelId,
+                id_funcionario1: func1.id,
+                id_funcionario2: func2Id,
                 tipo_quarto: this.tipoQuartoSelect.value,
                 qtd_diarias: parseInt(this.qtdDiariasInput.value),
                 data_reserva: document.getElementById('despesaDataReserva').value || null,
@@ -256,7 +232,6 @@ const DespesasUI = {
                 valor_total: valorTotal,
                 forma_pagamento: this.formaPagamentoSelect.value
             };
-            // --- Fim da Correção ---
 
             const { error } = await supabaseClient.from('despesas').upsert(payload);
             if (error) throw error;
@@ -267,13 +242,9 @@ const DespesasUI = {
         } catch (err) {
             console.error('Erro ao salvar despesa:', err);
             alert(`❌ Erro ao salvar despesa: ${err.message}`);
-            // Restaura o botão apenas em caso de erro, pois clearForm já reseta em caso de sucesso
             this.btnSubmit.disabled = false;
             this.btnSubmit.innerHTML = originalText;
         } finally {
-            // Em caso de sucesso, clearForm já reabilita o botão.
-            // Em caso de erro, restauramos acima.
-            // Se precisar garantir, podemos reabilitar aqui se ainda estiver desabilitado e não foi limpo.
             if (this.btnSubmit.disabled && this.editingIdInput.value) {
                  this.btnSubmit.disabled = false;
             }
@@ -288,30 +259,24 @@ const DespesasUI = {
     clearForm() {
         this.form.reset();
         this.editingIdInput.value = '';
-        // Restaura o botão com o ícone de spinner oculto
         this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar Despesa';
         this.btnClearForm.innerHTML = '<i class="fas fa-eraser"></i> Limpar';
         this.btnSubmit.disabled = false;
-        this.valorTotalInput.value = ''; // Limpa o campo de valor total
+        this.valorTotalInput.value = '';
         this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
         this.tipoQuartoSelect.disabled = true;
         this.btnGerenciarQuartos.disabled = true;
         this.formaPagamentoSelect.value = "";
         
-        // Limpa Multiselects
         this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => cb.checked = false);
         this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
         
         this.despesaHotelOptions.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
         this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
-        
     },
 
     async loadForEditing(id) {
         try {
-            // Correção: A sintaxe do select foi ajustada para o padrão do Supabase.
-            // Assumindo que as colunas de chave estrangeira são id_hotel, id_funcionario1, id_funcionario2.
-            // A sintaxe correta é: nome_da_tabela_relacionada(colunas)
             const { data: despesa, error } = await supabaseClient
                 .from('despesas')
                 .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
@@ -320,21 +285,18 @@ const DespesasUI = {
 
             this.editingIdInput.value = despesa.id;
             
-            // Preenche Rota (Multiselect)
             const rotas = (despesa.numero_rota || '').split(',').map(s => s.trim());
             this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => {
                 cb.checked = rotas.includes(cb.value);
             });
             this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
 
-            // Preenche Hotel (Multiselect)
-            // O banco só guarda 1 ID, então selecionamos esse ID
             if (despesa.id_hotel) {
                 const hotelCb = this.despesaHotelOptions.querySelector(`.hotel-checkbox[value="${despesa.id_hotel}"]`);
                 if (hotelCb) hotelCb.checked = true;
             }
             this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
-            this.handleHotelSelectionChange(); // Atualiza quartos
+            this.handleHotelSelectionChange();
 
             document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome_completo || '';
             document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome_completo || '';
@@ -348,10 +310,9 @@ const DespesasUI = {
             this.valorEnergiaInput.value = despesa.valor_energia || 0;
             this.formaPagamentoSelect.value = despesa.forma_pagamento || "";
 
-            // Carrega os tipos de quarto e seleciona o correto
-            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto); // Correto
+            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto);
 
-            this.calcularValorTotal(); // Recalcula o total ao carregar
+            this.calcularValorTotal();
             this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Atualizar Despesa';
             this.btnClearForm.innerHTML = '<i class="fas fa-times"></i> Cancelar';
             this.form.scrollIntoView({ behavior: 'smooth' });
@@ -382,23 +343,20 @@ const DespesasUI = {
 
     handleSort(field) {
         if (this.sortField === field) {
-            this.sortAsc = !this.sortAsc; // Inverte a ordem se for o mesmo campo
+            this.sortAsc = !this.sortAsc;
         } else {
             this.sortField = field;
-            this.sortAsc = true; // Padrão ascendente para novo campo
+            this.sortAsc = true;
         }
         this.renderGrid();
     },
 
     async renderGrid() {
-        // Lógica para buscar e renderizar a tabela de despesas
         try {
             const searchTerm = this.searchInput.value.trim();
-            let query; // Mover a declaração da query para cá
+            let query;
 
             if (searchTerm) {
-                // Solução para a busca com 'OR' em múltiplas tabelas relacionadas
-                // 1. Busca os IDs de cada condição separadamente
                 const [
                     { data: rotaData, error: rotaError },
                     { data: hotelData, error: hotelError },
@@ -416,7 +374,6 @@ const DespesasUI = {
                     throw new Error('Ocorreu um erro durante a busca.');
                 }
 
-                // 2. Junta todos os IDs encontrados, sem duplicatas
                 const ids = new Set([
                     ...(rotaData || []).map(d => d.id),
                     ...(hotelData || []).map(d => d.id),
@@ -431,20 +388,17 @@ const DespesasUI = {
                     return;
                 }
 
-                // 3. Busca os dados completos usando os IDs encontrados
                 query = supabaseClient
                     .from('despesas')
                     .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                     .in('id', matchingIds);
 
             } else {
-                // Query original quando não há busca
                 query = supabaseClient
                     .from('despesas')
                     .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
-            // Aplica a ordenação dinâmica baseada no estado atual
             if (this.sortField === 'hotel.nome') {
                 query = query.order('nome', { foreignTable: 'hoteis', ascending: this.sortAsc });
             } else if (this.sortField === 'funcionario1.nome') {
@@ -455,7 +409,6 @@ const DespesasUI = {
 
             const { data: despesas, error } = await query;
             
-            // Atualiza os ícones visuais na tabela
             this.updateSortIcons();
 
             if (error) throw error;
@@ -484,7 +437,7 @@ const DespesasUI = {
 
     updateSortIcons() {
         document.querySelectorAll('th[data-key] i').forEach(icon => {
-            icon.className = 'fas fa-sort'; // Ícone neutro
+            icon.className = 'fas fa-sort';
             const th = icon.closest('th');
             if (th.dataset.key === this.sortField) {
                 icon.className = this.sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
@@ -493,21 +446,16 @@ const DespesasUI = {
     },
 
     async loadDatalists() {
-        // Lógica para carregar as opções dos datalists (rotas, hoteis, funcionarios)
         try {
-            // Carregar Rotas
             const { data: rotas, error: rotasError } = await supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
             if (rotasError) throw rotasError;
             
-            // Popula Dropdown de Rotas
             if (this.despesaRotaOptions) {
-                this.despesaRotaOptions.innerHTML = ''; // Limpa anteriores
+                this.despesaRotaOptions.innerHTML = '';
                 
-                // Container Sticky para busca e limpar
                 const stickyContainer = document.createElement('div');
                 stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
 
-                // Input de Busca
                 const searchInput = document.createElement('input');
                 searchInput.type = 'text';
                 searchInput.placeholder = 'Buscar rota...';
@@ -523,7 +471,6 @@ const DespesasUI = {
                 });
                 stickyContainer.appendChild(searchInput);
 
-                // Botão para limpar seleção
                 const btnLimpar = this.criarBotaoLimpar(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', searchInput);
                 stickyContainer.appendChild(btnLimpar);
                 
@@ -539,18 +486,15 @@ const DespesasUI = {
                 }
             }
 
-            // Carregar Hotéis
             const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('id, nome').order('nome', { ascending: true });
             if (hoteisError) throw hoteisError;
             
             if (this.despesaHotelOptions) {
                 this.despesaHotelOptions.innerHTML = '';
 
-                // Container Sticky para busca e limpar
                 const stickyContainer = document.createElement('div');
                 stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
 
-                // Input de Busca
                 const searchInput = document.createElement('input');
                 searchInput.type = 'text';
                 searchInput.placeholder = 'Buscar hotel...';
@@ -566,7 +510,6 @@ const DespesasUI = {
                 });
                 stickyContainer.appendChild(searchInput);
 
-                // Botão para limpar seleção
                 const btnLimpar = this.criarBotaoLimpar(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox', searchInput);
                 stickyContainer.appendChild(btnLimpar);
                 
@@ -582,20 +525,18 @@ const DespesasUI = {
                 }
             }
 
-            // Carregar Funcionários (Motoristas) para o campo 1
             const { data: motoristas, error: motoristasError } = await supabaseClient
                 .from('funcionario')
                 .select('nome_completo')
-                .eq('funcao', 'Motorista') // Filtra apenas por motoristas
+                .eq('funcao', 'Motorista')
                 .order('nome_completo', { ascending: true });
             if (motoristasError) throw motoristasError;
             this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome_completo}"></option>`).join('');
 
-            // Carregar Funcionários (Auxiliares) para o campo 2
             const { data: auxiliares, error: auxiliaresError } = await supabaseClient
                 .from('funcionario')
                 .select('nome_completo')
-                .eq('funcao', 'Auxiliar') // Filtra apenas por auxiliares
+                .eq('funcao', 'Auxiliar')
                 .order('nome_completo', { ascending: true });
             if (auxiliaresError) throw auxiliaresError;
             this.funcionarios2List.innerHTML = auxiliares.map(f => `<option value="${f.nome_completo}"></option>`).join('');
@@ -616,7 +557,7 @@ const DespesasUI = {
             optionsContainer.querySelectorAll(`.${checkboxClass}`).forEach(cb => cb.checked = false);
             this.updateMultiselectText(optionsContainer, textSpan, checkboxClass);
             if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
-            optionsContainer.dispatchEvent(new Event('change')); // Dispara evento para atualizar dependências
+            optionsContainer.dispatchEvent(new Event('change'));
         };
         return btnLimpar;
     },
@@ -625,11 +566,9 @@ const DespesasUI = {
         const selectedIds = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
         
         if (selectedIds.length === 1) {
-            // Se apenas 1 hotel selecionado, carrega os quartos dele
             this.loadTiposQuarto(selectedIds[0]);
             this.btnGerenciarQuartos.disabled = false;
         } else {
-            // Se 0 ou >1, desabilita seleção de quarto (pois quarto depende de 1 hotel específico)
             this.tipoQuartoSelect.innerHTML = '<option value="">Selecione apenas um hotel</option>';
             this.tipoQuartoSelect.disabled = true;
             this.btnGerenciarQuartos.disabled = true;
@@ -637,12 +576,10 @@ const DespesasUI = {
     },
 
     async loadTiposQuarto(hotelId, selectedTipo) {
-        // Lógica para carregar os tipos de quarto de um hotel específico
         this.tipoQuartoSelect.disabled = true;
         this.tipoQuartoSelect.innerHTML = '<option value="">Carregando...</option>';
 
         try {
-            // 2. Busca os quartos vinculados a esse ID (Mesma lógica usada no modal e na página de hotéis)
             const { data: quartos, error: quartosError } = await supabaseClient
                 .from('hotel_quartos')
                 .select('nome_quarto')
@@ -663,8 +600,6 @@ const DespesasUI = {
             this.tipoQuartoSelect.innerHTML = '<option value="">Erro ao carregar quartos</option>';
         }
     },
-
-    // --- Funções do Modal de Gerenciamento de Quartos ---
 
     async abrirModalQuartos() {
         const selectedIds = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
@@ -759,7 +694,6 @@ const DespesasUI = {
 
             this.novoTipoQuartoInput.value = '';
             await this.listarQuartosNoModal();
-            // Atualiza o select principal
             this.loadTiposQuarto(this.currentHotelId, nomeQuarto);
         } catch (err) {
             console.error(err);
@@ -775,7 +709,6 @@ const DespesasUI = {
             if (error) throw error;
 
             await this.listarQuartosNoModal();
-            // Atualiza o select principal
             this.loadTiposQuarto(this.currentHotelId);
         } catch (err) {
             console.error(err);
