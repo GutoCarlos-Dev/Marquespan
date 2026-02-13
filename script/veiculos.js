@@ -13,29 +13,66 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    document.getElementById('btn-buscar').addEventListener('click', carregarVeiculos);
-    document.getElementById('btn-novo-veiculo').addEventListener('click', () => abrirModalVeiculo());
-    document.getElementById('btn-importar-massa').addEventListener('click', () => {
-        document.getElementById('modalImportacao').classList.remove('hidden');
-    });
-    document.getElementById('btn-exportar-xls').addEventListener('click', exportarExcel);
+    // Botão Buscar
+    const btnBuscar = document.getElementById('btn-buscar');
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', carregarVeiculos);
+    }
     
-    // Fechar modal de importação
-    document.querySelector('#modalImportacao .close-button').addEventListener('click', () => {
-        document.getElementById('modalImportacao').classList.add('hidden');
-    });
+    // Botão Novo Veículo
+    const btnNovo = document.getElementById('btn-novo-veiculo');
+    if (btnNovo) {
+        btnNovo.addEventListener('click', () => abrirModalVeiculo());
+    }
+    
+    // Botão Importar
+    const btnImportar = document.getElementById('btn-importar-massa');
+    if (btnImportar) {
+        btnImportar.addEventListener('click', () => {
+            const modal = document.getElementById('modalImportacao');
+            if (modal) modal.classList.remove('hidden');
+        });
+    }
+    
+    // Botão Exportar
+    const btnExportar = document.getElementById('btn-exportar-xls');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', exportarExcel);
+    }
+    
+    // Fechar modal de importação (Botão X)
+    const closeImportBtn = document.querySelector('#modalImportacao .close-button');
+    if (closeImportBtn) {
+        closeImportBtn.addEventListener('click', () => {
+            document.getElementById('modalImportacao').classList.add('hidden');
+        });
+    }
 
     // Form de importação
-    document.getElementById('formImportacao').addEventListener('submit', handleImportacao);
+    const formImportacao = document.getElementById('formImportacao');
+    if (formImportacao) {
+        formImportacao.addEventListener('submit', handleImportacao);
+    }
 
-    // Modal de Veículo (Novo/Editar)
-    document.getElementById('btnCloseModalVeiculo').addEventListener('click', fecharModalVeiculo);
-    document.getElementById('formVeiculo').addEventListener('submit', salvarVeiculo);
+    // Modal de Veículo (Novo/Editar) - Fechar
+    const closeVeiculoBtn = document.getElementById('btnCloseModalVeiculo');
+    if (closeVeiculoBtn) {
+        closeVeiculoBtn.addEventListener('click', fecharModalVeiculo);
+    }
+    
+    // Form de Veículo - Salvar
+    const formVeiculo = document.getElementById('formVeiculo');
+    if (formVeiculo) {
+        formVeiculo.addEventListener('submit', salvarVeiculo);
+    }
 
     // Delegação de eventos na tabela (Editar/Excluir)
-    document.getElementById('grid-veiculos-body').addEventListener('click', handleTableClick);
+    const gridBody = document.getElementById('grid-veiculos-body');
+    if (gridBody) {
+        gridBody.addEventListener('click', handleTableClick);
+    }
 
-    // Fechar modais ao clicar fora
+    // Fechar modais ao clicar fora (Backdrop)
     window.addEventListener('click', (e) => {
         const modalVeiculo = document.getElementById('modalVeiculo');
         const modalImportacao = document.getElementById('modalImportacao');
@@ -66,7 +103,7 @@ async function carregarFiliais() {
         if (error) throw error;
 
         // Limpa opções exceto a primeira
-        select.innerHTML = '<option value="">Todas</option>';
+        if (select) select.innerHTML = '<option value="">Todas</option>';
         if (selectImport) selectImport.innerHTML = '<option value="">Selecione a Filial</option>';
         if (selectModal) selectModal.innerHTML = '<option value="">Selecione</option>';
 
@@ -76,7 +113,7 @@ async function carregarFiliais() {
                 option.value = f.sigla || f.nome;
                 option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
                 
-                select.appendChild(option.cloneNode(true));
+                if (select) select.appendChild(option.cloneNode(true));
                 if (selectImport) selectImport.appendChild(option.cloneNode(true));
                 if (selectModal) selectModal.appendChild(option.cloneNode(true));
             });
@@ -105,7 +142,7 @@ function carregarTipos() {
     tipos.forEach(tipo => {
         const label = document.createElement('label');
         label.className = 'dropdown-item';
-        label.style.display = 'block'; // Garante visibilidade
+        label.style.display = 'block';
         label.style.padding = '6px 10px';
         label.style.cursor = 'pointer';
         label.innerHTML = `<input type="checkbox" class="filtro-tipo-checkbox" value="${tipo}"> ${tipo}`;
@@ -123,6 +160,8 @@ function carregarTipos() {
 
 async function carregarVeiculos() {
     const tbody = document.getElementById('grid-veiculos-body');
+    if (!tbody) return;
+    
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     const filial = document.getElementById('campo-filial').value;
@@ -174,7 +213,6 @@ function renderizarTabela(veiculos) {
     veiculos.forEach(v => {
         const tr = document.createElement('tr');
         
-        // Criação segura de elementos (evita XSS)
         const tdFilial = document.createElement('td'); tdFilial.textContent = v.filial || '-';
         const tdPlaca = document.createElement('td'); tdPlaca.textContent = v.placa; tdPlaca.style.fontWeight = 'bold';
         const tdModelo = document.createElement('td'); tdModelo.textContent = v.modelo || '-';
@@ -220,7 +258,6 @@ function setupMultiselect() {
     const display = document.getElementById('campo-tipo-display');
     const options = document.getElementById('campo-tipo-options');
     const text = document.getElementById('campo-tipo-text');
-    // Busca o botão novamente pois ele foi recriado em carregarTipos()
     const btnLimpar = document.getElementById('btn-limpar-tipo'); 
 
     if (!display || !options) return;
@@ -230,14 +267,12 @@ function setupMultiselect() {
         options.classList.toggle('hidden');
     });
 
-    // Fechar ao clicar fora
     document.addEventListener('click', (e) => {
         if (!display.contains(e.target) && !options.contains(e.target)) {
             options.classList.add('hidden');
         }
     });
 
-    // Atualizar texto ao selecionar
     options.addEventListener('change', () => {
         const checked = options.querySelectorAll('.filtro-tipo-checkbox:checked');
         if (checked.length === 0) {
@@ -251,19 +286,19 @@ function setupMultiselect() {
 
     if (btnLimpar) {
         btnLimpar.addEventListener('click', (e) => {
-            e.stopPropagation(); // Evita fechar o dropdown ao clicar em limpar
+            e.stopPropagation();
             options.querySelectorAll('.filtro-tipo-checkbox').forEach(cb => cb.checked = false);
             text.textContent = 'Todos os Tipos';
         });
     }
 }
 
-// --- Funções do Modal de Veículo ---
-
 function abrirModalVeiculo(veiculo = null) {
     const modal = document.getElementById('modalVeiculo');
     const form = document.getElementById('formVeiculo');
     const title = document.getElementById('modalTitle');
+
+    if (!modal || !form) return;
 
     form.reset();
     
@@ -278,11 +313,19 @@ function abrirModalVeiculo(veiculo = null) {
         document.getElementById('veiculoTipo').value = veiculo.tipo || '';
         document.getElementById('veiculoSituacao').value = veiculo.situacao || 'ativo';
         document.getElementById('veiculoQrcode').value = veiculo.qrcode || '';
-        // Campos extras se existirem no form
-        if(document.getElementById('veiculoChassi')) document.getElementById('veiculoChassi').value = veiculo.chassi || '';
-        if(document.getElementById('veiculoAnoFab')) document.getElementById('veiculoAnoFab').value = veiculo.anofab || '';
-        if(document.getElementById('veiculoAnoMod')) document.getElementById('veiculoAnoMod').value = veiculo.anomod || '';
-        if(document.getElementById('veiculoQtdTanque')) document.getElementById('veiculoQtdTanque').value = veiculo.qtdtanque || '';
+        
+        // Campos opcionais que podem não existir no form
+        const chassi = document.getElementById('veiculoChassi');
+        if(chassi) chassi.value = veiculo.chassi || '';
+        
+        const anoFab = document.getElementById('veiculoAnoFab');
+        if(anoFab) anoFab.value = veiculo.anofab || '';
+        
+        const anoMod = document.getElementById('veiculoAnoMod');
+        if(anoMod) anoMod.value = veiculo.anomod || '';
+        
+        const qtdTanque = document.getElementById('veiculoQtdTanque');
+        if(qtdTanque) qtdTanque.value = veiculo.qtdtanque || '';
     } else {
         title.textContent = 'Novo Veículo';
         document.getElementById('veiculoId').value = '';
@@ -292,7 +335,8 @@ function abrirModalVeiculo(veiculo = null) {
 }
 
 function fecharModalVeiculo() {
-    document.getElementById('modalVeiculo').classList.add('hidden');
+    const modal = document.getElementById('modalVeiculo');
+    if (modal) modal.classList.add('hidden');
 }
 
 async function editarVeiculo(id) {
@@ -315,22 +359,29 @@ async function salvarVeiculo(e) {
     e.preventDefault();
     
     const id = document.getElementById('veiculoId').value;
-    const payload = {
-        filial: document.getElementById('veiculoFilial').value,
-        placa: document.getElementById('veiculoPlaca').value.toUpperCase(),
-        marca: document.getElementById('veiculoMarca').value,
-        modelo: document.getElementById('veiculoModelo').value,
-        renavan: document.getElementById('veiculoRenavan').value,
-        tipo: document.getElementById('veiculoTipo').value,
-        situacao: document.getElementById('veiculoSituacao').value,
-        qrcode: document.getElementById('veiculoQrcode').value,
-        chassi: document.getElementById('veiculoChassi')?.value || null,
-        anofab: document.getElementById('veiculoAnoFab')?.value || null,
-        anomod: document.getElementById('veiculoAnoMod')?.value || null,
-        qtdtanque: document.getElementById('veiculoQtdTanque')?.value || null
+    
+    // Helper para pegar valor ou null
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? (el.value || null) : null;
     };
 
-    // Limpeza de campos vazios numéricos
+    const payload = {
+        filial: getVal('veiculoFilial'),
+        placa: getVal('veiculoPlaca')?.toUpperCase(),
+        marca: getVal('veiculoMarca'),
+        modelo: getVal('veiculoModelo'),
+        renavan: getVal('veiculoRenavan'),
+        tipo: getVal('veiculoTipo'),
+        situacao: getVal('veiculoSituacao'),
+        qrcode: getVal('veiculoQrcode'),
+        chassi: getVal('veiculoChassi'),
+        anofab: getVal('veiculoAnoFab'),
+        anomod: getVal('veiculoAnoMod'),
+        qtdtanque: getVal('veiculoQtdTanque')
+    };
+
+    // Remove campos nulos que não devem ser enviados se vazios
     if (!payload.anofab) delete payload.anofab;
     if (!payload.anomod) delete payload.anomod;
     if (!payload.qtdtanque) delete payload.qtdtanque;
@@ -378,8 +429,145 @@ function exportarExcel() {
 
 async function handleImportacao(e) {
     e.preventDefault();
-    // Implementação básica de importação se necessário
-    alert('Funcionalidade de importação em desenvolvimento.');
+    
+    const fileInput = document.getElementById('arquivoImportacao');
+    const filialSelect = document.getElementById('importFilial');
+    const filialPadrao = filialSelect.value;
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    
+    if (!fileInput.files.length) {
+        alert('Selecione um arquivo (.xlsx ou .xls).');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    const originalBtnText = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    btnSubmit.disabled = true;
+
+    reader.onload = async (event) => {
+        try {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+
+            if (json.length === 0) {
+                throw new Error('O arquivo está vazio.');
+            }
+
+            const excelPlacas = json
+                .map(row => {
+                    const key = Object.keys(row).find(k => k.toUpperCase().trim() === 'PLACA');
+                    return key ? String(row[key]).toUpperCase().trim() : null;
+                })
+                .filter(p => p);
+
+            if (excelPlacas.length === 0) {
+                throw new Error('Nenhuma coluna "PLACA" encontrada ou todas as placas estão vazias.');
+            }
+
+            const { data: existingVehicles, error: fetchError } = await supabaseClient
+                .from('veiculos')
+                .select('*')
+                .in('placa', excelPlacas);
+
+            if (fetchError) throw fetchError;
+
+            const existingMap = new Map();
+            existingVehicles.forEach(v => existingMap.set(v.placa, v));
+
+            let insertedCount = 0;
+            let updatedCount = 0;
+            let skippedCount = 0;
+            let errors = [];
+
+            for (const row of json) {
+                const rowNormalized = {};
+                Object.keys(row).forEach(k => rowNormalized[k.toUpperCase().trim()] = row[k]);
+
+                const placa = rowNormalized['PLACA'] ? String(rowNormalized['PLACA']).toUpperCase().trim() : null;
+                if (!placa) continue;
+
+                const existing = existingMap.get(placa);
+
+                const fieldsMap = {
+                    'FILIAL': 'filial',
+                    'MODELO': 'modelo',
+                    'TIPO': 'tipo',
+                    'RENAVAN': 'renavan',
+                    'SITUACAO': 'situacao',
+                    'QRCODE': 'qrcode',
+                    'MARCA': 'marca'
+                };
+
+                if (existing) {
+                    const updates = {};
+                    let hasChanges = false;
+
+                    for (const [excelCol, dbCol] of Object.entries(fieldsMap)) {
+                        let excelVal = rowNormalized[excelCol];
+                        
+                        if (excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '') {
+                            excelVal = String(excelVal).trim();
+                            if (dbCol === 'situacao') excelVal = excelVal.toLowerCase();
+
+                            const dbVal = existing[dbCol] ? String(existing[dbCol]).trim() : '';
+
+                            if (excelVal !== dbVal) {
+                                updates[dbCol] = excelVal;
+                                hasChanges = true;
+                            }
+                        }
+                    }
+
+                    if (hasChanges) {
+                        const { error } = await supabaseClient.from('veiculos').update(updates).eq('id', existing.id);
+                        if (error) errors.push(`Erro ao atualizar ${placa}: ${error.message}`);
+                        else updatedCount++;
+                    } else {
+                        skippedCount++;
+                    }
+
+                } else {
+                    const newRecord = {
+                        placa: placa,
+                        filial: (rowNormalized['FILIAL'] && String(rowNormalized['FILIAL']).trim() !== '') ? String(rowNormalized['FILIAL']).trim() : filialPadrao,
+                        modelo: rowNormalized['MODELO'] ? String(rowNormalized['MODELO']).trim() : '',
+                        tipo: rowNormalized['TIPO'] ? String(rowNormalized['TIPO']).trim() : '',
+                        renavan: rowNormalized['RENAVAN'] ? String(rowNormalized['RENAVAN']).trim() : '',
+                        situacao: rowNormalized['SITUACAO'] ? String(rowNormalized['SITUACAO']).trim().toLowerCase() : 'ativo',
+                        qrcode: rowNormalized['QRCODE'] ? String(rowNormalized['QRCODE']).trim() : '',
+                        marca: rowNormalized['MARCA'] ? String(rowNormalized['MARCA']).trim() : ''
+                    };
+
+                    const { error } = await supabaseClient.from('veiculos').insert([newRecord]);
+                    if (error) errors.push(`Erro ao inserir ${placa}: ${error.message}`);
+                    else insertedCount++;
+                }
+            }
+
+            let message = `Processamento concluído!\n✅ Inseridos: ${insertedCount}\n🔄 Atualizados: ${updatedCount}\n⏭️ Sem alterações: ${skippedCount}`;
+            if (errors.length > 0) message += `\n\n⚠️ Erros (${errors.length}):\n` + errors.slice(0, 5).join('\n');
+            
+            alert(message);
+            document.getElementById('modalImportacao').classList.add('hidden');
+            carregarVeiculos();
+
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            alert('Falha na importação: ' + error.message);
+        } finally {
+            btnSubmit.innerHTML = originalBtnText;
+            btnSubmit.disabled = false;
+            fileInput.value = '';
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
 }
 
 function setupSorting() {

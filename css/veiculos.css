@@ -1,5 +1,28 @@
 /* Estilos específicos para a página de Veículos */
 
+/* configuração do modal incluir veiculo */
+.hidden {
+  display: none !important;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.glass-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 600px;
+  width: 100%;
+}
+
 /* --- Layout de Cards (Topo) --- */
 .veiculos-top-grid {
     display: grid;
@@ -196,3 +219,28 @@
     overflow-y: auto;  /* Adiciona barra de rolagem vertical se necessário */
     z-index: 1000;     /* Garante que fique sobre outros elementos */
 }
+
+/* --- Ajustes da Tabela (Rolagem e Fonte) --- */
+.veiculos-table-container {
+    max-height: 550px; /* Define altura máxima para ativar a barra de rolagem */
+    overflow-y: auto;  /* Barra de rolagem vertical */
+    border-radius: 8px;
+}
+
+.glass-table {
+    font-size: 0.8rem; /* Reduz o tamanho da fonte (aprox 12.8px) */
+}
+
+.glass-table th, .glass-table td {
+    padding: 6px 10px; /* Reduz o espaçamento para ficar mais compacto */
+}
+
+.veiculos-table-head th {
+    position: sticky; /* Mantém o cabeçalho fixo ao rolar */
+    top: 0;
+    background-color: #f8f9fa; /* Cor de fundo para não ficar transparente */
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+
