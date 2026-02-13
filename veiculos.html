@@ -147,6 +147,73 @@
     </div>
   </div>
 
+  <!-- Modal para Cadastro/Edição de Veículo -->
+  <div id="modalVeiculo" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3 id="modalTitle">Novo Veículo</h3>
+            <button class="close-button" id="btnCloseModalVeiculo">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="formVeiculo">
+                <input type="hidden" id="veiculoId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="veiculoFilial">Filial *</label>
+                        <select id="veiculoFilial" required>
+                            <option value="">Selecione</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="veiculoPlaca">Placa *</label>
+                        <input type="text" id="veiculoPlaca" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="veiculoMarca">Marca</label>
+                        <input type="text" id="veiculoMarca" placeholder="Ex: Volvo">
+                    </div>
+                    <div class="form-group">
+                        <label for="veiculoModelo">Modelo *</label>
+                        <input type="text" id="veiculoModelo" required placeholder="Ex: FH 540">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="veiculoRenavan">Renavan</label>
+                        <input type="text" id="veiculoRenavan">
+                    </div>
+                    <div class="form-group">
+                        <label for="veiculoTipo">Tipo *</label>
+                        <select id="veiculoTipo" required>
+                            <option value="">Selecione</option>
+                            <!-- Opções preenchidas via JS -->
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="veiculoSituacao">Situação *</label>
+                        <select id="veiculoSituacao" required>
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                            <option value="manutencao">Manutenção</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="veiculoQrcode">QR Code</label>
+                        <input type="text" id="veiculoQrcode" placeholder="Código do QR">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/veiculos.js" defer></script>
 </body>
