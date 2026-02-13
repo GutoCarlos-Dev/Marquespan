@@ -134,12 +134,19 @@
                       <option value="">Selecione a Filial</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="arquivoImportacao">Selecione o Arquivo (.xlsx)</label>
-                    <p class="helper-text">Obrigatório: <strong>PLACA</strong>. Opcionais para atualização: FILIAL, MODELO, TIPO, RENAVAN, SITUACAO, QRCODE, MARCA.</p>
-                    <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required>
+                
+                <div class="form-group file-upload-container">
+                    <label>Arquivo Excel (.xlsx)</label>
+                    <div class="file-upload-wrapper" id="dropZoneImportacao">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <span class="upload-text" id="arquivoImportacaoLabel">Clique ou arraste o arquivo aqui</span>
+                        <p class="helper-text" style="font-size: 0.8rem; color: #888; margin-top: 5px;">Colunas: PLACA (Obrigatório), MODELO, TIPO, etc.</p>
+                        <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required>
+                    </div>
                 </div>
+
                 <div class="form-actions">
+                    <button type="button" class="btn-glass btn-red close-button-action" onclick="document.getElementById('modalImportacao').classList.add('hidden')">Cancelar</button>
                     <button type="submit" class="btn-glass btn-green"><i class="fas fa-check"></i> Processar Arquivo</button>
                 </div>
             </form>
@@ -149,7 +156,7 @@
 
   <!-- Modal para Cadastro/Edição de Veículo -->
   <div id="modalVeiculo" class="modal-backdrop hidden">
-    <div class="glass-modal" style="max-width: 800px;">
+    <div class="glass-modal" style="max-width: 750px;">
         <div class="modal-header">
             <h3 id="modalTitle">Novo Veículo</h3>
             <button class="close-button" id="btnCloseModalVeiculo">&times;</button>
@@ -207,6 +214,7 @@
                     </div>
                 </div>
                 <div class="form-actions">
+                    <button type="button" class="btn-glass btn-red" onclick="document.getElementById('modalVeiculo').classList.add('hidden')">Cancelar</button>
                     <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
                 </div>
             </form>

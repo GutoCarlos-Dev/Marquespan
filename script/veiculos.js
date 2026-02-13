@@ -79,6 +79,21 @@ function setupEventListeners() {
         if (e.target === modalVeiculo) fecharModalVeiculo();
         if (e.target === modalImportacao) modalImportacao.classList.add('hidden');
     });
+
+    // UX: Atualizar nome do arquivo no input de importação
+    const fileInput = document.getElementById('arquivoImportacao');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const fileName = e.target.files[0]?.name;
+            const label = document.getElementById('arquivoImportacaoLabel');
+            const wrapper = document.getElementById('dropZoneImportacao');
+            if (label && fileName) {
+                label.innerHTML = `<i class="fas fa-file-excel"></i> ${fileName}`;
+                wrapper.style.borderColor = '#006937';
+                wrapper.style.backgroundColor = '#f0fff4';
+            }
+        });
+    }
 }
 
 function handleTableClick(e) {
