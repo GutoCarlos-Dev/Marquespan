@@ -5,6 +5,8 @@ const RelatorioDespesasUI = {
         this.cacheDOM();
         this.bindEvents();
         this.setDefaultDates();
+        this.carregarRotas();
+        this.carregarHoteis();
         this.carregarDados();
         this.filteredData = []; // Armazena dados filtrados para exportação
         this.chartHoteis = null;
@@ -21,8 +23,12 @@ const RelatorioDespesasUI = {
         this.formFiltros = document.getElementById('formFiltros');
         this.dataInicio = document.getElementById('dataInicio');
         this.dataFim = document.getElementById('dataFim');
-        this.filtroRota = document.getElementById('filtroRota');
-        this.filtroHotel = document.getElementById('filtroHotel');
+        this.filtroRotaDisplay = document.getElementById('filtroRotaDisplay');
+        this.filtroRotaOptions = document.getElementById('filtroRotaOptions');
+        this.filtroRotaText = document.getElementById('filtroRotaText');
+        this.filtroHotelDisplay = document.getElementById('filtroHotelDisplay');
+        this.filtroHotelOptions = document.getElementById('filtroHotelOptions');
+        this.filtroHotelText = document.getElementById('filtroHotelText');
         this.kpiCustoTotal = document.getElementById('kpiCustoTotal');
         this.kpiTotalDiarias = document.getElementById('kpiTotalDiarias');
         this.chartHoteisCanvas = document.getElementById('chartHoteis');
@@ -46,6 +52,42 @@ const RelatorioDespesasUI = {
         });
         this.btnExportarExcel?.addEventListener('click', () => this.exportarExcel());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarPDF());
+
+        // Eventos do Multiselect de Rotas
+        if (this.filtroRotaDisplay) {
+            this.filtroRotaDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroRotaOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!this.filtroRotaDisplay.contains(e.target) && !this.filtroRotaOptions.contains(e.target)) {
+                    this.filtroRotaOptions.classList.add('hidden');
+                }
+            });
+
+            this.filtroRotaOptions.addEventListener('change', () => {
+                this.atualizarTextoRota();
+            });
+        }
+
+        // Eventos do Multiselect de Hotéis
+        if (this.filtroHotelDisplay) {
+            this.filtroHotelDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroHotelOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!this.filtroHotelDisplay.contains(e.target) && !this.filtroHotelOptions.contains(e.target)) {
+                    this.filtroHotelOptions.classList.add('hidden');
+                }
+            });
+
+            this.filtroHotelOptions.addEventListener('change', () => {
+                this.atualizarTextoHotel();
+            });
+        }
     },
 
     setDefaultDates() {
@@ -57,6 +99,152 @@ const RelatorioDespesasUI = {
         this.dataFim.value = lastDay.toISOString().split('T')[0];
     },
 
+    async carregarRotas() {
+        try {
+            const { data: rotas, error } = await supabaseClient
+                .from('rotas')
+                .select('numero')
+                .order('numero', { ascending: true });
+
+            if (error) throw error;
+
+            this.filtroRotaOptions.innerHTML = '';
+            
+            // Container Sticky para busca e limpar
+            const stickyContainer = document.createElement('div');
+            stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+            // Input de Busca
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Buscar rota...';
+            searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+            searchInput.onclick = (e) => e.stopPropagation();
+            searchInput.addEventListener('input', (e) => {
+                 const term = e.target.value.toLowerCase();
+                 const options = this.filtroRotaOptions.querySelectorAll('label.custom-option');
+                 options.forEach(opt => {
+                     const text = opt.textContent.toLowerCase();
+                     opt.style.display = text.includes(term) ? 'block' : 'none';
+                 });
+            });
+            stickyContainer.appendChild(searchInput);
+
+            // Botão para limpar seleção
+            const btnLimpar = document.createElement('div');
+            btnLimpar.className = 'custom-option';
+            btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer;';
+            btnLimpar.textContent = 'Limpar Seleção';
+            btnLimpar.onclick = (e) => {
+                e.stopPropagation();
+                this.filtroRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => cb.checked = false);
+                this.atualizarTextoRota();
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            };
+            stickyContainer.appendChild(btnLimpar);
+            
+            this.filtroRotaOptions.appendChild(stickyContainer);
+
+            if (rotas && rotas.length > 0) {
+                rotas.forEach(r => {
+                    const label = document.createElement('label');
+                    label.className = 'custom-option';
+                    label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}" style="margin-right: 8px;"> ${r.numero}`;
+                    this.filtroRotaOptions.appendChild(label);
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar rotas:', err);
+        }
+    },
+
+    async carregarHoteis() {
+        try {
+            const { data: hoteis, error } = await supabaseClient
+                .from('hoteis')
+                .select('id, nome')
+                .order('nome', { ascending: true });
+
+            if (error) throw error;
+
+            this.filtroHotelOptions.innerHTML = '';
+            
+            // Container Sticky para busca e limpar
+            const stickyContainer = document.createElement('div');
+            stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+            // Input de Busca
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Buscar hotel...';
+            searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+            searchInput.onclick = (e) => e.stopPropagation();
+            searchInput.addEventListener('input', (e) => {
+                 const term = e.target.value.toLowerCase();
+                 const options = this.filtroHotelOptions.querySelectorAll('label.custom-option');
+                 options.forEach(opt => {
+                     const text = opt.textContent.toLowerCase();
+                     opt.style.display = text.includes(term) ? 'block' : 'none';
+                 });
+            });
+            stickyContainer.appendChild(searchInput);
+
+            // Botão para limpar seleção
+            const btnLimpar = document.createElement('div');
+            btnLimpar.className = 'custom-option';
+            btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer;';
+            btnLimpar.textContent = 'Limpar Seleção';
+            btnLimpar.onclick = (e) => {
+                e.stopPropagation();
+                this.filtroHotelOptions.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
+                this.atualizarTextoHotel();
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            };
+            stickyContainer.appendChild(btnLimpar);
+            
+            this.filtroHotelOptions.appendChild(stickyContainer);
+
+            if (hoteis && hoteis.length > 0) {
+                hoteis.forEach(h => {
+                    const label = document.createElement('label');
+                    label.className = 'custom-option';
+                    label.innerHTML = `<input type="checkbox" class="hotel-checkbox" value="${h.id}" style="margin-right: 8px;"> ${h.nome}`;
+                    this.filtroHotelOptions.appendChild(label);
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar hotéis:', err);
+        }
+    },
+
+    atualizarTextoRota() {
+        const checkboxes = this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked');
+        const selecionados = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (selecionados.length === 0) {
+            this.filtroRotaText.textContent = 'Todas';
+        } else if (selecionados.length <= 3) {
+            this.filtroRotaText.textContent = selecionados.join(', ');
+        } else {
+            this.filtroRotaText.textContent = `${selecionados.length} selecionadas`;
+        }
+    },
+
+    atualizarTextoHotel() {
+        const checkboxes = this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked');
+        const selecionados = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+        
+        if (selecionados.length === 0) {
+            this.filtroHotelText.textContent = 'Todos';
+        } else if (selecionados.length <= 2) {
+            this.filtroHotelText.textContent = selecionados.join(', ');
+        } else {
+            this.filtroHotelText.textContent = `${selecionados.length} selecionados`;
+        }
+    },
+
     async carregarDados() {
         try {
             this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
@@ -66,30 +254,29 @@ const RelatorioDespesasUI = {
                 .gte('data_checkin', this.dataInicio.value)
                 .lte('data_checkin', this.dataFim.value);
 
-            if (this.filtroRota.value) {
-                query = query.ilike('numero_rota', `%${this.filtroRota.value}%`);
+            // Filtro de Múltiplas Rotas
+            const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
+            if (rotasSelecionadas.length > 0) {
+                // Cria uma condição OR para buscar se a rota está presente no campo numero_rota
+                // Ex: numero_rota.ilike.%101%,numero_rota.ilike.%102%
+                const orCondition = rotasSelecionadas.map(r => `numero_rota.ilike.%${r}%`).join(',');
+                query = query.or(orCondition);
             }
             
-            if (this.filtroHotel.value) {
-                // Filtro em tabela relacionada requer !inner se for obrigatório, mas aqui é busca textual
-                // Supabase postgrest-js filter on foreign table:
-                // .ilike('hoteis.nome', ...) works if joined correctly
-                // Simplificação: Filtramos no JS para evitar complexidade de query aninhada dinâmica
+            // Filtro de Múltiplos Hotéis
+            const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
+            if (hoteisSelecionados.length > 0) {
+                query = query.in('id_hotel', hoteisSelecionados);
             }
 
             const { data, error } = await query;
             if (error) throw error;
 
-            let filteredData = data;
-            if (this.filtroHotel.value) {
-                const term = this.filtroHotel.value.toLowerCase();
-                filteredData = data.filter(d => d.hoteis?.nome?.toLowerCase().includes(term));
-            }
-            this.filteredData = filteredData;
+            this.filteredData = data;
 
-            this.atualizarKPIs(filteredData);
-            this.renderizarGraficos(filteredData);
-            this.renderizarTabela(filteredData);
+            this.atualizarKPIs(this.filteredData);
+            this.renderizarGraficos(this.filteredData);
+            this.renderizarTabela(this.filteredData);
             
         } catch (err) {
             console.error('Erro ao carregar relatório:', err);
