@@ -127,8 +127,8 @@ function preencherTabela(registros) {
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td style="display: flex; gap: 5px;">
-        <button class="btn-acao editar" onclick="abrirManutencao(${m.id})" title="Abrir"><i class="fas fa-search"></i></button>
-        <button class="btn-acao excluir" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+        <button class="btn-icon edit" onclick="abrirManutencao(${m.id})" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
+        <button class="btn-icon delete" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash-alt"></i></button>
       </td>
       <td>${m.usuario || ''}</td>
       <td>${m.titulo || ''}</td>

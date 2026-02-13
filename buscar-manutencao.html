@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Buscar Manutenção</title>
   <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/manutencao.css" />
+  <!-- ✅ Novo CSS específico -->
+  <link rel="stylesheet" href="css/buscar-manutencao.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
@@ -14,100 +15,100 @@
 
   <!-- 🧩 Conteúdo principal -->
   <main class="main-content">
-    <section class="gestao-veiculos">
-      <h1 class="header"><i class="fas fa-search"></i> Buscar Manutenção</h1>
-    </section>
+    <header class="header glass-header">
+      <h1><i class="fas fa-search"></i> Buscar Manutenção</h1>
+    </header>
 
     <!-- 🔍 Filtros -->
-    <div class="painel-busca">
-      <div class="painel-busca-header">
+    <section class="glass-panel">
         <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
-      </div>
-      <div class="form-duplo">
-        <fieldset class="form-bloco">
-          <div class="form-linha">
-            <label for="dataInicial">Data Inicial:</label>
-            <input type="date" id="dataInicial">
-          </div>
-          <div class="form-linha">
-            <label for="titulo">Título:</label>
-            <input type="text" id="titulo" list="listaTitulos">
-            <datalist id="listaTitulos"></datalist>
-          </div>
-          <div class="form-linha">
-            <label for="nfse">NFS-e:</label>
-            <input type="text" id="nfse">
-          </div>
-          <div class="form-linha">
-            <label for="os">OS:</label>
-            <input type="text" id="os">
-          </div>
-          <div class="form-linha">
-            <label for="usuarioBusca">Usuário:</label>
-            <input type="text" id="usuarioBusca" placeholder="Quem lançou">
-          </div>
-        </fieldset>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="dataInicial">Data Inicial</label>
+                <input type="date" id="dataInicial">
+            </div>
+            <div class="form-group">
+                <label for="dataFinal">Data Final</label>
+                <input type="date" id="dataFinal">
+            </div>
+            <div class="form-group">
+                <label for="filial">Filial</label>
+                <select id="filial"></select>
+            </div>
+            <div class="form-group">
+                <label for="veiculo">Veículo</label>
+                <input type="text" id="veiculo" list="listaPlacas" placeholder="Placa">
+                <datalist id="listaPlacas"></datalist>
+            </div>
+        </div>
 
-        <fieldset class="form-bloco">
-          <div class="form-linha">
-            <label for="dataFinal">Data Final:</label>
-            <input type="date" id="dataFinal">
-          </div>
-          <div class="form-linha">
-            <label for="veiculo">Veículo:</label>
-            <input type="text" id="veiculo" list="listaPlacas">
-            <datalist id="listaPlacas"></datalist>
-          </div>
-          <div class="form-linha">
-            <label for="filial">Filial:</label>
-            <select id="filial"></select>
-          </div>
-          <div class="form-linha">
-            <label for="tipoManutencao">Tipo:</label>
-            <select id="tipoManutencao">
-              <option value="">Todos</option>
-              <option value="CORRETIVA">CORRETIVA</option>
-              <option value="PREVENTIVA">PREVENTIVA</option>
-            </select>
-          </div>
-        </fieldset>
-      </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="titulo">Título</label>
+                <input type="text" id="titulo" list="listaTitulos" placeholder="Ex: Troca de Óleo">
+                <datalist id="listaTitulos"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="fornecedor">Fornecedor</label>
+                <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Nome do Fornecedor">
+                <datalist id="listaFornecedores"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="nfse">NFS-e</label>
+                <input type="text" id="nfse">
+            </div>
+            <div class="form-group">
+                <label for="os">OS</label>
+                <input type="text" id="os">
+            </div>
+        </div>
 
-      <div class="form-linha">
-        <label for="fornecedor">Fornecedor:</label>
-        <input type="text" id="fornecedor" list="listaFornecedores">
-        <datalist id="listaFornecedores"></datalist>
-      </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="usuarioBusca">Usuário</label>
+                <input type="text" id="usuarioBusca" placeholder="Quem lançou">
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="button" id="btnBuscarManutencao" class="btn-glass btn-blue" style="width: 100%;">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </section>
 
-      <button type="button" id="btnBuscarManutencao">🔍 Buscar</button>
-    </div>
+    <!-- 📋 Resultados -->
+    <section class="glass-panel">
+        <div class="resumo-header">
+            <h3><i class="fas fa-list"></i> Resultados</h3>
+            <div class="resumo-valores">
+                <strong>Registros:</strong> <span id="totalRegistros">0</span> |
+                <strong>Total:</strong> R$ <span id="valorTotal">0.00</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button id="btnExportarXLS" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Excel</button>
+            </div>
+        </div>
 
-    <!-- 📊 Resumo -->
-    <div class="resumo-manutencao">
-      <button id="btnExportarPDF">📄 Exportar PDF</button>
-      <button id="btnExportarXLS">📊 Exportar XLS</button>
-      <div class="resumo-valores">
-        <strong>Realizadas:</strong> <span id="totalRegistros">0</span> |
-        <strong>Valor Total:</strong> R$ <span id="valorTotal">0.00</span>
-      </div>
-    </div>
-
-    <!-- 📋 Tabela de resultados -->
-    <table class="tabela-resultados">
-      <thead>
-        <tr>
-          <th>Ações</th>
-          <th>Usuário</th>
-          <th>Título</th>
-          <th>Placa</th>
-          <th>Descrição</th>
-          <th>OS</th>
-          <th>Data</th>
-          <th>Valor (R$)</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaResultados"></tbody>
-    </table>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ações</th>
+                        <th>Usuário</th>
+                        <th>Título</th>
+                        <th>Placa</th>
+                        <th>Descrição</th>
+                        <th>OS</th>
+                        <th>Data</th>
+                        <th>Valor (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaResultados"></tbody>
+            </table>
+        </div>
+    </section>
   </main>
 
   <!-- 🦶 Rodapé -->

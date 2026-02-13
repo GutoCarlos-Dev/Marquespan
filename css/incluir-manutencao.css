@@ -1,0 +1,370 @@
+/* Estilo Glassmorphism e Compacto para Manutenção */
+:root {
+    --primary-color: #006937;
+    --danger-color: #dc3545;
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(0,0,0,0.1);
+    --glass-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* Reset de fundo para garantir padrão claro */
+body {
+    background-color: #f4f6f9 !important;
+    background-image: none !important;
+}
+
+/* Header Glass (Padrão Veículos) */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.glass-panel h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* --- Layout de Grid para Cards (Novo) --- */
+.manutencao-grid-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 colunas iguais */
+    gap: 20px;
+}
+
+/* Responsividade: 1 coluna em telas menores */
+@media (max-width: 992px) {
+    .manutencao-grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilo dos Cards Internos */
+.glass-panel-inner {
+    background: #fcfcfc;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 15px;
+    height: 100%; /* Garante altura igual na linha */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Abas de Navegação */
+.painel-botoes {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.painel-btn {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.painel-btn:hover {
+    background-color: rgba(0, 105, 55, 0.05);
+    color: var(--primary-color);
+}
+
+.painel-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Formulários */
+.form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background-color: #f9f9f9;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--primary-color);
+    background-color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
+
+/* Botões Padrão Novo */
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-transform: uppercase;
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+/* Botões de Ícone (Tabela) */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.btn-icon:hover {
+    transform: scale(1.2);
+}
+
+.btn-icon.delete { color: var(--danger-color); }
+
+/* Tabelas */
+.table-responsive {
+    overflow-x: auto;
+    margin-top: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background-color: #fff;
+}
+
+th {
+    background-color: #f8f9fa;
+    color: #333;
+    font-weight: 700;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 2px solid #ddd;
+}
+
+/* --- Upload de Arquivo (Estilo Veículos) --- */
+.file-upload-container {
+    position: relative;
+    margin-top: 10px;
+}
+
+.file-upload-wrapper {
+    border: 2px dashed #ccc;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: #fafafa;
+    position: relative;
+}
+
+.file-upload-wrapper:hover {
+    border-color: #006937;
+    background-color: #f0fff4;
+}
+
+.file-upload-wrapper input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    color: #006937;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.upload-text {
+    font-weight: 600;
+    color: #555;
+    display: block;
+}
+
+/* Lista de Arquivos Anexados */
+.lista-arquivos {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    color: #555;
+}
+
+/* Utilitários */
+.hidden { display: none !important; }
+.fade-in { animation: fadeIn 0.3s ease-in; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- Estilos dos Modais (Padrão Veículos) --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.glass-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+    border: 1px solid rgba(0,0,0,0.05);
+    padding: 0;
+    max-width: 500px;
+    width: 95%;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animação ao abrir */
+.modal-backdrop:not(.hidden) .glass-modal {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fcfcfc;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.25rem;
+}
+
+.close-button {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+    padding: 0;
+}
+
+.close-button:hover {
+    color: var(--danger-color);
+}
+
+.modal-body {
+    padding: 25px;
+    overflow-y: auto;
+}
+
+.modal-acoes {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}

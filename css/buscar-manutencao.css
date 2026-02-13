@@ -1,0 +1,184 @@
+/* Estilo Glassmorphism para Buscar Manutenção */
+:root {
+    --primary-color: #006937;
+    --danger-color: #dc3545;
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(0,0,0,0.1);
+    --glass-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* Reset de fundo */
+body {
+    background-color: #f4f6f9 !important;
+    background-image: none !important;
+}
+
+/* Header Glass */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.glass-panel h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Formulários */
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background-color: #f9f9f9;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--primary-color);
+    background-color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
+}
+
+/* Botões */
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-transform: uppercase;
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-purple { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+/* Tabela */
+.table-responsive {
+    overflow-x: auto;
+    margin-top: 15px;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background-color: #fff;
+}
+
+th {
+    background-color: #f8f9fa;
+    color: #333;
+    font-weight: 700;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 2px solid #ddd;
+}
+
+td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    color: #555;
+}
+
+/* Botões de Ação na Tabela */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.btn-icon:hover { transform: scale(1.2); }
+.btn-icon.edit { color: #007bff; }
+.btn-icon.delete { color: #dc3545; }
+
+/* Resumo */
+.resumo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.resumo-valores {
+    background: #e8f5e9;
+    padding: 10px 15px;
+    border-radius: 8px;
+    color: #155724;
+    font-size: 0.95rem;
+    border: 1px solid #c3e6cb;
+}
