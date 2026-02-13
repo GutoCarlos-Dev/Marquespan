@@ -127,6 +127,7 @@ function preencherTabela(registros) {
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td style="display: flex; gap: 5px;">
+        <button class="btn-icon view" onclick="visualizarManutencao(${m.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button class="btn-icon edit" onclick="abrirManutencao(${m.id})" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
         <button class="btn-icon delete" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash-alt"></i></button>
       </td>
@@ -161,7 +162,67 @@ window.abrirManutencao = function(id) {
   window.location.href = `incluir-manutencao.html?id=${id}`;
 }
 
-// 🗑️ Excluir manutenção
+// 👁️ Visualizar manutenção (Modal)
+window.visualizarManutencao = async function(id) {
+  try {
+    // 1. Buscar dados da manutenção
+    const { data: m, error } = await supabaseClient
+      .from('manutencao')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // 2. Preencher campos do modal
+    document.getElementById('viewId').textContent = m.id;
+    document.getElementById('viewData').textContent = formatarData(m.data);
+    document.getElementById('viewStatus').textContent = m.status || '-';
+    document.getElementById('viewFilial').textContent = m.filial || '-';
+    document.getElementById('viewUsuario').textContent = m.usuario || '-';
+    document.getElementById('viewVeiculo').textContent = m.veiculo || '-';
+    document.getElementById('viewKm').textContent = m.km || '-';
+    document.getElementById('viewMotorista').textContent = m.motorista || '-';
+    document.getElementById('viewTitulo').textContent = m.titulo || '-';
+    document.getElementById('viewDescricao').textContent = m.descricao || '-';
+    document.getElementById('viewFornecedor').textContent = m.fornecedor || '-';
+    document.getElementById('viewNotas').textContent = `NF: ${m.notaFiscal || '-'} | NFS: ${m.notaServico || '-'}`;
+    
+    // Calcular valor total (NF + NFS)
+    const total = (m.valorNfe || 0) + (m.valorNfse || 0);
+    document.getElementById('viewValor').textContent = `R$ ${formatarValor(total)}`;
+
+    // 3. Buscar arquivos anexados
+    const { data: arquivos, error: errArq } = await supabaseClient
+      .from('manutencao_arquivos')
+      .select('*')
+      .eq('id_manutencao', id);
+
+    const listaArquivos = document.getElementById('viewListaArquivos');
+    listaArquivos.innerHTML = '';
+
+    if (arquivos && arquivos.length > 0) {
+      arquivos.forEach(arq => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9; margin-bottom: 5px; border-radius: 4px;';
+        li.innerHTML = `
+            <span><i class="fas fa-file-alt"></i> ${arq.nome_arquivo}</span>
+            <button onclick="downloadArquivo('${arq.caminho_arquivo}')" class="btn-icon view" title="Baixar"><i class="fas fa-download"></i></button>
+        `;
+        listaArquivos.appendChild(li);
+      });
+    } else {
+      listaArquivos.innerHTML = '<li style="color: #999; font-style: italic;">Nenhum arquivo anexado.</li>';
+    }
+
+    document.getElementById('modalVisualizar').classList.remove('hidden');
+  } catch (e) {
+    console.error('Erro ao visualizar manutenção:', e);
+    alert('Erro ao carregar detalhes da manutenção.');
+  }
+}
+
+// �️ Excluir manutenção
 window.excluirManutencao = async function(id) {
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
@@ -174,6 +235,23 @@ window.excluirManutencao = async function(id) {
     alert('✅ Manutenção excluída com sucesso!');
     buscarManutencao(); // Atualiza a tabela
   }
+}
+
+// 📥 Baixar arquivo
+window.downloadArquivo = async function(path) {
+  try {
+    const { data, error } = await supabaseClient.storage.from('manutencao_bucket').createSignedUrl(path, 60);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank');
+  } catch (err) {
+    console.error('Erro ao baixar arquivo:', err);
+    alert('Erro ao gerar link de download.');
+  }
+}
+
+// ❌ Fechar modal
+window.fecharModalVisualizacao = function() {
+  document.getElementById('modalVisualizar').classList.add('hidden');
 }
 
 // 🚀 Inicialização
@@ -189,5 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btnExportarXLS').addEventListener('click', () => {
     alert('📊 Exportar XLS ainda não implementado.');
+  });
+
+  // Fechar modal ao clicar fora
+  window.addEventListener('click', (e) => {
+    const modal = document.getElementById('modalVisualizar');
+    if (e.target === modal) modal.classList.add('hidden');
   });
 });

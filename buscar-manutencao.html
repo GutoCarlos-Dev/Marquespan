@@ -19,63 +19,72 @@
       <h1><i class="fas fa-search"></i> Buscar Manutenção</h1>
     </header>
 
-    <!-- 🔍 Filtros -->
-    <section class="glass-panel">
+    <div class="manutencao-top-grid">
+      <!-- Card 1: Filtros de Busca -->
+      <section class="glass-panel">
         <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
-        
-        <div class="form-row">
-            <div class="form-group">
+        <div class="filtros-container">
+            <div class="form-group-filter">
                 <label for="dataInicial">Data Inicial</label>
                 <input type="date" id="dataInicial">
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="dataFinal">Data Final</label>
                 <input type="date" id="dataFinal">
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="filial">Filial</label>
                 <select id="filial"></select>
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="veiculo">Veículo</label>
-                <input type="text" id="veiculo" list="listaPlacas" placeholder="Placa">
+                <input type="text" id="veiculo" list="listaPlacas" placeholder="Buscar...">
                 <datalist id="listaPlacas"></datalist>
             </div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
+            <div class="form-group-filter">
+                <label for="placa">Placa</label>
+                <input type="text" id="placa" placeholder="ABC1234">
+            </div>
+            <div class="form-group-filter">
                 <label for="titulo">Título</label>
                 <input type="text" id="titulo" list="listaTitulos" placeholder="Ex: Troca de Óleo">
                 <datalist id="listaTitulos"></datalist>
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="fornecedor">Fornecedor</label>
                 <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Nome do Fornecedor">
                 <datalist id="listaFornecedores"></datalist>
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="nfse">NFS-e</label>
                 <input type="text" id="nfse">
             </div>
-            <div class="form-group">
+            <div class="form-group-filter">
+                <label for="nfe">NF-E</label>
+                <input type="text" id="nfe">
+            </div>
+            <div class="form-group-filter">
                 <label for="os">OS</label>
                 <input type="text" id="os">
             </div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
+            <div class="form-group-filter">
                 <label for="usuarioBusca">Usuário</label>
                 <input type="text" id="usuarioBusca" placeholder="Quem lançou">
             </div>
-            <div class="form-group" style="display: flex; align-items: flex-end;">
-                <button type="button" id="btnBuscarManutencao" class="btn-glass btn-blue" style="width: 100%;">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
-            </div>
         </div>
-    </section>
+      </section>
+
+      <!-- Card 2: Ações -->
+      <section class="glass-panel acoes-panel">
+        <h3><i class="fas fa-cogs"></i> Ações</h3>
+        <div class="acoes-grid">
+          <button type="button" id="btnBuscarManutencao" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          <button type="button" id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" id="btnExportarXLS" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Excel</button>
+          <button type="button" id="btnImportar" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar</button>
+        </div>
+      </section>
+    </div>
 
     <!-- 📋 Resultados -->
     <section class="glass-panel">
@@ -84,10 +93,6 @@
             <div class="resumo-valores">
                 <strong>Registros:</strong> <span id="totalRegistros">0</span> |
                 <strong>Total:</strong> R$ <span id="valorTotal">0.00</span>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
-                <button id="btnExportarXLS" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Excel</button>
             </div>
         </div>
 
@@ -110,6 +115,52 @@
         </div>
     </section>
   </main>
+
+  <!-- Modal Visualizar Manutenção -->
+  <div id="modalVisualizar" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-eye"></i> Detalhes da Manutenção #<span id="viewId"></span></h3>
+            <button class="close-button" onclick="fecharModalVisualizacao()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="view-grid">
+                <div class="view-item"><span class="view-label">Data</span><span id="viewData" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">Status</span><span id="viewStatus" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">Filial</span><span id="viewFilial" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">Usuário</span><span id="viewUsuario" class="view-value"></span></div>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+            
+            <div class="view-grid">
+                <div class="view-item"><span class="view-label">Veículo</span><span id="viewVeiculo" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">KM</span><span id="viewKm" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">Motorista</span><span id="viewMotorista" class="view-value"></span></div>
+            </div>
+
+            <div class="view-grid">
+                <div class="view-item"><span class="view-label">Título</span><span id="viewTitulo" class="view-value"></span></div>
+                <div class="view-item" style="grid-column: span 2;"><span class="view-label">Descrição</span><span id="viewDescricao" class="view-value"></span></div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+
+            <div class="view-grid">
+                <div class="view-item"><span class="view-label">Fornecedor</span><span id="viewFornecedor" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">NF-e / NFS-e</span><span id="viewNotas" class="view-value"></span></div>
+                <div class="view-item"><span class="view-label">Valor Total</span><span id="viewValor" class="view-value" style="font-weight: bold; color: #006937;"></span></div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h4 style="font-size: 1rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Arquivos Anexados</h4>
+                <ul id="viewListaArquivos" style="list-style: none; padding: 0; margin-top: 10px;">
+                    <!-- Lista preenchida via JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+  </div>
 
   <!-- 🦶 Rodapé -->
   <footer class="footer">

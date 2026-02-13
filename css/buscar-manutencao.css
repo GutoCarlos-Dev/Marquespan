@@ -32,14 +32,51 @@ body {
     font-weight: 700;
 }
 
+/* --- Layout de Cards (Topo) --- */
+.manutencao-top-grid {
+    display: grid;
+    grid-template-columns: 3fr 1fr; /* Card Filtros (75%), Card Ações (25%) */
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+/* Responsividade: Empilha em telas menores */
+@media (max-width: 1024px) {
+    .manutencao-top-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Painéis (Cards) */
 .glass-panel {
     background-color: #ffffff !important;
     border: var(--glass-border);
     border-radius: 16px;
     box-shadow: var(--glass-shadow);
-    padding: 25px;
+    padding: 20px;
     margin-bottom: 25px;
+}
+
+/* --- Card 1: Filtros --- */
+.filtros-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+
+/* --- Card 2: Ações --- */
+.acoes-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.acoes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 botões por linha */
+    gap: 10px;
+    height: 100%;
+    align-content: center;
 }
 
 .glass-panel h3 {
@@ -71,6 +108,7 @@ body {
     font-weight: 600;
     color: #555;
     margin-bottom: 6px;
+    text-transform: uppercase;
 }
 
 .form-group input,
@@ -121,6 +159,7 @@ body {
 .btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
 .btn-purple { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
 .btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+.btn-orange { background: linear-gradient(135deg, #fd7e14, #d35400); }
 
 /* Tabela */
 .table-responsive {
@@ -162,6 +201,7 @@ td {
 }
 
 .btn-icon:hover { transform: scale(1.2); }
+.btn-icon.view { color: #17a2b8; }
 .btn-icon.edit { color: #007bff; }
 .btn-icon.delete { color: #dc3545; }
 
@@ -181,4 +221,29 @@ td {
     color: #155724;
     font-size: 0.95rem;
     border: 1px solid #c3e6cb;
+}
+
+/* Estilos para o Modal de Visualização */
+.view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.view-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.view-label {
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.view-value {
+    font-size: 0.95rem;
+    color: #333;
 }
