@@ -8,6 +8,30 @@
   <!-- ✅ Novo CSS específico -->
   <link rel="stylesheet" href="css/incluir-manutencao.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .id-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 8px 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .id-card .id-label {
+        color: #666;
+        font-weight: 600;
+        font-size: 0.9em;
+        text-transform: uppercase;
+    }
+    .id-card .id-value {
+        color: #006937;
+        font-weight: 800;
+        font-size: 1.1em;
+    }
+  </style>
 </head>
 <body>
 
@@ -30,13 +54,19 @@
 
         <!-- Cabeçalho de Ações (ID e Salvar) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
-            <div class="form-group" style="max-width: 100px;">
-                <label for="idManutencao">ID</label>
-                <input type="text" id="idManutencao" disabled style="text-align: center; font-weight: bold;">
+            <div class="id-card">
+                <span class="id-label">ID:</span>
+                <span id="idManutencaoDisplay" class="id-value">--</span>
+                <input type="hidden" id="idManutencao">
             </div>
-            <button type="button" id="btnSalvarManutencao" class="btn-glass btn-green" onclick="salvarManutencao()">
-                <i class="fas fa-save"></i> Salvar Manutenção
-            </button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-glass btn-orange" onclick="abrirModalConfigurarCampos()" title="Escolher campos para manter preenchidos">
+                    <i class="fas fa-thumbtack"></i> Fixar Campos
+                </button>
+                <button type="button" id="btnSalvarManutencao" class="btn-glass btn-green" onclick="salvarManutencao()">
+                    <i class="fas fa-save"></i> Salvar Manutenção
+                </button>
+            </div>
         </div>
 
         <!-- 📋 ABA 1: CADASTRO -->
@@ -254,6 +284,25 @@
             <div class="modal-acoes">
                 <button type="button" class="btn-glass btn-red" id="btnCancelarAnexo">Cancelar</button>
                 <button type="button" class="btn-glass btn-green" id="btnConfirmarAnexo">Adicionar</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Configurar Campos Fixos -->
+    <div id="modalConfigurarCampos" class="modal-backdrop hidden">
+      <div class="glass-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-thumbtack"></i> Configurar Campos Fixos</h3>
+            <button class="close-button" onclick="fecharModalConfigurarCampos()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Marque os campos que devem <strong>permanecer preenchidos</strong> após salvar um novo lançamento.</p>
+            <div id="listaCamposFixos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto;">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="modal-acoes" style="margin-top: 20px;">
+              <button class="btn-glass btn-green" onclick="salvarConfiguracaoCampos()">Salvar Preferências</button>
             </div>
         </div>
       </div>

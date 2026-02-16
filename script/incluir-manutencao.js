@@ -52,11 +52,15 @@ async function carregarPlacas() {
 }
 
 async function carregarFiliais() {
-  const { data, error } = await supabaseClient.from('filial').select('uf');
+  const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
   const select = document.getElementById('filial');
   if (error) return console.error('Erro ao carregar filiais:', error);
   select.innerHTML = '<option value="">Selecione</option>';
-  data?.forEach(f => select.appendChild(new Option(f.uf, f.uf)));
+  data?.forEach(f => {
+      const val = f.sigla || f.nome;
+      const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+      select.appendChild(new Option(text, val));
+  });
 }
 
 async function carregarTitulosManutencao() {
@@ -77,8 +81,8 @@ async function carregarFornecedores() {
 
 // 💰 Calcular Total Fiscal
 function calcularTotalFiscal() {
-  const vlrNfe = parseFloat(document.getElementById('valorNfe').value) || 0;
-  const vlrNfse = parseFloat(document.getElementById('valorNfse').value) || 0;
+  const vlrNfe = parseFloat(document.getElementById('valorNfe').value.replace(',', '.')) || 0;
+  const vlrNfse = parseFloat(document.getElementById('valorNfse').value.replace(',', '.')) || 0;
   const total = vlrNfe + vlrNfse;
   const inputTotal = document.getElementById('valorTotalFiscal');
   if (inputTotal) inputTotal.value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -100,11 +104,12 @@ async function carregarManutencaoParaEdicao(id) {
 
     // 2. Preencher os campos do formulário
     document.getElementById('idManutencao').value = manutencao.id;
+    document.getElementById('idManutencaoDisplay').textContent = manutencao.id;
     document.getElementById('usuarioLogado').value = manutencao.usuario;
     document.getElementById('status').value = manutencao.status;
     document.getElementById('filial').value = manutencao.filial;
     document.getElementById('titulo').value = manutencao.titulo;
-    // document.getElementById('tipoManutencao').value = manutencao.tipo || ''; // Coluna não existe no banco
+    document.getElementById('tipoManutencao').value = manutencao.tipo || '';
     document.getElementById('data').value = manutencao.data ? manutencao.data.split('T')[0] : '';
     document.getElementById('veiculo').value = manutencao.veiculo;
     document.getElementById('km').value = manutencao.km;
@@ -144,15 +149,15 @@ async function salvarManutencao() {
     filial: document.getElementById('filial').value,
     titulo: document.getElementById('titulo').value,
     data: document.getElementById('data').value,
-    // tipo: document.getElementById('tipoManutencao').value, // Coluna não existe no banco
+    tipo: document.getElementById('tipoManutencao').value,
     veiculo: document.getElementById('veiculo').value,
     km: parseInt(document.getElementById('km').value.replace(/\D/g, '')) || null,
     motorista: document.getElementById('motorista').value,
     fornecedor: document.getElementById('fornecedor').value,
     notaFiscal: document.getElementById('notaFiscal').value,
-    valorNfe: parseFloat(document.getElementById('valorNfe').value) || 0,
+    valorNfe: parseFloat(document.getElementById('valorNfe').value.replace(',', '.')) || 0,
     notaServico: document.getElementById('notaServico').value,
-    valorNfse: parseFloat(document.getElementById('valorNfse').value) || 0,
+    valorNfse: parseFloat(document.getElementById('valorNfse').value.replace(',', '.')) || 0,
     numeroOS: document.getElementById('numeroOS').value,
     descricao: document.getElementById('descricao').value
   };
@@ -181,6 +186,7 @@ async function salvarManutencao() {
 
   const novoIdManutencao = data[0].id;
   document.getElementById('idManutencao').value = novoIdManutencao;
+  document.getElementById('idManutencaoDisplay').textContent = novoIdManutencao;
 
   // Salvar Arquivos
   await salvarArquivosManutencao(novoIdManutencao);
@@ -188,16 +194,89 @@ async function salvarManutencao() {
   alert(`✅ Manutenção ${idManutencao ? 'atualizada' : 'salva'} com sucesso!`);
   // Recarrega a página ou limpa o form
   if (!idManutencao) {
-      // Se for novo, limpa tudo
-      document.getElementById('formManutencao').reset();
+      // Se for novo, limpa respeitando os campos fixados
+      limparFormularioInteligente();
       arquivosParaUpload = [];
       arquivosExistentes = [];
       renderizarListaArquivos();
       preencherUsuarioLogado();
+  } else {
+      window.location.href = 'buscar-manutencao.html';
   }
 }
 
-// 📎 Lógica de Arquivos
+// 📌 Lógica de Campos Fixos
+const MAPA_CAMPOS = {
+    'status': 'Status',
+    'filial': 'Filial',
+    'tipoManutencao': 'Tipo',
+    'titulo': 'Título',
+    'data': 'Data',
+    'veiculo': 'Placa',
+    'km': 'KM',
+    'motorista': 'Motorista',
+    'fornecedor': 'Fornecedor',
+    'notaFiscal': 'NF-E',
+    'valorNfe': 'Valor NF-E',
+    'notaServico': 'NFS-E',
+    'valorNfse': 'Valor NFS-E',
+    'numeroOS': 'Número OS',
+    'descricao': 'Descrição'
+};
+
+function abrirModalConfigurarCampos() {
+    const modal = document.getElementById('modalConfigurarCampos');
+    const container = document.getElementById('listaCamposFixos');
+    const camposSalvos = JSON.parse(localStorage.getItem('manutencao_campos_fixos') || '[]');
+    
+    container.innerHTML = '';
+    
+    Object.entries(MAPA_CAMPOS).forEach(([id, label]) => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '8px';
+        
+        const checked = camposSalvos.includes(id) ? 'checked' : '';
+        
+        div.innerHTML = `
+            <input type="checkbox" id="chk_fix_${id}" value="${id}" ${checked} style="width: auto;">
+            <label for="chk_fix_${id}" style="margin: 0; cursor: pointer;">${label}</label>
+        `;
+        container.appendChild(div);
+    });
+    
+    modal.classList.remove('hidden');
+}
+
+function fecharModalConfigurarCampos() {
+    document.getElementById('modalConfigurarCampos').classList.add('hidden');
+}
+
+function salvarConfiguracaoCampos() {
+    const checkboxes = document.querySelectorAll('#listaCamposFixos input[type="checkbox"]:checked');
+    const selecionados = Array.from(checkboxes).map(cb => cb.value);
+    
+    localStorage.setItem('manutencao_campos_fixos', JSON.stringify(selecionados));
+    alert('Preferências salvas! Os campos selecionados não serão limpos após salvar um novo lançamento.');
+    fecharModalConfigurarCampos();
+}
+
+function limparFormularioInteligente() {
+    const camposFixos = JSON.parse(localStorage.getItem('manutencao_campos_fixos') || '[]');
+    
+    Object.keys(MAPA_CAMPOS).forEach(id => {
+        if (!camposFixos.includes(id)) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        }
+    });
+    
+    // Recalcula totais caso valores tenham sido limpos
+    calcularTotalFiscal();
+}
+
+//  Lógica de Arquivos
 function abrirModalAnexo() {
     document.getElementById('modalAnexo').classList.remove('hidden');
     document.getElementById('inputArquivoAnexo').value = '';
@@ -420,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fechar modais ao clicar fora
   window.addEventListener('click', (e) => {
-    const modals = ['modalTitulo', 'modalFornecedor', 'modalAnexo'];
+    const modals = ['modalTitulo', 'modalFornecedor', 'modalAnexo', 'modalConfigurarCampos'];
     modals.forEach(id => {
         const modal = document.getElementById(id);
         if (e.target === modal) {
@@ -447,3 +526,7 @@ window.salvarFornecedor = salvarFornecedor;
 
 window.mostrarPainelInterno = mostrarPainelInterno;
 window.salvarManutencao = salvarManutencao;
+
+window.abrirModalConfigurarCampos = abrirModalConfigurarCampos;
+window.fecharModalConfigurarCampos = fecharModalConfigurarCampos;
+window.salvarConfiguracaoCampos = salvarConfiguracaoCampos;

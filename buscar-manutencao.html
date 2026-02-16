@@ -8,6 +8,48 @@
   <!-- ✅ Novo CSS específico -->
   <link rel="stylesheet" href="css/buscar-manutencao.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* Estilos para Barra de Rolagem e Tabela Responsiva */
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid #eee;
+    }
+    
+    /* Estilos para Redimensionamento de Colunas */
+    th {
+        position: relative;
+        min-width: 100px; /* Largura mínima para evitar colapso */
+    }
+    .resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        cursor: col-resize;
+        user-select: none;
+        height: 100%;
+        z-index: 10;
+    }
+    .resizer:hover, .resizing {
+        background-color: #007bff;
+    }
+
+    /* Estilos para Paginação */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #f9f9f9;
+        border-top: 1px solid #eee;
+    }
+    .pagination-controls button {
+        margin: 0 2px;
+        padding: 5px 10px;
+    }
+  </style>
 </head>
 <body>
 
@@ -35,6 +77,14 @@
             <div class="form-group-filter">
                 <label for="filial">Filial</label>
                 <select id="filial"></select>
+            </div>
+            <div class="form-group-filter">
+                <label for="tipoManutencao">Tipo</label>
+                <select id="tipoManutencao">
+                    <option value="">Todos</option>
+                    <option value="PREVENTIVA">PREVENTIVA</option>
+                    <option value="CORRETIVO">CORRETIVO</option>
+                </select>
             </div>
             <div class="form-group-filter">
                 <label for="veiculo">Veículo</label>
@@ -112,6 +162,14 @@
                 </thead>
                 <tbody id="tabelaResultados"></tbody>
             </table>
+        </div>
+        <!-- Controles de Paginação -->
+        <div id="paginationContainer" class="pagination-container hidden">
+            <span id="paginationInfo" class="pagination-info">Mostrando 0-0 de 0</span>
+            <div class="pagination-controls">
+                <button type="button" id="btnPrevPage" class="btn-glass btn-sm"><i class="fas fa-chevron-left"></i> Anterior</button>
+                <button type="button" id="btnNextPage" class="btn-glass btn-sm">Próximo <i class="fas fa-chevron-right"></i></button>
+            </div>
         </div>
     </section>
   </main>
