@@ -4,6 +4,7 @@ import { supabaseClient } from './supabase.js';
 // Estado dos arquivos
 let arquivosParaUpload = []; // Novos arquivos (File objects)
 let arquivosExistentes = []; // Arquivos já salvos no banco ({nome, path})
+let listaFornecedoresCache = []; // Cache para busca rápida no modal
 
 // 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
@@ -27,6 +28,13 @@ function mostrarPainelInterno(id) {
   if (btnAtivo) {
     btnAtivo.classList.add('active');
     btnAtivo.setAttribute('aria-selected', 'true');
+  }
+
+  // Carrega dados específicos da aba se necessário
+  if (id === 'abaFornecedores') {
+      carregarTabelaFornecedores();
+  } else if (id === 'abaTitulos') {
+      carregarTabelaTitulos();
   }
 }
 
@@ -53,30 +61,37 @@ async function carregarPlacas() {
 
 async function carregarFiliais() {
   const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
-  const select = document.getElementById('filial');
   if (error) return console.error('Erro ao carregar filiais:', error);
-  select.innerHTML = '<option value="">Selecione</option>';
-  data?.forEach(f => {
-      const val = f.sigla || f.nome;
-      const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
-      select.appendChild(new Option(text, val));
+  
+  const selects = ['filial', 'tabFornFilial', 'modalFornFilial'];
+  selects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+          select.innerHTML = '<option value="">Selecione</option>';
+          data?.forEach(f => {
+              const val = f.sigla || f.nome;
+              const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+              select.appendChild(new Option(text, val));
+          });
+      }
   });
 }
 
 async function carregarTitulosManutencao() {
-  const { data, error } = await supabaseClient.from('titulomanutencao').select('manutencao');
+  const { data, error } = await supabaseClient.from('titulo_manutencao').select('titulo').order('titulo');
   const lista = document.getElementById('listaTitulos');
   if (error) return console.error('Erro ao carregar títulos:', error);
   lista.innerHTML = '';
-  data?.forEach(item => item.manutencao && lista.appendChild(new Option(item.manutencao)));
+  data?.forEach(item => item.titulo && lista.appendChild(new Option(item.titulo)));
 }
 
 async function carregarFornecedores() {
-  const { data, error } = await supabaseClient.from('fornecedor').select('fornecedor');
+  const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('nome').order('nome');
   const lista = document.getElementById('listaFornecedores');
   if (error) return console.error('Erro ao carregar fornecedores:', error);
   lista.innerHTML = '';
-  data?.forEach(f => f.fornecedor && lista.appendChild(new Option(f.fornecedor)));
+  listaFornecedoresCache = data || [];
+  listaFornecedoresCache.forEach(f => f.nome && lista.appendChild(new Option(f.nome)));
 }
 
 // 💰 Calcular Total Fiscal
@@ -430,7 +445,7 @@ async function salvarTitulo() {
   const titulo = document.getElementById('novoTitulo').value.trim();
   if (!titulo) return;
 
-  const { error } = await supabaseClient.from('titulomanutencao').insert([{ manutencao: titulo }]);
+  const { error } = await supabaseClient.from('titulo_manutencao').insert([{ titulo: titulo }]);
   if (error) {
     console.error('Erro ao salvar título:', error);
     alert('❌ Erro ao salvar título.');
@@ -446,15 +461,35 @@ async function salvarTitulo() {
 }
 
 // 🗂️ Modal de Fornecedor
-function abrirModalFornecedor() { document.getElementById('modalFornecedor').classList.remove('hidden'); }
+function abrirModalFornecedor() { 
+    document.getElementById('novoFornecedor').value = '';
+    const cnpjInput = document.getElementById('modalFornCnpj');
+    if (cnpjInput) cnpjInput.value = '';
+    const telInput = document.getElementById('modalFornTelefone');
+    if (telInput) telInput.value = '';
+    const filialInput = document.getElementById('modalFornFilial');
+    if (filialInput) filialInput.value = '';
+    document.getElementById('obsFornecedor').value = '';
+    document.getElementById('modalFornecedor').classList.remove('hidden'); 
+    document.getElementById('resultadoBuscaFornecedor').style.display = 'none';
+}
 function fecharModalFornecedor() { document.getElementById('modalFornecedor').classList.add('hidden'); }
 
 async function salvarFornecedor() {
   const nome = document.getElementById('novoFornecedor').value.trim();
+  const cnpj = document.getElementById('modalFornCnpj')?.value.trim();
+  const telefone = document.getElementById('modalFornTelefone')?.value.trim();
+  const filial = document.getElementById('modalFornFilial')?.value;
   const obsFornecedor = document.getElementById('obsFornecedor').value.trim();
   if (!nome) return;
 
-  const { error } = await supabaseClient.from('fornecedor').insert([{ fornecedor: nome, obsFornecedor }]);
+  const { error } = await supabaseClient.from('fornecedor_manutencao').insert([{ 
+      nome: nome, 
+      cnpj: cnpj,
+      telefone: telefone,
+      filial: filial,
+      observacao: obsFornecedor 
+  }]);
   if (error) {
     console.error('Erro ao salvar fornecedor:', error);
     alert('❌ Erro ao salvar fornecedor.');
@@ -463,11 +498,136 @@ async function salvarFornecedor() {
 
   const lista = document.getElementById('listaFornecedores');
   lista.appendChild(new Option(nome));
+  listaFornecedoresCache.push({ nome: nome }); // Atualiza o cache local
   document.getElementById('fornecedor').value = nome;
   document.getElementById('novoFornecedor').value = '';
+  if (document.getElementById('modalFornCnpj')) document.getElementById('modalFornCnpj').value = '';
+  if (document.getElementById('modalFornTelefone')) document.getElementById('modalFornTelefone').value = '';
+  if (document.getElementById('modalFornFilial')) document.getElementById('modalFornFilial').value = '';
   document.getElementById('obsFornecedor').value = '';
+  document.getElementById('resultadoBuscaFornecedor').style.display = 'none';
   alert('✅ Fornecedor cadastrado com sucesso!');
   fecharModalFornecedor();
+}
+
+function handleBuscaFornecedorModal(e) {
+    const termo = e.target.value.toLowerCase();
+    const container = document.getElementById('resultadoBuscaFornecedor');
+    container.innerHTML = '';
+    
+    if (termo.length < 2) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const resultados = listaFornecedoresCache.filter(f => (f.nome || f.fornecedor).toLowerCase().includes(termo));
+    
+    if (resultados.length > 0) {
+        container.style.display = 'block';
+        const titulo = document.createElement('div');
+        titulo.style.cssText = 'padding: 5px; font-size: 0.8em; color: #888; background: #f9f9f9; border-bottom: 1px solid #eee;';
+        titulo.textContent = 'Fornecedores similares encontrados:';
+        container.appendChild(titulo);
+
+        resultados.forEach(f => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9em; color: #333;';
+            div.textContent = f.nome || f.fornecedor;
+            container.appendChild(div);
+        });
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// --- LÓGICA DAS NOVAS ABAS ---
+
+// Fornecedores
+async function carregarTabelaFornecedores() {
+    const tbody = document.getElementById('tabelaFornecedoresTab');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+    
+    const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('*').order('nome');
+    if (error) return console.error(error);
+    
+    tbody.innerHTML = '';
+    data.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f.nome}</td>
+            <td>${f.cnpj || '-'}</td>
+            <td>${f.telefone || '-'}</td>
+            <td>${f.filial || '-'}</td>
+            <td><button class="btn-icon delete" onclick="excluirFornecedorTab('${f.id}')"><i class="fas fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function salvarFornecedorTab() {
+    const nome = document.getElementById('tabFornNome').value.trim();
+    const cnpj = document.getElementById('tabFornCnpj').value.trim();
+    const telefone = document.getElementById('tabFornTelefone').value.trim();
+    const filial = document.getElementById('tabFornFilial').value;
+    
+    if (!nome) return alert('Nome é obrigatório');
+    
+    const { error } = await supabaseClient.from('fornecedor_manutencao').insert([{ nome, cnpj, telefone, filial }]);
+    if (error) return alert('Erro ao salvar: ' + error.message);
+    
+    document.getElementById('tabFornNome').value = '';
+    document.getElementById('tabFornCnpj').value = '';
+    document.getElementById('tabFornTelefone').value = '';
+    document.getElementById('tabFornFilial').value = '';
+    carregarTabelaFornecedores();
+    carregarFornecedores(); // Atualiza o datalist principal
+}
+
+async function excluirFornecedorTab(id) {
+    if (!confirm('Excluir fornecedor?')) return;
+    const { error } = await supabaseClient.from('fornecedor_manutencao').delete().eq('id', id);
+    if (error) return alert('Erro ao excluir');
+    carregarTabelaFornecedores();
+    carregarFornecedores();
+}
+
+// Títulos
+async function carregarTabelaTitulos() {
+    const tbody = document.getElementById('tabelaTitulosTab');
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Carregando...</td></tr>';
+    
+    const { data, error } = await supabaseClient.from('titulo_manutencao').select('*').order('titulo');
+    if (error) return console.error(error);
+    
+    tbody.innerHTML = '';
+    data.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${t.titulo}</td>
+            <td><button class="btn-icon delete" onclick="excluirTituloTab('${t.id}')"><i class="fas fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function salvarTituloTab() {
+    const titulo = document.getElementById('tabTituloNome').value.trim();
+    if (!titulo) return alert('Título é obrigatório');
+    
+    const { error } = await supabaseClient.from('titulo_manutencao').insert([{ titulo }]);
+    if (error) return alert('Erro ao salvar: ' + error.message);
+    
+    document.getElementById('tabTituloNome').value = '';
+    carregarTabelaTitulos();
+    carregarTitulosManutencao(); // Atualiza o datalist principal
+}
+
+async function excluirTituloTab(id) {
+    if (!confirm('Excluir título?')) return;
+    const { error } = await supabaseClient.from('titulo_manutencao').delete().eq('id', id);
+    if (error) return alert('Erro ao excluir');
+    carregarTabelaTitulos();
+    carregarTitulosManutencao();
 }
 
 // 🚀 Inicialização da página
@@ -481,6 +641,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listeners para cálculo fiscal
   document.getElementById('valorNfe')?.addEventListener('input', calcularTotalFiscal);
   document.getElementById('valorNfse')?.addEventListener('input', calcularTotalFiscal);
+
+  // Listener Busca Fornecedor Modal
+  document.getElementById('novoFornecedor').addEventListener('input', handleBuscaFornecedorModal);
 
   // Listeners Anexo
   document.getElementById('btnAbrirModalAnexo').addEventListener('click', abrirModalAnexo);
@@ -537,3 +700,8 @@ window.abrirModalConfigurarCampos = abrirModalConfigurarCampos;
 window.fecharModalConfigurarCampos = fecharModalConfigurarCampos;
 window.salvarConfiguracaoCampos = salvarConfiguracaoCampos;
 window.downloadArquivo = downloadArquivo;
+
+window.salvarFornecedorTab = salvarFornecedorTab;
+window.excluirFornecedorTab = excluirFornecedorTab;
+window.salvarTituloTab = salvarTituloTab;
+window.excluirTituloTab = excluirTituloTab;
