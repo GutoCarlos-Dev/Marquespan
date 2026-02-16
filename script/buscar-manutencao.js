@@ -468,8 +468,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const btnImportar = document.getElementById('btnImportar');
   if (btnImportar) {
-    btnImportar.addEventListener('click', () => {
-      setupImportModal();
+    btnImportar.addEventListener('click', async () => {
+      await setupImportModal();
       document.getElementById('modalImportar').classList.remove('hidden');
     });
   }
@@ -526,6 +526,10 @@ async function setupImportModal() {
                   <select id="filialImportacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                       ${optionsFiliais}
                   </select>
+              </div>
+              <div style="margin-bottom: 15px;">
+                  <label for="arquivoAnexoImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Anexar Arquivos (Opcional):</label>
+                  <input type="file" id="arquivoAnexoImportacao" multiple style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
               </div>
               <div style="margin-bottom: 5px; text-align: right;">
                   <a href="#" id="btnBaixarModelo" style="color: #007bff; text-decoration: none; font-size: 0.85em; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-download"></i> Baixar Modelo</a>
@@ -588,6 +592,7 @@ async function handleImportSubmit(e) {
   const tipo = document.getElementById('tipoImportacao').value;
   const filialSelecionada = document.getElementById('filialImportacao').value;
   const fileInput = document.getElementById('arquivoImportacao');
+  const anexoInput = document.getElementById('arquivoAnexoImportacao');
   const file = fileInput.files[0];
   const btnSubmit = e.target.querySelector('button[type="submit"]');
 
@@ -608,7 +613,7 @@ async function handleImportSubmit(e) {
 
           if (json.length === 0) throw new Error('Planilha vazia.');
 
-          await processarDadosImportacao(json, tipo, filialSelecionada);
+          await processarDadosImportacao(json, tipo, filialSelecionada, anexoInput.files);
           
           document.getElementById('modalImportar').classList.add('hidden');
           document.getElementById('formImportar').reset();
@@ -625,7 +630,7 @@ async function handleImportSubmit(e) {
   reader.readAsArrayBuffer(file);
 }
 
-async function processarDadosImportacao(dados, tipo, filialSelecionada) {
+async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivosAnexo) {
   const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
   const manutencoesParaInserir = [];
   const valoresParaInserir = [];
@@ -713,6 +718,29 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada) {
       // 3. Insere os itens na tabela manutencao_itens
       const { error: errItens } = await supabaseClient.from('manutencao_itens').insert(itens);
       if (errItens) console.error("Erro ao inserir itens de valor:", errItens);
+
+      // Processar anexo se houver
+      if (arquivosAnexo && arquivosAnexo.length > 0) {
+          for (const m of inserted) {
+              for (let i = 0; i < arquivosAnexo.length; i++) {
+                  const arquivo = arquivosAnexo[i];
+                  const fileName = `${m.id}/${Date.now()}_${arquivo.name}`;
+                  const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                      .from('manutencao_arquivos')
+                      .upload(fileName, arquivo);
+                  
+                  if (!uploadError) {
+                      await supabaseClient.from('manutencao_arquivos').insert({
+                          id_manutencao: m.id,
+                          nome_arquivo: arquivo.name,
+                          caminho_arquivo: uploadData.path
+                      });
+                  } else {
+                      console.error(`Erro ao enviar anexo ${arquivo.name} para manutenção ${m.id}:`, uploadError);
+                  }
+              }
+          }
+      }
 
       alert(`${inserted.length} registros de ${tipo} importados com sucesso!`);
   } else {

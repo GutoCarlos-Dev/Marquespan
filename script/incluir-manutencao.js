@@ -288,17 +288,19 @@ function fecharModalAnexo() {
 }
 
 function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        document.getElementById('arquivoAnexoLabel').textContent = file.name;
+    const files = e.target.files;
+    if (files.length > 0) {
+        const label = files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`;
+        document.getElementById('arquivoAnexoLabel').textContent = label;
     }
 }
 
 function confirmarAnexo() {
     const input = document.getElementById('inputArquivoAnexo');
     if (input.files.length > 0) {
-        const file = input.files[0];
-        arquivosParaUpload.push(file);
+        Array.from(input.files).forEach(file => {
+            arquivosParaUpload.push(file);
+        });
         renderizarListaArquivos();
         fecharModalAnexo();
     }
