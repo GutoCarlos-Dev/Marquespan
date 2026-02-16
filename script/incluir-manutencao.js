@@ -534,3 +534,4 @@ window.salvarManutencao = salvarManutencao;
 window.abrirModalConfigurarCampos = abrirModalConfigurarCampos;
 window.fecharModalConfigurarCampos = fecharModalConfigurarCampos;
 window.salvarConfiguracaoCampos = salvarConfiguracaoCampos;
+window.downloadArquivo = downloadArquivo;
