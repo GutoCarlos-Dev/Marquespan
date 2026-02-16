@@ -304,16 +304,15 @@ async function carregarFiliais() {
     
     try {
         const { data, error } = await supabaseClient
-            .from('veiculos')
-            .select('filial')
-            .not('filial', 'is', null);
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
             
         if (data) {
-            const filiais = [...new Set(data.map(v => v.filial))].sort();
-            filiais.forEach(f => {
+            data.forEach(f => {
                 const opt = document.createElement('option');
-                opt.value = f;
-                opt.textContent = f;
+                opt.value = f.sigla || f.nome;
+                opt.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
                 select.appendChild(opt);
             });
         }
