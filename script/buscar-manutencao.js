@@ -298,7 +298,7 @@ window.visualizarManutencao = async function(id) {
     document.getElementById('viewValor').textContent = `R$ ${formatarValor(total)}`;
 
     // 3. Buscar arquivos anexados
-    const { data: arquivos, error: errArq } = await supabaseClient
+    const { data: arquivos } = await supabaseClient
       .from('manutencao_arquivos')
       .select('*')
       .eq('id_manutencao', id);
