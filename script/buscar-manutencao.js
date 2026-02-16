@@ -236,9 +236,9 @@ function preencherTabela(registros) {
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td style="display: flex; gap: 5px;">
-        <button class="btn-icon view" onclick="visualizarManutencao(${m.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
-        <button class="btn-icon edit" onclick="abrirManutencao(${m.id})" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon delete" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+        <button class="btn-icon view btn-visualizar" data-id="${m.id}" title="Visualizar"><i class="fas fa-eye"></i></button>
+        <button class="btn-icon edit btn-editar" data-id="${m.id}" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
+        <button class="btn-icon delete btn-excluir" data-id="${m.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
       </td>
       <td>${m.usuario || ''}</td>
       <td>${m.titulo || ''}</td>
@@ -259,16 +259,18 @@ function formatarData(data) {
 }
 
 function formatarValor(valor) {
-  return valor.toFixed(2).replace('.', ',');
+  const v = parseFloat(valor);
+  if (isNaN(v)) return '0,00';
+  return v.toFixed(2).replace('.', ',');
 }
 
 // 🔗 Abrir manutenção
-window.abrirManutencao = function(id) {
+function abrirManutencao(id) {
   window.location.href = `incluir-manutencao.html?id=${id}`;
 }
 
 // 👁️ Visualizar manutenção (Modal)
-window.visualizarManutencao = async function(id) {
+async function visualizarManutencao(id) {
   try {
     // 1. Buscar dados da manutenção
     const { data: m, error } = await supabaseClient
@@ -294,7 +296,7 @@ window.visualizarManutencao = async function(id) {
     document.getElementById('viewNotas').textContent = `NF: ${m.notaFiscal || '-'} | NFS: ${m.notaServico || '-'}`;
     
     // Calcular valor total (NF + NFS)
-    const total = (m.valorNfe || 0) + (m.valorNfse || 0);
+    const total = (parseFloat(m.valorNfe) || 0) + (parseFloat(m.valorNfse) || 0);
     document.getElementById('viewValor').textContent = `R$ ${formatarValor(total)}`;
 
     // 3. Buscar arquivos anexados
@@ -328,7 +330,7 @@ window.visualizarManutencao = async function(id) {
 }
 
 // �️ Excluir manutenção
-window.excluirManutencao = async function(id) {
+async function excluirManutencao(id) {
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
   try {
@@ -488,6 +490,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnNext) btnNext.addEventListener('click', () => mudarPagina(1));
 
   setupColumnResizing();
+
+  // ✅ Delegação de Eventos para a Tabela de Resultados
+  const tabelaResultados = document.getElementById('tabelaResultados');
+  if (tabelaResultados) {
+      tabelaResultados.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          
+          const id = btn.dataset.id;
+          if (!id) return;
+
+          if (btn.classList.contains('btn-visualizar')) visualizarManutencao(id);
+          else if (btn.classList.contains('btn-editar')) abrirManutencao(id);
+          else if (btn.classList.contains('btn-excluir')) excluirManutencao(id);
+      });
+  }
 });
 
 async function setupImportModal() {
