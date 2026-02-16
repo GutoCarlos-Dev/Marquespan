@@ -332,15 +332,15 @@ window.excluirManutencao = async function(id) {
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
   try {
-    // 1. Buscar arquivos vinculados para excluir do Storage
-    const { data: arquivos } = await supabaseClient
+    // 1. Limpar arquivos do Storage (usando listagem direta da pasta para garantir limpeza total)
+    // Lista todos os arquivos dentro da pasta do ID
+    const { data: filesInStorage, error: listError } = await supabaseClient.storage
       .from('manutencao_arquivos')
-      .select('caminho_arquivo')
-      .eq('id_manutencao', id);
+      .list(id.toString());
 
-    // 2. Se houver arquivos, exclui do Storage
-    if (arquivos && arquivos.length > 0) {
-      const paths = arquivos.map(a => a.caminho_arquivo);
+    if (!listError && filesInStorage && filesInStorage.length > 0) {
+      // Mapeia para o caminho completo (ID/NomeArquivo)
+      const paths = filesInStorage.map(f => `${id}/${f.name}`);
       const { error: storageError } = await supabaseClient.storage
         .from('manutencao_arquivos')
         .remove(paths);
