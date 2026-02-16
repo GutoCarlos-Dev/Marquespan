@@ -107,6 +107,14 @@ const DespesasUI = {
         if (this.despesaHotelDisplay && this.despesaHotelOptions) {
             this.setupMultiselect(this.despesaHotelDisplay, this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
         }
+
+        // Atalho de teclado Ctrl+S para salvar
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                this.btnSubmit.click();
+            }
+        });
     },
 
     setupMultiselect(display, options, textSpan, checkboxClass) {
