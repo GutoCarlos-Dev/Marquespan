@@ -348,7 +348,7 @@ function renderizarListaArquivos() {
 }
 
 async function downloadArquivo(path) {
-    const { data, error } = await supabaseClient.storage.from('manutencao_bucket').createSignedUrl(path, 60);
+    const { data, error } = await supabaseClient.storage.from('manutencao_arquivos').createSignedUrl(path, 60);
     if (error) {
         console.error('Erro ao gerar link:', error);
         alert('Erro ao baixar arquivo. Verifique se o arquivo existe.');
@@ -376,7 +376,7 @@ async function salvarArquivosManutencao(idManutencao) {
     for (const file of arquivosParaUpload) {
         const fileName = `${idManutencao}/${Date.now()}_${file.name}`;
         const { data, error } = await supabaseClient.storage
-            .from('manutencao_bucket')
+            .from('manutencao_arquivos')
             .upload(fileName, file);
         
         if (error) {
@@ -396,7 +396,8 @@ async function salvarArquivosManutencao(idManutencao) {
     // para limpeza real seria necessário deletar do storage também.
     
     // Remove referências antigas
-    await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
+    const { error: deleteError } = await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
+    if (deleteError) console.error('Erro ao limpar referências antigas:', deleteError);
 
     // Prepara lista final (Existentes + Novos)
     const listaFinal = [
@@ -406,7 +407,10 @@ async function salvarArquivosManutencao(idManutencao) {
 
     if (listaFinal.length > 0) {
         const { error } = await supabaseClient.from('manutencao_arquivos').insert(listaFinal);
-        if (error) console.error('Erro ao salvar metadados dos arquivos:', error);
+        if (error) {
+            console.error('Erro ao salvar metadados dos arquivos:', error);
+            alert('Erro ao salvar referência do arquivo no banco: ' + (error.message || JSON.stringify(error)));
+        }
     }
 
     // Limpa lista de upload após salvar

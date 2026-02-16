@@ -331,21 +331,43 @@ window.visualizarManutencao = async function(id) {
 window.excluirManutencao = async function(id) {
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
-  const { error } = await supabaseClient.from('manutencao').delete().eq('id', id);
+  try {
+    // 1. Buscar arquivos vinculados para excluir do Storage
+    const { data: arquivos } = await supabaseClient
+      .from('manutencao_arquivos')
+      .select('caminho_arquivo')
+      .eq('id_manutencao', id);
 
-  if (error) {
-    console.error('Erro ao excluir manutenção:', error);
-    alert('❌ Erro ao excluir manutenção.');
-  } else {
+    // 2. Se houver arquivos, exclui do Storage
+    if (arquivos && arquivos.length > 0) {
+      const paths = arquivos.map(a => a.caminho_arquivo);
+      const { error: storageError } = await supabaseClient.storage
+        .from('manutencao_arquivos')
+        .remove(paths);
+      
+      if (storageError) console.warn('Aviso: Erro ao excluir arquivos do Storage:', storageError);
+    }
+
+    // 3. Excluir registros dependentes (caso não haja CASCADE configurado no banco)
+    await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', id);
+    await supabaseClient.from('manutencao_itens').delete().eq('id_manutencao', id);
+
+    // 4. Excluir a manutenção principal
+    const { error } = await supabaseClient.from('manutencao').delete().eq('id', id);
+    if (error) throw error;
+
     alert('✅ Manutenção excluída com sucesso!');
     buscarManutencao(); // Atualiza a tabela
+  } catch (error) {
+    console.error('Erro ao excluir manutenção:', error);
+    alert('❌ Erro ao excluir manutenção: ' + (error.message || error));
   }
 }
 
 // 📥 Baixar arquivo
 window.downloadArquivo = async function(path) {
   try {
-    const { data, error } = await supabaseClient.storage.from('manutencao_bucket').createSignedUrl(path, 60);
+    const { data, error } = await supabaseClient.storage.from('manutencao_arquivos').createSignedUrl(path, 60);
     if (error) throw error;
     window.open(data.signedUrl, '_blank');
   } catch (err) {
