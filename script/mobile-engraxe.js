@@ -129,25 +129,22 @@ function renderizarItensMobile(itens) {
         const statusColor = isDone ? '#28a745' : (item.status === 'ROTA' ? '#ffc107' : (item.status === 'INTERNADO' ? '#007bff' : '#dc3545'));
         
         div.className = 'historico-card';
-        div.style.cssText = `background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid ${statusColor};`;
+        // Layout compactado tipo tabela
+        div.style.cssText = `background: white; padding: 8px 10px; margin-bottom: 5px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-left: 4px solid ${statusColor}; display: flex; align-items: center; justify-content: space-between;`;
         
         div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                    <h4 style="margin: 0; font-size: 1.1rem;">${item.placa}</h4>
-                    <p style="margin: 5px 0; color: #666;">${item.modelo || '-'}</p>
-                    <div style="font-size: 0.85rem; color: #555;">
-                        <span style="margin-right: 10px;"><i class="fas fa-calendar-check"></i> ${item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-'}</span>
-                        <span><i class="fas fa-tachometer-alt"></i> ${item.km || '-'}</span>
-                    </div>
+            <div style="flex: 1; display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                <div style="font-weight: bold; font-size: 1rem; color: #333; min-width: 75px;">${item.placa}</div>
+                <div style="font-size: 0.85rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+                    ${item.modelo || '-'}
                 </div>
-                <button class="btn-secondary" onclick="window.prepararEdicaoMobile('${item.id}')" style="padding: 8px 12px;">
-                    <i class="fas fa-edit"></i>
-                </button>
+                <div style="font-weight: bold; color: ${statusColor}; font-size: 0.75rem; min-width: 60px; text-align: right;">
+                    ${item.status || 'PEND'}
+                </div>
             </div>
-            <div style="margin-top: 8px; font-weight: bold; color: ${statusColor}; font-size: 0.9rem;">
-                STATUS: ${item.status || 'PENDENTE'}
-            </div>
+            <button class="btn-secondary" onclick="window.prepararEdicaoMobile('${item.id}')" style="padding: 4px 8px; margin-left: 8px; height: 30px; display: flex; align-items: center;">
+                <i class="fas fa-edit"></i>
+            </button>
         `;
         container.appendChild(div);
     });

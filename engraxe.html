@@ -24,37 +24,48 @@
       </header>
 
       <section class="section">
-        <!-- Filters Card -->
-        <div class="card">
-          <div class="card-header">
-            <h2><i class="fas fa-filter"></i> Filtros e Ações</h2>
+        <div class="actions-grid" style="display: grid; grid-template-columns: 3fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
+          <!-- Card de Filtros -->
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-filter"></i> Filtros</h2>
+            </div>
+            <div class="filter-container">
+              <div class="form-group">
+                <label for="filtroMarca">Marca</label>
+                <input type="text" id="filtroMarca" placeholder="Buscar Marca...">
+              </div>
+              <div class="form-group">
+                <label for="filtroStatus">Status</label>
+                <select id="filtroStatus">
+                  <option value="">Todos</option>
+                  <option value="ABERTA">Aberta</option>
+                  <option value="FECHADA">Fechada</option>
+                  <option value="EM_ANDAMENTO">Em Andamento</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroDataIni">Data Início</label>
+                <input type="date" id="filtroDataIni">
+              </div>
+              <div class="form-group">
+                <label for="filtroDataFim">Data Fim</label>
+                <input type="date" id="filtroDataFim">
+              </div>
+              <div class="form-group" style="justify-content: flex-end;">
+                <button id="btnBuscar" class="btn-primary" style="width: 100%;"><i class="fas fa-search"></i> Buscar</button>
+              </div>
+            </div>
           </div>
-          <div class="filter-container">
-            <div class="form-group">
-              <label for="filtroPlaca">Placa</label>
-              <input type="text" id="filtroPlaca" placeholder="Buscar Placa...">
+          <!-- Card de Ações -->
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-cogs"></i> Ações</h2>
             </div>
-            <div class="form-group">
-              <label for="filtroStatus">Status</label>
-              <select id="filtroStatus">
-                <option value="">Todos</option>
-                <option value="ABERTA">Aberta</option>
-                <option value="FECHADA">Fechada</option>
-                <option value="EM_ANDAMENTO">Em Andamento</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="filtroDataIni">Data Início</label>
-              <input type="date" id="filtroDataIni">
-            </div>
-            <div class="form-group">
-              <label for="filtroDataFim">Data Fim</label>
-              <input type="date" id="filtroDataFim">
-            </div>
-            <div class="form-actions-inline">
-              <button id="btnBuscar" class="btn-primary"><i class="fas fa-search"></i> Buscar</button>
-              <button id="btnNovoLancamento" class="btn-success"><i class="fas fa-plus"></i> Nova Lista</button>
-              <button id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> PDF</button>
+            <div class="actions-container" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+              <button id="btnNovoLancamento" class="btn-success" style="width: 100%;"><i class="fas fa-plus"></i> Nova Lista</button>
+              <button id="btnControleVencimentos" class="btn-info" style="background-color: #17a2b8; color: white; width: 100%;"><i class="fas fa-calendar-check"></i> Controle de Vencimentos</button>
+              <button id="btnExportarPDF" class="btn-danger" style="width: 100%;"><i class="fas fa-file-pdf"></i> PDF</button>
             </div>
           </div>
         </div>
@@ -67,6 +78,7 @@
                 <tr>
                   <th>Data/Hora</th>
                   <th>Nome da Lista</th>
+                  <th>Marcas</th>
                   <th>Usuário Criou</th>
                   <th>Status</th>
                   <th>Ações</th>
@@ -92,6 +104,9 @@
       <div class="panel-body">
         <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
             <input type="text" id="filtroModalInput" placeholder="Filtrar por Marca ou Modelo..." style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <button id="btnAdicionarItemModal" class="btn-success" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
+                <i class="fas fa-plus"></i> Adicionar Linha
+            </button>
             <button id="btnImportarListaModal" class="btn-primary" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
                 <i class="fas fa-file-import"></i> Importar
             </button>
@@ -124,6 +139,105 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Controle de Vencimentos -->
+  <div id="modalVencimentos" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 1200px; width: 95%;">
+      <div class="panel-header">
+        <h3><i class="fas fa-calendar-alt"></i> Controle de Vencimentos e Histórico</h3>
+        <button class="close-button" id="btnCloseModalVencimentos">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="filtroVencimentoFilial" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">Todas Filiais</option>
+            </select>
+            <select id="filtroVencimentoMarca" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">Todas Marcas</option>
+            </select>
+            <select id="filtroVencimentoModelo" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">Todos Modelos</option>
+            </select>
+            <select id="filtroVencimentoStatus" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="TODOS">Todos os Status</option>
+                <option value="VENCIDO">Vencidos</option>
+                <option value="EM_DIA">Em Dia</option>
+                <option value="PENDENTE">Nunca Realizado</option>
+            </select>
+            <button id="btnGerarListaVencidos" class="btn-success" style="padding: 8px 15px;"><i class="fas fa-list-ul"></i> Gerar Lista com Selecionados</button>
+        </div>
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="data-grid" id="tabelaVencimentos">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" id="chkAllVencimentos"></th>
+                        <th>FILIAL</th>
+                        <th>PLACA</th>
+                        <th>MARCA</th>
+                        <th>MODELO</th>
+                        <th>DATA REALIZAÇÃO (Última)</th>
+                        <th>PRÓXIMO (Vencimento)</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyVencimentos">
+                    <!-- Preenchido via JS -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nova Lista (Seleção de Placas) -->
+  <div id="modalNovaLista" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 800px; width: 95%;">
+      <div class="panel-header">
+        <h3><i class="fas fa-plus"></i> Nova Lista de Engraxe</h3>
+        <button class="close-button" id="btnCloseModalNovaLista">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+            <label for="nomeNovaLista">Nome da Lista</label>
+            <input type="text" id="nomeNovaLista" class="form-control" placeholder="Ex: Engraxe Semana Atual">
+        </div>
+        <div class="form-group">
+            <label for="dataDaLista">Data da Lista (para cálculo de vencidos)</label>
+            <input type="date" id="dataDaLista" class="form-control">
+        </div>
+        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+            <select id="filtroMarcaNovaLista" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+                <option value="">Todas as Marcas</option>
+            </select>
+            <select id="filtroModeloNovaLista" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+                <option value="">Todos os Modelos</option>
+            </select>
+            <input type="text" id="filtroPlacaNovaLista" placeholder="Buscar Placa..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="data-grid">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" id="chkAllNovaLista"></th>
+                        <th>PLACA</th>
+                        <th>MARCA</th>
+                        <th>MODELO</th>
+                        <th>ÚLTIMA REALIZAÇÃO</th>
+                        <th>PRÓXIMO VENCIMENTO</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyNovaListaVeiculos">
+                    <!-- Veículos carregados via JS -->
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions" style="margin-top: 15px; text-align: right;">
+            <button id="btnConfirmarNovaLista" class="btn-success"><i class="fas fa-check"></i> Criar Lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/engraxe.js"></script>
   <footer class="footer">
