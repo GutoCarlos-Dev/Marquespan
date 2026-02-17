@@ -1,21 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
-// Chaves para armazenamento local (Mesmas do Desktop)
-const LOCAL_LISTAS_KEY = 'engraxe_listas_local';
-const LOCAL_ITENS_KEY = 'engraxe_itens_local';
-
 let currentListId = null;
 let currentItems = [];
-
-// Funções auxiliares
-function getLocalData(key) {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-}
-
-function setLocalData(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -63,42 +49,51 @@ function showViewListas() {
     carregarListasMobile();
 }
 
-function carregarListasMobile() {
+async function carregarListasMobile() {
     const container = document.getElementById('listaDeListas');
     if (!container) return;
     
     container.innerHTML = '<p style="text-align: center;">Carregando...</p>';
 
-    const listas = getLocalData(LOCAL_LISTAS_KEY);
-    // Filtra apenas listas ABERTAS para o mobile
-    const listasAbertas = listas.filter(l => l.status === 'ABERTA').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    try {
+        const { data: listasAbertas, error } = await supabaseClient
+            .from('engraxe_listas')
+            .select('*')
+            .eq('status', 'ABERTA')
+            .order('created_at', { ascending: false });
 
-    container.innerHTML = '';
-    if (listasAbertas.length === 0) {
-        container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma lista aberta encontrada.</p>';
-        return;
-    }
+        if (error) throw error;
 
-    listasAbertas.forEach(lista => {
-        const div = document.createElement('div');
-        div.className = 'historico-card'; 
-        div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #006937;';
-        div.onclick = () => abrirLista(lista.id, lista.nome);
-        
-        div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h4 style="margin: 0; color: #333;">${lista.nome}</h4>
-                    <small style="color: #666;">${new Date(lista.created_at).toLocaleDateString('pt-BR')}</small>
+        container.innerHTML = '';
+        if (!listasAbertas || listasAbertas.length === 0) {
+            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma lista aberta encontrada.</p>';
+            return;
+        }
+
+        listasAbertas.forEach(lista => {
+            const div = document.createElement('div');
+            div.className = 'historico-card'; 
+            div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #006937;';
+            div.onclick = () => abrirLista(lista.id, lista.nome);
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0; color: #333;">${lista.nome}</h4>
+                        <small style="color: #666;">${new Date(lista.created_at).toLocaleDateString('pt-BR')}</small>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #006937;"></i>
                 </div>
-                <i class="fas fa-chevron-right" style="color: #006937;"></i>
-            </div>
-        `;
-        container.appendChild(div);
-    });
+            `;
+            container.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar listas:', error);
+        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar listas.</p>';
+    }
 }
 
-function abrirLista(id, nome) {
+async function abrirLista(id, nome) {
     currentListId = id;
     const titulo = document.getElementById('tituloListaAtual');
     if (titulo) titulo.textContent = nome;
@@ -106,10 +101,24 @@ function abrirLista(id, nome) {
     document.getElementById('viewListas').classList.add('hidden');
     document.getElementById('viewItens').classList.remove('hidden');
     
-    // Carrega itens
-    const allItens = getLocalData(LOCAL_ITENS_KEY);
-    currentItems = allItens.filter(i => i.lista_id === id);
-    renderizarItensMobile(currentItems);
+    const container = document.getElementById('listaVeiculosContainer');
+    container.innerHTML = '<p style="text-align: center;">Carregando itens...</p>';
+
+    try {
+        const { data: itens, error } = await supabaseClient
+            .from('engraxe_itens')
+            .select('*')
+            .eq('lista_id', id)
+            .order('placa');
+
+        if (error) throw error;
+
+        currentItems = itens || [];
+        renderizarItensMobile(currentItems);
+    } catch (error) {
+        console.error('Erro ao carregar itens:', error);
+        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar itens.</p>';
+    }
 }
 
 function renderizarItensMobile(itens) {
@@ -178,7 +187,7 @@ window.prepararEdicaoMobile = function(id) {
     modal.classList.remove('hidden');
 }
 
-function salvarItemMobile() {
+async function salvarItemMobile() {
     const id = document.getElementById('editItemId').value;
     const realizado = document.getElementById('editRealizado').value;
     const proximo = document.getElementById('editProximo').value;
@@ -188,13 +197,8 @@ function salvarItemMobile() {
     const km = document.getElementById('editKm').value;
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
 
-    // Atualiza no LocalStorage
-    let allItens = getLocalData(LOCAL_ITENS_KEY);
-    const index = allItens.findIndex(i => i.id === id);
-
-    if (index !== -1) {
-        allItens[index] = {
-            ...allItens[index],
+    try {
+        const updateData = {
             data_realizado: realizado || null,
             data_proximo: proximo || null,
             plaquinha: plaqueta,
@@ -203,14 +207,27 @@ function salvarItemMobile() {
             km: km ? parseInt(km) : null,
             usuario_realizou: usuario
         };
-        setLocalData(LOCAL_ITENS_KEY, allItens);
-        
-        // Atualiza lista atual e re-renderiza
-        currentItems = allItens.filter(i => i.lista_id === currentListId);
-        renderizarItensMobile(currentItems);
-        
+
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .update(updateData)
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Atualiza cache local e re-renderiza
+        const index = currentItems.findIndex(i => i.id === id);
+        if (index !== -1) {
+            currentItems[index] = { ...currentItems[index], ...updateData };
+            renderizarItensMobile(currentItems);
+        }
+
         fecharModal();
         alert('Registro salvo!');
+
+    } catch (error) {
+        console.error('Erro ao salvar item:', error);
+        alert('Erro ao salvar item: ' + error.message);
     }
 }
 

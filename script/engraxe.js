@@ -63,6 +63,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (e.target.classList.contains('input-status')) {
+                const val = e.target.value;
+                if (val === 'OK') {
+                    e.target.style.color = '#28a745';
+                    e.target.style.fontWeight = 'bold';
+                } else if (val === 'INTERNADO') {
+                    e.target.style.color = '#007bff';
+                    e.target.style.fontWeight = 'bold';
+                } else if (val === 'PENDENTE') {
+                    e.target.style.color = '#dc3545';
+                    e.target.style.fontWeight = 'bold';
+                } else {
+                    e.target.style.color = '#dc3545';
+                    e.target.style.fontWeight = 'bold';
+                }
                 handleStatusChange(e.target, dataDaLista);
             }
 
@@ -72,6 +86,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const statusSelect = row.querySelector('.input-status');
                     if (statusSelect && statusSelect.value !== 'OK') {
                         statusSelect.value = 'OK';
+                        statusSelect.style.color = '#28a745';
+                        statusSelect.style.fontWeight = 'bold';
                         handleStatusChange(statusSelect, dataDaLista);
                         return;
                     }
@@ -565,6 +581,7 @@ window.abrirLista = async function(id, nome) {
 
         currentListItems = data;
         renderizarItensModal(data);
+        atualizarContadores();
 
     } catch (error) {
         console.error('Erro ao carregar itens:', error);
@@ -601,6 +618,7 @@ async function adicionarItemManual() {
         // Atualiza View
         currentListItems.push(novoItem);
         renderizarItensModal(currentListItems);
+        atualizarContadores();
     } catch (error) {
         console.error('Erro ao adicionar item:', error);
         alert('Erro ao adicionar item.');
@@ -625,6 +643,16 @@ function renderizarItensModal(itens) {
             if (d.includes('T')) return d.split('T')[0];
             return d;
         };
+
+        let statusStyle = 'width: 100%; padding: 2px 5px; height: 28px;';
+        const st = (item.status || '').toUpperCase();
+        if (st === 'OK' || st === 'REALIZADO') {
+            statusStyle += ' color: #28a745; font-weight: bold;';
+        } else if (st === 'INTERNADO') {
+            statusStyle += ' color: #007bff; font-weight: bold;';
+        } else if (st !== 'PENDENTE' && st !== '') {
+            statusStyle += ' color: #dc3545; font-weight: bold;';
+        }
         
         tr.innerHTML = `
             <td><input type="text" class="glass-input input-placa" value="${item.placa || ''}" style="width: 90px; text-transform: uppercase; padding: 2px 5px; height: 28px;" placeholder="PLACA"></td>
@@ -644,7 +672,7 @@ function renderizarItensModal(itens) {
                 </select>
             </td>
             <td>
-                <select class="glass-input input-status" style="width: 100%; padding: 2px 5px; height: 28px;">
+                <select class="glass-input input-status" style="${statusStyle}">
                     <option value="PENDENTE" ${!item.status || item.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
                     <option value="OK" ${item.status === 'OK' || item.status === 'REALIZADO' ? 'selected' : ''}>OK</option>
                     <option value="ROTA" ${item.status === 'ROTA' ? 'selected' : ''}>ROTA</option>
@@ -754,6 +782,7 @@ window.salvarItemIndividual = async function(id) {
         if (viewIndex > -1) {
             currentListItems[viewIndex] = { ...currentListItems[viewIndex], ...updateData };
         }
+        atualizarContadores();
         
         // Feedback visual
         const originalIcon = btn.innerHTML;
@@ -780,6 +809,7 @@ window.excluirItemLista = async function(id) {
         // Remove do array local e re-renderiza
         currentListItems = currentListItems.filter(i => i.id !== id);
         renderizarItensModal(currentListItems);
+        atualizarContadores();
     } catch (error) { console.error(error); alert('Erro ao excluir item.'); }
 }
 
@@ -913,6 +943,7 @@ async function limparListaAtual() {
         // Atualiza view
         currentListItems = [];
         renderizarItensModal(currentListItems);
+        atualizarContadores();
     } catch (error) {
         console.error('Erro ao limpar lista:', error);
         alert('Erro ao limpar lista.');
@@ -1316,7 +1347,7 @@ async function gerarPDFLista(id) {
             startY: 30,
             theme: 'grid',
             headStyles: { fillColor: [0, 105, 55] },
-            styles: { fontSize: 7, cellPadding: 1, overflow: 'linebreak' },
+            styles: { fontSize: 7.5, cellPadding: 1, overflow: 'linebreak' },
             alternateRowStyles: { fillColor: [230, 230, 230] },
             columnStyles: {
                 0: { cellWidth: 'auto' }, // Placa
@@ -1327,6 +1358,22 @@ async function gerarPDFLista(id) {
                 5: { cellWidth: 15, halign: 'center' }, // Status (~4-6 dígitos)
                 6: { cellWidth: 12, halign: 'center' }, // SEG (~4 dígitos)
                 7: { cellWidth: 25, halign: 'right' }   // KM (~12 dígitos)
+            },
+            margin: { bottom: 5 }, // Define a margem inferior para 5mm (padrão é maior)
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 5) {
+                    const status = (data.cell.raw || '').toString().toUpperCase();
+                    if (status === 'OK') {
+                        data.cell.styles.textColor = [40, 167, 69]; // Verde
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (status === 'INTERNADO') {
+                        data.cell.styles.textColor = [0, 123, 255]; // Azul
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (status !== '') {
+                        data.cell.styles.textColor = [220, 53, 69]; // Vermelho
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
             }
         });
 
@@ -1336,6 +1383,18 @@ async function gerarPDFLista(id) {
         console.error('Erro ao gerar PDF:', error);
         alert('Erro ao gerar PDF: ' + error.message);
     }
+}
+
+function atualizarContadores() {
+    if (!currentListItems) return;
+    const realizados = currentListItems.filter(i => i.status === 'OK' || i.status === 'REALIZADO').length;
+    const naoRealizados = currentListItems.length - realizados;
+    
+    const elRealizados = document.getElementById('contadorRealizados');
+    const elNaoRealizados = document.getElementById('contadorNaoRealizados');
+    
+    if (elRealizados) elRealizados.textContent = realizados;
+    if (elNaoRealizados) elNaoRealizados.textContent = naoRealizados;
 }
 
 // Expor funções para o escopo global se forem chamadas pelo HTML
