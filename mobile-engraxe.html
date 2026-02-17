@@ -16,34 +16,88 @@
     <a href="engraxe.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
   </header>
 
-  <div class="mobile-container">
-    <div class="panel mobile-panel">
-      <div class="panel-header"><h3><i class="fas fa-plus-circle"></i> Novo Registro</h3></div>
-      <div class="panel-body">
-        <form id="formMobileEngraxe">
-          <div class="form-group"><label for="placa">Placa</label><input type="text" id="placa" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;"><datalist id="listaVeiculos"></datalist></div>
-          <div class="form-row-mobile">
-            <div class="form-group"><label for="km_realizado">KM Atual</label><input type="number" id="km_realizado" placeholder="0" inputmode="numeric" required></div>
-            <div class="form-group"><label for="data_realizado">Data</label><input type="date" id="data_realizado" required></div>
-          </div>
-          <div class="form-group"><label for="status">Status</label><select id="status" required><option value="REALIZADO">REALIZADO</option><option value="PENDENTE">PENDENTE</option></select></div>
-          <details>
-            <summary>Mais Detalhes (Plaquinha, SEG, Próximo)</summary>
-            <div class="form-group" style="margin-top: 10px;"><label for="plaquinha">Plaquinha</label><input type="text" id="plaquinha"></div>
-            <div class="form-group"><label for="seg">SEG</label><input type="text" id="seg"></div>
-            <div class="form-row-mobile">
-                <div class="form-group"><label for="proximo_km">Próx. KM</label><input type="number" id="proximo_km" inputmode="numeric"></div>
-                <div class="form-group"><label for="proximo_data">Próx. Data</label><input type="date" id="proximo_data"></div>
-            </div>
-          </details>
-          <div class="form-actions mobile-actions"><button type="submit" class="btn-primary btn-block btn-large"><i class="fas fa-check"></i> SALVAR</button></div>
-        </form>
-      </div>
+  <!-- VIEW 1: Seleção de Lista -->
+  <div id="viewListas" class="mobile-container">
+    <h3 style="margin: 10px 0; color: #333;">Listas Abertas</h3>
+    <div id="listaDeListas" class="historico-list">
+      <p style="text-align: center; color: #666;">Carregando listas...</p>
+    </div>
+  </div>
+
+  <!-- VIEW 2: Itens da Lista -->
+  <div id="viewItens" class="mobile-container hidden">
+    <div class="panel-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+      <button id="btnVoltarListas" class="btn-secondary" style="padding: 5px 10px;"><i class="fas fa-arrow-left"></i></button>
+      <h3 id="tituloListaAtual" style="margin: 0; font-size: 1.1rem;">Lista</h3>
+    </div>
+    
+    <div class="form-group">
+      <input type="text" id="filtroVeiculoMobile" placeholder="Buscar placa ou modelo..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
     </div>
 
-    <div class="mobile-list-container">
-      <h3 style="margin: 20px 0 10px; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Últimos Registros</h3>
-      <div id="listaHistorico" class="historico-list"><p style="text-align: center; color: #666;">Carregando...</p></div>
+    <div id="listaVeiculosContainer" class="historico-list">
+      <!-- Itens carregados via JS -->
+    </div>
+  </div>
+
+  <!-- MODAL: Edição de Item -->
+  <div id="modalEditarItem" class="modal-mobile hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center;">
+    <div class="panel mobile-panel" style="width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div class="panel-header" style="display: flex; justify-content: space-between;">
+        <h3 id="modalPlacaTitulo">Editar Veículo</h3>
+        <button id="btnFecharModal" style="background: none; border: none; font-size: 1.5rem;">&times;</button>
+      </div>
+      <div class="panel-body">
+        <input type="hidden" id="editItemId">
+        
+        <div class="form-group">
+          <label>Realizado (Data)</label>
+          <input type="date" id="editRealizado">
+        </div>
+
+        <div class="form-group">
+          <label>Próximo (Automático)</label>
+          <input type="date" id="editProximo" readonly style="background-color: #e9ecef;">
+        </div>
+
+        <div class="form-row-mobile" style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Plaqueta</label>
+            <select id="editPlaqueta">
+              <option value="">-</option>
+              <option value="SIM">SIM</option>
+              <option value="NAO">NÃO</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>SEG</label>
+            <select id="editSeg">
+              <option value="">-</option>
+              <option value="OK">OK</option>
+              <option value="PENDENTE">PENDENTE</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Feito / Status</label>
+          <select id="editStatus">
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="OK">OK (FEITO)</option>
+            <option value="ROTA">ROTA</option>
+            <option value="INTERNADO">INTERNADO</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>KM</label>
+          <input type="number" id="editKm" placeholder="KM Atual" inputmode="numeric">
+        </div>
+
+        <div class="form-actions mobile-actions">
+          <button type="button" id="btnSalvarItemMobile" class="btn-primary btn-block btn-large"><i class="fas fa-save"></i> SALVAR</button>
+        </div>
+      </div>
     </div>
   </div>
 

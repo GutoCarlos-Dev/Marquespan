@@ -162,10 +162,29 @@ function renderizarTabelaListas(dados) {
             <td><span class="badge ${item.status === 'ABERTA' ? 'badge-pendente' : 'badge-realizado'}">${item.status}</span></td>
             <td>
                 <button class="btn-icon btn-edit" onclick="abrirLista('${item.id}', '${item.nome}')" title="Abrir Lista"><i class="fas fa-folder-open"></i></button>
+                <button class="btn-icon btn-edit" onclick="editarNomeLista('${item.id}', '${item.nome}')" title="Editar Nome"><i class="fas fa-pen"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.editarNomeLista = function(id, nomeAtual) {
+    const novoNome = prompt("Novo nome da lista:", nomeAtual);
+    if (novoNome === null || novoNome.trim() === "") return;
+
+    try {
+        let listas = getLocalData(LOCAL_LISTAS_KEY);
+        const index = listas.findIndex(l => l.id === id);
+        if (index !== -1) {
+            listas[index].nome = novoNome.trim();
+            setLocalData(LOCAL_LISTAS_KEY, listas);
+            carregarListas();
+        }
+    } catch (error) {
+        console.error('Erro ao editar nome:', error);
+        alert('Erro ao editar nome da lista.');
+    }
 }
 
 window.abrirLista = async function(id, nome) {
@@ -202,23 +221,46 @@ function renderizarItensModal(itens) {
     itens.forEach(item => {
         const tr = document.createElement('tr');
         
-        const isRealizado = item.status === 'REALIZADO';
-        const isNaoRealizado = item.status === 'NAO_REALIZADO';
-        const motivoDisplay = isNaoRealizado ? '' : 'none';
+        const formatDate = (d) => {
+            if (!d) return '';
+            if (d.includes('T')) return d.split('T')[0];
+            return d;
+        };
         
         tr.innerHTML = `
-            <td>${item.placa}</td>
-            <td>${item.modelo || '-'}</td>
-            <td>${item.marca || '-'}</td>
+            <td>${item.placa || ''}</td>
+            <td>${item.modelo || ''}</td>
+            <td>${item.marca || ''}</td>
             <td>
-                <select class="status-select" onchange="atualizarStatusItem('${item.id}', this)">
-                    <option value="PENDENTE" ${!isRealizado && !isNaoRealizado ? 'selected' : ''}>Pendente</option>
-                    <option value="REALIZADO" ${isRealizado ? 'selected' : ''}>Feito</option>
-                    <option value="NAO_REALIZADO" ${isNaoRealizado ? 'selected' : ''}>Não Realizado</option>
+                <input type="date" class="input-realizado" value="${formatDate(item.data_realizado)}" onchange="window.calcularProximaData(this)" style="width: 130px;">
+            </td>
+            <td>
+                <input type="date" class="input-proximo" value="${formatDate(item.data_proximo)}" readonly style="background-color: #e9ecef; width: 130px;">
+            </td>
+            <td>
+                <select class="input-plaquinha" style="width: 100%;">
+                    <option value="">-</option>
+                    <option value="SIM" ${item.plaquinha === 'SIM' ? 'selected' : ''}>SIM</option>
+                    <option value="NAO" ${item.plaquinha === 'NAO' ? 'selected' : ''}>NÃO</option>
                 </select>
             </td>
             <td>
-                <input type="text" id="motivo-${item.id}" class="motivo-input" value="${item.motivo || ''}" placeholder="Motivo..." style="display: ${motivoDisplay}; width: 100%;">
+                <select class="input-status" style="width: 100%;">
+                    <option value="PENDENTE" ${!item.status || item.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
+                    <option value="OK" ${item.status === 'OK' || item.status === 'REALIZADO' ? 'selected' : ''}>OK</option>
+                    <option value="ROTA" ${item.status === 'ROTA' ? 'selected' : ''}>ROTA</option>
+                    <option value="INTERNADO" ${item.status === 'INTERNADO' ? 'selected' : ''}>INTERNADO</option>
+                </select>
+            </td>
+            <td>
+                <select class="input-seg" style="width: 100%;">
+                    <option value="">-</option>
+                    <option value="OK" ${item.seg === 'OK' ? 'selected' : ''}>OK</option>
+                    <option value="PENDENTE" ${item.seg === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" class="input-km" value="${item.km || ''}" placeholder="KM" style="width: 80px;">
             </td>
             <td>
                 <button class="btn-icon btn-save" onclick="salvarItemIndividual('${item.id}')" title="Salvar"><i class="fas fa-save"></i></button>
@@ -228,49 +270,45 @@ function renderizarItensModal(itens) {
     });
 }
 
-window.atualizarStatusItem = function(id, select) {
-    const motivoInput = document.getElementById(`motivo-${id}`);
-    if (select.value === 'NAO_REALIZADO') {
-        motivoInput.style.display = 'block';
-        motivoInput.focus();
+window.calcularProximaData = function(inputRealizado) {
+    const row = inputRealizado.closest('tr');
+    const inputProximo = row.querySelector('.input-proximo');
+    
+    if (inputRealizado.value) {
+        const data = new Date(inputRealizado.value);
+        data.setDate(data.getDate() + 21); // +21 dias
+        inputProximo.value = data.toISOString().split('T')[0];
     } else {
-        motivoInput.style.display = 'none';
-        motivoInput.value = ''; // Limpa motivo se mudar status
+        inputProximo.value = '';
     }
 }
 
 window.salvarItemIndividual = async function(id) {
-    const row = document.querySelector(`button[onclick="salvarItemIndividual('${id}')"]`).closest('tr');
-    const status = row.querySelector('.status-select').value;
-    const motivo = document.getElementById(`motivo-${id}`).value;
+    const btn = document.querySelector(`button[onclick="salvarItemIndividual('${id}')"]`);
+    const row = btn.closest('tr');
     
     const dataRealizado = row.querySelector('.input-realizado').value;
     const dataProximo = row.querySelector('.input-proximo').value;
-    const plaquinha = row.querySelector('.input-plaq').value;
+    const plaquinha = row.querySelector('.input-plaquinha').value;
+    const status = row.querySelector('.input-status').value;
     const seg = row.querySelector('.input-seg').value;
     const km = row.querySelector('.input-km').value;
 
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
 
-    if (status === 'NAO_REALIZADO' && !motivo.trim()) {
-        alert('Por favor, informe o motivo para não realizado.');
-        return;
-    }
-
     try {
         const updateData = {
-            status: status,
-            motivo: status === 'NAO_REALIZADO' ? motivo : null,
-            data_realizado: dataRealizado || null, // Usa a data do input ou null
+            data_realizado: dataRealizado || null,
             data_proximo: dataProximo || null,
             plaquinha: plaquinha,
+            status: status,
             seg: seg,
             km: km ? parseInt(km) : null,
             usuario_realizou: usuario
         };
 
         // Atualizar no LocalStorage
-        const allItens = getLocalData(LOCAL_ITENS_KEY);
+        let allItens = getLocalData(LOCAL_ITENS_KEY);
         const index = allItens.findIndex(i => i.id === id);
         
         if (index !== -1) {
@@ -283,7 +321,10 @@ window.salvarItemIndividual = async function(id) {
                 currentListItems[viewIndex] = { ...currentListItems[viewIndex], ...updateData };
             }
             
-            alert('Item atualizado localmente!');
+            // Feedback visual
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check" style="color: green;"></i>';
+            setTimeout(() => btn.innerHTML = originalIcon, 1500);
         } else {
             alert('Item não encontrado no armazenamento local.');
         }
@@ -343,8 +384,9 @@ async function handleImportarListaModal(e) {
                     // Normalização de Status
                     let statusRaw = (r['STATUS'] || 'PENDENTE').toString().toUpperCase().trim();
                     let status = 'PENDENTE';
-                    if (['REALIZADO', 'FEITO', 'OK'].includes(statusRaw)) status = 'REALIZADO';
-                    if (['NÃO REALIZADO', 'NAO REALIZADO'].includes(statusRaw)) status = 'NAO_REALIZADO';
+                    if (['REALIZADO', 'FEITO', 'OK'].includes(statusRaw)) status = 'OK';
+                    if (['ROTA'].includes(statusRaw)) status = 'ROTA';
+                    if (['INTERNADO'].includes(statusRaw)) status = 'INTERNADO';
 
                     // Formatação de Data Robusta
                     const formatDate = (val) => {
@@ -381,7 +423,7 @@ async function handleImportarListaModal(e) {
                         placa: r['PLACA'] || 'SEM PLACA',
                         modelo: r['MODELO'] || '',
                         marca: r['MARCA'] || '',
-                        plaquinha: r['PLAQ'] || r['PLAQUINHA'] || '',
+                        plaquinha: r['PLAQ'] || r['PLAQUINHA'] || r['PLAQUETA'] || '',
                         seg: r['SEG'] || '',
                         km: r['KM'] ? parseInt(r['KM']) : null,
                         data_realizado: formatDate(r['REALIZADO']),
