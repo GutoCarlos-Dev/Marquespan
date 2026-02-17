@@ -1461,13 +1461,34 @@ const UI = {
     });
     if(itens.length) {
       try {
+        // Busca informações da cotação para o histórico
+        const { data: cotacaoInfo } = await supabaseClient.from('cotacoes').select('codigo_cotacao').eq('id', cotacaoId).single();
+        const codigoCotacao = cotacaoInfo?.codigo_cotacao || 'N/A';
+        
+        // Captura NFs para o histórico
+        const nfInputs = document.querySelectorAll('.nota-fiscal-input');
+        const nfs = Array.from(nfInputs).map(i => i.value.trim()).filter(v => v !== '').join(', ');
+        const obsHistorico = `Recebimento Cotação ${codigoCotacao}${nfs ? ' - NF: ' + nfs : ''}`;
+
         for (const item of itens) {
           await SupabaseService.insert('recebimentos', item);
           try {
             const { data: produto } = await supabaseClient.from('produtos').select('quantidade_em_estoque').eq('id', item.id_produto).single();
             if (produto) {
-                const novaQtd = (parseFloat(produto.quantidade_em_estoque) || 0) + parseFloat(item.qtd_recebida);
+                const qtdAnterior = parseFloat(produto.quantidade_em_estoque) || 0;
+                const novaQtd = qtdAnterior + parseFloat(item.qtd_recebida);
                 await supabaseClient.from('produtos').update({ quantidade_em_estoque: novaQtd }).eq('id', item.id_produto);
+
+                // REGISTRA NO HISTÓRICO DE MOVIMENTAÇÕES (Para aparecer no Estoque Geral)
+                await supabaseClient.from('movimentacoes_estoque').insert({
+                    produto_id: item.id_produto,
+                    tipo_movimentacao: 'ENTRADA',
+                    quantidade: item.qtd_recebida,
+                    quantidade_anterior: qtdAnterior,
+                    quantidade_nova: novaQtd,
+                    usuario: this._getCurrentUser()?.nome || 'Sistema',
+                    observacao: obsHistorico
+                });
             }
           } catch (errEstoque) { console.error(errEstoque); }
         }
@@ -1497,10 +1518,8 @@ const UI = {
             usuario_recebimento: this._getCurrentUser()?.nome || 'Sistema'
         };
         
-        const nfInputs = document.querySelectorAll('.nota-fiscal-input');
-        if (nfInputs.length > 0) {
-            const newNFs = Array.from(nfInputs).map(i => i.value.trim()).filter(v => v !== '');
-            updatePayload.nota_fiscal = newNFs.join(', ');
+        if (notaFiscalStr) {
+            updatePayload.nota_fiscal = notaFiscalStr;
         }
 
         await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
