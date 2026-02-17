@@ -18,26 +18,24 @@
     <div id="menu-container"></div>
 
     <div class="main-content">
-      <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-oil-can"></i> Controle de Engraxe</span>
-        <a href="mobile-engraxe.html" class="btn-secondary" style="font-size: 0.9rem; padding: 5px 10px; text-decoration: none; color: white; background-color: #006937; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> Modo App</a>
-      </header>
+      <div class="glass-header">
+        <h1><i class="fas fa-oil-can"></i> Controle de Engraxe</h1>
+        <a href="mobile-engraxe.html" class="btn-glass btn-green"><i class="fas fa-mobile-alt"></i> Modo App</a>
+      </div>
 
       <section class="section">
-        <div class="actions-grid" style="display: grid; grid-template-columns: 3fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
+        <div class="engraxe-layout">
           <!-- Card de Filtros -->
-          <div class="card">
-            <div class="card-header">
-              <h2><i class="fas fa-filter"></i> Filtros</h2>
-            </div>
-            <div class="filter-container">
+          <div class="glass-panel">
+            <h3><i class="fas fa-filter"></i> Filtros</h3>
+            <div class="filtros-container">
               <div class="form-group">
                 <label for="filtroMarca">Marca</label>
-                <input type="text" id="filtroMarca" placeholder="Buscar Marca...">
+                <input type="text" id="filtroMarca" class="glass-input" placeholder="Buscar Marca...">
               </div>
               <div class="form-group">
                 <label for="filtroStatus">Status</label>
-                <select id="filtroStatus">
+                <select id="filtroStatus" class="glass-input">
                   <option value="">Todos</option>
                   <option value="ABERTA">Aberta</option>
                   <option value="FECHADA">Fechada</option>
@@ -46,34 +44,33 @@
               </div>
               <div class="form-group">
                 <label for="filtroDataIni">Data Início</label>
-                <input type="date" id="filtroDataIni">
+                <input type="date" id="filtroDataIni" class="glass-input">
               </div>
               <div class="form-group">
                 <label for="filtroDataFim">Data Fim</label>
-                <input type="date" id="filtroDataFim">
+                <input type="date" id="filtroDataFim" class="glass-input">
               </div>
-              <div class="form-group" style="justify-content: flex-end;">
-                <button id="btnBuscar" class="btn-primary" style="width: 100%;"><i class="fas fa-search"></i> Buscar</button>
+              <div class="form-group actions">
+                <label>&nbsp;</label>
+                <button id="btnBuscar" class="btn-glass btn-blue btn-full"><i class="fas fa-search"></i> Buscar</button>
               </div>
             </div>
           </div>
           <!-- Card de Ações -->
-          <div class="card">
-            <div class="card-header">
-              <h2><i class="fas fa-cogs"></i> Ações</h2>
-            </div>
-            <div class="actions-container" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
-              <button id="btnNovoLancamento" class="btn-success" style="width: 100%;"><i class="fas fa-plus"></i> Nova Lista</button>
-              <button id="btnControleVencimentos" class="btn-info" style="background-color: #17a2b8; color: white; width: 100%;"><i class="fas fa-calendar-check"></i> Controle de Vencimentos</button>
-              <button id="btnExportarPDF" class="btn-danger" style="width: 100%;"><i class="fas fa-file-pdf"></i> PDF</button>
+          <div class="glass-panel">
+            <h3><i class="fas fa-cogs"></i> Ações</h3>
+            <div class="acoes-grid-vertical">
+              <button id="btnNovoLancamento" class="btn-glass btn-green btn-full"><i class="fas fa-plus"></i> Nova Lista</button>
+              <button id="btnControleVencimentos" class="btn-glass btn-info btn-full"><i class="fas fa-calendar-check"></i> Controle de Vencimentos</button>
+              <button id="btnExportarPDF" class="btn-glass btn-red btn-full"><i class="fas fa-file-pdf"></i> PDF</button>
             </div>
           </div>
         </div>
 
         <!-- Data Grid -->
-        <div class="card">
+        <div class="glass-panel">
           <div class="table-responsive">
-            <table class="data-grid" id="tabelaEngraxe">
+            <table class="glass-table" id="tabelaEngraxe">
               <thead>
                 <tr>
                   <th>Data/Hora</th>
@@ -102,20 +99,20 @@
         <button class="close-button" id="btnCloseModal">&times;</button>
       </div>
       <div class="panel-body">
-        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-            <input type="text" id="filtroModalInput" placeholder="Filtrar por Marca ou Modelo..." style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            <button id="btnAdicionarItemModal" class="btn-success" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
+        <div class="filter-container">
+            <input type="text" id="filtroModalInput" placeholder="Filtrar por Placa, Marca ou Modelo...">
+            <button id="btnAdicionarItemModal" class="btn-success">
                 <i class="fas fa-plus"></i> Adicionar Linha
             </button>
-            <button id="btnImportarListaModal" class="btn-primary" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
+            <button id="btnImportarListaModal" class="btn-primary">
                 <i class="fas fa-file-import"></i> Importar
             </button>
-            <button id="btnLimparListaModal" class="btn-danger" style="padding: 8px 15px; display: flex; align-items: center; gap: 5px;">
+            <button id="btnLimparListaModal" class="btn-danger">
                 <i class="fas fa-trash"></i> Limpar Lista
             </button>
             <input type="file" id="fileImportarListaModal" accept=".xlsx, .xls" style="display: none;">
         </div>
-        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+        <div class="table-responsive">
             <table class="data-grid">
                 <thead>
                     <tr>
@@ -141,33 +138,33 @@
   </div>
 
   <!-- Modal Controle de Vencimentos -->
-  <div id="modalVencimentos" class="panel-backdrop hidden">
-    <div class="panel" style="max-width: 1200px; width: 95%;">
-      <div class="panel-header">
+  <div id="modalVencimentos" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
         <h3><i class="fas fa-calendar-alt"></i> Controle de Vencimentos e Histórico</h3>
         <button class="close-button" id="btnCloseModalVencimentos">&times;</button>
       </div>
-      <div class="panel-body">
-        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <select id="filtroVencimentoFilial" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+      <div class="modal-body">
+        <div class="filtros-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="filtroVencimentoFilial" class="glass-input">
                 <option value="">Todas Filiais</option>
             </select>
-            <select id="filtroVencimentoMarca" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <select id="filtroVencimentoMarca" class="glass-input">
                 <option value="">Todas Marcas</option>
             </select>
-            <select id="filtroVencimentoModelo" style="flex: 1; min-width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <select id="filtroVencimentoModelo" class="glass-input">
                 <option value="">Todos Modelos</option>
             </select>
-            <select id="filtroVencimentoStatus" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <select id="filtroVencimentoStatus" class="glass-input">
                 <option value="TODOS">Todos os Status</option>
                 <option value="VENCIDO">Vencidos</option>
                 <option value="EM_DIA">Em Dia</option>
                 <option value="PENDENTE">Nunca Realizado</option>
             </select>
-            <button id="btnGerarListaVencidos" class="btn-success" style="padding: 8px 15px;"><i class="fas fa-list-ul"></i> Gerar Lista com Selecionados</button>
+            <button id="btnGerarListaVencidos" class="btn-glass btn-green"><i class="fas fa-list-ul"></i> Gerar Lista</button>
         </div>
         <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
-            <table class="data-grid" id="tabelaVencimentos">
+            <table class="glass-table" id="tabelaVencimentos">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" id="chkAllVencimentos"></th>
@@ -190,32 +187,32 @@
   </div>
 
   <!-- Modal Nova Lista (Seleção de Placas) -->
-  <div id="modalNovaLista" class="panel-backdrop hidden">
-    <div class="panel" style="max-width: 800px; width: 95%;">
-      <div class="panel-header">
+  <div id="modalNovaLista" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 800px;">
+      <div class="modal-header">
         <h3><i class="fas fa-plus"></i> Nova Lista de Engraxe</h3>
         <button class="close-button" id="btnCloseModalNovaLista">&times;</button>
       </div>
-      <div class="panel-body">
+      <div class="modal-body">
         <div class="form-group">
             <label for="nomeNovaLista">Nome da Lista</label>
-            <input type="text" id="nomeNovaLista" class="form-control" placeholder="Ex: Engraxe Semana Atual">
+            <input type="text" id="nomeNovaLista" class="glass-input" placeholder="Ex: Engraxe Semana Atual">
         </div>
         <div class="form-group">
             <label for="dataDaLista">Data da Lista (para cálculo de vencidos)</label>
-            <input type="date" id="dataDaLista" class="form-control">
+            <input type="date" id="dataDaLista" class="glass-input">
         </div>
-        <div class="filter-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-            <select id="filtroMarcaNovaLista" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+        <div class="filtros-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+            <select id="filtroMarcaNovaLista" class="glass-input">
                 <option value="">Todas as Marcas</option>
             </select>
-            <select id="filtroModeloNovaLista" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+            <select id="filtroModeloNovaLista" class="glass-input">
                 <option value="">Todos os Modelos</option>
             </select>
-            <input type="text" id="filtroPlacaNovaLista" placeholder="Buscar Placa..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
+            <input type="text" id="filtroPlacaNovaLista" class="glass-input" placeholder="Buscar Placa...">
         </div>
         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-            <table class="data-grid">
+            <table class="glass-table">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" id="chkAllNovaLista"></th>
@@ -232,7 +229,7 @@
             </table>
         </div>
         <div class="form-actions" style="margin-top: 15px; text-align: right;">
-            <button id="btnConfirmarNovaLista" class="btn-success"><i class="fas fa-check"></i> Criar Lista</button>
+            <button id="btnConfirmarNovaLista" class="btn-glass btn-green"><i class="fas fa-check"></i> Criar Lista</button>
         </div>
       </div>
     </div>

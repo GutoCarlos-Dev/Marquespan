@@ -141,11 +141,12 @@ async function abrirModalNovaLista() {
     const dataListaInput = document.getElementById('dataDaLista');
 
     // Injeção do contador
-    const modalHeader = modal.querySelector('.panel-header h3');
+    const modalHeader = modal.querySelector('.modal-header h3');
     if (modalHeader && !document.getElementById('contadorNovaLista')) {
         const contadorSpan = document.createElement('span');
         contadorSpan.id = 'contadorNovaLista';
         contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
+        contadorSpan.className = 'contador-selecao';
         modalHeader.appendChild(contadorSpan);
     }
     // Zera o contador ao abrir
@@ -153,7 +154,7 @@ async function abrirModalNovaLista() {
     if (contadorSpan) contadorSpan.textContent = '0 selecionado(s)';
 
     // Injeção da funcionalidade de ordenação nos cabeçalhos
-    const novaListaHeaders = modal.querySelectorAll('#modalNovaLista .data-grid th');
+    const novaListaHeaders = modal.querySelectorAll('.glass-table th');
     const novaListaSortMap = {
         'PLACA': 'placa',
         'MARCA': 'marca',
@@ -471,17 +472,20 @@ window.abrirLista = async function(id, nome) {
     const listaAtual = listas.find(l => l.id === id);
     const dataLista = listaAtual ? listaAtual.data_lista : '';
 
-    const panelBody = document.querySelector('#modalEngraxe .panel-body');
-    const filterContainer = document.querySelector('#modalEngraxe .filter-container');
+    const panelBody = document.querySelector('#modalEngraxe .modal-body');
+    const filterContainer = document.querySelector('#modalEngraxe .filtros-container');
     let dateContainer = document.getElementById('containerDataListaDetalhes');
 
     if (!dateContainer) {
         dateContainer = document.createElement('div');
         dateContainer.id = 'containerDataListaDetalhes';
         dateContainer.style.cssText = 'margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e9ecef;';
+        dateContainer.className = 'data-referencia-container';
         dateContainer.innerHTML = `
             <label for="dataListaDetalhes" style="font-weight: bold; color: #333;">Data de Referência:</label>
             <input type="date" id="dataListaDetalhes" class="form-control" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef;" readonly>
+            <label for="dataListaDetalhes">Data de Referência:</label>
+            <input type="date" id="dataListaDetalhes" class="form-control" readonly>
             <small style="color: #666;">(Usada para calcular vencimentos)</small>
         `;
         if (panelBody && filterContainer) {
@@ -506,6 +510,7 @@ window.abrirLista = async function(id, nome) {
         btnFinalizar.id = 'btnFinalizarLista';
         btnFinalizar.style.cssText = 'padding: 8px 15px; display: flex; align-items: center; gap: 5px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;';
         btnFinalizar.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
+        btnFinalizar.className = 'btn-glass btn-green';
         filterContainer.appendChild(btnFinalizar);
     }
 
@@ -516,12 +521,14 @@ window.abrirLista = async function(id, nome) {
         
         // Verifica o status atual para ajustar o botão
         if (listaAtual && listaAtual.status === 'FINALIZADA') {
+            newBtn.className = 'btn-glass btn-yellow';
             newBtn.disabled = false;
             newBtn.innerHTML = '<i class="fas fa-undo"></i> Reabrir Lista';
-            newBtn.style.backgroundColor = '#ffc107';
-            newBtn.style.color = '#000';
+            newBtn.style.backgroundColor = ''; // Remove inline
+            newBtn.style.color = ''; // Remove inline
             newBtn.style.cursor = 'pointer';
 
+            
             newBtn.addEventListener('click', () => {
                 if (confirm('Deseja reabrir esta lista? O status voltará para ABERTA.')) {
                     const listasLocal = getLocalData(LOCAL_LISTAS_KEY);
@@ -536,10 +543,11 @@ window.abrirLista = async function(id, nome) {
                 }
             });
         } else {
+            newBtn.className = 'btn-glass btn-green';
             newBtn.disabled = false;
             newBtn.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
-            newBtn.style.backgroundColor = '#28a745';
-            newBtn.style.color = 'white';
+            newBtn.style.backgroundColor = ''; // Remove inline
+            newBtn.style.color = ''; // Remove inline
             newBtn.style.cursor = 'pointer';
             
             newBtn.addEventListener('click', () => {
@@ -627,24 +635,24 @@ function renderizarItensModal(itens) {
         };
         
         tr.innerHTML = `
-            <td><input type="text" class="input-placa" value="${item.placa || ''}" style="width: 90px; text-transform: uppercase; padding: 2px 5px; height: 28px;" placeholder="PLACA"></td>
-            <td><input type="text" class="input-modelo" value="${item.modelo || ''}" style="width: 100px; padding: 2px 5px; height: 28px;" placeholder="MODELO"></td>
-            <td><input type="text" class="input-marca" value="${item.marca || ''}" style="width: 90px; padding: 2px 5px; height: 28px;" placeholder="MARCA"></td>
+            <td><input type="text" class="glass-input input-placa" value="${item.placa || ''}" style="width: 90px; text-transform: uppercase; padding: 2px 5px; height: 28px;" placeholder="PLACA"></td>
+            <td><input type="text" class="glass-input input-modelo" value="${item.modelo || ''}" style="width: 100px; padding: 2px 5px; height: 28px;" placeholder="MODELO"></td>
+            <td><input type="text" class="glass-input input-marca" value="${item.marca || ''}" style="width: 90px; padding: 2px 5px; height: 28px;" placeholder="MARCA"></td>
             <td>
-                <input type="date" class="input-realizado" value="${formatDate(item.data_realizado)}" onchange="window.calcularProximaData(this)" style="width: 130px; padding: 2px 5px; height: 28px;">
+                <input type="date" class="glass-input input-realizado" value="${formatDate(item.data_realizado)}" onchange="window.calcularProximaData(this)" style="width: 130px; padding: 2px 5px; height: 28px;">
             </td>
             <td>
-                <input type="date" class="input-proximo" value="${formatDate(item.data_proximo)}" readonly style="background-color: #e9ecef; width: 130px; padding: 2px 5px; height: 28px;">
+                <input type="date" class="glass-input input-proximo" value="${formatDate(item.data_proximo)}" readonly style="background-color: #e9ecef; width: 130px; padding: 2px 5px; height: 28px;">
             </td>
             <td>
-                <select class="input-plaquinha" style="width: 100%; padding: 2px 5px; height: 28px;">
+                <select class="glass-input input-plaquinha" style="width: 100%; padding: 2px 5px; height: 28px;">
                     <option value="">-</option>
                     <option value="SIM" ${item.plaquinha === 'SIM' ? 'selected' : ''}>SIM</option>
                     <option value="NAO" ${item.plaquinha === 'NAO' ? 'selected' : ''}>NÃO</option>
                 </select>
             </td>
             <td>
-                <select class="input-status" style="width: 100%; padding: 2px 5px; height: 28px;">
+                <select class="glass-input input-status" style="width: 100%; padding: 2px 5px; height: 28px;">
                     <option value="PENDENTE" ${!item.status || item.status === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
                     <option value="OK" ${item.status === 'OK' || item.status === 'REALIZADO' ? 'selected' : ''}>OK</option>
                     <option value="ROTA" ${item.status === 'ROTA' ? 'selected' : ''}>ROTA</option>
@@ -652,14 +660,14 @@ function renderizarItensModal(itens) {
                 </select>
             </td>
             <td>
-                <select class="input-seg" style="width: 100%; padding: 2px 5px; height: 28px;">
+                <select class="glass-input input-seg" style="width: 100%; padding: 2px 5px; height: 28px;">
                     <option value="">-</option>
                     <option value="OK" ${item.seg === 'OK' ? 'selected' : ''}>OK</option>
                     <option value="PENDENTE" ${item.seg === 'PENDENTE' ? 'selected' : ''}>PENDENTE</option>
                 </select>
             </td>
             <td>
-                <input type="number" class="input-km" value="${item.km || ''}" placeholder="KM" style="width: 80px; padding: 2px 5px; height: 28px;">
+                <input type="number" class="glass-input input-km" value="${item.km || ''}" placeholder="KM" style="width: 80px; padding: 2px 5px; height: 28px;">
             </td>
             <td>
                 <button class="btn-icon btn-save" onclick="salvarItemIndividual('${item.id}')" title="Salvar"><i class="fas fa-save"></i></button>
@@ -924,11 +932,12 @@ async function abrirControleVencimentos() {
     const tbody = document.getElementById('tbodyVencimentos');
 
     // Injeção do contador
-    const modalHeader = modal.querySelector('.panel-header h3');
+    const modalHeader = modal.querySelector('.modal-header h3');
     if (modalHeader && !document.getElementById('contadorVencimentos')) {
         const contadorSpan = document.createElement('span');
         contadorSpan.id = 'contadorVencimentos';
         contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
+        contadorSpan.className = 'contador-selecao';
         modalHeader.appendChild(contadorSpan);
     }
     // Zera o contador ao abrir
@@ -962,9 +971,12 @@ async function abrirControleVencimentos() {
     if (btnGerar && !document.getElementById('dataListaVencimentos')) {
         const container = document.createElement('div');
         container.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-right: 10px;';
+        container.className = 'data-lista-container';
         container.innerHTML = `
             <label for="dataListaVencimentos" style="font-weight: bold; color: #333; white-space: nowrap;">Data da Lista:</label>
             <input type="date" id="dataListaVencimentos" class="form-control" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <label for="dataListaVencimentos">Data da Lista:</label>
+            <input type="date" id="dataListaVencimentos" class="form-control">
         `;
         btnGerar.parentNode.insertBefore(container, btnGerar);
         btnGerar.parentNode.style.display = 'flex';
@@ -1176,7 +1188,7 @@ function ordenarVeiculosNovaLista(key) {
 }
 
 function updateSortIconsNovaLista() {
-    document.querySelectorAll('#modalNovaLista .data-grid th i').forEach(i => {
+    document.querySelectorAll('#modalNovaLista .glass-table th i').forEach(i => {
         i.className = 'fas fa-sort';
         i.style.color = '#ccc';
     });
