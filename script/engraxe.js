@@ -1277,25 +1277,25 @@ async function gerarPDFLista(id) {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                doc.addImage(base64data, 'PNG', 14, 10, 40, 10);
+                doc.addImage(base64data, 'PNG', 14, 6, 40, 10);
             }
         } catch (e) { console.warn('Logo não carregado'); }
 
         // Título e Informações
         doc.setFontSize(18);
-        doc.text('Relatório de Engraxe', 14, 27);
+        doc.text('Controle Engraxamento de Caminhões', 14, 23);
         
         doc.setFontSize(10);
 
         // Destaca o nome da lista em vermelho e negrito
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 0, 0); // Vermelho
-        doc.text(`Lista: ${lista.nome}`, 14, 32);
+        doc.text(`Lista: ${lista.nome}`, 14, 28);
 
         // Reseta o estilo para o texto seguinte
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0); // Preto
-        doc.text(`Usuário: ${lista.usuario || 'N/A'}`, 14, 37);
+        //doc.setFont('helvetica', 'normal');
+        //doc.setTextColor(0, 0, 0); // Preto
+        //doc.text(`Usuário: ${lista.usuario || 'N/A'}`, 14, 33);
 
         // Tabela
         const columns = ['Placa', 'Modelo', 'Realizado', 'Próximo', 'PLAQ', 'Status', 'SEG', 'KM'];
@@ -1313,11 +1313,21 @@ async function gerarPDFLista(id) {
         doc.autoTable({
             head: [columns],
             body: rows,
-            startY: 40,
+            startY: 30,
             theme: 'grid',
             headStyles: { fillColor: [0, 105, 55] },
-            styles: { fontSize: 7 },
-            alternateRowStyles: { fillColor: [230, 230, 230] }
+            styles: { fontSize: 7, cellPadding: 1, overflow: 'linebreak' },
+            alternateRowStyles: { fillColor: [230, 230, 230] },
+            columnStyles: {
+                0: { cellWidth: 'auto' }, // Placa
+                1: { cellWidth: 'auto' }, // Modelo
+                2: { cellWidth: 'auto', halign: 'center' }, // Realizado
+                3: { cellWidth: 'auto', halign: 'center' }, // Próximo
+                4: { cellWidth: 12, halign: 'center' }, // PLAQ (~4 dígitos)
+                5: { cellWidth: 15, halign: 'center' }, // Status (~4-6 dígitos)
+                6: { cellWidth: 12, halign: 'center' }, // SEG (~4 dígitos)
+                7: { cellWidth: 25, halign: 'right' }   // KM (~12 dígitos)
+            }
         });
 
         doc.save(`Engraxe_${lista.nome.replace(/[^a-z0-9]/gi, '_')}.pdf`);
