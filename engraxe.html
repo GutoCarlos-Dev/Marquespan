@@ -99,18 +99,28 @@
         <button class="close-button" id="btnCloseModal">&times;</button>
       </div>
       <div class="panel-body">
-        <div class="filter-container">
-            <input type="text" id="filtroModalInput" placeholder="Filtrar por Placa, Marca ou Modelo...">
-            <button id="btnAdicionarItemModal" class="btn-success">
-                <i class="fas fa-plus"></i> Adicionar Linha
-            </button>
-            <button id="btnImportarListaModal" class="btn-primary">
-                <i class="fas fa-file-import"></i> Importar
-            </button>
-            <button id="btnLimparListaModal" class="btn-danger">
-                <i class="fas fa-trash"></i> Limpar Lista
-            </button>
-            <input type="file" id="fileImportarListaModal" accept=".xlsx, .xls" style="display: none;">
+        <div class="modal-details-grid">
+            <!-- Card Informações -->
+            <div class="details-card">
+                <h4><i class="fas fa-info-circle"></i> Informações</h4>
+                <div class="form-group">
+                    <label for="dataListaDetalhes">Data de Referência</label>
+                    <input type="date" id="dataListaDetalhes" class="glass-input" readonly style="background-color: #e9ecef;">
+                </div>
+            </div>
+
+            <!-- Card Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações e Filtros</h4>
+                <div class="actions-row">
+                    <input type="text" id="filtroModalInput" class="glass-input" placeholder="Filtrar itens..." style="flex: 1; min-width: 150px;">
+                    <button id="btnAdicionarItemModal" class="btn-glass btn-green" title="Adicionar Linha"><i class="fas fa-plus"></i></button>
+                    <button id="btnImportarListaModal" class="btn-glass btn-blue" title="Importar Excel"><i class="fas fa-file-import"></i></button>
+                    <button id="btnLimparListaModal" class="btn-glass btn-red" title="Limpar Lista"><i class="fas fa-trash"></i></button>
+                    <button id="btnFinalizarLista" class="btn-glass btn-green"><i class="fas fa-check"></i> Finalizar Lista</button>
+                    <input type="file" id="fileImportarListaModal" accept=".xlsx, .xls" style="display: none;">
+                </div>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="data-grid">

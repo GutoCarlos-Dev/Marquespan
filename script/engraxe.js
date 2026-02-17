@@ -1,25 +1,12 @@
 import { supabaseClient } from './supabase.js';
 
-// Chaves para armazenamento local
-const LOCAL_LISTAS_KEY = 'engraxe_listas_local';
-const LOCAL_ITENS_KEY = 'engraxe_itens_local';
-
+// Variáveis de Estado
 let currentListItems = [];
 let currentVencimentosData = []; // Cache para os dados de vencimento
 let veiculosCacheNovaLista = []; // Cache para o modal de nova lista
 let currentListId = null;
 let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
-
-// Funções auxiliares para LocalStorage
-function getLocalData(key) {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-}
-
-function setLocalData(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -63,10 +50,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listener para mudança de status no modal de itens
     const tbodyModal = document.getElementById('tbodyModalItens');
     if (tbodyModal) {
-        tbodyModal.addEventListener('change', (e) => {
-            const listas = getLocalData(LOCAL_LISTAS_KEY);
-            const listaAtual = listas.find(l => l.id === currentListId);
-            const dataDaLista = listaAtual ? listaAtual.data_lista : null;
+        tbodyModal.addEventListener('change', async (e) => {
+            // Busca dados da lista atual para pegar a data de referência
+            let dataDaLista = null;
+            if (currentListId) {
+                const { data } = await supabaseClient
+                    .from('engraxe_listas')
+                    .select('data_lista')
+                    .eq('id', currentListId)
+                    .single();
+                if (data) dataDaLista = data.data_lista;
+            }
 
             if (e.target.classList.contains('input-status')) {
                 handleStatusChange(e.target, dataDaLista);
@@ -145,7 +139,6 @@ async function abrirModalNovaLista() {
     if (modalHeader && !document.getElementById('contadorNovaLista')) {
         const contadorSpan = document.createElement('span');
         contadorSpan.id = 'contadorNovaLista';
-        contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
         contadorSpan.className = 'contador-selecao';
         modalHeader.appendChild(contadorSpan);
     }
@@ -180,18 +173,19 @@ async function abrirModalNovaLista() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando veículos e histórico...</td></tr>';
 
     try {
+        // Busca veículos e histórico de engraxe (apenas itens realizados)
         const [veiculosRes, itensRes] = await Promise.all([
             supabaseClient.from('veiculos').select('placa, modelo, marca').eq('situacao', 'ativo').order('placa'),
-            getLocalData(LOCAL_ITENS_KEY)
+            supabaseClient.from('engraxe_itens').select('placa, data_realizado').not('data_realizado', 'is', null)
         ]);
 
         const { data: veiculos, error: veiculosError } = veiculosRes;
         if (veiculosError) throw veiculosError;
 
-        const todosItens = itensRes || [];
+        const todosItens = itensRes.data || [];
 
         veiculosCacheNovaLista = (veiculos || []).map(v => {
-            const itensVeiculo = todosItens.filter(i => i.placa === v.placa && i.data_realizado);
+            const itensVeiculo = todosItens.filter(i => i.placa === v.placa);
             
             let ultimaData = null;
             if (itensVeiculo.length > 0) {
@@ -201,7 +195,7 @@ async function abrirModalNovaLista() {
 
             let proximaData = null;
             if (ultimaData) {
-                const ult = new Date(ultimaData.replace(/-/g, '\/'));
+                const ult = new Date(ultimaData); // Supabase retorna YYYY-MM-DD, compatível com Date
                 ult.setDate(ult.getDate() + 21);
                 proximaData = ult.toISOString().split('T')[0];
             }
@@ -249,8 +243,8 @@ function renderizarTabelaNovaLista(veiculos) {
             proximoVencimentoStyle = 'color: red; font-weight: bold;';
         }
 
-        const ultimaDataFmt = v.ultimaData ? new Date(v.ultimaData.replace(/-/g, '\/')).toLocaleDateString('pt-BR') : '-';
-        const proximaDataFmt = v.proximaData ? new Date(v.proximaData.replace(/-/g, '\/')).toLocaleDateString('pt-BR') : '-';
+        const ultimaDataFmt = v.ultimaData ? new Date(v.ultimaData).toLocaleDateString('pt-BR') : '-';
+        const proximaDataFmt = v.proximaData ? new Date(v.proximaData).toLocaleDateString('pt-BR') : '-';
 
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-novalista" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
@@ -288,23 +282,29 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
 
     try {
+        const listaId = Date.now().toString(); // Gera ID único para a lista
+
         const novaLista = {
-            id: Date.now().toString(),
+            id: listaId,
             nome: nome,
             usuario: usuario,
             status: 'ABERTA',
             created_at: new Date().toISOString(),
             data_lista: dataLista || new Date().toISOString().split('T')[0],
-            marcasPresentes: [...new Set(veiculos.map(v => v.marca).filter(Boolean))] // Coleta marcas únicas
+            marcas_presentes: [...new Set(veiculos.map(v => v.marca).filter(Boolean))] // Coleta marcas únicas
         };
 
-        const listas = getLocalData(LOCAL_LISTAS_KEY);
-        listas.push(novaLista);
-        setLocalData(LOCAL_LISTAS_KEY, listas);
+        // 1. Salva a Lista
+        const { error: listaError } = await supabaseClient
+            .from('engraxe_listas')
+            .insert(novaLista);
 
+        if (listaError) throw listaError;
+
+        // 2. Prepara os Itens
         const itensParaInserir = veiculos.map(v => ({
             id: crypto.randomUUID(),
-            lista_id: novaLista.id,
+            lista_id: listaId,
             placa: v.placa,
             modelo: v.modelo,
             marca: v.marca,
@@ -318,9 +318,12 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
             usuario_realizou: null
         }));
 
-        const itens = getLocalData(LOCAL_ITENS_KEY);
-        const novosItens = itens.concat(itensParaInserir);
-        setLocalData(LOCAL_ITENS_KEY, novosItens);
+        // 3. Salva os Itens
+        const { error: itensError } = await supabaseClient
+            .from('engraxe_itens')
+            .insert(itensParaInserir);
+
+        if (itensError) throw itensError;
 
         alert('Lista criada com sucesso!');
         carregarListas();
@@ -365,28 +368,36 @@ function getSemanaAtual() {
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyEngraxe');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando listas locais...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando listas...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
     const status = document.getElementById('filtroStatus').value;
-
     const marcaFiltro = document.getElementById('filtroMarca').value.trim().toLowerCase();
 
     try {
-        // Carregar do LocalStorage
-        let data = getLocalData(LOCAL_LISTAS_KEY);
+        let query = supabaseClient
+            .from('engraxe_listas')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-        // Filtragem no cliente
-        if (dataIni) data = data.filter(l => l.created_at >= `${dataIni}T00:00:00`); // Corrigido: `dataIni` para `dataIni`
-        if (dataFim) data = data.filter(l => l.created_at <= `${dataFim}T23:59:59`);
-        if (status) data = data.filter(l => l.status === status);
-        if (marcaFiltro) data = data.filter(l => l.marcasPresentes && l.marcasPresentes.some(m => m.toLowerCase().includes(marcaFiltro)));
+        if (dataIni) query = query.gte('created_at', `${dataIni}T00:00:00`);
+        if (dataFim) query = query.lte('created_at', `${dataFim}T23:59:59`);
+        if (status) query = query.eq('status', status);
 
-        // Ordenação
-        data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const { data, error } = await query;
 
-        renderizarTabelaListas(data);
+        if (error) throw error;
+
+        // Filtragem de marca no cliente (pois é array no banco)
+        let listasFiltradas = data;
+        if (marcaFiltro) {
+            listasFiltradas = data.filter(l => 
+                l.marcas_presentes && l.marcas_presentes.some(m => m.toLowerCase().includes(marcaFiltro))
+            );
+        }
+
+        renderizarTabelaListas(listasFiltradas);
     } catch (error) {
         console.error('Erro ao carregar listas:', error);
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
@@ -398,7 +409,7 @@ function renderizarTabelaListas(dados) {
     tbody.innerHTML = '';
     
     if (!dados || dados.length === 0) { 
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
         return; 
     }
 
@@ -409,53 +420,52 @@ function renderizarTabelaListas(dados) {
         tr.innerHTML = `
             <td>${dataCriacao}</td>
             <td>${item.nome || 'Lista sem nome'}</td>
-            <td>${item.marcasPresentes ? item.marcasPresentes.join(', ') : '-'}</td>
+            <td>${item.marcas_presentes ? item.marcas_presentes.join(', ') : '-'}</td>
             <td>${item.usuario || '-'}</td>
             <td><span class="badge ${item.status === 'ABERTA' ? 'badge-pendente' : 'badge-realizado'}">${item.status}</span></td>
             <td>
                 <button class="btn-icon btn-edit" onclick="abrirLista('${item.id}', '${item.nome}')" title="Abrir Lista"><i class="fas fa-folder-open"></i></button>
-                <button class="btn-icon btn-edit" onclick="editarNomeLista('${item.id}', '${item.nome}')" title="Editar Nome"><i class="fas fa-pen"></i></button><button class="btn-icon btn-delete" onclick="excluirLista('${item.id}')" title="Excluir Lista"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon btn-edit" onclick="editarNomeLista('${item.id}', '${item.nome}')" title="Editar Nome"><i class="fas fa-pen"></i></button>
+                <button class="btn-icon btn-pdf" onclick="gerarPDFLista('${item.id}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
+                <button class="btn-icon btn-delete" onclick="excluirLista('${item.id}')" title="Excluir Lista"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-window.editarNomeLista = function(id, nomeAtual) {
+window.editarNomeLista = async function(id, nomeAtual) {
     const novoNome = prompt("Novo nome da lista:", nomeAtual);
     if (novoNome === null || novoNome.trim() === "") return;
 
     try {
-        let listas = getLocalData(LOCAL_LISTAS_KEY);
-        const index = listas.findIndex(l => l.id === id);
-        if (index !== -1) {
-            listas[index].nome = novoNome.trim();
-            setLocalData(LOCAL_LISTAS_KEY, listas);
-            carregarListas();
-        }
+        const { error } = await supabaseClient
+            .from('engraxe_listas')
+            .update({ nome: novoNome.trim() })
+            .eq('id', id);
+
+        if (error) throw error;
+        carregarListas();
     } catch (error) {
         console.error('Erro ao editar nome:', error);
         alert('Erro ao editar nome da lista.');
     }
 }
 
-window.excluirLista = function(id) {
+window.excluirLista = async function(id) {
     if (!confirm('Tem certeza que deseja excluir esta lista e todos os seus itens? Esta ação não pode ser desfeita.')) {
         return;
     }
 
     try {
-        // 1. Remove a lista
-        let listas = getLocalData(LOCAL_LISTAS_KEY);
-        listas = listas.filter(l => l.id !== id);
-        setLocalData(LOCAL_LISTAS_KEY, listas);
+        // O CASCADE no banco de dados cuidará dos itens
+        const { error } = await supabaseClient
+            .from('engraxe_listas')
+            .delete()
+            .eq('id', id);
 
-        // 2. Remove os itens associados
-        let itens = getLocalData(LOCAL_ITENS_KEY);
-        itens = itens.filter(i => i.lista_id !== id);
-        setLocalData(LOCAL_ITENS_KEY, itens);
+        if (error) throw error;
 
-        // 3. Recarrega a tabela de listas
         carregarListas();
     } catch (error) {
         console.error('Erro ao excluir lista:', error);
@@ -468,52 +478,23 @@ window.abrirLista = async function(id, nome) {
     currentListId = id;
 
     // --- Injeção do Campo Data da Lista ---
-    const listas = getLocalData(LOCAL_LISTAS_KEY);
-    const listaAtual = listas.find(l => l.id === id);
+    // Busca a lista para pegar a data
+    const { data: listaAtual } = await supabaseClient
+        .from('engraxe_listas')
+        .select('*')
+        .eq('id', id)
+        .single();
+
     const dataLista = listaAtual ? listaAtual.data_lista : '';
 
-    const panelBody = document.querySelector('#modalEngraxe .modal-body');
-    const filterContainer = document.querySelector('#modalEngraxe .filtros-container');
-    let dateContainer = document.getElementById('containerDataListaDetalhes');
-
-    if (!dateContainer) {
-        dateContainer = document.createElement('div');
-        dateContainer.id = 'containerDataListaDetalhes';
-        dateContainer.style.cssText = 'margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e9ecef;';
-        dateContainer.className = 'data-referencia-container';
-        dateContainer.innerHTML = `
-            <label for="dataListaDetalhes" style="font-weight: bold; color: #333;">Data de Referência:</label>
-            <input type="date" id="dataListaDetalhes" class="form-control" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef;" readonly>
-            <label for="dataListaDetalhes">Data de Referência:</label>
-            <input type="date" id="dataListaDetalhes" class="form-control" readonly>
-            <small style="color: #666;">(Usada para calcular vencimentos)</small>
-        `;
-        if (panelBody && filterContainer) {
-            panelBody.insertBefore(dateContainer, filterContainer);
-        }
-    }
-
+    // Preenche a data no campo estático
     const dateInput = document.getElementById('dataListaDetalhes');
     if (dateInput) {
-        const newDateInput = dateInput.cloneNode(true); // Remove listeners antigos
-        dateInput.parentNode.replaceChild(newDateInput, dateInput);
-        newDateInput.value = dataLista;
-        newDateInput.readOnly = true;
-        newDateInput.style.backgroundColor = "#e9ecef";
-    }
-    // --- Fim da Injeção ---
-
-    // --- Injeção do Botão Finalizar Lista ---
-    let btnFinalizar = document.getElementById('btnFinalizarLista');
-    if (!btnFinalizar && filterContainer) {
-        btnFinalizar = document.createElement('button');
-        btnFinalizar.id = 'btnFinalizarLista';
-        btnFinalizar.style.cssText = 'padding: 8px 15px; display: flex; align-items: center; gap: 5px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;';
-        btnFinalizar.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
-        btnFinalizar.className = 'btn-glass btn-green';
-        filterContainer.appendChild(btnFinalizar);
+        dateInput.value = dataLista;
     }
 
+    // Configura o botão Finalizar/Reabrir
+    const btnFinalizar = document.getElementById('btnFinalizarLista');
     if (btnFinalizar) {
         // Clona o botão para remover listeners antigos
         const newBtn = btnFinalizar.cloneNode(true);
@@ -524,18 +505,18 @@ window.abrirLista = async function(id, nome) {
             newBtn.className = 'btn-glass btn-yellow';
             newBtn.disabled = false;
             newBtn.innerHTML = '<i class="fas fa-undo"></i> Reabrir Lista';
-            newBtn.style.backgroundColor = ''; // Remove inline
-            newBtn.style.color = ''; // Remove inline
+            newBtn.style.backgroundColor = ''; 
+            newBtn.style.color = ''; 
             newBtn.style.cursor = 'pointer';
 
-            
-            newBtn.addEventListener('click', () => {
+            newBtn.addEventListener('click', async () => {
                 if (confirm('Deseja reabrir esta lista? O status voltará para ABERTA.')) {
-                    const listasLocal = getLocalData(LOCAL_LISTAS_KEY);
-                    const idx = listasLocal.findIndex(l => l.id === currentListId);
-                    if (idx !== -1) {
-                        listasLocal[idx].status = 'ABERTA';
-                        setLocalData(LOCAL_LISTAS_KEY, listasLocal);
+                    const { error } = await supabaseClient
+                        .from('engraxe_listas')
+                        .update({ status: 'ABERTA' })
+                        .eq('id', currentListId);
+
+                    if (!error) {
                         alert('Lista reaberta com sucesso!');
                         document.getElementById('modalEngraxe').classList.add('hidden');
                         carregarListas();
@@ -546,17 +527,18 @@ window.abrirLista = async function(id, nome) {
             newBtn.className = 'btn-glass btn-green';
             newBtn.disabled = false;
             newBtn.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
-            newBtn.style.backgroundColor = ''; // Remove inline
-            newBtn.style.color = ''; // Remove inline
+            newBtn.style.backgroundColor = ''; 
+            newBtn.style.color = ''; 
             newBtn.style.cursor = 'pointer';
             
-            newBtn.addEventListener('click', () => {
+            newBtn.addEventListener('click', async () => {
                 if (confirm('Tem certeza que deseja finalizar esta lista? O status será alterado para FINALIZADA.')) {
-                    const listasLocal = getLocalData(LOCAL_LISTAS_KEY);
-                    const idx = listasLocal.findIndex(l => l.id === currentListId);
-                    if (idx !== -1) {
-                        listasLocal[idx].status = 'FINALIZADA';
-                        setLocalData(LOCAL_LISTAS_KEY, listasLocal);
+                    const { error } = await supabaseClient
+                        .from('engraxe_listas')
+                        .update({ status: 'FINALIZADA' })
+                        .eq('id', currentListId);
+
+                    if (!error) {
                         alert('Lista finalizada com sucesso!');
                         document.getElementById('modalEngraxe').classList.add('hidden');
                         carregarListas();
@@ -565,28 +547,32 @@ window.abrirLista = async function(id, nome) {
             });
         }
     }
-    // --- Fim da Injeção Botão ---
 
     const tbodyModal = document.getElementById('tbodyModalItens');
-    tbodyModal.innerHTML = '<tr><td colspan="10" style="text-align: center;">Carregando itens locais...</td></tr>';
+    tbodyModal.innerHTML = '<tr><td colspan="10" style="text-align: center;">Carregando itens...</td></tr>';
     
     document.getElementById('modalEngraxe').classList.remove('hidden');
 
     try {
-        // Carregar itens do LocalStorage
-        const allItens = getLocalData(LOCAL_ITENS_KEY);
-        const data = allItens.filter(i => i.lista_id === id);
+        // Carregar itens do Supabase
+        const { data, error } = await supabaseClient
+            .from('engraxe_itens')
+            .select('*')
+            .eq('lista_id', id)
+            .order('placa');
+
+        if (error) throw error;
 
         currentListItems = data;
         renderizarItensModal(data);
 
     } catch (error) {
         console.error('Erro ao carregar itens:', error);
-        tbodyModal.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar itens.</td></tr>';
+        tbodyModal.innerHTML = '<tr><td colspan="10" style="text-align: center; color: red;">Erro ao carregar itens.</td></tr>';
     }
 }
 
-function adicionarItemManual() {
+async function adicionarItemManual() {
     if (!currentListId) return alert('Nenhuma lista selecionada.');
     
     const novoItem = {
@@ -605,14 +591,20 @@ function adicionarItemManual() {
         usuario_realizou: null
     };
 
-    // Atualiza LocalStorage
-    const allItens = getLocalData(LOCAL_ITENS_KEY);
-    allItens.push(novoItem);
-    setLocalData(LOCAL_ITENS_KEY, allItens);
+    try {
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .insert(novoItem);
 
-    // Atualiza View
-    currentListItems.push(novoItem);
-    renderizarItensModal(currentListItems);
+        if (error) throw error;
+
+        // Atualiza View
+        currentListItems.push(novoItem);
+        renderizarItensModal(currentListItems);
+    } catch (error) {
+        console.error('Erro ao adicionar item:', error);
+        alert('Erro ao adicionar item.');
+    }
 }
 
 function renderizarItensModal(itens) {
@@ -749,27 +741,25 @@ window.salvarItemIndividual = async function(id) {
             usuario_realizou: usuario
         };
 
-        // Atualizar no LocalStorage
-        let allItens = getLocalData(LOCAL_ITENS_KEY);
-        const index = allItens.findIndex(i => i.id === id);
+        // Atualizar no Supabase
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .update(updateData)
+            .eq('id', id);
         
-        if (index !== -1) {
-            allItens[index] = { ...allItens[index], ...updateData };
-            setLocalData(LOCAL_ITENS_KEY, allItens);
+        if (error) throw error;
             
-            // Atualiza array local da view
-            const viewIndex = currentListItems.findIndex(i => i.id === id);
-            if (viewIndex > -1) {
-                currentListItems[viewIndex] = { ...currentListItems[viewIndex], ...updateData };
-            }
-            
-            // Feedback visual
-            const originalIcon = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check" style="color: green;"></i>';
-            setTimeout(() => btn.innerHTML = originalIcon, 1500);
-        } else {
-            alert('Item não encontrado no armazenamento local.');
+        // Atualiza array local da view
+        const viewIndex = currentListItems.findIndex(i => i.id === id);
+        if (viewIndex > -1) {
+            currentListItems[viewIndex] = { ...currentListItems[viewIndex], ...updateData };
         }
+        
+        // Feedback visual
+        const originalIcon = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check" style="color: green;"></i>';
+        setTimeout(() => btn.innerHTML = originalIcon, 1500);
+
     } catch (error) {
         console.error('Erro ao salvar item:', error);
         alert('Erro ao salvar item.');
@@ -779,10 +769,13 @@ window.salvarItemIndividual = async function(id) {
 window.excluirItemLista = async function(id) {
     if (!confirm('Tem certeza que deseja remover este item da lista?')) return;
     try {
-        // Remover do LocalStorage
-        let allItens = getLocalData(LOCAL_ITENS_KEY);
-        allItens = allItens.filter(i => i.id !== id);
-        setLocalData(LOCAL_ITENS_KEY, allItens);
+        // Remover do Supabase
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
 
         // Remove do array local e re-renderiza
         currentListItems = currentListItems.filter(i => i.id !== id);
@@ -879,16 +872,18 @@ async function handleImportarListaModal(e) {
             });
 
             if (allItensParaInserir.length > 0) {
-                // Salvar no LocalStorage
-                const itens = getLocalData(LOCAL_ITENS_KEY);
-                const novosItens = itens.concat(allItensParaInserir);
-                setLocalData(LOCAL_ITENS_KEY, novosItens);
+                // Salvar no Supabase
+                const { error } = await supabaseClient
+                    .from('engraxe_itens')
+                    .insert(allItensParaInserir);
+
+                if (error) throw error;
                 
-                alert(`${allItensParaInserir.length} itens importados localmente com sucesso!`);
+                alert(`${allItensParaInserir.length} itens importados com sucesso!`);
                 
-                // Exibe apenas os itens importados na tela
-                currentListItems = allItensParaInserir;
-                renderizarItensModal(currentListItems);
+                // Exibe apenas os itens importados na tela (ou recarrega tudo)
+                // Vamos recarregar tudo para garantir consistência
+                abrirLista(currentListId, document.getElementById('modalTitle').textContent.replace('Lista: ', ''));
             } else {
                 alert('Nenhum item válido encontrado no arquivo.');
             }
@@ -907,10 +902,13 @@ async function limparListaAtual() {
     if (!confirm('Tem certeza que deseja remover TODOS os itens desta lista? Esta ação não pode ser desfeita.')) return;
 
     try {
-        // Remover do LocalStorage
-        let allItens = getLocalData(LOCAL_ITENS_KEY);
-        const novosItens = allItens.filter(i => i.lista_id !== currentListId);
-        setLocalData(LOCAL_ITENS_KEY, novosItens);
+        // Remover do Supabase
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .delete()
+            .eq('lista_id', currentListId);
+
+        if (error) throw error;
 
         // Atualiza view
         currentListItems = [];
@@ -936,7 +934,6 @@ async function abrirControleVencimentos() {
     if (modalHeader && !document.getElementById('contadorVencimentos')) {
         const contadorSpan = document.createElement('span');
         contadorSpan.id = 'contadorVencimentos';
-        contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
         contadorSpan.className = 'contador-selecao';
         modalHeader.appendChild(contadorSpan);
     }
@@ -970,13 +967,10 @@ async function abrirControleVencimentos() {
     const btnGerar = document.getElementById('btnGerarListaVencidos');
     if (btnGerar && !document.getElementById('dataListaVencimentos')) {
         const container = document.createElement('div');
-        container.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-right: 10px;';
         container.className = 'data-lista-container';
         container.innerHTML = `
-            <label for="dataListaVencimentos" style="font-weight: bold; color: #333; white-space: nowrap;">Data da Lista:</label>
-            <input type="date" id="dataListaVencimentos" class="form-control" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <label for="dataListaVencimentos">Data da Lista:</label>
-            <input type="date" id="dataListaVencimentos" class="form-control">
+            <input type="date" id="dataListaVencimentos" class="glass-input">
         `;
         btnGerar.parentNode.insertBefore(container, btnGerar);
         btnGerar.parentNode.style.display = 'flex';
@@ -998,13 +992,18 @@ async function abrirControleVencimentos() {
 
         if (error) throw error;
 
-        // 2. Buscar Histórico Local de Engraxe
-        const todosItens = getLocalData(LOCAL_ITENS_KEY);
+        // 2. Buscar Histórico de Engraxe (apenas itens realizados)
+        const { data: todosItens, error: itensError } = await supabaseClient
+            .from('engraxe_itens')
+            .select('placa, data_realizado')
+            .not('data_realizado', 'is', null);
+
+        if (itensError) throw itensError;
 
         // 3. Processar Dados (Cruzar Veículos com Histórico)
         currentVencimentosData = veiculos.map(v => {
             // Filtra itens deste veículo que tenham data realizada válida
-            const itensVeiculo = todosItens.filter(i => i.placa === v.placa && i.data_realizado);
+            const itensVeiculo = todosItens.filter(i => i.placa === v.placa);
             
             // Encontra a data mais recente
             let ultimaData = null;
@@ -1239,3 +1238,101 @@ function updateSortIconsVencimentos() {
         activeTh.style.color = '#333';
     }
 }
+
+async function gerarPDFLista(id) {
+    if (!window.jspdf) {
+        alert('Biblioteca PDF não carregada.');
+        return;
+    }
+
+    try {
+        // 1. Buscar dados da lista
+        const { data: lista, error: errLista } = await supabaseClient
+            .from('engraxe_listas')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (errLista) throw errLista;
+
+        // 2. Buscar itens da lista
+        const { data: itens, error: errItens } = await supabaseClient
+            .from('engraxe_itens')
+            .select('*')
+            .eq('lista_id', id)
+            .order('placa');
+
+        if (errItens) throw errItens;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait' });
+
+        // Logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.addImage(base64data, 'PNG', 14, 10, 40, 10);
+            }
+        } catch (e) { console.warn('Logo não carregado'); }
+
+        // Título e Informações
+        doc.setFontSize(18);
+        doc.text('Relatório de Engraxe', 14, 27);
+        
+        doc.setFontSize(10);
+
+        // Destaca o nome da lista em vermelho e negrito
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 0, 0); // Vermelho
+        doc.text(`Lista: ${lista.nome}`, 14, 32);
+
+        // Reseta o estilo para o texto seguinte
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0); // Preto
+        doc.text(`Usuário: ${lista.usuario || 'N/A'}`, 14, 37);
+
+        // Tabela
+        const columns = ['Placa', 'Modelo', 'Realizado', 'Próximo', 'PLAQ', 'Status', 'SEG', 'KM'];
+        const rows = itens.map(item => [
+            item.placa || '',
+            item.modelo || '',
+            item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '',
+            item.data_proximo ? new Date(item.data_proximo).toLocaleDateString('pt-BR') : '',
+            item.plaquinha || '',
+            (item.status === 'PENDENTE' ? '' : (item.status || '')),
+            item.seg || '',
+            item.km || ''
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55] },
+            styles: { fontSize: 7 },
+            alternateRowStyles: { fillColor: [230, 230, 230] }
+        });
+
+        doc.save(`Engraxe_${lista.nome.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar PDF: ' + error.message);
+    }
+}
+
+// Expor funções para o escopo global se forem chamadas pelo HTML
+window.abrirLista = abrirLista;
+window.editarNomeLista = editarNomeLista;
+window.excluirLista = excluirLista;
+window.salvarItemIndividual = salvarItemIndividual;
+window.excluirItemLista = excluirItemLista;
+window.calcularProximaData = calcularProximaData;
+window.gerarPDFLista = gerarPDFLista;
