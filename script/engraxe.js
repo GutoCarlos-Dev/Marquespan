@@ -8,6 +8,8 @@ let currentListItems = [];
 let currentVencimentosData = []; // Cache para os dados de vencimento
 let veiculosCacheNovaLista = []; // Cache para o modal de nova lista
 let currentListId = null;
+let sortStateNovaLista = { key: 'placa', asc: true };
+let sortStateVencimentos = { key: 'diasRestantes', asc: true };
 
 // Funções auxiliares para LocalStorage
 function getLocalData(key) {
@@ -62,12 +64,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tbodyModal = document.getElementById('tbodyModalItens');
     if (tbodyModal) {
         tbodyModal.addEventListener('change', (e) => {
+            const listas = getLocalData(LOCAL_LISTAS_KEY);
+            const listaAtual = listas.find(l => l.id === currentListId);
+            const dataDaLista = listaAtual ? listaAtual.data_lista : null;
+
             if (e.target.classList.contains('input-status')) {
-                const listas = getLocalData(LOCAL_LISTAS_KEY);
-                const listaAtual = listas.find(l => l.id === currentListId);
-                const dataDaLista = listaAtual ? listaAtual.data_lista : null;
-                
                 handleStatusChange(e.target, dataDaLista);
+            }
+
+            if (e.target.classList.contains('input-seg')) {
+                const row = e.target.closest('tr');
+                if (e.target.value === 'OK') {
+                    const statusSelect = row.querySelector('.input-status');
+                    if (statusSelect && statusSelect.value !== 'OK') {
+                        statusSelect.value = 'OK';
+                        handleStatusChange(statusSelect, dataDaLista);
+                        return;
+                    }
+                }
+                const itemId = row.dataset.id;
+                if (itemId) salvarItemIndividual(itemId);
             }
         });
     }
@@ -92,6 +108,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosNovaLista);
     document.getElementById('chkAllNovaLista').addEventListener('change', toggleAllNovaLista);
     document.getElementById('dataDaLista').addEventListener('change', () => renderizarTabelaNovaLista(veiculosCacheNovaLista));
+
+    // Listener para contador de seleção no Modal Nova Lista
+    document.getElementById('modalNovaLista').addEventListener('change', (e) => {
+        if (e.target.matches('.chk-veiculo-novalista') || e.target.matches('#chkAllNovaLista')) {
+            const count = document.querySelectorAll('#tbodyNovaListaVeiculos .chk-veiculo-novalista:checked').length;
+            const contadorSpan = document.getElementById('contadorNovaLista');
+            if (contadorSpan) {
+                contadorSpan.textContent = `${count} selecionado(s)`;
+            }
+        }
+    });
+
+    // Listener para contador de seleção no Modal Vencimentos
+    document.getElementById('modalVencimentos').addEventListener('change', (e) => {
+        if (e.target.matches('.chk-veiculo-vencimento') || e.target.matches('#chkAllVencimentos')) {
+            const count = document.querySelectorAll('#tbodyVencimentos .chk-veiculo-vencimento:checked').length;
+            const contadorSpan = document.getElementById('contadorVencimentos');
+            if (contadorSpan) {
+                contadorSpan.textContent = `${count} selecionado(s)`;
+            }
+        }
+    });
 });
 
 async function abrirModalNovaLista() {
@@ -101,6 +139,38 @@ async function abrirModalNovaLista() {
     const filtroMarca = document.getElementById('filtroMarcaNovaLista');
     const filtroModelo = document.getElementById('filtroModeloNovaLista');
     const dataListaInput = document.getElementById('dataDaLista');
+
+    // Injeção do contador
+    const modalHeader = modal.querySelector('.panel-header h3');
+    if (modalHeader && !document.getElementById('contadorNovaLista')) {
+        const contadorSpan = document.createElement('span');
+        contadorSpan.id = 'contadorNovaLista';
+        contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
+        modalHeader.appendChild(contadorSpan);
+    }
+    // Zera o contador ao abrir
+    const contadorSpan = document.getElementById('contadorNovaLista');
+    if (contadorSpan) contadorSpan.textContent = '0 selecionado(s)';
+
+    // Injeção da funcionalidade de ordenação nos cabeçalhos
+    const novaListaHeaders = modal.querySelectorAll('#modalNovaLista .data-grid th');
+    const novaListaSortMap = {
+        'PLACA': 'placa',
+        'MARCA': 'marca',
+        'MODELO': 'modelo',
+        'ÚLTIMA REALIZAÇÃO': 'ultimaData',
+        'PRÓXIMO VENCIMENTO': 'proximaData'
+    };
+
+    novaListaHeaders.forEach(th => {
+        const key = novaListaSortMap[th.textContent.trim()];
+        if (key) {
+            th.dataset.sortKey = key;
+            th.style.cursor = 'pointer';
+            if (!th.querySelector('i')) th.innerHTML += ' <i class="fas fa-sort" style="float: right; color: #ccc;"></i>';
+            th.onclick = () => ordenarVeiculosNovaLista(key);
+        }
+    });
     
     modal.classList.remove('hidden');
     nomeInput.value = `Engraxe Semana ${getSemanaAtual()}`;
@@ -213,7 +283,7 @@ function toggleAllNovaLista(e) {
     document.querySelectorAll('.chk-veiculo-novalista').forEach(chk => chk.checked = checked);
 }
 
-async function salvarListaNoStorage(nome, veiculos) {
+async function salvarListaNoStorage(nome, veiculos, dataLista) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
 
     try {
@@ -223,6 +293,7 @@ async function salvarListaNoStorage(nome, veiculos) {
             usuario: usuario,
             status: 'ABERTA',
             created_at: new Date().toISOString(),
+            data_lista: dataLista || new Date().toISOString().split('T')[0],
             marcasPresentes: [...new Set(veiculos.map(v => v.marca).filter(Boolean))] // Coleta marcas únicas
         };
 
@@ -394,6 +465,100 @@ window.excluirLista = function(id) {
 window.abrirLista = async function(id, nome) {
     document.getElementById('modalTitle').textContent = `Lista: ${nome}`;
     currentListId = id;
+
+    // --- Injeção do Campo Data da Lista ---
+    const listas = getLocalData(LOCAL_LISTAS_KEY);
+    const listaAtual = listas.find(l => l.id === id);
+    const dataLista = listaAtual ? listaAtual.data_lista : '';
+
+    const panelBody = document.querySelector('#modalEngraxe .panel-body');
+    const filterContainer = document.querySelector('#modalEngraxe .filter-container');
+    let dateContainer = document.getElementById('containerDataListaDetalhes');
+
+    if (!dateContainer) {
+        dateContainer = document.createElement('div');
+        dateContainer.id = 'containerDataListaDetalhes';
+        dateContainer.style.cssText = 'margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e9ecef;';
+        dateContainer.innerHTML = `
+            <label for="dataListaDetalhes" style="font-weight: bold; color: #333;">Data de Referência:</label>
+            <input type="date" id="dataListaDetalhes" class="form-control" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef;" readonly>
+            <small style="color: #666;">(Usada para calcular vencimentos)</small>
+        `;
+        if (panelBody && filterContainer) {
+            panelBody.insertBefore(dateContainer, filterContainer);
+        }
+    }
+
+    const dateInput = document.getElementById('dataListaDetalhes');
+    if (dateInput) {
+        const newDateInput = dateInput.cloneNode(true); // Remove listeners antigos
+        dateInput.parentNode.replaceChild(newDateInput, dateInput);
+        newDateInput.value = dataLista;
+        newDateInput.readOnly = true;
+        newDateInput.style.backgroundColor = "#e9ecef";
+    }
+    // --- Fim da Injeção ---
+
+    // --- Injeção do Botão Finalizar Lista ---
+    let btnFinalizar = document.getElementById('btnFinalizarLista');
+    if (!btnFinalizar && filterContainer) {
+        btnFinalizar = document.createElement('button');
+        btnFinalizar.id = 'btnFinalizarLista';
+        btnFinalizar.style.cssText = 'padding: 8px 15px; display: flex; align-items: center; gap: 5px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;';
+        btnFinalizar.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
+        filterContainer.appendChild(btnFinalizar);
+    }
+
+    if (btnFinalizar) {
+        // Clona o botão para remover listeners antigos
+        const newBtn = btnFinalizar.cloneNode(true);
+        btnFinalizar.parentNode.replaceChild(newBtn, btnFinalizar);
+        
+        // Verifica o status atual para ajustar o botão
+        if (listaAtual && listaAtual.status === 'FINALIZADA') {
+            newBtn.disabled = false;
+            newBtn.innerHTML = '<i class="fas fa-undo"></i> Reabrir Lista';
+            newBtn.style.backgroundColor = '#ffc107';
+            newBtn.style.color = '#000';
+            newBtn.style.cursor = 'pointer';
+
+            newBtn.addEventListener('click', () => {
+                if (confirm('Deseja reabrir esta lista? O status voltará para ABERTA.')) {
+                    const listasLocal = getLocalData(LOCAL_LISTAS_KEY);
+                    const idx = listasLocal.findIndex(l => l.id === currentListId);
+                    if (idx !== -1) {
+                        listasLocal[idx].status = 'ABERTA';
+                        setLocalData(LOCAL_LISTAS_KEY, listasLocal);
+                        alert('Lista reaberta com sucesso!');
+                        document.getElementById('modalEngraxe').classList.add('hidden');
+                        carregarListas();
+                    }
+                }
+            });
+        } else {
+            newBtn.disabled = false;
+            newBtn.innerHTML = '<i class="fas fa-check"></i> Finalizar Lista';
+            newBtn.style.backgroundColor = '#28a745';
+            newBtn.style.color = 'white';
+            newBtn.style.cursor = 'pointer';
+            
+            newBtn.addEventListener('click', () => {
+                if (confirm('Tem certeza que deseja finalizar esta lista? O status será alterado para FINALIZADA.')) {
+                    const listasLocal = getLocalData(LOCAL_LISTAS_KEY);
+                    const idx = listasLocal.findIndex(l => l.id === currentListId);
+                    if (idx !== -1) {
+                        listasLocal[idx].status = 'FINALIZADA';
+                        setLocalData(LOCAL_LISTAS_KEY, listasLocal);
+                        alert('Lista finalizada com sucesso!');
+                        document.getElementById('modalEngraxe').classList.add('hidden');
+                        carregarListas();
+                    }
+                }
+            });
+        }
+    }
+    // --- Fim da Injeção Botão ---
+
     const tbodyModal = document.getElementById('tbodyModalItens');
     tbodyModal.innerHTML = '<tr><td colspan="10" style="text-align: center;">Carregando itens locais...</td></tr>';
     
@@ -757,6 +922,57 @@ function fecharModal() {
 async function abrirControleVencimentos() {
     const modal = document.getElementById('modalVencimentos');
     const tbody = document.getElementById('tbodyVencimentos');
+
+    // Injeção do contador
+    const modalHeader = modal.querySelector('.panel-header h3');
+    if (modalHeader && !document.getElementById('contadorVencimentos')) {
+        const contadorSpan = document.createElement('span');
+        contadorSpan.id = 'contadorVencimentos';
+        contadorSpan.style.cssText = 'background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 15px;';
+        modalHeader.appendChild(contadorSpan);
+    }
+    // Zera o contador ao abrir
+    const contadorSpan = document.getElementById('contadorVencimentos');
+    if (contadorSpan) contadorSpan.textContent = '0 selecionado(s)';
+
+    // Injeção da funcionalidade de ordenação nos cabeçalhos
+    const vencimentosHeaders = modal.querySelectorAll('#tabelaVencimentos th');
+    const vencimentosSortMap = {
+        'FILIAL': 'filial',
+        'PLACA': 'placa',
+        'MARCA': 'marca',
+        'MODELO': 'modelo',
+        'DATA REALIZAÇÃO (Última)': 'ultimaData',
+        'PRÓXIMO (Vencimento)': 'proximaData',
+        'STATUS': 'status'
+    };
+
+    vencimentosHeaders.forEach(th => {
+        const key = vencimentosSortMap[th.textContent.trim()];
+        if (key) {
+            th.dataset.sortKey = key;
+            th.style.cursor = 'pointer';
+            if (!th.querySelector('i')) th.innerHTML += ' <i class="fas fa-sort" style="float: right; color: #ccc;"></i>';
+            th.onclick = () => ordenarVencimentos(key);
+        }
+    });
+
+    // Injeta o campo de Data se não existir
+    const btnGerar = document.getElementById('btnGerarListaVencidos');
+    if (btnGerar && !document.getElementById('dataListaVencimentos')) {
+        const container = document.createElement('div');
+        container.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-right: 10px;';
+        container.innerHTML = `
+            <label for="dataListaVencimentos" style="font-weight: bold; color: #333; white-space: nowrap;">Data da Lista:</label>
+            <input type="date" id="dataListaVencimentos" class="form-control" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        `;
+        btnGerar.parentNode.insertBefore(container, btnGerar);
+        btnGerar.parentNode.style.display = 'flex';
+        btnGerar.parentNode.style.alignItems = 'center';
+        btnGerar.parentNode.style.justifyContent = 'flex-end';
+        document.getElementById('dataListaVencimentos').value = new Date().toISOString().split('T')[0];
+    }
+
     modal.classList.remove('hidden');
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando dados da frota e histórico...</td></tr>';
 
@@ -916,12 +1132,98 @@ function gerarListaComSelecionados() {
         return alert('Selecione pelo menos um veículo para gerar a lista.');
     }
 
+    const dataInput = document.getElementById('dataListaVencimentos');
+    const dataLista = dataInput ? dataInput.value : new Date().toISOString().split('T')[0];
+
+    if (!dataLista) return alert('Selecione a Data da Lista.');
+
     document.getElementById('modalVencimentos').classList.add('hidden');
     
     const nomeSugerido = `Lista Personalizada (${selecionados.length} veic)`;
     const nomeLista = prompt("Digite o nome da nova lista:", nomeSugerido);
     if (nomeLista === null) return;
     
-    const dataLista = new Date().toISOString().split('T')[0];
     salvarListaNoStorage(nomeLista, selecionados, dataLista);
+}
+
+function ordenarVeiculosNovaLista(key) {
+    if (sortStateNovaLista.key === key) {
+        sortStateNovaLista.asc = !sortStateNovaLista.asc;
+    } else {
+        sortStateNovaLista.key = key;
+        sortStateNovaLista.asc = true;
+    }
+
+    veiculosCacheNovaLista.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (key === 'ultimaData' || key === 'proximaData') {
+            valA = valA ? new Date(valA.replace(/-/g, '\/')) : (sortStateNovaLista.asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+            valB = valB ? new Date(valB.replace(/-/g, '\/')) : (sortStateNovaLista.asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+        } else {
+            valA = String(valA || '').toLowerCase();
+            valB = String(valB || '').toLowerCase();
+        }
+
+        if (valA < valB) return sortStateNovaLista.asc ? -1 : 1;
+        if (valA > valB) return sortStateNovaLista.asc ? 1 : -1;
+        return 0;
+    });
+
+    updateSortIconsNovaLista();
+    filtrarVeiculosNovaLista();
+}
+
+function updateSortIconsNovaLista() {
+    document.querySelectorAll('#modalNovaLista .data-grid th i').forEach(i => {
+        i.className = 'fas fa-sort';
+        i.style.color = '#ccc';
+    });
+    const activeTh = document.querySelector(`#modalNovaLista th[data-sort-key="${sortStateNovaLista.key}"] i`);
+    if (activeTh) {
+        activeTh.className = sortStateNovaLista.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        activeTh.style.color = '#333';
+    }
+}
+
+function ordenarVencimentos(key) {
+    if (sortStateVencimentos.key === key) {
+        sortStateVencimentos.asc = !sortStateVencimentos.asc;
+    } else {
+        sortStateVencimentos.key = key;
+        sortStateVencimentos.asc = true;
+    }
+
+    currentVencimentosData.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (key === 'ultimaData' || key === 'proximaData') {
+            valA = valA ? new Date(valA.replace(/-/g, '\/')) : (sortStateVencimentos.asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+            valB = valB ? new Date(valB.replace(/-/g, '\/')) : (sortStateVencimentos.asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+        } else {
+            valA = String(valA || '').toLowerCase();
+            valB = String(valB || '').toLowerCase();
+        }
+
+        if (valA < valB) return sortStateVencimentos.asc ? -1 : 1;
+        if (valA > valB) return sortStateVencimentos.asc ? 1 : -1;
+        return 0;
+    });
+
+    updateSortIconsVencimentos();
+    filtrarTabelaVencimentos();
+}
+
+function updateSortIconsVencimentos() {
+    document.querySelectorAll('#tabelaVencimentos th i').forEach(i => {
+        i.className = 'fas fa-sort';
+        i.style.color = '#ccc';
+    });
+    const activeTh = document.querySelector(`#tabelaVencimentos th[data-sort-key="${sortStateVencimentos.key}"] i`);
+    if (activeTh) {
+        activeTh.className = sortStateVencimentos.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        activeTh.style.color = '#333';
+    }
 }
