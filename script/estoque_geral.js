@@ -169,7 +169,7 @@ const EstoqueGeralUI = {
                 <td>${p.codigo_principal || '-'}</td>
                 <td>${p.nome}</td>
                 <td>${p.unidade_medida || 'UN'}</td>
-                <td style="text-align: center; font-weight: bold; color: ${qtd <= 0 ? 'red' : 'green'}">${qtd}</td>
+                <td style="text-align: center; font-weight: bold; color: ${qtd <= 0 ? '#dc3545' : '#28a745'}">${qtd}</td>
             `;
             this.gridEstoqueBody.appendChild(tr);
         });
@@ -425,9 +425,20 @@ const EstoqueGeralUI = {
         }
 
         this.gridRelatorioBody.innerHTML = '';
+        
+        // Variáveis para o resumo
+        let totalEntrada = 0;
+        let totalSaida = 0;
+        let totalBatimento = 0;
+
         dadosFiltrados.forEach(m => {
             const tr = document.createElement('tr');
             const tipoClass = m.tipo_movimentacao === 'ENTRADA' ? 'text-success' : (m.tipo_movimentacao === 'SAIDA' ? 'text-danger' : 'text-warning');
+            
+            // Cálculos do resumo
+            if (m.tipo_movimentacao === 'ENTRADA') totalEntrada += (parseFloat(m.quantidade) || 0);
+            if (m.tipo_movimentacao === 'SAIDA') totalSaida += (parseFloat(m.quantidade) || 0);
+            if (m.tipo_movimentacao === 'BATIMENTO') totalBatimento++; // Conta quantos ajustes foram feitos
             
             tr.innerHTML = `
                 <td>${new Date(m.created_at).toLocaleString('pt-BR')}</td>
@@ -442,6 +453,11 @@ const EstoqueGeralUI = {
             `;
             this.gridRelatorioBody.appendChild(tr);
         });
+
+        // Atualiza os cards de resumo
+        document.getElementById('resumo-entrada').textContent = totalEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        document.getElementById('resumo-saida').textContent = totalSaida.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        document.getElementById('resumo-batimento').textContent = totalBatimento;
     }
 };
 

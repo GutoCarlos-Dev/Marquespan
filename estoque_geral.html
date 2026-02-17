@@ -18,7 +18,10 @@
     <div id="menu-container"></div>
 
     <div class="main-content">
-      <header class="header">📦 Estoque Geral</header>
+      <div class="glass-header">
+        <h1><i class="fas fa-boxes"></i> Estoque Geral</h1>
+        <a href="dashboard.html" class="btn-glass btn-blue"><i class="fas fa-arrow-left"></i> Voltar</a>
+      </div>
 
       <!-- Navegação por Abas -->
       <div class="painel-navegacao">
@@ -28,35 +31,36 @@
         <button class="painel-btn" data-tab="tab-relatorios" aria-selected="false"><i class="fas fa-chart-line"></i> Relatórios</button>
       </div>
 
+      <section class="section">
       <!-- ABA 1: ESTOQUE ATUAL -->
       <section id="tab-estoque-atual" class="tab-content">
         <!-- Card de Filtros Compacto -->
-        <div class="card" style="max-width: 900px; margin: 20px auto 20px auto; padding: 15px; border-left: 4px solid #006937;">
-          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <div class="glass-panel">
+          <h4>
             <i class="fas fa-search"></i> Pesquisar Estoque
           </h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
-            <div style="flex-grow: 1;">
-                <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Código</label>
-                <input type="text" id="filtro-codigo" placeholder="Código..." style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+          <div class="grid-filtros">
+            <div class="form-group" style="flex-grow: 1;">
+                <label>Código</label>
+                <input type="text" id="filtro-codigo" class="glass-input" placeholder="Código...">
             </div>
-            <div style="grid-column: span 2;">
-                <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Nome do Produto</label>
-                <input type="text" id="filtro-nome" placeholder="Nome..." style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Nome do Produto</label>
+                <input type="text" id="filtro-nome" class="glass-input" placeholder="Nome...">
             </div>
-            <div>
-                <button id="btn-buscar-estoque" class="btn-primary" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center;"><i class="fas fa-search"></i> Buscar</button>
+            <div class="form-group">
+                <button id="btn-buscar-estoque" class="btn-glass btn-green" style="width: 100%;"><i class="fas fa-search"></i> Buscar</button>
             </div>
-            <div>
-                <button id="btn-limpar-filtros" class="btn-muted" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center;"><i class="fas fa-eraser"></i> Limpar</button>
+            <div class="form-group">
+                <button id="btn-limpar-filtros" class="btn-glass btn-muted" style="width: 100%;"><i class="fas fa-eraser"></i> Limpar</button>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <h2 style="margin-bottom: 20px; font-size: 1.2em; color: #333;">Itens em Estoque</h2>
+        <div class="glass-panel">
+          <h4 style="margin-bottom: 15px;">Itens em Estoque</h4>
           <div class="table-responsive">
-            <table class="data-grid">
+            <table class="glass-table">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -70,7 +74,7 @@
               </tbody>
             </table>
           </div>
-          <div class="grid-footer" style="margin-top: 10px; text-align: right;">
+          <div class="grid-footer" style="margin-top: 10px; text-align: right; font-size: 0.9rem; color: #666;">
             Total de Itens Listados: <span id="total-itens" style="font-weight: bold;">0</span>
           </div>
         </div>
@@ -79,8 +83,8 @@
       <!-- ABA 2: RETIRADA DO ESTOQUE -->
       <section id="tab-retirada" class="tab-content hidden">
         <!-- Card Superior: Informações -->
-        <div class="card" style="max-width: 900px; margin: 20px auto 15px auto; padding: 10px 15px; border-left: 4px solid #17a2b8; background-color: #f8f9fa;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 0.9em;">
+        <div class="glass-panel" style="padding: 10px 20px;">
+          <div class="info-bar" style="margin-bottom: 0; background: transparent;">
             <div>
               <i class="fas fa-user-circle"></i> <strong>Usuário:</strong> <span id="retirada-usuario-logado">...</span>
             </div>
@@ -92,35 +96,35 @@
         </div>
 
         <!-- Área de Adição de Produtos (Compacto) -->
-        <div class="card" style="max-width: 900px; margin: 0 auto 20px auto; padding: 15px; border-left: 4px solid #006937;">
-          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <div class="glass-panel">
+          <h4>
             <i class="fas fa-cart-plus"></i> Adicionar Produtos
           </h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
-            <div style="grid-column: span 2;">
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Produto</label>
-              <input type="text" id="retirada-produto" list="lista-produtos-retirada" placeholder="Digite para buscar..." autocomplete="off" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+          <div class="grid-filtros">
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Produto</label>
+              <input type="text" id="retirada-produto" list="lista-produtos-retirada" class="glass-input" placeholder="Digite para buscar..." autocomplete="off">
               <datalist id="lista-produtos-retirada"></datalist>
               <input type="hidden" id="retirada-produto-id">
             </div>
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Estoque Atual</label>
-              <input type="text" id="retirada-estoque-atual" readonly style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef; font-weight: bold; color: #006937;">
+            <div class="form-group">
+              <label>Estoque Atual</label>
+              <input type="text" id="retirada-estoque-atual" class="glass-input" readonly style="background-color: rgba(0,0,0,0.05); font-weight: bold; color: #006937;">
             </div>
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Qtd. Retirada</label>
-              <input type="number" id="retirada-quantidade" min="0.01" step="0.01" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group">
+              <label>Qtd. Retirada</label>
+              <input type="number" id="retirada-quantidade" class="glass-input" min="0.01" step="0.01">
             </div>
-            <div>
-              <button id="btn-adicionar-item-retirada" class="btn-primary" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center;"><i class="fas fa-plus"></i> Adicionar</button>
+            <div class="form-group">
+              <button id="btn-adicionar-item-retirada" class="btn-glass btn-green" style="width: 100%;"><i class="fas fa-plus"></i> Adicionar</button>
             </div>
           </div>
         </div>
 
         <!-- Grid de Itens (Carrinho) -->
-        <div class="card" style="max-width: 900px; margin: 0 auto; min-height: 250px; display: flex; flex-direction: column;">
+        <div class="glass-panel" style="min-height: 250px; display: flex; flex-direction: column;">
           <div class="table-responsive" style="flex-grow: 1;">
-            <table class="data-grid">
+            <table class="glass-table">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -134,58 +138,58 @@
               </tbody>
             </table>
           </div>
-          <div style="text-align: right; margin-top: 10px; font-size: 1.1em; padding: 10px; background: #f8f9fa; border-top: 2px solid #006937;">
+          <div style="text-align: right; margin-top: 10px; font-size: 1.1em; padding: 10px; border-top: 1px solid rgba(0,0,0,0.1);">
             <strong>Total de Itens:</strong> <span id="total-itens-retirada" style="font-weight: bold; color: #006937;">0</span>
           </div>
         </div>
 
         <!-- Card de Ação (Finalizar) -->
-        <div class="card" style="max-width: 900px; margin: 20px auto 0 auto; padding: 15px; border-left: 4px solid #dc3545;">
-          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <div class="glass-panel">
+          <h4>
             <i class="fas fa-check-circle"></i> Finalizar Retirada
           </h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end;">
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Retirado Por (Nome Legível)</label>
-              <input type="text" id="retirada-responsavel" placeholder="Quem está levando a peça?" oninput="this.value = this.value.toUpperCase()" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+          <div class="grid-filtros">
+            <div class="form-group">
+              <label>Retirado Por (Nome Legível)</label>
+              <input type="text" id="retirada-responsavel" class="glass-input" placeholder="Quem está levando a peça?" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div style="grid-column: span 2;">
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Observação / Motivo</label>
-              <input type="text" id="retirada-observacao" placeholder="Opcional" oninput="this.value = this.value.toUpperCase()" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Observação / Motivo</label>
+              <input type="text" id="retirada-observacao" class="glass-input" placeholder="Opcional" oninput="this.value = this.value.toUpperCase()">
             </div>
           </div>
           <div class="form-actions" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="btn-registrar-saida" class="btn-primary" style="background-color: #dc3545; border-color: #dc3545; padding: 8px 15px; font-size: 0.9em;"><i class="fas fa-save"></i> Registrar Saída</button>
-            <button id="btn-gerar-pdf-saida" class="btn-primary" disabled style="background-color: #6c757d; border-color: #6c757d; cursor: not-allowed; padding: 8px 15px; font-size: 0.9em;"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+            <button id="btn-registrar-saida" class="btn-glass btn-red"><i class="fas fa-save"></i> Registrar Saída</button>
+            <button id="btn-gerar-pdf-saida" class="btn-glass btn-muted" disabled style="cursor: not-allowed;"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
           </div>
         </div>
       </section>
 
       <!-- ABA 3: BATIMENTO (CONTAGEM) -->
       <section id="tab-batimento" class="tab-content hidden">
-        <div class="card" style="max-width: 900px; margin: 20px auto 20px auto; padding: 15px; border-left: 4px solid #fd7e14;">
-          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <div class="glass-panel">
+          <h4>
             <i class="fas fa-clipboard-check"></i> Batimento de Estoque (Ajuste)
           </h4>
           <p style="color: #666; margin-bottom: 15px; font-size: 0.85em;">Use esta função para corrigir a quantidade em estoque após uma contagem física.</p>
           <form id="form-batimento">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
-              <div style="grid-column: span 2;">
-                <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Produto</label>
-                <input type="text" id="batimento-produto" list="lista-produtos-batimento" placeholder="Digite para buscar..." required autocomplete="off" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="grid-filtros">
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Produto</label>
+                <input type="text" id="batimento-produto" list="lista-produtos-batimento" class="glass-input" placeholder="Digite para buscar..." required autocomplete="off">
                 <datalist id="lista-produtos-batimento"></datalist>
                 <input type="hidden" id="batimento-produto-id">
               </div>
-              <div>
-                <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Estoque no Sistema</label>
-                <input type="text" id="batimento-estoque-atual" readonly style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef;">
+              <div class="form-group">
+                <label>Estoque no Sistema</label>
+                <input type="text" id="batimento-estoque-atual" class="glass-input" readonly style="background-color: rgba(0,0,0,0.05);">
               </div>
-              <div>
-                <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Qtd. Contada (Real)</label>
-                <input type="number" id="batimento-nova-quantidade" min="0" step="0.01" required style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px; border-color: #fd7e14;">
+              <div class="form-group">
+                <label>Qtd. Contada (Real)</label>
+                <input type="number" id="batimento-nova-quantidade" class="glass-input" min="0" step="0.01" required>
               </div>
-              <div>
-                <button type="submit" class="btn-primary" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center; background-color: #fd7e14; border-color: #fd7e14;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+              <div class="form-group">
+                <button type="submit" class="btn-glass btn-orange" style="width: 100%;"><i class="fas fa-sync-alt"></i> Atualizar</button>
               </div>
             </div>
           </form>
@@ -195,42 +199,58 @@
       <!-- ABA 4: RELATÓRIOS -->
       <section id="tab-relatorios" class="tab-content hidden">
         <!-- Card de Filtros Compacto -->
-        <div class="card" style="max-width: 900px; margin: 20px auto 20px auto; padding: 15px; border-left: 4px solid #006937;">
-          <h4 style="margin-top: 0; margin-bottom: 15px; color: #555; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <div class="glass-panel">
+          <h4>
             <i class="fas fa-filter"></i> Filtros de Pesquisa
           </h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Data Início</label>
-              <input type="date" id="relatorio-data-ini" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+          <div class="grid-filtros">
+            <div class="form-group">
+              <label>Data Início</label>
+              <input type="date" id="relatorio-data-ini" class="glass-input">
             </div>
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Data Fim</label>
-              <input type="date" id="relatorio-data-fim" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group">
+              <label>Data Fim</label>
+              <input type="date" id="relatorio-data-fim" class="glass-input">
             </div>
-            <div>
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Tipo</label>
-              <select id="relatorio-tipo" style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group">
+              <label>Tipo</label>
+              <select id="relatorio-tipo" class="glass-input">
                 <option value="">Todos os Tipos</option>
                 <option value="ENTRADA">Entrada</option>
                 <option value="SAIDA">Saída (Retirada)</option>
                 <option value="BATIMENTO">Batimento (Ajuste)</option>
               </select>
             </div>
-            <div style="flex-grow: 1;">
-              <label style="display: block; font-size: 0.8em; font-weight: bold; color: #666; margin-bottom: 3px;">Busca (Produto/NF/Obs)</label>
-              <input type="text" id="relatorio-busca" placeholder="Digite para pesquisar..." style="width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group" style="flex-grow: 1;">
+              <label>Busca (Produto/NF/Obs)</label>
+              <input type="text" id="relatorio-busca" class="glass-input" placeholder="Digite para pesquisar...">
             </div>
-            <div>
-              <button id="btn-buscar-relatorio" class="btn-primary" style="width: 100%; padding: 6px; font-size: 0.9em; justify-content: center;"><i class="fas fa-search"></i> Filtrar</button>
+            <div class="form-group">
+              <button id="btn-buscar-relatorio" class="btn-glass btn-blue" style="width: 100%;"><i class="fas fa-search"></i> Filtrar</button>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <h2 style="margin-bottom: 20px; font-size: 1.2em; color: #333;">Histórico de Movimentações</h2>
+        <!-- Resumo do Período -->
+        <div class="relatorio-resumo">
+            <div class="resumo-card entrada">
+                <h5><i class="fas fa-arrow-down"></i> Total Entradas</h5>
+                <div class="valor" id="resumo-entrada">0</div>
+            </div>
+            <div class="resumo-card saida">
+                <h5><i class="fas fa-arrow-up"></i> Total Saídas</h5>
+                <div class="valor" id="resumo-saida">0</div>
+            </div>
+            <div class="resumo-card batimento">
+                <h5><i class="fas fa-clipboard-check"></i> Ajustes (Batimentos)</h5>
+                <div class="valor" id="resumo-batimento">0</div>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+          <h4 style="margin-bottom: 15px;">Histórico de Movimentações</h4>
           <div class="table-responsive">
-            <table class="data-grid">
+            <table class="glass-table">
               <thead>
                 <tr>
                   <th>Data/Hora</th>
@@ -250,6 +270,7 @@
             </table>
           </div>
         </div>
+      </section>
       </section>
 
     </div>
