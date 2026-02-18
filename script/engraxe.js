@@ -1404,10 +1404,11 @@ async function gerarPDFLista(id) {
         //doc.text(`Usuário: ${lista.usuario || 'N/A'}`, 14, 33);
 
         // Tabela
-        const columns = ['Placa', 'Modelo', 'Realizado', 'Próximo', 'PLAQ', 'Status', 'SEG', 'KM'];
+        const columns = ['Placa', 'Modelo', 'Marca', 'Realizado', 'Próximo', 'PLAQ', 'Status', 'SEG', 'KM'];
         const rows = itens.map(item => [
             item.placa || '',
             item.modelo || '',
+            item.marca || '',
             item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '',
             item.data_proximo ? new Date(item.data_proximo).toLocaleDateString('pt-BR') : '',
             item.plaquinha || '',
@@ -1425,18 +1426,19 @@ async function gerarPDFLista(id) {
             styles: { fontSize: 7.5, cellPadding: 1, overflow: 'linebreak' },
             alternateRowStyles: { fillColor: [230, 230, 230] },
             columnStyles: {
-                0: { cellWidth: 'auto' }, // Placa
-                1: { cellWidth: 'auto' }, // Modelo
-                2: { cellWidth: 'auto', halign: 'center' }, // Realizado
-                3: { cellWidth: 'auto', halign: 'center' }, // Próximo
-                4: { cellWidth: 12, halign: 'center' }, // PLAQ (~4 dígitos)
-                5: { cellWidth: 15, halign: 'center' }, // Status (~4-6 dígitos)
-                6: { cellWidth: 12, halign: 'center' }, // SEG (~4 dígitos)
-                7: { cellWidth: 25, halign: 'right' }   // KM (~12 dígitos)
+                0: { cellWidth: 15, halign: 'center' }, // Placa
+                1: { cellWidth: 20, halign: 'center' }, // Modelo
+                2: { cellWidth: 20, halign: 'center' }, // Marca
+                3: { cellWidth: 20, halign: 'center' }, // Realizado
+                4: { cellWidth: 20, halign: 'center' }, // Próximo
+                5: { cellWidth: 12, halign: 'center' }, // PLAQ (~4 dígitos)
+                6: { cellWidth: 20, halign: 'center' }, // Status (~4-6 dígitos)
+                7: { cellWidth: 12, halign: 'center' }, // SEG (~4 dígitos)
+                8: { cellWidth: 35, halign: 'right' }   // KM (~12 dígitos)
             },
             margin: { bottom: 5 }, // Define a margem inferior para 5mm (padrão é maior)
             didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 5) {
+                if (data.section === 'body' && data.column.index === 6) { // Coluna de Status   
                     const status = (data.cell.raw || '').toString().toUpperCase();
                     if (status === 'OK') {
                         data.cell.styles.textColor = [40, 167, 69]; // Verde
