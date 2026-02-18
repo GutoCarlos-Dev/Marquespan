@@ -7,6 +7,7 @@ let veiculosCacheNovaLista = []; // Cache para o modal de nova lista
 let currentListId = null;
 let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
+let sortStateItensModal = { key: 'placa', asc: true };
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -569,6 +570,32 @@ window.abrirLista = async function(id, nome) {
     
     document.getElementById('modalEngraxe').classList.remove('hidden');
 
+    // Injeção da funcionalidade de ordenação nos cabeçalhos do modal de itens
+    const modalItens = document.getElementById('modalEngraxe');
+    const itensHeaders = modalItens.querySelectorAll('.data-grid thead th');
+    const itensModalSortMap = {
+        'PLACA': 'placa',
+        'MODELO': 'modelo',
+        'MARCA': 'marca',
+        'REALIZADO': 'data_realizado',
+        'PRÓXIMO': 'data_proximo',
+        'PLAQUETA (S/N)': 'plaquinha',
+        'FEITO': 'status',
+        'SEG': 'seg',
+        'KM': 'km'
+    };
+
+    itensHeaders.forEach(th => {
+        const key = itensModalSortMap[th.textContent.trim()];
+        if (key) {
+            th.dataset.sortKey = key;
+            th.style.cursor = 'pointer';
+            if (!th.querySelector('i')) th.innerHTML += ' <i class="fas fa-sort" style="float: right; color: #ccc;"></i>';
+            th.onclick = () => ordenarItensModal(key);
+        }
+    });
+
+
     try {
         // Carregar itens do Supabase
         const { data, error } = await supabaseClient
@@ -626,6 +653,29 @@ async function adicionarItemManual() {
 }
 
 function renderizarItensModal(itens) {
+    // Ordena os itens antes de renderizar
+    const key = sortStateItensModal.key;
+    const asc = sortStateItensModal.asc;
+
+    itens.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (key === 'data_realizado' || key === 'data_proximo') {
+            valA = valA ? new Date(valA.replace(/-/g, '\/')) : (asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+            valB = valB ? new Date(valB.replace(/-/g, '\/')) : (asc ? new Date('2999-12-31') : new Date('1900-01-01'));
+        } else if (key === 'km') {
+            valA = parseInt(valA || 0);
+            valB = parseInt(valB || 0);
+        } else {
+            valA = String(valA || '').toLowerCase();
+            valB = String(valB || '').toLowerCase();
+        }
+
+        if (valA < valB) return asc ? -1 : 1;
+        if (valA > valB) return asc ? 1 : -1;
+        return 0;
+    });
     const tbody = document.getElementById('tbodyModalItens');
     tbody.innerHTML = '';
 
@@ -696,6 +746,8 @@ function renderizarItensModal(itens) {
         `;
         tbody.appendChild(tr);
     });
+
+    updateSortIconsItensModal();
 }
 
 window.calcularProximaData = function(inputRealizado) {
@@ -1266,6 +1318,29 @@ function updateSortIconsVencimentos() {
     const activeTh = document.querySelector(`#tabelaVencimentos th[data-sort-key="${sortStateVencimentos.key}"] i`);
     if (activeTh) {
         activeTh.className = sortStateVencimentos.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        activeTh.style.color = '#333';
+    }
+}
+
+function ordenarItensModal(key) {
+    if (sortStateItensModal.key === key) {
+        sortStateItensModal.asc = !sortStateItensModal.asc;
+    } else {
+        sortStateItensModal.key = key;
+        sortStateItensModal.asc = true;
+    }
+    // A re-renderização vai aplicar a ordenação
+    renderizarItensModal(currentListItems);
+}
+
+function updateSortIconsItensModal() {
+    document.querySelectorAll('#modalEngraxe .data-grid thead th i').forEach(i => {
+        i.className = 'fas fa-sort';
+        i.style.color = '#ccc';
+    });
+    const activeTh = document.querySelector(`#modalEngraxe th[data-sort-key="${sortStateItensModal.key}"] i`);
+    if (activeTh) {
+        activeTh.className = sortStateItensModal.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
         activeTh.style.color = '#333';
     }
 }
