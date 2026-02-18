@@ -1116,7 +1116,10 @@ const UI = {
   },
 
   closeModal(){
-    document.querySelectorAll('.modal').forEach(modal => modal.classList.add('hidden'));
+    this.importPanel?.classList.add('hidden');
+    this.detailPanelBackdrop?.classList.add('hidden');
+    this.recebimentoPanelBackdrop?.classList.add('hidden');
+    document.querySelectorAll('.modal, .modal-backdrop').forEach(modal => modal.classList.add('hidden'));
   },
 
   closeImportPanel(){
