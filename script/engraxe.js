@@ -103,13 +103,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnControleVencimentos').addEventListener('click', abrirControleVencimentos);
     document.getElementById('btnCloseModalVencimentos').addEventListener('click', () => document.getElementById('modalVencimentos').classList.add('hidden'));
     document.getElementById('btnGerarListaVencidos').addEventListener('click', gerarListaComSelecionados);
-    
+
     // Filtros do Modal de Vencimentos
     document.getElementById('filtroVencimentoFilial').addEventListener('change', filtrarTabelaVencimentos);
-    document.getElementById('filtroVencimentoMarca').addEventListener('change', filtrarTabelaVencimentos);
-    document.getElementById('filtroVencimentoModelo').addEventListener('change', filtrarTabelaVencimentos);
     document.getElementById('filtroVencimentoStatus').addEventListener('change', filtrarTabelaVencimentos);
     document.getElementById('chkAllVencimentos').addEventListener('change', toggleAllVencimentos);
+
+    // Configura os novos multiselects
+    setupCustomMultiselect('filtroVencimentoMarcaDisplay', 'filtroVencimentoMarcaOptions', 'filtroVencimentoMarcaText', 'Todas as Marcas');
+    setupCustomMultiselect('filtroVencimentoModeloDisplay', 'filtroVencimentoModeloOptions', 'filtroVencimentoModeloText', 'Todos os Modelos');
+
+    document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
+    document.getElementById('dataListaVencimentos')?.addEventListener('change', recalcularStatusVencimentos);
+
+    // Fecha os dropdowns se o usuário clicar fora deles
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.custom-multiselect')) {
+            document.querySelectorAll('.glass-dropdown').forEach(d => d.classList.add('hidden'));
+        }
+    });
 
     // Modal Nova Lista
     document.getElementById('btnCloseModalNovaLista').addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
@@ -1012,7 +1024,6 @@ async function abrirControleVencimentos() {
     const modal = document.getElementById('modalVencimentos');
     const tbody = document.getElementById('tbodyVencimentos');
 
-    // Injeção do contador
     const modalHeader = modal.querySelector('.modal-header h3');
     if (modalHeader && !document.getElementById('contadorVencimentos')) {
         const contadorSpan = document.createElement('span');
@@ -1020,11 +1031,9 @@ async function abrirControleVencimentos() {
         contadorSpan.className = 'contador-selecao';
         modalHeader.appendChild(contadorSpan);
     }
-    // Zera o contador ao abrir
     const contadorSpan = document.getElementById('contadorVencimentos');
     if (contadorSpan) contadorSpan.textContent = '0 selecionado(s)';
 
-    // Injeção da funcionalidade de ordenação nos cabeçalhos
     const vencimentosHeaders = modal.querySelectorAll('#tabelaVencimentos th');
     const vencimentosSortMap = {
         'FILIAL': 'filial',
@@ -1035,7 +1044,6 @@ async function abrirControleVencimentos() {
         'PRÓXIMO (Vencimento)': 'proximaData',
         'STATUS': 'status'
     };
-
     vencimentosHeaders.forEach(th => {
         const key = vencimentosSortMap[th.textContent.trim()];
         if (key) {
@@ -1046,24 +1054,13 @@ async function abrirControleVencimentos() {
         }
     });
 
-    // Injeta o campo de Data se não existir
-    const btnGerar = document.getElementById('btnGerarListaVencidos');
-    if (btnGerar && !document.getElementById('dataListaVencimentos')) {
-        const container = document.createElement('div');
-        container.className = 'data-lista-container';
-        container.innerHTML = `
-            <label for="dataListaVencimentos">Data da Lista:</label>
-            <input type="date" id="dataListaVencimentos" class="glass-input">
-        `;
-        btnGerar.parentNode.insertBefore(container, btnGerar);
-        btnGerar.parentNode.style.display = 'flex';
-        btnGerar.parentNode.style.alignItems = 'center';
-        btnGerar.parentNode.style.justifyContent = 'flex-end';
-        document.getElementById('dataListaVencimentos').value = new Date().toISOString().split('T')[0];
+    const dataListaInput = document.getElementById('dataListaVencimentos');
+    if (dataListaInput) {
+        dataListaInput.value = new Date().toISOString().split('T')[0];
     }
 
     modal.classList.remove('hidden');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando dados da frota e histórico...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando dados da frota e histórico...</td></tr>';
 
     try {
         // 1. Buscar Veículos Ativos com Filial
@@ -1084,6 +1081,9 @@ async function abrirControleVencimentos() {
         if (itensError) throw itensError;
 
         // 3. Processar Dados (Cruzar Veículos com Histórico)
+        const dataReferencia = dataListaInput.value;
+        const hoje = new Date(dataReferencia + 'T00:00:00');
+
         currentVencimentosData = veiculos.map(v => {
             // Filtra itens deste veículo que tenham data realizada válida
             const itensVeiculo = todosItens.filter(i => i.placa === v.placa);
@@ -1106,8 +1106,6 @@ async function abrirControleVencimentos() {
                 prox.setDate(prox.getDate() + 21); // Regra de 21 dias
                 proximaData = prox.toISOString().split('T')[0];
 
-                const hoje = new Date();
-                hoje.setHours(0,0,0,0);
                 const proxDate = new Date(prox);
                 proxDate.setHours(0,0,0,0);
 
@@ -1133,20 +1131,18 @@ async function abrirControleVencimentos() {
             return score(a.status) - score(b.status) || a.diasRestantes - b.diasRestantes;
         });
 
-        popularFiltrosVencimentos();
+        await popularFiltrosVencimentos();
         renderizarTabelaVencimentos(currentVencimentosData);
 
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
-function popularFiltrosVencimentos() {
+async function popularFiltrosVencimentos() {
     const dados = currentVencimentosData;
     const filiais = [...new Set(dados.map(d => d.filial).filter(Boolean))].sort();
-    const marcas = [...new Set(dados.map(d => d.marca).filter(Boolean))].sort();
-    const modelos = [...new Set(dados.map(d => d.modelo).filter(Boolean))].sort();
 
     const populate = (id, items, defaultText) => {
         const sel = document.getElementById(id);
@@ -1157,8 +1153,16 @@ function popularFiltrosVencimentos() {
     };
 
     populate('filtroVencimentoFilial', filiais, 'Todas Filiais');
-    populate('filtroVencimentoMarca', marcas, 'Todas Marcas');
-    populate('filtroVencimentoModelo', modelos, 'Todos Modelos');
+
+    // Busca marcas e modelos de todos os veículos para os novos filtros
+    const { data: veiculos, error } = await supabaseClient.from('veiculos').select('marca, modelo');
+    if (error) return console.error('Erro ao carregar marcas e modelos para filtros:', error);
+
+    const marcas = [...new Set(veiculos.map(v => v.marca).filter(Boolean))].sort();
+    const modelos = [...new Set(veiculos.map(v => v.modelo).filter(Boolean))].sort();
+
+    populateMultiselect(document.getElementById('filtroVencimentoMarcaOptions'), marcas, 'Limpar Marcas');
+    populateMultiselect(document.getElementById('filtroVencimentoModeloOptions'), modelos, 'Limpar Modelos');
 }
 
 function renderizarTabelaVencimentos(dados) {
@@ -1166,7 +1170,7 @@ function renderizarTabelaVencimentos(dados) {
     tbody.innerHTML = '';
 
     if (dados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum veículo encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum veículo encontrado.</td></tr>';
         return;
     }
 
@@ -1195,17 +1199,24 @@ function renderizarTabelaVencimentos(dados) {
 
 function filtrarTabelaVencimentos() {
     const filial = document.getElementById('filtroVencimentoFilial').value;
-    const marca = document.getElementById('filtroVencimentoMarca').value;
-    const modelo = document.getElementById('filtroVencimentoModelo').value;
     const status = document.getElementById('filtroVencimentoStatus').value;
+    const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroVencimentoMarcaOptions input:checked')).map(cb => cb.value);
+    const modelosSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoModeloOptions input:checked')).map(cb => cb.value);
 
-    const filtrados = currentVencimentosData.filter(item => {
-        const matchFilial = !filial || item.filial === filial;
-        const matchMarca = !marca || item.marca === marca;
-        const matchModelo = !modelo || item.modelo === modelo;
-        const matchStatus = status === 'TODOS' || item.status === status;
-        return matchFilial && matchMarca && matchModelo && matchStatus;
-    });
+    let filtrados = currentVencimentosData;
+
+    if (filial) {
+        filtrados = filtrados.filter(item => item.filial === filial);
+    }
+    if (marcasSelecionadas.length > 0) {
+        filtrados = filtrados.filter(item => marcasSelecionadas.includes(item.marca));
+    }
+    if (modelosSelecionados.length > 0) {
+        filtrados = filtrados.filter(item => modelosSelecionados.includes(item.modelo));
+    }
+    if (status !== 'TODOS') {
+        filtrados = filtrados.filter(item => item.status === status);
+    }
 
     renderizarTabelaVencimentos(filtrados);
 }
@@ -1331,6 +1342,88 @@ function ordenarItensModal(key) {
     }
     // A re-renderização vai aplicar a ordenação
     renderizarItensModal(currentListItems);
+}
+
+function recalcularStatusVencimentos() {
+    const dataReferencia = document.getElementById('dataListaVencimentos').value;
+    if (!dataReferencia || currentVencimentosData.length === 0) return;
+
+    const hoje = new Date(dataReferencia + 'T00:00:00');
+
+    currentVencimentosData.forEach(item => {
+        if (item.proximaData) {
+            const proxDate = new Date(item.proximaData + 'T00:00:00');
+            const diffTime = proxDate - hoje;
+            const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            item.diasRestantes = diasRestantes;
+            if (diasRestantes < 0) {
+                item.status = 'VENCIDO';
+            } else {
+                item.status = 'EM_DIA';
+            }
+        } else {
+            item.status = 'PENDENTE';
+            item.diasRestantes = -999; // Mantém consistência
+        }
+    });
+
+    filtrarTabelaVencimentos();
+}
+
+
+function populateMultiselect(container, items, clearButtonText) {
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="dropdown-header">
+            <button type="button" class="btn-limpar-selecao">${clearButtonText}</button>
+        </div>
+    `;
+
+    items.forEach(item => {
+        const label = document.createElement('label');
+        label.className = 'dropdown-item';
+        label.innerHTML = `<input type="checkbox" value="${item}"> ${item}`;
+        container.appendChild(label);
+    });
+}
+
+function setupCustomMultiselect(displayId, optionsId, textId, defaultText) {
+    const display = document.getElementById(displayId);
+    const options = document.getElementById(optionsId);
+    const text = document.getElementById(textId);
+
+    if (!display || !options || !text) return;
+
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.glass-dropdown').forEach(d => {
+            if (d.id !== optionsId) d.classList.add('hidden');
+        });
+        options.classList.toggle('hidden');
+    });
+
+    options.addEventListener('change', () => {
+        const checked = options.querySelectorAll('input[type="checkbox"]:checked');
+        if (checked.length === 0) {
+            text.textContent = defaultText;
+        } else if (checked.length === 1) {
+            text.textContent = checked[0].value;
+        } else {
+            text.textContent = `${checked.length} selecionados`;
+        }
+        document.dispatchEvent(new Event('vencimentoFilterChange'));
+    });
+
+    options.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-limpar-selecao')) {
+            e.stopPropagation();
+            options.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            text.textContent = defaultText;
+            document.dispatchEvent(new Event('vencimentoFilterChange'));
+        }
+    });
 }
 
 function updateSortIconsItensModal() {
@@ -1482,3 +1575,4 @@ window.salvarItemIndividual = salvarItemIndividual;
 window.excluirItemLista = excluirItemLista;
 window.calcularProximaData = calcularProximaData;
 window.gerarPDFLista = gerarPDFLista;
+window.atualizarContadores = atualizarContadores;

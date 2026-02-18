@@ -159,23 +159,54 @@
         <button class="close-button" id="btnCloseModalVencimentos">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="filtros-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <select id="filtroVencimentoFilial" class="glass-input">
-                <option value="">Todas Filiais</option>
-            </select>
-            <select id="filtroVencimentoMarca" class="glass-input">
-                <option value="">Todas Marcas</option>
-            </select>
-            <select id="filtroVencimentoModelo" class="glass-input">
-                <option value="">Todos Modelos</option>
-            </select>
-            <select id="filtroVencimentoStatus" class="glass-input">
-                <option value="TODOS">Todos os Status</option>
-                <option value="VENCIDO">Vencidos</option>
-                <option value="EM_DIA">Em Dia</option>
-                <option value="PENDENTE">Nunca Realizado</option>
-            </select>
-            <button id="btnGerarListaVencidos" class="btn-glass btn-green"><i class="fas fa-list-ul"></i> Gerar Lista</button>
+        <div class="modal-details-grid" style="margin-bottom: 20px;">
+            <!-- Card 1: Filtros -->
+            <div class="details-card">
+                <h4><i class="fas fa-filter"></i> Filtros de Vencimento</h4>
+                <div class="filtros-grid-vencimentos">
+                    <select id="filtroVencimentoFilial" class="glass-input">
+                        <option value="">Todas Filiais</option>
+                    </select>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoMarcaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoMarcaText">Todas as Marcas</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoMarcaOptions" class="glass-dropdown hidden">
+                            <!-- Opções carregadas via JS -->
+                        </div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoModeloDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoModeloText">Todos os Modelos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoModeloOptions" class="glass-dropdown hidden">
+                            <!-- Opções carregadas via JS -->
+                        </div>
+                    </div>
+                    <select id="filtroVencimentoStatus" class="glass-input">
+                        <option value="TODOS">Todos os Status</option>
+                        <option value="VENCIDO">Vencidos</option>
+                        <option value="EM_DIA">Em Dia</option>
+                        <option value="PENDENTE">Nunca Realizado</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Card 2: Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações</h4>
+                <div class="acoes-grid-vencimentos">
+                    <div class="form-group">
+                        <label for="dataListaVencimentos">Data da Lista</label>
+                        <input type="date" id="dataListaVencimentos" class="glass-input">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button id="btnGerarListaVencidos" class="btn-glass btn-green btn-full"><i class="fas fa-list-ul"></i> Gerar Lista</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
             <table class="glass-table" id="tabelaVencimentos">
