@@ -41,6 +41,7 @@ const EstoqueGeralUI = {
         this.retiradaResponsavel = document.getElementById('retirada-responsavel');
         this.retiradaObservacao = document.getElementById('retirada-observacao');
         this.btnRegistrarSaida = document.getElementById('btn-registrar-saida');
+        this.btnGerarPdfSaida = document.getElementById('btn-gerar-pdf-saida');
         this.listaProdutosRetirada = document.getElementById('lista-produtos-retirada');
 
         // Aba Batimento
@@ -84,6 +85,7 @@ const EstoqueGeralUI = {
         this.btnAdicionarItemRetirada.addEventListener('click', () => this.adicionarItemRetirada());
         this.gridItensRetirada.addEventListener('click', (e) => this.removerItemRetirada(e));
         this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
+        if (this.btnGerarPdfSaida) this.btnGerarPdfSaida.addEventListener('click', () => this.gerarPdfSaida());
 
         // Batimento
         this.batimentoProdutoInput.addEventListener('input', (e) => this.handleProdutoInput(e, 'batimento'));
@@ -320,7 +322,24 @@ const EstoqueGeralUI = {
                 if (movError) throw movError;
             }
 
+            // Salva dados para o PDF antes de limpar o carrinho
+            this.dadosUltimaSaida = {
+                itens: JSON.parse(JSON.stringify(this.carrinhoRetirada)),
+                responsavel,
+                observacao,
+                usuario: usuarioLogado,
+                data: new Date()
+            };
+
             alert('✅ Saída registrada com sucesso!');
+            
+            if (this.btnGerarPdfSaida) {
+                this.btnGerarPdfSaida.disabled = false;
+                this.btnGerarPdfSaida.style.cursor = 'pointer';
+                this.btnGerarPdfSaida.classList.remove('btn-muted');
+                this.btnGerarPdfSaida.classList.add('btn-blue');
+            }
+
             this.carrinhoRetirada = [];
             this.renderCarrinhoRetirada();
             this.retiradaResponsavel.value = '';
@@ -334,6 +353,73 @@ const EstoqueGeralUI = {
             console.error(error);
             alert('Erro ao registrar saída: ' + error.message);
         }
+    },
+
+    async gerarPdfSaida() {
+        if (!this.dadosUltimaSaida) return;
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const data = this.dadosUltimaSaida;
+
+        // --- LOGO ---
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+        };
+        const logoBase64 = await getLogoBase64();
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+        // --- FIM LOGO ---
+
+        // Cabeçalho
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Comprovante de Retirada de Estoque', 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Data: ${data.data.toLocaleString('pt-BR')}`, 14, 40);
+        doc.text(`Responsável pela Retirada: ${data.responsavel}`, 14, 46);
+        doc.text(`Registrado por: ${data.usuario}`, 14, 52);
+        let startY = 58;
+        if(data.observacao) {
+            doc.text(`Observação: ${data.observacao}`, 14, 58);
+            startY = 64;
+        }
+
+        const columns = ['Código', 'Produto', 'Qtd'];
+        const rows = data.itens.map(i => [i.codigo, i.nome, i.qtd]);
+
+        doc.autoTable({
+            startY: startY,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55] }
+        });
+        
+        const finalTableY = doc.lastAutoTable.finalY + 20;
+        doc.setLineWidth(1.0);
+        doc.line(14, finalTableY, 100, finalTableY);
+        doc.text('Assinatura', 48, finalTableY + 5);
+
+        doc.save(`retirada_${Date.now()}.pdf`);
     },
 
     // --- LÓGICA DE BATIMENTO ---
@@ -449,8 +535,16 @@ const EstoqueGeralUI = {
                 <td>${m.quantidade_nova}</td>
                 <td>${m.usuario}</td>
                 <td style="font-size: 0.85em; color: #555;">${m.observacao || '-'}</td>
-                <td>-</td>
+                <td style="text-align: center;">
+                    <button class="btn-glass btn-sm btn-pdf" title="Reimprimir PDF" style="color: #dc3545; cursor: pointer;">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </td>
             `;
+            
+            const btnPdf = tr.querySelector('.btn-pdf');
+            if (btnPdf) btnPdf.addEventListener('click', () => this.gerarPdfMovimentacao(m));
+
             this.gridRelatorioBody.appendChild(tr);
         });
 
@@ -458,6 +552,78 @@ const EstoqueGeralUI = {
         document.getElementById('resumo-entrada').textContent = totalEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         document.getElementById('resumo-saida').textContent = totalSaida.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         document.getElementById('resumo-batimento').textContent = totalBatimento;
+    },
+
+    async gerarPdfMovimentacao(movimentacao) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // --- LOGO ---
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+        };
+        const logoBase64 = await getLogoBase64();
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+        // --- FIM LOGO ---
+
+        // Cabeçalho
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Comprovante de Movimentação', 14, 30);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Data: ${new Date(movimentacao.created_at).toLocaleString('pt-BR')}`, 14, 40);
+        doc.text(`Tipo: ${movimentacao.tipo_movimentacao}`, 14, 46);
+        doc.text(`Usuário: ${movimentacao.usuario}`, 14, 52);
+        
+        let startY = 60;
+        if(movimentacao.observacao) {
+            const splitObs = doc.splitTextToSize(`Observação: ${movimentacao.observacao}`, 180);
+            doc.text(splitObs, 14, 58);
+            startY = 58 + (splitObs.length * 5) + 5;
+        }
+
+        const columns = ['Produto', 'Qtd', 'Saldo Anterior', 'Saldo Novo'];
+        const rows = [[
+            movimentacao.produtos?.nome || 'Produto Excluído',
+            (movimentacao.quantidade || 0).toLocaleString('pt-BR'),
+            (movimentacao.quantidade_anterior || 0).toLocaleString('pt-BR'),
+            (movimentacao.quantidade_nova || 0).toLocaleString('pt-BR')
+        ]];
+
+        doc.autoTable({
+            startY: startY,
+            head: [columns],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55] },
+            styles: { halign: 'center' }
+        });
+        
+        const finalY = doc.lastAutoTable.finalY + 20;
+        doc.setLineWidth(1.0);
+        doc.line(14, finalY, 100, finalY);
+        doc.text('Assinatura', 48, finalY + 5);
+
+        doc.save(`movimentacao_${movimentacao.id}.pdf`);
     }
 };
 

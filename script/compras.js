@@ -1436,102 +1436,119 @@ const UI = {
     }
   },
 
-  async salvarRecebimento(){
+  async salvarRecebimento() {
     const cotacaoId = this.recebimentoItemsContainer.dataset.cotacaoId;
 
     if (!cotacaoId || cotacaoId.length < 36) {
-      alert('❌ Erro crítico: ID da cotação inválido. Não é possível salvar o recebimento.');
-      return;
+        alert('❌ Erro crítico: ID da cotação inválido. Não é possível salvar o recebimento.');
+        return;
     }
 
     const itens = [];
     document.querySelectorAll('.recebimento-item').forEach(div => {
-      const idProduto = div.dataset.itemId;
-      const qtdPedida = parseFloat(div.dataset.qtdPedida);
-      const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
-      if(!isNaN(qtd) && qtd > 0 && idProduto && idProduto.length >= 36) {
-        itens.push({
-          id_cotacao: cotacaoId,
-          id_produto: idProduto,
-          qtd_recebida: qtd,
-          qtd_pedida: qtdPedida,
-          data_recebimento: new Date().toISOString()
-        });
-      }
-    });
-    if(itens.length) {
-      try {
-        // Busca informações da cotação para o histórico
-        const { data: cotacaoInfo } = await supabaseClient.from('cotacoes').select('codigo_cotacao').eq('id', cotacaoId).single();
-        const codigoCotacao = cotacaoInfo?.codigo_cotacao || 'N/A';
-        
-        // Captura NFs para o histórico
-        const nfInputs = document.querySelectorAll('.nota-fiscal-input');
-        const nfs = Array.from(nfInputs).map(i => i.value.trim()).filter(v => v !== '').join(', ');
-        const obsHistorico = `Recebimento Cotação ${codigoCotacao}${nfs ? ' - NF: ' + nfs : ''}`;
-
-        for (const item of itens) {
-          await SupabaseService.insert('recebimentos', item);
-          try {
-            const { data: produto } = await supabaseClient.from('produtos').select('quantidade_em_estoque').eq('id', item.id_produto).single();
-            if (produto) {
-                const qtdAnterior = parseFloat(produto.quantidade_em_estoque) || 0;
-                const novaQtd = qtdAnterior + parseFloat(item.qtd_recebida);
-                await supabaseClient.from('produtos').update({ quantidade_em_estoque: novaQtd }).eq('id', item.id_produto);
-
-                // REGISTRA NO HISTÓRICO DE MOVIMENTAÇÕES (Para aparecer no Estoque Geral)
-                await supabaseClient.from('movimentacoes_estoque').insert({
-                    produto_id: item.id_produto,
-                    tipo_movimentacao: 'ENTRADA',
-                    quantidade: item.qtd_recebida,
-                    quantidade_anterior: qtdAnterior,
-                    quantidade_nova: novaQtd,
-                    usuario: this._getCurrentUser()?.nome || 'Sistema',
-                    observacao: obsHistorico
-                });
-            }
-          } catch (errEstoque) { console.error(errEstoque); }
+        const idProduto = div.dataset.itemId;
+        const qtdPedida = parseFloat(div.dataset.qtdPedida);
+        const qtd = parseFloat(div.querySelector('.qtd-recebida').value);
+        if (!isNaN(qtd) && qtd > 0 && idProduto && idProduto.length >= 36) {
+            itens.push({
+                id_cotacao: cotacaoId,
+                id_produto: idProduto,
+                qtd_recebida: qtd,
+                qtd_pedida: qtdPedida,
+                data_recebimento: new Date().toISOString()
+            });
         }
-        
-        const { data: todosItens } = await supabaseClient.from('cotacao_itens').select('id_produto, quantidade').eq('id_cotacao', cotacaoId);
-        const { data: todosRecebimentos } = await supabaseClient.from('recebimentos').select('id_produto, qtd_recebida').eq('id_cotacao', cotacaoId);
-        
-        const totalRecebidoMap = {};
-        todosRecebimentos?.forEach(r => {
-            totalRecebidoMap[r.id_produto] = (totalRecebidoMap[r.id_produto] || 0) + r.qtd_recebida;
-        });
+    });
 
-        let statusFinal = 'Recebido';
-        if (todosItens) {
-            for (const item of todosItens) {
-                const recebido = totalRecebidoMap[item.id_produto] || 0;
-                if (recebido < item.quantidade) {
-                    statusFinal = 'Recebido Parcial';
-                    break;
+    if (itens.length) {
+        try {
+            // 1. Buscar informações da cotação para o histórico (código e NFs)
+            const { data: cotacaoInfo } = await supabaseClient.from('cotacoes').select('codigo_cotacao').eq('id', cotacaoId).single();
+            const codigoCotacao = cotacaoInfo?.codigo_cotacao || 'N/A';
+            
+            const nfInputs = document.querySelectorAll('.nota-fiscal-input');
+            const nfs = Array.from(nfInputs).map(i => i.value.trim()).filter(v => v !== '').join(', ');
+            const obsHistorico = `Recebimento Compras - Cotação ${codigoCotacao}${nfs ? ' - NF: ' + nfs : ''}`;
+
+            // 2. Itera sobre os itens para salvar o recebimento e atualizar o estoque
+            for (const item of itens) {
+                // Salva o registro de recebimento individual
+                await SupabaseService.insert('recebimentos', item);
+
+                // Atualiza o estoque do produto
+                try {
+                    const { data: produto } = await supabaseClient.from('produtos').select('quantidade_em_estoque').eq('id', item.id_produto).single();
+                    
+                    if (produto) {
+                        const qtdAnterior = parseFloat(produto.quantidade_em_estoque) || 0;
+                        const novaQtd = qtdAnterior + parseFloat(item.qtd_recebida);
+                        
+                        // Atualiza a quantidade na tabela 'produtos'
+                        await supabaseClient.from('produtos').update({ quantidade_em_estoque: novaQtd }).eq('id', item.id_produto);
+
+                        // REGISTRA NO HISTÓRICO DE MOVIMENTAÇÕES (Para aparecer no Estoque Geral)
+                        await supabaseClient.from('movimentacoes_estoque').insert({
+                            produto_id: item.id_produto,
+                            tipo_movimentacao: 'ENTRADA',
+                            quantidade: item.qtd_recebida,
+                            quantidade_anterior: qtdAnterior,
+                            quantidade_nova: novaQtd,
+                            usuario: this._getCurrentUser()?.nome || 'Sistema',
+                            observacao: obsHistorico // Usa a observação padronizada
+                        });
+                    }
+                } catch (errEstoque) {
+                    console.error(`Erro ao atualizar estoque do produto ${item.id_produto}:`, errEstoque);
+                    // Continua o processo mesmo que um item falhe na atualização de estoque
                 }
             }
-        }
 
-        const updatePayload = { 
-            status: statusFinal,
-            data_recebimento: new Date().toISOString(),
-            usuario_recebimento: this._getCurrentUser()?.nome || 'Sistema'
-        };
-        
-        if (notaFiscalStr) {
-            updatePayload.nota_fiscal = notaFiscalStr;
-        }
+            // 3. Verificar se o pedido foi totalmente recebido para definir o status
+            const { data: todosItens } = await supabaseClient.from('cotacao_itens').select('id_produto, quantidade').eq('id_cotacao', cotacaoId);
+            const { data: todosRecebimentos } = await supabaseClient.from('recebimentos').select('id_produto, qtd_recebida').eq('id_cotacao', cotacaoId);
+            
+            const totalRecebidoMap = {};
+            todosRecebimentos?.forEach(r => {
+                totalRecebidoMap[r.id_produto] = (totalRecebidoMap[r.id_produto] || 0) + r.qtd_recebida;
+            });
 
-        await SupabaseService.update('cotacoes', updatePayload, {field:'id',value:cotacaoId});
-        alert('Recebimento salvo com sucesso!');
-        this.closeRecebimentoPanel();
-        this.renderSavedQuotations();
-      } catch(e) {
-        console.error(e);
-        alert('Erro ao salvar recebimento');
-      }
+            let statusFinal = 'Recebido';
+            if (todosItens) {
+                for (const item of todosItens) {
+                    const recebido = totalRecebidoMap[item.id_produto] || 0;
+                    if (recebido < item.quantidade) {
+                        statusFinal = 'Recebido Parcial';
+                        break;
+                    }
+                }
+            }
+
+            // 4. Preparar o payload para atualizar a cotação principal
+            const updatePayload = {
+                status: statusFinal,
+                data_recebimento: new Date().toISOString(),
+                usuario_recebimento: this._getCurrentUser()?.nome || 'Sistema'
+            };
+            
+            // Atualiza o campo nota_fiscal na cotação com base nos inputs
+            const notaFiscalStr = Array.from(document.querySelectorAll('.nota-fiscal-input')).map(i => i.value.trim()).filter(v => v).join(', ');
+            if (notaFiscalStr) {
+                updatePayload.nota_fiscal = notaFiscalStr;
+            }
+
+            // 5. Atualizar a cotação
+            await SupabaseService.update('cotacoes', updatePayload, { field: 'id', value: cotacaoId });
+            
+            alert('Recebimento salvo com sucesso!');
+            this.closeRecebimentoPanel();
+            this.renderSavedQuotations();
+
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao salvar recebimento: ' + e.message);
+        }
     } else {
-      alert('Nenhum item válido para receber');
+        alert('Nenhum item válido para receber');
     }
   }
 };
