@@ -94,6 +94,26 @@ function setupEventListeners() {
             }
         });
     }
+
+    // ✅ Adiciona atalho Ctrl+S para salvar no modal do veículo
+    const modalVeiculo = document.getElementById('modalVeiculo');
+    if (modalVeiculo) {
+        modalVeiculo.addEventListener('keydown', (e) => {
+            // Verifica se o modal está visível antes de acionar o atalho
+            if (modalVeiculo.classList.contains('hidden')) return;
+
+            if (e.ctrlKey && e.key.toLowerCase() === 's') {
+                e.preventDefault(); // Impede a ação padrão do navegador (salvar página)
+                
+                // Encontra o botão de salvar dentro do formulário e simula um clique
+                const formVeiculo = document.getElementById('formVeiculo');
+                const btnSalvar = formVeiculo?.querySelector('button[type="submit"]');
+                if (btnSalvar) {
+                    btnSalvar.click();
+                }
+            }
+        });
+    }
 }
 
 function handleTableClick(e) {
