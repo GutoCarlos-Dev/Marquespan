@@ -162,7 +162,8 @@ async function carregarDados() {
                 )
             `)
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`)
+            .limit(10000); // Aumenta o limite para garantir que os gráficos recebam todos os dados
 
         if (filial) {
             query = query.eq('coletas_manutencao.veiculos.filial', filial);
