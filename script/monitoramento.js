@@ -263,20 +263,38 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
         }
 
         // 5. Gasto Total (Soma dos valores)
-        let queryValores = supabaseClient
-            .from('coletas_manutencao_checklist')
-            .select('valor, coletas_manutencao!inner(id, veiculos!inner(filial))')
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+        
+        let totalValor = 0;
+        let from = 0;
+        const step = 2000; // Busca em lotes de 2000 para garantir estabilidade
+        let keepFetching = true;
 
-        if (filial) queryValores = queryValores.eq('coletas_manutencao.veiculos.filial', filial);
+        while (keepFetching) {
+            let queryValores = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('valor, coletas_manutencao!inner(id, veiculos!inner(filial))')
+                .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+                .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`)
+                .range(from, from + step - 1);
 
-        const { data: dataValores, error: errValores } = await queryValores;
+            if (filial) queryValores = queryValores.eq('coletas_manutencao.veiculos.filial', filial);
 
-        if (!errValores && dataValores) {
-            const totalValor = dataValores.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
-            document.getElementById('kpi-total-valor').textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const { data: dataValores, error: errValores } = await queryValores;
+
+            if (errValores) {
+                console.error('Erro ao calcular gasto total:', errValores);
+                keepFetching = false;
+            } else {
+                if (dataValores && dataValores.length > 0) {
+                    totalValor += dataValores.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+                    if (dataValores.length < step) keepFetching = false;
+                    else from += step;
+                } else {
+                    keepFetching = false;
+                }
+            }
         }
+        document.getElementById('kpi-total-valor').textContent = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     } catch (error) {
         console.error('Erro ao carregar KPIs detalhados:', error);
@@ -435,7 +453,12 @@ function renderChartEvolucao(data) {
         // Conta apenas uma vez por manutenção (cabeçalho), ignorando múltiplos itens
         if (!processedIds.has(item.coletas_manutencao.id)) {
             processedIds.add(item.coletas_manutencao.id);
-            const dataStr = item.coletas_manutencao.data_hora ? new Date(item.coletas_manutencao.data_hora).toLocaleDateString('pt-BR') : 'N/A';
+            let dataStr = 'N/A';
+            if (item.coletas_manutencao.data_hora) {
+                const isoDate = item.coletas_manutencao.data_hora.split('T')[0];
+                const [ano, mes, dia] = isoDate.split('-');
+                dataStr = `${dia}/${mes}/${ano}`;
+            }
             if (!agrupado[dataStr]) agrupado[dataStr] = 0;
             agrupado[dataStr]++;
         }
