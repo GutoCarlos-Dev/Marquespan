@@ -2353,11 +2353,15 @@ const ColetarManutencaoUI = {
                 if (!coletasMap.has(coletaId)) {
                     coletasMap.set(coletaId, {
                         meta: row.coletas_manutencao,
-                        items: {}
+                        items: {},
+                        totalCalculado: 0
                     });
                 }
                 const entry = coletasMap.get(coletaId);
                 
+                // Soma o valor do item ao total calculado
+                entry.totalCalculado += (Number(row.valor) || 0);
+
                 let cellValue = '';
                 if (row.item === 'ELETRICA INTERNA' || row.item === 'ELETRICA / MECANICA - INTERNA') {
                     cellValue = `SOLICITAÇÃO: ${row.detalhes || ''}`;
@@ -2381,6 +2385,11 @@ const ColetarManutencaoUI = {
                     }
                 }
                 
+                // Adiciona o valor individual do item se houver
+                if (row.valor && Number(row.valor) > 0) {
+                    cellValue += ` (R$ ${Number(row.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})})`;
+                }
+
                 entry.items[row.item] = cellValue;
             });
 
@@ -2403,7 +2412,8 @@ const ColetarManutencaoUI = {
                     'PLACA': entry.meta.placa,
                     'MODELO': entry.meta.modelo,
                     'KM': entry.meta.km,
-                    'USUARIO': entry.meta.usuario
+                    'USUARIO': entry.meta.usuario,
+                    'VALOR TOTAL': (entry.totalCalculado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})
                 };
 
                 itemColumns.forEach(col => {
