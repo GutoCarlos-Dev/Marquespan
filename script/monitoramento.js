@@ -141,7 +141,7 @@ async function carregarDados() {
 
     carregarTotalFrota(filial); // Busca total da frota
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
-    carregarKPIsDetalhados(dtIni, dtFim, filial); // Busca KPIs com contagem exata
+    const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial); // Busca KPIs com contagem exata e aguarda retorno
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -174,7 +174,7 @@ async function carregarDados() {
         if (error) throw error;
 
         // atualizarKPIs(data); // Removido: KPIs agora são carregados por carregarKPIsDetalhados
-        atualizarGraficos(data);
+        atualizarGraficos(data, kpiCounts);
         
         // Atualiza timestamp
         const now = new Date();
@@ -189,6 +189,7 @@ async function carregarDados() {
 }
 
 async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
+    let counts = { pendentes: 0, internados: 0 };
     try {
         // 1. Total Pendentes (Contar Itens/Serviços)
         // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
@@ -205,6 +206,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
 
         if (!errPendentes) {
             document.getElementById('kpi-pendentes').textContent = countPendentes || 0;
+            counts.pendentes = countPendentes || 0;
         }
 
         // 2. Veículos Internados (Contar Itens)
@@ -221,6 +223,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
 
         if (!errInternados) {
             document.getElementById('kpi-internados').textContent = countInternados || 0;
+            counts.internados = countInternados || 0;
         }
 
         // 3. Finalizados Hoje (Contar Itens)
@@ -278,6 +281,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
     } catch (error) {
         console.error('Erro ao carregar KPIs detalhados:', error);
     }
+    return counts;
 }
 
 async function carregarTotalFrota(filial) {
@@ -322,14 +326,14 @@ async function carregarFiliais() {
     }
 }
 
-function atualizarGraficos(data) {
+function atualizarGraficos(data, kpiCounts) {
     renderChartEvolucao(data);
     renderChartTopPlacas(data);
     renderChartOficinas(data);
     renderChartStatus(data);
     renderChartTopServicosFreq(data);
     renderChartTopServicosCusto(data);
-    renderChartPendentesInternados(data);
+    renderChartPendentesInternados(data, kpiCounts);
 }
 
 async function carregarDadosEstoque() {
@@ -662,16 +666,22 @@ function renderChartTopServicosFreq(data) {
     });
 }
 
-function renderChartPendentesInternados(data) {
+function renderChartPendentesInternados(data, kpiCounts) {
     // Contagem total de Pendentes e Internados
     let totalPendente = 0;
     let totalInternado = 0;
 
-    data.forEach(item => {
-        const s = (item.status || '').toUpperCase();
-        if (s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO') totalPendente++;
-        if (s === 'INTERNADO') totalInternado++;
-    });
+    if (kpiCounts) {
+        // Usa os valores exatos dos KPIs se disponíveis
+        totalPendente = kpiCounts.pendentes;
+        totalInternado = kpiCounts.internados;
+    } else {
+        data.forEach(item => {
+            const s = (item.status || '').toUpperCase();
+            if (s === 'PENDENTE' || s === 'NAO REALIZADO' || s === 'NÃO REALIZADO') totalPendente++;
+            if (s === 'INTERNADO') totalInternado++;
+        });
+    }
 
     const ctx = document.getElementById('chartPendentesInternados').getContext('2d');
     if (chartPendentesInternados) chartPendentesInternados.destroy();
