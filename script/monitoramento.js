@@ -9,6 +9,7 @@ let chartTopServicosFreq = null;
 let chartTopServicosCusto = null;
 let chartPendentesInternados = null;
 let chartNivelTanques = null;
+let chartEmManutencaoAtual = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
@@ -148,6 +149,7 @@ async function carregarDados() {
     carregarTotalFrota(filial); // Busca total da frota
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
     const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial); // Busca KPIs com contagem exata e aguarda retorno
+    carregarEmManutencaoAtual(filial); // Carrega gráfico geral filtrado apenas por filial
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -462,6 +464,94 @@ async function carregarDadosEstoque() {
     } catch (error) {
         console.error('Erro ao carregar dados de estoque para o monitoramento:', error);
     }
+}
+
+async function carregarEmManutencaoAtual(filial) {
+    try {
+        // Busca contagem global sem filtros de data, mas respeitando a filial
+        // Status: INTERNADO, CHECK-IN OFICINA, CHECK-IN ROTA
+        let query = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('status, coletas_manutencao!inner(veiculos!inner(filial))')
+            .in('status', ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA']);
+
+        if (filial) {
+            query = query.eq('coletas_manutencao.veiculos.filial', filial);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        const counts = {
+            'INTERNADO': 0,
+            'CHECK-IN OFICINA': 0,
+            'CHECK-IN ROTA': 0
+        };
+
+        if (data) {
+            data.forEach(item => {
+                const s = item.status;
+                if (counts[s] !== undefined) {
+                    counts[s]++;
+                }
+            });
+        }
+
+        renderChartEmManutencaoAtual(counts);
+
+    } catch (error) {
+        console.error('Erro ao carregar Em Manutenção Atual:', error);
+    }
+}
+
+function renderChartEmManutencaoAtual(counts) {
+    const ctx = document.getElementById('chartEmManutencaoAtual');
+    if (!ctx) return;
+    
+    if (chartEmManutencaoAtual) chartEmManutencaoAtual.destroy();
+
+    const total = counts['INTERNADO'] + counts['CHECK-IN OFICINA'] + counts['CHECK-IN ROTA'];
+
+    chartEmManutencaoAtual = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA'],
+            datasets: [{
+                data: [counts['INTERNADO'], counts['CHECK-IN OFICINA'], counts['CHECK-IN ROTA']],
+                backgroundColor: [
+                    STATUS_COLORS['INTERNADO'], 
+                    STATUS_COLORS['CHECK-IN OFICINA'], 
+                    STATUS_COLORS['CHECK-IN ROTA']
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: { font: { size: 12 } }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold' },
+                    formatter: (value) => value > 0 ? value : ''
+                },
+                title: {
+                    display: true,
+                    text: `Total: ${total}`,
+                    font: { size: 16 },
+                    position: 'top'
+                }
+            },
+            cutout: '60%'
+        },
+        plugins: [ChartDataLabels]
+    });
 }
 
 function renderChartNivelTanques(estoqueData) {
