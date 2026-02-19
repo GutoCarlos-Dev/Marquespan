@@ -12,6 +12,34 @@
   <!-- Plugin Datalabels para exibir valores nos gráficos (opcional, mas recomendado) -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Ajustes para compactar os cards e caber melhor na tela */
+    .kpi-grid {
+        gap: 10px !important;
+        margin-bottom: 15px !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    }
+    .kpi-card {
+        padding: 10px 15px !important;
+        min-height: auto !important;
+    }
+    .kpi-icon {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 1.1rem !important;
+    }
+    .kpi-info h3 { font-size: 0.8rem !important; margin-bottom: 2px !important; }
+    .kpi-info p { font-size: 1.3rem !important; }
+    
+    /* Estilo para o card Roxo (Check-in Oficina) para melhor contraste */
+    .kpi-card.purple {
+        border-left: 4px solid #6f42c1 !important;
+    }
+    .kpi-card.purple .kpi-icon {
+        color: #ffffff !important;
+        background-color: rgba(111, 66, 193, 0.1) !important;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -87,6 +115,30 @@
                 <div id="tooltip-internados" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
                     <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas Internadas</div>
                     <div id="tooltip-internados-content">Carregando...</div>
+                </div>
+            </div>
+            <div class="kpi-card glass-card purple" id="card-checkin-oficina" style="position: relative; cursor: help;">
+                <div class="kpi-icon"><i class="fas fa-warehouse"></i></div>
+                <div class="kpi-info">
+                    <h3>Check-in Oficina</h3>
+                    <p id="kpi-checkin-oficina">0</p>
+                </div>
+                <!-- Tooltip para detalhamento -->
+                <div id="tooltip-checkin-oficina" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas em Oficina</div>
+                    <div id="tooltip-checkin-oficina-content">Carregando...</div>
+                </div>
+            </div>
+            <div class="kpi-card glass-card orange" id="card-checkin-rota" style="position: relative; cursor: help;">
+                <div class="kpi-icon"><i class="fas fa-road"></i></div>
+                <div class="kpi-info">
+                    <h3>Check-in Rota</h3>
+                    <p id="kpi-checkin-rota">0</p>
+                </div>
+                <!-- Tooltip para detalhamento -->
+                <div id="tooltip-checkin-rota" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas em Rota</div>
+                    <div id="tooltip-checkin-rota-content">Carregando...</div>
                 </div>
             </div>
             <div class="kpi-card glass-card green">
@@ -239,8 +291,6 @@
                 tooltipInternadosContent.innerHTML = 'Carregando...';
 
                 try {
-                    const dataIni = document.getElementById('dataInicial').value;
-                    const dataFim = document.getElementById('dataFinal').value;
                     const filial = document.getElementById('filtroFilial').value;
 
                     let query = supabaseClient
@@ -248,8 +298,6 @@
                         .select('coletas_manutencao!inner(placa, data_hora, veiculos!inner(filial)), oficinas(nome)')
                         .eq('status', 'INTERNADO');
 
-                    if (dataIni) query = query.gte('coletas_manutencao.data_hora', dataIni + 'T00:00:00');
-                    if (dataFim) query = query.lte('coletas_manutencao.data_hora', dataFim + 'T23:59:59');
                     if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
 
                     const { data, error } = await query;
@@ -290,6 +338,106 @@
             cardInternados.addEventListener('mouseleave', () => {
                 tooltipInternados.style.display = 'none';
             });
+        }
+
+        // Lógica para Tooltip de Check-in Oficina
+        const cardCheckinOficina = document.getElementById('card-checkin-oficina');
+        const tooltipCheckinOficina = document.getElementById('tooltip-checkin-oficina');
+        const tooltipCheckinOficinaContent = document.getElementById('tooltip-checkin-oficina-content');
+
+        if (cardCheckinOficina && tooltipCheckinOficina) {
+            cardCheckinOficina.addEventListener('mouseenter', async () => {
+                tooltipCheckinOficina.style.display = 'block';
+                tooltipCheckinOficinaContent.innerHTML = 'Carregando...';
+
+                try {
+                    const filial = document.getElementById('filtroFilial').value;
+
+                    let query = supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .select('coletas_manutencao!inner(placa, data_hora, veiculos!inner(filial)), oficinas(nome)')
+                        .eq('status', 'CHECK-IN OFICINA');
+
+                    if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        const veiculosMap = new Map();
+                        data.forEach(item => {
+                            const placa = item.coletas_manutencao.placa;
+                            const oficina = item.oficinas ? item.oficinas.nome : 'Sem Oficina';
+                            if (!veiculosMap.has(placa)) veiculosMap.set(placa, oficina);
+                        });
+                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        Array.from(veiculosMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).forEach(([placa, oficina]) => {
+                            html += `<li style="padding: 4px 0; border-bottom: 1px solid #444; color: #ddd; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: bold;">${placa}</span>
+                                <span style="font-size: 0.85em; color: #aaa; margin-left: 10px; text-align: right;">${oficina}</span>
+                            </li>`;
+                        });
+                        html += '</ul>';
+                        tooltipCheckinOficinaContent.innerHTML = html;
+                    } else {
+                        tooltipCheckinOficinaContent.innerHTML = 'Nenhum veículo em oficina.';
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar check-in oficina:', err);
+                    tooltipCheckinOficinaContent.innerHTML = 'Erro ao carregar dados.';
+                }
+            });
+            cardCheckinOficina.addEventListener('mouseleave', () => { tooltipCheckinOficina.style.display = 'none'; });
+        }
+
+        // Lógica para Tooltip de Check-in Rota
+        const cardCheckinRota = document.getElementById('card-checkin-rota');
+        const tooltipCheckinRota = document.getElementById('tooltip-checkin-rota');
+        const tooltipCheckinRotaContent = document.getElementById('tooltip-checkin-rota-content');
+
+        if (cardCheckinRota && tooltipCheckinRota) {
+            cardCheckinRota.addEventListener('mouseenter', async () => {
+                tooltipCheckinRota.style.display = 'block';
+                tooltipCheckinRotaContent.innerHTML = 'Carregando...';
+
+                try {
+                    const filial = document.getElementById('filtroFilial').value;
+
+                    let query = supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .select('coletas_manutencao!inner(placa, data_hora, veiculos!inner(filial)), oficinas(nome)')
+                        .eq('status', 'CHECK-IN ROTA');
+
+                    if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        const veiculosMap = new Map();
+                        data.forEach(item => {
+                            const placa = item.coletas_manutencao.placa;
+                            const oficina = item.oficinas ? item.oficinas.nome : 'Sem Oficina';
+                            if (!veiculosMap.has(placa)) veiculosMap.set(placa, oficina);
+                        });
+                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        Array.from(veiculosMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).forEach(([placa, oficina]) => {
+                            html += `<li style="padding: 4px 0; border-bottom: 1px solid #444; color: #ddd; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: bold;">${placa}</span>
+                                <span style="font-size: 0.85em; color: #aaa; margin-left: 10px; text-align: right;">${oficina}</span>
+                            </li>`;
+                        });
+                        html += '</ul>';
+                        tooltipCheckinRotaContent.innerHTML = html;
+                    } else {
+                        tooltipCheckinRotaContent.innerHTML = 'Nenhum veículo em rota.';
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar check-in rota:', err);
+                    tooltipCheckinRotaContent.innerHTML = 'Erro ao carregar dados.';
+                }
+            });
+            cardCheckinRota.addEventListener('mouseleave', () => { tooltipCheckinRota.style.display = 'none'; });
         }
     });
   </script>

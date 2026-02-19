@@ -9,14 +9,13 @@ let chartTopServicosFreq = null;
 let chartTopServicosCusto = null;
 let chartPendentesInternados = null;
 let chartNivelTanques = null;
-let chartEmManutencaoAtual = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
     'FINALIZADO': '#249c40',       // Verde
     'PENDENTE': '#ff0019',         // Vermelho
     'INTERNADO': '#0cabf5',        // Azul
-    'CHECK-IN OFICINA': '#eede06', // Amarelo
+    'CHECK-IN OFICINA': '#6f42c1', // Roxo
     'CHECK-IN ROTA': '#d35400',    // Laranja
     'FINALIZADO ROTA': '#0b3314'   // Verde Escuro
 };
@@ -145,11 +144,12 @@ async function carregarDados() {
     const dtIni = document.getElementById('dataInicial').value;
     const dtFim = document.getElementById('dataFinal').value;
     const filial = document.getElementById('filtroFilial').value;
+    const statusEl = document.getElementById('filtroStatus');
+    const status = statusEl ? statusEl.value : '';
 
     carregarTotalFrota(filial); // Busca total da frota
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
-    const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial); // Busca KPIs com contagem exata e aguarda retorno
-    carregarEmManutencaoAtual(filial); // Carrega gráfico geral filtrado apenas por filial
+    const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial, status); // Busca KPIs com contagem exata e aguarda retorno
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -176,6 +176,15 @@ async function carregarDados() {
         if (filial) {
             query = query.eq('coletas_manutencao.veiculos.filial', filial);
         }
+        if (status) {
+            if (status === 'PENDENTE') {
+                query = query.in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
+            } else if (status === 'FINALIZADO') {
+                query = query.in('status', ['FINALIZADO', 'OK']);
+            } else {
+                query = query.eq('status', status);
+            }
+        }
 
         const { data, error } = await query;
 
@@ -196,7 +205,7 @@ async function carregarDados() {
     }
 }
 
-async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
+async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
     let counts = { 
         pendentes: 0, 
         internados: 0,
@@ -206,6 +215,18 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
         finalizadoRota: 0
     };
     try {
+        // Helper function to apply the global status filter consistently
+        const applyStatusFilter = (query) => {
+            if (!status) return query; // No filter, return original
+            if (status === 'PENDENTE') {
+                return query.in('coletas_manutencao_checklist.status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
+            } else if (status === 'FINALIZADO') {
+                return query.in('coletas_manutencao_checklist.status', ['FINALIZADO', 'OK']);
+            } else {
+                return query.eq('coletas_manutencao_checklist.status', status);
+            }
+        };
+
         // 1. Total Pendentes (Contar Itens/Serviços)
         // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
         let queryPendentes = supabaseClient
@@ -216,6 +237,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
 
         if (filial) queryPendentes = queryPendentes.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryPendentes = applyStatusFilter(queryPendentes);
 
         const { count: countPendentes, error: errPendentes } = await queryPendentes;
 
@@ -225,14 +247,14 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
         }
 
         // 2. Veículos Internados (Contar Itens)
+        // Removido filtro de data para mostrar o total GERAL (Status Atual)
         let queryInternados = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
-            .eq('status', 'INTERNADO')
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+            .eq('status', 'INTERNADO');
 
         if (filial) queryInternados = queryInternados.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryInternados = applyStatusFilter(queryInternados);
 
         const { count: countInternados, error: errInternados } = await queryInternados;
 
@@ -252,32 +274,39 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
 
         if (filial) queryFinalizadosPeriodo = queryFinalizadosPeriodo.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryFinalizadosPeriodo = applyStatusFilter(queryFinalizadosPeriodo);
         const { count: countFinalizadosPeriodo } = await queryFinalizadosPeriodo;
         counts.finalizados = countFinalizadosPeriodo || 0;
 
-        // CHECK-IN OFICINA
+        // CHECK-IN OFICINA (Status Atual - Sem filtro de data)
         let queryCheckinOficina = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
-            .eq('status', 'CHECK-IN OFICINA')
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+            .eq('status', 'CHECK-IN OFICINA');
 
         if (filial) queryCheckinOficina = queryCheckinOficina.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryCheckinOficina = applyStatusFilter(queryCheckinOficina);
         const { count: countCheckinOficina } = await queryCheckinOficina;
         counts.checkinOficina = countCheckinOficina || 0;
+        
+        // Atualiza o card no DOM
+        const kpiCheckinOficina = document.getElementById('kpi-checkin-oficina');
+        if (kpiCheckinOficina) kpiCheckinOficina.textContent = countCheckinOficina || 0;
 
-        // CHECK-IN ROTA
+        // CHECK-IN ROTA (Status Atual - Sem filtro de data)
         let queryCheckinRota = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
-            .eq('status', 'CHECK-IN ROTA')
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+            .eq('status', 'CHECK-IN ROTA');
 
         if (filial) queryCheckinRota = queryCheckinRota.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryCheckinRota = applyStatusFilter(queryCheckinRota);
         const { count: countCheckinRota } = await queryCheckinRota;
         counts.checkinRota = countCheckinRota || 0;
+
+        // Atualiza o card no DOM
+        const kpiCheckinRota = document.getElementById('kpi-checkin-rota');
+        if (kpiCheckinRota) kpiCheckinRota.textContent = countCheckinRota || 0;
 
         // FINALIZADO ROTA
         let queryFinalizadoRota = supabaseClient
@@ -288,6 +317,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
 
         if (filial) queryFinalizadoRota = queryFinalizadoRota.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryFinalizadoRota = applyStatusFilter(queryFinalizadoRota);
         const { count: countFinalizadoRota } = await queryFinalizadoRota;
         counts.finalizadoRota = countFinalizadoRota || 0;
 
@@ -305,6 +335,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
             .lte('coletas_manutencao.data_hora', `${hojeStr}T23:59:59`);
 
         if (filial) queryFinalizados = queryFinalizados.eq('coletas_manutencao.veiculos.filial', filial);
+        if (status) queryFinalizados = applyStatusFilter(queryFinalizados);
 
         const { count: countFinalizados, error: errFinalizados } = await queryFinalizados;
 
@@ -315,11 +346,20 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
         // 4. Total Manutenções (Contar Cabeçalhos/Veículos Atendidos)
         let queryManutencoes = supabaseClient
             .from('coletas_manutencao')
-            .select('*, veiculos!inner(filial)', { count: 'exact', head: true })
+            .select('id, veiculos!inner(filial), coletas_manutencao_checklist!inner(status)', { count: 'exact', head: true })
             .gte('data_hora', `${dtIni}T00:00:00`)
             .lte('data_hora', `${dtFim}T23:59:59`);
 
         if (filial) queryManutencoes = queryManutencoes.eq('veiculos.filial', filial);
+        if (status) {
+            if (status === 'PENDENTE') {
+                queryManutencoes = queryManutencoes.in('coletas_manutencao_checklist.status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
+            } else if (status === 'FINALIZADO') {
+                queryManutencoes = queryManutencoes.in('coletas_manutencao_checklist.status', ['FINALIZADO', 'OK']);
+            } else {
+                queryManutencoes = queryManutencoes.eq('coletas_manutencao_checklist.status', status);
+            }
+        }
 
         const { count: countManutencoes, error: errManutencoes } = await queryManutencoes;
 
@@ -343,6 +383,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
                 .range(from, from + step - 1);
 
             if (filial) queryValores = queryValores.eq('coletas_manutencao.veiculos.filial', filial);
+            if (status) queryValores = applyStatusFilter(queryValores);
 
             const { data: dataValores, error: errValores } = await queryValores;
 
@@ -371,8 +412,7 @@ async function carregarTotalFrota(filial) {
     try {
         let query = supabaseClient
             .from('veiculos')
-            .select('*', { count: 'exact', head: true })
-            .neq('tipo', 'SEMI-REBOQUE');
+            .select('*', { count: 'exact', head: true });
 
         if (filial) query = query.eq('filial', filial);
 
@@ -464,94 +504,6 @@ async function carregarDadosEstoque() {
     } catch (error) {
         console.error('Erro ao carregar dados de estoque para o monitoramento:', error);
     }
-}
-
-async function carregarEmManutencaoAtual(filial) {
-    try {
-        // Busca contagem global sem filtros de data, mas respeitando a filial
-        // Status: INTERNADO, CHECK-IN OFICINA, CHECK-IN ROTA
-        let query = supabaseClient
-            .from('coletas_manutencao_checklist')
-            .select('status, coletas_manutencao!inner(veiculos!inner(filial))')
-            .in('status', ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA']);
-
-        if (filial) {
-            query = query.eq('coletas_manutencao.veiculos.filial', filial);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const counts = {
-            'INTERNADO': 0,
-            'CHECK-IN OFICINA': 0,
-            'CHECK-IN ROTA': 0
-        };
-
-        if (data) {
-            data.forEach(item => {
-                const s = item.status;
-                if (counts[s] !== undefined) {
-                    counts[s]++;
-                }
-            });
-        }
-
-        renderChartEmManutencaoAtual(counts);
-
-    } catch (error) {
-        console.error('Erro ao carregar Em Manutenção Atual:', error);
-    }
-}
-
-function renderChartEmManutencaoAtual(counts) {
-    const ctx = document.getElementById('chartEmManutencaoAtual');
-    if (!ctx) return;
-    
-    if (chartEmManutencaoAtual) chartEmManutencaoAtual.destroy();
-
-    const total = counts['INTERNADO'] + counts['CHECK-IN OFICINA'] + counts['CHECK-IN ROTA'];
-
-    chartEmManutencaoAtual = new Chart(ctx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA'],
-            datasets: [{
-                data: [counts['INTERNADO'], counts['CHECK-IN OFICINA'], counts['CHECK-IN ROTA']],
-                backgroundColor: [
-                    STATUS_COLORS['INTERNADO'], 
-                    STATUS_COLORS['CHECK-IN OFICINA'], 
-                    STATUS_COLORS['CHECK-IN ROTA']
-                ],
-                borderColor: '#ffffff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { 
-                    position: 'bottom',
-                    labels: { font: { size: 12 } }
-                },
-                datalabels: {
-                    color: '#fff',
-                    font: { weight: 'bold' },
-                    formatter: (value) => value > 0 ? value : ''
-                },
-                title: {
-                    display: true,
-                    text: `Total: ${total}`,
-                    font: { size: 16 },
-                    position: 'top'
-                }
-            },
-            cutout: '60%'
-        },
-        plugins: [ChartDataLabels]
-    });
 }
 
 function renderChartNivelTanques(estoqueData) {
