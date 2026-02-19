@@ -228,16 +228,16 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
 
         // 3. Finalizados Hoje (Contar Itens)
         // Usa a data atual do sistema para filtrar "Hoje"
-        const hoje = new Date();
-        const hojeIni = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
-        const hojeFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+        // Formata a data como 'YYYY-MM-DD' para evitar problemas de fuso horário.
+        // O Supabase interpretará como o dia inteiro na timezone do banco (UTC).
+        const hojeStr = new Date().toISOString().split('T')[0];
 
         let queryFinalizados = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
             .in('status', ['FINALIZADO', 'FINALIZADO ROTA', 'OK'])
-            .gte('coletas_manutencao.data_hora', hojeIni)
-            .lte('coletas_manutencao.data_hora', hojeFim);
+            .gte('coletas_manutencao.data_hora', `${hojeStr}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${hojeStr}T23:59:59`);
 
         if (filial) queryFinalizados = queryFinalizados.eq('coletas_manutencao.veiculos.filial', filial);
 
