@@ -266,7 +266,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
         
         let totalValor = 0;
         let from = 0;
-        const step = 2000; // Busca em lotes de 2000 para garantir estabilidade
+        const step = 1000; // Ajustado para 1000 (limite padrão do Supabase) para evitar parada prematura
         let keepFetching = true;
 
         while (keepFetching) {

@@ -3,9 +3,7 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
-let paginaAtual = 1;
-const registrosPorPagina = 50;
-
+// Paginação removida para exibir todos os resultados
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   const divUsuario = document.getElementById('usuario-logado');
@@ -81,32 +79,25 @@ async function buscarManutencao() {
       return;
   }
 
-  if (count > 1000) {
-      const confirmar = confirm(`A pesquisa retornou ${count} registros. Isso pode demorar um pouco para carregar. Deseja continuar?`);
-      if (!confirmar) return;
-  }
+  // 2. Buscar os dados em lotes para não ter limite
+  let manutencoes = [];
+  const step = 1000; // Limite do Supabase por requisição
+  for (let i = 0; i < count; i += step) {
+      let query = supabaseClient.from('manutencao').select('*');
+      query = aplicarFiltrosQuery(query, filtros);
+      query = query.order('data', { ascending: false });
+      query = query.range(i, i + step - 1);
 
-  // 2. Buscar os dados (agora com range total se confirmado)
-  let query = supabaseClient.from('manutencao').select('*');
-  query = aplicarFiltrosQuery(query, filtros);
-  
-  // Ordenação padrão
-  query = query.order('data', { ascending: false });
-  
-  // Se for muitos dados, o Supabase pode limitar, então usamos range se necessário
-  // Mas por padrão ele traz até um limite. Vamos tentar trazer tudo paginado pelo banco se fosse muito grande,
-  // mas como o requisito é "visualizar todos" e paginar no grid, vamos trazer o máximo possível.
-  if (count > 0) {
-      query = query.range(0, count - 1);
-  }
+      const { data: batch, error } = await query;
 
-  // Executar a query
-  const { data: manutencoes, error } = await query;
-
-  if (error) {
-    console.error('❌ Erro ao buscar manutenções:', error);
-    alert('Erro ao buscar manutenções. Verifique os filtros ou tente novamente.');
-    return;
+      if (error) {
+          console.error('❌ Erro ao buscar manutenções em lote:', error);
+          alert('Erro ao buscar manutenções. Verifique os filtros ou tente novamente.');
+          return; // Interrompe a busca em caso de erro
+      }
+      if (batch) {
+          manutencoes.push(...batch);
+      }
   }
 
   // Verificar se há dados
@@ -145,10 +136,9 @@ async function buscarManutencao() {
 
   dadosExportacao = manutencoesComValor;
   todosRegistros = manutencoesComValor;
-  paginaAtual = 1;
 
   // Preencher a tabela com os dados enriquecidos
-  renderizarPagina();
+  renderizarTabelaCompleta();
 }
 
 function aplicarFiltrosQuery(query, filtros) {
@@ -182,49 +172,16 @@ async function fetchItensEmLotes(ids) {
     return allItems;
 }
 
-function renderizarPagina() {
-    const inicio = (paginaAtual - 1) * registrosPorPagina;
-    const fim = inicio + registrosPorPagina;
-    const registrosPagina = todosRegistros.slice(inicio, fim);
+function renderizarTabelaCompleta() {
+    preencherTabela(todosRegistros); // Renderiza todos os registros de uma vez
 
-    preencherTabela(registrosPagina);
-    atualizarControlesPaginacao();
-}
-
-function mudarPagina(delta) {
-    const totalPaginas = Math.ceil(todosRegistros.length / registrosPorPagina);
-    const novaPagina = paginaAtual + delta;
-
-    if (novaPagina >= 1 && novaPagina <= totalPaginas) {
-        paginaAtual = novaPagina;
-        renderizarPagina();
-    }
-}
-
-function atualizarControlesPaginacao() {
-    const totalRegistrosCount = todosRegistros.length;
-    const totalPaginas = Math.ceil(totalRegistrosCount / registrosPorPagina);
-    const inicio = (paginaAtual - 1) * registrosPorPagina + 1;
-    const fim = Math.min(paginaAtual * registrosPorPagina, totalRegistrosCount);
-
-    const info = document.getElementById('paginationInfo');
-    const btnPrev = document.getElementById('btnPrevPage');
-    const btnNext = document.getElementById('btnNextPage');
-    const container = document.getElementById('paginationContainer');
-
-    if (totalRegistrosCount > 0) {
-        container.classList.remove('hidden');
-        info.textContent = `Mostrando ${inicio}-${fim} de ${totalRegistrosCount}`;
-        btnPrev.disabled = paginaAtual === 1;
-        btnNext.disabled = paginaAtual === totalPaginas;
-    } else {
-        container.classList.add('hidden');
-    }
-    
     // Atualiza totais gerais
     const valorTotalGeral = todosRegistros.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+    const totalRegistrosCount = todosRegistros.length;
+
     document.getElementById('totalRegistros').textContent = totalRegistrosCount;
     document.getElementById('valorTotal').textContent = formatarValor(valorTotalGeral);
+    document.getElementById('paginationContainer').classList.add('hidden'); // Sempre esconde a paginação
 }
 
 // 📋 Preencher tabela de resultados
@@ -481,13 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('modalVisualizar');
     if (e.target === modal) modal.classList.add('hidden');
   });
-
-  // Listeners de Paginação
-  const btnPrev = document.getElementById('btnPrevPage');
-  if (btnPrev) btnPrev.addEventListener('click', () => mudarPagina(-1));
-  
-  const btnNext = document.getElementById('btnNextPage');
-  if (btnNext) btnNext.addEventListener('click', () => mudarPagina(1));
 
   setupColumnResizing();
 
