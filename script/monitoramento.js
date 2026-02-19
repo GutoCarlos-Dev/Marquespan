@@ -45,6 +45,12 @@ function initDashboard() {
     document.getElementById('btn-fullscreen').addEventListener('click', toggleFullScreen);
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => window.toggleSidebar && window.toggleSidebar());
 
+    // Adiciona tooltip explicativo ao card de Total de Manutenções
+    const kpiCardTotalQtd = document.getElementById('kpi-total-qtd')?.parentElement;
+    if (kpiCardTotalQtd) {
+        kpiCardTotalQtd.title = "Esse número representa quantas vezes a equipe de manutenção parou para atender um veículo no período selecionado.";
+    }
+
     // Carregamento inicial
     carregarDados();
 
@@ -189,7 +195,14 @@ async function carregarDados() {
 }
 
 async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
-    let counts = { pendentes: 0, internados: 0 };
+    let counts = { 
+        pendentes: 0, 
+        internados: 0,
+        finalizados: 0,
+        checkinOficina: 0,
+        checkinRota: 0,
+        finalizadoRota: 0
+    };
     try {
         // 1. Total Pendentes (Contar Itens/Serviços)
         // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
@@ -225,6 +238,56 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial) {
             document.getElementById('kpi-internados').textContent = countInternados || 0;
             counts.internados = countInternados || 0;
         }
+
+        // --- NOVOS CONTADORES PARA O GRÁFICO DE STATUS (PERÍODO SELECIONADO) ---
+
+        // FINALIZADO (inclui OK)
+        let queryFinalizadosPeriodo = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .in('status', ['FINALIZADO', 'OK'])
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryFinalizadosPeriodo = queryFinalizadosPeriodo.eq('coletas_manutencao.veiculos.filial', filial);
+        const { count: countFinalizadosPeriodo } = await queryFinalizadosPeriodo;
+        counts.finalizados = countFinalizadosPeriodo || 0;
+
+        // CHECK-IN OFICINA
+        let queryCheckinOficina = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .eq('status', 'CHECK-IN OFICINA')
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryCheckinOficina = queryCheckinOficina.eq('coletas_manutencao.veiculos.filial', filial);
+        const { count: countCheckinOficina } = await queryCheckinOficina;
+        counts.checkinOficina = countCheckinOficina || 0;
+
+        // CHECK-IN ROTA
+        let queryCheckinRota = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .eq('status', 'CHECK-IN ROTA')
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryCheckinRota = queryCheckinRota.eq('coletas_manutencao.veiculos.filial', filial);
+        const { count: countCheckinRota } = await queryCheckinRota;
+        counts.checkinRota = countCheckinRota || 0;
+
+        // FINALIZADO ROTA
+        let queryFinalizadoRota = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .eq('status', 'FINALIZADO ROTA')
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+
+        if (filial) queryFinalizadoRota = queryFinalizadoRota.eq('coletas_manutencao.veiculos.filial', filial);
+        const { count: countFinalizadoRota } = await queryFinalizadoRota;
+        counts.finalizadoRota = countFinalizadoRota || 0;
 
         // 3. Finalizados Hoje (Contar Itens)
         // Usa a data atual do sistema para filtrar "Hoje"
@@ -348,7 +411,7 @@ function atualizarGraficos(data, kpiCounts) {
     renderChartEvolucao(data);
     renderChartTopPlacas(data);
     renderChartOficinas(data);
-    renderChartStatus(data);
+    renderChartStatus(data, kpiCounts);
     renderChartTopServicosFreq(data);
     renderChartTopServicosCusto(data);
     renderChartPendentesInternados(data, kpiCounts);
@@ -582,18 +645,30 @@ function renderChartOficinas(data) {
     });
 }
 
-function renderChartStatus(data) {
+function renderChartStatus(data, kpiCounts) {
     const contagem = {};
-    data.forEach(item => {
-        let status = (item.status || 'N/A').toUpperCase();
-        
-        // Normalização de status para consistência com os KPIs
-        if (status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') status = 'PENDENTE';
-        if (status === 'OK') status = 'FINALIZADO';
 
-        if (!contagem[status]) contagem[status] = 0;
-        contagem[status]++;
-    });
+    if (kpiCounts) {
+        // Usa os valores exatos do banco de dados
+        if (kpiCounts.pendentes > 0) contagem['PENDENTE'] = kpiCounts.pendentes;
+        if (kpiCounts.internados > 0) contagem['INTERNADO'] = kpiCounts.internados;
+        if (kpiCounts.finalizados > 0) contagem['FINALIZADO'] = kpiCounts.finalizados;
+        if (kpiCounts.checkinOficina > 0) contagem['CHECK-IN OFICINA'] = kpiCounts.checkinOficina;
+        if (kpiCounts.checkinRota > 0) contagem['CHECK-IN ROTA'] = kpiCounts.checkinRota;
+        if (kpiCounts.finalizadoRota > 0) contagem['FINALIZADO ROTA'] = kpiCounts.finalizadoRota;
+    } else {
+        // Fallback para contagem local (caso kpiCounts não esteja disponível)
+        data.forEach(item => {
+            let status = (item.status || 'N/A').toUpperCase();
+            
+            // Normalização de status para consistência com os KPIs
+            if (status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') status = 'PENDENTE';
+            if (status === 'OK') status = 'FINALIZADO';
+
+            if (!contagem[status]) contagem[status] = 0;
+            contagem[status]++;
+        });
+    }
 
     const labels = Object.keys(contagem);
     const values = Object.values(contagem);
