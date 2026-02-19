@@ -234,9 +234,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         let queryPendentes = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
-            .in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO'])
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
+            .in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
 
         if (filial) queryPendentes = queryPendentes.eq('coletas_manutencao.veiculos.filial', filial);
         if (status) queryPendentes = applyStatusFilter(queryPendentes);
