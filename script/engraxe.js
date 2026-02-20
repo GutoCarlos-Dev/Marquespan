@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
     document.getElementById('dataListaVencimentos')?.addEventListener('change', recalcularStatusVencimentos);
+    document.getElementById('btnRecalcularVencimentos')?.addEventListener('click', recalcularStatusVencimentos);
 
     // Fecha os dropdowns se o usuário clicar fora deles
     document.addEventListener('click', (e) => {

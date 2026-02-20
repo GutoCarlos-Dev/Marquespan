@@ -199,7 +199,10 @@
                 <div class="acoes-grid-vencimentos">
                     <div class="form-group">
                         <label for="dataListaVencimentos">Data da Lista</label>
-                        <input type="date" id="dataListaVencimentos" class="glass-input">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="date" id="dataListaVencimentos" class="glass-input">
+                            <button id="btnRecalcularVencimentos" class="btn-glass btn-blue" title="Recalcular Status"><i class="fas fa-sync-alt"></i></button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
