@@ -412,7 +412,8 @@ async function carregarTotalFrota(filial) {
     try {
         let query = supabaseClient
             .from('veiculos')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .neq('tipo', 'SEMI-REBOQUE'); // Exclui SEMI-REBOQUE da contagem principal
 
         if (filial) query = query.eq('filial', filial);
 
