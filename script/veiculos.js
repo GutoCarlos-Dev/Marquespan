@@ -163,7 +163,7 @@ function carregarTipos() {
     const selectModal = document.getElementById('veiculoTipo');
     
     // Lista fixa conforme solicitado
-    const tipos = ['HR/VAN', 'MUNKC', 'SEMI-REBOQUE', 'OPERACIONAL', 'RESERVA', 'CAVALO MECANICO', 'TOCO', 'TRUCK', 'BITRUCK', 'UTILITARIO'];
+    const tipos = ['HR/VAN', 'MUNKC', 'SEMI-REBOQUE', 'OPERACIONAL', 'RESERVA', 'CAVALO MECANICO', 'TOCO', 'TRUCK', 'BITRUCK', 'INOPERANTE'];
     
     if (!container) return;
     
