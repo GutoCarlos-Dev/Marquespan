@@ -89,7 +89,7 @@
 .kpi-card.blue1 { border-left-color: #0cabf5; }
 .kpi-card.green { border-left-color: #28a745; }
 .kpi-card.orange { border-left-color: #fd7e14; }
-.kpi-card.purple { border-left-color: #6f42c1; }
+.kpi-card.yellow { border-left-color: #ffc107; }
 .kpi-card.red { border-left-color: #ff0019;}
 
 .kpi-icon {
@@ -101,7 +101,7 @@
 .kpi-card.blue1 .kpi-icon { color: #ffffff; }
 .kpi-card.green .kpi-icon { color: #ffffff; }
 .kpi-card.orange .kpi-icon { color: #ffffff; }
-.kpi-card.purple .kpi-icon { color: #6f42c1; }
+.kpi-card.yellow .kpi-icon { color: #ffc107; }
 .kpi-card.red .kpi-icon { color: #ffffff; }
 
 .kpi-info h3 {
