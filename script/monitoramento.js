@@ -13,12 +13,12 @@ let chartEmManutencaoAtual = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
-    'FINALIZADO': '#249c40',       // Verde
-    'PENDENTE': '#ff0019',         // Vermelho
-    'INTERNADO': '#0cabf5',        // Azul
-    'CHECK-IN OFICINA': '#6f42c1', // Roxo
-    'CHECK-IN ROTA': '#d35400',    // Laranja
-    'FINALIZADO ROTA': '#0b3314'   // Verde Escuro
+    'FINALIZADO': '#28a745',       // Verde Escuro
+    'PENDENTE': '#dc3545',         // Vermelho Escuro
+    'INTERNADO': '#007bff',        // Azul Escuro
+    'CHECK-IN OFICINA': '#ffc107', // Amarelo Escuro
+    'CHECK-IN ROTA': '#fd7e14',    // Laranja Escuro
+    'FINALIZADO ROTA': '#006400'   // Verde Muito Escuro
 };
 
 // Intervalo de atualização automática (30 segundos)
