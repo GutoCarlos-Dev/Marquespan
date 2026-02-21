@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('btnCloseModalNovaLista')?.addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
+    document.getElementById('btnCancelarNovaLista')?.addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
     document.getElementById('btnConfirmarCriacao')?.addEventListener('click', criarNovaLista);
     
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosModal);
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('btnCloseModalDetalhes').addEventListener('click', () => document.getElementById('modalDetalhesLista').classList.add('hidden'));
+    document.getElementById('btnFecharDetalhes')?.addEventListener('click', () => document.getElementById('modalDetalhesLista').classList.add('hidden'));
     document.getElementById('filtroDetalhesInput').addEventListener('input', filtrarItensDetalhes);
     document.getElementById('btnFinalizarLista').addEventListener('click', finalizarListaAtual);
     document.getElementById('btnExportarPDF').addEventListener('click', gerarPDFLista);
@@ -126,6 +128,7 @@ async function carregarListas() {
                 </td>
                 <td>
                     <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')"><i class="fas fa-folder-open"></i></button>
+                    <button class="btn-icon pdf" onclick="gerarPDFListaPorId('${lista.id}', '${lista.nome}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
                     <button class="btn-icon delete" onclick="excluirLista('${lista.id}')"><i class="fas fa-trash"></i></button>
                 </td>
             `;
@@ -491,6 +494,83 @@ window.excluirLista = async function(id) {
         carregarListas();
     } catch (error) {
         alert('Erro ao excluir lista.');
+    }
+}
+
+window.gerarPDFListaPorId = async function(id, nomeLista) {
+    if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
+    
+    try {
+        const { data: itens, error } = await supabaseClient
+            .from('lavagem_itens')
+            .select('*')
+            .eq('lista_id', id)
+            .order('placa');
+
+        if (error) throw error;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Logo
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.addImage(base64data, 'PNG', 14, 10, 40, 15);
+            }
+        } catch (e) { console.warn('Logo não carregado'); }
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55); // Verde Marquespan
+        doc.text('Relatório de Lavagem', 14, 35);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Lista: ${nomeLista}`, 14, 42);
+        doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 48);
+
+        const columns = ['Placa', 'Modelo', 'Marca', 'Tipo', 'Status', 'Data Realizado'];
+        const rows = itens.map(item => [
+            item.placa,
+            item.modelo || '',
+            item.marca || '',
+            item.tipo_lavagem || '-',
+            item.status,
+            item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-'
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 55,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55] },
+            styles: { fontSize: 10, cellPadding: 2 },
+            alternateRowStyles: { fillColor: [240, 240, 240] },
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 4) { // Status column
+                    const status = data.cell.raw;
+                    if (status === 'REALIZADO') {
+                        data.cell.styles.textColor = [40, 167, 69]; // Green
+                        data.cell.styles.fontStyle = 'bold';
+                    } else {
+                        data.cell.styles.textColor = [220, 53, 69]; // Red
+                    }
+                }
+            }
+        });
+
+        doc.save(`Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar PDF: ' + error.message);
     }
 }
 
