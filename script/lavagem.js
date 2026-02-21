@@ -31,8 +31,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosModal);
     document.getElementById('filtroFilialNovaLista').addEventListener('change', filtrarVeiculosModal);
-    document.getElementById('filtroTipoNovaLista')?.addEventListener('change', filtrarVeiculosModal);
     document.getElementById('chkAllNovaLista').addEventListener('change', toggleAllVeiculos);
+
+    // Setup Multiselect Tipo
+    const displayTipo = document.getElementById('filtroTipoNovaListaDisplay');
+    const optionsTipo = document.getElementById('filtroTipoNovaListaOptions');
+    if (displayTipo && optionsTipo) {
+        displayTipo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            optionsTipo.style.display = optionsTipo.style.display === 'block' ? 'none' : 'block';
+        });
+        document.addEventListener('click', (e) => {
+            if (!displayTipo.contains(e.target) && !optionsTipo.contains(e.target)) {
+                optionsTipo.style.display = 'none';
+            }
+        });
+        optionsTipo.addEventListener('change', () => {
+            filtrarVeiculosModal();
+            updateMultiselectText();
+        });
+    }
 
     document.getElementById('btnCloseModalDetalhes').addEventListener('click', () => document.getElementById('modalDetalhesLista').classList.add('hidden'));
     document.getElementById('filtroDetalhesInput').addEventListener('input', filtrarItensDetalhes);
@@ -41,6 +59,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await carregarListas();
 });
+
+function updateMultiselectText() {
+    const checked = document.querySelectorAll('.tipo-checkbox:checked');
+    const textSpan = document.getElementById('filtroTipoNovaListaText');
+    if (checked.length === 0) {
+        textSpan.textContent = 'Todos os Tipos';
+    } else if (checked.length === 1) {
+        textSpan.textContent = checked[0].value;
+    } else {
+        textSpan.textContent = `${checked.length} selecionados`;
+    }
+}
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyListas');
@@ -140,11 +170,28 @@ async function abrirModalNovaLista() {
         filiais.forEach(f => selectFilial.add(new Option(f, f)));
 
         // Popula filtro de tipo
-        const selectTipo = document.getElementById('filtroTipoNovaLista');
-        if (selectTipo) {
+        const optionsContainer = document.getElementById('filtroTipoNovaListaOptions');
+        if (optionsContainer) {
             const tipos = [...new Set(veiculosAptosCache.map(v => v.tipo).filter(Boolean))].sort();
-            selectTipo.innerHTML = '<option value="">Todos os Tipos</option>';
-            tipos.forEach(t => selectTipo.add(new Option(t, t)));
+            optionsContainer.innerHTML = '';
+            
+            const btnLimpar = document.createElement('div');
+            btnLimpar.style.cssText = 'padding: 8px; cursor: pointer; color: #dc3545; font-weight: bold; border-bottom: 1px solid #eee; text-align: center; font-size: 0.9em;';
+            btnLimpar.textContent = 'Limpar Seleção';
+            btnLimpar.onclick = () => { 
+                document.querySelectorAll('.tipo-checkbox').forEach(cb => cb.checked = false); 
+                updateMultiselectText(); 
+                filtrarVeiculosModal(); 
+            };
+            optionsContainer.appendChild(btnLimpar);
+
+            tipos.forEach(t => {
+                const label = document.createElement('label'); 
+                label.style.cssText = 'display: block; padding: 5px 10px; cursor: pointer; font-size: 0.9em;';
+                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${t}" style="margin-right: 8px;"> ${t}`;
+                optionsContainer.appendChild(label);
+            });
+            updateMultiselectText();
         }
 
         renderizarVeiculosModal(veiculosAptosCache);
@@ -182,16 +229,15 @@ function renderizarVeiculosModal(veiculos) {
 function filtrarVeiculosModal() {
     const placaInput = document.getElementById('filtroPlacaNovaLista');
     const filialInput = document.getElementById('filtroFilialNovaLista');
-    const tipoInput = document.getElementById('filtroTipoNovaLista');
     
     const placa = placaInput ? placaInput.value.toUpperCase() : '';
     const filial = filialInput ? filialInput.value : '';
-    const tipo = tipoInput ? tipoInput.value : '';
+    const checkedTypes = Array.from(document.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value);
 
     const filtrados = veiculosAptosCache.filter(v => {
         const matchPlaca = !placa || v.placa.includes(placa);
         const matchFilial = !filial || v.filial === filial;
-        const matchTipo = !tipo || v.tipo === tipo;
+        const matchTipo = checkedTypes.length === 0 || checkedTypes.includes(v.tipo);
         return matchPlaca && matchFilial && matchTipo;
     });
 

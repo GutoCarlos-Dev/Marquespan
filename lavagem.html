@@ -89,9 +89,13 @@
                     <select id="filtroFilialNovaLista" class="glass-input">
                         <option value="">Todas Filiais</option>
                     </select>
-                    <select id="filtroTipoNovaLista" class="glass-input">
-                        <option value="">Todos os Tipos</option>
-                    </select>
+                    <div class="custom-multiselect" style="position: relative; min-width: 180px;">
+                        <div id="filtroTipoNovaListaDisplay" class="glass-input" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <span id="filtroTipoNovaListaText">Todos os Tipos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroTipoNovaListaOptions" class="glass-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    </div>
                 </div>
 
                 <div class="table-responsive" style="max-height: 400px;">
