@@ -1,0 +1,52 @@
+/* Estilos específicos para Lavagem */
+.lavagem-table-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.badge-aberta { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+.badge-finalizada { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.badge-pendente { background-color: #fff3cd; color: #856404; }
+.badge-realizado { background-color: #d4edda; color: #155724; }
+
+.select-tipo-lavagem {
+    padding: 5px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    width: 100%;
+    background-color: #fff;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #006937;
+    transition: width 0.3s ease;
+}
+
+.filtros-container {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filtros-container .form-group {
+    margin-bottom: 0;
+}

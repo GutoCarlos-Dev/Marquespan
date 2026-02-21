@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Lavagem - Marquespan</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/lavagem.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+        <header class="glass-header">
+            <h1><i class="fas fa-shower"></i> Controle de Lavagem</h1>
+        </header>
+
+        <section class="glass-panel">
+            <div class="panel-header-actions">
+                <h3>Listas de Lavagem</h3>
+                <button id="btnNovaLista" class="btn-glass btn-green"><i class="fas fa-plus"></i> Nova Lista</button>
+            </div>
+
+            <div class="filtros-container">
+                <div class="form-group">
+                    <label>Data Início</label>
+                    <input type="date" id="filtroDataIni" class="glass-input">
+                </div>
+                <div class="form-group">
+                    <label>Data Fim</label>
+                    <input type="date" id="filtroDataFim" class="glass-input">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="filtroStatus" class="glass-input">
+                        <option value="">Todos</option>
+                        <option value="ABERTA">Aberta</option>
+                        <option value="FINALIZADA">Finalizada</option>
+                    </select>
+                </div>
+                <button id="btnBuscar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+            </div>
+
+            <div class="table-responsive lavagem-table-container">
+                <table class="glass-table">
+                    <thead>
+                        <tr>
+                            <th>Data Criação</th>
+                            <th>Nome da Lista</th>
+                            <th>Data da Lavagem</th>
+                            <th>Status</th>
+                            <th>Progresso</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyListas">
+                        <!-- JS fills this -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal Nova Lista -->
+    <div id="modalNovaLista" class="modal-backdrop hidden">
+        <div class="glass-modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Criar Nova Lista</h3>
+                <button class="close-button" id="btnCloseModalNovaLista">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nome da Lista</label>
+                        <input type="text" id="nomeNovaLista" class="glass-input" placeholder="Ex: Lavagem Semana 42">
+                    </div>
+                    <div class="form-group">
+                        <label>Data da Lavagem</label>
+                        <input type="date" id="dataDaLista" class="glass-input">
+                    </div>
+                </div>
+
+                <div class="filtros-modal" style="margin: 15px 0; display: flex; gap: 10px;">
+                    <input type="text" id="filtroPlacaNovaLista" class="glass-input" placeholder="Filtrar por Placa...">
+                    <select id="filtroFilialNovaLista" class="glass-input">
+                        <option value="">Todas Filiais</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="chkAllNovaLista"></th>
+                                <th>Placa</th>
+                                <th>Modelo</th>
+                                <th>Filial</th>
+                                <th>Situação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyVeiculosAptos">
+                            <!-- JS fills this -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 10px; text-align: right; font-weight: bold; color: #006937;">
+                    <span id="contadorNovaLista">0 selecionado(s)</span>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 20px; text-align: right;">
+                <button id="btnConfirmarCriacao" class="btn-glass btn-green"><i class="fas fa-save"></i> Criar Lista</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="modalDetalhesLista" class="modal-backdrop hidden">
+        <div class="glass-modal" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h3 id="tituloDetalhesLista">Detalhes da Lista</h3>
+                <button class="close-button" id="btnCloseModalDetalhes">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="actions-bar" style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+                    <input type="text" id="filtroDetalhesInput" class="glass-input" placeholder="Buscar na lista..." style="max-width: 300px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button id="btnFinalizarLista" class="btn-glass btn-green"><i class="fas fa-check-double"></i> Finalizar Lista</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 500px;">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Modelo</th>
+                                <th>Tipo Lavagem</th>
+                                <th>Status</th>
+                                <th>Data Realizado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDetalhesItens">
+                            <!-- JS fills this -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="resumo-lista" style="margin-top: 15px; display: flex; gap: 20px; font-weight: bold;">
+                    <span style="color: #28a745;">Realizados: <span id="countRealizados">0</span></span>
+                    <span style="color: #dc3545;">Pendentes: <span id="countPendentes">0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script/menu.js"></script>
+    <script type="module" src="script/lavagem.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lavagem Mobile - Marquespan</title>
+    <link rel="stylesheet" href="css/mobile-lavagem.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="mobile-header">
+        <div class="header-content">
+            <img src="logo.png" alt="Logo" class="mobile-logo">
+            <h1>Lavagem</h1>
+        </div>
+        <a href="index.html" class="btn-desktop-link"><i class="fas fa-sign-out-alt"></i></a>
+    </header>
+
+    <div class="mobile-container">
+        <!-- Tela 1: Seleção de Lista -->
+        <div id="screenListas">
+            <h3 class="section-title">Listas Abertas</h3>
+            <div id="listaDeListas" class="cards-container">
+                <div class="loading">Carregando listas...</div>
+            </div>
+        </div>
+
+        <!-- Tela 2: Itens da Lista -->
+        <div id="screenItens" class="hidden">
+            <div class="list-header">
+                <button id="btnVoltar" class="btn-back"><i class="fas fa-arrow-left"></i> Voltar</button>
+                <h3 id="tituloListaAtual">Lista Selecionada</h3>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" id="searchPlacaMobile" placeholder="Buscar placa...">
+                <i class="fas fa-search"></i>
+            </div>
+
+            <div class="filter-tabs">
+                <button class="tab active" data-filter="TODOS">Todos</button>
+                <button class="tab" data-filter="PENDENTE">Pendentes</button>
+                <button class="tab" data-filter="REALIZADO">Feitos</button>
+            </div>
+
+            <div id="listaDeItens" class="cards-container">
+                <!-- Cards carregados via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ação -->
+    <div id="modalAcaoMobile" class="mobile-modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalPlacaVeiculo">ABC-1234</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalModeloVeiculo" class="veiculo-modelo">Modelo do Veículo</p>
+                
+                <div class="form-group">
+                    <label>Tipo de Lavagem</label>
+                    <div class="radio-group" id="radioGroupTipos">
+                        <!-- Opções geradas via JS -->
+                    </div>
+                </div>
+
+                <button id="btnSalvarLavagem" class="btn-block btn-primary">
+                    <i class="fas fa-check"></i> Confirmar Lavagem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script/mobile-lavagem.js"></script>
+</body>
+</html>

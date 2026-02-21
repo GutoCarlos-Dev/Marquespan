@@ -1,0 +1,99 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding-bottom: 20px;
+}
+
+.mobile-header {
+    background-color: #006937;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.mobile-logo { height: 30px; background: white; padding: 2px; border-radius: 4px; }
+.mobile-header h1 { margin: 0; font-size: 1.2rem; font-weight: 600; margin-left: 10px; }
+.header-content { display: flex; align-items: center; }
+.btn-desktop-link { color: white; font-size: 1.2rem; }
+
+.mobile-container { padding: 15px; max-width: 600px; margin: 0 auto; }
+.section-title { color: #333; margin-top: 0; border-bottom: 2px solid #006937; padding-bottom: 5px; display: inline-block; }
+
+.hidden { display: none !important; }
+
+.cards-container { display: flex; flex-direction: column; gap: 15px; }
+
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left: 5px solid #ccc;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.card:active { transform: scale(0.98); }
+.card h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: #333; }
+.card p { margin: 0; color: #666; font-size: 0.9rem; }
+.card .status { float: right; font-weight: bold; font-size: 0.8rem; padding: 3px 8px; border-radius: 10px; }
+
+.card.status-aberta { border-left-color: #007bff; }
+.card.status-pendente { border-left-color: #ffc107; }
+.card.status-realizado { border-left-color: #28a745; background-color: #f0fff4; }
+
+.search-bar { position: relative; margin-bottom: 15px; }
+.search-bar input {
+    width: 100%; padding: 12px 15px 12px 40px;
+    border: 1px solid #ddd; border-radius: 25px;
+    font-size: 1rem; box-sizing: border-box;
+}
+.search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
+
+.filter-tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; }
+.tab {
+    padding: 8px 15px; border: none; background: #e0e0e0;
+    border-radius: 20px; font-weight: 600; color: #555;
+    white-space: nowrap;
+}
+.tab.active { background: #006937; color: white; }
+
+.list-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.btn-back { background: none; border: none; font-size: 1rem; color: #006937; font-weight: bold; }
+
+.mobile-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); z-index: 1000;
+    display: flex; align-items: flex-end;
+}
+
+.modal-content {
+    background: white; width: 100%; border-radius: 20px 20px 0 0;
+    padding: 20px; box-sizing: border-box; animation: slideUp 0.3s;
+}
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.modal-header h3 { margin: 0; font-size: 1.5rem; color: #006937; }
+.close-modal { background: none; border: none; font-size: 2rem; color: #999; }
+
+.veiculo-modelo { font-size: 1.1rem; color: #666; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+.radio-group { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
+.radio-option {
+    display: flex; align-items: center; padding: 12px;
+    border: 1px solid #ddd; border-radius: 8px;
+}
+.radio-option input { margin-right: 10px; transform: scale(1.5); }
+.radio-option.selected { border-color: #006937; background-color: #e8f5e9; font-weight: bold; }
+
+.btn-block { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 20px; cursor: pointer; }
+.btn-primary { background: #006937; color: white; }
