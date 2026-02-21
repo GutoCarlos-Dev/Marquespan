@@ -15,13 +15,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtroDataFim').value = hoje.toISOString().split('T')[0];
 
     // Listeners
-    document.getElementById('btnBuscar').addEventListener('click', carregarListas);
-    document.getElementById('btnNovaLista').addEventListener('click', abrirModalNovaLista);
-    document.getElementById('btnCloseModalNovaLista').addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
-    document.getElementById('btnConfirmarCriacao').addEventListener('click', criarNovaLista);
+    const btnBuscar = document.getElementById('btnBuscar');
+    if (btnBuscar) btnBuscar.addEventListener('click', carregarListas);
+
+    const btnNovaLista = document.getElementById('btnNovaLista');
+    if (btnNovaLista) {
+        btnNovaLista.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirModalNovaLista();
+        });
+    }
+
+    document.getElementById('btnCloseModalNovaLista')?.addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
+    document.getElementById('btnConfirmarCriacao')?.addEventListener('click', criarNovaLista);
     
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosModal);
     document.getElementById('filtroFilialNovaLista').addEventListener('change', filtrarVeiculosModal);
+    document.getElementById('filtroTipoNovaLista')?.addEventListener('change', filtrarVeiculosModal);
     document.getElementById('chkAllNovaLista').addEventListener('change', toggleAllVeiculos);
 
     document.getElementById('btnCloseModalDetalhes').addEventListener('click', () => document.getElementById('modalDetalhesLista').classList.add('hidden'));
@@ -104,11 +114,13 @@ async function abrirModalNovaLista() {
     const dataInput = document.getElementById('dataDaLista');
     const nomeInput = document.getElementById('nomeNovaLista');
     
-    dataInput.value = new Date().toISOString().split('T')[0];
-    nomeInput.value = `Lavagem - ${new Date().toLocaleDateString('pt-BR')}`;
+    if (!modal) return console.error('Modal não encontrado!');
+
+    if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+    if (nomeInput) nomeInput.value = `Lavagem - ${new Date().toLocaleDateString('pt-BR')}`;
     
     modal.classList.remove('hidden');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando veículos aptos...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando veículos aptos...</td></tr>';
 
     try {
         const { data, error } = await supabaseClient
@@ -127,11 +139,19 @@ async function abrirModalNovaLista() {
         selectFilial.innerHTML = '<option value="">Todas Filiais</option>';
         filiais.forEach(f => selectFilial.add(new Option(f, f)));
 
+        // Popula filtro de tipo
+        const selectTipo = document.getElementById('filtroTipoNovaLista');
+        if (selectTipo) {
+            const tipos = [...new Set(veiculosAptosCache.map(v => v.tipo).filter(Boolean))].sort();
+            selectTipo.innerHTML = '<option value="">Todos os Tipos</option>';
+            tipos.forEach(t => selectTipo.add(new Option(t, t)));
+        }
+
         renderizarVeiculosModal(veiculosAptosCache);
 
     } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar veículos.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erro ao carregar veículos.</td></tr>';
     }
 }
 
@@ -140,7 +160,7 @@ function renderizarVeiculosModal(veiculos) {
     tbody.innerHTML = '';
     
     if (veiculos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum veículo apto encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum veículo apto encontrado.</td></tr>';
         return;
     }
 
@@ -150,6 +170,7 @@ function renderizarVeiculosModal(veiculos) {
             <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.modelo || '-'}</td>
+            <td>${v.marca || '-'}</td>
             <td>${v.filial || '-'}</td>
             <td><span class="badge badge-realizado">APTO</span></td>
         `;
@@ -159,13 +180,19 @@ function renderizarVeiculosModal(veiculos) {
 }
 
 function filtrarVeiculosModal() {
-    const placa = document.getElementById('filtroPlacaNovaLista').value.toUpperCase();
-    const filial = document.getElementById('filtroFilialNovaLista').value;
+    const placaInput = document.getElementById('filtroPlacaNovaLista');
+    const filialInput = document.getElementById('filtroFilialNovaLista');
+    const tipoInput = document.getElementById('filtroTipoNovaLista');
+    
+    const placa = placaInput ? placaInput.value.toUpperCase() : '';
+    const filial = filialInput ? filialInput.value : '';
+    const tipo = tipoInput ? tipoInput.value : '';
 
     const filtrados = veiculosAptosCache.filter(v => {
         const matchPlaca = !placa || v.placa.includes(placa);
         const matchFilial = !filial || v.filial === filial;
-        return matchPlaca && matchFilial;
+        const matchTipo = !tipo || v.tipo === tipo;
+        return matchPlaca && matchFilial && matchTipo;
     });
 
     renderizarVeiculosModal(filtrados);
@@ -279,9 +306,16 @@ function renderizarItensDetalhes(itens) {
         const tiposLavagem = ['SIMPLES', 'DIFERENCIADA', 'BAÚ COMPLETO', 'MOTOR', 'THERMO KING', 'CHASSI'];
         
         let options = '<option value="">Selecione...</option>';
+        let found = false;
         tiposLavagem.forEach(t => {
-            options += `<option value="${t}" ${item.tipo_lavagem === t ? 'selected' : ''}>${t}</option>`;
+            const isSelected = item.tipo_lavagem === t;
+            if (isSelected) found = true;
+            options += `<option value="${t}" ${isSelected ? 'selected' : ''}>${t}</option>`;
         });
+        
+        if (item.tipo_lavagem && !found) {
+            options += `<option value="${item.tipo_lavagem}" selected>${item.tipo_lavagem}</option>`;
+        }
 
         const dataRealizado = item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-';
         const isRealizado = item.status === 'REALIZADO';

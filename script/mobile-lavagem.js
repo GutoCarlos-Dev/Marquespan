@@ -147,20 +147,41 @@ function abrirModalAcao(item) {
     const container = document.getElementById('radioGroupTipos');
     container.innerHTML = '';
 
+    // Botão Limpar Seleção
+    const btnLimpar = document.createElement('button');
+    btnLimpar.type = 'button';
+    btnLimpar.innerHTML = '<i class="fas fa-eraser"></i> Limpar Seleção';
+    btnLimpar.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 10px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; color: #666; font-weight: 600;';
+    btnLimpar.onclick = () => {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+            cb.closest('.radio-option').classList.remove('selected');
+        });
+    };
+    container.appendChild(btnLimpar);
+
+    // Parse tipos existentes (separados por vírgula)
+    const currentTypes = item.tipo_lavagem ? item.tipo_lavagem.split(',').map(t => t.trim()) : [];
+
     tipos.forEach(tipo => {
         const label = document.createElement('label');
         label.className = 'radio-option';
-        if (item.tipo_lavagem === tipo) label.classList.add('selected');
+        const isChecked = currentTypes.includes(tipo);
+        if (isChecked) label.classList.add('selected');
         
         label.innerHTML = `
-            <input type="radio" name="tipoLavagem" value="${tipo}" ${item.tipo_lavagem === tipo ? 'checked' : ''}>
+            <input type="checkbox" name="tipoLavagem" value="${tipo}" ${isChecked ? 'checked' : ''}>
             ${tipo}
         `;
         
-        label.addEventListener('click', () => {
-            document.querySelectorAll('.radio-option').forEach(l => l.classList.remove('selected'));
-            label.classList.add('selected');
-            label.querySelector('input').checked = true;
+        // Highlight visual ao mudar
+        label.addEventListener('change', (e) => {
+            const checkbox = e.currentTarget.querySelector('input');
+            if (checkbox.checked) {
+                e.currentTarget.classList.add('selected');
+            } else {
+                e.currentTarget.classList.remove('selected');
+            }
         });
 
         container.appendChild(label);
@@ -172,13 +193,13 @@ function abrirModalAcao(item) {
 async function salvarLavagem() {
     if (!itemSelecionadoParaAcao) return;
 
-    const radio = document.querySelector('input[name="tipoLavagem"]:checked');
-    if (!radio) {
-        alert('Selecione um tipo de lavagem.');
+    const checkboxes = document.querySelectorAll('input[name="tipoLavagem"]:checked');
+    if (checkboxes.length === 0) {
+        alert('Selecione pelo menos um tipo de lavagem.');
         return;
     }
 
-    const tipoLavagem = radio.value;
+    const tipoLavagem = Array.from(checkboxes).map(cb => cb.value).join(', ');
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
     const btn = document.getElementById('btnSalvarLavagem');
     
