@@ -583,6 +583,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     
     try {
+        // 1. Fetch Items
         const { data: itens, error } = await supabaseClient
             .from('lavagem_itens')
             .select('*')
@@ -590,6 +591,61 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             .order('placa');
 
         if (error) throw error;
+
+        // 2. Fetch Vehicle Types for Pricing
+        const placas = [...new Set(itens.map(i => i.placa))];
+        let veiculoMap = new Map();
+        
+        if (placas.length > 0) {
+            const { data: veiculos, error: errVeiculos } = await supabaseClient
+                .from('veiculos')
+                .select('placa, tipo')
+                .in('placa', placas);
+            
+            if (errVeiculos) throw errVeiculos;
+            veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
+        }
+
+        // 3. Prepare Data & Calculate Prices
+        if (precosCache.length === 0) await carregarPrecos();
+
+        let totalGeral = 0;
+        const summary = {}; 
+
+        const rows = itens.map(item => {
+            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+            const tiposLavagemStr = item.tipo_lavagem;
+            let valorItem = 0;
+            
+            if (item.status === 'REALIZADO' && tiposLavagemStr) {
+                const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
+                
+                tipos.forEach(tipo => {
+                    const precoObj = precosCache.find(p => 
+                        p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                        p.tipoLavagem === tipo
+                    );
+                    const valorTipo = precoObj ? precoObj.valor : 0;
+                    valorItem += valorTipo;
+
+                    if (!summary[tipo]) summary[tipo] = { qtd: 0, valor: 0 };
+                    summary[tipo].qtd++;
+                    summary[tipo].valor += valorTipo;
+                });
+                
+                totalGeral += valorItem;
+            }
+
+            return [
+                item.placa,
+                item.modelo || '',
+                item.marca || '',
+                item.tipo_lavagem || '-',
+                item.status,
+                item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-',
+                valorItem > 0 ? `R$ ${valorItem.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'
+            ];
+        });
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -608,33 +664,29 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             }
         } catch (e) { console.warn('Logo não carregado'); }
 
-        doc.setFontSize(18);
+        doc.setFontSize(16);
         doc.setTextColor(0, 105, 55); // Verde Marquespan
         doc.text('Relatório de Lavagem', 14, 35);
         
-        doc.setFontSize(12);
+        doc.setFontSize(10);
         doc.setTextColor(0);
         doc.text(`Lista: ${nomeLista}`, 14, 42);
         doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 48);
 
-        const columns = ['Placa', 'Modelo', 'Marca', 'Tipo', 'Status', 'Data Realizado'];
-        const rows = itens.map(item => [
-            item.placa,
-            item.modelo || '',
-            item.marca || '',
-            item.tipo_lavagem || '-',
-            item.status,
-            item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-'
-        ]);
+        const columns = ['Placa', 'Modelo', 'Marca', 'Tipo', 'Status', 'Data', 'Valor'];
 
         doc.autoTable({
             head: [columns],
             body: rows,
-            startY: 55,
+            startY: 52,
             theme: 'grid',
-            headStyles: { fillColor: [0, 105, 55] },
-            styles: { fontSize: 10, cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
+            styles: { fontSize: 7, cellPadding: 1.5 }, // Fonte menor
+            columnStyles: {
+                6: { halign: 'right' } // Valor align right
+            },
             alternateRowStyles: { fillColor: [240, 240, 240] },
+            margin: { left: 10, right: 10 }, // Margens reduzidas para usar máximo da página
             didParseCell: function(data) {
                 if (data.section === 'body' && data.column.index === 4) { // Status column
                     const status = data.cell.raw;
@@ -647,6 +699,62 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
                 }
             }
         });
+
+        let finalY = doc.lastAutoTable.finalY + 10;
+
+        // Summary Table
+        const summaryRows = Object.keys(summary).map(tipo => [
+            tipo,
+            summary[tipo].qtd,
+            `R$ ${summary[tipo].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
+        ]);
+
+        // Check if summary fits
+        if (finalY + 40 > 280) {
+            doc.addPage();
+            finalY = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Resumo:', 14, finalY);
+        
+        doc.autoTable({
+            head: [['Tipo Lavagem', 'QTD', 'Valor']],
+            body: summaryRows,
+            startY: finalY + 2,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right' }
+            },
+            margin: { left: 10 },
+            tableWidth: 100
+        });
+
+        finalY = doc.lastAutoTable.finalY + 10;
+
+        // Total General
+        doc.setFontSize(12);
+        doc.setTextColor(0, 105, 55);
+        doc.text(`Valor Total Geral: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 14, finalY);
+
+        // Signature
+        finalY += 30;
+        if (finalY > 270) {
+            doc.addPage();
+            finalY = 40;
+        }
+
+        doc.setDrawColor(0);
+        doc.line(110, finalY, 196, finalY); // Linha da assinatura na direita
+        doc.setFontSize(9);
+        doc.setTextColor(0);
+        doc.setFont(undefined, 'normal');
+        doc.text('DATA: _____/_____/________', 14, finalY); // Data na esquerda
+        doc.text('Assinatura do Responsável', 110, finalY + 5); // Texto da assinatura na direita
 
         doc.save(`Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
@@ -1021,14 +1129,17 @@ async function gerarRelatorio() {
                     
                     // Calculate price
                     const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
-                    const tipoLavagem = item.tipo_lavagem;
+                    const tiposLavagemStr = item.tipo_lavagem;
                     
-                    if (tipoLavagem) {
-                        const precoObj = precosCache.find(p => 
-                            p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                            p.tipoLavagem === tipoLavagem
-                        );
-                        if (precoObj) valorLista += precoObj.valor;
+                    if (tiposLavagemStr) {
+                        const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
+                        tipos.forEach(tipo => {
+                            const precoObj = precosCache.find(p => 
+                                p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                                p.tipoLavagem === tipo
+                            );
+                            if (precoObj) valorLista += precoObj.valor;
+                        });
                     }
 
                 } else {
