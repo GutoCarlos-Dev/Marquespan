@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-pendente')?.addEventListener('click', () => bulkSetStatus('PENDENTE'));
     document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
+    document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
 
     await carregarListas();
 });
@@ -349,7 +350,7 @@ window.abrirDetalhesLista = async function(id, nome) {
     if (chkAll) chkAll.checked = false;
 
     const tbody = document.getElementById('tbodyDetalhesItens');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando itens...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando itens...</td></tr>';
 
     try {
         const { data, error } = await supabaseClient
@@ -365,7 +366,7 @@ window.abrirDetalhesLista = async function(id, nome) {
 
     } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao carregar itens.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar itens.</td></tr>';
     }
 }
 
@@ -375,16 +376,19 @@ function renderizarItensDetalhes(itens) {
     
     let realizados = 0;
     let pendentes = 0;
+    let agendados = 0;
 
     if (itens.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum item para exibir.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum item para exibir.</td></tr>';
         document.getElementById('countRealizados').textContent = 0;
         document.getElementById('countPendentes').textContent = 0;
         return;
     }
 
     itens.forEach(item => {
-        if (item.status === 'REALIZADO') realizados++; else pendentes++;
+        if (item.status === 'REALIZADO') realizados++;
+        else if (item.status === 'AGENDADO') agendados++;
+        else pendentes++;
 
         const tr = document.createElement('tr');
         const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
@@ -402,19 +406,26 @@ function renderizarItensDetalhes(itens) {
         }
 
         const dataRealizado = item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-';
-        const isRealizado = item.status === 'REALIZADO';
+        
+        let badgeClass = 'badge-pendente';
+        if (item.status === 'REALIZADO') {
+            badgeClass = 'badge-realizado';
+        } else if (item.status === 'AGENDADO') {
+            badgeClass = 'badge-agendado';
+        }
 
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}"></td>
             <td><strong>${item.placa}</strong></td>
             <td>${item.modelo || '-'}</td>
+            <td>${item.marca || '-'}</td>
             <td>
                 <select class="select-tipo-lavagem" onchange="atualizarItem('${item.id}', 'tipo', this.value)">
                     ${options}
                 </select>
             </td>
             <td>
-                <span class="badge ${isRealizado ? 'badge-realizado' : 'badge-pendente'}" 
+                <span class="badge ${badgeClass}" 
                       style="cursor:pointer;" 
                       onclick="toggleStatusItem('${item.id}', '${item.status}')">
                     ${item.status}
@@ -429,7 +440,7 @@ function renderizarItensDetalhes(itens) {
     });
 
     document.getElementById('countRealizados').textContent = realizados;
-    document.getElementById('countPendentes').textContent = pendentes;
+    document.getElementById('countPendentes').textContent = pendentes + agendados;
     atualizarContadorSelecaoDetalhes();
 }
 
@@ -455,7 +466,14 @@ window.atualizarItem = async function(id, campo, valor) {
 }
 
 window.toggleStatusItem = async function(id, statusAtual) {
-    const novoStatus = statusAtual === 'PENDENTE' ? 'REALIZADO' : 'PENDENTE';
+    let novoStatus = 'PENDENTE';
+    
+    if (statusAtual === 'PENDENTE' || statusAtual === 'AGENDADO') {
+        novoStatus = 'REALIZADO';
+    } else if (statusAtual === 'REALIZADO') {
+        novoStatus = 'PENDENTE';
+    }
+
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
     const dataRealizado = novoStatus === 'REALIZADO' ? new Date().toISOString() : null;
 
@@ -762,5 +780,41 @@ async function bulkAplicarTipo() {
     } catch (error) {
         console.error('Erro ao aplicar tipo em massa:', error);
         alert('Erro ao aplicar tipo: ' + error.message);
+    }
+}
+
+async function bulkAgendar() {
+    const ids = getSelectedIds();
+    const dataAgendamento = document.getElementById('dataAgendamentoBulk').value;
+
+    if (ids.length === 0) return alert('Nenhum item selecionado.');
+    if (!dataAgendamento) return alert('Selecione uma data para o agendamento.');
+
+    if (!confirm(`Deseja agendar ${ids.length} item(ns) para ${new Date(dataAgendamento).toLocaleDateString('pt-BR')}?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('lavagem_itens')
+            .update({ 
+                status: 'AGENDADO',
+                data_realizado: dataAgendamento // Usamos data_realizado para armazenar a data do agendamento
+            })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        ids.forEach(id => {
+            const itemIndex = currentListItems.findIndex(i => i.id == id);
+            if (itemIndex > -1) {
+                currentListItems[itemIndex].status = 'AGENDADO';
+                currentListItems[itemIndex].data_realizado = dataAgendamento;
+            }
+        });
+        renderizarItensDetalhes(currentListItems);
+        alert('Agendamento realizado com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao agendar em massa:', error);
+        alert('Erro ao agendar: ' + error.message);
     }
 }

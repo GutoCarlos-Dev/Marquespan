@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        .badge-agendado { background-color: #ffc107; color: #212529; }
+        .badge-realizado { background-color: #28a745; color: white; }
+        .badge-pendente { background-color: #dc3545; color: white; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+    </style>
 </head>
 <body>
     <div id="menu-container"></div>
@@ -142,15 +148,38 @@
                     </div>
                 </div>
 
+                <div class="bulk-actions" style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: 1px solid #e9ecef;">
+                    <span style="font-weight: bold; color: #555;">Ações em Massa:</span>
+                    <span id="contador-selecionados-detalhes" style="font-size: 0.9em; color: #006937; font-weight: bold;">0 selecionados</span>
+                    
+                    <div style="display: flex; gap: 5px; align-items: center; border-left: 1px solid #ccc; padding-left: 10px;">
+                        <select id="select-bulk-tipo" class="glass-input" style="padding: 5px; height: 32px; font-size: 0.9em;"></select>
+                        <button id="btn-bulk-aplicar-tipo" class="btn-glass btn-blue" style="padding: 5px 10px; font-size: 0.85em;">Aplicar Tipo</button>
+                    </div>
+            
+                    <div style="display: flex; gap: 5px; align-items: center; border-left: 1px solid #ccc; padding-left: 10px;">
+                        <input type="date" id="dataAgendamentoBulk" class="glass-input" style="padding: 5px; height: 32px; font-size: 0.9em;">
+                        <button id="btn-bulk-agendar" class="btn-glass btn-yellow" style="padding: 5px 10px; font-size: 0.85em; color: black;"><i class="fas fa-calendar-alt"></i> Agendar</button>
+                    </div>
+            
+                    <div style="display: flex; gap: 5px; align-items: center; border-left: 1px solid #ccc; padding-left: 10px;">
+                        <button id="btn-bulk-realizado" class="btn-glass btn-green" style="padding: 5px 10px; font-size: 0.85em;" title="Marcar como Realizado"><i class="fas fa-check"></i></button>
+                        <button id="btn-bulk-pendente" class="btn-glass btn-red" style="padding: 5px 10px; font-size: 0.85em;" title="Marcar como Pendente"><i class="fas fa-undo"></i></button>
+                        <button id="btn-bulk-remover" class="btn-glass btn-red" style="padding: 5px 10px; font-size: 0.85em;" title="Remover da Lista"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+
                 <div class="table-responsive" style="max-height: 500px;">
                     <table class="glass-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox" id="chkAllDetalhes"></th>
                                 <th>Placa</th>
                                 <th>Modelo</th>
+                                <th>Marca</th>
                                 <th>Tipo Lavagem</th>
                                 <th>Status</th>
-                                <th>Data Realizado</th>
+                                <th>Data</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
