@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 let veiculosAptosCache = [];
 let currentListId = null;
 let currentListItems = [];
+let currentSort = { key: null, asc: true };
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -71,6 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
+
+    // Listeners de Ordenação
+    document.querySelectorAll('#modalDetalhesLista th.sortable').forEach(th => {
+        th.addEventListener('click', () => ordenarItensDetalhes(th.dataset.sort));
+    });
 
     await carregarListas();
 });
@@ -817,4 +823,31 @@ async function bulkAgendar() {
         console.error('Erro ao agendar em massa:', error);
         alert('Erro ao agendar: ' + error.message);
     }
+}
+
+function ordenarItensDetalhes(key) {
+    if (currentSort.key === key) {
+        currentSort.asc = !currentSort.asc;
+    } else {
+        currentSort.key = key;
+        currentSort.asc = true;
+    }
+
+    currentListItems.sort((a, b) => {
+        let valA = a[key] || '';
+        let valB = b[key] || '';
+
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) return currentSort.asc ? -1 : 1;
+        if (valA > valB) return currentSort.asc ? 1 : -1;
+        return 0;
+    });
+
+    document.querySelectorAll('#modalDetalhesLista th.sortable i').forEach(i => i.className = 'fas fa-sort');
+    const activeTh = document.querySelector(`#modalDetalhesLista th[data-sort="${key}"] i`);
+    if (activeTh) activeTh.className = currentSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+    renderizarItensDetalhes(currentListItems);
 }
