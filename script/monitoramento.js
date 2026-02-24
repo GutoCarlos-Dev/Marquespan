@@ -49,7 +49,7 @@ function initDashboard() {
     // Adiciona tooltip explicativo ao card de Total de Manutenções
     const kpiCardTotalQtd = document.getElementById('kpi-total-qtd')?.parentElement;
     if (kpiCardTotalQtd) {
-        kpiCardTotalQtd.title = "Esse número representa quantas vezes a equipe de manutenção parou para atender um veículo no período selecionado.";
+        kpiCardTotalQtd.title = "Soma total de serviços com status 'Finalizado', 'Internado', 'Check-in Oficina' e 'Check-in Rota' no período selecionado.";
     }
 
     // Carregamento inicial
@@ -343,22 +343,17 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
             document.getElementById('kpi-finalizados-hoje').textContent = countFinalizados || 0;
         }
 
-        // 4. Total Manutenções (Contar Cabeçalhos/Veículos Atendidos)
+        // 4. Total Manutenções (Soma de status específicos no período)
+        const statusesParaContar = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'INTERNADO', 'FINALIZADO', 'OK'];
         let queryManutencoes = supabaseClient
-            .from('coletas_manutencao')
-            .select('id, veiculos!inner(filial), coletas_manutencao_checklist!inner(status)', { count: 'exact', head: true })
-            .gte('data_hora', `${dtIni}T00:00:00`)
-            .lte('data_hora', `${dtFim}T23:59:59`);
+            .from('coletas_manutencao_checklist')
+            .select('id, coletas_manutencao!inner(data_hora, veiculos!inner(filial))', { count: 'exact', head: true })
+            .in('status', statusesParaContar)
+            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
 
-        if (filial) queryManutencoes = queryManutencoes.eq('veiculos.filial', filial);
-        if (status) {
-            if (status === 'PENDENTE') {
-                queryManutencoes = queryManutencoes.in('coletas_manutencao_checklist.status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
-            } else if (status === 'FINALIZADO') {
-                queryManutencoes = queryManutencoes.in('coletas_manutencao_checklist.status', ['FINALIZADO', 'OK']);
-            } else {
-                queryManutencoes = queryManutencoes.eq('coletas_manutencao_checklist.status', status);
-            }
+        if (filial) {
+            queryManutencoes = queryManutencoes.eq('coletas_manutencao.veiculos.filial', filial);
         }
 
         const { count: countManutencoes, error: errManutencoes } = await queryManutencoes;
