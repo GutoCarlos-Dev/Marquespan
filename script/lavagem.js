@@ -963,57 +963,97 @@ async function gerarRelatorio() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Gerando relatório...</td></tr>';
 
     try {
-        // 1. Fetch Lavagem Itens (Realizados)
-        const { data: itens, error } = await supabaseClient
+        // 1. Fetch Lists
+        const { data: listas, error: errListas } = await supabaseClient
+            .from('lavagem_listas')
+            .select('*')
+            .gte('data_lista', dataIni)
+            .lte('data_lista', dataFim)
+            .order('data_lista', { ascending: false });
+
+        if (errListas) throw errListas;
+
+        if (!listas || listas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma lista encontrada no período.</td></tr>';
+            document.getElementById('relTotalGastoGeral').textContent = 'R$ 0,00';
+            return;
+        }
+
+        const listaIds = listas.map(l => l.id);
+
+        // 2. Fetch Items for these lists
+        const { data: itens, error: errItens } = await supabaseClient
             .from('lavagem_itens')
             .select('*')
-            .gte('data_realizado', `${dataIni}T00:00:00`)
-            .lte('data_realizado', `${dataFim}T23:59:59`)
-            .eq('status', 'REALIZADO');
+            .in('lista_id', listaIds);
 
-        if (error) throw error;
+        if (errItens) throw errItens;
 
-        // 2. Fetch Veiculos to get Type
-        const { data: veiculos } = await supabaseClient
+        // 3. Fetch Vehicles to get types (for pricing)
+        const placas = [...new Set(itens.map(i => i.placa))];
+        const { data: veiculos, error: errVeiculos } = await supabaseClient
             .from('veiculos')
-            .select('placa, tipo');
+            .select('placa, tipo')
+            .in('placa', placas);
         
+        if (errVeiculos) throw errVeiculos;
+
         const veiculoMap = new Map();
         veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
 
-        // 3. Calculate
-        let totalGasto = 0;
-        let totalQtd = 0;
+        // 4. Process Data
+        let totalGeral = 0;
         tbody.innerHTML = '';
 
-        itens.forEach(item => {
-            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
-            const tipoLavagem = item.tipo_lavagem;
+        // Ensure prices are loaded
+        if (precosCache.length === 0) await carregarPrecos();
+
+        listas.forEach(lista => {
+            const itensLista = itens.filter(i => i.lista_id === lista.id);
             
-            // Find price
-            const precoObj = precosCache.find(p => 
-                p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                p.tipoLavagem === tipoLavagem
-            );
-            
-            const valor = precoObj ? precoObj.valor : 0;
-            totalGasto += valor;
-            totalQtd++;
+            let qtdRealizada = 0;
+            let qtdPendente = 0;
+            let valorLista = 0;
+
+            itensLista.forEach(item => {
+                if (item.status === 'REALIZADO') {
+                    qtdRealizada++;
+                    
+                    // Calculate price
+                    const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+                    const tipoLavagem = item.tipo_lavagem;
+                    
+                    if (tipoLavagem) {
+                        const precoObj = precosCache.find(p => 
+                            p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                            p.tipoLavagem === tipoLavagem
+                        );
+                        if (precoObj) valorLista += precoObj.valor;
+                    }
+
+                } else {
+                    qtdPendente++;
+                }
+            });
+
+            totalGeral += valorLista;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${new Date(item.data_realizado).toLocaleDateString('pt-BR')}</td>
-                <td>${item.placa}</td>
-                <td>${item.modelo || '-'}</td>
-                <td>${tipoVeiculo}</td>
-                <td>${tipoLavagem || '-'}</td>
-                <td>R$ ${valor.toFixed(2)}</td>
+                <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
+                <td>${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</td>
+                <td>${qtdRealizada}</td>
+                <td>${qtdPendente}</td>
+                <td>R$ ${valorLista.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td>
+                    <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')" title="Abrir Lista"><i class="fas fa-folder-open"></i></button>
+                    <button class="btn-icon pdf" onclick="gerarPDFListaPorId('${lista.id}', '${lista.nome}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
 
-        document.getElementById('relTotalGasto').textContent = `R$ ${totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('relTotalQtd').textContent = totalQtd;
+        document.getElementById('relTotalGastoGeral').textContent = `R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
     } catch (err) {
         console.error(err);

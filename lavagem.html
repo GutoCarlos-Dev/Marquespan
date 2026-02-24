@@ -117,32 +117,31 @@
         </section>
 
         <section id="tab-relatorios" class="glass-panel tab-content hidden">
-            <h3><i class="fas fa-chart-line"></i> Relatório de Custos</h3>
+            <h3><i class="fas fa-chart-line"></i> Relatório de Listas</h3>
             <div class="filtros-container">
                 <div class="form-group">
-                    <label>Data Início</label>
+                    <label>Data Início (Lista)</label>
                     <input type="date" id="relDataIni" class="glass-input">
                 </div>
                 <div class="form-group">
-                    <label>Data Fim</label>
+                    <label>Data Fim (Lista)</label>
                     <input type="date" id="relDataFim" class="glass-input">
                 </div>
-                <button id="btnGerarRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Gerar Relatório</button>
+                <button id="btnGerarRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
             </div>
             <div class="resumo-lista" style="margin-bottom: 15px; display: flex; gap: 20px; font-weight: bold; font-size: 1.1em;">
-                <span style="color: #28a745;">Total Gasto: <span id="relTotalGasto">R$ 0,00</span></span>
-                <span style="color: #007bff;">Quantidade: <span id="relTotalQtd">0</span></span>
+                <span style="color: #28a745;">Valor Total Geral: <span id="relTotalGastoGeral">R$ 0,00</span></span>
             </div>
             <div class="table-responsive">
                 <table class="glass-table" id="tabelaRelatorio">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Placa</th>
-                            <th>Modelo</th>
-                            <th>Tipo Veículo</th>
-                            <th>Lavagem</th>
-                            <th>Valor Estimado</th>
+                            <th>Data Criação</th>
+                            <th>Data Lista</th>
+                            <th>Qtd Realizada</th>
+                            <th>Qtd Pendente</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbodyRelatorio"></tbody>
