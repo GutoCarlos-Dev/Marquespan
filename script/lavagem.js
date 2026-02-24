@@ -59,6 +59,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnFinalizarLista').addEventListener('click', finalizarListaAtual);
     document.getElementById('btnExportarPDF').addEventListener('click', gerarPDFLista);
 
+    // --- NOVOS LISTENERS PARA SELEÇÃO EM MASSA ---
+    document.getElementById('chkAllDetalhes')?.addEventListener('change', toggleAllDetalhes);
+    document.getElementById('tbodyDetalhesItens')?.addEventListener('change', (e) => {
+        if (e.target.classList.contains('chk-item-detalhe')) {
+            atualizarContadorSelecaoDetalhes();
+        }
+    });
+    document.getElementById('btn-bulk-realizado')?.addEventListener('click', () => bulkSetStatus('REALIZADO'));
+    document.getElementById('btn-bulk-pendente')?.addEventListener('click', () => bulkSetStatus('PENDENTE'));
+    document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
+    document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
+
     await carregarListas();
 });
 
@@ -319,9 +331,25 @@ window.abrirDetalhesLista = async function(id, nome) {
     currentListId = id;
     document.getElementById('tituloDetalhesLista').textContent = nome;
     document.getElementById('modalDetalhesLista').classList.remove('hidden');
-    
+
+    // Popula o select de tipo para ações em massa
+    const selectBulkTipo = document.getElementById('select-bulk-tipo');
+    if (selectBulkTipo) {
+        const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
+        selectBulkTipo.innerHTML = '<option value="">Aplicar tipo...</option>';
+        tiposLavagem.forEach(t => {
+            selectBulkTipo.add(new Option(t, t));
+        });
+    }
+
+    // Reseta o contador e o checkbox "todos"
+    const contadorSpan = document.getElementById('contador-selecionados-detalhes');
+    if (contadorSpan) contadorSpan.textContent = '0 selecionados';
+    const chkAll = document.getElementById('chkAllDetalhes');
+    if (chkAll) chkAll.checked = false;
+
     const tbody = document.getElementById('tbodyDetalhesItens');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando itens...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando itens...</td></tr>';
 
     try {
         const { data, error } = await supabaseClient
@@ -337,22 +365,29 @@ window.abrirDetalhesLista = async function(id, nome) {
 
     } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erro ao carregar itens.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao carregar itens.</td></tr>';
     }
 }
 
 function renderizarItensDetalhes(itens) {
     const tbody = document.getElementById('tbodyDetalhesItens');
     tbody.innerHTML = '';
-
+    
     let realizados = 0;
     let pendentes = 0;
+
+    if (itens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum item para exibir.</td></tr>';
+        document.getElementById('countRealizados').textContent = 0;
+        document.getElementById('countPendentes').textContent = 0;
+        return;
+    }
 
     itens.forEach(item => {
         if (item.status === 'REALIZADO') realizados++; else pendentes++;
 
         const tr = document.createElement('tr');
-        const tiposLavagem = ['SIMPLES', 'DIFERENCIADA', 'BAÚ COMPLETO', 'MOTOR', 'THERMO KING', 'CHASSI'];
+        const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
         
         let options = '<option value="">Selecione...</option>';
         let found = false;
@@ -370,6 +405,7 @@ function renderizarItensDetalhes(itens) {
         const isRealizado = item.status === 'REALIZADO';
 
         tr.innerHTML = `
+            <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}"></td>
             <td><strong>${item.placa}</strong></td>
             <td>${item.modelo || '-'}</td>
             <td>
@@ -394,6 +430,7 @@ function renderizarItensDetalhes(itens) {
 
     document.getElementById('countRealizados').textContent = realizados;
     document.getElementById('countPendentes').textContent = pendentes;
+    atualizarContadorSelecaoDetalhes();
 }
 
 window.atualizarItem = async function(id, campo, valor) {
@@ -595,4 +632,135 @@ window.gerarPDFLista = function() {
     });
 
     doc.save(`Lavagem_${titulo}.pdf`);
+}
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.chk-item-detalhe:checked')).map(chk => chk.value);
+}
+
+function atualizarContadorSelecaoDetalhes() {
+    const count = getSelectedIds().length;
+    const contadorSpan = document.getElementById('contador-selecionados-detalhes');
+    if (contadorSpan) {
+        contadorSpan.textContent = `${count} selecionado(s)`;
+    }
+}
+
+function toggleAllDetalhes(e) {
+    const checked = e.target.checked;
+    // Seleciona apenas os checkboxes visíveis (respeitando o filtro)
+    document.querySelectorAll('#tbodyDetalhesItens tr').forEach(tr => {
+        const chk = tr.querySelector('.chk-item-detalhe');
+        if (chk) {
+            chk.checked = checked;
+        }
+    });
+    atualizarContadorSelecaoDetalhes();
+}
+
+async function bulkSetStatus(novoStatus) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        return alert('Nenhum item selecionado.');
+    }
+
+    if (novoStatus === 'REALIZADO') {
+        // Verifica se todos os selecionados têm um tipo de lavagem definido
+        for (const id of ids) {
+            const item = currentListItems.find(i => i.id == id);
+            if (!item.tipo_lavagem) {
+                alert(`O veículo ${item.placa} não possui um tipo de lavagem definido. Não é possível marcá-lo como "Realizado".`);
+                return;
+            }
+        }
+    }
+
+    if (!confirm(`Deseja alterar o status de ${ids.length} item(ns) para "${novoStatus}"?`)) {
+        return;
+    }
+
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+    const dataRealizado = novoStatus === 'REALIZADO' ? new Date().toISOString() : null;
+
+    try {
+        const { error } = await supabaseClient
+            .from('lavagem_itens')
+            .update({
+                status: novoStatus,
+                data_realizado: dataRealizado,
+                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null
+            })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        // Atualiza a view local
+        ids.forEach(id => {
+            const itemIndex = currentListItems.findIndex(i => i.id == id);
+            if (itemIndex > -1) {
+                currentListItems[itemIndex].status = novoStatus;
+                currentListItems[itemIndex].data_realizado = dataRealizado;
+            }
+        });
+        renderizarItensDetalhes(currentListItems);
+        alert('Status atualizado com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao atualizar status em massa:', error);
+        alert('Erro ao atualizar status: ' + error.message);
+    }
+}
+
+async function bulkRemover() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        return alert('Nenhum item selecionado.');
+    }
+
+    if (!confirm(`Deseja remover ${ids.length} item(ns) da lista?`)) {
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('lavagem_itens')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+
+        // Atualiza a view local
+        currentListItems = currentListItems.filter(i => !ids.includes(String(i.id)));
+        renderizarItensDetalhes(currentListItems);
+        alert('Itens removidos com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao remover em massa:', error);
+        alert('Erro ao remover itens: ' + error.message);
+    }
+}
+
+async function bulkAplicarTipo() {
+    const ids = getSelectedIds();
+    const tipo = document.getElementById('select-bulk-tipo').value;
+
+    if (ids.length === 0) return alert('Nenhum item selecionado.');
+    if (!tipo) return alert('Selecione um tipo de lavagem para aplicar.');
+    if (!confirm(`Deseja aplicar o tipo "${tipo}" para ${ids.length} item(ns)?`)) return;
+
+    try {
+        const { error } = await supabaseClient.from('lavagem_itens').update({ tipo_lavagem: tipo }).in('id', ids);
+        if (error) throw error;
+
+        ids.forEach(id => {
+            const itemIndex = currentListItems.findIndex(i => i.id == id);
+            if (itemIndex > -1) currentListItems[itemIndex].tipo_lavagem = tipo;
+        });
+        renderizarItensDetalhes(currentListItems);
+        alert('Tipo de lavagem aplicado com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao aplicar tipo em massa:', error);
+        alert('Erro ao aplicar tipo: ' + error.message);
+    }
 }
