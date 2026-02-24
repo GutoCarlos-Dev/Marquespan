@@ -25,7 +25,13 @@
             <a href="mobile-lavagem.html" class="btn-glass btn-green" style="text-decoration: none; color: white;"><i class="fas fa-mobile-alt"></i> Modo App</a>
         </header>
 
-        <section class="glass-panel">
+        <div class="painel-navegacao">
+            <button class="painel-btn active" data-tab="tab-listas">Listas de Lavagem</button>
+            <button class="painel-btn" data-tab="tab-precificacao">Precificação</button>
+            <button class="painel-btn" data-tab="tab-relatorios">Relatórios</button>
+        </div>
+
+        <section id="tab-listas" class="glass-panel tab-content">
             <div class="panel-header-actions">
                 <h3>Listas de Lavagem</h3>
                 <button id="btnNovaLista" class="btn-glass btn-green"><i class="fas fa-plus"></i> Nova Lista</button>
@@ -66,6 +72,81 @@
                     <tbody id="tbodyListas">
                         <!-- JS fills this -->
                     </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tab-precificacao" class="glass-panel tab-content hidden">
+            <h3><i class="fas fa-tags"></i> Tabela de Preços</h3>
+            <div class="filtros-container">
+                <div class="form-group">
+                    <label>Tipo de Veículo</label>
+                    <select id="precoTipoVeiculo" class="glass-input">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Lavagem</label>
+                    <select id="precoTipoLavagem" class="glass-input">
+                        <option value="SIMPLES">SIMPLES</option>
+                        <option value="BAÚ COMPLETO">BAÚ COMPLETO</option>
+                        <option value="CHASSI">CHASSI</option>
+                        <option value="MOTOR">MOTOR</option>
+                        <option value="THERMO KING">THERMO KING</option>
+                        <option value="DIFERENCIADA">DIFERENCIADA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor (R$)</label>
+                    <input type="number" id="precoValor" class="glass-input" step="0.01" placeholder="0.00">
+                </div>
+                <button id="btnSalvarPreco" class="btn-glass btn-green"><i class="fas fa-save"></i> Adicionar</button>
+            </div>
+            <div class="table-responsive">
+                <table class="glass-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo de Veículo</th>
+                            <th>Tipo de Lavagem</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyPrecos"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tab-relatorios" class="glass-panel tab-content hidden">
+            <h3><i class="fas fa-chart-line"></i> Relatório de Custos</h3>
+            <div class="filtros-container">
+                <div class="form-group">
+                    <label>Data Início</label>
+                    <input type="date" id="relDataIni" class="glass-input">
+                </div>
+                <div class="form-group">
+                    <label>Data Fim</label>
+                    <input type="date" id="relDataFim" class="glass-input">
+                </div>
+                <button id="btnGerarRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Gerar Relatório</button>
+            </div>
+            <div class="resumo-lista" style="margin-bottom: 15px; display: flex; gap: 20px; font-weight: bold; font-size: 1.1em;">
+                <span style="color: #28a745;">Total Gasto: <span id="relTotalGasto">R$ 0,00</span></span>
+                <span style="color: #007bff;">Quantidade: <span id="relTotalQtd">0</span></span>
+            </div>
+            <div class="table-responsive">
+                <table class="glass-table" id="tabelaRelatorio">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Placa</th>
+                            <th>Modelo</th>
+                            <th>Tipo Veículo</th>
+                            <th>Lavagem</th>
+                            <th>Valor Estimado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyRelatorio"></tbody>
                 </table>
             </div>
         </section>

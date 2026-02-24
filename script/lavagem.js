@@ -4,6 +4,7 @@ let veiculosAptosCache = [];
 let currentListId = null;
 let currentListItems = [];
 let currentSort = { key: null, asc: true };
+let precosCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -14,6 +15,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     document.getElementById('filtroDataIni').value = inicioMes.toISOString().split('T')[0];
     document.getElementById('filtroDataFim').value = hoje.toISOString().split('T')[0];
+    
+    // Init dates for report
+    document.getElementById('relDataIni').value = inicioMes.toISOString().split('T')[0];
+    document.getElementById('relDataFim').value = hoje.toISOString().split('T')[0];
+
+    // Tabs Logic
+    document.querySelectorAll('.painel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.painel-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.remove('hidden');
+        });
+    });
 
     // Listeners
     const btnBuscar = document.getElementById('btnBuscar');
@@ -78,7 +93,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         th.addEventListener('click', () => ordenarItensDetalhes(th.dataset.sort));
     });
 
+    // Pricing Listeners
+    document.getElementById('btnSalvarPreco')?.addEventListener('click', salvarPreco);
+    document.getElementById('btnGerarRelatorio')?.addEventListener('click', gerarRelatorio);
+
     await carregarListas();
+    await carregarPrecos();
+    carregarTiposVeiculoParaPreco();
 });
 
 function updateMultiselectText() {
@@ -850,4 +871,175 @@ function ordenarItensDetalhes(key) {
     if (activeTh) activeTh.className = currentSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
     renderizarItensDetalhes(currentListItems);
+}
+
+// --- LÓGICA DE PRECIFICAÇÃO ---
+
+async function carregarPrecos() {
+    try {
+        const { data, error } = await supabaseClient.from('lavagem_precos').select('*');
+        if (error) throw error;
+        
+        precosCache = data.map(p => ({
+            id: p.id,
+            tipoVeiculo: p.tipo_veiculo,
+            tipoLavagem: p.tipo_lavagem,
+            valor: p.valor
+        }));
+        renderizarTabelaPrecos();
+    } catch (error) {
+        console.error('Erro ao carregar preços:', error);
+    }
+}
+
+async function salvarPreco() {
+    const tipoVeiculo = document.getElementById('precoTipoVeiculo').value.trim().toUpperCase();
+    const tipoLavagem = document.getElementById('precoTipoLavagem').value;
+    const valor = parseFloat(document.getElementById('precoValor').value);
+
+    if (!tipoVeiculo || !tipoLavagem || isNaN(valor)) {
+        return alert('Preencha todos os campos corretamente.');
+    }
+
+    // Check if exists
+    const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem);
+    
+    try {
+        if (exists) {
+            if(!confirm('Já existe um preço para este tipo de veículo e lavagem. Deseja atualizar?')) return;
+            const { error } = await supabaseClient.from('lavagem_precos').update({ valor }).eq('id', exists.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, valor });
+            if (error) throw error;
+        }
+        
+        await carregarPrecos();
+        alert('Preço salvo com sucesso!');
+        document.getElementById('precoValor').value = '';
+    } catch (error) {
+        console.error('Erro ao salvar preço:', error);
+        alert('Erro ao salvar preço: ' + error.message);
+    }
+}
+
+function renderizarTabelaPrecos() {
+    const tbody = document.getElementById('tbodyPrecos');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    precosCache.forEach((p, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${p.tipoVeiculo}</td>
+            <td>${p.tipoLavagem}</td>
+            <td>R$ ${p.valor.toFixed(2)}</td>
+            <td><button class="btn-icon delete" onclick="removerPreco(${p.id})"><i class="fas fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.removerPreco = async function(id) {
+    if(confirm('Remover este preço?')) {
+        try {
+            const { error } = await supabaseClient.from('lavagem_precos').delete().eq('id', id);
+            if (error) throw error;
+            await carregarPrecos();
+        } catch (error) {
+            console.error('Erro ao remover preço:', error);
+            alert('Erro ao remover preço: ' + error.message);
+        }
+    }
+}
+
+// --- LÓGICA DE RELATÓRIOS ---
+
+async function gerarRelatorio() {
+    const dataIni = document.getElementById('relDataIni').value;
+    const dataFim = document.getElementById('relDataFim').value;
+    const tbody = document.getElementById('tbodyRelatorio');
+    
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Gerando relatório...</td></tr>';
+
+    try {
+        // 1. Fetch Lavagem Itens (Realizados)
+        const { data: itens, error } = await supabaseClient
+            .from('lavagem_itens')
+            .select('*')
+            .gte('data_realizado', `${dataIni}T00:00:00`)
+            .lte('data_realizado', `${dataFim}T23:59:59`)
+            .eq('status', 'REALIZADO');
+
+        if (error) throw error;
+
+        // 2. Fetch Veiculos to get Type
+        const { data: veiculos } = await supabaseClient
+            .from('veiculos')
+            .select('placa, tipo');
+        
+        const veiculoMap = new Map();
+        veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
+
+        // 3. Calculate
+        let totalGasto = 0;
+        let totalQtd = 0;
+        tbody.innerHTML = '';
+
+        itens.forEach(item => {
+            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+            const tipoLavagem = item.tipo_lavagem;
+            
+            // Find price
+            const precoObj = precosCache.find(p => 
+                p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                p.tipoLavagem === tipoLavagem
+            );
+            
+            const valor = precoObj ? precoObj.valor : 0;
+            totalGasto += valor;
+            totalQtd++;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${new Date(item.data_realizado).toLocaleDateString('pt-BR')}</td>
+                <td>${item.placa}</td>
+                <td>${item.modelo || '-'}</td>
+                <td>${tipoVeiculo}</td>
+                <td>${tipoLavagem || '-'}</td>
+                <td>R$ ${valor.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('relTotalGasto').textContent = `R$ ${totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById('relTotalQtd').textContent = totalQtd;
+
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erro ao gerar relatório.</td></tr>';
+    }
+}
+
+async function carregarTiposVeiculoParaPreco() {
+    const select = document.getElementById('precoTipoVeiculo');
+    if (!select) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('tipo');
+
+        if (error) throw error;
+
+        const tipos = [...new Set(data.map(v => v.tipo).filter(t => t))].sort();
+
+        select.innerHTML = '<option value="">Selecione o Tipo</option>';
+        tipos.forEach(t => {
+            select.add(new Option(t, t));
+        });
+    } catch (error) {
+        console.error('Erro ao carregar tipos de veículo:', error);
+        select.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
 }
