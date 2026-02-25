@@ -741,11 +741,17 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
         let totalGeral = 0;
         const summary = {}; 
+        const statusSummary = {};
 
         const rows = itens.map(item => {
             const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
             const tiposLavagemStr = item.tipo_lavagem;
             let valorItem = 0;
+
+            // Contabiliza Status
+            const statusKey = item.status || 'INDEFINIDO';
+            if (!statusSummary[statusKey]) statusSummary[statusKey] = 0;
+            statusSummary[statusKey]++;
             
             if (item.status === 'REALIZADO' && tiposLavagemStr) {
                 const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
@@ -840,6 +846,11 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             `R$ ${summary[tipo].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
         ]);
 
+        const statusRows = Object.keys(statusSummary).map(status => [
+            status,
+            statusSummary[status]
+        ]);
+
         if (finalY + 40 > 280) {
             doc.addPage();
             finalY = 20;
@@ -847,12 +858,15 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text('Resumo:', 14, finalY);
+        doc.text('Resumo Financeiro:', 14, finalY);
+        doc.text('Resumo Status:', 120, finalY);
         
+        const startYSummaries = finalY + 2;
+
         doc.autoTable({
             head: [['Tipo Lavagem', 'QTD', 'Valor']],
             body: summaryRows,
-            startY: finalY + 2,
+            startY: startYSummaries,
             theme: 'grid',
             headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
             styles: { fontSize: 8 },
@@ -864,7 +878,24 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             tableWidth: 100
         });
 
-        finalY = doc.lastAutoTable.finalY + 10;
+        const finalY1 = doc.lastAutoTable.finalY;
+
+        doc.autoTable({
+            head: [['Status', 'QTD']],
+            body: statusRows,
+            startY: startYSummaries,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                1: { halign: 'center' }
+            },
+            margin: { left: 120 },
+            tableWidth: 80
+        });
+
+        const finalY2 = doc.lastAutoTable.finalY;
+        finalY = Math.max(finalY1, finalY2) + 10;
 
         doc.setFontSize(12);
         doc.setTextColor(0, 105, 55);
