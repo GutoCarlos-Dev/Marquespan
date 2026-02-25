@@ -234,6 +234,7 @@ const UI = {
       estoque: ['sectionCotacoesSalvas'],
       compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
       administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
+      gerencia: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
       default: []
     };
 
@@ -799,9 +800,9 @@ const UI = {
 
         const btnPdfHtml = `<button class="btn-action btn-pdf" data-id="${c.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>`;
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : '';
-        const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
+        const podeReceber = ['estoque', 'administrador', 'gerencia'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
-        const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
+        const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador' || nivelUsuario === 'gerencia') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
         
         tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`;
 
@@ -1089,7 +1090,7 @@ const UI = {
     const usuarioLogado = this._getCurrentUser();
     const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
     if (btnSalvar) {
-      if (['estoque', 'administrador', 'compras'].includes(nivelUsuario)) {
+      if (['estoque', 'administrador', 'compras', 'gerencia'].includes(nivelUsuario)) {
         btnSalvar.style.display = 'block';
       } else {
         btnSalvar.style.display = 'none';
