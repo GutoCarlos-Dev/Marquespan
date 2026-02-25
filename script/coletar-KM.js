@@ -374,6 +374,13 @@ async function carregarHistorico() {
     const tbody = document.getElementById('tableBodyHistorico');
     if (!tbody) return;
 
+    // Ajuste visual: Adiciona barra de rolagem ao container da tabela de histórico
+    const tableContainer = tbody.closest('table')?.parentElement;
+    if (tableContainer) {
+        tableContainer.style.maxHeight = '400px';
+        tableContainer.style.overflowY = 'auto';
+    }
+
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Carregando histórico...</td></tr>';
 
     try {
@@ -382,8 +389,7 @@ async function carregarHistorico() {
             .from('coleta_km')
             .select('*')
             // Ordena pela data da coleta para agrupar os lotes mais recentes primeiro
-            .order('data_coleta', { ascending: false }) 
-            .limit(500); // Aumenta o limite para capturar vários lotes completos
+            .order('data_coleta', { ascending: false }); // Removido limite para mostrar todos
 
         if (error) throw error;
 
@@ -416,7 +422,7 @@ async function carregarHistorico() {
         const isAdmin = usuarioLogado && usuarioLogado.nivel && usuarioLogado.nivel.toLowerCase() === 'administrador';
 
         // Pega os 20 lotes mais recentes para exibir na tela
-        const lotesParaExibir = Object.values(grupos).slice(0, 20);
+        const lotesParaExibir = Object.values(grupos); // Removido slice para mostrar todos
 
         // Renderizar os lotes agrupados
         lotesParaExibir.forEach(grupo => {
