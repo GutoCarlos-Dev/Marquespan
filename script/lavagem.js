@@ -11,6 +11,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
 
+    // Inject CSS for Pular Lavagem badge
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .badge-pular-lavagem {
+            background-color: #6c757d !important; /* Cinza */
+            color: white !important;
+        }
+    `;
+    document.head.appendChild(style);
+
     // Init dates
     const hoje = new Date();
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -88,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-realizado')?.addEventListener('click', () => bulkSetStatus('REALIZADO'));
     document.getElementById('btn-bulk-pendente')?.addEventListener('click', () => bulkSetStatus('PENDENTE'));
     document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
+    document.getElementById('btn-bulk-pular-lavagem')?.addEventListener('click', () => bulkSetStatus('PULAR_LAVAGEM'));
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
 
@@ -153,7 +164,7 @@ async function carregarListas() {
 
         data.forEach(lista => {
             const itensDestaLista = itensStatus.filter(i => i.lista_id === lista.id);
-            const total = itensDestaLista.length;
+            const total = itensDestaLista.filter(i => i.status !== 'PULAR_LAVAGEM').length;
             const realizados = itensDestaLista.filter(i => i.status === 'REALIZADO').length;
             const percent = total > 0 ? Math.round((realizados / total) * 100) : 0;
 
@@ -161,7 +172,6 @@ async function carregarListas() {
             tr.innerHTML = `
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${lista.nome}</td>
-                <td>${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</td>
                 <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td>
@@ -193,13 +203,23 @@ async function abrirModalNovaLista() {
     
     if (!modal) return console.error('Modal não encontrado!');
 
-    if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
     if (dataInput) {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         dataInput.value = now.toISOString().slice(0, 10);
     }
-    if (nomeInput) nomeInput.value = `Lavagem - ${new Date().toLocaleDateString('pt-BR')}`;
+    if (nomeInput) {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        const oneJan = new Date(currentYear, 0, 1);
+        const days = Math.floor((now - oneJan) / (24 * 60 * 60 * 1000));
+        const weekNum = Math.ceil((days + oneJan.getDay() + 1) / 7);
+        nomeInput.value = `Lavagem Semana ${String(weekNum).padStart(2, '0')} - ${currentYear} de ${startOfWeek.toLocaleDateString('pt-BR')} á ${endOfWeek.toLocaleDateString('pt-BR')}`;
+    }
     
     modal.classList.remove('hidden');
     if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando veículos aptos...</td></tr>';
@@ -242,13 +262,13 @@ async function abrirModalNovaLista() {
         selectFilial.innerHTML = '<option value="">Todas Filiais</option>';
         filiais.forEach(f => selectFilial.add(new Option(f, f)));
 
-        // Popula filtro de situação (cria se não existir para garantir funcionalidade)
+        // Popula filtro de situação
         let selectSituacao = document.getElementById('filtroSituacaoNovaLista');
         if (!selectSituacao && selectFilial && selectFilial.parentNode) {
             selectSituacao = document.createElement('select');
             selectSituacao.id = 'filtroSituacaoNovaLista';
-            selectSituacao.className = selectFilial.className; // Copia classes
-            selectSituacao.style.cssText = selectFilial.style.cssText; // Copia estilos
+            selectSituacao.className = selectFilial.className;
+            selectSituacao.style.cssText = selectFilial.style.cssText;
             selectSituacao.style.marginLeft = '5px';
             selectFilial.insertAdjacentElement('afterend', selectSituacao);
             selectSituacao.addEventListener('change', filtrarVeiculosModal);
@@ -451,7 +471,6 @@ window.abrirDetalhesLista = async function(id, nome) {
     document.getElementById('tituloDetalhesLista').textContent = nome;
     document.getElementById('modalDetalhesLista').classList.remove('hidden');
 
-    // Popula o select de tipo para ações em massa
     const selectBulkTipo = document.getElementById('select-bulk-tipo');
     if (selectBulkTipo) {
         const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
@@ -461,7 +480,6 @@ window.abrirDetalhesLista = async function(id, nome) {
         });
     }
 
-    // Reseta o contador e o checkbox "todos"
     const contadorSpan = document.getElementById('contador-selecionados-detalhes');
     if (contadorSpan) contadorSpan.textContent = '0 selecionados';
     const chkAll = document.getElementById('chkAllDetalhes');
@@ -494,23 +512,29 @@ function renderizarItensDetalhes(itens) {
     
     let realizados = 0;
     let pendentes = 0;
+    let pulados = 0;
     let agendados = 0;
 
     if (itens.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum item para exibir.</td></tr>';
-        document.getElementById('countRealizados').textContent = 0;
-        document.getElementById('countPendentes').textContent = 0;
+        if(document.getElementById('countRealizados')) document.getElementById('countRealizados').textContent = 0;
+        if(document.getElementById('countPendentes')) document.getElementById('countPendentes').textContent = 0;
+        if(document.getElementById('countPulados')) document.getElementById('countPulados').textContent = 0;
         return;
     }
 
     itens.forEach(item => {
         if (item.status === 'REALIZADO') realizados++;
         else if (item.status === 'AGENDADO') agendados++;
+        else if (item.status === 'PULAR_LAVAGEM') pulados++;
         else pendentes++;
 
         const tr = document.createElement('tr');
         const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
         
+        // Desabilita campos se o status for PULAR_LAVAGEM
+        const isDisabled = item.status === 'PULAR_LAVAGEM';
+
         let options = '<option value="">Selecione...</option>';
         let found = false;
         tiposLavagem.forEach(t => {
@@ -530,6 +554,8 @@ function renderizarItensDetalhes(itens) {
             badgeClass = 'badge-realizado';
         } else if (item.status === 'AGENDADO') {
             badgeClass = 'badge-agendado';
+        } else if (item.status === 'PULAR_LAVAGEM') {
+            badgeClass = 'badge-pular-lavagem';
         }
 
         tr.innerHTML = `
@@ -538,14 +564,14 @@ function renderizarItensDetalhes(itens) {
             <td>${item.modelo || '-'}</td>
             <td>${item.marca || '-'}</td>
             <td>
-                <select class="select-tipo-lavagem" onchange="atualizarItem('${item.id}', 'tipo', this.value)">
+                <select class="select-tipo-lavagem" onchange="atualizarItem('${item.id}', 'tipo', this.value)" ${isDisabled ? 'disabled' : ''}>
                     ${options}
                 </select>
             </td>
             <td>
                 <span class="badge ${badgeClass}" 
-                      style="cursor:pointer;" 
-                      onclick="toggleStatusItem('${item.id}', '${item.status}')">
+                      style="${isDisabled ? 'cursor: default;' : 'cursor:pointer;'}" 
+                      onclick="${isDisabled ? '' : `toggleStatusItem('${item.id}', '${item.status}')`}">
                     ${item.status}
                 </span>
             </td>
@@ -557,15 +583,28 @@ function renderizarItensDetalhes(itens) {
         tbody.appendChild(tr);
     });
 
-    document.getElementById('countRealizados').textContent = realizados;
-    document.getElementById('countPendentes').textContent = pendentes + agendados;
+    if(document.getElementById('countRealizados')) document.getElementById('countRealizados').textContent = realizados;
+    if(document.getElementById('countPendentes')) document.getElementById('countPendentes').textContent = pendentes + agendados;
+    if(document.getElementById('countPulados')) document.getElementById('countPulados').textContent = pulados;
     atualizarContadorSelecaoDetalhes();
+}
+
+async function gerarPDFLista() {
+    if (!currentListId) return alert('Nenhuma lista selecionada.');
+    const nomeElement = document.getElementById('tituloDetalhesLista');
+    const nome = nomeElement ? nomeElement.textContent : 'Lista';
+    await gerarPDFListaPorId(currentListId, nome);
 }
 
 window.atualizarItem = async function(id, campo, valor) {
     try {
         const updateData = {};
         if (campo === 'tipo') updateData.tipo_lavagem = valor;
+
+        const item = currentListItems.find(i => i.id === id);
+        if (item && item.status === 'PULAR_LAVAGEM') {
+            return alert('Não é possível editar o tipo de lavagem de um item com status "PULAR_LAVAGEM".');
+        }
 
         const { error } = await supabaseClient
             .from('lavagem_itens')
@@ -574,7 +613,6 @@ window.atualizarItem = async function(id, campo, valor) {
 
         if (error) throw error;
         
-        const item = currentListItems.find(i => i.id === id);
         if (item && campo === 'tipo') item.tipo_lavagem = valor;
 
     } catch (error) {
@@ -584,6 +622,10 @@ window.atualizarItem = async function(id, campo, valor) {
 }
 
 window.toggleStatusItem = async function(id, statusAtual) {
+    if (statusAtual === 'PULAR_LAVAGEM') {
+        return alert('Não é possível alterar o status de um item com "PULAR_LAVAGEM". Remova-o e adicione novamente se necessário.');
+    }
+
     let novoStatus = 'PENDENTE';
     
     if (statusAtual === 'PENDENTE' || statusAtual === 'AGENDADO') {
@@ -674,7 +716,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     
     try {
-        // 1. Fetch Items
         const { data: itens, error } = await supabaseClient
             .from('lavagem_itens')
             .select('*')
@@ -683,7 +724,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
         if (error) throw error;
 
-        // 2. Fetch Vehicle Types for Pricing
         const placas = [...new Set(itens.map(i => i.placa))];
         let veiculoMap = new Map();
         
@@ -697,7 +737,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
         }
 
-        // 3. Prepare Data & Calculate Prices
         if (precosCache.length === 0) await carregarPrecos();
 
         let totalGeral = 0;
@@ -741,7 +780,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // Logo
         try {
             const response = await fetch('logo.png');
             if (response.ok) {
@@ -756,7 +794,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         } catch (e) { console.warn('Logo não carregado'); }
 
         doc.setFontSize(16);
-        doc.setTextColor(0, 105, 55); // Verde Marquespan
+        doc.setTextColor(0, 105, 55);
         doc.text('Relatório de Lavagem', 14, 35);
         
         doc.setFontSize(10);
@@ -772,20 +810,23 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             startY: 52,
             theme: 'grid',
             headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
-            styles: { fontSize: 7, cellPadding: 1.5 }, // Fonte menor
+            styles: { fontSize: 7, cellPadding: 1.5 },
             columnStyles: {
-                6: { halign: 'right' } // Valor align right
+                6: { halign: 'right' }
             },
             alternateRowStyles: { fillColor: [240, 240, 240] },
-            margin: { left: 10, right: 10 }, // Margens reduzidas para usar máximo da página
+            margin: { left: 10, right: 10 },
             didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 4) { // Status column
+                if (data.section === 'body' && data.column.index === 4) {
                     const status = data.cell.raw;
                     if (status === 'REALIZADO') {
-                        data.cell.styles.textColor = [40, 167, 69]; // Green
+                        data.cell.styles.textColor = [40, 167, 69];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (status === 'PULAR_LAVAGEM') {
+                        data.cell.styles.textColor = [108, 117, 125]; // Cinza
                         data.cell.styles.fontStyle = 'bold';
                     } else {
-                        data.cell.styles.textColor = [220, 53, 69]; // Red
+                        data.cell.styles.textColor = [220, 53, 69];
                     }
                 }
             }
@@ -793,14 +834,12 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
         let finalY = doc.lastAutoTable.finalY + 10;
 
-        // Summary Table
         const summaryRows = Object.keys(summary).map(tipo => [
             tipo,
             summary[tipo].qtd,
             `R$ ${summary[tipo].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
         ]);
 
-        // Check if summary fits
         if (finalY + 40 > 280) {
             doc.addPage();
             finalY = 20;
@@ -827,12 +866,10 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
         finalY = doc.lastAutoTable.finalY + 10;
 
-        // Total General
         doc.setFontSize(12);
         doc.setTextColor(0, 105, 55);
         doc.text(`Valor Total Geral: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 14, finalY);
 
-        // Signature
         finalY += 30;
         if (finalY > 270) {
             doc.addPage();
@@ -840,12 +877,12 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         }
 
         doc.setDrawColor(0);
-        doc.line(110, finalY, 196, finalY); // Linha da assinatura na direita
+        doc.line(110, finalY, 196, finalY);
         doc.setFontSize(9);
         doc.setTextColor(0);
         doc.setFont(undefined, 'normal');
-        doc.text('DATA: _____/_____/________', 14, finalY); // Data na esquerda
-        doc.text('Assinatura do Responsável', 110, finalY + 5); // Texto da assinatura na direita
+        doc.text('DATA: _____/_____/________', 14, finalY);
+        doc.text('Assinatura do Responsável', 110, finalY + 5);
 
         doc.save(`Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
@@ -853,29 +890,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         console.error('Erro ao gerar PDF:', error);
         alert('Erro ao gerar PDF: ' + error.message);
     }
-}
-
-window.gerarPDFLista = function() {
-    const doc = new jspdf.jsPDF();
-    const titulo = document.getElementById('tituloDetalhesLista').textContent;
-    
-    doc.text(`Relatório de Lavagem - ${titulo}`, 14, 20);
-    
-    const rows = currentListItems.map(item => [
-        item.placa,
-        item.modelo || '',
-        item.tipo_lavagem || '-',
-        item.status,
-        item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-'
-    ]);
-
-    doc.autoTable({
-        head: [['Placa', 'Modelo', 'Tipo', 'Status', 'Data']],
-        body: rows,
-        startY: 30,
-    });
-
-    doc.save(`Lavagem_${titulo}.pdf`);
 }
 
 function getSelectedIds() {
@@ -892,7 +906,6 @@ function atualizarContadorSelecaoDetalhes() {
 
 function toggleAllDetalhes(e) {
     const checked = e.target.checked;
-    // Seleciona apenas os checkboxes visíveis (respeitando o filtro)
     document.querySelectorAll('#tbodyDetalhesItens tr').forEach(tr => {
         const chk = tr.querySelector('.chk-item-detalhe');
         if (chk) {
@@ -908,8 +921,11 @@ async function bulkSetStatus(novoStatus) {
         return alert('Nenhum item selecionado.');
     }
 
+    if (novoStatus === 'PULAR_LAVAGEM') {
+        if (!confirm(`Deseja marcar ${ids.length} item(ns) como "PULAR LAVAGEM"? Itens com este status não poderão ser editados.`)) return;
+    }
+
     if (novoStatus === 'REALIZADO') {
-        // Verifica se todos os selecionados têm um tipo de lavagem definido
         for (const id of ids) {
             const item = currentListItems.find(i => i.id == id);
             if (!item.tipo_lavagem) {
@@ -932,18 +948,21 @@ async function bulkSetStatus(novoStatus) {
             .update({
                 status: novoStatus,
                 data_realizado: dataRealizado,
-                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null
+                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null,
+                tipo_lavagem: novoStatus === 'PULAR_LAVAGEM' ? null : undefined
             })
             .in('id', ids);
 
         if (error) throw error;
 
-        // Atualiza a view local
         ids.forEach(id => {
             const itemIndex = currentListItems.findIndex(i => i.id == id);
             if (itemIndex > -1) {
                 currentListItems[itemIndex].status = novoStatus;
                 currentListItems[itemIndex].data_realizado = dataRealizado;
+                if (novoStatus === 'PULAR_LAVAGEM') {
+                    currentListItems[itemIndex].tipo_lavagem = null;
+                }
             }
         });
         renderizarItensDetalhes(currentListItems);
@@ -973,7 +992,6 @@ async function bulkRemover() {
 
         if (error) throw error;
 
-        // Atualiza a view local
         currentListItems = currentListItems.filter(i => !ids.includes(String(i.id)));
         renderizarItensDetalhes(currentListItems);
         alert('Itens removidos com sucesso!');
@@ -1023,7 +1041,7 @@ async function bulkAgendar() {
             .from('lavagem_itens')
             .update({ 
                 status: 'AGENDADO',
-                data_realizado: dataAgendamento // Usamos data_realizado para armazenar a data do agendamento
+                data_realizado: dataAgendamento
             })
             .in('id', ids);
 
@@ -1100,7 +1118,6 @@ async function salvarPreco() {
         return alert('Preencha todos os campos corretamente.');
     }
 
-    // Check if exists
     const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem);
     
     try {
@@ -1162,7 +1179,6 @@ async function gerarRelatorio() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Gerando relatório...</td></tr>';
 
     try {
-        // 1. Fetch Lists
         const { data: listas, error: errListas } = await supabaseClient
             .from('lavagem_listas')
             .select('*')
@@ -1180,7 +1196,6 @@ async function gerarRelatorio() {
 
         const listaIds = listas.map(l => l.id);
 
-        // 2. Fetch Items for these lists
         const { data: itens, error: errItens } = await supabaseClient
             .from('lavagem_itens')
             .select('*')
@@ -1188,7 +1203,6 @@ async function gerarRelatorio() {
 
         if (errItens) throw errItens;
 
-        // 3. Fetch Vehicles to get types (for pricing)
         const placas = [...new Set(itens.map(i => i.placa))];
         const { data: veiculos, error: errVeiculos } = await supabaseClient
             .from('veiculos')
@@ -1200,11 +1214,9 @@ async function gerarRelatorio() {
         const veiculoMap = new Map();
         veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
 
-        // 4. Process Data
         let totalGeral = 0;
         tbody.innerHTML = '';
 
-        // Ensure prices are loaded
         if (precosCache.length === 0) await carregarPrecos();
 
         listas.forEach(lista => {
@@ -1218,7 +1230,6 @@ async function gerarRelatorio() {
                 if (item.status === 'REALIZADO') {
                     qtdRealizada++;
                     
-                    // Calculate price
                     const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
                     const tiposLavagemStr = item.tipo_lavagem;
                     
