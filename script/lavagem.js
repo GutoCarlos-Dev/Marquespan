@@ -49,6 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosModal);
     document.getElementById('filtroFilialNovaLista').addEventListener('change', filtrarVeiculosModal);
     document.getElementById('chkAllNovaLista').addEventListener('change', toggleAllVeiculos);
+    const filtroSituacao = document.getElementById('filtroSituacaoNovaLista');
+    if (filtroSituacao) filtroSituacao.addEventListener('change', filtrarVeiculosModal);
 
     // Setup Multiselect Tipo
     const displayTipo = document.getElementById('filtroTipoNovaListaDisplay');
@@ -199,7 +201,6 @@ async function abrirModalNovaLista() {
         const { data, error } = await supabaseClient
             .from('veiculos')
             .select('*')
-            .neq('situacao', 'INTERNADO')
             .neq('situacao', 'inativo')
             .order('placa');
 
@@ -211,6 +212,21 @@ async function abrirModalNovaLista() {
         const selectFilial = document.getElementById('filtroFilialNovaLista');
         selectFilial.innerHTML = '<option value="">Todas Filiais</option>';
         filiais.forEach(f => selectFilial.add(new Option(f, f)));
+
+        // Popula filtro de situação (cria se não existir para garantir funcionalidade)
+        let selectSituacao = document.getElementById('filtroSituacaoNovaLista');
+        if (!selectSituacao && selectFilial && selectFilial.parentNode) {
+            selectSituacao = document.createElement('select');
+            selectSituacao.id = 'filtroSituacaoNovaLista';
+            selectSituacao.className = selectFilial.className; // Copia classes
+            selectSituacao.style.cssText = selectFilial.style.cssText; // Copia estilos
+            selectSituacao.style.marginLeft = '5px';
+            selectFilial.insertAdjacentElement('afterend', selectSituacao);
+            selectSituacao.addEventListener('change', filtrarVeiculosModal);
+        }
+        const situacoes = [...new Set(data.map(v => v.situacao).filter(Boolean))].sort();
+        selectSituacao.innerHTML = '<option value="">Todas Situações</option>';
+        situacoes.forEach(s => selectSituacao.add(new Option(s.toUpperCase(), s)));
 
         // Popula filtro de tipo
         const optionsContainer = document.getElementById('filtroTipoNovaListaOptions');
@@ -256,13 +272,19 @@ function renderizarVeiculosModal(veiculos) {
 
     veiculos.forEach(v => {
         const tr = document.createElement('tr');
+        
+        let statusBadge = '<span class="badge badge-realizado">APTO</span>';
+        if (v.situacao === 'INTERNADO') {
+            statusBadge = '<span class="badge" style="background-color: #007bff; color: white;">INTERNADO</span>';
+        }
+
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.modelo || '-'}</td>
             <td>${v.marca || '-'}</td>
             <td>${v.filial || '-'}</td>
-            <td><span class="badge badge-realizado">APTO</span></td>
+            <td>${statusBadge}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -272,16 +294,19 @@ function renderizarVeiculosModal(veiculos) {
 function filtrarVeiculosModal() {
     const placaInput = document.getElementById('filtroPlacaNovaLista');
     const filialInput = document.getElementById('filtroFilialNovaLista');
+    const situacaoInput = document.getElementById('filtroSituacaoNovaLista');
     
     const placa = placaInput ? placaInput.value.toUpperCase() : '';
     const filial = filialInput ? filialInput.value : '';
+    const situacao = situacaoInput ? situacaoInput.value : '';
     const checkedTypes = Array.from(document.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value);
 
     const filtrados = veiculosAptosCache.filter(v => {
         const matchPlaca = !placa || v.placa.includes(placa);
         const matchFilial = !filial || v.filial === filial;
+        const matchSituacao = !situacao || v.situacao === situacao;
         const matchTipo = checkedTypes.length === 0 || checkedTypes.includes(v.tipo);
-        return matchPlaca && matchFilial && matchTipo;
+        return matchPlaca && matchFilial && matchTipo && matchSituacao;
     });
 
     renderizarVeiculosModal(filtrados);
