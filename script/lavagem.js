@@ -2,7 +2,8 @@ import { supabaseClient } from './supabase.js';
 
 let veiculosAptosCache = [];
 let currentListId = null;
-let currentListItems = [];
+let currentListItems = []; // Itens da lista de detalhes
+let sortStateNovaLista = { key: 'placa', asc: true }; // Estado de ordenação para o modal de nova lista
 let currentSort = { key: null, asc: true };
 let precosCache = [];
 
@@ -203,6 +204,28 @@ async function abrirModalNovaLista() {
     modal.classList.remove('hidden');
     if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando veículos aptos...</td></tr>';
 
+    const headers = modal.querySelectorAll('.glass-table th');
+    const sortableColumns = {
+        'PLACA': 'placa',
+        'MODELO': 'modelo',
+        'MARCA': 'marca',
+        'FILIAL': 'filial',
+        'SITUAÇÃO': 'situacao'
+    };
+
+    headers.forEach(th => {
+        const key = sortableColumns[th.textContent.trim().toUpperCase()];
+        if (key) {
+            th.dataset.sort = key;
+            th.style.cursor = 'pointer';
+            if (!th.querySelector('i')) {
+                th.innerHTML += ' <i class="fas fa-sort" style="color: #aaa; float: right;"></i>';
+            }
+            th.onclick = () => ordenarVeiculosModal(key);
+        }
+    });
+    updateSortIconsModal();
+
     try {
         const { data, error } = await supabaseClient
             .from('veiculos')
@@ -332,6 +355,43 @@ function atualizarContadorSelecao() {
 document.getElementById('tbodyVeiculosAptos').addEventListener('change', (e) => {
     if (e.target.classList.contains('chk-veiculo')) atualizarContadorSelecao();
 });
+
+function ordenarVeiculosModal(key) {
+    if (sortStateNovaLista.key === key) {
+        sortStateNovaLista.asc = !sortStateNovaLista.asc;
+    } else {
+        sortStateNovaLista.key = key;
+        sortStateNovaLista.asc = true;
+    }
+
+    veiculosAptosCache.sort((a, b) => {
+        let valA = a[key] || '';
+        let valB = b[key] || '';
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortStateNovaLista.asc ? -1 : 1;
+        if (valA > valB) return sortStateNovaLista.asc ? 1 : -1;
+        return 0;
+    });
+    updateSortIconsModal();
+    filtrarVeiculosModal();
+}
+
+function updateSortIconsModal() {
+    document.querySelectorAll('#modalNovaLista th[data-sort] i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+        icon.style.color = '#aaa';
+    });
+    const activeTh = document.querySelector(`#modalNovaLista th[data-sort="${sortStateNovaLista.key}"]`);
+    if (activeTh) {
+        const icon = activeTh.querySelector('i');
+        if (icon) {
+            icon.className = sortStateNovaLista.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            icon.style.color = '#333';
+        }
+    }
+}
+
 
 async function criarNovaLista() {
     const nome = document.getElementById('nomeNovaLista').value;
