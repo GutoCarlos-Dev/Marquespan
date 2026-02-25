@@ -161,6 +161,7 @@ async function carregarListas() {
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${lista.nome}</td>
                 <td>${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</td>
+                <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td>
                     <div class="progress-bar-container" title="${realizados}/${total}">
@@ -192,6 +193,11 @@ async function abrirModalNovaLista() {
     if (!modal) return console.error('Modal não encontrado!');
 
     if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+    if (dataInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dataInput.value = now.toISOString().slice(0, 10);
+    }
     if (nomeInput) nomeInput.value = `Lavagem - ${new Date().toLocaleDateString('pt-BR')}`;
     
     modal.classList.remove('hidden');
