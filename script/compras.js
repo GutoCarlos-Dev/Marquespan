@@ -770,7 +770,7 @@ const UI = {
 
       const usuarioLogado = this._getCurrentUser();
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
-      const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
+      const podeExcluir = !['compras', 'estoque','gerencia'].includes(nivelUsuario);
 
       data.forEach(c=>{
         const tr = document.createElement('tr');
