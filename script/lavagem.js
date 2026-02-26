@@ -250,7 +250,7 @@ async function abrirModalNovaLista() {
         const { data, error } = await supabaseClient
             .from('veiculos')
             .select('*')
-            .neq('situacao', 'inativo')
+            .in('situacao', ['ativo', 'INTERNADO'])
             .order('placa');
 
         if (error) throw error;
@@ -328,7 +328,7 @@ function renderizarVeiculosModal(veiculos) {
         }
 
         tr.innerHTML = `
-            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
+            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}" data-situacao="${v.situacao}"></td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.modelo || '-'}</td>
             <td>${v.marca || '-'}</td>
@@ -419,7 +419,8 @@ async function criarNovaLista() {
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo:checked')).map(chk => ({
         placa: chk.value,
         modelo: chk.dataset.modelo,
-        marca: chk.dataset.marca
+        marca: chk.dataset.marca,
+        situacao: chk.dataset.situacao
     }));
 
     if (selecionados.length === 0) return alert('Selecione pelo menos um veículo.');
@@ -446,7 +447,7 @@ async function criarNovaLista() {
             placa: v.placa,
             modelo: v.modelo,
             marca: v.marca,
-            status: 'PENDENTE',
+            status: v.situacao === 'INTERNADO' ? 'INTERNADO' : 'PENDENTE',
             tipo_lavagem: null
         }));
 
@@ -514,12 +515,15 @@ function renderizarItensDetalhes(itens) {
     let pendentes = 0;
     let pulados = 0;
     let agendados = 0;
+    let internados = 0;
 
     if (itens.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum item para exibir.</td></tr>';
         if(document.getElementById('countRealizados')) document.getElementById('countRealizados').textContent = 0;
         if(document.getElementById('countPendentes')) document.getElementById('countPendentes').textContent = 0;
         if(document.getElementById('countPulados')) document.getElementById('countPulados').textContent = 0;
+        if(document.getElementById('countAgendados')) document.getElementById('countAgendados').textContent = 0;
+        if(document.getElementById('countInternados')) document.getElementById('countInternados').textContent = 0;
         return;
     }
 
@@ -527,6 +531,7 @@ function renderizarItensDetalhes(itens) {
         if (item.status === 'REALIZADO') realizados++;
         else if (item.status === 'AGENDADO') agendados++;
         else if (item.status === 'PULAR_LAVAGEM') pulados++;
+        else if (item.status === 'INTERNADO') internados++;
         else pendentes++;
 
         const tr = document.createElement('tr');
@@ -556,6 +561,8 @@ function renderizarItensDetalhes(itens) {
             badgeClass = 'badge-agendado';
         } else if (item.status === 'PULAR_LAVAGEM') {
             badgeClass = 'badge-pular-lavagem';
+        } else if (item.status === 'INTERNADO') {
+            badgeClass = 'badge-internado';
         }
 
         tr.innerHTML = `
@@ -584,8 +591,10 @@ function renderizarItensDetalhes(itens) {
     });
 
     if(document.getElementById('countRealizados')) document.getElementById('countRealizados').textContent = realizados;
-    if(document.getElementById('countPendentes')) document.getElementById('countPendentes').textContent = pendentes + agendados;
+    if(document.getElementById('countPendentes')) document.getElementById('countPendentes').textContent = pendentes;
+    if(document.getElementById('countAgendados')) document.getElementById('countAgendados').textContent = agendados;
     if(document.getElementById('countPulados')) document.getElementById('countPulados').textContent = pulados;
+    if(document.getElementById('countInternados')) document.getElementById('countInternados').textContent = internados;
     atualizarContadorSelecaoDetalhes();
 }
 
@@ -774,7 +783,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
 
             return [
                 item.placa,
-                item.modelo || '',
+                tipoVeiculo,
                 item.marca || '',
                 item.tipo_lavagem || '-',
                 item.status,
@@ -808,7 +817,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         doc.text(`Lista: ${nomeLista}`, 14, 42);
         doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 48);
 
-        const columns = ['Placa', 'Modelo', 'Marca', 'Tipo', 'Status', 'Data', 'Valor'];
+        const columns = ['Placa', 'Tipo', 'Marca', 'Tipo Lavagem', 'Status', 'Data', 'Valor'];
 
         doc.autoTable({
             head: [columns],
