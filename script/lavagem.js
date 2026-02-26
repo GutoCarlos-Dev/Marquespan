@@ -832,16 +832,34 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
             alternateRowStyles: { fillColor: [240, 240, 240] },
             margin: { left: 10, right: 10 },
             didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 4) {
+                if (data.section === 'body' && data.column.index === 4) { // Coluna 'Status'
                     const status = data.cell.raw;
-                    if (status === 'REALIZADO') {
-                        data.cell.styles.textColor = [40, 167, 69];
+                    let textColor;
+
+                    switch (status) {
+                        case 'REALIZADO':
+                            textColor = [40, 167, 69]; // #28a745
+                            break;
+                        case 'PENDENTE':
+                            textColor = [220, 53, 69]; // #dc3545
+                            break;
+                        case 'AGENDADO':
+                            textColor = [255, 193, 7]; // #ffc107
+                            break;
+                        case 'INTERNADO':
+                            textColor = [0, 123, 255]; // #007bff
+                            break;
+                        case 'PULAR_LAVAGEM':
+                            textColor = [108, 117, 125]; // #6c757d
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (textColor) {
+                        data.cell.styles.textColor = textColor;
                         data.cell.styles.fontStyle = 'bold';
-                    } else if (status === 'PULAR_LAVAGEM') {
-                        data.cell.styles.textColor = [108, 117, 125]; // Cinza
-                        data.cell.styles.fontStyle = 'bold';
-                    } else {
-                        data.cell.styles.textColor = [220, 53, 69];
+                        data.cell.styles.halign = 'center';
                     }
                 }
             }
