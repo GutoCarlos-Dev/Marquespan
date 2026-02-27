@@ -130,9 +130,39 @@ function editarOficina(oficina) {
 
 async function excluirOficina(id) {
     if (!confirm('Tem certeza que deseja excluir esta oficina?')) return;
-    const { error } = await supabaseClient.from('oficinas').delete().eq('id', id);
-    if (error) return alert('Erro ao excluir: ' + error.message);
-    carregarOficinas();
+
+    try {
+        const { error } = await supabaseClient.from('oficinas').delete().eq('id', id);
+
+        if (error) {
+            // Tratamento específico para erro de chave estrangeira (FK)
+            if (error.message.includes('violates foreign key constraint') || error.code === '23503') {
+                if (confirm('Esta oficina possui registros vinculados em "Coletas de Manutenção".\n\nDeseja desvincular esses registros (definir como "Sem Oficina") e excluir a oficina permanentemente?')) {
+                    
+                    // 1. Desvincular registros na tabela filha
+                    const { error: updateError } = await supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .update({ oficina_id: null })
+                        .eq('oficina_id', id);
+
+                    if (updateError) throw new Error('Erro ao desvincular registros: ' + updateError.message);
+
+                    // 2. Tentar excluir novamente a oficina
+                    const { error: deleteError } = await supabaseClient.from('oficinas').delete().eq('id', id);
+                    if (deleteError) throw deleteError;
+
+                    alert('Oficina excluída e registros desvinculados com sucesso!');
+                    carregarOficinas();
+                    return;
+                }
+            }
+            throw error; // Lança outros erros ou se o usuário cancelar
+        }
+        carregarOficinas();
+    } catch (err) {
+        console.error('Erro ao excluir oficina:', err);
+        alert('Erro ao excluir: ' + err.message);
+    }
 }
 
 function limparFormularioOficina() {
