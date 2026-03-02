@@ -304,14 +304,18 @@
                 <button class="close-button" id="btnCloseModalAdicionarVeiculo">&times;</button>
             </div>
             <div class="modal-body">
+                <div style="margin-bottom: 10px;">
+                    <input type="text" id="searchAdicionarVeiculo" class="glass-input" placeholder="Buscar Placa..." style="width: 100%;">
+                </div>
                 <div class="table-responsive" style="max-height: 400px;">
                     <table class="glass-table">
                         <thead>
                             <tr>
                                 <th style="width: 40px;"><input type="checkbox" id="chkAllAdicionarVeiculo"></th>
-                                <th>Placa</th>
-                                <th>Modelo</th>
-                                <th>Marca</th>
+                                <th class="sortable-add" data-sort="placa" style="cursor: pointer;">Placa <i class="fas fa-sort"></i></th>
+                                <th class="sortable-add" data-sort="tipo" style="cursor: pointer;">Tipo <i class="fas fa-sort"></i></th>
+                                <th class="sortable-add" data-sort="modelo" style="cursor: pointer;">Modelo <i class="fas fa-sort"></i></th>
+                                <th class="sortable-add" data-sort="marca" style="cursor: pointer;">Marca <i class="fas fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyAdicionarVeiculo">

@@ -4,6 +4,8 @@ let veiculosAptosCache = [];
 let currentListId = null;
 let currentListItems = []; // Itens da lista de detalhes
 let sortStateNovaLista = { key: 'placa', asc: true }; // Estado de ordenação para o modal de nova lista
+let sortStateAdicionar = { key: 'placa', asc: true }; // Estado de ordenação para o modal de adicionar veículo
+let veiculosDisponiveisParaAdicao = []; // Cache filtrado para o modal de adicionar
 let currentSort = { key: null, asc: true };
 let precosCache = [];
 
@@ -108,6 +110,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnConfirmarAdicao')?.addEventListener('click', adicionarVeiculosNaLista);
     document.getElementById('chkAllAdicionarVeiculo')?.addEventListener('change', (e) => {
         document.querySelectorAll('#tbodyAdicionarVeiculo .chk-veiculo-adicionar').forEach(chk => chk.checked = e.target.checked);
+    });
+    // Listeners para Busca e Ordenação no Modal Adicionar Veículo
+    document.getElementById('searchAdicionarVeiculo')?.addEventListener('input', filtrarVeiculosAdicionar);
+    document.querySelectorAll('.sortable-add').forEach(th => {
+        th.addEventListener('click', () => ordenarVeiculosAdicionar(th.dataset.sort));
     });
 
     // Listeners de Ordenação
@@ -1423,14 +1430,56 @@ async function abrirModalAdicionarVeiculo() {
         const placasNaLista = new Set(currentListItems.map(item => item.placa));
 
         // Filtra os veículos que não estão na lista
-        const veiculosParaAdicionar = veiculosAptosCache.filter(v => !placasNaLista.has(v.placa));
+        veiculosDisponiveisParaAdicao = veiculosAptosCache.filter(v => !placasNaLista.has(v.placa));
 
-        renderTabelaAdicionarVeiculo(veiculosParaAdicionar);
+        // Limpa busca
+        const searchInput = document.getElementById('searchAdicionarVeiculo');
+        if(searchInput) searchInput.value = '';
 
+        // Renderiza com ordenação padrão
+        ordenarVeiculosAdicionar('placa');
     } catch (error) {
         console.error('Erro ao preparar modal para adicionar veículo:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Erro ao carregar veículos.</td></tr>';
     }
+}
+
+/**
+ * Filtra os veículos no modal de adicionar com base no input de busca.
+ */
+function filtrarVeiculosAdicionar() {
+    const term = document.getElementById('searchAdicionarVeiculo').value.toUpperCase();
+    const filtered = veiculosDisponiveisParaAdicao.filter(v => v.placa.includes(term));
+    renderTabelaAdicionarVeiculo(filtered);
+}
+
+/**
+ * Ordena os veículos no modal de adicionar.
+ */
+function ordenarVeiculosAdicionar(key) {
+    if (sortStateAdicionar.key === key) {
+        sortStateAdicionar.asc = !sortStateAdicionar.asc;
+    } else {
+        sortStateAdicionar.key = key;
+        sortStateAdicionar.asc = true;
+    }
+    
+    // Atualiza ícones
+    document.querySelectorAll('.sortable-add i').forEach(i => i.className = 'fas fa-sort');
+    const activeTh = document.querySelector(`.sortable-add[data-sort="${key}"] i`);
+    if(activeTh) activeTh.className = sortStateAdicionar.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+    veiculosDisponiveisParaAdicao.sort((a, b) => {
+        let valA = a[key] || '';
+        let valB = b[key] || '';
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortStateAdicionar.asc ? -1 : 1;
+        if (valA > valB) return sortStateAdicionar.asc ? 1 : -1;
+        return 0;
+    });
+
+    filtrarVeiculosAdicionar();
 }
 
 /**
@@ -1442,7 +1491,7 @@ function renderTabelaAdicionarVeiculo(veiculos) {
     tbody.innerHTML = '';
 
     if (veiculos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Todos os veículos já estão na lista.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum veículo encontrado.</td></tr>';
         return;
     }
 
@@ -1451,6 +1500,7 @@ function renderTabelaAdicionarVeiculo(veiculos) {
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-veiculo-adicionar" value="${v.placa}" data-modelo="${v.modelo || ''}" data-marca="${v.marca || ''}"></td>
             <td><strong>${v.placa}</strong></td>
+            <td>${v.tipo || '-'}</td>
             <td>${v.modelo || '-'}</td>
             <td>${v.marca || '-'}</td>
         `;
