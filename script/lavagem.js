@@ -228,6 +228,8 @@ async function abrirModalNovaLista() {
     const sortableColumns = {
         'PLACA': 'placa',
         'MODELO': 'modelo',
+        'TIPO': 'tipo',
+        'TIPO VEICULO': 'tipo',
         'MARCA': 'marca',
         'FILIAL': 'filial',
         'SITUAÇÃO': 'situacao'
@@ -330,7 +332,7 @@ function renderizarVeiculosModal(veiculos) {
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}" data-situacao="${v.situacao}"></td>
             <td><strong>${v.placa}</strong></td>
-            <td>${v.modelo || '-'}</td>
+            <td>${v.tipo || '-'}</td>
             <td>${v.marca || '-'}</td>
             <td>${v.filial || '-'}</td>
             <td>${statusBadge}</td>
