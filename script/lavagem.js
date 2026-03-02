@@ -498,8 +498,27 @@ window.abrirDetalhesLista = async function(id, nome) {
 
         if (error) throw error;
 
-        currentListItems = data;
-        renderizarItensDetalhes(data);
+        // Buscar tipos de veículos para exibir na lista
+        const placas = [...new Set(data.map(i => i.placa))];
+        const veiculoMap = new Map();
+        
+        if (placas.length > 0) {
+            const { data: veiculos, error: errVeiculos } = await supabaseClient
+                .from('veiculos')
+                .select('placa, tipo')
+                .in('placa', placas);
+            
+            if (!errVeiculos && veiculos) {
+                veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
+            }
+        }
+
+        currentListItems = data.map(item => ({
+            ...item,
+            tipo_veiculo: veiculoMap.get(item.placa) || '-'
+        }));
+
+        renderizarItensDetalhes(currentListItems);
 
     } catch (error) {
         console.error(error);
@@ -568,7 +587,7 @@ function renderizarItensDetalhes(itens) {
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}"></td>
             <td><strong>${item.placa}</strong></td>
-            <td>${item.modelo || '-'}</td>
+            <td>${item.tipo_veiculo || '-'}</td>
             <td>${item.marca || '-'}</td>
             <td>
                 <select class="select-tipo-lavagem" onchange="atualizarItem('${item.id}', 'tipo', this.value)" ${isDisabled ? 'disabled' : ''}>
@@ -1130,8 +1149,9 @@ function ordenarItensDetalhes(key) {
     }
 
     currentListItems.sort((a, b) => {
-        let valA = a[key] || '';
-        let valB = b[key] || '';
+        const sortKey = key === 'modelo' ? 'tipo_veiculo' : key;
+        let valA = a[sortKey] || '';
+        let valB = b[sortKey] || '';
 
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
