@@ -793,6 +793,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         let totalGeral = 0;
         const summary = {}; 
         const statusSummary = {};
+        const tipoVeiculoSummary = {}; // Novo resumo por tipo
 
         const rows = itens.map(item => {
             // Se `item.tipo_veiculo` existe, usa ele. Senão, busca no mapa.
@@ -804,6 +805,12 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             const statusKey = item.status || 'INDEFINIDO';
             if (!statusSummary[statusKey]) statusSummary[statusKey] = 0;
             statusSummary[statusKey]++;
+
+            // Contabiliza Tipo de Veículo (apenas REALIZADO)
+            if (item.status === 'REALIZADO') {
+                if (!tipoVeiculoSummary[tipoVeiculo]) tipoVeiculoSummary[tipoVeiculo] = 0;
+                tipoVeiculoSummary[tipoVeiculo]++;
+            }
             
             if (item.status === 'REALIZADO' && tiposLavagemStr) {
                 const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
@@ -921,6 +928,11 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             statusSummary[status]
         ]);
 
+        const tipoVeiculoRows = Object.keys(tipoVeiculoSummary).map(tipo => [
+            tipo,
+            tipoVeiculoSummary[tipo]
+        ]);
+
         if (finalY + 40 > 280) {
             doc.addPage();
             finalY = 20;
@@ -928,27 +940,26 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text('Resumo Financeiro:', 14, finalY);
+        doc.text('Resumo Tipo (Realizados):', 14, finalY);
         doc.text('Resumo Status:', 120, finalY);
         
         const startYSummaries = finalY + 2;
 
         doc.autoTable({
-            head: [['Tipo Lavagem', 'QTD', 'Valor']],
-            body: summaryRows,
+            head: [['Tipo Veículo', 'QTD']],
+            body: tipoVeiculoRows,
             startY: startYSummaries,
             theme: 'grid',
             headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
             styles: { fontSize: 8 },
             columnStyles: {
-                1: { halign: 'center' },
-                2: { halign: 'right' }
+                1: { halign: 'center' }
             },
-            margin: { left: 10 },
-            tableWidth: 100
+            margin: { left: 14 },
+            tableWidth: 90
         });
 
-        const finalY1 = doc.lastAutoTable.finalY;
+        const finalYTipo = doc.lastAutoTable.finalY;
 
         doc.autoTable({
             head: [['Status', 'QTD']],
@@ -964,8 +975,32 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             tableWidth: 80
         });
 
-        const finalY2 = doc.lastAutoTable.finalY;
-        finalY = Math.max(finalY1, finalY2) + 10;
+        const finalYStatus = doc.lastAutoTable.finalY;
+        finalY = Math.max(finalYTipo, finalYStatus) + 10;
+
+        if (finalY + 40 > 280) {
+            doc.addPage();
+            finalY = 20;
+        }
+
+        doc.text('Resumo Financeiro:', 14, finalY);
+
+        doc.autoTable({
+            head: [['Tipo Lavagem', 'QTD', 'Valor']],
+            body: summaryRows,
+            startY: finalY + 2,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right' }
+            },
+            margin: { left: 14 },
+            tableWidth: 100
+        });
+
+        finalY = doc.lastAutoTable.finalY + 10;
 
         doc.setFontSize(12);
         doc.setTextColor(0, 105, 55);
