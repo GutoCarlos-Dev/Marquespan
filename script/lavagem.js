@@ -102,6 +102,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
 
+    // --- NOVOS LISTENERS PARA ADICIONAR VEÍCULO MANUALMENTE ---
+    document.getElementById('btnAdicionarVeiculoDetalhes')?.addEventListener('click', abrirModalAdicionarVeiculo);
+    document.getElementById('btnCloseModalAdicionarVeiculo')?.addEventListener('click', () => document.getElementById('modalAdicionarVeiculo').classList.add('hidden'));
+    document.getElementById('btnConfirmarAdicao')?.addEventListener('click', adicionarVeiculosNaLista);
+    document.getElementById('chkAllAdicionarVeiculo')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#tbodyAdicionarVeiculo .chk-veiculo-adicionar').forEach(chk => chk.checked = e.target.checked);
+    });
+
     // Listeners de Ordenação
     document.querySelectorAll('#modalDetalhesLista th.sortable').forEach(th => {
         th.addEventListener('click', () => ordenarItensDetalhes(th.dataset.sort));
@@ -623,7 +631,8 @@ async function gerarPDFLista() {
     if (!currentListId) return alert('Nenhuma lista selecionada.');
     const nomeElement = document.getElementById('tituloDetalhesLista');
     const nome = nomeElement ? nomeElement.textContent : 'Lista';
-    await gerarPDFListaPorId(currentListId, nome);
+    // Passa a lista de itens atualmente exibida (e ordenada) para o gerador de PDF
+    await gerarPDFListaPorId(currentListId, nome, currentListItems);
 }
 
 window.atualizarItem = async function(id, campo, valor) {
@@ -742,27 +751,32 @@ window.excluirLista = async function(id) {
     }
 }
 
-window.gerarPDFListaPorId = async function(id, nomeLista) {
+window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null) {
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     
     try {
-        const { data: itens, error } = await supabaseClient
-            .from('lavagem_itens')
-            .select('*')
-            .eq('lista_id', id)
-            .order('placa');
+        let itens;
+        // Se os itens foram passados pelo modal (já ordenados), usa-os.
+        // Senão, busca no banco (chamada da lista principal).
+        if (itensFromModal) {
+            itens = itensFromModal;
+        } else {
+            const { data: fetchedItens, error } = await supabaseClient
+                .from('lavagem_itens')
+                .select('*')
+                .eq('lista_id', id)
+                .order('placa'); // Ordem padrão para PDF da lista principal
 
-        if (error) throw error;
+            if (error) throw error;
+            itens = fetchedItens;
+        }
 
+        // O `tipo_veiculo` já vem nos `itensFromModal`. Se não vier, busca no banco.
         const placas = [...new Set(itens.map(i => i.placa))];
         let veiculoMap = new Map();
         
-        if (placas.length > 0) {
-            const { data: veiculos, error: errVeiculos } = await supabaseClient
-                .from('veiculos')
-                .select('placa, tipo')
-                .in('placa', placas);
-            
+        if (placas.length > 0 && (!itens[0] || !itens[0].hasOwnProperty('tipo_veiculo'))) {
+            const { data: veiculos, error: errVeiculos } = await supabaseClient.from('veiculos').select('placa, tipo').in('placa', placas);
             if (errVeiculos) throw errVeiculos;
             veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
         }
@@ -774,7 +788,8 @@ window.gerarPDFListaPorId = async function(id, nomeLista) {
         const statusSummary = {};
 
         const rows = itens.map(item => {
-            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+            // Se `item.tipo_veiculo` existe, usa ele. Senão, busca no mapa.
+            const tipoVeiculo = item.tipo_veiculo || veiculoMap.get(item.placa) || 'DESCONHECIDO';
             const tiposLavagemStr = item.tipo_lavagem;
             let valorItem = 0;
 
@@ -1374,5 +1389,106 @@ async function carregarTiposVeiculoParaPreco() {
     } catch (error) {
         console.error('Erro ao carregar tipos de veículo:', error);
         select.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+// --- NOVAS FUNÇÕES PARA ADICIONAR VEÍCULO MANUALMENTE ---
+
+/**
+ * Abre o modal para adicionar um novo veículo a uma lista existente.
+ * Filtra os veículos para não mostrar os que já estão na lista.
+ */
+async function abrirModalAdicionarVeiculo() {
+    const modal = document.getElementById('modalAdicionarVeiculo');
+    if (!modal) {
+        return alert('Erro: O modal para adicionar veículos não foi encontrado no HTML.');
+    }
+
+    const tbody = document.getElementById('tbodyAdicionarVeiculo');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>';
+    modal.classList.remove('hidden');
+
+    try {
+        // Reutiliza o cache de veículos se já foi carregado, senão busca
+        if (veiculosAptosCache.length === 0) {
+            const { data, error } = await supabaseClient
+                .from('veiculos')
+                .select('*')
+                .in('situacao', ['ativo', 'INTERNADO']);
+            if (error) throw error;
+            veiculosAptosCache = data;
+        }
+
+        // Pega as placas que já estão na lista atual
+        const placasNaLista = new Set(currentListItems.map(item => item.placa));
+
+        // Filtra os veículos que não estão na lista
+        const veiculosParaAdicionar = veiculosAptosCache.filter(v => !placasNaLista.has(v.placa));
+
+        renderTabelaAdicionarVeiculo(veiculosParaAdicionar);
+
+    } catch (error) {
+        console.error('Erro ao preparar modal para adicionar veículo:', error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Erro ao carregar veículos.</td></tr>';
+    }
+}
+
+/**
+ * Renderiza a tabela de veículos disponíveis para serem adicionados.
+ * @param {Array} veiculos - A lista de veículos a ser renderizada.
+ */
+function renderTabelaAdicionarVeiculo(veiculos) {
+    const tbody = document.getElementById('tbodyAdicionarVeiculo');
+    tbody.innerHTML = '';
+
+    if (veiculos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Todos os veículos já estão na lista.</td></tr>';
+        return;
+    }
+
+    veiculos.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo-adicionar" value="${v.placa}" data-modelo="${v.modelo || ''}" data-marca="${v.marca || ''}"></td>
+            <td><strong>${v.placa}</strong></td>
+            <td>${v.modelo || '-'}</td>
+            <td>${v.marca || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Adiciona os veículos selecionados no modal à lista de lavagem atual.
+ */
+async function adicionarVeiculosNaLista() {
+    const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-adicionar:checked'));
+
+    if (selecionados.length === 0) return alert('Selecione pelo menos um veículo para adicionar.');
+    if (!currentListId) return alert('Erro: ID da lista atual não encontrado.');
+
+    const btn = document.getElementById('btnConfirmarAdicao');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adicionando...';
+
+    const novosItens = selecionados.map(chk => ({
+        lista_id: currentListId, placa: chk.value, modelo: chk.dataset.modelo, marca: chk.dataset.marca, status: 'PENDENTE', tipo_lavagem: null
+    }));
+
+    try {
+        const { error } = await supabaseClient.from('lavagem_itens').insert(novosItens);
+        if (error) throw error;
+
+        alert(`${novosItens.length} veículo(s) adicionado(s) com sucesso!`);
+        document.getElementById('modalAdicionarVeiculo').classList.add('hidden');
+
+        const nomeLista = document.getElementById('tituloDetalhesLista').textContent.replace('Lista: ', '');
+        await abrirDetalhesLista(currentListId, nomeLista);
+    } catch (error) {
+        console.error('Erro ao adicionar veículos:', error);
+        alert('Erro ao adicionar veículos: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Adicionar Selecionados';
     }
 }
