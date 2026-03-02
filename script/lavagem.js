@@ -737,14 +737,53 @@ function filtrarItensDetalhes() {
 }
 
 async function finalizarListaAtual() {
-    if (!confirm('Deseja finalizar esta lista?')) return;
+    if (!confirm('Deseja finalizar esta lista? Ao finalizar, os valores serão consolidados e não sofrerão alterações futuras.')) return;
+    
+    const btn = document.getElementById('btnFinalizarLista');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizando...';
+
     try {
+        // 1. Carregar itens e veículos para cálculo do snapshot
+        const { data: itens, error: errItens } = await supabaseClient.from('lavagem_itens').select('*').eq('lista_id', currentListId);
+        if (errItens) throw errItens;
+
+        const placas = [...new Set(itens.map(i => i.placa))];
+        const veiculoMap = new Map();
+        if (placas.length > 0) {
+            const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, tipo').in('placa', placas);
+            if (veiculos) veiculos.forEach(v => veiculoMap.set(v.placa, v.tipo));
+        }
+
+        if (precosCache.length === 0) await carregarPrecos();
+
+        // 2. Calcular e salvar valor fixo para itens realizados
+        const updates = itens.map(item => {
+            if (item.status !== 'REALIZADO') return null;
+            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+            let valorItem = 0;
+            if (item.tipo_lavagem) {
+                item.tipo_lavagem.split(',').map(t => t.trim()).forEach(tipo => {
+                    const p = precosCache.find(x => x.tipoVeiculo === tipoVeiculo.toUpperCase() && x.tipoLavagem === tipo);
+                    if (p) valorItem += p.valor;
+                });
+            }
+            return supabaseClient.from('lavagem_itens').update({ valor: valorItem }).eq('id', item.id);
+        }).filter(p => p !== null);
+
+        if (updates.length > 0) await Promise.all(updates);
+
         await supabaseClient.from('lavagem_listas').update({ status: 'FINALIZADA' }).eq('id', currentListId);
         alert('Lista finalizada!');
         document.getElementById('modalDetalhesLista').classList.add('hidden');
         carregarListas();
     } catch (error) {
-        alert('Erro ao finalizar lista.');
+        console.error(error);
+        alert('Erro ao finalizar lista: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
@@ -814,6 +853,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             
             if (item.status === 'REALIZADO' && tiposLavagemStr) {
                 const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
+                let valorCalculado = 0;
                 
                 tipos.forEach(tipo => {
                     const precoObj = precosCache.find(p => 
@@ -821,13 +861,20 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                         p.tipoLavagem === tipo
                     );
                     const valorTipo = precoObj ? precoObj.valor : 0;
-                    valorItem += valorTipo;
+                    valorCalculado += valorTipo;
 
                     if (!summary[tipo]) summary[tipo] = { qtd: 0, valor: 0 };
                     summary[tipo].qtd++;
                     summary[tipo].valor += valorTipo;
                 });
                 
+                // Se existe valor salvo (snapshot), usa ele. Senão usa o calculado.
+                if (item.valor !== undefined && item.valor !== null) {
+                    valorItem = item.valor;
+                } else {
+                    valorItem = valorCalculado;
+                }
+
                 totalGeral += valorItem;
             }
 
@@ -1367,18 +1414,24 @@ async function gerarRelatorio() {
                 if (item.status === 'REALIZADO') {
                     qtdRealizada++;
                     
-                    const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
-                    const tiposLavagemStr = item.tipo_lavagem;
-                    
-                    if (tiposLavagemStr) {
-                        const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
-                        tipos.forEach(tipo => {
-                            const precoObj = precosCache.find(p => 
-                                p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                                p.tipoLavagem === tipo
-                            );
-                            if (precoObj) valorLista += precoObj.valor;
-                        });
+                    // Se tem valor salvo (snapshot), usa ele
+                    if (item.valor !== undefined && item.valor !== null) {
+                        valorLista += item.valor;
+                    } else {
+                        // Fallback: calcula com preços atuais
+                        const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+                        const tiposLavagemStr = item.tipo_lavagem;
+                        
+                        if (tiposLavagemStr) {
+                            const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
+                            tipos.forEach(tipo => {
+                                const precoObj = precosCache.find(p => 
+                                    p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                                    p.tipoLavagem === tipo
+                                );
+                                if (precoObj) valorLista += precoObj.valor;
+                            });
+                        }
                     }
 
                 } else {
