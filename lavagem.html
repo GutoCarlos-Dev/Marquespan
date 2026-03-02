@@ -27,6 +27,12 @@
             font-size: 0.8rem;
             height: auto;
         }
+        /* Estilo para tabela de preços com scroll e cabeçalho fixo */
+        #tab-precificacao .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        #tab-precificacao th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -114,13 +120,13 @@
                 </div>
                 <button id="btnSalvarPreco" class="btn-glass btn-green"><i class="fas fa-save"></i> Adicionar</button>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 500px;">
                 <table class="glass-table">
                     <thead>
                         <tr>
-                            <th>Tipo de Veículo</th>
-                            <th>Tipo de Lavagem</th>
-                            <th>Valor</th>
+                            <th class="sortable-preco" data-sort="tipoVeiculo" style="cursor: pointer;">Tipo de Veículo <i class="fas fa-sort"></i></th>
+                            <th class="sortable-preco" data-sort="tipoLavagem" style="cursor: pointer;">Tipo de Lavagem <i class="fas fa-sort"></i></th>
+                            <th class="sortable-preco" data-sort="valor" style="cursor: pointer;">Valor <i class="fas fa-sort"></i></th>
                             <th>Ações</th>
                         </tr>
                     </thead>

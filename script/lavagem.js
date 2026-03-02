@@ -9,6 +9,8 @@ let sortStateAdicionar = { key: 'placa', asc: true }; // Estado de ordenação p
 let veiculosDisponiveisParaAdicao = []; // Cache filtrado para o modal de adicionar
 let currentSort = { key: null, asc: true };
 let precosCache = [];
+let editingPriceId = null;
+let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -116,6 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('searchAdicionarVeiculo')?.addEventListener('input', filtrarVeiculosAdicionar);
     document.querySelectorAll('.sortable-add').forEach(th => {
         th.addEventListener('click', () => ordenarVeiculosAdicionar(th.dataset.sort));
+    });
+    // Listeners para Ordenação na Tabela de Preços
+    document.querySelectorAll('.sortable-preco').forEach(th => {
+        th.addEventListener('click', () => ordenarPrecos(th.dataset.sort));
     });
 
     // Listeners de Ordenação
@@ -1348,25 +1354,54 @@ async function salvarPreco() {
         return alert('Preencha todos os campos corretamente.');
     }
 
-    const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem);
-    
     try {
-        if (exists) {
-            if(!confirm('Já existe um preço para este tipo de veículo e lavagem. Deseja atualizar?')) return;
-            const { error } = await supabaseClient.from('lavagem_precos').update({ valor }).eq('id', exists.id);
+        if (editingPriceId) {
+            // Update existing
+            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.id !== editingPriceId);
+            if (exists) {
+                return alert('Já existe um preço cadastrado para este Tipo de Veículo e Lavagem.');
+            }
+
+            const { error } = await supabaseClient.from('lavagem_precos').update({ 
+                tipo_veiculo: tipoVeiculo, 
+                tipo_lavagem: tipoLavagem, 
+                valor: valor 
+            }).eq('id', editingPriceId);
+            
             if (error) throw error;
+            alert('Preço atualizado com sucesso!');
         } else {
-            const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, valor });
-            if (error) throw error;
+            // Insert new
+            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem);
+            
+            if (exists) {
+                if(!confirm('Já existe um preço para este tipo de veículo e lavagem. Deseja atualizar o valor?')) return;
+                const { error } = await supabaseClient.from('lavagem_precos').update({ valor }).eq('id', exists.id);
+                if (error) throw error;
+                alert('Preço atualizado com sucesso!');
+            } else {
+                const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, valor });
+                if (error) throw error;
+                alert('Preço adicionado com sucesso!');
+            }
         }
         
         await carregarPrecos();
-        alert('Preço salvo com sucesso!');
-        document.getElementById('precoValor').value = '';
+        limparFormularioPreco();
     } catch (error) {
         console.error('Erro ao salvar preço:', error);
         alert('Erro ao salvar preço: ' + error.message);
     }
+}
+
+function limparFormularioPreco() {
+    document.getElementById('precoValor').value = '';
+    document.getElementById('precoTipoVeiculo').value = '';
+    editingPriceId = null;
+    const btn = document.getElementById('btnSalvarPreco');
+    btn.innerHTML = '<i class="fas fa-save"></i> Adicionar';
+    btn.classList.remove('btn-blue');
+    btn.classList.add('btn-green');
 }
 
 function renderizarTabelaPrecos() {
@@ -1380,10 +1415,52 @@ function renderizarTabelaPrecos() {
             <td>${p.tipoVeiculo}</td>
             <td>${p.tipoLavagem}</td>
             <td>R$ ${p.valor.toFixed(2)}</td>
-            <td><button class="btn-icon delete" onclick="removerPreco(${p.id})"><i class="fas fa-trash"></i></button></td>
+            <td>
+                <button class="btn-icon edit" onclick="editarPreco(${p.id})"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon delete" onclick="removerPreco(${p.id})"><i class="fas fa-trash"></i></button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.editarPreco = function(id) {
+    const p = precosCache.find(x => x.id === id);
+    if (!p) return;
+    
+    document.getElementById('precoTipoVeiculo').value = p.tipoVeiculo;
+    document.getElementById('precoTipoLavagem').value = p.tipoLavagem;
+    document.getElementById('precoValor').value = p.valor;
+    
+    editingPriceId = id;
+    const btn = document.getElementById('btnSalvarPreco');
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+    btn.classList.remove('btn-green');
+    btn.classList.add('btn-blue');
+}
+
+function ordenarPrecos(key) {
+    if (sortStatePrecos.key === key) {
+        sortStatePrecos.asc = !sortStatePrecos.asc;
+    } else {
+        sortStatePrecos.key = key;
+        sortStatePrecos.asc = true;
+    }
+
+    document.querySelectorAll('.sortable-preco i').forEach(i => i.className = 'fas fa-sort');
+    const activeTh = document.querySelector(`.sortable-preco[data-sort="${key}"] i`);
+    if (activeTh) activeTh.className = sortStatePrecos.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+    precosCache.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortStatePrecos.asc ? -1 : 1;
+        if (valA > valB) return sortStatePrecos.asc ? 1 : -1;
+        return 0;
+    });
+    renderizarTabelaPrecos();
 }
 
 window.removerPreco = async function(id) {
