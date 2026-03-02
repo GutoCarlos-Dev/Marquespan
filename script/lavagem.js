@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let veiculosAptosCache = [];
 let currentListId = null;
+let currentListStatus = 'ABERTA';
 let currentListItems = []; // Itens da lista de detalhes
 let sortStateNovaLista = { key: 'placa', asc: true }; // Estado de ordenação para o modal de nova lista
 let sortStateAdicionar = { key: 'placa', asc: true }; // Estado de ordenação para o modal de adicionar veículo
@@ -515,6 +516,11 @@ window.abrirDetalhesLista = async function(id, nome) {
 
         if (error) throw error;
 
+        // Buscar status da lista para controle de UI
+        const { data: listaInfo } = await supabaseClient.from('lavagem_listas').select('status').eq('id', id).single();
+        currentListStatus = listaInfo ? listaInfo.status : 'ABERTA';
+        updateModalState();
+
         // Buscar tipos de veículos para exibir na lista
         const placas = [...new Set(data.map(i => i.placa))];
         const veiculoMap = new Map();
@@ -543,6 +549,28 @@ window.abrirDetalhesLista = async function(id, nome) {
     }
 }
 
+function updateModalState() {
+    const btnFinalizar = document.getElementById('btnFinalizarLista');
+    const btnAdicionar = document.getElementById('btnAdicionarVeiculoDetalhes');
+    const bulkActions = document.querySelector('.bulk-actions');
+    
+    if (currentListStatus === 'FINALIZADA') {
+        if (btnFinalizar) {
+            btnFinalizar.innerHTML = '<i class="fas fa-undo"></i> Reabrir Lista';
+            btnFinalizar.className = 'btn-glass btn-red';
+        }
+        if (btnAdicionar) btnAdicionar.style.display = 'none';
+        if (bulkActions) bulkActions.style.display = 'none';
+    } else {
+        if (btnFinalizar) {
+            btnFinalizar.innerHTML = '<i class="fas fa-check-double"></i> Finalizar Lista';
+            btnFinalizar.className = 'btn-glass btn-green';
+        }
+        if (btnAdicionar) btnAdicionar.style.display = 'inline-block';
+        if (bulkActions) bulkActions.style.display = 'flex';
+    }
+}
+
 function renderizarItensDetalhes(itens) {
     const tbody = document.getElementById('tbodyDetalhesItens');
     tbody.innerHTML = '';
@@ -563,6 +591,8 @@ function renderizarItensDetalhes(itens) {
         return;
     }
 
+    const isFinalizada = currentListStatus === 'FINALIZADA';
+
     itens.forEach(item => {
         if (item.status === 'REALIZADO') realizados++;
         else if (item.status === 'AGENDADO') agendados++;
@@ -574,7 +604,7 @@ function renderizarItensDetalhes(itens) {
         const tiposLavagem = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
         
         // Desabilita campos se o status for PULAR_LAVAGEM
-        const isDisabled = item.status === 'PULAR_LAVAGEM';
+        const isDisabled = item.status === 'PULAR_LAVAGEM' || isFinalizada;
 
         let options = '<option value="">Selecione...</option>';
         let found = false;
@@ -602,7 +632,7 @@ function renderizarItensDetalhes(itens) {
         }
 
         tr.innerHTML = `
-            <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}"></td>
+            <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}" ${isFinalizada ? 'disabled' : ''}></td>
             <td><strong>${item.placa}</strong></td>
             <td>${item.tipo_veiculo || '-'}</td>
             <td>${item.marca || '-'}</td>
@@ -620,7 +650,7 @@ function renderizarItensDetalhes(itens) {
             </td>
             <td>${dataRealizado}</td>
             <td>
-                <button class="btn-icon delete" onclick="removerItemLista('${item.id}')"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon delete" onclick="removerItemLista('${item.id}')" ${isFinalizada ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -737,6 +767,22 @@ function filtrarItensDetalhes() {
 }
 
 async function finalizarListaAtual() {
+    if (currentListStatus === 'FINALIZADA') {
+        if (!confirm('Deseja reabrir esta lista? Ela voltará a ser editável.')) return;
+        try {
+            const { error } = await supabaseClient.from('lavagem_listas').update({ status: 'ABERTA' }).eq('id', currentListId);
+            if (error) throw error;
+            alert('Lista reaberta!');
+            currentListStatus = 'ABERTA';
+            updateModalState();
+            renderizarItensDetalhes(currentListItems);
+            carregarListas();
+        } catch (error) {
+            alert('Erro ao reabrir lista: ' + error.message);
+        }
+        return;
+    }
+
     if (!confirm('Deseja finalizar esta lista? Ao finalizar, os valores serão consolidados e não sofrerão alterações futuras.')) return;
     
     const btn = document.getElementById('btnFinalizarLista');
