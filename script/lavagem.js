@@ -474,7 +474,7 @@ window.abrirDetalhesLista = async function(id, nome) {
 
     const selectBulkTipo = document.getElementById('select-bulk-tipo');
     if (selectBulkTipo) {
-        const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
+        const tiposLavagem = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
         selectBulkTipo.innerHTML = '<option value="">Aplicar tipo...</option>';
         tiposLavagem.forEach(t => {
             selectBulkTipo.add(new Option(t, t));
@@ -535,7 +535,7 @@ function renderizarItensDetalhes(itens) {
         else pendentes++;
 
         const tr = document.createElement('tr');
-        const tiposLavagem = ['SIMPLES', 'BAÚ COMPLETO', 'CHASSI','MOTOR', 'THERMO KING'];
+        const tiposLavagem = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
         
         // Desabilita campos se o status for PULAR_LAVAGEM
         const isDisabled = item.status === 'PULAR_LAVAGEM';
