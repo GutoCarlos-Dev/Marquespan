@@ -143,7 +143,7 @@ function abrirModalAcao(item) {
     document.getElementById('modalPlacaVeiculo').textContent = item.placa;
     document.getElementById('modalModeloVeiculo').textContent = item.modelo || '';
     
-    const tipos = ['SIMPLES', 'DIFERENCIADA', 'BAÚ COMPLETO', 'MOTOR', 'THERMO KING', 'CHASSI'];
+    const tipos = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
     const container = document.getElementById('radioGroupTipos');
     container.innerHTML = '';
 
