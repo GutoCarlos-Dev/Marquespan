@@ -38,6 +38,21 @@ const MapaUI = {
         // Adiciona o grupo de camadas ao mapa
         this.routeLayers.addTo(this.map);
 
+        // Adiciona controle de busca de endereços (Lupa)
+        L.Control.geocoder({
+            defaultMarkGeocode: true,
+            placeholder: 'Buscar endereço...',
+            errorMessage: 'Não encontrado.'
+        }).addTo(this.map);
+
+        // Adiciona controle de rotas (Painel A -> B)
+        L.Routing.control({
+            waypoints: [], // Inicia vazio
+            routeWhileDragging: true,
+            geocoder: L.Control.Geocoder.nominatim(),
+            language: 'pt-BR'
+        }).addTo(this.map);
+
         // Evento de clique no mapa para adicionar novo ponto
         this.map.on('click', (e) => this.handleMapClick(e));
     },
