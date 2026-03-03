@@ -93,7 +93,8 @@
     box-sizing: border-box;
 }
 
-.glass-input:focus {
+/* Mostra o anel de foco apenas para navegação via teclado */
+.glass-input:focus-visible {
     background: rgba(255, 255, 255, 0.9);
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);

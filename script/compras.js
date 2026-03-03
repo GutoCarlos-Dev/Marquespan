@@ -758,21 +758,35 @@ const UI = {
       const status = this.filterStatusSelect?.value;
       let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))');
       
-      if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
       if(status && status!=='Todas') q = q.eq('status',status);
       
-      q = q.order(this._savedQuotationsSort.field, { ascending: this._savedQuotationsSort.ascending });
+      if (this._savedQuotationsSort.field === 'fornecedores.nome') {
+        q = q.order('nome', { foreignTable: 'fornecedores', ascending: this._savedQuotationsSort.ascending });
+      } else {
+        q = q.order(this._savedQuotationsSort.field, { ascending: this._savedQuotationsSort.ascending });
+      }
 
       const { data, error } = await q;
       if(error) throw error;
+
+      let filteredData = data || [];
+      if (search) {
+        const s = search.toLowerCase();
+        filteredData = filteredData.filter(item => {
+            const code = (item.codigo_cotacao || '').toLowerCase();
+            const winner = (item.fornecedores?.nome || '').toLowerCase();
+            return code.includes(s) || winner.includes(s);
+        });
+      }
+
       this.savedQuotationsTableBody.innerHTML = '';
-      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="10">Nenhuma cotação encontrada.</td></tr>`;
+      if(!filteredData || filteredData.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="10">Nenhuma cotação encontrada.</td></tr>`;
 
       const usuarioLogado = this._getCurrentUser();
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       const podeExcluir = !['compras', 'estoque','gerencia'].includes(nivelUsuario);
 
-      data.forEach(c=>{
+      filteredData.forEach(c=>{
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         
