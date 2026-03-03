@@ -4,6 +4,7 @@ const MapaUI = {
     map: null,
     activeRouteId: null,
     routeLayers: L.layerGroup(), // Camada para marcadores e linhas da rota ativa
+    routingControl: null, // Controle de roteamento
 
     init() {
         // Proteção de Rota
@@ -24,6 +25,7 @@ const MapaUI = {
         this.painelPontos = document.getElementById('painelPontos');
         this.tituloPainelPontos = document.getElementById('tituloPainelPontos');
         this.listaPontos = document.getElementById('listaPontos');
+        this.btnFecharRota = document.getElementById('btnFecharRota');
     },
 
     initMap() {
@@ -40,17 +42,31 @@ const MapaUI = {
 
         // Adiciona controle de busca de endereços (Lupa)
         L.Control.geocoder({
-            defaultMarkGeocode: true,
+            geocoder: L.Control.Geocoder.nominatim(),
+            // feature comes from the geocoder service
+            onSelect: (geocodeResult) => {
+              console.log(geocodeResult);
+              // Aqui você pode preencher automaticamente o campo de endereço
+              // com o resultado selecionado
+              // Ex: document.getElementById('endereco').value = geocodeResult.name;
+            },
+            showResultIcons: false,
+            usemapBounds: false,
+            collapsed: true,
             placeholder: 'Buscar endereço...',
             errorMessage: 'Não encontrado.'
         }).addTo(this.map);
 
         // Adiciona controle de rotas (Painel A -> B)
-        L.Routing.control({
+        this.routingControl = L.Routing.control({
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
             geocoder: L.Control.Geocoder.nominatim(),
-            language: 'pt-BR'
+            language: 'pt-BR',
+            createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
+            lineOptions: {
+                styles: [{color: '#006937', opacity: 0.7, weight: 5}] // Estilo da linha da rota
+            }
         }).addTo(this.map);
 
         // Evento de clique no mapa para adicionar novo ponto
@@ -59,6 +75,7 @@ const MapaUI = {
 
     bindEvents() {
         this.formNovaRota.addEventListener('submit', (e) => this.handleNewRoute(e));
+        if (this.btnFecharRota) this.btnFecharRota.addEventListener('click', () => this.closeRouteLoop());
     },
 
     // --- LÓGICA DE ROTAS ---
@@ -172,6 +189,7 @@ const MapaUI = {
                 this.activeRouteId = null;
                 this.painelPontos.classList.add('hidden');
                 this.routeLayers.clearLayers();
+                if (this.routingControl) this.routingControl.setWaypoints([]);
             }
             
             this.loadRoutes();
@@ -240,6 +258,9 @@ const MapaUI = {
     async loadAndDrawPoints(routeId, routeColor) {
         this.listaPontos.innerHTML = '<li>Carregando pontos...</li>';
         this.routeLayers.clearLayers(); // Limpa marcadores e linhas antigas
+        if (this.routingControl) {
+            this.routingControl.setWaypoints([]); // Limpa a rota antiga
+        }
 
         try {
             const { data: pontos, error } = await supabaseClient
@@ -302,12 +323,12 @@ const MapaUI = {
             marker.bindPopup(`<b>${ponto.ordem}. ${enderecoPopup}</b><br>${ponto.observacao || ''}`);
         });
 
-        // Desenha a linha conectando os pontos
-        if (latLngs.length > 1) {
-            const polyline = L.polyline(latLngs, { color: routeColor || '#3388ff' }).addTo(this.routeLayers);
-            // Ajusta o zoom do mapa para mostrar a rota inteira
-            this.map.fitBounds(polyline.getBounds());
-        } else if (latLngs.length === 1) {
+        // Calcula e desenha a trajetória usando o Routing Machine
+        if (this.routingControl) {
+            this.routingControl.setWaypoints(latLngs);
+        }
+
+        if (latLngs.length === 1) {
             // Se houver apenas um ponto, centraliza nele
             this.map.setView(latLngs[0], 13);
         }
@@ -332,6 +353,60 @@ const MapaUI = {
         } catch (err) {
             console.error('Erro ao excluir ponto:', err);
             alert('Erro ao excluir ponto.');
+        }
+    },
+
+    async closeRouteLoop() {
+        if (!this.activeRouteId) return;
+
+        try {
+            const { data: pontos, error } = await supabaseClient
+                .from('mapa_pontos')
+                .select('*')
+                .eq('rota_id', this.activeRouteId)
+                .order('ordem', { ascending: true });
+
+            if (error) throw error;
+
+            if (!pontos || pontos.length === 0) {
+                alert('Adicione pontos à rota antes de finalizar.');
+                return;
+            }
+
+            const primeiroPonto = pontos[0];
+            const ultimoPonto = pontos[pontos.length - 1];
+
+            // Verifica se já está fechado (coordenadas muito próximas)
+            if (pontos.length > 1 && 
+                Math.abs(primeiroPonto.latitude - ultimoPonto.latitude) < 0.00001 && 
+                Math.abs(primeiroPonto.longitude - ultimoPonto.longitude) < 0.00001) {
+                alert('A rota já termina no ponto inicial.');
+                return;
+            }
+
+            const proximaOrdem = ultimoPonto.ordem + 1;
+
+            const { error: insertError } = await supabaseClient
+                .from('mapa_pontos')
+                .insert({
+                    rota_id: this.activeRouteId,
+                    endereco: primeiroPonto.endereco + ' (Retorno)',
+                    latitude: primeiroPonto.latitude,
+                    longitude: primeiroPonto.longitude,
+                    ordem: proximaOrdem,
+                    observacao: 'Retorno ao ponto inicial'
+                });
+
+            if (insertError) throw insertError;
+
+            // Recarrega a rota
+            const activeRouteLi = document.querySelector(`#listaRotas li[data-route-id="${this.activeRouteId}"]`);
+            const routeColor = activeRouteLi ? activeRouteLi.querySelector('.color-swatch').style.backgroundColor : '#3388ff';
+            this.loadAndDrawPoints(this.activeRouteId, routeColor);
+
+        } catch (err) {
+            console.error('Erro ao fechar rota:', err);
+            alert('Erro ao finalizar rota.');
         }
     }
 };
