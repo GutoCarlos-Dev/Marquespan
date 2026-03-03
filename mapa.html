@@ -56,7 +56,24 @@
         <!-- Painel para Pontos da Rota Selecionada -->
         <div id="painelPontos" class="glass-panel hidden">
           <h3 id="tituloPainelPontos"><i class="fas fa-map-marker-alt"></i> Pontos da Rota</h3>
+          <div id="rotaInfo" class="glass-panel-inner" style="margin-bottom: 10px; padding: 10px; text-align: center; display: none; background-color: rgba(0, 105, 55, 0.1); border: 1px solid #006937; border-radius: 8px;">
+             <i class="fas fa-road"></i> <strong>Total:</strong> <span id="distanciaRota" style="font-size: 1.1em; font-weight: bold;">0 km</span> 
+             <span style="margin: 0 5px;">•</span> <i class="fas fa-clock"></i> <span id="tempoRota">0 min</span>
+          </div>
           <p class="instrucao-mapa">Clique no mapa para adicionar um novo ponto.</p>
+
+          <!-- Painel de Roteirização Inteligente (Movido para cá) -->
+          <div class="glass-panel-inner" style="margin-top: 15px; margin-bottom: 15px; padding: 15px; background-color: rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #006937;"><i class="fas fa-robot"></i> Roteirização Inteligente</h4>
+            <div class="form-grid" style="display: flex; flex-direction: column; gap: 10px;">
+              <input type="text" id="inputOrigem" placeholder="Ponto Inicial (Origem)" class="glass-input">
+              <input type="text" id="inputDestino" placeholder="Ponto Final (Destino)" class="glass-input">
+              <button id="btnTracarRotaInteligente" class="btn-glass btn-blue compact-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <i class="fas fa-route"></i> Traçar Melhor Rota
+              </button>
+            </div>
+          </div>
+
           <button id="btnFecharRota" class="btn-glass btn-blue compact-btn" style="width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
             <i class="fas fa-undo"></i> Finalizar Rota ao Ponto Inicial
           </button>

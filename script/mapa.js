@@ -25,7 +25,13 @@ const MapaUI = {
         this.painelPontos = document.getElementById('painelPontos');
         this.tituloPainelPontos = document.getElementById('tituloPainelPontos');
         this.listaPontos = document.getElementById('listaPontos');
+        this.rotaInfo = document.getElementById('rotaInfo');
+        this.distanciaRota = document.getElementById('distanciaRota');
+        this.tempoRota = document.getElementById('tempoRota');
         this.btnFecharRota = document.getElementById('btnFecharRota');
+        this.inputOrigem = document.getElementById('inputOrigem');
+        this.inputDestino = document.getElementById('inputDestino');
+        this.btnTracarRotaInteligente = document.getElementById('btnTracarRotaInteligente');
     },
 
     initMap() {
@@ -62,12 +68,26 @@ const MapaUI = {
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
             geocoder: L.Control.Geocoder.nominatim(),
+            showAlternatives: true, // Permite mostrar rotas alternativas
             language: 'pt-BR',
             createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
             lineOptions: {
                 styles: [{color: '#006937', opacity: 0.7, weight: 5}] // Estilo da linha da rota
             }
         }).addTo(this.map);
+
+        // Evento disparado quando uma rota é encontrada/calculada
+        this.routingControl.on('routesfound', (e) => {
+            const routes = e.routes;
+            const summary = routes[0].summary;
+            // Converte metros para km e segundos para minutos
+            const km = (summary.totalDistance / 1000).toFixed(1);
+            const tempo = Math.round(summary.totalTime / 60);
+            
+            if (this.distanciaRota) this.distanciaRota.innerText = `${km} km`;
+            if (this.tempoRota) this.tempoRota.innerText = `${tempo} min`;
+            if (this.rotaInfo) this.rotaInfo.style.display = 'block';
+        });
 
         // Evento de clique no mapa para adicionar novo ponto
         this.map.on('click', (e) => this.handleMapClick(e));
@@ -76,6 +96,7 @@ const MapaUI = {
     bindEvents() {
         this.formNovaRota.addEventListener('submit', (e) => this.handleNewRoute(e));
         if (this.btnFecharRota) this.btnFecharRota.addEventListener('click', () => this.closeRouteLoop());
+        if (this.btnTracarRotaInteligente) this.btnTracarRotaInteligente.addEventListener('click', () => this.tracarRotaInteligente());
     },
 
     // --- LÓGICA DE ROTAS ---
@@ -190,6 +211,7 @@ const MapaUI = {
                 this.painelPontos.classList.add('hidden');
                 this.routeLayers.clearLayers();
                 if (this.routingControl) this.routingControl.setWaypoints([]);
+                if (this.rotaInfo) this.rotaInfo.style.display = 'none';
             }
             
             this.loadRoutes();
@@ -260,6 +282,7 @@ const MapaUI = {
         this.routeLayers.clearLayers(); // Limpa marcadores e linhas antigas
         if (this.routingControl) {
             this.routingControl.setWaypoints([]); // Limpa a rota antiga
+            if (this.rotaInfo) this.rotaInfo.style.display = 'none'; // Esconde info até recalcular
         }
 
         try {
@@ -407,6 +430,51 @@ const MapaUI = {
         } catch (err) {
             console.error('Erro ao fechar rota:', err);
             alert('Erro ao finalizar rota.');
+        }
+    },
+
+    async tracarRotaInteligente() {
+        const origem = this.inputOrigem.value;
+        const destino = this.inputDestino.value;
+
+        if (!origem || !destino) {
+            alert('Por favor, informe o Ponto Inicial e o Ponto Final.');
+            return;
+        }
+
+        const btn = this.btnTracarRotaInteligente;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+        btn.disabled = true;
+
+        const geocoder = L.Control.Geocoder.nominatim();
+        
+        const geocode = (query) => new Promise((resolve, reject) => {
+            geocoder.geocode(query, (results) => {
+                if (results && results.length > 0) resolve(results[0].center);
+                else reject('Endereço não encontrado: ' + query);
+            });
+        });
+
+        try {
+            const startCoords = await geocode(origem);
+            const endCoords = await geocode(destino);
+
+            // Limpa rotas anteriores e define os novos pontos
+            this.routingControl.setWaypoints([
+                startCoords,
+                endCoords
+            ]);
+            
+            this.routeLayers.clearLayers();
+            L.marker(startCoords).addTo(this.routeLayers).bindPopup('<b>Origem</b><br>' + origem);
+            L.marker(endCoords).addTo(this.routeLayers).bindPopup('<b>Destino</b><br>' + destino);
+
+        } catch (e) {
+            alert(e);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     }
 };
