@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Rotas - Marquespan</title>
+  <!-- Estilos existentes -->
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/compras.css"> <!-- Reutilizando estilos -->
+  <!-- Estilo específico do mapa -->
+  <link rel="stylesheet" href="css/mapa.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Leaflet (Biblioteca de Mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-map-marked-alt"></i> Mapa de Rotas</h1>
+    </header>
+
+    <div class="map-layout">
+      <!-- Coluna da Esquerda: Painéis de Controle -->
+      <aside class="map-sidebar">
+        
+        <!-- Painel para Criar/Listar Rotas -->
+        <div class="glass-panel">
+          <h3><i class="fas fa-route"></i> Rotas</h3>
+          <form id="formNovaRota" class="form-grid" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="text" id="nomeNovaRota" placeholder="Nome da Rota" class="glass-input" style="flex: 1;" required>
+                <input type="color" id="corNovaRota" value="#3388ff" title="Cor da Rota" style="height: 40px; width: 50px; padding: 0; border: none; background: none; cursor: pointer;">
+                <button type="submit" class="btn-glass btn-green compact-btn" title="Salvar Rota" style="width: 50px;"><i class="fas fa-plus"></i></button>
+            </div>
+            <input type="text" id="enderecoNovaRota" placeholder="Endereço / Localidade (Opcional)" class="glass-input">
+          </form>
+          <hr>
+          <ul id="listaRotas" class="item-list">
+            <!-- Rotas serão carregadas aqui via JS -->
+            <li>Carregando rotas...</li>
+          </ul>
+        </div>
+
+        <!-- Painel para Pontos da Rota Selecionada -->
+        <div id="painelPontos" class="glass-panel hidden">
+          <h3 id="tituloPainelPontos"><i class="fas fa-map-marker-alt"></i> Pontos da Rota</h3>
+          <p class="instrucao-mapa">Clique no mapa para adicionar um novo ponto.</p>
+          <ul id="listaPontos" class="item-list">
+            <!-- Pontos da rota selecionada serão carregados aqui -->
+          </ul>
+        </div>
+
+      </aside>
+
+      <!-- Coluna da Direita: O Mapa -->
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/mapa.js"></script>
+</body>
+</html>
