@@ -81,6 +81,7 @@ const MapaUI = {
                         <span class="color-swatch" style="background-color: ${rota.cor_rgb};"></span>
                         <strong>${rota.nome_rota}</strong>
                     </div>
+                    ${rota.supervisor ? `<small style="color: #006937; font-weight: bold; font-size: 0.85em; margin-left: 25px;">Sup: ${rota.supervisor}</small>` : ''}
                     ${rota.endereco ? `<small style="color: #666; font-size: 0.85em; margin-left: 25px;">${rota.endereco}</small>` : ''}
                 </span>
                 <span class="item-actions">
@@ -106,9 +107,11 @@ const MapaUI = {
         const nomeInput = document.getElementById('nomeNovaRota');
         const corInput = document.getElementById('corNovaRota');
         const enderecoInput = document.getElementById('enderecoNovaRota');
+        const supervisorInput = document.getElementById('supervisorNovaRota');
         const nome = nomeInput.value.trim();
         const cor = corInput.value;
         const endereco = enderecoInput ? enderecoInput.value.trim() : null;
+        const supervisor = supervisorInput ? supervisorInput.value.trim() : null;
 
         if (!nome) {
             alert('O nome da rota é obrigatório.');
@@ -118,13 +121,14 @@ const MapaUI = {
         try {
             const { error } = await supabaseClient
                 .from('mapa_rotas')
-                .insert({ nome_rota: nome, cor_rgb: cor, endereco: endereco });
+                .insert({ nome_rota: nome, cor_rgb: cor, endereco: endereco, supervisor: supervisor });
 
             if (error) throw error;
 
             alert('Rota criada com sucesso!');
             nomeInput.value = '';
             if(enderecoInput) enderecoInput.value = '';
+            if(supervisorInput) supervisorInput.value = '';
             this.loadRoutes();
 
         } catch (err) {
