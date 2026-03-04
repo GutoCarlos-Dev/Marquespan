@@ -1563,10 +1563,17 @@ const ColetarManutencaoUI = {
             };
 
             // === ATUALIZAÇÃO AUTOMÁTICA DO STATUS DO VEÍCULO ===
-            // Se houver algum item INTERNADO, o veículo fica INTERNADO.
-            // Caso contrário, volta para ativo.
-            const temInternado = itemsToProcess.some(i => i.status === 'INTERNADO');
-            const novaSituacao = temInternado ? 'INTERNADO' : 'ativo';
+            // Verifica no banco se existe ALGUM item com status 'INTERNADO' para esta placa.
+            // Isso garante que itens antigos ou de outras semanas mantenham o veículo internado se necessário.
+            const { count: qtdInternados, error: errCheckInternado } = await supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select('id, coletas_manutencao!inner(placa)', { count: 'exact', head: true })
+                .eq('status', 'INTERNADO')
+                .eq('coletas_manutencao.placa', placa);
+
+            const novaSituacao = (qtdInternados && qtdInternados > 0) ? 'INTERNADO' : 'ativo';
+            
+            if (errCheckInternado) console.error('Erro ao verificar status internado:', errCheckInternado);
 
             const { error: errVeiculo } = await supabaseClient
                 .from('veiculos')
