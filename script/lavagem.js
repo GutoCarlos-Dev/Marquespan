@@ -897,12 +897,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             if (!statusSummary[statusKey]) statusSummary[statusKey] = 0;
             statusSummary[statusKey]++;
 
-            // Contabiliza Tipo de Veículo (apenas REALIZADO)
-            if (item.status === 'REALIZADO') {
-                if (!tipoVeiculoSummary[tipoVeiculo]) tipoVeiculoSummary[tipoVeiculo] = 0;
-                tipoVeiculoSummary[tipoVeiculo]++;
-            }
-            
             if (item.status === 'REALIZADO' && tiposLavagemStr) {
                 const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
                 let valorCalculado = 0;
@@ -928,6 +922,13 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 }
 
                 totalGeral += valorItem;
+            }
+
+            // Contabiliza Tipo de Veículo (apenas REALIZADO)
+            if (item.status === 'REALIZADO') {
+                if (!tipoVeiculoSummary[tipoVeiculo]) tipoVeiculoSummary[tipoVeiculo] = { qtd: 0, valor: 0 };
+                tipoVeiculoSummary[tipoVeiculo].qtd++;
+                tipoVeiculoSummary[tipoVeiculo].valor += valorItem;
             }
 
             return [
@@ -1029,7 +1030,8 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
 
         const tipoVeiculoRows = Object.keys(tipoVeiculoSummary).map(tipo => [
             tipo,
-            tipoVeiculoSummary[tipo]
+            tipoVeiculoSummary[tipo].qtd,
+            `R$ ${tipoVeiculoSummary[tipo].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
         ]);
 
         if (finalY + 40 > 280) {
@@ -1045,17 +1047,18 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         const startYSummaries = finalY + 2;
 
         doc.autoTable({
-            head: [['Tipo Veículo', 'QTD']],
+            head: [['Tipo Veículo', 'QTD', 'Valor']],
             body: tipoVeiculoRows,
             startY: startYSummaries,
             theme: 'grid',
             headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
             styles: { fontSize: 8 },
             columnStyles: {
-                1: { halign: 'center' }
+                1: { halign: 'center' },
+                2: { halign: 'right' }
             },
             margin: { left: 14 },
-            tableWidth: 90
+            tableWidth: 100
         });
 
         const finalYTipo = doc.lastAutoTable.finalY;
