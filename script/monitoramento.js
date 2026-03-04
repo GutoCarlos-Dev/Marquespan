@@ -161,6 +161,7 @@ async function carregarDados() {
     carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
     const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial, status); // Busca KPIs com contagem exata e aguarda retorno
     carregarEmManutencaoAtual(filial); // Carrega gráfico geral filtrado apenas por filial
+    carregarDadosTopPlacas(dtIni, dtFim, filial); // Carrega Top 10 Placas (independente de status)
 
     try {
         // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
@@ -457,7 +458,6 @@ async function carregarFiliais() {
 
 function atualizarGraficos(data, kpiCounts) {
     renderChartEvolucao(data);
-    renderChartTopPlacas(data);
     renderChartOficinas(data);
     renderChartStatus(data, kpiCounts);
     renderChartTopServicosFreq(data);
@@ -704,12 +704,40 @@ function renderChartEvolucao(data) {
     });
 }
 
+async function carregarDadosTopPlacas(dtIni, dtFim, filial) {
+    try {
+        let query = supabaseClient
+            .from('coletas_manutencao')
+            .select(`
+                placa,
+                valor_total,
+                veiculos!inner (
+                    filial
+                )
+            `)
+            .gte('data_hora', `${dtIni}T00:00:00`)
+            .lte('data_hora', `${dtFim}T23:59:59`)
+            .gt('valor_total', 0); // Apenas com valor preenchido/maior que zero
+
+        if (filial) {
+            query = query.eq('veiculos.filial', filial);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        renderChartTopPlacas(data);
+    } catch (error) {
+        console.error('Erro ao carregar Top Placas:', error);
+    }
+}
+
 function renderChartTopPlacas(data) {
     // Agrupar gastos por placa
     const gastosPorPlaca = {};
     data.forEach(item => {
-        const val = parseFloat(item.valor) || 0;
-        const placa = item.coletas_manutencao.placa || 'N/A';
+        const val = parseFloat(item.valor_total) || 0;
+        const placa = item.placa || 'N/A';
         if (!gastosPorPlaca[placa]) gastosPorPlaca[placa] = 0;
         gastosPorPlaca[placa] += val;
     });
