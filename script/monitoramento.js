@@ -45,6 +45,7 @@ function initDashboard() {
     document.getElementById('btn-refresh').addEventListener('click', carregarDados);
     document.getElementById('btn-fullscreen').addEventListener('click', toggleFullScreen);
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => window.toggleSidebar && window.toggleSidebar());
+    document.getElementById('chkMostrarCusto').addEventListener('change', toggleCustoCard);
 
     // Adiciona tooltip explicativo ao card de Total de Manutenções
     const kpiCardTotalQtd = document.getElementById('kpi-total-qtd')?.parentElement;
@@ -80,6 +81,14 @@ function initDashboard() {
             btn.title = "Tela Cheia";
         }
     });
+}
+
+function toggleCustoCard(e) {
+    const card = document.getElementById('card-gasto-total');
+    if (card) {
+        // Remove o display inline (volta ao CSS original que deve ser flex/block) ou oculta
+        card.style.display = e.target.checked ? '' : 'none';
+    }
 }
 
 // Função para embaralhar a ordem dos gráficos no DOM
