@@ -945,18 +945,29 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
+        // Logo com fundo branco
         try {
-            const response = await fetch('logo.png');
-            if (response.ok) {
-                const blob = await response.blob();
-                const reader = new FileReader();
-                const base64data = await new Promise((resolve) => {
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(blob);
+            const getLogoBase64 = async () => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = 'logo.png';
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF'; // Fundo branco
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg')); // Exporta como JPEG
+                    };
+                    img.onerror = () => resolve(null);
                 });
-                doc.addImage(base64data, 'PNG', 14, 10, 40, 15);
-            }
-        } catch (e) { console.warn('Logo não carregado'); }
+            };
+            const logoBase64 = await getLogoBase64();
+            if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 15);
+        } catch (e) { console.warn('Logo não carregado', e); }
 
         doc.setFontSize(16);
         doc.setTextColor(0, 105, 55);
