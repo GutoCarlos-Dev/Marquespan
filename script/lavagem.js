@@ -139,9 +139,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function updateMultiselectText() {
+    const all = document.querySelectorAll('.tipo-checkbox');
     const checked = document.querySelectorAll('.tipo-checkbox:checked');
     const textSpan = document.getElementById('filtroTipoNovaListaText');
-    if (checked.length === 0) {
+    if (checked.length === 0 || (all.length > 0 && checked.length === all.length)) {
         textSpan.textContent = 'Todos os Tipos';
     } else if (checked.length === 1) {
         textSpan.textContent = checked[0].value;
@@ -320,7 +321,7 @@ async function abrirModalNovaLista() {
             tipos.forEach(t => {
                 const label = document.createElement('label'); 
                 label.style.cssText = 'display: block; padding: 5px 10px; cursor: pointer; font-size: 0.9em;';
-                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${t}" style="margin-right: 8px;"> ${t}`;
+                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${t}" style="margin-right: 8px;" checked> ${t}`;
                 optionsContainer.appendChild(label);
             });
             updateMultiselectText();
