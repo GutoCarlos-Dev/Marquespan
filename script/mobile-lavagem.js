@@ -22,6 +22,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Otimização: usa delegação de eventos para os cliques nos cards
+    document.getElementById('listaDeItens').addEventListener('click', (e) => {
+        const card = e.target.closest('.card[data-item-id]');
+        if (card) {
+            const itemId = parseInt(card.dataset.itemId, 10);
+            const item = currentItems.find(i => i.id === itemId);
+            if (item) {
+                abrirModalAcao(item);
+            }
+        }
+    });
+
     document.querySelector('.close-modal').addEventListener('click', fecharModal);
     document.getElementById('btnSalvarLavagem').addEventListener('click', salvarLavagem);
 });
@@ -87,6 +99,7 @@ async function carregarItensDaLista(id) {
         if (error) throw error;
 
         currentItems = data;
+        atualizarContadores();
         renderizarItens();
 
     } catch (error) {
@@ -95,45 +108,65 @@ async function carregarItensDaLista(id) {
     }
 }
 
+function atualizarContadores() {
+    // Otimização: usa reduce para contar todos os status em uma única passagem
+    const counts = currentItems.reduce((acc, item) => {
+        if (item.status === 'PENDENTE') {
+            acc.pendentes++;
+        } else if (item.status === 'REALIZADO') {
+            acc.realizados++;
+        }
+        return acc;
+    }, { pendentes: 0, realizados: 0 });
+
+    const elTodos = document.getElementById('countTodos');
+    if (elTodos) elTodos.textContent = `(${currentItems.length})`;
+    
+    const elPendentes = document.getElementById('countPendentes');
+    if (elPendentes) elPendentes.textContent = `(${counts.pendentes})`;
+    
+    const elRealizados = document.getElementById('countRealizados');
+    if (elRealizados) elRealizados.textContent = `(${counts.realizados})`;
+}
+
 function renderizarItens() {
     const container = document.getElementById('listaDeItens');
     const termo = document.getElementById('searchPlacaMobile').value.toUpperCase();
-    container.innerHTML = '';
 
     const itensFiltrados = currentItems.filter(item => {
         const matchTermo = item.placa.includes(termo);
         const matchStatus = currentFilter === 'TODOS' || item.status === currentFilter;
         return matchTermo && matchStatus;
     });
-
+    
     if (itensFiltrados.length === 0) {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">Nenhum veículo encontrado.</div>';
         return;
     }
 
-    itensFiltrados.forEach(item => {
+    // Otimização: constrói uma string HTML e a insere de uma só vez, o que é muito mais rápido.
+    const cardsHtml = itensFiltrados.map(item => {
         const isRealizado = item.status === 'REALIZADO';
-        const card = document.createElement('div');
-        card.className = `card ${isRealizado ? 'status-realizado' : 'status-pendente'}`;
-        
-        let infoExtra = isRealizado ? `<br><small>Lavagem: ${item.tipo_lavagem}</small>` : '';
+        // Adicionado verificação se tipo_lavagem existe
+        let infoExtra = isRealizado && item.tipo_lavagem ? `<br><small>Lavagem: ${item.tipo_lavagem}</small>` : '';
 
-        card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h4>${item.placa}</h4>
-                    <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
-                </div>
-                <div style="text-align:right;">
-                    <span class="status">${item.status}</span>
-                    ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
+        return `
+            <div class="card ${isRealizado ? 'status-realizado' : 'status-pendente'}" data-item-id="${item.id}">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h4>${item.placa}</h4>
+                        <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="status">${item.status}</span>
+                        ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
+                    </div>
                 </div>
             </div>
         `;
-        
-        card.onclick = () => abrirModalAcao(item);
-        container.appendChild(card);
-    });
+    }).join('');
+
+    container.innerHTML = cardsHtml;
 }
 
 let itemSelecionadoParaAcao = null;
@@ -227,6 +260,7 @@ async function salvarLavagem() {
 
         fecharModal();
         renderizarItens();
+        atualizarContadores();
 
     } catch (error) {
         console.error(error);
