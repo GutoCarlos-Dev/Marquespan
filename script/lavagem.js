@@ -136,6 +136,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await carregarListas();
     await carregarPrecos();
     carregarTiposVeiculoParaPreco();
+    // Injeta os campos de fornecedor na interface se não existirem
+    injectFornecedorFields();
 });
 
 function updateMultiselectText() {
@@ -148,6 +150,56 @@ function updateMultiselectText() {
         textSpan.textContent = checked[0].value;
     } else {
         textSpan.textContent = `${checked.length} selecionados`;
+    }
+}
+
+// Função auxiliar para injetar campos de Fornecedor na interface
+function injectFornecedorFields() {
+    // 1. Campo na Precificação
+    const divPreco = document.getElementById('precoTipoVeiculo')?.parentNode;
+    if (divPreco && !document.getElementById('precoFornecedor')) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `<label>Fornecedor</label><input type="text" id="precoFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
+        divPreco.parentNode.insertBefore(div, divPreco);
+    }
+
+    // 2. Campo na Nova Lista
+    const divNovaLista = document.getElementById('nomeNovaLista')?.parentNode;
+    if (divNovaLista && !document.getElementById('novaListaFornecedor')) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `<label>Fornecedor Padrão da Lista</label><input type="text" id="novaListaFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
+        divNovaLista.parentNode.insertBefore(div, divNovaLista.nextSibling);
+    }
+
+    // 3. Campo ao Adicionar Veículo Manualmente
+    const divAddVeiculo = document.getElementById('searchAdicionarVeiculo')?.parentNode;
+    if (divAddVeiculo && !document.getElementById('adicionarVeiculoFornecedor')) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.style.marginBottom = '10px';
+        div.innerHTML = `<label>Fornecedor para estes veículos</label><input type="text" id="adicionarVeiculoFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
+        divAddVeiculo.parentNode.insertBefore(div, divAddVeiculo);
+    }
+
+    // 4. Adicionar coluna Fornecedor na tabela de Preços
+    const tblPrecosHead = document.querySelector('#tbodyPrecos')?.previousElementSibling?.querySelector('tr');
+    if (tblPrecosHead && !tblPrecosHead.innerHTML.includes('Fornecedor')) {
+        const th = document.createElement('th');
+        th.textContent = 'Fornecedor';
+        th.className = 'sortable-preco';
+        th.dataset.sort = 'fornecedor';
+        tblPrecosHead.insertBefore(th, tblPrecosHead.children[0]); // Insere no início
+    }
+
+    // 5. Adicionar coluna Fornecedor na tabela de Detalhes da Lista
+    const tblDetalhesHead = document.querySelector('#tbodyDetalhesItens')?.previousElementSibling?.querySelector('tr');
+    if (tblDetalhesHead && !tblDetalhesHead.innerHTML.includes('Fornecedor')) {
+        const th = document.createElement('th');
+        th.textContent = 'Fornecedor';
+        // Insere antes da coluna de Ações (última)
+        tblDetalhesHead.insertBefore(th, tblDetalhesHead.lastElementChild);
     }
 }
 
@@ -441,6 +493,7 @@ function updateSortIconsModal() {
 async function criarNovaLista() {
     const nome = document.getElementById('nomeNovaLista').value;
     const dataLista = document.getElementById('dataDaLista').value;
+    const fornecedor = document.getElementById('novaListaFornecedor')?.value?.toUpperCase() || null;
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo:checked')).map(chk => ({
         placa: chk.value,
         modelo: chk.dataset.modelo,
@@ -460,7 +513,8 @@ async function criarNovaLista() {
                 nome,
                 data_lista: dataLista,
                 status: 'ABERTA',
-                usuario_criacao: usuario
+                usuario_criacao: usuario,
+                fornecedor: fornecedor
             }])
             .select()
             .single();
@@ -473,7 +527,8 @@ async function criarNovaLista() {
             modelo: v.modelo,
             marca: v.marca,
             status: v.situacao === 'INTERNADO' ? 'INTERNADO' : 'PENDENTE',
-            tipo_lavagem: null
+            tipo_lavagem: null,
+            fornecedor: fornecedor // Herda o fornecedor da lista
         }));
 
         const { error: errItens } = await supabaseClient
@@ -656,6 +711,7 @@ function renderizarItensDetalhes(itens) {
                 </span>
             </td>
             <td>${dataRealizado}</td>
+            <td>${item.fornecedor || '-'}</td>
             <td>
                 <button class="btn-icon delete" onclick="removerItemLista('${item.id}')" ${isFinalizada ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i></button>
             </td>
@@ -818,7 +874,12 @@ async function finalizarListaAtual() {
             let valorItem = 0;
             if (item.tipo_lavagem) {
                 item.tipo_lavagem.split(',').map(t => t.trim()).forEach(tipo => {
-                    const p = precosCache.find(x => x.tipoVeiculo === tipoVeiculo.toUpperCase() && x.tipoLavagem === tipo);
+                    // Busca preço considerando o fornecedor do item
+                    const p = precosCache.find(x => 
+                        x.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                        x.tipoLavagem === tipo &&
+                        (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor))
+                    );
                     if (p) valorItem += p.valor;
                 });
             }
@@ -905,7 +966,8 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 tipos.forEach(tipo => {
                     const precoObj = precosCache.find(p => 
                         p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                        p.tipoLavagem === tipo
+                        p.tipoLavagem === tipo &&
+                        (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor))
                     );
                     const valorTipo = precoObj ? precoObj.valor : 0;
                     valorCalculado += valorTipo;
@@ -1352,6 +1414,7 @@ async function carregarPrecos() {
             id: p.id,
             tipoVeiculo: p.tipo_veiculo,
             tipoLavagem: p.tipo_lavagem,
+            fornecedor: p.fornecedor,
             valor: p.valor
         }));
         renderizarTabelaPrecos();
@@ -1363,6 +1426,7 @@ async function carregarPrecos() {
 async function salvarPreco() {
     const tipoVeiculo = document.getElementById('precoTipoVeiculo').value.trim().toUpperCase();
     const tipoLavagem = document.getElementById('precoTipoLavagem').value;
+    const fornecedor = document.getElementById('precoFornecedor')?.value?.trim().toUpperCase() || null;
     const valor = parseFloat(document.getElementById('precoValor').value);
 
     if (!tipoVeiculo || !tipoLavagem || isNaN(valor)) {
@@ -1372,14 +1436,15 @@ async function salvarPreco() {
     try {
         if (editingPriceId) {
             // Update existing
-            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.id !== editingPriceId);
+            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor && p.id !== editingPriceId);
             if (exists) {
-                return alert('Já existe um preço cadastrado para este Tipo de Veículo e Lavagem.');
+                return alert('Já existe um preço cadastrado para este Tipo de Veículo, Lavagem e Fornecedor.');
             }
 
             const { error } = await supabaseClient.from('lavagem_precos').update({ 
                 tipo_veiculo: tipoVeiculo, 
                 tipo_lavagem: tipoLavagem, 
+                fornecedor: fornecedor,
                 valor: valor 
             }).eq('id', editingPriceId);
             
@@ -1387,15 +1452,15 @@ async function salvarPreco() {
             alert('Preço atualizado com sucesso!');
         } else {
             // Insert new
-            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem);
+            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor);
             
             if (exists) {
-                if(!confirm('Já existe um preço para este tipo de veículo e lavagem. Deseja atualizar o valor?')) return;
+                if(!confirm('Já existe um preço para este tipo de veículo, lavagem e fornecedor. Deseja atualizar o valor?')) return;
                 const { error } = await supabaseClient.from('lavagem_precos').update({ valor }).eq('id', exists.id);
                 if (error) throw error;
                 alert('Preço atualizado com sucesso!');
             } else {
-                const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, valor });
+                const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, fornecedor: fornecedor, valor });
                 if (error) throw error;
                 alert('Preço adicionado com sucesso!');
             }
@@ -1412,6 +1477,7 @@ async function salvarPreco() {
 function limparFormularioPreco() {
     document.getElementById('precoValor').value = '';
     document.getElementById('precoTipoVeiculo').value = '';
+    if(document.getElementById('precoFornecedor')) document.getElementById('precoFornecedor').value = '';
     editingPriceId = null;
     const btn = document.getElementById('btnSalvarPreco');
     btn.innerHTML = '<i class="fas fa-save"></i> Adicionar';
@@ -1427,6 +1493,7 @@ function renderizarTabelaPrecos() {
     precosCache.forEach((p, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td>${p.fornecedor || '-'}</td>
             <td>${p.tipoVeiculo}</td>
             <td>${p.tipoLavagem}</td>
             <td>R$ ${p.valor.toFixed(2)}</td>
@@ -1446,6 +1513,7 @@ window.editarPreco = function(id) {
     document.getElementById('precoTipoVeiculo').value = p.tipoVeiculo;
     document.getElementById('precoTipoLavagem').value = p.tipoLavagem;
     document.getElementById('precoValor').value = p.valor;
+    if(document.getElementById('precoFornecedor')) document.getElementById('precoFornecedor').value = p.fornecedor || '';
     
     editingPriceId = id;
     const btn = document.getElementById('btnSalvarPreco');
@@ -1565,7 +1633,8 @@ async function gerarRelatorio() {
                             tipos.forEach(tipo => {
                                 const precoObj = precosCache.find(p => 
                                     p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                                    p.tipoLavagem === tipo
+                                    p.tipoLavagem === tipo &&
+                                    (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor))
                                 );
                                 if (precoObj) valorLista += precoObj.valor;
                             });
@@ -1739,6 +1808,7 @@ function renderTabelaAdicionarVeiculo(veiculos) {
  */
 async function adicionarVeiculosNaLista() {
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-adicionar:checked'));
+    const fornecedor = document.getElementById('adicionarVeiculoFornecedor')?.value?.toUpperCase() || null;
 
     if (selecionados.length === 0) return alert('Selecione pelo menos um veículo para adicionar.');
     if (!currentListId) return alert('Erro: ID da lista atual não encontrado.');
@@ -1748,7 +1818,13 @@ async function adicionarVeiculosNaLista() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adicionando...';
 
     const novosItens = selecionados.map(chk => ({
-        lista_id: currentListId, placa: chk.value, modelo: chk.dataset.modelo, marca: chk.dataset.marca, status: 'PENDENTE', tipo_lavagem: null
+        lista_id: currentListId, 
+        placa: chk.value, 
+        modelo: chk.dataset.modelo, 
+        marca: chk.dataset.marca, 
+        status: 'PENDENTE', 
+        tipo_lavagem: null,
+        fornecedor: fornecedor
     }));
 
     try {
