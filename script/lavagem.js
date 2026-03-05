@@ -182,6 +182,7 @@ function injectFornecedorFields() {
         div.style.marginBottom = '10px';
         div.innerHTML = `<label>Fornecedor para estes veículos</label><select id="adicionarVeiculoFornecedor" class="glass-input"><option value="">Selecione...</option></select>`;
         divAddVeiculo.parentNode.insertBefore(div, divAddVeiculo);
+        atualizarDropdownFornecedores();
     }
 
     // 4. Adicionar coluna Fornecedor na tabela de Preços
@@ -973,12 +974,13 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         let totalGeral = 0;
         const summary = {}; 
         const statusSummary = {};
-        const tipoVeiculoSummary = {}; // Novo resumo por tipo
+        const fornecedorSummary = {}; // Resumo por Fornecedor
 
         const rows = itens.map(item => {
             // Se `item.tipo_veiculo` existe, usa ele. Senão, busca no mapa.
             const tipoVeiculo = item.tipo_veiculo || veiculoMap.get(item.placa) || 'DESCONHECIDO';
             const tiposLavagemStr = item.tipo_lavagem;
+            const fornecedor = item.fornecedor || 'NÃO INFORMADO';
             let valorItem = 0;
 
             // Contabiliza Status
@@ -1012,13 +1014,11 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 }
 
                 totalGeral += valorItem;
-            }
 
-            // Contabiliza Tipo de Veículo (apenas REALIZADO)
-            if (item.status === 'REALIZADO') {
-                if (!tipoVeiculoSummary[tipoVeiculo]) tipoVeiculoSummary[tipoVeiculo] = { qtd: 0, valor: 0 };
-                tipoVeiculoSummary[tipoVeiculo].qtd++;
-                tipoVeiculoSummary[tipoVeiculo].valor += valorItem;
+                // Contabiliza Fornecedor (apenas REALIZADO)
+                if (!fornecedorSummary[fornecedor]) fornecedorSummary[fornecedor] = { qtd: 0, valor: 0 };
+                fornecedorSummary[fornecedor].qtd++;
+                fornecedorSummary[fornecedor].valor += valorItem;
             }
 
             return [
@@ -1129,10 +1129,10 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             statusSummary[status]
         ]);
 
-        const tipoVeiculoRows = Object.keys(tipoVeiculoSummary).map(tipo => [
-            tipo,
-            tipoVeiculoSummary[tipo].qtd,
-            `R$ ${tipoVeiculoSummary[tipo].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
+        const fornecedorRows = Object.keys(fornecedorSummary).map(f => [
+            f,
+            fornecedorSummary[f].qtd,
+            `R$ ${fornecedorSummary[f].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
         ]);
 
         if (finalY + 40 > 280) {
@@ -1142,14 +1142,14 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text('Resumo Tipo (Realizados):', 14, finalY);
+        doc.text('Resumo por Fornecedor:', 14, finalY);
         doc.text('Resumo Status:', 120, finalY);
         
         const startYSummaries = finalY + 2;
 
         doc.autoTable({
-            head: [['Tipo Veículo', 'QTD', 'Valor']],
-            body: tipoVeiculoRows,
+            head: [['Fornecedor', 'QTD', 'Valor']],
+            body: fornecedorRows,
             startY: startYSummaries,
             theme: 'grid',
             headStyles: { fillColor: [100, 100, 100], fontSize: 8 },
