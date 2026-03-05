@@ -164,46 +164,63 @@ async function carregarDados() {
     carregarDadosTopPlacas(dtIni, dtFim, filial); // Carrega Top 10 Placas (independente de status)
 
     try {
-        // Busca dados unindo checklist (itens), cabeçalho (data/placa) e oficinas (nome)
-        let query = supabaseClient
-            .from('coletas_manutencao_checklist')
-            .select(`
-                *,
-                coletas_manutencao!inner (
-                    id,
-                    data_hora,
-                    placa,
-                    veiculos!inner (
-                        filial
-                    )
-                ),
-                oficinas (
-                    nome
-                )
-            `)
-            .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
-            .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`)
-            .limit(10000); // Aumenta o limite para garantir que os gráficos recebam todos os dados
+        // Busca de dados com paginação para não haver limite de registros.
+        let allData = [];
+        let from = 0;
+        const step = 1000; // Limite de registros por busca
+        let keepFetching = true;
 
-        if (filial) {
-            query = query.eq('coletas_manutencao.veiculos.filial', filial);
-        }
-        if (status) {
-            if (status === 'PENDENTE') {
-                query = query.in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
-            } else if (status === 'FINALIZADO') {
-                query = query.in('status', ['FINALIZADO', 'OK']);
+        while (keepFetching) {
+            let query = supabaseClient
+                .from('coletas_manutencao_checklist')
+                .select(`
+                    *,
+                    coletas_manutencao!inner (
+                        id,
+                        data_hora,
+                        placa,
+                        veiculos!inner (
+                            filial
+                        )
+                    ),
+                    oficinas (
+                        nome
+                    )
+                `)
+                .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
+                .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`)
+                .range(from, from + step - 1); // Paginação
+
+            if (filial) {
+                query = query.eq('coletas_manutencao.veiculos.filial', filial);
+            }
+            if (status) {
+                if (status === 'PENDENTE') {
+                    query = query.in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
+                } else if (status === 'FINALIZADO') {
+                    query = query.in('status', ['FINALIZADO', 'OK']);
+                } else {
+                    query = query.eq('status', status);
+                }
+            }
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                allData.push(...data);
+                if (data.length < step) {
+                    keepFetching = false; // Última página
+                } else {
+                    from += step; // Prepara para a próxima página
+                }
             } else {
-                query = query.eq('status', status);
+                keepFetching = false; // Não há mais dados
             }
         }
 
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        // atualizarKPIs(data); // Removido: KPIs agora são carregados por carregarKPIsDetalhados
-        atualizarGraficos(data, kpiCounts);
+        atualizarGraficos(allData, kpiCounts);
         
         // Atualiza timestamp
         const now = new Date();
@@ -473,17 +490,39 @@ async function carregarDadosEstoque() {
             .select('id, nome, capacidade, tipo_combustivel');
         if (tanquesError) throw tanquesError;
 
+        const step = 1000;
+
         // 2. Buscar todas as entradas (abastecimentos)
-        const { data: entradas, error: entradasError } = await supabaseClient
-            .from('abastecimentos')
-            .select('tanque_id, qtd_litros');
-        if (entradasError) throw entradasError;
+        let entradas = [];
+        let fromEntradas = 0;
+        let keepFetchingEntradas = true;
+        while (keepFetchingEntradas) {
+            const { data, error } = await supabaseClient.from('abastecimentos').select('tanque_id, qtd_litros').range(fromEntradas, fromEntradas + step - 1);
+            if (error) throw error;
+            if (data && data.length > 0) {
+                entradas.push(...data);
+                if (data.length < step) keepFetchingEntradas = false;
+                else fromEntradas += step;
+            } else {
+                keepFetchingEntradas = false;
+            }
+        }
 
         // 3. Buscar todas as saídas
-        const { data: saidas, error: saidasError } = await supabaseClient
-            .from('saidas_combustivel')
-            .select('qtd_litros, bicos(bombas(tanque_id))');
-        if (saidasError) throw saidasError;
+        let saidas = [];
+        let fromSaidas = 0;
+        let keepFetchingSaidas = true;
+        while (keepFetchingSaidas) {
+            const { data, error } = await supabaseClient.from('saidas_combustivel').select('qtd_litros, bicos(bombas(tanque_id))').range(fromSaidas, fromSaidas + step - 1);
+            if (error) throw error;
+            if (data && data.length > 0) {
+                saidas.push(...data);
+                if (data.length < step) keepFetchingSaidas = false;
+                else fromSaidas += step;
+            } else {
+                keepFetchingSaidas = false;
+            }
+        }
 
         // 4. Calcular o estoque atual
         const estoqueMap = new Map();
@@ -572,10 +611,30 @@ async function carregarEmManutencaoAtual(filial) {
                 .in('status', ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA']);
         }
 
-        const { data, error } = await query;
+        // Paginação para buscar todos os registros sem limite
+        let allData = [];
+        let from = 0;
+        const step = 1000;
+        let keepFetching = true;
 
-        if (error) throw error;
+        while (keepFetching) {
+            const { data: batch, error } = await query.range(from, from + step - 1);
 
+            if (error) throw error;
+
+            if (batch && batch.length > 0) {
+                allData.push(...batch);
+                if (batch.length < step) {
+                    keepFetching = false;
+                } else {
+                    from += step;
+                }
+            } else {
+                keepFetching = false;
+            }
+        }
+
+        const data = allData;
         const counts = {
             'INTERNADO': 0,
             'CHECK-IN OFICINA': 0,
@@ -723,10 +782,30 @@ async function carregarDadosTopPlacas(dtIni, dtFim, filial) {
             query = query.eq('veiculos.filial', filial);
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
+        // Paginação para buscar todos os registros sem limite
+        let allData = [];
+        let from = 0;
+        const step = 1000;
+        let keepFetching = true;
 
-        renderChartTopPlacas(data);
+        while (keepFetching) {
+            const { data: batch, error } = await query.range(from, from + step - 1);
+
+            if (error) throw error;
+
+            if (batch && batch.length > 0) {
+                allData.push(...batch);
+                if (batch.length < step) {
+                    keepFetching = false;
+                } else {
+                    from += step;
+                }
+            } else {
+                keepFetching = false;
+            }
+        }
+
+        renderChartTopPlacas(allData);
     } catch (error) {
         console.error('Erro ao carregar Top Placas:', error);
     }
