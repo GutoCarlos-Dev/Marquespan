@@ -169,8 +169,9 @@ function injectFornecedorFields() {
     if (divNovaLista && !document.getElementById('novaListaFornecedor')) {
         const div = document.createElement('div');
         div.className = 'form-group';
-        div.innerHTML = `<label>Fornecedor Padrão da Lista</label><input type="text" id="novaListaFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
+        div.innerHTML = `<label>Fornecedor Padrão da Lista</label><select id="novaListaFornecedor" class="glass-input"><option value="">Selecione...</option></select>`;
         divNovaLista.parentNode.insertBefore(div, divNovaLista.nextSibling);
+        atualizarDropdownFornecedores();
     }
 
     // 3. Campo ao Adicionar Veículo Manualmente
@@ -179,7 +180,7 @@ function injectFornecedorFields() {
         const div = document.createElement('div');
         div.className = 'form-group';
         div.style.marginBottom = '10px';
-        div.innerHTML = `<label>Fornecedor para estes veículos</label><input type="text" id="adicionarVeiculoFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
+        div.innerHTML = `<label>Fornecedor para estes veículos</label><select id="adicionarVeiculoFornecedor" class="glass-input"><option value="">Selecione...</option></select>`;
         divAddVeiculo.parentNode.insertBefore(div, divAddVeiculo);
     }
 
@@ -201,6 +202,32 @@ function injectFornecedorFields() {
         // Insere antes da coluna de Ações (última)
         tblDetalhesHead.insertBefore(th, tblDetalhesHead.lastElementChild);
     }
+}
+
+function atualizarDropdownFornecedores() {
+    const selects = [
+        document.getElementById('novaListaFornecedor'),
+        document.getElementById('adicionarVeiculoFornecedor')
+    ];
+
+    const fornecedores = [...new Set(precosCache.map(p => p.fornecedor).filter(f => f))].sort();
+    
+    selects.forEach(select => {
+        if (!select) return;
+        
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        fornecedores.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f;
+            option.textContent = f;
+            select.appendChild(option);
+        });
+        
+        if (fornecedores.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    });
 }
 
 async function carregarListas() {
@@ -1418,6 +1445,7 @@ async function carregarPrecos() {
             valor: p.valor
         }));
         renderizarTabelaPrecos();
+        atualizarDropdownFornecedores();
     } catch (error) {
         console.error('Erro ao carregar preços:', error);
     }
