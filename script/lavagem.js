@@ -703,7 +703,7 @@ function renderizarItensDetalhes(itens) {
         const tiposLavagem = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
         
         // Desabilita campos se o status for PULAR_LAVAGEM
-        const isDisabled = item.status === 'PULAR_LAVAGEM' || isFinalizada;
+        const isDisabled = item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO' || isFinalizada;
 
         let options = '<option value="">Selecione...</option>';
         let found = false;
@@ -778,8 +778,8 @@ window.atualizarItem = async function(id, campo, valor) {
         if (campo === 'tipo') updateData.tipo_lavagem = valor;
 
         const item = currentListItems.find(i => i.id === id);
-        if (item && item.status === 'PULAR_LAVAGEM') {
-            return alert('Não é possível editar o tipo de lavagem de um item com status "PULAR_LAVAGEM".');
+        if (item && (item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO')) {
+            return alert(`Não é possível editar o tipo de lavagem de um item com status "${item.status}".`);
         }
 
         const { error } = await supabaseClient
@@ -798,8 +798,8 @@ window.atualizarItem = async function(id, campo, valor) {
 }
 
 window.toggleStatusItem = async function(id, statusAtual) {
-    if (statusAtual === 'PULAR_LAVAGEM') {
-        return alert('Não é possível alterar o status de um item com "PULAR_LAVAGEM". Remova-o e adicione novamente se necessário.');
+    if (statusAtual === 'PULAR_LAVAGEM' || statusAtual === 'INTERNADO') {
+        return alert(`Não é possível alterar o status de um item com "${statusAtual}". Remova-o e adicione novamente se necessário.`);
     }
 
     let novoStatus = 'PENDENTE';

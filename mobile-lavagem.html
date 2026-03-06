@@ -6,6 +6,37 @@
     <title>Lavagem Mobile - Marquespan</title>
     <link rel="stylesheet" href="css/mobile-lavagem.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Estilo para Veículos Internados - AZUL */
+        .badge-internado {
+            background-color: #007bff !important;
+            color: white !important;
+        }
+        /* Desabilita interação com cards internados */
+        .card-internado {
+            opacity: 0.8;
+            pointer-events: none; /* Impede cliques */
+        }
+        /* Estilo para PENDENTE - VERMELHO */
+        .badge-pendente {
+            background-color: #dc3545 !important;
+            color: white !important;
+        }
+        /* Estilo para AGENDADO - AMARELO */
+        .badge-agendado {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+        /* Estilo para PULAR_LAVAGEM - CINZA */
+        .badge-pular {
+            background-color: #6c757d !important;
+            color: white !important;
+        }
+        .card-pular {
+            opacity: 0.8;
+            pointer-events: none; /* Impede cliques */
+        }
+    </style>
 </head>
 <body>
     <header class="mobile-header">
@@ -74,5 +105,44 @@
     </div>
 
     <script type="module" src="script/mobile-lavagem.js"></script>
+    <script>
+        // Script auxiliar para aplicar estilos e bloqueios a veículos INTERNADOS
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('listaDeItens');
+            if (container) {
+                // Observa mudanças na lista para aplicar regras assim que os itens forem carregados
+                const observer = new MutationObserver(() => {
+                    // Busca badges ou elementos que contenham o texto INTERNADO
+                    const badges = container.querySelectorAll('.badge, span');
+                    badges.forEach(badge => {
+                        const texto = badge.textContent.trim();
+                        const card = badge.closest('.card-veiculo') || badge.closest('div[class*="card"]');
+
+                        if (texto === 'INTERNADO') {
+                            badge.classList.add('badge-internado');
+                            if (card) {
+                                card.classList.add('card-internado');
+                                card.style.borderLeft = '5px solid #007bff';
+                            }
+                        } else if (texto === 'PENDENTE') {
+                            badge.classList.add('badge-pendente');
+                            if (card) card.style.borderLeft = '5px solid #dc3545';
+                        } else if (texto === 'AGENDADO') {
+                            badge.classList.add('badge-agendado');
+                            if (card) card.style.borderLeft = '5px solid #ffc107';
+                        } else if (texto === 'PULAR_LAVAGEM') {
+                            badge.classList.add('badge-pular');
+                            if (card) {
+                                card.classList.add('card-pular');
+                                card.style.borderLeft = '5px solid #6c757d';
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(container, { childList: true, subtree: true });
+            }
+        });
+    </script>
 </body>
 </html>
