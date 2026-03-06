@@ -16,6 +16,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
 
+    // Controle de Permissões: Ocultar abas para coleta_km
+    if (usuario.nivel && usuario.nivel.toLowerCase() === 'coleta_km') {
+        const tabsToHide = ['tab-precificacao', 'tab-relatorios'];
+        tabsToHide.forEach(tabId => {
+            const btn = document.querySelector(`.painel-btn[data-tab="${tabId}"]`);
+            if (btn) btn.style.display = 'none';
+        });
+    }
+
     // Inject CSS for Pular Lavagem badge
     const style = document.createElement('style');
     style.innerHTML = `
