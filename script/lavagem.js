@@ -717,7 +717,7 @@ function renderizarItensDetalhes(itens) {
             options += `<option value="${item.tipo_lavagem}" selected>${item.tipo_lavagem}</option>`;
         }
 
-        const dataRealizado = item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-';
+        const dataRealizado = item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '-';
         
         let badgeClass = 'badge-pendente';
         if (item.status === 'REALIZADO') {
@@ -1042,7 +1042,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 item.marca || '',
                 item.tipo_lavagem || '-',
                 item.status,
-                item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '-',
+                item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '-',
                 valorItem > 0 ? `R$ ${valorItem.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'
             ];
         });
@@ -1421,7 +1421,8 @@ async function bulkAgendar() {
     if (ids.length === 0) return alert('Nenhum item selecionado.');
     if (!dataAgendamento) return alert('Selecione uma data para o agendamento.');
 
-    if (!confirm(`Deseja agendar ${ids.length} item(ns) para ${new Date(dataAgendamento).toLocaleDateString('pt-BR')}?`)) return;
+    const [ano, mes, dia] = dataAgendamento.split('-');
+    if (!confirm(`Deseja agendar ${ids.length} item(ns) para ${dia}/${mes}/${ano}?`)) return;
 
     try {
         const { error } = await supabaseClient
