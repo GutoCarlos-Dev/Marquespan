@@ -1729,6 +1729,8 @@ async function gerarRelatorio() {
             tr.innerHTML = `
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</td>
+                <td>${lista.nome}</td>
+                <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td>${qtdRealizada}</td>
                 <td>${qtdPendente}</td>
                 <td>R$ ${valorLista.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
