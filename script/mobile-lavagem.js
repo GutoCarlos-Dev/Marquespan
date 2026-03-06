@@ -26,8 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('listaDeItens').addEventListener('click', (e) => {
         const card = e.target.closest('.card[data-item-id]');
         if (card) {
-            const itemId = parseInt(card.dataset.itemId, 10);
-            const item = currentItems.find(i => i.id === itemId);
+            const itemId = card.dataset.itemId;
+            const item = currentItems.find(i => String(i.id) === itemId);
             if (item) {
                 abrirModalAcao(item);
             }
