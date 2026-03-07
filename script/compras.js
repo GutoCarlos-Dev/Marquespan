@@ -263,9 +263,10 @@ const UI = {
     try{
       const productList = document.getElementById('productList');
       if (!productList) return;
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida', {orderBy:'nome'});
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida, status', {orderBy:'nome'});
       productList.innerHTML = '';
       produtos.forEach(p=>{
+        if (p.status === 'Inativo') return; // Não mostra produtos inativos na lista de compra
         const opt = document.createElement('option');
         opt.value = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
         opt.dataset.id = p.id;
@@ -1269,6 +1270,10 @@ const UI = {
     if (btn.classList.contains('btn-edit')) {
       this.loadProductForEditing(id);
     }
+    if (btn.classList.contains('btn-toggle-status')) {
+      const currentStatus = btn.dataset.status;
+      this.toggleProdutoStatus(id, currentStatus);
+    }
   },
 
   handleFornecedorTableClick(e){
@@ -1282,6 +1287,20 @@ const UI = {
     }
     if (btn.classList.contains('btn-edit')) {
       this.loadFornecedorForEditing(id);
+    }
+  },
+
+  async toggleProdutoStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'Inativo' ? 'Ativo' : 'Inativo';
+    if (confirm(`Deseja alterar o status do produto para ${newStatus}?`)) {
+      try {
+        await SupabaseService.update('produtos', { status: newStatus }, { field: 'id', value: id });
+        this.renderProdutosGrid();
+        this.populateProductDropdown(); // Atualiza o dropdown para refletir a mudança imediatamente
+      } catch (e) {
+        console.error(e);
+        alert('Erro ao alterar status do produto.');
+      }
     }
   },
 
@@ -1337,18 +1356,27 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida', queryOptions);
-      this.produtosTableBody.innerHTML = produtos.map(p => `
-        <tr>
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida, status', queryOptions);
+      this.produtosTableBody.innerHTML = produtos.map(p => {
+        const status = p.status || 'Ativo';
+        const isInactive = status === 'Inativo';
+        const btnLabel = isInactive ? 'Ativar' : 'Inativar';
+        const btnClass = isInactive ? 'btn-green' : 'btn-orange';
+        const rowStyle = isInactive ? 'style="opacity: 0.6; background-color: #f0f0f0;"' : '';
+        return `
+        <tr ${rowStyle}>
           <td>${p.codigo_principal || ''}</td>
           <td>${p.codigo_secundario || ''}</td>
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || ''}</td>
+          <td>${status}</td>
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
+            <button class="btn-glass ${btnClass} btn-toggle-status" data-id="${p.id}" data-status="${status}" style="padding: 2px 8px; margin-right: 5px;">${btnLabel}</button>
             <button class="btn-delete" data-id="${p.id}">Excluir</button>
           </td>
-        </tr>`).join('');
+        </tr>`
+      }).join('');
       
       this.updateSortIcons('#sectionCadastrarProdutos', this._produtosSort);
     } catch(e) {
