@@ -115,9 +115,13 @@ function atualizarContadores() {
             acc.pendentes++;
         } else if (item.status === 'REALIZADO') {
             acc.realizados++;
+        } else if (item.status === 'AGENDADO') {
+            acc.agendados++;
+        } else if (item.status === 'INTERNADO') {
+            acc.internados++;
         }
         return acc;
-    }, { pendentes: 0, realizados: 0 });
+    }, { pendentes: 0, realizados: 0, agendados: 0, internados: 0 });
 
     const elTodos = document.getElementById('countTodos');
     if (elTodos) elTodos.textContent = `(${currentItems.length})`;
@@ -127,6 +131,12 @@ function atualizarContadores() {
     
     const elRealizados = document.getElementById('countRealizados');
     if (elRealizados) elRealizados.textContent = `(${counts.realizados})`;
+
+    const elAgendados = document.getElementById('countAgendados');
+    if (elAgendados) elAgendados.textContent = `(${counts.agendados})`;
+
+    const elInternados = document.getElementById('countInternados');
+    if (elInternados) elInternados.textContent = `(${counts.internados})`;
 }
 
 function renderizarItens() {
