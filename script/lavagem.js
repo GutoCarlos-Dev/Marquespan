@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-pendente')?.addEventListener('click', () => bulkSetStatus('PENDENTE'));
     document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
     document.getElementById('btn-bulk-pular-lavagem')?.addEventListener('click', () => bulkSetStatus('PULAR_LAVAGEM'));
+    document.getElementById('btn-bulk-internado')?.addEventListener('click', () => bulkSetStatus('INTERNADO'));
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
 
