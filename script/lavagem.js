@@ -205,13 +205,25 @@ function injectFornecedorFields() {
         tblPrecosHead.insertBefore(th, tblPrecosHead.children[0]); // Insere no início
     }
 
-    // 5. Adicionar coluna Fornecedor na tabela de Detalhes da Lista
+    // 5. Adicionar colunas Usuário e Fornecedor na tabela de Detalhes da Lista
     const tblDetalhesHead = document.querySelector('#tbodyDetalhesItens')?.previousElementSibling?.querySelector('tr');
-    if (tblDetalhesHead && !tblDetalhesHead.innerHTML.includes('Fornecedor')) {
-        const th = document.createElement('th');
-        th.textContent = 'Fornecedor';
-        // Insere antes da coluna de Ações (última)
-        tblDetalhesHead.insertBefore(th, tblDetalhesHead.lastElementChild);
+    if (tblDetalhesHead) {
+        // Tenta encontrar a coluna Fornecedor para inserir o Usuário antes dela
+        const thFornecedor = Array.from(tblDetalhesHead.children).find(th => th.textContent.includes('Fornecedor'));
+        
+        if (!tblDetalhesHead.innerHTML.includes('Usuário')) {
+            const thUser = document.createElement('th');
+            thUser.textContent = 'Usuário';
+            // Se Fornecedor existe, insere antes dele, senão insere antes de Ações
+            tblDetalhesHead.insertBefore(thUser, thFornecedor || tblDetalhesHead.lastElementChild);
+        }
+
+        if (!tblDetalhesHead.innerHTML.includes('Fornecedor')) {
+            const th = document.createElement('th');
+            th.textContent = 'Fornecedor';
+            // Insere antes da coluna de Ações (última)
+            tblDetalhesHead.insertBefore(th, tblDetalhesHead.lastElementChild);
+        }
     }
 }
 
@@ -718,7 +730,7 @@ function renderizarItensDetalhes(itens) {
             options += `<option value="${item.tipo_lavagem}" selected>${item.tipo_lavagem}</option>`;
         }
 
-        const dataRealizado = item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '-';
+        const dataRealizado = item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
         
         let badgeClass = 'badge-pendente';
         if (item.status === 'REALIZADO') {
@@ -749,6 +761,7 @@ function renderizarItensDetalhes(itens) {
                 </span>
             </td>
             <td>${dataRealizado}</td>
+            <td>${item.usuario_realizou || '-'}</td>
             <td>${item.fornecedor || '-'}</td>
             <td>
                 <button class="btn-icon delete" onclick="removerItemLista('${item.id}')" ${isFinalizada ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i></button>
