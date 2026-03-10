@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Configura os novos multiselects
     setupCustomMultiselect('filtroVencimentoMarcaDisplay', 'filtroVencimentoMarcaOptions', 'filtroVencimentoMarcaText', 'Todas as Marcas');
     setupCustomMultiselect('filtroVencimentoModeloDisplay', 'filtroVencimentoModeloOptions', 'filtroVencimentoModeloText', 'Todos os Modelos');
+    setupCustomMultiselect('filtroVencimentoTipoDisplay', 'filtroVencimentoTipoOptions', 'filtroVencimentoTipoText', 'Todos os Tipos');
 
     document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
     document.getElementById('dataListaVencimentos')?.addEventListener('change', recalcularStatusVencimentos);
@@ -1124,7 +1125,7 @@ async function abrirControleVencimentos() {
         // 1. Buscar Veículos Ativos com Filial
         const { data: veiculos, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, modelo, marca, filial')
+            .select('id, placa, modelo, marca, filial, tipo')
             .eq('situacao', 'ativo')
             .order('placa');
 
@@ -1213,14 +1214,16 @@ async function popularFiltrosVencimentos() {
     populate('filtroVencimentoFilial', filiais, 'Todas Filiais');
 
     // Busca marcas e modelos de todos os veículos para os novos filtros
-    const { data: veiculos, error } = await supabaseClient.from('veiculos').select('marca, modelo');
+    const { data: veiculos, error } = await supabaseClient.from('veiculos').select('marca, modelo, tipo');
     if (error) return console.error('Erro ao carregar marcas e modelos para filtros:', error);
 
     const marcas = [...new Set(veiculos.map(v => v.marca).filter(Boolean))].sort();
     const modelos = [...new Set(veiculos.map(v => v.modelo).filter(Boolean))].sort();
+    const tipos = [...new Set(veiculos.map(v => v.tipo).filter(Boolean))].sort();
 
     populateMultiselect(document.getElementById('filtroVencimentoMarcaOptions'), marcas, 'Limpar Marcas');
     populateMultiselect(document.getElementById('filtroVencimentoModeloOptions'), modelos, 'Limpar Modelos');
+    populateMultiselect(document.getElementById('filtroVencimentoTipoOptions'), tipos, 'Limpar Tipos');
 }
 
 function renderizarTabelaVencimentos(dados) {
@@ -1260,11 +1263,15 @@ function filtrarTabelaVencimentos() {
     const status = document.getElementById('filtroVencimentoStatus').value;
     const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroVencimentoMarcaOptions input:checked')).map(cb => cb.value);
     const modelosSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoModeloOptions input:checked')).map(cb => cb.value);
+    const tiposSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoTipoOptions input:checked')).map(cb => cb.value);
 
     let filtrados = currentVencimentosData;
 
     if (filial) {
         filtrados = filtrados.filter(item => item.filial === filial);
+    }
+    if (tiposSelecionados.length > 0) {
+        filtrados = filtrados.filter(item => tiposSelecionados.includes(item.tipo));
     }
     if (marcasSelecionadas.length > 0) {
         filtrados = filtrados.filter(item => marcasSelecionadas.includes(item.marca));
