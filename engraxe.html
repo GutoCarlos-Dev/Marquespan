@@ -250,14 +250,24 @@
             <label for="dataDaLista">Data da Lista (para cálculo de vencidos)</label>
             <input type="date" id="dataDaLista" class="glass-input">
         </div>
-        <div class="filtros-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-            <select id="filtroMarcaNovaLista" class="glass-input">
+        <div class="filtros-container" style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+            <select id="filtroMarcaNovaLista" class="glass-input" style="flex: 1 1 150px;">
                 <option value="">Todas as Marcas</option>
             </select>
-            <select id="filtroModeloNovaLista" class="glass-input">
+            <select id="filtroModeloNovaLista" class="glass-input" style="flex: 1 1 150px;">
                 <option value="">Todos os Modelos</option>
             </select>
-            <input type="text" id="filtroPlacaNovaLista" class="glass-input" placeholder="Buscar Placa...">
+            <!-- NOVO FILTRO TIPO -->
+            <div class="custom-multiselect" style="flex: 1 1 150px;">
+                <div id="filtroTipoNovaListaDisplay" class="glass-input multiselect-display">
+                    <span id="filtroTipoNovaListaText">Todos os Tipos</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="filtroTipoNovaListaOptions" class="glass-dropdown hidden">
+                    <!-- Opções carregadas via JS -->
+                </div>
+            </div>
+            <input type="text" id="filtroPlacaNovaLista" class="glass-input" style="flex: 1 1 150px;" placeholder="Buscar Placa...">
         </div>
         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="glass-table">

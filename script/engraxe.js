@@ -4,6 +4,7 @@ import { supabaseClient } from './supabase.js';
 let currentListItems = [];
 let currentVencimentosData = []; // Cache para os dados de vencimento
 let veiculosCacheNovaLista = []; // Cache para o modal de nova lista
+let tiposSelecionadosNovaLista = []; // Cache para os tipos selecionados no filtro
 let currentListId = null;
 let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
@@ -156,6 +157,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
+/**
+ * Configura o filtro de seleção múltipla para 'Tipo' no modal de nova lista.
+ * @param {Array} veiculos - A lista de veículos para extrair os tipos.
+ */
+function setupFiltroTipoNovaLista(veiculos) {
+    const display = document.getElementById('filtroTipoNovaListaDisplay');
+    const optionsContainer = document.getElementById('filtroTipoNovaListaOptions');
+    const textEl = document.getElementById('filtroTipoNovaListaText');
+    
+    // Evita reinicializar o componente e seus listeners
+    if (optionsContainer.dataset.initialized) return;
+    optionsContainer.dataset.initialized = 'true';
+
+    const tiposUnicos = [...new Set(veiculos.map(v => v.tipo).filter(Boolean))].sort();
+
+    // Monta o HTML do dropdown com checkboxes e botão de limpar
+    optionsContainer.innerHTML = `
+        <div class="dropdown-header">
+            <button type="button" id="btnLimparSelecaoTipo">Limpar</button>
+        </div>
+        ${tiposUnicos.map(tipo => `
+            <label class="dropdown-item">
+                <input type="checkbox" class="filtro-tipo-checkbox" value="${tipo}"> ${tipo}
+            </label>
+        `).join('')}
+    `;
+
+    // --- Event Listeners ---
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        optionsContainer.classList.toggle('hidden');
+    });
+
+    document.getElementById('btnLimparSelecaoTipo').addEventListener('click', (e) => {
+        e.stopPropagation();
+        tiposSelecionadosNovaLista = [];
+        optionsContainer.querySelectorAll('.filtro-tipo-checkbox').forEach(chk => chk.checked = false);
+        textEl.textContent = 'Todos os Tipos';
+        optionsContainer.classList.add('hidden');
+        filtrarVeiculosNovaLista();
+    });
+
+    optionsContainer.addEventListener('change', (e) => {
+        if (e.target.classList.contains('filtro-tipo-checkbox')) {
+            tiposSelecionadosNovaLista = Array.from(optionsContainer.querySelectorAll('.filtro-tipo-checkbox:checked')).map(chk => chk.value);
+            textEl.textContent = tiposSelecionadosNovaLista.length === 0 ? 'Todos os Tipos' : tiposSelecionadosNovaLista.length === 1 ? tiposSelecionadosNovaLista[0] : `${tiposSelecionadosNovaLista.length} tipos selecionados`;
+            filtrarVeiculosNovaLista();
+        }
+    });
+}
+
 async function abrirModalNovaLista() {
     const modal = document.getElementById('modalNovaLista');
     const tbody = document.getElementById('tbodyNovaListaVeiculos');
@@ -205,7 +257,7 @@ async function abrirModalNovaLista() {
     try {
         // Busca veículos e histórico de engraxe (apenas itens realizados)
         const [veiculosRes, itensRes] = await Promise.all([
-            supabaseClient.from('veiculos').select('placa, modelo, marca').eq('situacao', 'ativo').order('placa'),
+            supabaseClient.from('veiculos').select('placa, modelo, marca, tipo').eq('situacao', 'ativo').order('placa'),
             supabaseClient.from('engraxe_itens').select('placa, data_realizado').not('data_realizado', 'is', null)
         ]);
 
@@ -246,6 +298,9 @@ async function abrirModalNovaLista() {
         modelos.forEach(m => {
             filtroModelo.add(new Option(m, m));
         });
+
+        // Configura o novo filtro de Tipo
+        setupFiltroTipoNovaLista(veiculosCacheNovaLista);
 
         renderizarTabelaNovaLista(veiculosCacheNovaLista);
 
@@ -297,7 +352,9 @@ function filtrarVeiculosNovaLista() {
         const matchMarca = !marca || v.marca === marca;
         const matchModelo = !modelo || v.modelo === modelo;
         const matchPlaca = !placa || v.placa.toLowerCase().includes(placa);
-        return matchMarca && matchModelo && matchPlaca;
+        // Adiciona o filtro por tipo
+        const matchTipo = tiposSelecionadosNovaLista.length === 0 || (v.tipo && tiposSelecionadosNovaLista.includes(v.tipo));
+        return matchMarca && matchModelo && matchPlaca && matchTipo;
     });
     
     renderizarTabelaNovaLista(filtrados);
