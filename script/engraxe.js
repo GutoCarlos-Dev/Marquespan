@@ -130,8 +130,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Modal Nova Lista
     document.getElementById('btnCloseModalNovaLista').addEventListener('click', () => document.getElementById('modalNovaLista').classList.add('hidden'));
     document.getElementById('btnConfirmarNovaLista').addEventListener('click', confirmarCriacaoNovaLista);
-    document.getElementById('filtroMarcaNovaLista').addEventListener('change', filtrarVeiculosNovaLista);
-    document.getElementById('filtroModeloNovaLista').addEventListener('change', filtrarVeiculosNovaLista);
+    
+    // Novos listeners para o modal de nova lista
+    document.getElementById('filtroFilialNovaLista')?.addEventListener('change', filtrarVeiculosNovaLista);
+    document.getElementById('filtroMarcaNovaListaOptions')?.addEventListener('change', filtrarVeiculosNovaLista);
+    document.getElementById('filtroModeloNovaListaOptions')?.addEventListener('change', filtrarVeiculosNovaLista);
+    document.getElementById('filtroTipoNovaListaOptions')?.addEventListener('change', filtrarVeiculosNovaLista);
     document.getElementById('filtroPlacaNovaLista').addEventListener('input', filtrarVeiculosNovaLista);
     document.getElementById('chkAllNovaLista').addEventListener('change', toggleAllNovaLista);
     document.getElementById('dataDaLista').addEventListener('change', () => renderizarTabelaNovaLista(veiculosCacheNovaLista));
@@ -159,63 +163,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-/**
- * Configura o filtro de seleção múltipla para 'Tipo' no modal de nova lista.
- * @param {Array} veiculos - A lista de veículos para extrair os tipos.
- */
-function setupFiltroTipoNovaLista(veiculos) {
-    const display = document.getElementById('filtroTipoNovaListaDisplay');
-    const optionsContainer = document.getElementById('filtroTipoNovaListaOptions');
-    const textEl = document.getElementById('filtroTipoNovaListaText');
-    
-    // Evita reinicializar o componente e seus listeners
-    if (optionsContainer.dataset.initialized) return;
-    optionsContainer.dataset.initialized = 'true';
-
-    const tiposUnicos = [...new Set(veiculos.map(v => v.tipo).filter(Boolean))].sort();
-
-    // Monta o HTML do dropdown com checkboxes e botão de limpar
-    optionsContainer.innerHTML = `
-        <div class="dropdown-header">
-            <button type="button" id="btnLimparSelecaoTipo">Limpar</button>
-        </div>
-        ${tiposUnicos.map(tipo => `
-            <label class="dropdown-item">
-                <input type="checkbox" class="filtro-tipo-checkbox" value="${tipo}"> ${tipo}
-            </label>
-        `).join('')}
-    `;
-
-    // --- Event Listeners ---
-    display.addEventListener('click', (e) => {
-        e.stopPropagation();
-        optionsContainer.classList.toggle('hidden');
-    });
-
-    document.getElementById('btnLimparSelecaoTipo').addEventListener('click', (e) => {
-        e.stopPropagation();
-        tiposSelecionadosNovaLista = [];
-        optionsContainer.querySelectorAll('.filtro-tipo-checkbox').forEach(chk => chk.checked = false);
-        textEl.textContent = 'Todos os Tipos';
-        optionsContainer.classList.add('hidden');
-        filtrarVeiculosNovaLista();
-    });
-
-    optionsContainer.addEventListener('change', (e) => {
-        if (e.target.classList.contains('filtro-tipo-checkbox')) {
-            tiposSelecionadosNovaLista = Array.from(optionsContainer.querySelectorAll('.filtro-tipo-checkbox:checked')).map(chk => chk.value);
-            textEl.textContent = tiposSelecionadosNovaLista.length === 0 ? 'Todos os Tipos' : tiposSelecionadosNovaLista.length === 1 ? tiposSelecionadosNovaLista[0] : `${tiposSelecionadosNovaLista.length} tipos selecionados`;
-            filtrarVeiculosNovaLista();
-        }
-    });
-}
-
 async function abrirModalNovaLista() {
     const modal = document.getElementById('modalNovaLista');
     const tbody = document.getElementById('tbodyNovaListaVeiculos');
     const nomeInput = document.getElementById('nomeNovaLista');
-    const filtroMarca = document.getElementById('filtroMarcaNovaLista');
-    const filtroModelo = document.getElementById('filtroModeloNovaLista');
     const dataListaInput = document.getElementById('dataDaLista');
 
     // Injeção do contador
@@ -237,7 +188,8 @@ async function abrirModalNovaLista() {
         'MARCA': 'marca',
         'MODELO': 'modelo',
         'ÚLTIMA REALIZAÇÃO': 'ultimaData',
-        'PRÓXIMO VENCIMENTO': 'proximaData'
+        'PRÓXIMO VENCIMENTO': 'proximaData',
+        'STATUS': 'status'
     };
 
     novaListaHeaders.forEach(th => {
@@ -253,13 +205,18 @@ async function abrirModalNovaLista() {
     modal.classList.remove('hidden');
     nomeInput.value = `Engraxe Semana ${getSemanaAtual()}`;
     dataListaInput.value = new Date().toISOString().split('T')[0];
+    
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando veículos e histórico...</td></tr>';
 
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando veículos e histórico...</td></tr>';
+    // Setup dos novos multiselects
+    setupCustomMultiselect('filtroMarcaNovaListaDisplay', 'filtroMarcaNovaListaOptions', 'filtroMarcaNovaListaText', 'Todas as Marcas');
+    setupCustomMultiselect('filtroModeloNovaListaDisplay', 'filtroModeloNovaListaOptions', 'filtroModeloNovaListaText', 'Todos os Modelos');
+    setupCustomMultiselect('filtroTipoNovaListaDisplay', 'filtroTipoNovaListaOptions', 'filtroTipoNovaListaText', 'Todos os Tipos');
 
     try {
         // Busca veículos e histórico de engraxe (apenas itens realizados)
         const [veiculosRes, itensRes] = await Promise.all([
-            supabaseClient.from('veiculos').select('placa, modelo, marca, tipo').eq('situacao', 'ativo').order('placa'),
+            supabaseClient.from('veiculos').select('placa, modelo, marca, tipo, filial').eq('situacao', 'ativo').order('placa'),
             supabaseClient.from('engraxe_itens').select('placa, data_realizado').not('data_realizado', 'is', null)
         ]);
 
@@ -278,37 +235,39 @@ async function abrirModalNovaLista() {
             }
 
             let proximaData = null;
-            if (ultimaData) {
-                const ult = new Date(ultimaData); // Supabase retorna YYYY-MM-DD, compatível com Date
-                ult.setDate(ult.getDate() + 21);
-                proximaData = ult.toISOString().split('T')[0];
-            }
+             if (ultimaData) {
+                // Lógica de data mais robusta para evitar problemas de fuso horário
+                const [uy, um, ud] = ultimaData.split('T')[0].split('-').map(Number);
+                const ultUTC = new Date(Date.UTC(uy, um - 1, ud));
+                const proxUTC = new Date(ultUTC);
+                proxUTC.setUTCDate(proxUTC.getUTCDate() + 21);
+                proximaData = proxUTC.toISOString().split('T')[0];
+             }
 
             return { ...v, ultimaData, proximaData };
         });
         
-        // Popula Filtro de Marcas
+        // Popula Filtros
+        const filiais = [...new Set(veiculosCacheNovaLista.map(v => v.filial).filter(Boolean))].sort();
         const marcas = [...new Set(veiculosCacheNovaLista.map(v => v.marca).filter(m => m))].sort();
-        filtroMarca.innerHTML = '<option value="">Todas as Marcas</option>';
-        marcas.forEach(m => {
-            filtroMarca.add(new Option(m, m));
-        });
-
-        // Popula Filtro de Modelos
         const modelos = [...new Set(veiculosCacheNovaLista.map(v => v.modelo).filter(m => m))].sort();
-        filtroModelo.innerHTML = '<option value="">Todos os Modelos</option>';
-        modelos.forEach(m => {
-            filtroModelo.add(new Option(m, m));
-        });
+        const tipos = [...new Set(veiculosCacheNovaLista.map(v => v.tipo).filter(Boolean))].sort();
 
-        // Configura o novo filtro de Tipo
-        setupFiltroTipoNovaLista(veiculosCacheNovaLista);
+        const filtroFilial = document.getElementById('filtroFilialNovaLista');
+        const currentFilial = filtroFilial.value;
+        filtroFilial.innerHTML = '<option value="">Todas Filiais</option>';
+        filiais.forEach(f => filtroFilial.add(new Option(f, f)));
+        filtroFilial.value = currentFilial;
+
+        populateMultiselect(document.getElementById('filtroMarcaNovaListaOptions'), marcas, 'Limpar Marcas');
+        populateMultiselect(document.getElementById('filtroModeloNovaListaOptions'), modelos, 'Limpar Modelos');
+        populateMultiselect(document.getElementById('filtroTipoNovaListaOptions'), tipos, 'Limpar Tipos');
 
         renderizarTabelaNovaLista(veiculosCacheNovaLista);
 
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar veículos.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Erro ao carregar veículos.</td></tr>';
     }
 }
 
@@ -318,45 +277,59 @@ function renderizarTabelaNovaLista(veiculos) {
     tbody.innerHTML = '';
     
     if (veiculos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum veículo encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum veículo encontrado.</td></tr>';
         return;
     }
 
     veiculos.forEach(v => {
         const tr = document.createElement('tr');
 
-        let proximoVencimentoStyle = '';
-        if (v.proximaData && dataLista && v.proximaData < dataLista) {
-            proximoVencimentoStyle = 'color: red; font-weight: bold;';
+        let status = 'PENDENTE';
+        let statusStyle = 'color: #6c757d;'; // Cinza
+
+        if (v.proximaData) {
+            // A comparação de strings 'YYYY-MM-DD' funciona corretamente para datas.
+            if (dataLista && v.proximaData < dataLista) {
+                status = 'VENCIDO';
+                statusStyle = 'color: red; font-weight: bold;';
+            } else {
+                status = 'EM DIA';
+                statusStyle = 'color: green;';
+            }
         }
 
-        const ultimaDataFmt = v.ultimaData ? new Date(v.ultimaData).toLocaleDateString('pt-BR') : '-';
-        const proximaDataFmt = v.proximaData ? new Date(v.proximaData).toLocaleDateString('pt-BR') : '-';
+        const ultimaDataFmt = v.ultimaData ? new Date(v.ultimaData + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+        const proximaDataFmt = v.proximaData ? new Date(v.proximaData + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
 
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-novalista" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
+            <td>${v.filial || '-'}</td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.marca || '-'}</td>
             <td>${v.modelo || '-'}</td>
             <td>${ultimaDataFmt}</td>
-            <td style="${proximoVencimentoStyle}">${proximaDataFmt}</td>
+            <td style="${status === 'VENCIDO' ? 'color: red; font-weight: bold;' : ''}">${proximaDataFmt}</td>
+            <td style="${statusStyle}">${status}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 function filtrarVeiculosNovaLista() {
-    const marca = document.getElementById('filtroMarcaNovaLista').value;
-    const modelo = document.getElementById('filtroModeloNovaLista').value;
+    const filial = document.getElementById('filtroFilialNovaLista').value;
     const placa = document.getElementById('filtroPlacaNovaLista').value.toLowerCase();
     
+    const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroMarcaNovaListaOptions input:checked')).map(cb => cb.value);
+    const modelosSelecionados = Array.from(document.querySelectorAll('#filtroModeloNovaListaOptions input:checked')).map(cb => cb.value);
+    const tiposSelecionados = Array.from(document.querySelectorAll('#filtroTipoNovaListaOptions input:checked')).map(cb => cb.value);
+
     const filtrados = veiculosCacheNovaLista.filter(v => {
-        const matchMarca = !marca || v.marca === marca;
-        const matchModelo = !modelo || v.modelo === modelo;
+        const matchFilial = !filial || v.filial === filial;
         const matchPlaca = !placa || v.placa.toLowerCase().includes(placa);
-        // Adiciona o filtro por tipo
-        const matchTipo = tiposSelecionadosNovaLista.length === 0 || (v.tipo && tiposSelecionadosNovaLista.includes(v.tipo));
-        return matchMarca && matchModelo && matchPlaca && matchTipo;
+        const matchMarca = marcasSelecionadas.length === 0 || (v.marca && marcasSelecionadas.includes(v.marca));
+        const matchModelo = modelosSelecionados.length === 0 || (v.modelo && modelosSelecionados.includes(v.modelo));
+        const matchTipo = tiposSelecionados.length === 0 || (v.tipo && tiposSelecionados.includes(v.tipo));
+        return matchFilial && matchPlaca && matchMarca && matchModelo && matchTipo;
     });
     
     renderizarTabelaNovaLista(filtrados);
@@ -457,7 +430,7 @@ function getSemanaAtual() {
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyEngraxe');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando listas...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando listas...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
@@ -489,7 +462,7 @@ async function carregarListas() {
         renderizarTabelaListas(listasFiltradas);
     } catch (error) {
         console.error('Erro ao carregar listas:', error);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
@@ -1407,6 +1380,22 @@ function ordenarVeiculosNovaLista(key) {
     } else {
         sortStateNovaLista.key = key;
         sortStateNovaLista.asc = true;
+    }
+
+    // Adiciona o status dinamicamente aos itens do cache para permitir a ordenação
+    if (key === 'status') {
+        const dataLista = document.getElementById('dataDaLista').value;
+        veiculosCacheNovaLista.forEach(v => {
+            let status = 'PENDENTE';
+            if (v.proximaData) {
+                if (dataLista && v.proximaData < dataLista) {
+                    status = 'VENCIDO';
+                } else {
+                    status = 'EM DIA';
+                }
+            }
+            v.status = status; // Atribui o status calculado para a ordenação
+        });
     }
 
     veiculosCacheNovaLista.sort((a, b) => {

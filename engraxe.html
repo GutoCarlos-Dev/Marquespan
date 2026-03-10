@@ -82,7 +82,7 @@
                 </tr>
               </thead>
               <tbody id="tbodyEngraxe">
-                <tr><td colspan="10" style="text-align: center;">Carregando dados...</td></tr>
+                <tr><td colspan="6" style="text-align: center;">Carregando dados...</td></tr>
               </tbody>
             </table>
           </div>
@@ -258,58 +258,72 @@
 
   <!-- Modal Nova Lista (Seleção de Placas) -->
   <div id="modalNovaLista" class="modal-backdrop hidden">
-    <div class="glass-modal" style="max-width: 800px;">
+    <div class="glass-modal" style="max-width: 1200px;">
       <div class="modal-header">
         <h3><i class="fas fa-plus"></i> Nova Lista de Engraxe</h3>
         <button class="close-button" id="btnCloseModalNovaLista">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-            <label for="nomeNovaLista">Nome da Lista</label>
-            <input type="text" id="nomeNovaLista" class="glass-input" placeholder="Ex: Engraxe Semana Atual">
-        </div>
-        <div class="form-group">
-            <label for="dataDaLista">Data da Lista (para cálculo de vencidos)</label>
-            <input type="date" id="dataDaLista" class="glass-input">
-        </div>
-        <div class="filtros-container" style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-            <select id="filtroMarcaNovaLista" class="glass-input" style="flex: 1 1 150px;">
-                <option value="">Todas as Marcas</option>
-            </select>
-            <select id="filtroModeloNovaLista" class="glass-input" style="flex: 1 1 150px;">
-                <option value="">Todos os Modelos</option>
-            </select>
-            <!-- NOVO FILTRO TIPO -->
-            <div class="custom-multiselect" style="flex: 1 1 150px;">
-                <div id="filtroTipoNovaListaDisplay" class="glass-input multiselect-display">
-                    <span id="filtroTipoNovaListaText">Todos os Tipos</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div id="filtroTipoNovaListaOptions" class="glass-dropdown hidden">
-                    <!-- Opções carregadas via JS -->
+        <div class="modal-details-grid" style="margin-bottom: 20px;">
+            <!-- Card 1: Filtros -->
+            <div class="details-card">
+                <h4><i class="fas fa-filter"></i> Filtros</h4>
+                <div class="filtros-grid-vencimentos">
+                    <select id="filtroFilialNovaLista" class="glass-input">
+                        <option value="">Todas Filiais</option>
+                    </select>
+                    <div class="custom-multiselect">
+                        <div id="filtroMarcaNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroMarcaNovaListaText">Todas as Marcas</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroMarcaNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroModeloNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroModeloNovaListaText">Todos os Modelos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroModeloNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroTipoNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroTipoNovaListaText">Todos os Tipos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroTipoNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <input type="text" id="filtroPlacaNovaLista" class="glass-input" placeholder="Buscar Placa...">
                 </div>
             </div>
-            <input type="text" id="filtroPlacaNovaLista" class="glass-input" style="flex: 1 1 150px;" placeholder="Buscar Placa...">
+            <!-- Card 2: Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações da Lista</h4>
+                <div class="acoes-grid-vencimentos">
+                    <div class="form-group"><label for="nomeNovaLista">Nome da Lista</label><input type="text" id="nomeNovaLista" class="glass-input" placeholder="Ex: Engraxe Semana Atual"></div>
+                    <div class="form-group"><label for="dataDaLista">Data da Lista</label><input type="date" id="dataDaLista" class="glass-input"></div>
+                    <div class="form-group"><label>&nbsp;</label><button id="btnConfirmarNovaLista" class="btn-glass btn-green btn-full"><i class="fas fa-check"></i> Criar Lista</button></div>
+                </div>
+            </div>
         </div>
-        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
             <table class="glass-table">
                 <thead>
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" id="chkAllNovaLista"></th>
+                        <th>FILIAL</th>
                         <th>PLACA</th>
                         <th>MARCA</th>
                         <th>MODELO</th>
                         <th>ÚLTIMA REALIZAÇÃO</th>
                         <th>PRÓXIMO VENCIMENTO</th>
+                        <th>STATUS</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyNovaListaVeiculos">
                     <!-- Veículos carregados via JS -->
                 </tbody>
             </table>
-        </div>
-        <div class="form-actions" style="margin-top: 15px; text-align: right;">
-            <button id="btnConfirmarNovaLista" class="btn-glass btn-green"><i class="fas fa-check"></i> Criar Lista</button>
         </div>
       </div>
     </div>
