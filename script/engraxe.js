@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCustomMultiselect('filtroVencimentoModeloDisplay', 'filtroVencimentoModeloOptions', 'filtroVencimentoModeloText', 'Todos os Modelos');
     setupCustomMultiselect('filtroVencimentoTipoDisplay', 'filtroVencimentoTipoOptions', 'filtroVencimentoTipoText', 'Todos os Tipos');
 
+    document.getElementById('btnAplicarStatusVencimentos').addEventListener('click', aplicarStatusEmMassa);
     document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
     document.getElementById('dataListaVencimentos')?.addEventListener('change', recalcularStatusVencimentos);
     document.getElementById('btnRecalcularVencimentos')?.addEventListener('click', recalcularStatusVencimentos);
@@ -1141,7 +1142,8 @@ async function abrirControleVencimentos() {
 
         // 3. Processar Dados (Cruzar Veículos com Histórico)
         const dataReferencia = dataListaInput.value;
-        const hoje = new Date(dataReferencia + 'T00:00:00');
+        const [y, m, d] = dataReferencia.split('-').map(Number);
+        const hojeUTC = new Date(Date.UTC(y, m - 1, d));
 
         currentVencimentosData = veiculos.map(v => {
             // Filtra itens deste veículo que tenham data realizada válida
@@ -1160,16 +1162,15 @@ async function abrirControleVencimentos() {
             let diasRestantes = -999;
 
             if (ultimaData) {
-                const ult = new Date(ultimaData);
-                const prox = new Date(ult);
-                prox.setDate(prox.getDate() + 21); // Regra de 21 dias
-                proximaData = prox.toISOString().split('T')[0];
+                const [uy, um, ud] = ultimaData.split('T')[0].split('-').map(Number);
+                const ultUTC = new Date(Date.UTC(uy, um - 1, ud));
 
-                const proxDate = new Date(prox);
-                proxDate.setHours(0,0,0,0);
+                const proxUTC = new Date(ultUTC);
+                proxUTC.setUTCDate(proxUTC.getUTCDate() + 21); // Use setUTCDate for UTC dates
+                proximaData = proxUTC.toISOString().split('T')[0];
 
-                const diffTime = proxDate - hoje;
-                diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const diffTime = proxUTC.getTime() - hojeUTC.getTime();
+                diasRestantes = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
                 if (diasRestantes < 0) status = 'VENCIDO';
                 else status = 'EM_DIA';
@@ -1316,6 +1317,90 @@ function gerarListaComSelecionados() {
     salvarListaNoStorage(nomeLista, selecionados, dataLista);
 }
 
+async function aplicarStatusEmMassa() {
+    const status = document.getElementById('selStatusVencimentos').value;
+    const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-vencimento:checked')).map(chk => ({
+        placa: chk.value,
+        modelo: chk.dataset.modelo,
+        marca: chk.dataset.marca
+    }));
+
+    if (selecionados.length === 0) return alert('Selecione pelo menos um veículo.');
+    if (!status) return alert('Selecione um status para aplicar.');
+
+    if (!confirm(`Confirma alterar o status de ${selecionados.length} veículos para ${status}?`)) return;
+
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+
+    try {
+        if (status === 'REALIZADO') {
+            const hoje = new Date().toISOString().split('T')[0];
+            const nomeLista = `Engraxe Rápido - ${new Date().toLocaleDateString('pt-BR')}`;
+            
+            let { data: lista } = await supabaseClient
+                .from('engraxe_listas')
+                .select('id')
+                .eq('nome', nomeLista)
+                .eq('data_lista', hoje)
+                .single();
+
+            let listaId = lista?.id;
+
+            if (!listaId) {
+                const { data: novaLista, error: errLista } = await supabaseClient
+                    .from('engraxe_listas')
+                    .insert({
+                        nome: nomeLista,
+                        data_lista: hoje,
+                        status: 'ABERTA',
+                        usuario: usuario,
+                        marcas_presentes: [...new Set(selecionados.map(v => v.marca).filter(Boolean))]
+                    })
+                    .select()
+                    .single();
+                
+                if (errLista) throw errLista;
+                listaId = novaLista.id;
+            }
+
+            const itens = selecionados.map(v => ({
+                id: crypto.randomUUID(),
+                lista_id: listaId,
+                placa: v.placa,
+                modelo: v.modelo,
+                marca: v.marca,
+                status: 'REALIZADO',
+                data_realizado: new Date().toISOString(),
+                usuario_realizou: usuario
+            }));
+
+            const { error: errItens } = await supabaseClient.from('engraxe_itens').insert(itens);
+            if (errItens) throw errItens;
+
+            alert('Veículos marcados como REALIZADO com sucesso!');
+
+        } else if (status === 'INTERNADO' || status === 'ATIVO') {
+            const novaSituacao = status === 'ATIVO' ? 'ativo' : 'INTERNADO';
+            const placas = selecionados.map(v => v.placa);
+
+            const { error } = await supabaseClient
+                .from('veiculos')
+                .update({ situacao: novaSituacao })
+                .in('placa', placas);
+
+            if (error) throw error;
+            
+            alert(`Situação dos veículos atualizada para ${status}!`);
+        }
+
+        abrirControleVencimentos();
+
+    } catch (error) {
+        console.error('Erro ao aplicar status:', error);
+        alert('Erro ao aplicar status: ' + error.message);
+    }
+}
+
 function ordenarVeiculosNovaLista(key) {
     if (sortStateNovaLista.key === key) {
         sortStateNovaLista.asc = !sortStateNovaLista.asc;
@@ -1413,13 +1498,16 @@ function recalcularStatusVencimentos() {
     const dataReferencia = document.getElementById('dataListaVencimentos').value;
     if (!dataReferencia || currentVencimentosData.length === 0) return;
 
-    const hoje = new Date(dataReferencia + 'T00:00:00');
+    const [y, m, d] = dataReferencia.split('-').map(Number);
+    const hojeUTC = new Date(Date.UTC(y, m - 1, d));
 
     currentVencimentosData.forEach(item => {
         if (item.proximaData) {
-            const proxDate = new Date(item.proximaData + 'T00:00:00');
-            const diffTime = proxDate - hoje;
-            const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const [py, pm, pd] = item.proximaData.split('-').map(Number);
+            const proxDateUTC = new Date(Date.UTC(py, pm - 1, pd));
+            
+            const diffTime = proxDateUTC.getTime() - hojeUTC.getTime();
+            const diasRestantes = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             item.diasRestantes = diasRestantes;
             if (diasRestantes < 0) {
