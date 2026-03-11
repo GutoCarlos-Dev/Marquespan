@@ -121,7 +121,8 @@ body {
 }
 
 /* Estilos de Modal (reaproveitados e adaptados de retorno-rota.css) */
-.modal-overlay {
+/* Usando IDs para aumentar a especificidade e evitar conflitos com CSS genérico */
+#modalRetorno, #modalMateriais {
     position: fixed;
     top: 0;
     left: 0;
@@ -130,35 +131,48 @@ body {
     background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Alinha o modal no topo para melhor visualização */
+    align-items: center; /* Centraliza o modal na tela */
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
-    padding: 5vh 15px; /* Adiciona um espaçamento para o modal não colar nas bordas */
-    overflow-y: auto; /* Garante a rolagem se o modal for maior que a tela */
+    padding: 15px; /* Espaçamento para não colar nas bordas */
+    box-sizing: border-box;
 }
 
-.modal-overlay:not(.hidden) {
+#modalRetorno:not(.hidden), #modalMateriais:not(.hidden) {
     opacity: 1;
     visibility: visible;
 }
 
-.modal-content {
+/* Estilos para o conteúdo dos modais, com especificidade aumentada */
+#modalRetorno .modal-content, 
+#modalMateriais .modal-content {
+    /* Resetando estilos que podem vir de outros CSS para evitar conflitos */
+    position: relative; 
+    top: auto;
+    left: auto;
+    transform: none;
+    animation: none;
+
+    /* Estilos do modal mobile */
     background: #fff;
     padding: 20px;
     border-radius: 8px;
-    width: 100%; /* Ocupa a largura disponível com o padding do overlay */
+    width: 100%;
     max-width: 500px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    
+    /* Animação de entrada */
     transform: scale(0.95);
-    transition: transform 0.3s;
+    transition: transform 0.3s ease-out;
 }
 
-.modal-overlay:not(.hidden) .modal-content {
+#modalRetorno:not(.hidden) .modal-content,
+#modalMateriais:not(.hidden) .modal-content {
     transform: scale(1);
 }
 
@@ -201,4 +215,30 @@ body {
     padding: 40px;
     font-size: 1.1rem;
     color: #888;
+}
+
+/* Estilos para garantir a aparência dos botões no rodapé do modal */
+.modal-footer .btn-custom {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: white;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.modal-footer .btn-custom:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.modal-footer .btn-green {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.modal-footer .btn-blue {
+    background: linear-gradient(135deg, #007bff, #0056b3);
 }
