@@ -39,6 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalListeners('modalDevolucoes', 'btnSalvarDevolucoes', saveDevolucoesData);
     setupModalListeners('modalMateriais', 'btnSalvarMateriais', saveMateriaisData);
 
+    // Listener para o modal de materiais (paletes)
+    document.getElementById('matTemPaletes').addEventListener('change', (e) => {
+        const detailsContainer = document.getElementById('paletes-details');
+        const show = e.target.value === 'true';
+        detailsContainer.classList.toggle('hidden', !show);
+
+        if (!show) {
+            detailsContainer.querySelectorAll('input').forEach(input => input.value = '');
+        }
+    });
+
     // Listener para delegação de eventos na tabela
     document.getElementById('tbodyRetornoRota').addEventListener('click', handleTableClick);
 });
@@ -276,13 +287,19 @@ function openMateriaisModal(index) {
     const rowData = gridData[index];
     const modal = document.getElementById('modalMateriais');
 
+    const temPaletesSelect = modal.querySelector('#matTemPaletes');
+    const temPaletes = rowData.paletes > 0;
+
     modal.querySelector('#matCarrinhos').value = rowData.carrinhos || '';
-    modal.querySelector('#matPaletes').value = rowData.paletes || '';
+    temPaletesSelect.value = temPaletes ? 'true' : 'false';
     modal.querySelector('#matMadeira').value = rowData.madeira_qtd || '';
     modal.querySelector('#matPlastico').value = rowData.plastico_qtd || '';
     modal.querySelector('#matCaixaBranca').value = rowData.caixa_branca_qtd || '';
     modal.querySelector('#matObsCarrinhos').value = rowData.obs_carrinhos || '';
     
+    // Dispara o evento change para mostrar/ocultar a seção de detalhes dos paletes
+    temPaletesSelect.dispatchEvent(new Event('change'));
+
     modal.classList.remove('hidden');
 }
 
@@ -294,11 +311,21 @@ function saveMateriaisData() {
     const modal = document.getElementById('modalMateriais');
     const rowData = gridData[currentRowIndex];
 
+    const temPaletes = modal.querySelector('#matTemPaletes').value === 'true';
+
     rowData.carrinhos = modal.querySelector('#matCarrinhos').value;
-    rowData.paletes = modal.querySelector('#matPaletes').value;
-    rowData.madeira_qtd = modal.querySelector('#matMadeira').value;
-    rowData.plastico_qtd = modal.querySelector('#matPlastico').value;
-    rowData.caixa_branca_qtd = modal.querySelector('#matCaixaBranca').value;
+    rowData.paletes = temPaletes ? 1 : 0; // Salva 1 para 'Sim', 0 para 'Não'
+
+    if (temPaletes) {
+        rowData.madeira_qtd = modal.querySelector('#matMadeira').value;
+        rowData.plastico_qtd = modal.querySelector('#matPlastico').value;
+        rowData.caixa_branca_qtd = modal.querySelector('#matCaixaBranca').value;
+    } else {
+        // Limpa os campos se 'Não' for selecionado
+        rowData.madeira_qtd = null;
+        rowData.plastico_qtd = null;
+        rowData.caixa_branca_qtd = null;
+    }
     rowData.obs_carrinhos = modal.querySelector('#matObsCarrinhos').value;
 }
 

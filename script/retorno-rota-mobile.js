@@ -32,6 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMateriais.classList.add('hidden');
     });
 
+    // Listener para o modal de materiais (paletes) na versão mobile
+    document.getElementById('matTemPaletes').addEventListener('change', (e) => {
+        const detailsContainer = document.getElementById('paletes-details-mobile');
+        const show = e.target.value === 'true';
+        detailsContainer.classList.toggle('hidden', !show);
+
+        if (!show) {
+            detailsContainer.querySelectorAll('input').forEach(input => input.value = '');
+        }
+    });
+
     // Event delegation para abrir o modal ao clicar no card
     document.getElementById('listaRetornoMobile').addEventListener('click', (e) => {
         const card = e.target.closest('.retorno-card');
@@ -114,12 +125,18 @@ function openEditModal(item) {
     document.getElementById('modalObs').value = item.obs || '';
 
     // Limpa e preenche o modal de materiais
+    const temPaletesSelect = document.getElementById('matTemPaletes');
+    const temPaletes = item.paletes > 0;
+
     document.getElementById('matCarrinhos').value = item.carrinhos || '';
-    document.getElementById('matPaletes').value = item.paletes || '';
+    temPaletesSelect.value = temPaletes ? 'true' : 'false';
     document.getElementById('matMadeira').value = item.madeira_qtd || '';
     document.getElementById('matPlastico').value = item.plastico_qtd || '';
     document.getElementById('matCaixaBranca').value = item.caixa_branca_qtd || '';
     document.getElementById('matObsCarrinhos').value = item.obs_carrinhos || '';
+
+    // Dispara o evento change para mostrar/ocultar a seção de detalhes dos paletes
+    temPaletesSelect.dispatchEvent(new Event('change'));
 
     document.getElementById('modalRetorno').classList.remove('hidden');
 }
@@ -141,12 +158,21 @@ async function saveRetorno() {
     const obs = document.getElementById('modalObs').value;
 
     // Coleta dados do modal de materiais
+    const temPaletes = document.getElementById('matTemPaletes').value === 'true';
+    const paletesFlag = temPaletes ? 1 : 0;
     const carrinhos = document.getElementById('matCarrinhos').value;
-    const paletes = document.getElementById('matPaletes').value;
-    const madeira = document.getElementById('matMadeira').value;
-    const plastico = document.getElementById('matPlastico').value;
-    const caixaBranca = document.getElementById('matCaixaBranca').value;
     const obsCarrinhos = document.getElementById('matObsCarrinhos').value;
+
+    let madeira, plastico, caixaBranca;
+    if (temPaletes) {
+        madeira = document.getElementById('matMadeira').value;
+        plastico = document.getElementById('matPlastico').value;
+        caixaBranca = document.getElementById('matCaixaBranca').value;
+    } else {
+        madeira = null;
+        plastico = null;
+        caixaBranca = null;
+    }
 
     const parseNum = (val) => {
         if (val === '' || val === null || val === undefined) return null;

@@ -96,45 +96,55 @@
     </div>
 
     <!-- Modal para Detalhes de Materiais -->
-    <div id="modalMateriais" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header">
-                <h3>Materiais Retornados</h3>
-                <button class="close-button">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-grid-2-cols">
-                    <div class="form-group">
-                        <label for="matCarrinhos">Carrinhos</label>
-                        <input type="number" id="matCarrinhos" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="matPaletes">Paletes</label>
-                        <input type="number" id="matPaletes" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="matMadeira">Madeira (Qtd)</label>
-                        <input type="number" id="matMadeira" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="matPlastico">Plástico (Qtd)</label>
-                        <input type="number" id="matPlastico" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="matCaixaBranca">Caixa Branca (Qtd)</label>
-                        <input type="number" id="matCaixaBranca" class="glass-input">
-                    </div>
-                     <div class="form-group form-group-full">
-                        <label for="matObsCarrinhos">Obs. Carrinhos</label>
-                        <input type="text" id="matObsCarrinhos" class="glass-input">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btnSalvarMateriais" class="btn-custom btn-green">Salvar e Fechar</button>
-            </div>
-        </div>
-    </div>
+     <div id="modalMateriais" class="modal-overlay hidden">
+         <div class="modal-content" style="max-width: 500px;">
+             <div class="modal-header">
+                 <h3>Materiais Retornados</h3>
+                 <button class="close-button">&times;</button>
+             </div>
+             <div class="modal-body">
+                 <div class="form-grid-2-cols">
+                     <div class="form-group">
+                         <label for="matCarrinhos">Carrinhos</label>
+                         <input type="number" id="matCarrinhos" class="glass-input">
+                     </div>
+                     <div class="form-group">
+                         <label for="matTemPaletes">Houve retorno de Paletes?</label>
+                         <select id="matTemPaletes" class="glass-input">
+                             <option value="false">Não</option>
+                             <option value="true">Sim</option>
+                         </select>
+                     </div>
+                 </div>
+ 
+                 <!-- Detalhes dos Paletes (inicialmente oculto) -->
+                 <div id="paletes-details" class="hidden" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                     <div class="form-grid-2-cols">
+                         <div class="form-group">
+                             <label for="matMadeira">Madeira (Qtd)</label>
+                             <input type="number" id="matMadeira" class="glass-input">
+                         </div>
+                         <div class="form-group">
+                             <label for="matPlastico">Plástico (Qtd)</label>
+                             <input type="number" id="matPlastico" class="glass-input">
+                         </div>
+                         <div class="form-group">
+                             <label for="matCaixaBranca">Caixa Branca (Qtd)</label>
+                             <input type="number" id="matCaixaBranca" class="glass-input">
+                         </div>
+                     </div>
+                 </div>
+ 
+                 <div class="form-group form-group-full" style="margin-top: 1rem;">
+                     <label for="matObsCarrinhos">Obs. Carrinhos</label>
+                     <input type="text" id="matObsCarrinhos" class="glass-input">
+                 </div>
+             </div>
+             <div class="modal-footer">
+                 <button id="btnSalvarMateriais" class="btn-custom btn-green">Salvar e Fechar</button>
+             </div>
+         </div>
+     </div>
 
     <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
 
