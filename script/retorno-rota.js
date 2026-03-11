@@ -337,11 +337,11 @@ async function saveAllData() {
             
             // Equipe
             nome_mot: row.nome_mot,
-            hora_mot: row.hora_mot,
+            hora_mot: row.hora_mot || null,
             nome_aux: row.nome_aux,
-            hora_aux: row.hora_aux,
+            hora_aux: row.hora_aux || null,
             nome_terceiro: row.nome_terceiro,
-            hora_terceiro: row.hora_terceiro,
+            hora_terceiro: row.hora_terceiro || null,
             
             // Materiais (Numéricos)
             carrinhos: parseNum(row.carrinhos),

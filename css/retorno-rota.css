@@ -102,6 +102,12 @@
 
 #modalDevolucoes .modal-content,
 #modalMateriais .modal-content {
+    /* Reset de estilos para evitar conflitos com modal.css genérico */
+    position: relative;
+    top: auto;
+    left: auto;
+    animation: none;
+
     background: #fff;
     padding: 25px;
     border-radius: 8px;
