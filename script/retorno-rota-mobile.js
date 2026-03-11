@@ -52,16 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
     document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
 
-    // Listener para o campo "Supervisor Ciente?"
-    document.getElementById('supervisorCienteDevolucao').addEventListener('change', (e) => {
-        const show = e.target.value === 'true';
-        document.getElementById('campoNomeSupervisorDevolucao').classList.toggle('hidden', !show);
-        // Se for "Não", limpa o valor do nome do supervisor
-        if (!show) {
-            document.getElementById('nomeSupervisorDevolucao').value = '';
-        }
-    });
-
     // Carrega dados auxiliares
     await carregarSupervisores();
 
@@ -183,28 +173,19 @@ function openMateriaisModal() {
 function openDevolucoesModal() {
     if (!currentItem) return;
     const modal = document.getElementById('modalDevolucoes');
-
-    // --- NEW: Handle centralized supervisor fields ---
-    const supervisorCienteSelect = document.getElementById('supervisorCienteDevolucao');
+ 
+    // --- Handle centralized supervisor fields ---
     const nomeSupervisorSelect = document.getElementById('nomeSupervisorDevolucao');
     
     // Populate supervisor names dropdown
     nomeSupervisorSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
     supervisoresCache.forEach(sup => {
-        const option = document.createElement('option');
-        option.value = sup;
-        option.textContent = sup;
-        nomeSupervisorSelect.appendChild(option);
+        nomeSupervisorSelect.add(new Option(sup, sup));
     });
 
-    // Set initial values from currentItem
-    const isCiente = currentItem.supervisor_ciente === true;
-    supervisorCienteSelect.value = isCiente;
-    nomeSupervisorSelect.value = isCiente ? (currentItem.nome_supervisor || '') : '';
-
-    // Trigger change to show/hide the name field
-    supervisorCienteSelect.dispatchEvent(new Event('change'));
-    // --- END NEW ---
+    // Set initial value from currentItem
+    nomeSupervisorSelect.value = currentItem.nome_supervisor || '';
+    // --- END ---
 
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
@@ -270,11 +251,10 @@ function saveDevolucoesData() {
     if (!currentItem) return;
     const modal = document.getElementById('modalDevolucoes');
     
-    // --- NEW: Save centralized supervisor data ---
-    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
-    currentItem.supervisor_ciente = supervisorCiente;
-    currentItem.nome_supervisor = supervisorCiente ? document.getElementById('nomeSupervisorDevolucao').value : null;
-    // --- END NEW ---
+    // --- Save centralized supervisor data ---
+    const nomeSupervisor = document.getElementById('nomeSupervisorDevolucao').value;
+    currentItem.nome_supervisor = nomeSupervisor || null;
+    currentItem.supervisor_ciente = !!nomeSupervisor; // true if a name is selected, false otherwise
 
     // Save data from client tabs
     modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
