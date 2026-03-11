@@ -50,7 +50,7 @@ const MapaUI = {
         L.Control.geocoder({
             // Trocando para Photon para ter sugestões enquanto digita (autocomplete)
             geocoder: L.Control.Geocoder.photon({
-                geocodingQueryParams: { lang: 'pt' } // Prioriza resultados em português
+                geocodingQueryParams: { lang: 'pt', countrycodes: 'BR' } // Prioriza resultados em português e no Brasil
             }),
             defaultMarkGeocode: true,
             showResultIcons: false,
@@ -64,7 +64,7 @@ const MapaUI = {
         this.routingControl = L.Routing.control({
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
-            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt' } }), // Autocomplete também na rota
+            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt', countrycodes: 'BR' } }), // Autocomplete também na rota
             showAlternatives: true, // Permite mostrar rotas alternativas
             language: 'pt-BR',
             createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
