@@ -35,7 +35,7 @@
 
 .data-grid th, .data-grid td {
     border: 1px solid #ddd;
-    padding: 8px 10px;
+    padding: 2px 8px; /* Padding vertical reduzido */
     text-align: left;
     vertical-align: middle;
     white-space: nowrap;
@@ -44,6 +44,7 @@
 .data-grid th {
     background-color: #f2f2f2;
     font-weight: 600;
+    font-size: 0.85rem; /* Fonte do cabeçalho menor */
 }
 
 .data-grid input[type="text"],
@@ -51,8 +52,10 @@
     width: 100%;
     border: none;
     background: transparent;
-    padding: 4px;
+    padding: 6px 4px; /* Ajusta padding interno */
     box-sizing: border-box;
+    font-size: 0.9rem; /* Fonte do input menor */
+    height: 28px; /* Altura fixa para os inputs */
 }
 
 .data-grid input:focus {

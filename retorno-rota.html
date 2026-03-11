@@ -6,44 +6,51 @@
     <title>Retorno de Rota - Logística</title>
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/retorno-rota.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-    <div id="menu-container"></div>
+    <div class="container">
+        <div id="menu-container"></div>
 
-    <main id="main-content">
-        <div class="header-container">
-            <h1><i class="fas fa-route"></i> Retorno de Rota</h1>
-            <div class="header-actions">
-                <button id="btnSalvarTudo" class="btn-custom btn-green"><i class="fas fa-save"></i> Salvar Tudo</button>
-            </div>
-        </div>
+        <div class="main-content">
+            <header class="header glass-header">
+                <h1><i class="fas fa-route"></i> Retorno de Rota</h1>
+            </header>
 
-        <div class="glass-panel">
-            <div class="panel-header">
-                <h2>Lançamentos do Dia</h2>
-            </div>
-            <div class="panel-body">
-                <div class="filter-container">
-                    <div class="form-group">
-                        <label for="dataRetorno">Dia da Semana</label>
+            <section class="glass-panel">
+                <div class="panel-header-actions">
+                    <h3><i class="fas fa-list"></i> Lançamentos do Dia</h3>
+                    <div class="acoes-grid-header">
+                        <button id="btnAdicionarLinha" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
+                        <button id="btnSalvarTudo" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Tudo</button>
+                    </div>
+                </div>
+
+                <div class="filtros-container" style="margin-bottom: 20px;">
+                    <div class="form-group-filter">
+                        <label for="dataRetorno">Data do Retorno</label>
                         <input type="date" id="dataRetorno" class="glass-input">
                     </div>
-                    <button id="btnAdicionarLinha" class="btn-custom btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
                 </div>
 
-                <div class="info-paste">
-                    <p><i class="fas fa-info-circle"></i> <strong>Dica:</strong> Copie as colunas da sua planilha (Placa, Rota, Operador, etc.) e cole diretamente na área da tabela abaixo para preencher várias linhas de uma vez.</p>
+                <div class="info-paste" style="margin-bottom: 20px;">
+                    <p><i class="fas fa-info-circle"></i> <strong>Dica:</strong> Copie as colunas da sua planilha e cole na tabela para preencher várias linhas de uma vez.</p>
                 </div>
 
-                <div class="data-grid-container">
+                <div class="table-responsive">
                     <table class="data-grid" id="gridRetornoRota">
                         <thead>
                             <tr>
                                 <th>Placa</th>
                                 <th>Rota</th>
-                                <th>Operador</th>
-                                <th>Equipe</th>
+                                <th>Operador Receb.</th>
+                                <th>Motorista</th>
+                                <th>Hora Motorista</th>
+                                <th>Auxiliar</th>
+                                <th>Hora Aux.</th>
+                                <th>Terceiro</th>
+                                <th>Hora Terceiro</th>
                                 <th>Materiais</th>
                                 <th>Devoluções</th>
                                 <th>Observações</th>
@@ -55,9 +62,9 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
-    </main>
+    </div>
 
     <!-- Modal para Detalhes de Devolução -->
     <div id="modalDevolucoes" class="modal-overlay hidden">
@@ -128,8 +135,9 @@
         </div>
     </div>
 
-    <script type="module" src="script/supabase.js"></script>
-    <script type="module" src="script/menu.js"></script>
+    <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+    <script type="module" src="script/menu.js" defer></script>
     <script type="module" src="script/retorno-rota.js"></script>
 </body>
 </html>

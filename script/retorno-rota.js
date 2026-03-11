@@ -150,10 +150,12 @@ function renderGrid() {
             <td><input type="text" value="${rowData.placa || ''}" data-field="placa"></td>
             <td><input type="text" value="${rowData.rota || ''}" data-field="rota"></td>
             <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
-            <td>
-                <input type="text" placeholder="Motorista" value="${rowData.nome_mot || ''}" data-field="nome_mot"><br>
-                <input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot">
-            </td>
+            <td><input type="text" value="${rowData.nome_mot || ''}" data-field="nome_mot"></td>
+            <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot"></td>
+            <td><input type="text" value="${rowData.nome_aux || ''}" data-field="nome_aux"></td>
+            <td><input type="time" value="${rowData.hora_aux || ''}" data-field="hora_aux"></td>
+            <td><input type="text" value="${rowData.nome_terceiro || ''}" data-field="nome_terceiro"></td>
+            <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro"></td>
             <td>
                 <button class="btn-modal-action btn-materiais">Materiais</button>
             </td>
