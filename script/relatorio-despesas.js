@@ -248,7 +248,7 @@ const RelatorioDespesasUI = {
     async carregarDados() {
         try {
             this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
-            let query = supabaseClient
+            let baseQuery = supabaseClient
                 .from('despesas')
                 .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                 .gte('data_checkin', this.dataInicio.value)
@@ -260,19 +260,39 @@ const RelatorioDespesasUI = {
                 // Cria uma condição OR para buscar se a rota está presente no campo numero_rota
                 // Ex: numero_rota.ilike.%101%,numero_rota.ilike.%102%
                 const orCondition = rotasSelecionadas.map(r => `numero_rota.ilike.%${r}%`).join(',');
-                query = query.or(orCondition);
+                baseQuery = baseQuery.or(orCondition);
             }
             
             // Filtro de Múltiplos Hotéis
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
             if (hoteisSelecionados.length > 0) {
-                query = query.in('id_hotel', hoteisSelecionados);
+                baseQuery = baseQuery.in('id_hotel', hoteisSelecionados);
             }
 
-            const { data, error } = await query;
-            if (error) throw error;
+            // Lógica de paginação para buscar todos os registros sem o limite de 1000
+            const allData = [];
+            let from = 0;
+            const step = 1000;
+            let keepFetching = true;
 
-            this.filteredData = data;
+            while (keepFetching) {
+                const { data, error } = await baseQuery.range(from, from + step - 1);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    allData.push(...data);
+                    if (data.length < step) {
+                        keepFetching = false; // Última página
+                    } else {
+                        from += step; // Prepara para a próxima página
+                    }
+                } else {
+                    keepFetching = false; // Não há mais dados
+                }
+            }
+
+            this.filteredData = allData;
 
             this.atualizarKPIs(this.filteredData);
             this.renderizarGraficos(this.filteredData);
