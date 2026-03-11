@@ -175,6 +175,7 @@ function openDevolucoesModal() {
     const modal = document.getElementById('modalDevolucoes');
  
     // --- Handle centralized supervisor fields ---
+    const supervisorCienteSelect = document.getElementById('supervisorCienteDevolucao');
     const nomeSupervisorSelect = document.getElementById('nomeSupervisorDevolucao');
     
     // Populate supervisor names dropdown
@@ -183,7 +184,8 @@ function openDevolucoesModal() {
         nomeSupervisorSelect.add(new Option(sup, sup));
     });
 
-    // Set initial value from currentItem
+    // Set initial values from currentItem
+    supervisorCienteSelect.value = currentItem.supervisor_ciente === true ? 'true' : 'false';
     nomeSupervisorSelect.value = currentItem.nome_supervisor || '';
     // --- END ---
 
@@ -252,9 +254,10 @@ function saveDevolucoesData() {
     const modal = document.getElementById('modalDevolucoes');
     
     // --- Save centralized supervisor data ---
+    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
     const nomeSupervisor = document.getElementById('nomeSupervisorDevolucao').value;
+    currentItem.supervisor_ciente = supervisorCiente;
     currentItem.nome_supervisor = nomeSupervisor || null;
-    currentItem.supervisor_ciente = !!nomeSupervisor; // true if a name is selected, false otherwise
 
     // Save data from client tabs
     modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {

@@ -125,8 +125,15 @@
              </div>
              <div class="modal-body">
                  <div class="supervisor-section" style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee;">
-                     <div class="form-group">
-                         <label for="nomeSupervisorDevolucao">Supervisor Ciente</label>
+                    <div class="form-group">
+                         <label for="supervisorCienteDevolucao">Supervisor Ciente?</label>
+                         <select id="supervisorCienteDevolucao" class="glass-input">
+                             <option value="false">Não</option>
+                             <option value="true">Sim</option>
+                         </select>
+                     </div>
+                     <div class="form-group" style="margin-top: 10px;">
+                         <label for="nomeSupervisorDevolucao">Nome do Supervisor</label>
                          <select id="nomeSupervisorDevolucao" class="glass-input">
                              <!-- Options will be populated by JS -->
                          </select>
