@@ -2,13 +2,27 @@ import { supabaseClient } from './supabase.js';
 
 let allData = []; // Cache dos dados do dia
 let currentItem = null; // Item sendo editado no modal
+let supervisoresCache = []; // Cache para a lista de supervisores
 
 function getCurrentUserName() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     return usuario ? usuario.nome : null;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+async function carregarSupervisores() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('rotas')
+            .select('supervisor');
+        if (error) throw error;
+        // Pega nomes únicos, remove nulos/vazios e ordena
+        supervisoresCache = [...new Set(data.map(item => item.supervisor).filter(Boolean))].sort();
+    } catch (err) {
+        console.error('Erro ao carregar supervisores:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
     dataInput.value = new Date().toISOString().split('T')[0];
@@ -38,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
     document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
 
+    // Carrega dados auxiliares
+    await carregarSupervisores();
 
     // Listener para o modal de materiais (paletes) na versão mobile
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
@@ -160,6 +176,11 @@ function openDevolucoesModal() {
 
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
+        // Cria as opções para o dropdown de supervisor
+        const supervisorOptions = supervisoresCache.map(sup =>
+            `<option value="${sup}" ${currentItem[`supervisor_devolucao${i}`] === sup ? 'selected' : ''}>${sup}</option>`
+        ).join('');
+
         tabContent.innerHTML = `
             <h4>Detalhes do Cliente ${i}</h4>
             <div class="form-grid-2-cols">
@@ -196,8 +217,11 @@ function openDevolucoesModal() {
                     </select>
                 </div>
                 <div class="form-group form-group-full">
-                    <label>Obs. Motivo</label>
-                    <input type="text" class="glass-input" data-field="obs_motivo${i}" value="${currentItem[`obs_motivo${i}`] || ''}">
+                    <label>Supervisor Ciente</label>
+                    <select class="glass-input" data-field="supervisor_devolucao${i}">
+                        <option value="">Selecione o Supervisor</option>
+                        ${supervisorOptions}
+                    </select>
                 </div>
                 <div class="form-group form-group-full">
                     <label>Obs. NF Devolvida</label>
@@ -224,7 +248,7 @@ function openDevolucoesModal() {
 function saveDevolucoesData() {
     if (!currentItem) return;
     const modal = document.getElementById('modalDevolucoes');
-    modal.querySelectorAll('input').forEach(input => {
+    modal.querySelectorAll('input, select').forEach(input => {
         const field = input.dataset.field;
         if (field) currentItem[field] = input.value;
     });
@@ -288,7 +312,7 @@ async function saveRetorno() {
         updateData[`frances_noturno${i}`] = parseNum(currentItem[`frances_noturno${i}`]);
         updateData[`variedades${i}`] = currentItem[`variedades${i}`] || null;
         updateData[`motivo${i}`] = currentItem[`motivo${i}`] || null;
-        updateData[`obs_motivo${i}`] = currentItem[`obs_motivo${i}`] || null;
+        updateData[`supervisor_devolucao${i}`] = currentItem[`supervisor_devolucao${i}`] || null;
         updateData[`obs_nf_dev${i}`] = currentItem[`obs_nf_dev${i}`] || null;
     }
 
