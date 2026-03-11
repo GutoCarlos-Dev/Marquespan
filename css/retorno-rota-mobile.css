@@ -122,7 +122,7 @@ body {
 
 /* Estilos de Modal (reaproveitados e adaptados de retorno-rota.css) */
 /* Usando IDs para aumentar a especificidade e evitar conflitos com CSS genérico */
-#modalRetorno, #modalMateriais {
+#modalRetorno, #modalMateriais, #modalDevolucoes {
     position: fixed;
     top: 0;
     left: 0;
@@ -140,14 +140,20 @@ body {
     box-sizing: border-box;
 }
 
-#modalRetorno:not(.hidden), #modalMateriais:not(.hidden) {
+/* Garante que os modais secundários fiquem sobre o principal */
+#modalMateriais, #modalDevolucoes {
+    z-index: 1001;
+}
+
+#modalRetorno:not(.hidden), #modalMateriais:not(.hidden), #modalDevolucoes:not(.hidden) {
     opacity: 1;
     visibility: visible;
 }
 
 /* Estilos para o conteúdo dos modais, com especificidade aumentada */
 #modalRetorno .modal-content, 
-#modalMateriais .modal-content {
+#modalMateriais .modal-content,
+#modalDevolucoes .modal-content {
     /* Resetando estilos que podem vir de outros CSS para evitar conflitos */
     position: relative; 
     top: auto;
@@ -172,7 +178,8 @@ body {
 }
 
 #modalRetorno:not(.hidden) .modal-content,
-#modalMateriais:not(.hidden) .modal-content {
+#modalMateriais:not(.hidden) .modal-content,
+#modalDevolucoes:not(.hidden) .modal-content {
     transform: scale(1);
 }
 
@@ -241,4 +248,70 @@ body {
 
 .modal-footer .btn-blue {
     background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.botoes-acao-modal .btn-orange {
+    background: linear-gradient(135deg, #fd7e14, #d35400);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+/* Estilos para Abas dentro do Modal */
+.tab-container {
+    display: flex;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 1rem;
+    overflow-x: auto; /* Para telas pequenas */
+}
+
+.tab-link {
+    padding: 10px 15px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 0.9em;
+    color: #555;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+}
+
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.5s;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.form-grid-2-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.form-group-full {
+    grid-column: 1 / -1;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }

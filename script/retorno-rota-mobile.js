@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMateriais.classList.add('hidden');
     });
 
+    // Modal de Devoluções
+    const modalDevolucoes = document.getElementById('modalDevolucoes');
+    modalDevolucoes.querySelector('.close-button').addEventListener('click', () => modalDevolucoes.classList.add('hidden'));
+    document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
+    document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
+
+
     // Listener para o modal de materiais (paletes) na versão mobile
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
         const detailsContainer = document.getElementById('paletes-details-mobile');
@@ -89,7 +96,8 @@ function renderCards() {
     const filteredData = allData.filter(item => {
         const placa = item.placa || '';
         const rota = item.rota || '';
-        return placa.toUpperCase().includes(termoBusca) || rota.toUpperCase().includes(termoBusca);
+        const motorista = item.nome_mot || '';
+        return placa.toUpperCase().includes(termoBusca) || rota.toUpperCase().includes(termoBusca) || motorista.toUpperCase().includes(termoBusca);
     });
 
     if (filteredData.length === 0) {
@@ -146,6 +154,84 @@ function openMateriaisModal() {
     document.getElementById('modalMateriais').classList.remove('hidden');
 }
 
+function openDevolucoesModal() {
+    if (!currentItem) return;
+    const modal = document.getElementById('modalDevolucoes');
+
+    for (let i = 1; i <= 4; i++) {
+        const tabContent = document.getElementById(`tab-cliente-${i}`);
+        tabContent.innerHTML = `
+            <h4>Detalhes do Cliente ${i}</h4>
+            <div class="form-grid-2-cols">
+                <div class="form-group">
+                    <label>Cliente</label>
+                    <input type="text" class="glass-input" data-field="cliente${i}" value="${currentItem[`cliente${i}`] || ''}">
+                </div>
+                <div class="form-group">
+                    <label>NF Devolvida</label>
+                    <input type="text" class="glass-input" data-field="nf_dev${i}" value="${currentItem[`nf_dev${i}`] || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Francês Diurno</label>
+                    <input type="number" class="glass-input" data-field="frances_diurno${i}" value="${currentItem[`frances_diurno${i}`] || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Francês Noturno</label>
+                    <input type="number" class="glass-input" data-field="frances_noturno${i}" value="${currentItem[`frances_noturno${i}`] || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Variedades</label>
+                    <input type="text" class="glass-input" data-field="variedades${i}" value="${currentItem[`variedades${i}`] || ''}" placeholder="Texto livre...">
+                </div>
+                <div class="form-group">
+                    <label>Motivo</label>
+                    <select class="glass-input" data-field="motivo${i}">
+                        <option value="" ${!currentItem[`motivo${i}`] ? 'selected' : ''}>Selecione</option>
+                        <option value="AVARIA" ${currentItem[`motivo${i}`] === 'AVARIA' ? 'selected' : ''}>AVARIA</option>
+                        <option value="DEVOLUÇÃO" ${currentItem[`motivo${i}`] === 'DEVOLUÇÃO' ? 'selected' : ''}>DEVOLUÇÃO</option>
+                        <option value="FALTOU TEMPO HÁBIL" ${currentItem[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                        <option value="PRODUTO INVERTIDO" ${currentItem[`motivo${i}`] === 'PRODUTO INVERTIDO' ? 'selected' : ''}>PRODUTO INVERTIDO</option>
+                        <option value="SOBROU CARGA" ${currentItem[`motivo${i}`] === 'SOBROU CARGA' ? 'selected' : ''}>SOBROU CARGA</option>
+                        <option value="TROCA" ${currentItem[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
+                    </select>
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Obs. Motivo</label>
+                    <input type="text" class="glass-input" data-field="obs_motivo${i}" value="${currentItem[`obs_motivo${i}`] || ''}">
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Obs. NF Devolvida</label>
+                    <input type="text" class="glass-input" data-field="obs_nf_dev${i}" value="${currentItem[`obs_nf_dev${i}`] || ''}">
+                </div>
+            </div>
+        `;
+    }
+
+    // Lógica das abas
+    modal.querySelectorAll('.tab-link').forEach(button => {
+        button.onclick = (e) => {
+            modal.querySelectorAll('.tab-link, .tab-content').forEach(el => el.classList.remove('active'));
+            e.target.classList.add('active');
+            document.getElementById(e.target.dataset.tab).classList.add('active');
+        };
+    });
+    // Ativa a primeira aba por padrão
+    modal.querySelector('.tab-link').click();
+
+    modal.classList.remove('hidden');
+}
+
+function saveDevolucoesData() {
+    if (!currentItem) return;
+    const modal = document.getElementById('modalDevolucoes');
+    modal.querySelectorAll('input').forEach(input => {
+        const field = input.dataset.field;
+        if (field) currentItem[field] = input.value;
+    });
+    modal.classList.add('hidden');
+    alert('Devoluções salvas localmente. Clique em "Salvar" para registrar no banco de dados.');
+}
+
 async function saveRetorno() {
     if (!currentItem) return;
 
@@ -182,6 +268,8 @@ async function saveRetorno() {
 
     const updateData = {
         hora_mot: horaMotorista || null,
+        hora_aux: horaMotorista || null, // Preenche hora do auxiliar
+        hora_terceiro: horaMotorista || null, // Preenche hora do terceiro
         obs: obs || null,
         carrinhos: parseNum(carrinhos),
         paletes: paletesFlag,
@@ -191,6 +279,18 @@ async function saveRetorno() {
         obs_carrinhos: obsCarrinhos || null,
         operador_recebimento: getCurrentUserName(), // Adiciona o usuário que está salvando
     };
+
+    // Adiciona os dados de devolução que podem ter sido editados
+    for (let i = 1; i <= 4; i++) {
+        updateData[`cliente${i}`] = currentItem[`cliente${i}`] || null;
+        updateData[`nf_dev${i}`] = currentItem[`nf_dev${i}`] || null;
+        updateData[`frances_diurno${i}`] = parseNum(currentItem[`frances_diurno${i}`]);
+        updateData[`frances_noturno${i}`] = parseNum(currentItem[`frances_noturno${i}`]);
+        updateData[`variedades${i}`] = currentItem[`variedades${i}`] || null;
+        updateData[`motivo${i}`] = currentItem[`motivo${i}`] || null;
+        updateData[`obs_motivo${i}`] = currentItem[`obs_motivo${i}`] || null;
+        updateData[`obs_nf_dev${i}`] = currentItem[`obs_nf_dev${i}`] || null;
+    }
 
     try {
         const { error } = await supabaseClient
