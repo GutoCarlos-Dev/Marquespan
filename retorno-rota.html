@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retorno de Rota - Logística</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/retorno-rota.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <main id="main-content">
+        <div class="header-container">
+            <h1><i class="fas fa-route"></i> Retorno de Rota</h1>
+            <div class="header-actions">
+                <button id="btnSalvarTudo" class="btn-custom btn-green"><i class="fas fa-save"></i> Salvar Tudo</button>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <div class="panel-header">
+                <h2>Lançamentos do Dia</h2>
+            </div>
+            <div class="panel-body">
+                <div class="filter-container">
+                    <div class="form-group">
+                        <label for="dataRetorno">Dia da Semana</label>
+                        <input type="date" id="dataRetorno" class="glass-input">
+                    </div>
+                    <button id="btnAdicionarLinha" class="btn-custom btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
+                </div>
+
+                <div class="info-paste">
+                    <p><i class="fas fa-info-circle"></i> <strong>Dica:</strong> Copie as colunas da sua planilha (Placa, Rota, Operador, etc.) e cole diretamente na área da tabela abaixo para preencher várias linhas de uma vez.</p>
+                </div>
+
+                <div class="data-grid-container">
+                    <table class="data-grid" id="gridRetornoRota">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Rota</th>
+                                <th>Operador</th>
+                                <th>Equipe</th>
+                                <th>Materiais</th>
+                                <th>Devoluções</th>
+                                <th>Observações</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyRetornoRota">
+                            <!-- Linhas serão inseridas via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Detalhes de Devolução -->
+    <div id="modalDevolucoes" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Lançar Devoluções da Rota</h3>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-container">
+                    <button class="tab-link active" data-tab="tab-cliente-1">Cliente 1</button>
+                    <button class="tab-link" data-tab="tab-cliente-2">Cliente 2</button>
+                    <button class="tab-link" data-tab="tab-cliente-3">Cliente 3</button>
+                    <button class="tab-link" data-tab="tab-cliente-4">Cliente 4</button>
+                </div>
+
+                <!-- Abas de Clientes -->
+                <div id="tab-cliente-1" class="tab-content active"></div>
+                <div id="tab-cliente-2" class="tab-content"></div>
+                <div id="tab-cliente-3" class="tab-content"></div>
+                <div id="tab-cliente-4" class="tab-content"></div>
+
+            </div>
+            <div class="modal-footer">
+                <button id="btnSalvarDevolucoes" class="btn-custom btn-green">Salvar e Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Detalhes de Materiais -->
+    <div id="modalMateriais" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Materiais Retornados</h3>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid-2-cols">
+                    <div class="form-group">
+                        <label for="matCarrinhos">Carrinhos</label>
+                        <input type="number" id="matCarrinhos" class="glass-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="matPaletes">Paletes</label>
+                        <input type="number" id="matPaletes" class="glass-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="matMadeira">Madeira (Qtd)</label>
+                        <input type="number" id="matMadeira" class="glass-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="matPlastico">Plástico (Qtd)</label>
+                        <input type="number" id="matPlastico" class="glass-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="matCaixaBranca">Caixa Branca (Qtd)</label>
+                        <input type="number" id="matCaixaBranca" class="glass-input">
+                    </div>
+                     <div class="form-group form-group-full">
+                        <label for="matObsCarrinhos">Obs. Carrinhos</label>
+                        <input type="text" id="matObsCarrinhos" class="glass-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSalvarMateriais" class="btn-custom btn-green">Salvar e Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script/supabase.js"></script>
+    <script type="module" src="script/menu.js"></script>
+    <script type="module" src="script/retorno-rota.js"></script>
+</body>
+</html>
