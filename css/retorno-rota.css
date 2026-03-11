@@ -76,8 +76,9 @@
     background-color: #0056b3;
 }
 
-/* Estilos para Modais */
-.modal-overlay {
+/* Estilos para Modais com IDs para aumentar a especificidade e evitar conflitos */
+#modalDevolucoes,
+#modalMateriais {
     position: fixed;
     top: 0;
     left: 0;
@@ -93,12 +94,14 @@
     transition: opacity 0.3s, visibility 0.3s;
 }
 
-.modal-overlay:not(.hidden) {
+#modalDevolucoes:not(.hidden),
+#modalMateriais:not(.hidden) {
     opacity: 1;
     visibility: visible;
 }
 
-.modal-content {
+#modalDevolucoes .modal-content,
+#modalMateriais .modal-content {
     background: #fff;
     padding: 25px;
     border-radius: 8px;
@@ -112,7 +115,8 @@
     transition: transform 0.3s;
 }
 
-.modal-overlay:not(.hidden) .modal-content {
+#modalDevolucoes:not(.hidden) .modal-content,
+#modalMateriais:not(.hidden) .modal-content {
     transform: scale(1);
 }
 
@@ -149,6 +153,29 @@
     margin-top: 20px;
     text-align: right;
 }
+
+/* Estilos para garantir a aparência dos botões no rodapé do modal */
+.modal-footer .btn-custom {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: white;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.modal-footer .btn-custom:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.modal-footer .btn-green {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
 
 /* Estilos para Abas dentro do Modal */
 .tab-container {
