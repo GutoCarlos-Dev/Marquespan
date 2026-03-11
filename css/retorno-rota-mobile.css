@@ -130,11 +130,13 @@ body {
     background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start; /* Alinha o modal no topo para melhor visualização */
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
+    padding: 5vh 15px; /* Adiciona um espaçamento para o modal não colar nas bordas */
+    overflow-y: auto; /* Garante a rolagem se o modal for maior que a tela */
 }
 
 .modal-overlay:not(.hidden) {
@@ -146,7 +148,7 @@ body {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
-    width: 90%;
+    width: 100%; /* Ocupa a largura disponível com o padding do overlay */
     max-width: 500px;
     max-height: 90vh;
     display: flex;
