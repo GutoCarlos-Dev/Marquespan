@@ -3,16 +3,17 @@ import { supabaseClient } from './supabase.js';
 // Estado global para armazenar os dados da grid
 let gridData = [];
 let currentRowIndex = null; // Índice da linha sendo editada nos modais
+let supervisoresCache = []; // Cache para a lista de supervisores
 
 // Mapeamento de colunas da planilha para os nomes dos campos no objeto de dados
 // A ordem aqui DEVE corresponder à ordem das colunas na planilha do usuário
 const COLUMN_MAP = [
     'placa', 'rota', 'operador_recebimento', 'nome_mot', 'hora_mot', 'nome_aux', 'hora_aux', 'nome_terceiro', 'hora_terceiro',
     'carrinhos', 'obs_carrinhos', 'paletes', 'madeira_qtd', 'plastico_qtd', 'caixa_branca_qtd', 'tipo_retorno', 'qtd_clientes',
-    'cliente1', 'frances_diurno1', 'frances_noturno1', 'variedades1', 'motivo1', 'obs_motivo1', 'nf_dev1', 'obs_nf_dev1',
-    'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'obs_motivo2', 'nf_dev2', 'obs_nf_dev2',
-    'cliente3', 'frances_diurno3', 'frances_noturno3', 'variedades3', 'motivo3', 'obs_motivo3', 'nf_dev3', 'obs_nf_dev3',
-    'cliente4', 'frances_diurno4', 'frances_noturno4', 'variedades4', 'motivo4', 'obs_motivo4', 'nf_dev4', 'obs_nf_dev4',
+    'cliente1', 'frances_diurno1', 'frances_noturno1', 'variedades1', 'motivo1', 'nf_dev1', 'obs_nf_dev1',
+    'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'nf_dev2', 'obs_nf_dev2',
+    'cliente3', 'frances_diurno3', 'frances_noturno3', 'variedades3', 'motivo3', 'nf_dev3', 'obs_nf_dev3',
+    'cliente4', 'frances_diurno4', 'frances_noturno4', 'variedades4', 'motivo4', 'nf_dev4', 'obs_nf_dev4',
     'supervisor_ciente', 'nome_supervisor', 'obs'
 ];
 
@@ -21,7 +22,20 @@ function getCurrentUserName() {
     return usuario ? usuario.nome : null;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+async function carregarSupervisores() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('rotas')
+            .select('supervisor');
+        if (error) throw error;
+        // Pega nomes únicos, remove nulos/vazios e ordena
+        supervisoresCache = [...new Set(data.map(item => item.supervisor).filter(Boolean))].sort();
+    } catch (err) {
+        console.error('Erro ao carregar supervisores:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa a data com o dia de hoje
     const dataInput = document.getElementById('dataRetorno');
     dataInput.value = new Date().toISOString().split('T')[0];
@@ -38,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listeners dos Modais
     setupModalListeners('modalDevolucoes', 'btnSalvarDevolucoes', saveDevolucoesData);
     setupModalListeners('modalMateriais', 'btnSalvarMateriais', saveMateriaisData);
+
+    // Carrega dados auxiliares
+    await carregarSupervisores();
 
     // Listener para o modal de materiais (paletes)
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
@@ -209,6 +226,21 @@ function openDevolucoesModal(index) {
     const rowData = gridData[index];
     const modal = document.getElementById('modalDevolucoes');
 
+    // --- Handle centralized supervisor fields ---
+    const supervisorCienteSelect = document.getElementById('supervisorCienteDevolucao');
+    const nomeSupervisorSelect = document.getElementById('nomeSupervisorDevolucao');
+    
+    // Populate supervisor names dropdown
+    nomeSupervisorSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
+    supervisoresCache.forEach(sup => {
+        nomeSupervisorSelect.add(new Option(sup, sup));
+    });
+
+    // Set initial values from rowData
+    supervisorCienteSelect.value = rowData.supervisor_ciente === true ? 'true' : 'false';
+    nomeSupervisorSelect.value = rowData.nome_supervisor || '';
+    // --- END ---
+
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
         tabContent.innerHTML = `
@@ -232,16 +264,21 @@ function openDevolucoesModal(index) {
                 </div>
                  <div class="form-group">
                     <label>Variedades</label>
-                    <input type="number" class="glass-input" data-field="variedades${i}" value="${rowData[`variedades${i}`] || ''}">
+                    <input type="text" class="glass-input" data-field="variedades${i}" value="${rowData[`variedades${i}`] || ''}" placeholder="Texto livre...">
                 </div>
                 <div class="form-group">
                     <label>Motivo</label>
-                    <input type="text" class="glass-input" data-field="motivo${i}" value="${rowData[`motivo${i}`] || ''}">
+                    <select class="glass-input" data-field="motivo${i}">
+                        <option value="" ${!rowData[`motivo${i}`] ? 'selected' : ''}>Selecione</option>
+                        <option value="AVARIA" ${rowData[`motivo${i}`] === 'AVARIA' ? 'selected' : ''}>AVARIA</option>
+                        <option value="DEVOLUÇÃO" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO' ? 'selected' : ''}>DEVOLUÇÃO</option>
+                        <option value="FALTOU TEMPO HÁBIL" ${rowData[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                        <option value="PRODUTO INVERTIDO" ${rowData[`motivo${i}`] === 'PRODUTO INVERTIDO' ? 'selected' : ''}>PRODUTO INVERTIDO</option>
+                        <option value="SOBROU CARGA" ${rowData[`motivo${i}`] === 'SOBROU CARGA' ? 'selected' : ''}>SOBROU CARGA</option>
+                        <option value="TROCA" ${rowData[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
+                    </select>
                 </div>
-                <div class="form-group form-group-full">
-                    <label>Obs. Motivo</label>
-                    <input type="text" class="glass-input" data-field="obs_motivo${i}" value="${rowData[`obs_motivo${i}`] || ''}">
-                </div>
+
                  <div class="form-group form-group-full">
                     <label>Obs. NF Devolvida</label>
                     <input type="text" class="glass-input" data-field="obs_nf_dev${i}" value="${rowData[`obs_nf_dev${i}`] || ''}">
@@ -270,7 +307,14 @@ function openDevolucoesModal(index) {
 function saveDevolucoesData() {
     if (currentRowIndex === null) return;
     const modal = document.getElementById('modalDevolucoes');
-    modal.querySelectorAll('input').forEach(input => {
+
+    // --- Save centralized supervisor data ---
+    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
+    const nomeSupervisor = document.getElementById('nomeSupervisorDevolucao').value;
+    gridData[currentRowIndex].supervisor_ciente = supervisorCiente;
+    gridData[currentRowIndex].nome_supervisor = nomeSupervisor || null;
+
+    modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
         const field = input.dataset.field;
         if (field) {
             gridData[currentRowIndex][field] = input.value;
@@ -396,9 +440,8 @@ async function saveAllData() {
             item[`cliente${i}`] = row[`cliente${i}`];
             item[`frances_diurno${i}`] = parseNum(row[`frances_diurno${i}`]);
             item[`frances_noturno${i}`] = parseNum(row[`frances_noturno${i}`]);
-            item[`variedades${i}`] = parseNum(row[`variedades${i}`]);
+            item[`variedades${i}`] = row[`variedades${i}`] || null; // Agora é texto
             item[`motivo${i}`] = row[`motivo${i}`];
-            item[`obs_motivo${i}`] = row[`obs_motivo${i}`];
             item[`nf_dev${i}`] = row[`nf_dev${i}`];
             item[`obs_nf_dev${i}`] = row[`obs_nf_dev${i}`];
         }
