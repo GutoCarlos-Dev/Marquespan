@@ -319,12 +319,19 @@ async function saveAllData() {
         return isNaN(n) ? null : n;
     };
 
-    const dataToSave = gridData.map(row => {
+    // Filtra apenas linhas que possuem Placa preenchida para evitar salvar linhas vazias
+    const validRows = gridData.filter(row => row.placa && row.placa.trim() !== '');
+
+    if (validRows.length === 0) {
+        alert('Preencha pelo menos uma linha com Placa para salvar.');
+        return;
+    }
+
+    const dataToSave = validRows.map(row => {
         // Constrói um objeto limpo apenas com as colunas do banco de dados
         const item = {
-            id: row.id || undefined, // Mantém ID se existir para atualização
             data_retorno: dataRetorno,
-            placa: row.placa,
+            placa: row.placa.trim().toUpperCase(),
             rota: row.rota,
             operador_recebimento: row.operador_recebimento || getCurrentUserName(),
             
@@ -351,6 +358,11 @@ async function saveAllData() {
             nome_supervisor: row.nome_supervisor,
             obs: row.obs
         };
+
+        // Só adiciona o ID se ele existir e for válido (evita enviar id: "" ou id: undefined incorretamente)
+        if (row.id) {
+            item.id = row.id;
+        }
 
         // Processa os campos repetitivos de clientes (1 a 4)
         for (let i = 1; i <= 4; i++) {
