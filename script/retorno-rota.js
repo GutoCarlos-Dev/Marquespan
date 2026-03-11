@@ -16,6 +16,11 @@ const COLUMN_MAP = [
     'supervisor_ciente', 'nome_supervisor', 'obs'
 ];
 
+function getCurrentUserName() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? usuario.nome : null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializa a data com o dia de hoje
     const dataInput = document.getElementById('dataRetorno');
@@ -118,6 +123,11 @@ function handlePaste(event) {
             newRowData[key] = columns[index] || null;
         });
         
+        // Garante que o operador seja preenchido se estiver vazio na colagem
+        if (!newRowData.operador_recebimento) {
+            newRowData.operador_recebimento = getCurrentUserName();
+        }
+        
         gridData.push(newRowData);
     });
 
@@ -130,6 +140,7 @@ function handlePaste(event) {
 function addEmptyRow() {
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
+    newRow.operador_recebimento = getCurrentUserName(); // Preenche com o usuário logado
     gridData.push(newRow);
     renderGrid();
 }
@@ -301,21 +312,60 @@ async function saveAllData() {
         return;
     }
 
-    const dataToSave = gridData.map(row => ({
-        ...row,
-        data_retorno: dataRetorno,
-        // Garante que campos numéricos sejam salvos como números
-        carrinhos: parseInt(row.carrinhos) || null,
-        paletes: parseInt(row.paletes) || null,
-        madeira_qtd: parseInt(row.madeira_qtd) || null,
-        plastico_qtd: parseInt(row.plastico_qtd) || null,
-        caixa_branca_qtd: parseInt(row.caixa_branca_qtd) || null,
-        qtd_clientes: parseInt(row.qtd_clientes) || null,
-        frances_diurno1: parseInt(row.frances_diurno1) || null,
-        frances_noturno1: parseInt(row.frances_noturno1) || null,
-        variedades1: parseInt(row.variedades1) || null,
-        // ... repetir para os outros clientes
-    }));
+    // Função auxiliar para converter números mantendo o 0 (evita que 0 vire null)
+    const parseNum = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const n = parseInt(val, 10);
+        return isNaN(n) ? null : n;
+    };
+
+    const dataToSave = gridData.map(row => {
+        // Constrói um objeto limpo apenas com as colunas do banco de dados
+        const item = {
+            id: row.id || undefined, // Mantém ID se existir para atualização
+            data_retorno: dataRetorno,
+            placa: row.placa,
+            rota: row.rota,
+            operador_recebimento: row.operador_recebimento || getCurrentUserName(),
+            
+            // Equipe
+            nome_mot: row.nome_mot,
+            hora_mot: row.hora_mot,
+            nome_aux: row.nome_aux,
+            hora_aux: row.hora_aux,
+            nome_terceiro: row.nome_terceiro,
+            hora_terceiro: row.hora_terceiro,
+            
+            // Materiais (Numéricos)
+            carrinhos: parseNum(row.carrinhos),
+            obs_carrinhos: row.obs_carrinhos,
+            paletes: parseNum(row.paletes),
+            madeira_qtd: parseNum(row.madeira_qtd),
+            plastico_qtd: parseNum(row.plastico_qtd),
+            caixa_branca_qtd: parseNum(row.caixa_branca_qtd),
+            tipo_retorno: row.tipo_retorno,
+            qtd_clientes: parseNum(row.qtd_clientes),
+            
+            // Outros
+            supervisor_ciente: row.supervisor_ciente,
+            nome_supervisor: row.nome_supervisor,
+            obs: row.obs
+        };
+
+        // Processa os campos repetitivos de clientes (1 a 4)
+        for (let i = 1; i <= 4; i++) {
+            item[`cliente${i}`] = row[`cliente${i}`];
+            item[`frances_diurno${i}`] = parseNum(row[`frances_diurno${i}`]);
+            item[`frances_noturno${i}`] = parseNum(row[`frances_noturno${i}`]);
+            item[`variedades${i}`] = parseNum(row[`variedades${i}`]);
+            item[`motivo${i}`] = row[`motivo${i}`];
+            item[`obs_motivo${i}`] = row[`obs_motivo${i}`];
+            item[`nf_dev${i}`] = row[`nf_dev${i}`];
+            item[`obs_nf_dev${i}`] = row[`obs_nf_dev${i}`];
+        }
+
+        return item;
+    });
 
     try {
         // `upsert` irá inserir novas linhas ou atualizar existentes com base na chave primária (`id`)

@@ -3,6 +3,11 @@ import { supabaseClient } from './supabase.js';
 let allData = []; // Cache dos dados do dia
 let currentItem = null; // Item sendo editado no modal
 
+function getCurrentUserName() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? usuario.nome : null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
@@ -143,15 +148,22 @@ async function saveRetorno() {
     const caixaBranca = document.getElementById('matCaixaBranca').value;
     const obsCarrinhos = document.getElementById('matObsCarrinhos').value;
 
+    const parseNum = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const n = parseInt(val, 10);
+        return isNaN(n) ? null : n;
+    };
+
     const updateData = {
         hora_mot: horaMotorista || null,
         obs: obs || null,
-        carrinhos: parseInt(carrinhos) || null,
-        paletes: parseInt(paletes) || null,
-        madeira_qtd: parseInt(madeira) || null,
-        plastico_qtd: parseInt(plastico) || null,
-        caixa_branca_qtd: parseInt(caixaBranca) || null,
+        carrinhos: parseNum(carrinhos),
+        paletes: parseNum(paletes),
+        madeira_qtd: parseNum(madeira),
+        plastico_qtd: parseNum(plastico),
+        caixa_branca_qtd: parseNum(caixaBranca),
         obs_carrinhos: obsCarrinhos || null,
+        operador_recebimento: getCurrentUserName(), // Adiciona o usuário que está salvando
     };
 
     try {
