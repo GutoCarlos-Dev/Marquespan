@@ -184,7 +184,7 @@ async function saveRetorno() {
         hora_mot: horaMotorista || null,
         obs: obs || null,
         carrinhos: parseNum(carrinhos),
-        paletes: parseNum(paletes),
+        paletes: paletesFlag,
         madeira_qtd: parseNum(madeira),
         plastico_qtd: parseNum(plastico),
         caixa_branca_qtd: parseNum(caixaBranca),
