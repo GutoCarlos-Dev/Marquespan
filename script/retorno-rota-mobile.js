@@ -52,6 +52,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
     document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
 
+    // Listener para o campo "Supervisor Ciente?"
+    document.getElementById('supervisorCienteDevolucao').addEventListener('change', (e) => {
+        const show = e.target.value === 'true';
+        document.getElementById('campoNomeSupervisorDevolucao').classList.toggle('hidden', !show);
+        // Se for "Não", limpa o valor do nome do supervisor
+        if (!show) {
+            document.getElementById('nomeSupervisorDevolucao').value = '';
+        }
+    });
+
     // Carrega dados auxiliares
     await carregarSupervisores();
 
@@ -174,12 +184,30 @@ function openDevolucoesModal() {
     if (!currentItem) return;
     const modal = document.getElementById('modalDevolucoes');
 
+    // --- NEW: Handle centralized supervisor fields ---
+    const supervisorCienteSelect = document.getElementById('supervisorCienteDevolucao');
+    const nomeSupervisorSelect = document.getElementById('nomeSupervisorDevolucao');
+    
+    // Populate supervisor names dropdown
+    nomeSupervisorSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
+    supervisoresCache.forEach(sup => {
+        const option = document.createElement('option');
+        option.value = sup;
+        option.textContent = sup;
+        nomeSupervisorSelect.appendChild(option);
+    });
+
+    // Set initial values from currentItem
+    const isCiente = currentItem.supervisor_ciente === true;
+    supervisorCienteSelect.value = isCiente;
+    nomeSupervisorSelect.value = isCiente ? (currentItem.nome_supervisor || '') : '';
+
+    // Trigger change to show/hide the name field
+    supervisorCienteSelect.dispatchEvent(new Event('change'));
+    // --- END NEW ---
+
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
-        // Cria as opções para o dropdown de supervisor
-        const supervisorOptions = supervisoresCache.map(sup =>
-            `<option value="${sup}" ${currentItem[`supervisor_devolucao${i}`] === sup ? 'selected' : ''}>${sup}</option>`
-        ).join('');
 
         tabContent.innerHTML = `
             <h4>Detalhes do Cliente ${i}</h4>
@@ -217,13 +245,6 @@ function openDevolucoesModal() {
                     </select>
                 </div>
                 <div class="form-group form-group-full">
-                    <label>Supervisor Ciente</label>
-                    <select class="glass-input" data-field="supervisor_devolucao${i}">
-                        <option value="">Selecione o Supervisor</option>
-                        ${supervisorOptions}
-                    </select>
-                </div>
-                <div class="form-group form-group-full">
                     <label>Obs. NF Devolvida</label>
                     <input type="text" class="glass-input" data-field="obs_nf_dev${i}" value="${currentItem[`obs_nf_dev${i}`] || ''}">
                 </div>
@@ -248,7 +269,15 @@ function openDevolucoesModal() {
 function saveDevolucoesData() {
     if (!currentItem) return;
     const modal = document.getElementById('modalDevolucoes');
-    modal.querySelectorAll('input, select').forEach(input => {
+    
+    // --- NEW: Save centralized supervisor data ---
+    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
+    currentItem.supervisor_ciente = supervisorCiente;
+    currentItem.nome_supervisor = supervisorCiente ? document.getElementById('nomeSupervisorDevolucao').value : null;
+    // --- END NEW ---
+
+    // Save data from client tabs
+    modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
         const field = input.dataset.field;
         if (field) currentItem[field] = input.value;
     });
@@ -301,7 +330,10 @@ async function saveRetorno() {
         plastico_qtd: parseNum(plastico),
         caixa_branca_qtd: parseNum(caixaBranca),
         obs_carrinhos: obsCarrinhos || null,
-        operador_recebimento: getCurrentUserName(), // Adiciona o usuário que está salvando
+        operador_recebimento: getCurrentUserName(),
+        // --- NEW: Add centralized supervisor fields to the final save payload ---
+        supervisor_ciente: currentItem.supervisor_ciente || false,
+        nome_supervisor: currentItem.nome_supervisor || null,
     };
 
     // Adiciona os dados de devolução que podem ter sido editados
@@ -312,7 +344,6 @@ async function saveRetorno() {
         updateData[`frances_noturno${i}`] = parseNum(currentItem[`frances_noturno${i}`]);
         updateData[`variedades${i}`] = currentItem[`variedades${i}`] || null;
         updateData[`motivo${i}`] = currentItem[`motivo${i}`] || null;
-        updateData[`supervisor_devolucao${i}`] = currentItem[`supervisor_devolucao${i}`] || null;
         updateData[`obs_nf_dev${i}`] = currentItem[`obs_nf_dev${i}`] || null;
     }
 
