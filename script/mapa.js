@@ -48,14 +48,11 @@ const MapaUI = {
 
         // Adiciona controle de busca de endereços (Lupa)
         L.Control.geocoder({
-            geocoder: L.Control.Geocoder.nominatim(),
-            // feature comes from the geocoder service
-            onSelect: (geocodeResult) => {
-              console.log(geocodeResult);
-              // Aqui você pode preencher automaticamente o campo de endereço
-              // com o resultado selecionado
-              // Ex: document.getElementById('endereco').value = geocodeResult.name;
-            },
+            // Trocando para Photon para ter sugestões enquanto digita (autocomplete)
+            geocoder: L.Control.Geocoder.photon({
+                geocodingQueryParams: { lang: 'pt' } // Prioriza resultados em português
+            }),
+            defaultMarkGeocode: true,
             showResultIcons: false,
             usemapBounds: false,
             collapsed: true,
@@ -67,7 +64,7 @@ const MapaUI = {
         this.routingControl = L.Routing.control({
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
-            geocoder: L.Control.Geocoder.nominatim(),
+            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt' } }), // Autocomplete também na rota
             showAlternatives: true, // Permite mostrar rotas alternativas
             language: 'pt-BR',
             createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
