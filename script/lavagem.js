@@ -117,6 +117,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
 
+    // Listeners para o novo modal de Fornecedor
+    document.getElementById('btn-bulk-fornecedor')?.addEventListener('click', abrirModalFornecedor);
+    document.getElementById('btnCloseModalFornecedor')?.addEventListener('click', () => document.getElementById('modalInformarFornecedor').classList.add('hidden'));
+    document.getElementById('btnSalvarFornecedorBulk')?.addEventListener('click', bulkAplicarFornecedor);
+
     // --- NOVOS LISTENERS PARA ADICIONAR VEÍCULO MANUALMENTE ---
     document.getElementById('btnAdicionarVeiculoDetalhes')?.addEventListener('click', abrirModalAdicionarVeiculo);
     document.getElementById('btnCloseModalAdicionarVeiculo')?.addEventListener('click', () => document.getElementById('modalAdicionarVeiculo').classList.add('hidden'));
@@ -1486,6 +1491,59 @@ async function bulkAgendar() {
     } catch (error) {
         console.error('Erro ao agendar em massa:', error);
         alert('Erro ao agendar: ' + error.message);
+    }
+}
+
+function abrirModalFornecedor() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        return alert('Nenhum item selecionado.');
+    }
+
+    const modal = document.getElementById('modalInformarFornecedor');
+    const select = document.getElementById('selectFornecedorBulk');
+    
+    // Pega fornecedores únicos do cache de preços
+    const fornecedores = [...new Set(precosCache.map(p => p.fornecedor).filter(f => f))].sort();
+    
+    select.innerHTML = '<option value="">Selecione um fornecedor</option>';
+    fornecedores.forEach(f => {
+        const option = document.createElement('option');
+        option.value = f;
+        option.textContent = f;
+        select.appendChild(option);
+    });
+
+    modal.classList.remove('hidden');
+}
+
+async function bulkAplicarFornecedor() {
+    const ids = getSelectedIds();
+    const fornecedor = document.getElementById('selectFornecedorBulk').value;
+
+    if (ids.length === 0) return alert('Nenhum item selecionado.');
+    if (!fornecedor) return alert('Selecione um fornecedor para aplicar.');
+    if (!confirm(`Deseja aplicar o fornecedor "${fornecedor}" para ${ids.length} item(ns)?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('lavagem_itens')
+            .update({ fornecedor: fornecedor })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        ids.forEach(id => {
+            const itemIndex = currentListItems.findIndex(i => i.id == id);
+            if (itemIndex > -1) currentListItems[itemIndex].fornecedor = fornecedor;
+        });
+
+        renderizarItensDetalhes(currentListItems);
+        document.getElementById('modalInformarFornecedor').classList.add('hidden');
+        alert('Fornecedor aplicado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao aplicar fornecedor em massa:', error);
+        alert('Erro ao aplicar fornecedor: ' + error.message);
     }
 }
 
