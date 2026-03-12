@@ -730,8 +730,20 @@ function renderizarItensDetalhes(itens) {
             options += `<option value="${item.tipo_lavagem}" selected>${item.tipo_lavagem}</option>`;
         }
 
-        const dataRealizado = item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
-        
+        let dataRealizado = '-';
+        if (item.data_realizado) {
+            // Garante que strings de data (YYYY-MM-DD) sejam tratadas como hora local.
+            // Strings ISO completas (com 'T') são tratadas corretamente por new Date().
+            const dateString = item.data_realizado.length === 10 && !item.data_realizado.includes('T')
+                ? `${item.data_realizado}T00:00:00`
+                : item.data_realizado;
+            const dataObj = new Date(dateString);
+            // Verifica se a data é válida antes de formatar
+            if (!isNaN(dataObj.getTime())) {
+                dataRealizado = dataObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
         let badgeClass = 'badge-pendente';
         if (item.status === 'REALIZADO') {
             badgeClass = 'badge-realizado';
@@ -1056,7 +1068,15 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 item.marca || '',
                 item.tipo_lavagem || '-',
                 item.status,
-                item.data_realizado ? new Date(item.data_realizado + (item.data_realizado.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '-',
+                (() => {
+                    if (!item.data_realizado) return '-';
+                    const dateString = item.data_realizado.length === 10 && !item.data_realizado.includes('T')
+                        ? `${item.data_realizado}T00:00:00`
+                        : item.data_realizado;
+                    const dataObj = new Date(dateString);
+                    // No PDF, mostramos data e hora se houver, ou só a data se for meia-noite.
+                    return !isNaN(dataObj.getTime()) ? (dataObj.getHours() === 0 && dataObj.getMinutes() === 0 ? dataObj.toLocaleDateString('pt-BR') : dataObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })) : '-';
+                })(),
                 valorItem > 0 ? `R$ ${valorItem.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'
             ];
         });
@@ -1433,17 +1453,21 @@ async function bulkAgendar() {
     const dataAgendamento = document.getElementById('dataAgendamentoBulk').value;
 
     if (ids.length === 0) return alert('Nenhum item selecionado.');
-    if (!dataAgendamento) return alert('Selecione uma data para o agendamento.');
+    if (!dataAgendamento) return alert('Selecione uma data e hora para o agendamento.');
 
-    const [ano, mes, dia] = dataAgendamento.split('-');
-    if (!confirm(`Deseja agendar ${ids.length} item(ns) para ${dia}/${mes}/${ano}?`)) return;
+    const dataObj = new Date(dataAgendamento);
+    const dataFormatada = dataObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    if (!confirm(`Deseja agendar ${ids.length} item(ns) para ${dataFormatada}?`)) return;
+
+    const dataParaSalvar = dataObj.toISOString();
 
     try {
         const { error } = await supabaseClient
             .from('lavagem_itens')
             .update({ 
                 status: 'AGENDADO',
-                data_realizado: dataAgendamento
+                data_realizado: dataParaSalvar
             })
             .in('id', ids);
 
@@ -1453,7 +1477,7 @@ async function bulkAgendar() {
             const itemIndex = currentListItems.findIndex(i => i.id == id);
             if (itemIndex > -1) {
                 currentListItems[itemIndex].status = 'AGENDADO';
-                currentListItems[itemIndex].data_realizado = dataAgendamento;
+                currentListItems[itemIndex].data_realizado = dataParaSalvar;
             }
         });
         renderizarItensDetalhes(currentListItems);
