@@ -45,9 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listeners
     dataInput.addEventListener('change', loadDataFromSupabase);
-    document.getElementById('btnAdicionarLinha').addEventListener('click', addEmptyRow);
+    document.getElementById('btnAdicionarLinha').addEventListener('click', () => {
+        addEmptyRow();
+        renderGrid();
+    });
     document.getElementById('tbodyRetornoRota').addEventListener('paste', handlePaste);
     document.getElementById('btnSalvarTudo').addEventListener('click', saveAllData);
+
+    // Listener para o novo campo de busca
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.addEventListener('input', renderGrid);
 
     // Listeners dos Modais
     setupModalListeners('modalDevolucoes', 'btnSalvarDevolucoes', saveDevolucoesData);
@@ -139,27 +146,57 @@ async function loadDataFromSupabase() {
  * @param {ClipboardEvent} event - O evento de colar.
  */
 function handlePaste(event) {
-    event.preventDefault();
+    const target = event.target;
+
+    // A nova lógica de colar só funciona se o alvo for um input dentro da tabela.
+    // Se não for, o comportamento padrão do navegador ocorrerá (que pode ser colar texto simples no campo).
+    if (!target || target.tagName !== 'INPUT' || !target.closest('tr[data-row-index]')) {
+        return;
+    }
+    
+    event.preventDefault(); // Previne o comportamento padrão de colar apenas se o alvo for válido.
+
+    const startRowIndex = parseInt(target.closest('tr').dataset.rowIndex, 10);
+    const startField = target.dataset.field;
+    
+    // Pega a lista de campos de input visíveis na ordem em que aparecem na linha
+    const visibleFields = Array.from(
+        document.querySelectorAll(`#tbodyRetornoRota tr[data-row-index='${startRowIndex}'] input[data-field]`)
+    ).map(input => input.dataset.field);
+    
+    const startColIndex = visibleFields.indexOf(startField);
+
+    if (isNaN(startRowIndex) || startColIndex === -1) {
+        console.error('Não foi possível determinar o ponto de início da colagem.');
+        return;
+    }
+
     const pasteData = event.clipboardData.getData('text');
     const rows = pasteData.split(/[\r\n]+/).filter(row => row.trim() !== '');
 
-    rows.forEach(row => {
+    rows.forEach((row, rowIndexOffset) => {
+        const currentRowIndex = startRowIndex + rowIndexOffset;
         const columns = row.split('\t');
-        const newRowData = {};
-        
-        COLUMN_MAP.forEach((key, index) => {
-            newRowData[key] = columns[index] || null;
-        });
-        
-        // Garante que o operador seja preenchido se estiver vazio na colagem
-        if (!newRowData.operador_recebimento) {
-            newRowData.operador_recebimento = getCurrentUserName();
+
+        // Se a linha não existe no nosso array de dados, cria uma nova
+        if (currentRowIndex >= gridData.length) {
+            addEmptyRow();
         }
-        
-        gridData.push(newRowData);
+
+        columns.forEach((colValue, colIndexOffset) => {
+            const currentColIndex = startColIndex + colIndexOffset;
+
+            // Garante que estamos dentro dos limites dos campos visíveis
+            if (currentColIndex < visibleFields.length) {
+                const fieldToUpdate = visibleFields[currentColIndex];
+                if (gridData[currentRowIndex]) {
+                    gridData[currentRowIndex][fieldToUpdate] = colValue.trim();
+                }
+            }
+        });
     });
 
-    renderGrid();
+    renderGrid(); // Re-renderiza a grid com os novos dados
 }
 
 /**
@@ -170,7 +207,6 @@ function addEmptyRow() {
     COLUMN_MAP.forEach(key => newRow[key] = null);
     newRow.operador_recebimento = getCurrentUserName(); // Preenche com o usuário logado
     gridData.push(newRow);
-    renderGrid();
 }
 
 /**
@@ -180,7 +216,29 @@ function renderGrid() {
     const tbody = document.getElementById('tbodyRetornoRota');
     tbody.innerHTML = '';
 
-    gridData.forEach((rowData, index) => {
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
+
+    const dataToRender = searchTerm
+        ? gridData.filter(row =>
+            (row.placa || '').toUpperCase().includes(searchTerm) ||
+            (row.rota || '').toUpperCase().includes(searchTerm) ||
+            (row.nome_mot || '').toUpperCase().includes(searchTerm) ||
+            (row.nome_aux || '').toUpperCase().includes(searchTerm) ||
+            (row.nome_terceiro || '').toUpperCase().includes(searchTerm)
+          )
+        : gridData;
+
+    if (dataToRender.length === 0) {
+        const colCount = document.querySelector('#tableRetornoRota thead tr')?.children.length || 13;
+        tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 20px;">Nenhum resultado encontrado.</td></tr>`;
+        return;
+    }
+
+    dataToRender.forEach((rowData) => {
+        // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
+        const index = gridData.indexOf(rowData);
+
         const tr = document.createElement('tr');
         tr.dataset.rowIndex = index;
 
