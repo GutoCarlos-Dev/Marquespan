@@ -162,6 +162,37 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
 
 /* === ESTILOS DOS MODAIS (Materiais e Devoluções) === */
 
+/* Cabeçalho do Modal */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.modal-header .close-button {
+    background: transparent;
+    border: none;
+    font-size: 2rem; /* Aumenta o tamanho do 'x' */
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.modal-header .close-button:hover {
+    color: #dc3545; /* Vermelho para indicar perigo/fechar */
+    transform: scale(1.1);
+}
+
 /* Botões de Salvar no Rodapé dos Modais */
 .modal-footer .btn-custom {
     padding: 12px 24px;
@@ -227,4 +258,21 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     color: #28a745;
     border-bottom-color: #28a745;
     background-color: transparent;
+}
+
+/* === ESTILOS PARA CONTEÚDO DAS ABAS (Tabs) === */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content {
+    display: none; /* Esconde todas as abas por padrão */
+    padding: 20px 5px;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.tab-content.active {
+    display: block; /* Mostra apenas a aba ativa */
 }
