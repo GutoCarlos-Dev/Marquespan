@@ -1,232 +1,95 @@
-/* /style/retorno-rota.css */
-
-/* Estilos gerais para a página de Retorno de Rota */
-.filter-container {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-end;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
+/* Estilos para feedback de salvamento */
+@keyframes fadeOutSuccess {
+    from { background-color: #d4edda; } /* Verde claro */
+    to { background-color: transparent; }
 }
 
-.info-paste {
-    background-color: rgba(0, 105, 55, 0.1);
-    border-left: 4px solid var(--primary-color);
-    padding: 12px 16px;
-    margin-bottom: 1.5rem;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #333;
+@keyframes fadeOutError {
+    from { background-color: #f8d7da; } /* Vermelho claro */
+    to { background-color: transparent; }
 }
 
-.info-paste i {
-    margin-right: 8px;
-    color: var(--primary-color);
+tr.saving td {
+    background-color: #fff3cd !important; /* Amarelo claro, com !important para sobrepor hover */
+    transition: background-color 0.3s;
 }
 
-.data-grid-container {
-    overflow-x: auto;
+tr.saved-success td {
+    /* A animação cuidará da transição de volta para transparente */
+    animation: fadeOutSuccess 1.5s ease-out forwards;
 }
 
+tr.saved-error td {
+    animation: fadeOutError 2.5s ease-out forwards;
+}
+
+/* Garante que a cor do texto da linha (vermelho/negrito) seja visível sobre o fundo de feedback */
+tr.saved-success input, tr.saved-error input, tr.saving input {
+    background-color: transparent;
+}
+
+/* === NOVOS ESTILOS PARA A GRADE === */
+
+/* Estilo geral da tabela */
 .data-grid {
+    border-collapse: separate; /* Usa 'separate' para permitir border-radius nas células */
+    border-spacing: 0;
     width: 100%;
-    border-collapse: collapse;
+    font-size: 13px; /* Fonte um pouco menor */
 }
 
-.data-grid th, .data-grid td {
-    border: 1px solid #ddd;
-    padding: 2px 8px; /* Padding vertical reduzido */
-    text-align: left;
-    vertical-align: middle;
-    white-space: nowrap;
-}
-
+/* Estilo do cabeçalho */
 .data-grid th {
     background-color: #f2f2f2;
     font-weight: 600;
-    font-size: 0.85rem; /* Fonte do cabeçalho menor */
+    padding: 10px 12px;
+    border-bottom: 2px solid #ddd;
+    font-size: 12px; /* Fonte do cabeçalho também menor */
+    text-align: left;
 }
 
-.data-grid input[type="text"],
-.data-grid input[type="time"] {
+/* Estilo das linhas do corpo da tabela */
+.data-grid tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Efeito de hover nas linhas */
+.data-grid tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Efeito de "zebra" (linhas alternadas) */
+.data-grid tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+.data-grid tbody tr:nth-child(even):hover {
+    background-color: #f0f0f0;
+}
+
+/* Estilo das células */
+.data-grid td {
+    padding: 0; /* Remove o padding da célula para o input ocupar todo o espaço */
+    border-bottom: 1px solid #e9e9e9;
+    vertical-align: middle;
+}
+
+/* Estilo dos inputs dentro da tabela */
+.data-grid td input[type="text"],
+.data-grid td input[type="time"] {
     width: 100%;
-    border: none;
-    background: transparent;
-    padding: 6px 4px; /* Ajusta padding interno */
-    box-sizing: border-box;
-    font-size: 0.9rem; /* Fonte do input menor */
-    height: 28px; /* Altura fixa para os inputs */
-}
-
-.data-grid input:focus {
-    outline: 1px solid var(--primary-color);
-    background-color: #fff;
-}
-
-.btn-modal-action {
-    background-color: #007bff;
-    color: white;
-    border: none;
+    height: 38px; /* Altura da linha */
     padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85em;
-}
-.btn-modal-action:hover {
-    background-color: #0056b3;
-}
-
-/* Estilos para Modais com IDs para aumentar a especificidade e evitar conflitos */
-#modalDevolucoes,
-#modalMateriais {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-}
-
-#modalDevolucoes:not(.hidden),
-#modalMateriais:not(.hidden) {
-    opacity: 1;
-    visibility: visible;
-}
-
-#modalDevolucoes .modal-content,
-#modalMateriais .modal-content {
-    /* Reset de estilos para evitar conflitos com modal.css genérico */
-    position: relative;
-    top: auto;
-    left: auto;
-    animation: none;
-
-    background: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    transform: scale(0.95);
-    transition: transform 0.3s;
-}
-
-#modalDevolucoes:not(.hidden) .modal-content,
-#modalMateriais:not(.hidden) .modal-content {
-    transform: scale(1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--primary-color);
-}
-
-.close-button {
-    background: none;
     border: none;
-    font-size: 2rem;
-    cursor: pointer;
-    color: #888;
+    background-color: transparent;
+    font-size: 13px; /* Fonte menor para os inputs */
+    color: #333;
+    outline: none;
+    box-sizing: border-box;
+    transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.modal-body {
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-.modal-footer {
-    border-top: 1px solid #ccc;
-    padding-top: 15px;
-    margin-top: 20px;
-    text-align: right;
-}
-
-/* Estilos para garantir a aparência dos botões no rodapé do modal */
-.modal-footer .btn-custom {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: white;
-    font-size: 0.95rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-}
-
-.modal-footer .btn-custom:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-}
-
-.modal-footer .btn-green {
-    background: linear-gradient(135deg, #28a745, #1e7e34);
-}
-
-
-/* Estilos para Abas dentro do Modal */
-.tab-container {
-    display: flex;
-    border-bottom: 2px solid #eee;
-    margin-bottom: 1rem;
-}
-
-.tab-link {
-    padding: 10px 20px;
-    cursor: pointer;
-    border: none;
-    background: none;
-    font-size: 1em;
-    color: #555;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-}
-
-.tab-link.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-    font-weight: 600;
-}
-
-.tab-content {
-    display: none;
-    animation: fadeIn 0.5s;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.form-grid-2-cols {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.form-group-full {
-    grid-column: 1 / -1;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Efeito de foco nos inputs */
+.data-grid td input:focus {
+    background-color: #ffffff;
+    box-shadow: inset 0 0 0 2px #007bff; /* Borda interna azul ao focar */
 }
