@@ -93,3 +93,138 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     background-color: #ffffff;
     box-shadow: inset 0 0 0 2px #007bff; /* Borda interna azul ao focar */
 }
+
+/* === ESTILOS SOFISTICADOS PARA BOTÕES DA GRADE === */
+
+/* Centraliza os botões dentro das células */
+.data-grid td button {
+    margin: 0 auto;
+    display: block;
+}
+
+/* Botões Gerais de Ação (Materiais, Devoluções) */
+.btn-modal-action {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px; /* Mantém compacto */
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15); /* Sombra suave */
+    min-width: 85px; /* Garante uma largura mínima uniforme */
+}
+
+.btn-modal-action:hover {
+    transform: translateY(-2px); /* Efeito de elevação */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    filter: brightness(1.1);
+}
+
+.btn-modal-action:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Estilo Específico: Materiais (Gradiente Azul/Roxo Moderno) */
+.btn-materiais {
+    background: linear-gradient(135deg, #4ff30e 0%, #087e18 100%);
+}
+
+/* Estilo Específico: Devoluções (Gradiente Laranja/Rosa Moderno) */
+.btn-devolucoes {
+    background: linear-gradient(135deg, #ff0e06 0%, #740202 100%);
+}
+
+/* Botão de Excluir (Ícone Sofisticado) */
+.btn-delete-row {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete-row:hover {
+    background-color: rgba(231, 76, 60, 0.1); /* Fundo vermelho bem claro ao passar o mouse */
+    transform: scale(1.15);
+    color: #c0392b;
+}
+
+/* === ESTILOS DOS MODAIS (Materiais e Devoluções) === */
+
+/* Botões de Salvar no Rodapé dos Modais */
+.modal-footer .btn-custom {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    min-width: 160px; /* Garante um tamanho clicável confortável */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilo específico para botão verde (Salvar) */
+.modal-footer .btn-green {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); /* Gradiente Verde Profissional */
+}
+
+.modal-footer .btn-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
+}
+
+.modal-footer .btn-custom:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Melhoria nas Abas do Modal de Devoluções */
+.tab-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0;
+}
+
+.tab-link {
+    background: transparent;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-link:hover {
+    color: #333;
+    background-color: #f9f9f9;
+}
+
+.tab-link.active {
+    color: #28a745;
+    border-bottom-color: #28a745;
+    background-color: transparent;
+}
