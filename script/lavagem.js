@@ -718,21 +718,29 @@ function renderizarItensDetalhes(itens) {
         else pendentes++;
 
         const tr = document.createElement('tr');
-        const tiposLavagem = ['PADRÃO MARQUESPAN', 'HIGIENIZAÇÃO CABINE', 'CONDENSADORA-TK', 'LAVAGEM MOTOR', 'LAVAGEM CHASSI MANUT.'];
         
         // Desabilita campos se o status for PULAR_LAVAGEM
         const isDisabled = item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO' || isFinalizada;
+        
+        // Lógica para filtrar os tipos de lavagem com base no fornecedor do item
+        let tiposLavagemDisponiveis = [];
+        if (item.fornecedor && precosCache) {
+            // Filtra os preços para o fornecedor do item e pega os tipos de lavagem únicos
+            tiposLavagemDisponiveis = [...new Set(
+                precosCache.filter(p => p.fornecedor === item.fornecedor).map(p => p.tipoLavagem)
+            )].sort();
+        }
 
         let options = '<option value="">Selecione...</option>';
         let found = false;
-        tiposLavagem.forEach(t => {
+        tiposLavagemDisponiveis.forEach(t => {
             const isSelected = item.tipo_lavagem === t;
             if (isSelected) found = true;
             options += `<option value="${t}" ${isSelected ? 'selected' : ''}>${t}</option>`;
         });
         
         if (item.tipo_lavagem && !found) {
-            options += `<option value="${item.tipo_lavagem}" selected>${item.tipo_lavagem}</option>`;
+            options += `<option value="${item.tipo_lavagem}" selected style="color: red; font-style: italic;">${item.tipo_lavagem} (Inválido)</option>`;
         }
 
         let dataRealizado = '-';
