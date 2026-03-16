@@ -292,6 +292,9 @@ async function carregarListas() {
             .select('lista_id, status')
             .in('lista_id', listaIds);
 
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivelUsuario = usuario ? usuario.nivel.toLowerCase() : null;
+
         data.forEach(lista => {
             const itensDestaLista = itensStatus.filter(i => i.lista_id === lista.id);
             const total = itensDestaLista.filter(i => i.status !== 'PULAR_LAVAGEM').length;
@@ -313,7 +316,9 @@ async function carregarListas() {
                 <td>
                     <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')"><i class="fas fa-folder-open"></i></button>
                     <button class="btn-icon pdf" onclick="gerarPDFListaPorId('${lista.id}', '${lista.nome}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
+                    ${lista.status !== 'FINALIZADA' || nivelUsuario === 'administrador' ? `
                     <button class="btn-icon delete" onclick="excluirLista('${lista.id}')"><i class="fas fa-trash"></i></button>
+                    ` : ''}
                 </td>
             `;
             tbody.appendChild(tr);
