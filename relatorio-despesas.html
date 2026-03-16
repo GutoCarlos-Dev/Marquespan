@@ -30,6 +30,14 @@
     .custom-option { display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; color: #333; }
     .custom-option:hover { background-color: #f0f0f0; }
 
+    /* Estilos para ordenação da tabela */
+    .sortable { cursor: pointer; user-select: none; }
+    .sortable:hover { background-color: #f0f0f0; }
+    .sortable i {
+        margin-left: 5px;
+        color: #ccc;
+    }
+
     /* Estilos para o Marquee de Gráficos (Dashboard) */
     .charts-scroll-container {
         display: flex;
@@ -117,11 +125,12 @@
         <table class="glass-table data-grid">
           <thead>
             <tr>
-              <th>DATA</th>
-              <th>ROTA</th>
-              <th>HOTEL</th>
-              <th>FUNCIONÁRIOS</th>
-              <th>VALOR</th>
+              <th class="sortable" data-key="data_checkin">DATA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="numero_rota">ROTA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="hotel_nome">HOTEL <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="funcionarios">FUNCIONÁRIOS <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="qtd_diarias" style="text-align: center;">DIÁRIAS <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="valor_total">VALOR <i class="fas fa-sort"></i></th>
             </tr>
           </thead>
           <tbody id="tableBodyResultados">

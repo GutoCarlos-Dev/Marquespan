@@ -408,7 +408,7 @@ const RelatorioDespesasUI = {
         this.tableBodyResultados.innerHTML = '';
         
         if (!data || data.length === 0) {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
             this.totalQtd.textContent = '0';
             this.totalValor.textContent = 'R$ 0,00';
             return;
@@ -437,6 +437,7 @@ const RelatorioDespesasUI = {
                 <td>${item.numero_rota || '-'}</td>
                 <td>${item.hoteis?.nome || '-'}</td>
                 <td>${funcionariosHtml || '-'}</td>
+                <td style="text-align: center;">${item.qtd_diarias || 1}</td>
                 <td>${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
             `;
             this.tableBodyResultados.appendChild(tr);
