@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 // 📦 Importação do Supabase
 
 // Estado dos arquivos
+let veiculosCache = []; // Cache para busca rápida de modelo
 let arquivosParaUpload = []; // Novos arquivos (File objects)
 let arquivosExistentes = []; // Arquivos já salvos no banco ({nome, path})
 let listaFornecedoresCache = []; // Cache para busca rápida no modal
@@ -52,11 +53,28 @@ function preencherUsuarioLogado() {
 
 // 🔧 Carregamento de dados dinâmicos
 async function carregarPlacas() {
-  const { data, error } = await supabaseClient.from('veiculos').select('placa');
+  const { data, error } = await supabaseClient.from('veiculos').select('placa, modelo');
   const lista = document.getElementById('listaPlacas');
   if (error) return console.error('Erro ao carregar placas:', error);
+  
+  veiculosCache = data || []; // Armazena placas e modelos no cache
+
   lista.innerHTML = '';
   data?.forEach(v => v.placa && lista.appendChild(new Option(v.placa)));
+}
+
+/**
+ * Preenche o campo de modelo do veículo com base na placa selecionada.
+ */
+function preencherModeloVeiculo() {
+    const placaInput = document.getElementById('veiculo');
+    const modeloInput = document.getElementById('modeloVeiculo'); // O novo campo de modelo
+    if (!placaInput || !modeloInput) return;
+
+    const placaSelecionada = placaInput.value;
+    const veiculo = veiculosCache.find(v => v.placa === placaSelecionada);
+
+    modeloInput.value = veiculo ? (veiculo.modelo || '') : '';
 }
 
 async function carregarFiliais() {
@@ -127,6 +145,9 @@ async function carregarManutencaoParaEdicao(id) {
     document.getElementById('tipoManutencao').value = manutencao.tipo || '';
     document.getElementById('data').value = manutencao.data ? manutencao.data.split('T')[0] : '';
     document.getElementById('veiculo').value = manutencao.veiculo;
+    
+    // Preenche o modelo do veículo ao carregar para edição
+    preencherModeloVeiculo();
     document.getElementById('km').value = manutencao.km;
     document.getElementById('motorista').value = manutencao.motorista;
     document.getElementById('fornecedor').value = manutencao.fornecedor;
@@ -166,6 +187,7 @@ async function salvarManutencao() {
     data: document.getElementById('data').value,
     tipo: document.getElementById('tipoManutencao').value,
     veiculo: document.getElementById('veiculo').value,
+    modelo: document.getElementById('modeloVeiculo').value,
     km: parseInt(document.getElementById('km').value.replace(/\D/g, '')) || null,
     motorista: document.getElementById('motorista').value,
     fornecedor: document.getElementById('fornecedor').value,
@@ -287,6 +309,10 @@ function limparFormularioInteligente() {
         }
     });
     
+    // Limpa o campo de modelo se o campo de placa não for fixo
+    const modeloInput = document.getElementById('modeloVeiculo');
+    if (modeloInput && !camposFixos.includes('veiculo')) modeloInput.value = '';
+
     // Recalcula totais caso valores tenham sido limpos
     calcularTotalFiscal();
 }
@@ -637,6 +663,12 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarFiliais();
   carregarTitulosManutencao();
   carregarFornecedores();
+
+  // Listener para preencher o modelo quando a placa muda
+  const veiculoInput = document.getElementById('veiculo');
+  if (veiculoInput) {
+      veiculoInput.addEventListener('input', preencherModeloVeiculo);
+  }
 
   // Listeners para cálculo fiscal
   document.getElementById('valorNfe')?.addEventListener('input', calcularTotalFiscal);
