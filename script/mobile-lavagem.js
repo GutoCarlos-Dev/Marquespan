@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 let currentListId = null;
 let currentItems = [];

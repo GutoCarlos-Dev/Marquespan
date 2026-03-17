@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 let veiculosAptosCache = [];
 let currentListId = null;
@@ -101,6 +102,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtroDetalhesInput').addEventListener('input', filtrarItensDetalhes);
     document.getElementById('btnFinalizarLista').addEventListener('click', finalizarListaAtual);
     document.getElementById('btnExportarPDF').addEventListener('click', gerarPDFLista);
+
+    // --- NOVO: Adicionar botão de exportar para Excel ---
+    const pdfButton = document.getElementById('btnExportarPDF');
+    if (pdfButton && pdfButton.parentElement) {
+        const xlsxButton = document.createElement('button');
+        xlsxButton.id = 'btnExportarXLSX';
+        xlsxButton.className = 'btn-glass btn-green'; // Usando classes existentes para manter o estilo
+        xlsxButton.innerHTML = '<i class="fas fa-file-excel"></i> Exportar XLSX';
+        xlsxButton.title = 'Exportar lista para Excel';
+        xlsxButton.style.marginLeft = '10px'; // Adiciona um espaço
+        pdfButton.parentElement.insertBefore(xlsxButton, pdfButton.nextSibling); // Insere depois do botão de PDF
+        
+        xlsxButton.addEventListener('click', gerarXLSXLista);
+    }
 
     // --- NOVOS LISTENERS PARA SELEÇÃO EM MASSA ---
     document.getElementById('chkAllDetalhes')?.addEventListener('change', toggleAllDetalhes);
@@ -814,6 +829,52 @@ async function gerarPDFLista() {
     const nome = nomeElement ? nomeElement.textContent : 'Lista';
     // Passa a lista de itens atualmente exibida (e ordenada) para o gerador de PDF
     await gerarPDFListaPorId(currentListId, nome, currentListItems);
+}
+
+/**
+ * Gera um arquivo XLSX com os dados da lista atual no modal.
+ */
+async function gerarXLSXLista() {
+    if (typeof XLSX === 'undefined') {
+        return alert('A biblioteca de exportação (XLSX) não foi carregada.');
+    }
+    if (!currentListId || currentListItems.length === 0) {
+        return alert('Não há itens na lista para exportar.');
+    }
+
+    const nomeLista = document.getElementById('tituloDetalhesLista').textContent || 'lista_lavagem';
+    
+    // Mapeia os dados para o formato desejado, respeitando a ordenação atual de `currentListItems`
+    const dadosExportacao = currentListItems.map(item => {
+        let dataRealizado = '-';
+        if (item.data_realizado) {
+            const dateString = item.data_realizado.length === 10 && !item.data_realizado.includes('T')
+                ? `${item.data_realizado}T00:00:00`
+                : item.data_realizado;
+            const dataObj = new Date(dateString);
+            if (!isNaN(dataObj.getTime())) {
+                dataRealizado = dataObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
+        return {
+            'Placa': item.placa,
+            'Tipo Veículo': item.tipo_veiculo || '-',
+            'Marca': item.marca || '-',
+            'Tipo Lavagem': item.tipo_lavagem || '-',
+            'Status': item.status,
+            'Data Realizado': dataRealizado,
+            'Usuário': item.usuario_realizou || '-',
+            'Fornecedor': item.fornecedor || '-'
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lista de Lavagem");
+
+    const fileName = `Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
 }
 
 window.atualizarItem = async function(id, campo, valor) {
