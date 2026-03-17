@@ -201,7 +201,7 @@ async function abrirModalNovaLista() {
             th.onclick = () => ordenarVeiculosNovaLista(key);
         }
     });
-    
+
     modal.classList.remove('hidden');
     nomeInput.value = `Engraxe Semana ${getSemanaAtual()}`;
     dataListaInput.value = new Date().toISOString().split('T')[0];
@@ -338,6 +338,44 @@ function filtrarVeiculosNovaLista() {
 function toggleAllNovaLista(e) {
     const checked = e.target.checked;
     document.querySelectorAll('.chk-veiculo-novalista').forEach(chk => chk.checked = checked);
+}
+
+async function aplicarStatusEmMassaNovaLista() {
+    const status = document.getElementById('selStatusNovaLista').value;
+    const checkboxes = document.querySelectorAll('.chk-veiculo-novalista:checked');
+    const placas = Array.from(checkboxes).map(chk => chk.value);
+
+    if (placas.length === 0) return alert('Selecione pelo menos um veículo para alterar o status.');
+    if (!status) return alert('Selecione um status para aplicar.');
+
+    if (!confirm(`Deseja alterar a situação de ${placas.length} veículos para "${status}"?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('veiculos')
+            .update({ situacao: status })
+            .in('placa', placas);
+
+        if (error) throw error;
+
+        alert('Situação atualizada com sucesso!');
+
+        // Se o status alterado não for 'ativo', remove da lista de seleção (pois ela mostra ativos para criar lista)
+        if (status !== 'ativo') {
+            veiculosCacheNovaLista = veiculosCacheNovaLista.filter(v => !placas.includes(v.placa));
+            filtrarVeiculosNovaLista();
+            document.getElementById('chkAllNovaLista').checked = false;
+            
+            // Atualiza contador
+            const count = document.querySelectorAll('#tbodyNovaListaVeiculos .chk-veiculo-novalista:checked').length;
+            const contadorSpan = document.getElementById('contadorNovaLista');
+            if (contadorSpan) contadorSpan.textContent = `${count} selecionado(s)`;
+        }
+
+    } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        alert('Erro ao atualizar status: ' + error.message);
+    }
 }
 
 async function salvarListaNoStorage(nome, veiculos, dataLista) {
@@ -1057,6 +1095,23 @@ async function abrirControleVencimentos() {
     const modal = document.getElementById('modalVencimentos');
     const tbody = document.getElementById('tbodyVencimentos');
 
+    // Injeta opção "NÃO ENGRAXAR" no select de ações se não existir
+    const selAcoes = document.getElementById('selStatusVencimentos');
+    if (selAcoes) {
+        if (!selAcoes.querySelector('option[value="NAO_ENGRAXAR"]')) {
+            const opt = document.createElement('option');
+            opt.value = 'NAO_ENGRAXAR';
+            opt.textContent = 'NÃO ENGRAXAR';
+            selAcoes.appendChild(opt);
+        }
+        if (!selAcoes.querySelector('option[value="ATIVO"]')) {
+            const opt = document.createElement('option');
+            opt.value = 'ATIVO';
+            opt.textContent = 'ATIVO (Retornar)';
+            selAcoes.appendChild(opt);
+        }
+    }
+
     const modalHeader = modal.querySelector('.modal-header h3');
     if (modalHeader && !document.getElementById('contadorVencimentos')) {
         const contadorSpan = document.createElement('span');
@@ -1099,8 +1154,8 @@ async function abrirControleVencimentos() {
         // 1. Buscar Veículos Ativos com Filial
         const { data: veiculos, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, modelo, marca, filial, tipo')
-            .eq('situacao', 'ativo')
+            .select('id, placa, modelo, marca, filial, tipo, situacao')
+            .in('situacao', ['ativo', 'NAO_ENGRAXAR'])
             .order('placa');
 
         if (error) throw error;
@@ -1134,7 +1189,9 @@ async function abrirControleVencimentos() {
             let status = 'PENDENTE'; // Default se nunca fez
             let diasRestantes = -999;
 
-            if (ultimaData) {
+            if (v.situacao === 'NAO_ENGRAXAR') {
+                status = 'NAO_ENGRAXAR';
+            } else if (ultimaData) {
                 const [uy, um, ud] = ultimaData.split('T')[0].split('-').map(Number);
                 const ultUTC = new Date(Date.UTC(uy, um - 1, ud));
 
@@ -1214,6 +1271,7 @@ function renderizarTabelaVencimentos(dados) {
         let statusColor = '#6c757d'; // Cinza (Pendente)
         if (item.status === 'VENCIDO') statusColor = '#dc3545'; // Vermelho
         if (item.status === 'EM_DIA') statusColor = '#28a745'; // Verde
+        if (item.status === 'NAO_ENGRAXAR') statusColor = '#17a2b8'; // Ciano
 
         const dataRealizacaoFmt = item.ultimaData ? new Date(item.ultimaData).toLocaleDateString('pt-BR') : '-';
         const proximoFmt = item.proximaData ? new Date(item.proximaData).toLocaleDateString('pt-BR') : '-';
@@ -1352,8 +1410,11 @@ async function aplicarStatusEmMassa() {
 
             alert('Veículos marcados como REALIZADO com sucesso!');
 
-        } else if (status === 'INTERNADO' || status === 'ATIVO') {
-            const novaSituacao = status === 'ATIVO' ? 'ativo' : 'INTERNADO';
+        } else if (status === 'INTERNADO' || status === 'ATIVO' || status === 'NAO_ENGRAXAR') {
+            let novaSituacao = 'INTERNADO';
+            if (status === 'ATIVO') novaSituacao = 'ativo';
+            else if (status === 'NAO_ENGRAXAR') novaSituacao = 'NAO_ENGRAXAR';
+            
             const placas = selecionados.map(v => v.placa);
 
             const { error } = await supabaseClient
