@@ -367,47 +367,17 @@ const RelatorioDespesasUI = {
     async carregarDados() {
         try {
             this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+            
+            // Captura filtros selecionados antes do loop
+            const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
+            const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
+            const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
+
             let baseQuery = supabaseClient
                 .from('despesas')
                 .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                 .gte('data_checkin', this.dataInicio.value)
                 .lte('data_checkin', this.dataFim.value);
-
-            // Filtro de Múltiplas Rotas
-            const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
-            if (rotasSelecionadas.length > 0) {
-                // Cria uma condição OR para buscar se a rota está presente no campo numero_rota
-                // Ex: numero_rota.ilike.%101%,numero_rota.ilike.%102%
-                const orCondition = rotasSelecionadas.map(r => `numero_rota.ilike.%${r}%`).join(',');
-                baseQuery = baseQuery.or(orCondition);
-            }
-
-            // Filtro de Supervisor (Converte Supervisor -> Rotas -> Filtro)
-            const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
-            if (supervisoresSelecionados.length > 0) {
-                // Encontra todas as rotas que pertencem aos supervisores selecionados
-                const rotasDosSupervisores = this.rotasCache
-                    .filter(r => supervisoresSelecionados.includes(r.supervisor))
-                    .map(r => r.numero);
-                
-                if (rotasDosSupervisores.length > 0) {
-                    // Adiciona condição OR para estas rotas
-                    // Nota: Se já existir filtro de rota, o Supabase pode conflitar com múltiplos .or().
-                    // O ideal seria combinar os filtros, mas aqui vamos assumir que o usuário usa um ou outro, ou o Supabase aplicará como AND entre os grupos de filtros se possível.
-                    // Como .or() substitui ou adiciona complexidade, uma abordagem segura é filtrar em memória se o filtro de rota já estiver aplicado, mas vamos tentar aplicar no banco.
-                    const orSupervisor = rotasDosSupervisores.map(r => `numero_rota.ilike.%${r}%`).join(',');
-                    baseQuery = baseQuery.or(orSupervisor); 
-                } else {
-                    // Supervisor selecionado não tem rotas, então não deve retornar nada
-                    baseQuery = baseQuery.eq('id', -1); // Força retorno vazio
-                }
-            }
-            
-            // Filtro de Múltiplos Hotéis
-            const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
-            if (hoteisSelecionados.length > 0) {
-                baseQuery = baseQuery.in('id_hotel', hoteisSelecionados);
-            }
 
             // Lógica de paginação para buscar todos os registros sem o limite de 1000
             let allData = [];
@@ -416,7 +386,35 @@ const RelatorioDespesasUI = {
             let keepFetching = true;
 
             while (keepFetching) {
-                const { data, error } = await baseQuery.range(from, from + step - 1);
+                // Cria uma nova instância da query para cada página para evitar conflitos de range
+                let query = baseQuery.range(from, from + step - 1);
+
+                // Filtro de Múltiplas Rotas
+                if (rotasSelecionadas.length > 0) {
+                    const orCondition = rotasSelecionadas.map(r => `numero_rota.ilike.%${r}%`).join(',');
+                    query = query.or(orCondition);
+                }
+
+                // Filtro de Supervisor (Server-side optimization)
+                if (supervisoresSelecionados.length > 0) {
+                    const rotasDosSupervisores = this.rotasCache
+                        .filter(r => supervisoresSelecionados.includes(r.supervisor))
+                        .map(r => r.numero);
+                    
+                    if (rotasDosSupervisores.length > 0) {
+                        const orSupervisor = rotasDosSupervisores.map(r => `numero_rota.ilike.%${r}%`).join(',');
+                        query = query.or(orSupervisor); 
+                    } else {
+                        query = query.eq('id', -1);
+                    }
+                }
+                
+                // Filtro de Hotéis
+                if (hoteisSelecionados.length > 0) {
+                    query = query.in('id_hotel', hoteisSelecionados);
+                }
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -450,6 +448,23 @@ const RelatorioDespesasUI = {
                 }
                 return item;
             });
+
+            // Refinamento de Filtro no Cliente (Para garantir precisão)
+            if (supervisoresSelecionados.length > 0) {
+                allData = allData.filter(item => {
+                    if (item.supervisor === '-' || !item.supervisor) return false;
+                    const itemSupers = item.supervisor.split(', ');
+                    return itemSupers.some(s => supervisoresSelecionados.includes(s));
+                });
+            }
+
+            // Refinamento de Filtro de Rota (opcional, para evitar falsos positivos do ilike)
+            if (rotasSelecionadas.length > 0) {
+                allData = allData.filter(item => {
+                    const itemRotas = String(item.numero_rota || '').split(',').map(r => r.trim());
+                    return itemRotas.some(r => rotasSelecionadas.includes(r));
+                });
+            }
 
             this.filteredData = allData;
 
