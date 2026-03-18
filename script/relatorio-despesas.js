@@ -5,9 +5,11 @@ const RelatorioDespesasUI = {
         this.cacheDOM();
         this.bindEvents();
         this.setDefaultDates();
-        this.carregarRotas();
-        this.carregarHoteis();
-        this.carregarDados();
+        // Garante que rotas sejam carregadas antes dos dados para mapear o supervisor
+        this.carregarRotas().then(() => {
+            this.carregarHoteis();
+            this.carregarDados();
+        });
         this.filteredData = []; // Armazena dados filtrados para exportação
         this.chartHoteis = null;
         this.chartRotas = null;
@@ -15,6 +17,8 @@ const RelatorioDespesasUI = {
         this.chartTopHoteis = null;
         this.chartEvolucaoDiaria = null;
         this.chartTopFuncionarios = null;
+        this.rotasCache = []; // Cache para buscar supervisores
+        this.currentSort = { column: 'data_checkin', direction: 'desc' }; // Estado de ordenação
         
         this.iniciarRolagemAutomatica();
     },
@@ -29,6 +33,13 @@ const RelatorioDespesasUI = {
         this.filtroHotelDisplay = document.getElementById('filtroHotelDisplay');
         this.filtroHotelOptions = document.getElementById('filtroHotelOptions');
         this.filtroHotelText = document.getElementById('filtroHotelText');
+        
+        // Injeta o HTML do filtro de supervisor se não existir
+        this.injectSupervisorFilterHTML();
+        this.filtroSupervisorDisplay = document.getElementById('filtroSupervisorDisplay');
+        this.filtroSupervisorOptions = document.getElementById('filtroSupervisorOptions');
+        this.filtroSupervisorText = document.getElementById('filtroSupervisorText');
+
         this.kpiCustoTotal = document.getElementById('kpiCustoTotal');
         this.kpiTotalDiarias = document.getElementById('kpiTotalDiarias');
         this.chartHoteisCanvas = document.getElementById('chartHoteis');
@@ -43,6 +54,31 @@ const RelatorioDespesasUI = {
         this.totalQtd = document.getElementById('totalQtd');
         this.totalValor = document.getElementById('totalValor');
         this.tableBodyResultados = document.getElementById('tableBodyResultados');
+    },
+
+    injectSupervisorFilterHTML() {
+        if (document.getElementById('filtroSupervisorDisplay')) return;
+
+        const rotaDisplay = this.filtroRotaDisplay || document.getElementById('filtroRotaDisplay');
+        if (!rotaDisplay) return;
+
+        // Encontra o grupo de formulário (.form-group) da Rota e seu container pai
+        const rotaGroup = rotaDisplay.closest('.form-group');
+        const container = rotaGroup?.parentElement;
+
+        if (!container) return;
+
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `
+            <label>Supervisor</label>
+            <div class="custom-multiselect" style="position: relative;">
+                <div id="filtroSupervisorDisplay" class="glass-input multiselect-display"><span id="filtroSupervisorText">Todos</span> <i class="fas fa-chevron-down"></i></div>
+                <div id="filtroSupervisorOptions" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto;"></div>
+            </div>
+        `;
+        // Insere o filtro de Supervisor logo APÓS o filtro de Rota, mantendo o alinhamento
+        container.insertBefore(div, rotaGroup.nextSibling); 
     },
 
     bindEvents() {
@@ -88,6 +124,23 @@ const RelatorioDespesasUI = {
                 this.atualizarTextoHotel();
             });
         }
+
+        // Eventos do Multiselect de Supervisor
+        if (this.filtroSupervisorDisplay) {
+            this.filtroSupervisorDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroSupervisorOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!this.filtroSupervisorDisplay.contains(e.target) && !this.filtroSupervisorOptions.contains(e.target)) {
+                    this.filtroSupervisorOptions.classList.add('hidden');
+                }
+            });
+            this.filtroSupervisorOptions.addEventListener('change', () => {
+                this.atualizarTextoSupervisor();
+            });
+        }
     },
 
     setDefaultDates() {
@@ -103,12 +156,16 @@ const RelatorioDespesasUI = {
         try {
             const { data: rotas, error } = await supabaseClient
                 .from('rotas')
-                .select('numero')
+                .select('numero, supervisor')
                 .order('numero', { ascending: true });
 
             if (error) throw error;
 
             this.filtroRotaOptions.innerHTML = '';
+            
+            // Prepara lista de Supervisores
+            const supervisores = [...new Set(rotas.map(r => r.supervisor).filter(Boolean))].sort();
+            this.popularFiltroSupervisor(supervisores);
             
             // Container Sticky para busca e limpar
             const stickyContainer = document.createElement('div');
@@ -153,6 +210,7 @@ const RelatorioDespesasUI = {
                     label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}" style="margin-right: 8px;"> ${r.numero}`;
                     this.filtroRotaOptions.appendChild(label);
                 });
+                this.rotasCache = rotas; // Salva para lookup de supervisor
             }
         } catch (err) {
             console.error('Erro ao carregar rotas:', err);
@@ -219,6 +277,54 @@ const RelatorioDespesasUI = {
         }
     },
 
+    popularFiltroSupervisor(supervisores) {
+        if (!this.filtroSupervisorOptions) return;
+        this.filtroSupervisorOptions.innerHTML = '';
+        
+        // Container Sticky para busca e limpar
+        const stickyContainer = document.createElement('div');
+        stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+        // Input de Busca
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Buscar supervisor...';
+        searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+        searchInput.onclick = (e) => e.stopPropagation();
+        searchInput.addEventListener('input', (e) => {
+             const term = e.target.value.toLowerCase();
+             const options = this.filtroSupervisorOptions.querySelectorAll('label.custom-option');
+             options.forEach(opt => {
+                 const text = opt.textContent.toLowerCase();
+                 opt.style.display = text.includes(term) ? 'block' : 'none';
+             });
+        });
+        stickyContainer.appendChild(searchInput);
+
+        // Botão Limpar
+        const btnLimpar = document.createElement('div');
+        btnLimpar.className = 'custom-option';
+        btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer; border-bottom: 1px solid #eee; padding: 10px;';
+        btnLimpar.textContent = 'Limpar Seleção';
+        btnLimpar.onclick = (e) => {
+            e.stopPropagation();
+            this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+            this.atualizarTextoSupervisor();
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        };
+        stickyContainer.appendChild(btnLimpar);
+
+        this.filtroSupervisorOptions.appendChild(stickyContainer);
+
+        supervisores.forEach(sup => {
+            const label = document.createElement('label');
+            label.className = 'custom-option';
+            label.innerHTML = `<input type="checkbox" class="supervisor-checkbox" value="${sup}" style="margin-right: 8px;"> ${sup}`;
+            this.filtroSupervisorOptions.appendChild(label);
+        });
+    },
+
     atualizarTextoRota() {
         const checkboxes = this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked');
         const selecionados = Array.from(checkboxes).map(cb => cb.value);
@@ -245,6 +351,19 @@ const RelatorioDespesasUI = {
         }
     },
 
+    atualizarTextoSupervisor() {
+        const checkboxes = this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked');
+        const selecionados = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (selecionados.length === 0) {
+            this.filtroSupervisorText.textContent = 'Todos';
+        } else if (selecionados.length <= 2) {
+            this.filtroSupervisorText.textContent = selecionados.join(', ');
+        } else {
+            this.filtroSupervisorText.textContent = `${selecionados.length} selecionados`;
+        }
+    },
+
     async carregarDados() {
         try {
             this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
@@ -262,6 +381,27 @@ const RelatorioDespesasUI = {
                 const orCondition = rotasSelecionadas.map(r => `numero_rota.ilike.%${r}%`).join(',');
                 baseQuery = baseQuery.or(orCondition);
             }
+
+            // Filtro de Supervisor (Converte Supervisor -> Rotas -> Filtro)
+            const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
+            if (supervisoresSelecionados.length > 0) {
+                // Encontra todas as rotas que pertencem aos supervisores selecionados
+                const rotasDosSupervisores = this.rotasCache
+                    .filter(r => supervisoresSelecionados.includes(r.supervisor))
+                    .map(r => r.numero);
+                
+                if (rotasDosSupervisores.length > 0) {
+                    // Adiciona condição OR para estas rotas
+                    // Nota: Se já existir filtro de rota, o Supabase pode conflitar com múltiplos .or().
+                    // O ideal seria combinar os filtros, mas aqui vamos assumir que o usuário usa um ou outro, ou o Supabase aplicará como AND entre os grupos de filtros se possível.
+                    // Como .or() substitui ou adiciona complexidade, uma abordagem segura é filtrar em memória se o filtro de rota já estiver aplicado, mas vamos tentar aplicar no banco.
+                    const orSupervisor = rotasDosSupervisores.map(r => `numero_rota.ilike.%${r}%`).join(',');
+                    baseQuery = baseQuery.or(orSupervisor); 
+                } else {
+                    // Supervisor selecionado não tem rotas, então não deve retornar nada
+                    baseQuery = baseQuery.eq('id', -1); // Força retorno vazio
+                }
+            }
             
             // Filtro de Múltiplos Hotéis
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
@@ -270,7 +410,7 @@ const RelatorioDespesasUI = {
             }
 
             // Lógica de paginação para buscar todos os registros sem o limite de 1000
-            const allData = [];
+            let allData = [];
             let from = 0;
             const step = 1000;
             let keepFetching = true;
@@ -291,6 +431,25 @@ const RelatorioDespesasUI = {
                     keepFetching = false; // Não há mais dados
                 }
             }
+
+            // Enriquecer dados com Supervisor
+            allData = allData.map(item => {
+                if (item.numero_rota) {
+                    // Suporta múltiplas rotas separadas por vírgula e remove espaços
+                    const rotasArr = String(item.numero_rota).split(',').map(s => s.trim());
+                    const supervisores = rotasArr.map(rNum => {
+                        // Compara como string para garantir que ache '101' e 101
+                        const r = this.rotasCache.find(rc => String(rc.numero) === rNum);
+                        return r ? r.supervisor : null;
+                    }).filter(Boolean); // Remove nulos
+                    
+                    const uniqueSupervisors = [...new Set(supervisores)];
+                    item.supervisor = uniqueSupervisors.length > 0 ? uniqueSupervisors.join(', ') : '-';
+                } else {
+                    item.supervisor = '-';
+                }
+                return item;
+            });
 
             this.filteredData = allData;
 
@@ -404,15 +563,85 @@ const RelatorioDespesasUI = {
         });
     },
 
+    handleSort(column) {
+        if (this.currentSort.column === column) {
+            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentSort.column = column;
+            this.currentSort.direction = 'asc';
+        }
+        this.renderizarTabela(this.filteredData);
+    },
+
+    updateTableHeaders() {
+        const table = this.tableBodyResultados.closest('table');
+        if (!table) return;
+        
+        let thead = table.querySelector('thead');
+        if (!thead) {
+            thead = document.createElement('thead');
+            table.prepend(thead);
+        }
+
+        thead.innerHTML = `
+            <tr>
+                <th data-sort="data_checkin" style="cursor:pointer">DATA <i class="fas fa-sort"></i></th>
+                <th data-sort="numero_rota" style="cursor:pointer">ROTA <i class="fas fa-sort"></i></th>
+                <th data-sort="supervisor" style="cursor:pointer">SUPERVISOR <i class="fas fa-sort"></i></th>
+                <th data-sort="hotel" style="cursor:pointer">HOTEL <i class="fas fa-sort"></i></th>
+                <th data-sort="funcionarios" style="cursor:pointer">FUNCIONÁRIOS <i class="fas fa-sort"></i></th>
+                <th data-sort="qtd_diarias" style="text-align: center; cursor:pointer">DIÁRIAS <i class="fas fa-sort"></i></th>
+                <th data-sort="valor_total" style="cursor:pointer">VALOR <i class="fas fa-sort"></i></th>
+            </tr>
+        `;
+
+        // Re-attach listeners
+        thead.querySelectorAll('th[data-sort]').forEach(th => {
+            const icon = th.querySelector('i');
+            if (th.dataset.sort === this.currentSort.column) {
+                icon.className = this.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            } else {
+                icon.className = 'fas fa-sort';
+            }
+            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
+    },
+
     renderizarTabela(data) {
+        this.updateTableHeaders();
         this.tableBodyResultados.innerHTML = '';
         
         if (!data || data.length === 0) {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
             this.totalQtd.textContent = '0';
             this.totalValor.textContent = 'R$ 0,00';
             return;
         }
+
+        // Ordenação
+        data.sort((a, b) => {
+            let valA = a[this.currentSort.column];
+            let valB = b[this.currentSort.column];
+
+            if (this.currentSort.column === 'data_checkin') {
+                valA = new Date(valA);
+                valB = new Date(valB);
+            } else if (this.currentSort.column === 'hotel') {
+                valA = a.hoteis?.nome || '';
+                valB = b.hoteis?.nome || '';
+            } else if (this.currentSort.column === 'funcionarios') {
+                valA = a.funcionario1?.nome_completo || '';
+                valB = b.funcionario1?.nome_completo || '';
+            } else {
+                // Trata nulls/undefined como string vazia ou 0
+                valA = valA || '';
+                valB = valB || '';
+            }
+
+            if (valA < valB) return this.currentSort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return this.currentSort.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
 
         let totalValor = 0;
 
@@ -435,6 +664,7 @@ const RelatorioDespesasUI = {
             tr.innerHTML = `
                 <td>${dataCheckin}</td>
                 <td>${item.numero_rota || '-'}</td>
+                <td>${item.supervisor || '-'}</td>
                 <td>${item.hoteis?.nome || '-'}</td>
                 <td>${funcionariosHtml || '-'}</td>
                 <td style="text-align: center;">${item.qtd_diarias || 1}</td>
