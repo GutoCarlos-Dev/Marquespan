@@ -730,6 +730,12 @@ function renderizarItensDetalhes(itens) {
 
     const isFinalizada = currentListStatus === 'FINALIZADA';
 
+    // Conta ocorrências de cada placa para identificar duplicidade na lista
+    const contagemPlacas = itens.reduce((acc, item) => {
+        acc[item.placa] = (acc[item.placa] || 0) + 1;
+        return acc;
+    }, {});
+
     itens.forEach(item => {
         if (item.status === 'REALIZADO') realizados++;
         else if (item.status === 'AGENDADO') agendados++;
@@ -788,9 +794,13 @@ function renderizarItensDetalhes(itens) {
             badgeClass = 'badge-internado';
         }
 
+        // Verifica se a placa está duplicada e aplica estilo vermelho negrito
+        const isDuplicada = contagemPlacas[item.placa] > 1;
+        const stylePlaca = isDuplicada ? 'color: red; font-weight: bold;' : '';
+
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}" ${isFinalizada ? 'disabled' : ''}></td>
-            <td><strong>${item.placa}</strong></td>
+            <td><strong style="${stylePlaca}">${item.placa}</strong></td>
             <td>${item.tipo_veiculo || '-'}</td>
             <td>${item.marca || '-'}</td>
             <td>
@@ -1073,6 +1083,12 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             itens = fetchedItens;
         }
 
+        // Conta ocorrências de cada placa para destacar duplicatas no PDF
+        const contagemPlacas = itens.reduce((acc, item) => {
+            acc[item.placa] = (acc[item.placa] || 0) + 1;
+            return acc;
+        }, {});
+
         // O `tipo_veiculo` já vem nos `itensFromModal`. Se não vier, busca no banco.
         const placas = [...new Set(itens.map(i => i.placa))];
         let veiculoMap = new Map();
@@ -1211,6 +1227,15 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
             alternateRowStyles: { fillColor: [240, 240, 240] },
             margin: { left: 10, right: 10 },
             didParseCell: function(data) {
+                // Lógica para destacar placas duplicadas
+                if (data.section === 'body' && data.column.index === 0) { // Coluna 'Placa'
+                    const placa = data.cell.raw;
+                    if (contagemPlacas[placa] > 1) {
+                        data.cell.styles.textColor = [255, 0, 0]; // Vermelho
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+
                 if (data.section === 'body' && data.column.index === 4) { // Coluna 'Status'
                     const status = data.cell.raw;
                     let textColor;
@@ -1370,7 +1395,18 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         doc.setTextColor(0, 105, 55);
         doc.text(`Valor Total Geral: R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 14, finalY);
 
-        finalY += 30;
+        finalY += 15; // Espaço antes da observação
+
+        // Adiciona a observação sobre placas duplicadas, se houver alguma
+        const temDuplicadas = Object.values(contagemPlacas).some(count => count > 1);
+        if (temDuplicadas) {
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'italic');
+            doc.setTextColor(255, 0, 0); // Vermelho
+            doc.text('* Placas destacadas em Vermelho foram Lavadas em dias diferentes na mesma semana.', 14, finalY);
+        }
+
+        finalY += 15; // Espaço antes da assinatura
         if (finalY > 270) {
             doc.addPage();
             finalY = 40;
@@ -1382,7 +1418,10 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         doc.setTextColor(0);
         doc.setFont(undefined, 'normal');
         doc.text('DATA: _____/_____/________', 14, finalY);
-        doc.text('Assinatura do Responsável', 110, finalY + 5);
+        doc.text('Assinatura do Responsável Marquespan', 110, finalY + 5);
+        doc.line(110, finalY + 25, 196, finalY + 25);
+        doc.text('Assinatura Prestador de Serviço', 110, finalY + 30);
+        
 
         doc.save(`Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
@@ -1970,11 +2009,8 @@ async function abrirModalAdicionarVeiculo() {
             veiculosAptosCache = data;
         }
 
-        // Pega as placas que já estão na lista atual
-        const placasNaLista = new Set(currentListItems.map(item => item.placa));
-
-        // Filtra os veículos que não estão na lista
-        veiculosDisponiveisParaAdicao = veiculosAptosCache.filter(v => !placasNaLista.has(v.placa));
+        // Carrega todos os veículos, permitindo adicionar mesmo que já esteja na lista (duplicidade)
+        veiculosDisponiveisParaAdicao = [...veiculosAptosCache];
 
         // Limpa busca
         const searchInput = document.getElementById('searchAdicionarVeiculo');
