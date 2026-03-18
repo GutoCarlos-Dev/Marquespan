@@ -1291,6 +1291,64 @@ const ColetarManutencaoUI = {
         }
     },
 
+    // Exibe modal de conflito customizado com 3 opções
+    async showConflictModal(placa) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6); display: flex; justify-content: center;
+                align-items: center; z-index: 10000; font-family: Arial, sans-serif;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 25px; border-radius: 8px; width: 400px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center;
+            `;
+            
+            const icon = document.createElement('div');
+            icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+            icon.style.cssText = 'font-size: 40px; color: #ffc107; margin-bottom: 15px;';
+
+            const title = document.createElement('h3');
+            title.textContent = 'Veículo já possui lançamento';
+            title.style.color = '#333';
+            title.style.margin = '0 0 10px 0';
+            
+            const msg = document.createElement('p');
+            msg.innerHTML = `A placa <strong>${placa}</strong> já consta na lista de lançamentos desta semana.<br>O que deseja fazer?`;
+            msg.style.color = '#666';
+            msg.style.marginBottom = '20px';
+            
+            const btnGroup = document.createElement('div');
+            btnGroup.style.display = 'flex';
+            btnGroup.style.flexDirection = 'column';
+            btnGroup.style.gap = '10px';
+            
+            const createBtn = (text, color, choice) => {
+                const btn = document.createElement('button');
+                btn.textContent = text;
+                btn.style.cssText = `padding: 12px; background: ${color}; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: opacity 0.2s;`;
+                btn.onmouseover = () => btn.style.opacity = '0.9';
+                btn.onmouseout = () => btn.style.opacity = '1';
+                btn.onclick = () => { document.body.removeChild(modal); resolve(choice); };
+                return btn;
+            };
+
+            btnGroup.appendChild(createBtn('1. Sim, incluir no existente', '#007bff', 'MERGE'));
+            btnGroup.appendChild(createBtn('2. Não, incluir novo lançamento', '#28a745', 'NEW'));
+            btnGroup.appendChild(createBtn('3. Cancelar', '#dc3545', 'CANCEL'));
+            
+            content.appendChild(icon);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(btnGroup);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        });
+    },
+
     // Registra uma nova coleta ou atualiza uma existente
     async registrarColeta(e) {
         e.preventDefault();
@@ -1440,12 +1498,38 @@ const ColetarManutencaoUI = {
 
                 if (existingHeaders && existingHeaders.length > 0) {
                     latestHeader = existingHeaders[0];
-                    // Se já existe um lançamento para esta placa na mesma semana, pergunta se deseja atualizar.
-                    // Isso cobre tanto o caso de um lançamento PENDENTE quanto um FINALIZADO.
-                    if (confirm(`ATENÇÃO: A placa ${placa} já consta na lista de lançamentos abaixo. Deseja incluir as informações e atualizar?`)) {
-                        shouldMerge = true;
+                    
+                    let conflictWithFinalized = false;
+
+                    // Verifica se algum dos itens que estão sendo salvos já existe como FINALIZADO nesta semana
+                    for (const formItem of itemsToProcess) {
+                        const itemConflict = existingHeaders.some(header => 
+                            header.coletas_manutencao_checklist && 
+                            header.coletas_manutencao_checklist.some(existingItem => 
+                                existingItem.item === formItem.item && 
+                                ['FINALIZADO', 'FINALIZADO ROTA', 'OK'].includes(existingItem.status)
+                            )
+                        );
+                        
+                        if (itemConflict) {
+                            conflictWithFinalized = true;
+                            break;
+                        }
+                    }
+
+                    if (conflictWithFinalized) {
+                        shouldMerge = false; // Força novo lançamento pois o item específico já foi finalizado anteriormente
                     } else {
-                        return; // Usuário cancelou a operação
+                        // Pergunta ao usuário o que fazer (Merge, Novo ou Cancelar)
+                        const userChoice = await this.showConflictModal(placa);
+                        
+                        if (userChoice === 'CANCEL') {
+                            return; // Usuário cancelou a operação
+                        } else if (userChoice === 'MERGE') {
+                            shouldMerge = true;
+                        } else if (userChoice === 'NEW') {
+                            shouldMerge = false;
+                        }
                     }
                 }
 
