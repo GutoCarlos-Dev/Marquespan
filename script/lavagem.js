@@ -220,8 +220,10 @@ function injectFornecedorFields() {
     if (tblPrecosHead && !tblPrecosHead.innerHTML.includes('Fornecedor')) {
         const th = document.createElement('th');
         th.textContent = 'Fornecedor';
+        th.innerHTML = 'Fornecedor <i class="fas fa-sort"></i>';
         th.className = 'sortable-preco';
         th.dataset.sort = 'fornecedor';
+        th.addEventListener('click', () => ordenarPrecos('fornecedor'));
         tblPrecosHead.insertBefore(th, tblPrecosHead.children[0]); // Insere no início
     }
 
@@ -1821,8 +1823,8 @@ function ordenarPrecos(key) {
     if (activeTh) activeTh.className = sortStatePrecos.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
     precosCache.sort((a, b) => {
-        let valA = a[key];
-        let valB = b[key];
+        let valA = a[key] || '';
+        let valB = b[key] || '';
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
         if (valA < valB) return sortStatePrecos.asc ? -1 : 1;
