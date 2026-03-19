@@ -1,156 +1,112 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatório de Abastecimento - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/relatorio-abastecimento.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="icon" href="logo.png" type="image/png">
-  
-  <!-- Bibliotecas para Exportação -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <style>
-    /* Estilo para o switch toggle */
-    .form-switch-container {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding-top: 1.2em; /* Alinha com os outros campos que têm label em cima */
-    }
-    .form-switch {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-    }
-    .form-switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #ccc;
-      transition: .4s;
-      border-radius: 24px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 16px; width: 16px;
-      left: 4px; bottom: 4px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    input:checked + .slider { background-color: #28a745; }
-    input:checked + .slider:before { transform: translateX(26px); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Abastecimento - Marquespan</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/relatorio-abastecimento.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
-  <div class="container">
-    <!-- O menu será injetado aqui pelo menu.js -->
-    
-    <div class="main-content">
-      <header class="header"><i class="fas fa-chart-bar"></i> Relatório de Abastecimentos</header>
+    <div id="menu-container"></div>
 
-      <section class="section">
-        <!-- Card de Filtros -->
-        <div class="card">
-          <div class="card-header">
-            <h2><i class="fas fa-filter"></i> Filtros de Busca</h2>
-          </div>
-          <form id="formFiltroAbastecimento">
-            <div class="filter-grid">
-              <div class="form-group">
-                <label for="dataInicial">Data Inicial</label>
-                <input type="date" id="dataInicial" class="form-control" required />
-              </div>
-              <div class="form-group">
-                <label for="dataFinal">Data Final</label>
-                <input type="date" id="dataFinal" class="form-control" required />
-              </div>
-              <div class="form-group">
-                <label for="filtroTanque">Tanque</label>
-                <select id="filtroTanque" class="form-control">
-                  <option value="">Todos os Tanques</option>
-                  <!-- Preenchido via JS -->
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="filtroTipoMovimentacao">Tipo de Movimentação</label>
-                <select id="filtroTipoMovimentacao" class="form-control">
-                  <option value="">Todos</option>
-                  <option value="ENTRADA">Entrada</option>
-                  <option value="SAIDA">Saída</option>
-                  <option value="AJUSTE">Ajuste de Estoque</option>
-                </select>
-              </div>
-              <div class="form-group form-switch-container">
-                <label for="incluirAjusteEstoque" style="cursor: pointer; white-space: nowrap;">Incluir Ajustes</label>
-                <label class="form-switch">
-                  <input type="checkbox" id="incluirAjusteEstoque" checked>
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="form-group filter-actions">
-                <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Buscar</button>
-                <button type="button" id="btnLimparFiltros" class="btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
-              </div>
+    <main class="main-content">
+        <header class="glass-header">
+            <h1><i class="fas fa-gas-pump"></i> Relatório de Movimentação de Combustível</h1>
+        </header>
+
+        <!-- Filtros -->
+        <section class="glass-panel">
+            <form id="formFiltroAbastecimento">
+                <div class="filtros-grid">
+                    <div class="form-group">
+                        <label for="dataInicial">Data Inicial</label>
+                        <input type="date" id="dataInicial" class="glass-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataFinal">Data Final</label>
+                        <input type="date" id="dataFinal" class="glass-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroTanque">Tanque</label>
+                        <select id="filtroTanque" class="glass-input">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroTipoMovimentacao">Tipo</label>
+                        <select id="filtroTipoMovimentacao" class="glass-input">
+                            <option value="">Todos</option>
+                            <option value="ENTRADA">Entrada</option>
+                            <option value="SAIDA">Saída</option>
+                            <option value="AJUSTE">Ajuste</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="incluirAjusteEstoque" checked>
+                        <label for="incluirAjusteEstoque" style="margin:0; cursor:pointer;">Incluir Ajustes</label>
+                    </div>
+                    <div class="form-group" style="flex-direction: row; gap: 10px;">
+                        <button type="submit" class="btn-glass btn-primary"><i class="fas fa-search"></i> Buscar</button>
+                        <button type="button" id="btnLimparFiltros" class="btn-glass btn-secondary"><i class="fas fa-eraser"></i> Limpar</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Resultados -->
+        <section id="cardResultados" class="glass-panel hidden">
+            <div class="resumo-container">
+                <div class="kpi-card">
+                    <h3>Total Litros</h3>
+                    <div id="totalLitros" class="valor">0,00 L</div>
+                </div>
+                <div class="kpi-card" style="border-left-color: #28a745;">
+                    <h3>Valor Movimentado</h3>
+                    <div id="totalValor" class="valor">R$ 0,00</div>
+                </div>
             </div>
-          </form>
-        </div>
 
-        <!-- Card de Resultados -->
-        <div class="card hidden" id="cardResultados">
-          <div class="card-header-actions">
-            <h3>Resultados da Busca</h3>
-            <div class="export-buttons">
-              <button type="button" id="btnExportarXLS" class="btn-success"><i class="fas fa-file-excel"></i> Excel</button>
-              <button type="button" id="btnExportarPDF" class="btn-danger"><i class="fas fa-file-pdf"></i> PDF</button>
+            <div class="acoes-exportacao">
+                <button id="btnExportarXLS" class="btn-glass btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                <button id="btnExportarPDF" class="btn-glass btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
             </div>
-          </div>
 
-          <div class="table-responsive">
-            <table class="data-grid" id="tabelaRelatorio">
-              <thead>
-                <tr>
-                  <th>Data/Hora</th>
-                  <th>Usuário</th>
-                  <th>Placa</th>
-                  <th>Rota</th>
-                  <th>KM Atual</th>
-                  <th>Nº Nota</th>
-                  <th>Tanque</th>
-                  <th>Combustível</th>
-                  <th>Litros</th>
-                  <th>Vlr. Litro</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody id="tableBodyRelatorio">
-                <!-- Preenchido via JS -->
-              </tbody>
-              <tfoot>
-                <tr class="total-row" style="background-color: #f8f9fa; font-weight: bold;">
-                  <td colspan="8" style="text-align: right;">TOTAIS:</td>
-                  <td id="totalLitros">0,00 L</td>
-                  <td>-</td>
-                  <td id="totalValor">R$ 0,00</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-  <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/relatorio-abastecimento.js"></script>
-  <footer class="footer">
-    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
-  </footer>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-sort="data_hora">Data/Hora <i class="fas fa-sort"></i></th>
+                            <th data-sort="usuario">Usuário <i class="fas fa-sort"></i></th>
+                            <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>
+                            <th data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+                            <th data-sort="km_atual">KM <i class="fas fa-sort"></i></th>
+                            <th data-sort="numero_nota">Nº Nota <i class="fas fa-sort"></i></th>
+                            <th data-sort="tanque">Tanque <i class="fas fa-sort"></i></th>
+                            <th data-sort="combustivel">Combustível <i class="fas fa-sort"></i></th>
+                            <th data-sort="litros" style="text-align: right;">Litros <i class="fas fa-sort"></i></th>
+                            <th data-sort="valor_litro" style="text-align: right;">Vlr. Unit <i class="fas fa-sort"></i></th>
+                            <th data-sort="valor_total" style="text-align: right;">Total <i class="fas fa-sort"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyRelatorio">
+                        <!-- Dados aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+    </footer>
+
+    <script type="module" src="script/menu.js"></script>
+    <script type="module" src="script/relatorio-abastecimento.js"></script>
 </body>
 </html>

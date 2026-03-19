@@ -3,6 +3,10 @@ import { supabaseClient } from './supabase.js';
 document.addEventListener('DOMContentLoaded', () => {
     const RelatorioUI = {
         dadosRelatorio: [],
+        sortConfig: {
+            column: null,
+            direction: 'asc'
+        },
 
         init() {
             this.cache();
@@ -39,6 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar.addEventListener('click', this.clearFilters.bind(this));
             this.btnExportarXLS.addEventListener('click', this.exportXLS.bind(this));
             this.btnExportarPDF.addEventListener('click', this.exportPDF.bind(this));
+            
+            // Eventos de ordenação nos cabeçalhos
+            document.querySelectorAll('th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    this.handleSort(th.dataset.sort);
+                });
+            });
         },
 
         async loadTanques() {
@@ -171,6 +182,55 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        handleSort(column) {
+            // Alterna a direção se clicar na mesma coluna, senão define como ASC
+            if (this.sortConfig.column === column) {
+                this.sortConfig.direction = this.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortConfig.column = column;
+                this.sortConfig.direction = 'asc';
+            }
+
+            this.updateSortIcons();
+            this.sortData();
+            this.renderTable();
+        },
+
+        sortData() {
+            const { column, direction } = this.sortConfig;
+            if (!column) return;
+
+            const factor = direction === 'asc' ? 1 : -1;
+
+            this.dadosRelatorio.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+
+                // Trata nulos e undefined
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+
+                // Comparação de strings (case insensitive) ou números
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return -1 * factor;
+                if (valA > valB) return 1 * factor;
+                return 0;
+            });
+        },
+
+        updateSortIcons() {
+            // Reseta todos os ícones
+            document.querySelectorAll('th[data-sort] i').forEach(i => i.className = 'fas fa-sort');
+            
+            // Atualiza o ícone da coluna ativa
+            const activeHeader = document.querySelector(`th[data-sort="${this.sortConfig.column}"] i`);
+            if (activeHeader) {
+                activeHeader.className = this.sortConfig.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        },
+
         renderTable() {
             this.tableBody.innerHTML = '';
             let somaLitros = 0;
@@ -194,10 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dataFormatada = new Date(reg.data_hora).toLocaleString('pt-BR');
                 
                 // Estilo para diferenciar tipos
-                let rowClass = '';
-                if (reg.tipo === 'SAIDA') rowClass = 'color: #dc3545;'; // Vermelho
-                else if (reg.tipo === 'ENTRADA') rowClass = 'color: #28a745;'; // Verde
-                else rowClass = 'color: #007bff;'; // Azul (Ajuste)
+                let tipoClass = '';
+                if (reg.tipo === 'SAIDA') tipoClass = 'text-danger'; 
+                else if (reg.tipo === 'ENTRADA') tipoClass = 'text-success';
+                else tipoClass = 'text-primary';
 
                 tr.innerHTML = `
                     <td>${dataFormatada}</td>
@@ -208,9 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${reg.numero_nota}</td>
                     <td>${reg.tanque}</td>
                     <td>${reg.combustivel}</td>
-                    <td style="font-weight:bold; ${rowClass}">${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
-                    <td>${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                    <td>${Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                    <td class="font-bold ${tipoClass}" style="text-align: right;">${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
+                    <td style="text-align: right;">${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                    <td style="text-align: right;">${Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                 `;
                 this.tableBody.appendChild(tr);
             });
@@ -341,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Adiciona linha de total
                 tableRows.push([
-                    { content: 'TOTAIS GERAIS', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'TOTAL GERAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: totalLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold' } },
                     '',
                     { content: totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}), styles: { fontStyle: 'bold' } }
