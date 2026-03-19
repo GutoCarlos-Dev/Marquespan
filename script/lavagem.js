@@ -1030,7 +1030,7 @@ async function finalizarListaAtual() {
                 item.tipo_lavagem.split(',').map(t => t.trim()).forEach(tipo => {
                     // Busca preço considerando o fornecedor do item
                     const p = precosCache.find(x => 
-                        x.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                        (x.tipoVeiculo || '').toUpperCase() === (tipoVeiculo || '').toUpperCase() && 
                         x.tipoLavagem === tipo &&
                         (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor))
                     );
@@ -1123,28 +1123,49 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
 
             if (item.status === 'REALIZADO' && tiposLavagemStr) {
                 const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
-                let valorCalculado = 0;
                 
+                // 1. Calcula o total com preços atuais para base de rateio
+                let valorCalculadoAtual = 0;
+                const breakdown = [];
+
                 tipos.forEach(tipo => {
                     const precoObj = precosCache.find(p => 
-                        p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
+                        (p.tipoVeiculo || '').toUpperCase() === (tipoVeiculo || '').toUpperCase() && 
                         p.tipoLavagem === tipo &&
                         (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor))
                     );
                     const valorTipo = precoObj ? precoObj.valor : 0;
-                    valorCalculado += valorTipo;
-
-                    if (!summary[tipo]) summary[tipo] = { qtd: 0, valor: 0 };
-                    summary[tipo].qtd++;
-                    summary[tipo].valor += valorTipo;
+                    valorCalculadoAtual += valorTipo;
+                    breakdown.push({ tipo, valorBase: valorTipo });
                 });
                 
-                // Se existe valor salvo (snapshot), usa ele. Senão usa o calculado.
+                // 2. Determina o valor final do item (Snapshot ou Atual)
                 if (item.valor !== undefined && item.valor !== null) {
                     valorItem = item.valor;
                 } else {
-                    valorItem = valorCalculado;
+                    valorItem = valorCalculadoAtual;
                 }
+
+                // 3. Calcula o fator de ajuste (Ratio) para distribuir o valor fixo proporcionalmente
+                let ratio = 1;
+                if (valorCalculadoAtual > 0) {
+                    ratio = valorItem / valorCalculadoAtual;
+                }
+
+                // 4. Popula o sumário com valores ajustados (respeitando o valor fixo)
+                breakdown.forEach(b => {
+                    let valorRealComponente = b.valorBase * ratio;
+                    
+                    // Caso especial: Preços atuais zerados/apagados mas existe valor histórico no item
+                    if (valorCalculadoAtual === 0 && valorItem > 0 && breakdown.length > 0) {
+                        valorRealComponente = valorItem / breakdown.length; // Distribui igualmente
+                    }
+                    
+                    if (!summary[b.tipo]) summary[b.tipo] = { qtd: 0, valor: 0 };
+                    
+                    summary[b.tipo].qtd++;
+                    summary[b.tipo].valor += valorRealComponente;
+                });
 
                 totalGeral += valorItem;
 
