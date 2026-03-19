@@ -1,5 +1,115 @@
 /* Estilos para a página de Estoque de Abastecimento */
 
+:root {
+    --glass-bg: #ffffff;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px);
+    --radius: 20px;
+    --primary-color: #006937;
+    --text-color: #333;
+}
+
+/* Header */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: var(--glass-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Painéis (Cards) */
+.glass-panel {
+    background-color: #ffffff !important;
+    border: var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: transform 0.3s ease;
+}
+
+.glass-panel h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+
+/* Botões Glass */
+.btn-glass {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    filter: brightness(1.1);
+}
+
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+
+/* Tabelas Glass */
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.glass-table th {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.glass-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+    vertical-align: middle;
+}
+
+.glass-table tr:hover {
+    background: rgba(0, 105, 55, 0.05);
+}
+
+/* Utilitários */
 .text-right {
     text-align: right;
 }
@@ -8,28 +118,32 @@
     text-align: center;
 }
 
+/* Barra de Progresso */
 .progress-bar-container {
     width: 100%;
     background-color: #e9ecef;
-    border-radius: .25rem;
-    height: 20px;
+    border-radius: 10px;
+    height: 24px;
     overflow: hidden;
     position: relative;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .progress-bar {
     height: 100%;
-    background-color: #28a745; /* Verde para nível bom */
+    background: linear-gradient(90deg, #28a745, #218838); /* Verde */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: width 0.6s ease;
-    text-align: center;
     color: white;
     font-weight: bold;
     font-size: 0.8rem;
-    line-height: 20px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
 }
 
-.progress-bar.warning { background-color: #ffc107; color: black; } /* Amarelo para aviso */
-.progress-bar.danger { background-color: #dc3545; } /* Vermelho para perigo */
+.progress-bar.warning { background: linear-gradient(90deg, #ffc107, #d39e00); color: #333; text-shadow: none; } 
+.progress-bar.danger { background: linear-gradient(90deg, #dc3545, #c82333); }
 
 /* Estilos para o histórico de movimentações */
 .badge-movimentacao {
@@ -40,11 +154,8 @@
     font-weight: bold;
     text-transform: uppercase;
 }
-.badge-movimentacao.entrada {
-    background-color: #28a745;
-}
-.badge-movimentacao.saida {
-    background-color: #dc3545;
-}
+.badge-movimentacao.entrada { background-color: #28a745; }
+.badge-movimentacao.saida { background-color: #dc3545; }
+
 .text-right.entrada { color: #28a745; font-weight: bold; }
 .text-right.saida { color: #dc3545; font-weight: bold; }

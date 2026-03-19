@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.tanquesDisponiveis = [];
             this.bicosDisponiveis = [];
-            this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenação
+            this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenacao
             this.initTabs();
             this.cache();
             this.bind();

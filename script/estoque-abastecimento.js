@@ -4,16 +4,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const EstoqueUI = {
         init() {
             this.cache();
+            this.bind();
             this.loadEstoque();
         },
 
         cache() {
             this.tableBodyResumo = document.getElementById('tableBodyResumoEstoque');
             this.tableBodyHistorico = document.getElementById('tableBodyHistorico');
+            this.btnAtualizar = document.getElementById('btnAtualizarDados');
+        },
+
+        bind() {
+            if (this.btnAtualizar) {
+                this.btnAtualizar.addEventListener('click', () => this.loadEstoque());
+            }
         },
 
         async loadEstoque() {
             if (!this.tableBodyResumo || !this.tableBodyHistorico) return;
+
+            // Feedback visual no botão
+            if (this.btnAtualizar) {
+                this.btnAtualizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+                this.btnAtualizar.disabled = true;
+            }
 
             this.tableBodyResumo.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
             this.tableBodyHistorico.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
@@ -49,6 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro ao carregar estoque:', error);
                 this.tableBodyResumo.innerHTML = '<tr><td colspan="5" class="text-center" style="color:red;">Erro ao carregar dados.</td></tr>';
                 this.tableBodyHistorico.innerHTML = '<tr><td colspan="5" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
+            } finally {
+                if (this.btnAtualizar) {
+                    this.btnAtualizar.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+                    this.btnAtualizar.disabled = false;
+                }
             }
         },
 
@@ -107,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="text-right">${estoqueAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L</td>
                     <td>
                         <div class="progress-bar-container">
-                            <div class="${progressBarClass}" style="width: ${Math.min(percentual, 100)}%;">${percentual.toFixed(1)}%</div>
+                            <div class="${progressBarClass}" style="width: ${Math.min(percentual, 100)}%;">${percentual.toFixed(0)}%</div>
                         </div>
                     </td>
                 `;
