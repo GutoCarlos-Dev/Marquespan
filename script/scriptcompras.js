@@ -263,10 +263,11 @@ const UI = {
     let abaInicial = 'sectionRealizarCotacoes'; // Padrão
 
     const permissoes = {
-      estoque: ['sectionCotacoesSalvas'],
+      estoque: ['sectionCotacoesSalvas', 'sectionRelatorios'],
       compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
       administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
-      default: []
+      gerencia: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
+      default: ['sectionRelatorios']
     };
 
     const abasPermitidas = permissoes[nivel] || permissoes.default;
