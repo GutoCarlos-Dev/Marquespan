@@ -29,6 +29,7 @@
       <button class="painel-btn" data-secao="sectionCotacoesSalvas"><i class="fas fa-history"></i> Cotações Salvas</button>
       <button class="painel-btn" data-secao="sectionCadastrarProdutos"><i class="fas fa-box"></i> Produtos</button>
       <button class="painel-btn" data-secao="sectionCadastrarFornecedor"><i class="fas fa-truck"></i> Fornecedores</button>
+      <button class="painel-btn" data-secao="sectionRelatorios"><i class="fas fa-chart-line"></i> Relatórios</button>
     </div>
 
     <!-- SEÇÃO: REALIZAR COTAÇÃO -->
@@ -195,6 +196,32 @@
       </div>
     </section>
 
+    <!-- SEÇÃO: RELATÓRIOS -->
+    <section id="sectionRelatorios" class="glass-panel hidden">
+      <div class="panel-header-actions">
+        <h3>Relatórios de Produtos em Cotações</h3>
+      </div>
+      <div class="filtros-inline" style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <input type="text" id="searchRelatorioProduto" placeholder="Buscar produto..." class="glass-input">
+        <button id="btnSearchRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th>DATA</th>
+              <th>COTAÇÃO</th>
+              <th>PRODUTO</th>
+              <th>QTD</th>
+              <th>STATUS</th>
+              <th>FORNECEDOR (Vencedor)</th>
+            </tr>
+          </thead>
+          <tbody id="relatoriosTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 
   <!-- Painéis Flutuantes (Modais) -->
@@ -265,6 +292,6 @@
 
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/compras.js"></script>
+  <script type="module" src="./script/scriptcompras.js"></script>
 </body>
 </html>

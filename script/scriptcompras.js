@@ -98,7 +98,7 @@ const UI = {
 
   cache(){
     this.navLinks = document.querySelectorAll('#menu-compras button.painel-btn');
-    this.sections = document.querySelectorAll('section.section');
+    this.sections = document.querySelectorAll('section.glass-panel');
     this.cartBody = document.getElementById('cartBody'); // Cache do corpo do carrinho
     this.cartProductInput = document.getElementById('cartProductInput'); // Novo input de produto
     this.cartQtd = document.getElementById('cartQtd');
@@ -141,6 +141,11 @@ const UI = {
     this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
     this.nfContainer = document.getElementById('nfContainer');
     this.btnAddNF = document.getElementById('btnAddNF');
+    
+    // Cache para Relatórios
+    this.searchRelatorioProduto = document.getElementById('searchRelatorioProduto');
+    this.btnSearchRelatorio = document.getElementById('btnSearchRelatorio');
+    this.relatoriosTableBody = document.getElementById('relatoriosTableBody');
   },
   
 
@@ -183,6 +188,12 @@ const UI = {
 
     // Novo painel de recebimento
     this.recebimentoPanel?.querySelector('.close-button').addEventListener('click', ()=>this.closeRecebimentoPanel());
+    
+    // Listener Relatórios
+    this.btnSearchRelatorio?.addEventListener('click', () => this.renderRelatoriosGrid());
+    this.searchRelatorioProduto?.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') this.renderRelatoriosGrid();
+    });
 
     // print and close buttons for quotation details
     this.btnPrintQuotation?.addEventListener('click', () => {
@@ -223,7 +234,7 @@ const UI = {
   },
 
   showSection(id){
-    document.querySelectorAll('section.section').forEach(s=>s.classList.add('hidden')); // Corrigido: &gt; para >
+    this.sections.forEach(s=>s.classList.add('hidden'));
     const el = document.getElementById(id);
     if(el) el.classList.remove('hidden');
     
@@ -235,6 +246,9 @@ const UI = {
     if(id==='sectionCotacoesSalvas'){ this.renderSavedQuotations(); }
     if(id==='sectionCadastrarProdutos'){ this.renderProdutosGrid(); }
     if(id==='sectionCadastrarFornecedor'){ this.renderFornecedoresGrid(); }
+    if(id==='sectionRelatorios'){ 
+        setTimeout(() => this.searchRelatorioProduto?.focus(), 50);
+    }
 
 
   },
@@ -250,8 +264,8 @@ const UI = {
 
     const permissoes = {
       estoque: ['sectionCotacoesSalvas'],
-      compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
-      administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
+      compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
+      administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
       default: []
     };
 
@@ -1669,6 +1683,55 @@ const UI = {
       }
     } else {
       alert('Nenhum item válido para receber');
+    }
+  },
+
+  async renderRelatoriosGrid() {
+    const term = this.searchRelatorioProduto?.value.trim();
+    if(!term) return alert('Digite um nome de produto para buscar.');
+    
+    if(this.relatoriosTableBody) this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center">Carregando...</td></tr>';
+
+    try {
+      // Busca itens de cotação filtrando pelo nome do produto
+      const { data, error } = await supabaseClient
+        .from('cotacao_itens')
+        .select(`
+            quantidade,
+            produtos!inner(nome),
+            cotacoes!inner(
+                codigo_cotacao,
+                updated_at,
+                data_cotacao,
+                status,
+                fornecedores(nome)
+            )
+        `)
+        .ilike('produtos.nome', `%${term}%`);
+
+      if(error) throw error;
+
+      this.relatoriosTableBody.innerHTML = '';
+      if(!data || data.length === 0) {
+        this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma cotação encontrada com este produto.</td></tr>';
+        return;
+      }
+
+      // Ordena por data (mais recente primeiro)
+      data.sort((a,b) => new Date(b.cotacoes.updated_at || b.cotacoes.data_cotacao) - new Date(a.cotacoes.updated_at || a.cotacoes.data_cotacao));
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        const dataStr = new Date(item.cotacoes.updated_at || item.cotacoes.data_cotacao).toLocaleString('pt-BR');
+        const fornecedor = item.cotacoes.fornecedores ? item.cotacoes.fornecedores.nome : '-';
+        
+        tr.innerHTML = `<td>${dataStr}</td><td>${item.cotacoes.codigo_cotacao}</td><td>${item.produtos.nome}</td><td>${item.quantidade}</td><td><span class="status status-${item.cotacoes.status.replace(/\s+/g, '-')}">${item.cotacoes.status}</span></td><td>${fornecedor}</td>`;
+        this.relatoriosTableBody.appendChild(tr);
+      });
+
+    } catch(e) {
+        console.error(e);
+        if(this.relatoriosTableBody) this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red">Erro ao buscar dados.</td></tr>';
     }
   }
 };
