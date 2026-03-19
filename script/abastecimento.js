@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.tanquesDisponiveis = [];
             this.bicosDisponiveis = [];
+            this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenação
             this.initTabs();
             this.cache();
             this.bind();
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         initTabs() {
             const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
-            const sections = document.querySelectorAll('.main-content .section');
+            const sections = document.querySelectorAll('.main-content .glass-panel');
 
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -91,6 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
             if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
+
+            // Listeners para ordenação da tabela de histórico
+            const ths = document.querySelectorAll('#containerHistoricoEntrada th[data-field]');
+            ths.forEach(th => {
+                th.addEventListener('click', () => this.handleSort(th.dataset.field));
+            });
         },
 
         getUsuarioLogado() {
@@ -203,11 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </td>
                         <td>
-                            <input type="text" class="input-estoque-atual" data-id="${tanque.id}" 
+                            <input type="text" class="input-estoque-atual glass-input" data-id="${tanque.id}" 
                                    data-capacidade="${tanque.capacidade || 0}"
                                    value="${tanque.estoque_atual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}" 
-                                   oninput="this.value = this.value.replace(/[^0-9,.]/g, '')"
-                                   style="width: 150px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; color: #333;">
+                                   oninput="this.value = this.value.replace(/[^0-9,.]/g, '')">
                         </td>
                     `;
                     this.tbodyEstoque.appendChild(tr);
@@ -412,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
             row.className = 'distribuicao-row';
 
             const select = document.createElement('select');
-            select.className = 'tanque-select';
+            select.className = 'tanque-select glass-input';
             select.innerHTML = '<option value="">-- Selecione um Tanque --</option>';
             this.tanquesDisponiveis.forEach(t => {
                 const option = new Option(`${t.nome} (${t.tipo_combustivel})`, t.id);
@@ -422,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const inputQtd = document.createElement('input');
             inputQtd.type = 'number';
-            inputQtd.className = 'tanque-qtd';
+            inputQtd.className = 'tanque-qtd glass-input';
             inputQtd.placeholder = 'Litros';
             inputQtd.step = '0.01';
             inputQtd.min = '0.01';
@@ -457,11 +463,20 @@ document.addEventListener('DOMContentLoaded', () => {
         async getAbastecimentos() {
             try {
                 // Faz join com a tabela de tanques para pegar o nome
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('abastecimentos')
-                    .select('*, tanques(nome, tipo_combustivel)')
-                    .order('data', { ascending: false });
+                    .select('*, tanques(nome, tipo_combustivel)');
                 
+                // Aplica a ordenação baseada no estado atual
+                const { field, ascending } = this.sortState;
+                if (field.includes('.')) {
+                    const [table, col] = field.split('.');
+                    query = query.order(col, { foreignTable: table, ascending: ascending });
+                } else {
+                    query = query.order(field, { ascending: ascending });
+                }
+
+                const { data, error } = await query;
                 if (error) throw error;
                 return data || [];
             } catch (error) {
@@ -782,6 +797,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro ao carregar saída para edição:', error);
                 alert('Não foi possível carregar os dados para edição.');
             }
+        },
+
+        handleSort(field) {
+            if (this.sortState.field === field) {
+                this.sortState.ascending = !this.sortState.ascending;
+            } else {
+                this.sortState.field = field;
+                this.sortState.ascending = true;
+            }
+            this.updateSortIcons();
+            this.renderTable();
+        },
+
+        updateSortIcons() {
+            const ths = document.querySelectorAll('#containerHistoricoEntrada th[data-field]');
+            ths.forEach(th => {
+                const icon = th.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-sort'; // Reset para ícone neutro
+                    if (th.dataset.field === this.sortState.field) {
+                        icon.className = this.sortState.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                    }
+                }
+            });
         },
 
         async deleteSaida(id) {
