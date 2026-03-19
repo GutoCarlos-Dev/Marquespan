@@ -361,6 +361,9 @@ function abrirModalVeiculo(veiculo = null) {
         
         const qtdTanque = document.getElementById('veiculoQtdTanque');
         if(qtdTanque) qtdTanque.value = veiculo.qtdtanque || '';
+
+        const volumeTanque = document.getElementById('veiculoVolumeTanque');
+        if(volumeTanque) volumeTanque.value = veiculo.volume_tanque || '';
     } else {
         title.textContent = 'Novo Veículo';
         document.getElementById('veiculoId').value = '';
@@ -413,13 +416,15 @@ async function salvarVeiculo(e) {
         chassi: getVal('veiculoChassi'),
         anofab: getVal('veiculoAnoFab'),
         anomod: getVal('veiculoAnoMod'),
-        qtdtanque: getVal('veiculoQtdTanque')
+        qtdtanque: getVal('veiculoQtdTanque'),
+        volume_tanque: getVal('veiculoVolumeTanque')
     };
 
     // Remove campos nulos que não devem ser enviados se vazios
     if (!payload.anofab) delete payload.anofab;
     if (!payload.anomod) delete payload.anomod;
     if (!payload.qtdtanque) delete payload.qtdtanque;
+    if (!payload.volume_tanque) delete payload.volume_tanque;
 
     try {
         let error;
