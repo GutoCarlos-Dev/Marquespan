@@ -1844,10 +1844,9 @@ function ordenarPrecos(key) {
     if (activeTh) activeTh.className = sortStatePrecos.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
     precosCache.sort((a, b) => {
-        let valA = a[key] || '';
-        let valB = b[key] || '';
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
+        const valA = String(a[key] || '').toLowerCase();
+        const valB = String(b[key] || '').toLowerCase();
+
         if (valA < valB) return sortStatePrecos.asc ? -1 : 1;
         if (valA > valB) return sortStatePrecos.asc ? 1 : -1;
         return 0;
