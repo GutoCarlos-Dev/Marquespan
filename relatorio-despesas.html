@@ -160,6 +160,13 @@
             <strong id="kpiTotalDiarias">0</strong>
           </div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-icon orange"><i class="fas fa-divide"></i></div>
+          <div class="kpi-info">
+            <span>Média</span>
+            <strong id="kpiMedia">R$ 0,00</strong>
+          </div>
+        </div>
       </div>
 
       <!-- Gráficos -->
@@ -195,6 +202,35 @@
 
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
 
+  <script>
+    // Script para corrigir o cálculo da Média convertendo os valores corretamente
+    document.addEventListener('DOMContentLoaded', () => {
+      const calcularMedia = () => {
+        const elCusto = document.getElementById('kpiCustoTotal');
+        const elDiarias = document.getElementById('kpiTotalDiarias');
+        const elMedia = document.getElementById('kpiMedia');
+
+        if (!elCusto || !elDiarias || !elMedia) return;
+
+        // Converte "R$ 1.500,00" para 1500.00
+        const custo = parseFloat(elCusto.textContent.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+        const diarias = parseInt(elDiarias.textContent.replace(/\D/g, '')) || 0;
+
+        const media = diarias > 0 ? (custo / diarias) : 0;
+        elMedia.textContent = media.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      };
+
+      // Monitora mudanças nos valores para recalcular a média automaticamente
+      const observer = new MutationObserver(calcularMedia);
+      const config = { childList: true, characterData: true, subtree: true };
+      const targetIds = ['kpiCustoTotal', 'kpiTotalDiarias'];
+      
+      targetIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el, config);
+      });
+    });
+  </script>
   <script type="module" src="./script/menu.js"></script>
   <script type="module" src="script/relatorio-despesas.js"></script>
 </body>

@@ -148,6 +148,7 @@
 
 .kpi-icon.green { background: linear-gradient(135deg, #28a745, #1e7e34); }
 .kpi-icon.blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.kpi-icon.orange { background: linear-gradient(135deg, #fd7e14, #d65b00); }
 
 .kpi-info {
     display: flex;
