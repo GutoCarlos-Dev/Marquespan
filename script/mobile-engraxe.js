@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let currentListId = null;
 let currentItems = [];
+let currentFilter = 'TODOS';
 
 document.addEventListener('DOMContentLoaded', () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -24,7 +25,29 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filtro
     const filtro = document.getElementById('filtroVeiculoMobile');
-    if (filtro) filtro.addEventListener('input', filtrarVeiculosMobile);
+    if (filtro) filtro.addEventListener('input', renderizarItensMobile); // Mudado para chamar renderizarItensMobile diretamente
+
+    // Abas de Filtro
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            currentFilter = e.currentTarget.dataset.filter;
+            renderizarItensMobile();
+        });
+    });
+
+    // Delegação de eventos para clique nos cards de itens (Performance e UX)
+    const containerItens = document.getElementById('listaVeiculosContainer');
+    if (containerItens) {
+        containerItens.addEventListener('click', (e) => {
+            const card = e.target.closest('.card[data-item-id]');
+            if (card) {
+                const id = card.dataset.itemId;
+                window.prepararEdicaoMobile(id);
+            }
+        });
+    }
 
     // Cálculo automático de data no modal
     const editRealizado = document.getElementById('editRealizado');
@@ -53,7 +76,7 @@ async function carregarListasMobile() {
     const container = document.getElementById('listaDeListas');
     if (!container) return;
     
-    container.innerHTML = '<p style="text-align: center;">Carregando...</p>';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando listas...</div>';
 
     try {
         const { data: listasAbertas, error } = await supabaseClient
@@ -66,34 +89,32 @@ async function carregarListasMobile() {
 
         container.innerHTML = '';
         if (!listasAbertas || listasAbertas.length === 0) {
-            container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma lista aberta encontrada.</p>';
+            container.innerHTML = '<div class="loading">Nenhuma lista aberta encontrada.</div>';
             return;
         }
 
-        listasAbertas.forEach(lista => {
-            const div = document.createElement('div');
-            div.className = 'historico-card'; 
-            div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #006937;';
-            div.onclick = () => abrirLista(lista.id, lista.nome);
-            
-            div.innerHTML = `
+        const cardsHtml = listasAbertas.map(lista => `
+            <div class="card status-aberta" onclick="window.abrirLista('${lista.id}', '${lista.nome}')">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h4 style="margin: 0; color: #333;">${lista.nome}</h4>
-                        <small style="color: #666;">${new Date(lista.created_at).toLocaleDateString('pt-BR')}</small>
+                        <h4>${lista.nome}</h4>
+                        <p><i class="far fa-calendar-alt"></i> ${new Date(lista.created_at).toLocaleDateString('pt-BR')}</p>
+                        <span class="status">ABERTA</span>
                     </div>
-                    <i class="fas fa-chevron-right" style="color: #006937;"></i>
+                    <i class="fas fa-chevron-right"></i>
                 </div>
-            `;
-            container.appendChild(div);
-        });
+            </div>
+        `).join('');
+
+        container.innerHTML = cardsHtml;
     } catch (error) {
         console.error('Erro ao carregar listas:', error);
-        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar listas.</p>';
+        container.innerHTML = '<div class="loading" style="color: red;">Erro ao carregar listas.</div>';
     }
 }
 
-async function abrirLista(id, nome) {
+// Expor função para o escopo global
+window.abrirLista = async function(id, nome) {
     currentListId = id;
     const titulo = document.getElementById('tituloListaAtual');
     if (titulo) titulo.textContent = nome;
@@ -102,7 +123,7 @@ async function abrirLista(id, nome) {
     document.getElementById('viewItens').classList.remove('hidden');
     
     const container = document.getElementById('listaVeiculosContainer');
-    container.innerHTML = '<p style="text-align: center;">Carregando itens...</p>';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando itens...</div>';
 
     try {
         const { data: itens, error } = await supabaseClient
@@ -114,49 +135,92 @@ async function abrirLista(id, nome) {
         if (error) throw error;
 
         currentItems = itens || [];
-        renderizarItensMobile(currentItems);
+        atualizarContadores();
+        renderizarItensMobile();
     } catch (error) {
         console.error('Erro ao carregar itens:', error);
-        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar itens.</p>';
+        container.innerHTML = '<div class="loading" style="color: red;">Erro ao carregar itens.</div>';
     }
 }
 
-function renderizarItensMobile(itens) {
+function renderizarItensMobile() {
     const container = document.getElementById('listaVeiculosContainer');
     if (!container) return;
-    
-    container.innerHTML = '';
 
-    if (itens.length === 0) {
-        container.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhum veículo nesta lista.</p>';
+    const termo = document.getElementById('filtroVeiculoMobile').value.toLowerCase();
+    
+    // Filtragem combinada (Busca + Aba de Status)
+    const itensFiltrados = currentItems.filter(i => {
+        const matchTermo = i.placa.toLowerCase().includes(termo) || (i.modelo && i.modelo.toLowerCase().includes(termo));
+        
+        let matchStatus = true;
+        const statusItem = i.status || 'PENDENTE';
+        
+        if (currentFilter !== 'TODOS') {
+            if (currentFilter === 'OK') {
+                matchStatus = statusItem === 'OK' || statusItem === 'REALIZADO';
+            } else {
+                matchStatus = statusItem === currentFilter;
+            }
+        }
+        
+        return matchTermo && matchStatus;
+    });
+    
+    if (itensFiltrados.length === 0) {
+        container.innerHTML = '<div class="loading">Nenhum veículo encontrado.</div>';
         return;
     }
 
-    itens.forEach(item => {
-        const div = document.createElement('div');
-        const isDone = item.status === 'OK' || item.status === 'REALIZADO';
-        const statusColor = isDone ? '#28a745' : (item.status === 'ROTA' ? '#ffc107' : (item.status === 'INTERNADO' ? '#007bff' : '#dc3545'));
+    const cardsHtml = itensFiltrados.map(item => {
+        const status = item.status || 'PENDENTE';
+        let statusClass = 'status-pendente';
         
-        div.className = 'historico-card';
-        // Layout compactado tipo tabela
-        div.style.cssText = `background: white; padding: 8px 10px; margin-bottom: 5px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-left: 4px solid ${statusColor}; display: flex; align-items: center; justify-content: space-between;`;
+        if (status === 'OK' || status === 'REALIZADO') statusClass = 'status-realizado';
+        else if (status === 'ROTA') statusClass = 'status-rota';
+        else if (status === 'INTERNADO') statusClass = 'status-internado';
         
-        div.innerHTML = `
-            <div style="flex: 1; display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                <div style="font-weight: bold; font-size: 1rem; color: #333; min-width: 75px;">${item.placa}</div>
-                <div style="font-size: 0.85rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
-                    ${item.modelo || '-'}
-                </div>
-                <div style="font-weight: bold; color: ${statusColor}; font-size: 0.75rem; min-width: 60px; text-align: right;">
-                    ${item.status || 'PEND'}
+        const isDone = status === 'OK' || status === 'REALIZADO';
+
+        return `
+            <div class="card ${statusClass}" data-item-id="${item.id}">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <h4>${item.placa}</h4>
+                        <p>${item.modelo || 'Modelo n/i'}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status">${status}</span>
+                        ${isDone ? '<br><i class="fas fa-check-circle" style="color: #28a745; margin-top: 5px; font-size: 1.2rem;"></i>' : ''}
+                    </div>
                 </div>
             </div>
-            <button class="btn-secondary" onclick="window.prepararEdicaoMobile('${item.id}')" style="padding: 4px 8px; margin-left: 8px; height: 30px; display: flex; align-items: center;">
-                <i class="fas fa-edit"></i>
-            </button>
         `;
-        container.appendChild(div);
-    });
+    }).join('');
+
+    container.innerHTML = cardsHtml;
+}
+
+function atualizarContadores() {
+    const counts = currentItems.reduce((acc, item) => {
+        const s = item.status || 'PENDENTE';
+        if (s === 'PENDENTE') acc.pendentes++;
+        else if (s === 'OK' || s === 'REALIZADO') acc.realizados++;
+        else if (s === 'ROTA') acc.rota++;
+        else if (s === 'INTERNADO') acc.internados++;
+        return acc;
+    }, { pendentes: 0, realizados: 0, rota: 0, internados: 0 });
+
+    const setTxt = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `(${txt})`;
+    };
+
+    setTxt('countTodos', currentItems.length);
+    setTxt('countPendentes', counts.pendentes);
+    setTxt('countRealizados', counts.realizados);
+    setTxt('countRota', counts.rota);
+    setTxt('countInternados', counts.internados);
 }
 
 window.prepararEdicaoMobile = function(id) {
@@ -168,8 +232,23 @@ window.prepararEdicaoMobile = function(id) {
     
     // Preenche campos
     const formatDate = (d) => d && d.includes('T') ? d.split('T')[0] : d;
-    document.getElementById('editRealizado').value = formatDate(item.data_realizado) || '';
-    document.getElementById('editProximo').value = formatDate(item.data_proximo) || '';
+
+    // Define data de hoje (local) se não houver data realizada
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const hoje = now.toISOString().split('T')[0];
+
+    const dataRealizado = formatDate(item.data_realizado) || hoje;
+    document.getElementById('editRealizado').value = dataRealizado;
+
+    // Se não tinha data realizada (era novo/pendente), calcula o próximo vencimento (21 dias)
+    let dataProximo = formatDate(item.data_proximo);
+    if (!item.data_realizado && !dataProximo) {
+        const d = new Date(dataRealizado);
+        d.setDate(d.getDate() + 21);
+        dataProximo = d.toISOString().split('T')[0];
+    }
+    document.getElementById('editProximo').value = dataProximo || '';
     
     document.getElementById('editPlaqueta').value = item.plaquinha || '';
     document.getElementById('editSeg').value = item.seg || '';
@@ -177,6 +256,7 @@ window.prepararEdicaoMobile = function(id) {
     // Normaliza status para o select
     let statusVal = item.status || 'PENDENTE';
     if (statusVal === 'REALIZADO') statusVal = 'OK';
+    if (statusVal === 'PENDENTE') statusVal = 'OK'; // Já vem selecionado OK
     document.getElementById('editStatus').value = statusVal;
     
     document.getElementById('editKm').value = item.km || '';
@@ -196,6 +276,11 @@ async function salvarItemMobile() {
     const status = document.getElementById('editStatus').value;
     const km = document.getElementById('editKm').value;
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+
+    const btn = document.getElementById('btnSalvarItemMobile');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando...';
 
     try {
         const updateData = {
@@ -219,15 +304,18 @@ async function salvarItemMobile() {
         const index = currentItems.findIndex(i => i.id === id);
         if (index !== -1) {
             currentItems[index] = { ...currentItems[index], ...updateData };
-            renderizarItensMobile(currentItems);
+            atualizarContadores();
+            renderizarItensMobile();
         }
 
         fecharModal();
-        alert('Registro salvo!');
 
     } catch (error) {
         console.error('Erro ao salvar item:', error);
         alert('Erro ao salvar item: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
@@ -235,13 +323,4 @@ function fecharModal() {
     const modal = document.getElementById('modalEditarItem');
     modal.style.display = 'none';
     modal.classList.add('hidden');
-}
-
-function filtrarVeiculosMobile() {
-    const termo = document.getElementById('filtroVeiculoMobile').value.toLowerCase();
-    const filtrados = currentItems.filter(i => 
-        i.placa.toLowerCase().includes(termo) || 
-        (i.modelo && i.modelo.toLowerCase().includes(termo))
-    );
-    renderizarItensMobile(filtrados);
 }

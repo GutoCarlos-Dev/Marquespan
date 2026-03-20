@@ -1,110 +1,114 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>App Engraxe - Marquespan</title>
-  <link rel="stylesheet" href="css/buttons.css" />
-  <link rel="stylesheet" href="css/mobile-engraxe.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="icon" href="logo.png" type="image/png">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engraxe Mobile - Marquespan</title>
+    <link rel="stylesheet" href="css/mobile-engraxe.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <header class="mobile-header">
-    <div class="header-content"><img src="logo.png" alt="Logo" class="mobile-logo"><h1>Engraxe</h1></div>
-    <a href="engraxe.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
-  </header>
 
-  <!-- VIEW 1: Seleção de Lista -->
-  <div id="viewListas" class="mobile-container">
-    <h3 style="margin: 10px 0; color: #333;">Listas Abertas</h3>
-    <div id="listaDeListas" class="historico-list">
-      <p style="text-align: center; color: #666;">Carregando listas...</p>
-    </div>
-  </div>
-
-  <!-- VIEW 2: Itens da Lista -->
-  <div id="viewItens" class="mobile-container hidden">
-    <div class="panel-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-      <button id="btnVoltarListas" class="btn-secondary" style="padding: 5px 10px;"><i class="fas fa-arrow-left"></i></button>
-      <h3 id="tituloListaAtual" style="margin: 0; font-size: 1.1rem;">Lista</h3>
-    </div>
-    
-    <div class="form-group">
-      <input type="text" id="filtroVeiculoMobile" placeholder="Buscar placa ou modelo..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+    <!-- VISTA 1: LISTA DE LISTAS -->
+    <div id="viewListas">
+        <header class="mobile-header">
+            <h1><i class="fas fa-truck-moving"></i> Listas de Engraxe</h1>
+            <a href="engraxe.html" class="btn-icon"><i class="fas fa-desktop"></i></a>
+        </header>
+        <div id="listaDeListas">
+            <!-- Preenchido via JS -->
+        </div>
     </div>
 
-    <div id="listaVeiculosContainer" class="historico-list">
-      <!-- Itens carregados via JS -->
-    </div>
-  </div>
-
-  <!-- MODAL: Edição de Item -->
-  <div id="modalEditarItem" class="modal-mobile hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center;">
-    <div class="panel mobile-panel" style="width: 90%; max-height: 90vh; overflow-y: auto;">
-      <div class="panel-header" style="display: flex; justify-content: space-between;">
-        <h3 id="modalPlacaTitulo">Editar Veículo</h3>
-        <button id="btnFecharModal" style="background: none; border: none; font-size: 1.5rem;">&times;</button>
-      </div>
-      <div class="panel-body">
-        <input type="hidden" id="editItemId">
+    <!-- VISTA 2: ITENS DA LISTA -->
+    <div id="viewItens" class="hidden">
+        <header class="mobile-header">
+            <div class="header-content">
+                <button id="btnVoltarListas" class="btn-icon"><i class="fas fa-arrow-left"></i></button>
+                <h1 id="tituloListaAtual">Lista</h1>
+            </div>
+        </header>
         
-        <div class="form-group">
-          <label>Realizado (Data)</label>
-          <input type="date" id="editRealizado">
-        </div>
+        <div class="mobile-container">
+            <div class="form-group">
+                <input type="text" id="filtroVeiculoMobile" class="search-input" placeholder="🔍 Filtrar placa ou modelo...">
+            </div>
 
-        <div class="form-group">
-          <label>Próximo (Automático)</label>
-          <input type="date" id="editProximo" readonly style="background-color: #e9ecef;">
-        </div>
+            <!-- Filtros por Status (Abas) -->
+            <div class="filter-tabs">
+                <button class="tab active" data-filter="TODOS">Todos <small id="countTodos">(0)</small></button>
+                <button class="tab" data-filter="PENDENTE">Pendentes <small id="countPendentes">(0)</small></button>
+                <button class="tab" data-filter="OK">Feitos <small id="countRealizados">(0)</small></button>
+                <button class="tab" data-filter="ROTA">Rota <small id="countRota">(0)</small></button>
+                <button class="tab" data-filter="INTERNADO">Internado <small id="countInternados">(0)</small></button>
+            </div>
 
-        <div class="form-row-mobile" style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label>Plaqueta</label>
-            <select id="editPlaqueta">
-              <option value="">-</option>
-              <option value="SIM">SIM</option>
-              <option value="NAO">NÃO</option>
-            </select>
-          </div>
-          <div class="form-group" style="flex: 1;">
-            <label>SEG</label>
-            <select id="editSeg">
-              <option value="">-</option>
-              <option value="OK">OK</option>
-              <option value="PENDENTE">PENDENTE</option>
-            </select>
-          </div>
+            <div id="listaVeiculosContainer">
+                <!-- Preenchido via JS -->
+            </div>
         </div>
-
-        <div class="form-group">
-          <label>Feito / Status</label>
-          <select id="editStatus">
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="OK">OK (FEITO)</option>
-            <option value="ROTA">ROTA</option>
-            <option value="INTERNADO">INTERNADO</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>KM</label>
-          <input type="number" id="editKm" placeholder="KM Atual" inputmode="numeric">
-        </div>
-
-        <div class="form-actions mobile-actions">
-          <button type="button" id="btnSalvarItemMobile" class="btn-primary btn-block btn-large"><i class="fas fa-save"></i> SALVAR</button>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <script type="module" src="script/mobile-engraxe.js"></script>
-  <script>
-    const usuarioLogado = localStorage.getItem('usuarioLogado');
-    if (!usuarioLogado) { alert('Você precisa fazer login.'); window.location.href = 'index.html'; }
-  </script>
+    <!-- MODAL DE EDIÇÃO -->
+    <div id="modalEditarItem" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalPlacaTitulo">Editar Veículo</h3>
+                <button id="btnFecharModal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editItemId">
+                
+                <div class="form-group">
+                    <label>Data Realizado</label>
+                    <input type="date" id="editRealizado">
+                </div>
+                
+                <div class="form-group">
+                    <label>Próximo Vencimento</label>
+                    <input type="date" id="editProximo" readonly style="background-color: #eee;">
+                </div>
+
+                <div class="form-row-mobile">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="editStatus">
+                            <option value="PENDENTE">PENDENTE</option>
+                            <option value="OK">OK</option>
+                            <option value="ROTA">ROTA</option>
+                            <option value="INTERNADO">INTERNADO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>KM</label>
+                        <input type="number" id="editKm" placeholder="KM Atual">
+                    </div>
+                </div>
+
+                <div class="form-row-mobile">
+                    <div class="form-group">
+                        <label>Plaqueta (S/N)</label>
+                        <select id="editPlaqueta">
+                            <option value="">-</option>
+                            <option value="SIM">SIM</option>
+                            <option value="NAO">NÃO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>SEG</label>
+                        <select id="editSeg">
+                            <option value="">-</option>
+                            <option value="OK">OK</option>
+                            <option value="PENDENTE">PENDENTE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="btnSalvarItemMobile" class="btn-block">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script/mobile-engraxe.js"></script>
 </body>
 </html>
