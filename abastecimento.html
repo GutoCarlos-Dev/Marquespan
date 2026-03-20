@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="css/comodato.css" /> <!-- Reutilizando layout de grid -->
   <link rel="stylesheet" href="css/abastecimento.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* Barra de rolagem para tabelas extensas com cabeçalho fixo */
+    .table-scroll-y { max-height: 450px; overflow-y: auto; }
+    .table-scroll-y th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body>
   <!-- Container para injeção do Menu Lateral -->
@@ -126,7 +131,7 @@
           <!-- Tabela -->
           <div>
             <h4 style="margin-bottom: 10px; color: var(--primary-color);">Histórico de Abastecimentos</h4>
-            <div class="table-responsive" id="containerHistoricoEntrada">
+            <div class="table-responsive table-scroll-y" id="containerHistoricoEntrada">
               <table class="glass-table data-grid">
                 <thead>
                   <tr>
@@ -251,7 +256,8 @@
                         </div>
                         <div class="form-group">
                             <label>Posto</label>
-                            <select id="extPosto" class="glass-input" required></select>
+                            <input type="text" id="extPosto" class="glass-input" list="listaPostosExternos" placeholder="Digite o nome ou CNPJ..." required>
+                            <datalist id="listaPostosExternos"></datalist>
                         </div>
                     </td>
 
@@ -264,7 +270,7 @@
                         </div>
                         <div class="form-group">
                             <label>Tipo Veículo</label>
-                            <input type="text" id="extTipo" class="glass-input" readonly>
+                            <input type="text" id="extTipo" class="glass-input" readonly style="background-color: #e9ecef; font-weight: bold;">
                         </div>
                         <div class="form-group">
                             <label>Rota</label>
@@ -274,7 +280,7 @@
                         <div style="display: flex; gap: 10px;">
                             <div class="form-group" style="flex:1;">
                                 <label>KM Anterior</label>
-                                <input type="number" id="extKmAnterior" class="glass-input" readonly>
+                                <input type="number" id="extKmAnterior" class="glass-input" readonly style="background-color: #e9ecef; font-weight: bold;">
                             </div>
                             <div class="form-group" style="flex:1;">
                                 <label>KM Atual</label>
@@ -311,11 +317,22 @@
             </div>
           </form>
 
-          <div class="table-responsive" style="margin-top: 20px;">
+          <div style="margin-top: 20px; margin-bottom: 10px;">
+              <input type="text" id="searchExtInput" class="glass-input" placeholder="🔍 Buscar por Placa, Posto ou Data..." style="width: 100%;">
+          </div>
+
+          <div class="table-responsive table-scroll-y">
             <table class="glass-table data-grid">
                 <thead>
                     <tr>
-                        <th>Data</th><th>Posto</th><th>Veículo</th><th>Litros</th><th>Valor Total</th><th>Unitário</th><th>KM Atual</th><th>Ações</th>
+                        <th class="sortable-ext" data-sort="data_hora" style="cursor: pointer;">Data <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="posto" style="cursor: pointer;">Posto <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="veiculo_placa" style="cursor: pointer;">Veículo <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="litros" style="cursor: pointer;">Litros <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="valor_total" style="cursor: pointer;">Valor Total <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="valor_unitario" style="cursor: pointer;">Unitário <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="km_atual" style="cursor: pointer;">KM Atual <i class="fas fa-sort"></i></th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tableBodyAbastecimentoExterno"></tbody>
@@ -386,7 +403,7 @@
               <input type="text" id="searchPostoInput" class="glass-input" placeholder="🔍 Buscar por Razão Social, CNPJ ou Cidade..." style="width: 100%;">
           </div>
 
-          <div class="table-responsive">
+          <div class="table-responsive table-scroll-y">
             <table class="glass-table data-grid">
                 <thead>
                     <tr>

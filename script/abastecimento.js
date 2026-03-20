@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenacao
             this.postosData = []; // Cache dos dados de postos
             this.postosSort = { key: 'razao_social', asc: true }; // Estado de ordenação dos postos
+            this.extData = []; // Cache dos dados de abastecimento externo
+            this.extSort = { key: 'data_hora', asc: false }; // Estado de ordenação externo
             this.initTabs();
             this.cache();
             this.bind();
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnImportarExterno = document.getElementById('btnImportarExterno'); // Novo Botão Importar
             this.fileImportarExterno = document.getElementById('fileImportarExterno'); // Novo Input File
             this.tableBodyExt = document.getElementById('tableBodyAbastecimentoExterno');
+            this.searchExtInput = document.getElementById('searchExtInput'); // Input de busca externo
 
             // Novos Elementos - Cadastro Posto
             this.formPosto = document.getElementById('formCadastroPosto');
@@ -145,6 +148,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Listener para Tabela Externa (Editar/Excluir)
             if (this.tableBodyExt) this.tableBodyExt.addEventListener('click', (e) => this.handleExtTableClick(e));
+
+            // Listeners para Busca e Ordenação de Abastecimento Externo
+            if (this.searchExtInput) {
+                this.searchExtInput.addEventListener('input', () => this.renderExtTable(false));
+            }
+            document.querySelectorAll('.sortable-ext').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sort;
+                    if (this.extSort.key === key) {
+                        this.extSort.asc = !this.extSort.asc;
+                    } else {
+                        this.extSort.key = key;
+                        this.extSort.asc = true;
+                    }
+                    this.renderExtTable(false);
+                });
+            });
 
             // Listener para Tabela de Postos (Editar/Excluir)
             if (this.tableBodyPostos) this.tableBodyPostos.addEventListener('click', (e) => this.handlePostoTableClick(e));
@@ -681,9 +701,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${vlrLitroFormatado}</td>
                     <td>${totalFormatado}</td>
                     <td>${reg.usuario || '-'}</td>
-                    <td class="actions-cell">
-                        <button class="btn-action btn-edit" data-id="${reg.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-delete" data-id="${reg.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <td style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="btn-action btn-edit" data-id="${reg.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action btn-delete" data-id="${reg.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 this.tableBody.appendChild(tr);
@@ -968,18 +988,27 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async loadPostosOptions() {
-            if (!this.extPosto) return;
-            const { data } = await supabaseClient.from('postos').select('id, razao_social').order('razao_social');
-            
+            const datalist = document.getElementById('listaPostosExternos');
+            if (!datalist) return;
+
             // Inicializa data atual
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
 
-            this.extPosto.innerHTML = '<option value="">Selecione o Posto</option>';
-            data?.forEach(p => {
-                this.extPosto.add(new Option(p.razao_social, p.id));
-            });
+            try {
+                const { data } = await supabaseClient.from('postos').select('id, razao_social, cnpj').order('razao_social');
+                this.postosCache = data || []; // Cache para lookup de ID ao salvar
+
+                datalist.innerHTML = '';
+                this.postosCache.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = `${p.razao_social} (${p.cnpj || 'S/CNPJ'})`;
+                    datalist.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar postos:', error);
+            }
         },
 
         async handleExtVeiculoChange() {
@@ -1162,10 +1191,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async handleExtSubmit(e) {
             e.preventDefault();
+            
+            // Resolver ID do Posto a partir do texto do input
+            let postoId = null;
+            const postoVal = this.extPosto.value;
+            if (this.postosCache) {
+                const found = this.postosCache.find(p => `${p.razao_social} (${p.cnpj || 'S/CNPJ'})` === postoVal);
+                if (found) postoId = found.id;
+            }
+
+            if (!postoId) return alert('Selecione um posto válido da lista.');
+
             const payload = {
                 data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
                 filial: this.extFilial.value,
-                posto_id: this.extPosto.value,
+                posto_id: postoId,
                 veiculo_placa: this.extVeiculo.value.toUpperCase(),
                 tipo_veiculo: this.extTipo.value,
                 km_atual: parseFloat(this.extKmAtual.value),
@@ -1205,23 +1245,65 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async renderExtTable() {
+        async renderExtTable(fetchData = true) {
             if (!this.tableBodyExt) return;
-            this.tableBodyExt.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
             
-            const { data } = await supabaseClient
-                .from('abastecimento_externo')
-                .select('*, postos(razao_social)')
-                .order('data_hora', { ascending: false })
-                .limit(50);
-            
+            if (fetchData) {
+                this.tableBodyExt.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+                // Aumentei o limite para 200 para permitir uma ordenação/busca local mais fluida
+                const { data } = await supabaseClient
+                    .from('abastecimento_externo')
+                    .select('*, postos(razao_social)')
+                    .order('data_hora', { ascending: false })
+                    .limit(200);
+                
+                this.extData = data || [];
+            }
+
+            // Filtragem
+            const term = this.searchExtInput ? this.searchExtInput.value.toLowerCase() : '';
+            const filtered = this.extData.filter(item => {
+                const postoNome = item.postos?.razao_social || '';
+                return (item.veiculo_placa || '').toLowerCase().includes(term) ||
+                       (postoNome).toLowerCase().includes(term) ||
+                       (item.data_hora || '').toLowerCase().includes(term);
+            });
+
+            // Ordenação
+            filtered.sort((a, b) => {
+                let valA = a[this.extSort.key];
+                let valB = b[this.extSort.key];
+
+                // Tratamento especial para coluna de relacionamento 'posto'
+                if (this.extSort.key === 'posto') {
+                    valA = a.postos?.razao_social || '';
+                    valB = b.postos?.razao_social || '';
+                }
+
+                if (valA === null) valA = '';
+                if (valB === null) valB = '';
+
+                // Se for data, string ou número
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                
+                if (valA < valB) return this.extSort.asc ? -1 : 1;
+                if (valA > valB) return this.extSort.asc ? 1 : -1;
+                return 0;
+            });
+
+            // Atualiza Ícones
+            document.querySelectorAll('.sortable-ext i').forEach(i => i.className = 'fas fa-sort');
+            const activeTh = document.querySelector(`.sortable-ext[data-sort="${this.extSort.key}"] i`);
+            if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
             this.tableBodyExt.innerHTML = '';
-            if (!data || data.length === 0) {
+            if (filtered.length === 0) {
                 this.tableBodyExt.innerHTML = '<tr><td colspan="8">Nenhum registro.</td></tr>';
                 return;
             }
 
-            data.forEach(item => {
+            filtered.forEach(item => {
                 const tr = document.createElement('tr');
                 const dataF = new Date(item.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
                 const valTotal = item.valor_total ? item.valor_total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
@@ -1255,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async editExt(id) {
-            const { data, error } = await supabaseClient.from('abastecimento_externo').select('*').eq('id', id).single();
+            const { data, error } = await supabaseClient.from('abastecimento_externo').select('*, postos(id, razao_social, cnpj)').eq('id', id).single();
             if (error || !data) return alert('Erro ao carregar dados.');
 
             this.extEditingId = id;
@@ -1267,7 +1349,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.extDataHora.value = date.toISOString().slice(0, 16);
             }
             this.extFilial.value = data.filial || '';
-            this.extPosto.value = data.posto_id || '';
+            
+            if (data.postos) {
+                this.extPosto.value = `${data.postos.razao_social} (${data.postos.cnpj || 'S/CNPJ'})`;
+            } else {
+                this.extPosto.value = '';
+            }
+
             this.extVeiculo.value = data.veiculo_placa || '';
             this.extTipo.value = data.tipo_veiculo || '';
             this.extRota.value = data.rota || '';
