@@ -800,6 +800,8 @@ function renderizarItensDetalhes(itens) {
         const isDuplicada = contagemPlacas[item.placa] > 1;
         const stylePlaca = isDuplicada ? 'color: red; font-weight: bold;' : '';
 
+        const valorFormatado = item.valor ? Number(item.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
+
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}" ${isFinalizada ? 'disabled' : ''}></td>
             <td><strong style="${stylePlaca}">${item.placa}</strong></td>
@@ -818,6 +820,7 @@ function renderizarItensDetalhes(itens) {
                 </span>
             </td>
             <td>${dataRealizado}</td>
+            <td>${valorFormatado}</td>
             <td>${item.usuario_realizou || '-'}</td>
             <td>${item.fornecedor || '-'}</td>
             <td>
@@ -914,6 +917,24 @@ window.atualizarItem = async function(id, campo, valor) {
     }
 }
 
+// Função auxiliar para calcular o valor com base nos preços atuais
+function calcularValorPeloPrecoAtual(item) {
+    if (!item.tipo_lavagem) return 0;
+    
+    const tipos = item.tipo_lavagem.split(',').map(t => t.trim());
+    let total = 0;
+    
+    tipos.forEach(tipo => {
+        const p = precosCache.find(x => 
+            (x.tipoVeiculo || '').toUpperCase() === (item.tipo_veiculo || '').toUpperCase() && 
+            x.tipoLavagem === tipo &&
+            (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor))
+        );
+        if (p) total += p.valor;
+    });
+    return total;
+}
+
 window.toggleStatusItem = async function(id, statusAtual) {
     if (statusAtual === 'PULAR_LAVAGEM' || statusAtual === 'INTERNADO') {
         return alert(`Não é possível alterar o status de um item com "${statusAtual}". Remova-o e adicione novamente se necessário.`);
@@ -930,6 +951,7 @@ window.toggleStatusItem = async function(id, statusAtual) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
     const dataRealizado = novoStatus === 'REALIZADO' ? new Date().toISOString() : null;
 
+    let valorParaSalvar = null;
     if (novoStatus === 'REALIZADO') {
         const item = currentListItems.find(i => i.id === id);
         const select = document.querySelector(`select[onchange*="${id}"]`);
@@ -939,6 +961,8 @@ window.toggleStatusItem = async function(id, statusAtual) {
             alert('Selecione o Tipo de Lavagem antes de marcar como Realizado.');
             return;
         }
+        // Calcula o valor para salvar no banco
+        valorParaSalvar = calcularValorPeloPrecoAtual(item);
     }
 
     try {
@@ -947,7 +971,8 @@ window.toggleStatusItem = async function(id, statusAtual) {
             .update({
                 status: novoStatus,
                 data_realizado: dataRealizado,
-                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null
+                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null,
+                valor: valorParaSalvar // Salva o valor calculado (ou null se pendente)
             })
             .eq('id', id);
 
@@ -957,6 +982,7 @@ window.toggleStatusItem = async function(id, statusAtual) {
         if (itemIndex > -1) {
             currentListItems[itemIndex].status = novoStatus;
             currentListItems[itemIndex].data_realizado = dataRealizado;
+            currentListItems[itemIndex].valor = valorParaSalvar;
         }
         renderizarItensDetalhes(currentListItems);
 
@@ -1024,19 +1050,25 @@ async function finalizarListaAtual() {
         // 2. Calcular e salvar valor fixo para itens realizados
         const updates = itens.map(item => {
             if (item.status !== 'REALIZADO') return null;
-            const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
+            
+            // Se já tem valor salvo no banco, NÃO altera (preserva histórico de preço)
+            if (item.valor !== null && item.valor !== undefined) return null;
+
+            // Se não tem valor (antigo ou erro), calcula e salva
+            const tipoVeiculo = veiculoMap.get(item.placa);
+            
+            // Monta um objeto temporário para usar a função auxiliar
+            const tempItem = { 
+                ...item, 
+                tipo_veiculo: tipoVeiculo || 'DESCONHECIDO'
+            };
+            
             let valorItem = 0;
-            if (item.tipo_lavagem) {
-                item.tipo_lavagem.split(',').map(t => t.trim()).forEach(tipo => {
-                    // Busca preço considerando o fornecedor do item
-                    const p = precosCache.find(x => 
-                        (x.tipoVeiculo || '').toUpperCase() === (tipoVeiculo || '').toUpperCase() && 
-                        x.tipoLavagem === tipo &&
-                        (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor))
-                    );
-                    if (p) valorItem += p.valor;
-                });
+            
+            if(item.tipo_lavagem) {
+                valorItem = calcularValorPeloPrecoAtual(tempItem);
             }
+            
             return supabaseClient.from('lavagem_itens').update({ valor: valorItem }).eq('id', item.id);
         }).filter(p => p !== null);
 
@@ -1141,7 +1173,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 
                 // 2. Determina o valor final do item (Snapshot ou Atual)
                 if (item.valor !== undefined && item.valor !== null) {
-                    valorItem = item.valor;
+                    valorItem = Number(item.valor);
                 } else {
                     valorItem = valorCalculadoAtual;
                 }
@@ -1504,24 +1536,42 @@ async function bulkSetStatus(novoStatus) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
     const dataRealizado = novoStatus === 'REALIZADO' ? new Date().toISOString() : null;
 
-    try {
-        const { error } = await supabaseClient
-            .from('lavagem_itens')
-            .update({
-                status: novoStatus,
-                data_realizado: dataRealizado,
-                usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null,
-                tipo_lavagem: novoStatus === 'PULAR_LAVAGEM' ? null : undefined
-            })
-            .in('id', ids);
+    // Prepara atualizações individuais para calcular valor corretamente se for REALIZADO
+    const updatesPromises = ids.map(id => {
+        const item = currentListItems.find(i => i.id == id);
+        let valorParaSalvar = null;
+        
+        if (novoStatus === 'REALIZADO') {
+            valorParaSalvar = calcularValorPeloPrecoAtual(item);
+        }
 
-        if (error) throw error;
+        return supabaseClient.from('lavagem_itens').update({
+            status: novoStatus,
+            data_realizado: dataRealizado,
+            usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null,
+            tipo_lavagem: novoStatus === 'PULAR_LAVAGEM' ? null : undefined,
+            valor: valorParaSalvar
+        }).eq('id', id);
+    });
+
+    try {
+        const results = await Promise.all(updatesPromises);
+        const errors = results.filter(r => r.error).map(r => r.error);
+
+        if (errors.length > 0) throw errors[0];
 
         ids.forEach(id => {
             const itemIndex = currentListItems.findIndex(i => i.id == id);
             if (itemIndex > -1) {
                 currentListItems[itemIndex].status = novoStatus;
                 currentListItems[itemIndex].data_realizado = dataRealizado;
+                
+                if (novoStatus === 'REALIZADO') {
+                    currentListItems[itemIndex].valor = calcularValorPeloPrecoAtual(currentListItems[itemIndex]);
+                } else {
+                    currentListItems[itemIndex].valor = null;
+                }
+
                 if (novoStatus === 'PULAR_LAVAGEM') {
                     currentListItems[itemIndex].tipo_lavagem = null;
                 }
@@ -1930,7 +1980,7 @@ async function gerarRelatorio() {
                     
                     // Se tem valor salvo (snapshot), usa ele
                     if (item.valor !== undefined && item.valor !== null) {
-                        valorLista += item.valor;
+                        valorLista += Number(item.valor);
                     } else {
                         // Fallback: calcula com preços atuais
                         const tipoVeiculo = veiculoMap.get(item.placa) || 'DESCONHECIDO';
