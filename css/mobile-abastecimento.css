@@ -278,3 +278,9 @@ body {
     cursor: pointer;
     color: #666;
 }
+
+/* Ajuste para o container do leitor de QR Code */
+#reader {
+    width: 100%;
+    background-color: black;
+}
