@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
@@ -6,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tanquesDisponiveis = [];
             this.bicosDisponiveis = [];
             this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenacao
+            this.postosData = []; // Cache dos dados de postos
+            this.postosSort = { key: 'razao_social', asc: true }; // Estado de ordenação dos postos
             this.initTabs();
             this.cache();
             this.bind();
@@ -71,6 +74,40 @@ document.addEventListener('DOMContentLoaded', () => {
             // Elementos da Aba Estoque
             this.tbodyEstoque = document.getElementById('tbodyEstoqueAtual');
             this.btnSalvarEstoque = document.getElementById('btnSalvarEstoque');
+
+            // Novos Elementos - Abastecimento Externo
+            this.formExt = document.getElementById('formAbastecimentoExterno');
+            this.extDataHora = document.getElementById('extDataHora'); // Novo
+            this.extFilial = document.getElementById('extFilial');
+            this.extPosto = document.getElementById('extPosto');
+            this.extVeiculo = document.getElementById('extVeiculo');
+            this.extTipo = document.getElementById('extTipo');
+            this.extKmAtual = document.getElementById('extKmAtual');
+            this.extKmAnterior = document.getElementById('extKmAnterior');
+            this.extKmRodado = document.getElementById('extKmRodado');
+            this.extRota = document.getElementById('extRota');
+            this.extLitros = document.getElementById('extLitros'); // Novo
+            this.extValorTotal = document.getElementById('extValorTotal'); // Novo
+            this.extValorUnitario = document.getElementById('extValorUnitario'); // Novo
+            this.extCapacidadeTanque = document.getElementById('extCapacidadeTanque'); // Span de capacidade
+            this.btnImportarExterno = document.getElementById('btnImportarExterno'); // Novo Botão Importar
+            this.fileImportarExterno = document.getElementById('fileImportarExterno'); // Novo Input File
+            this.tableBodyExt = document.getElementById('tableBodyAbastecimentoExterno');
+
+            // Novos Elementos - Cadastro Posto
+            this.formPosto = document.getElementById('formCadastroPosto');
+            this.postoFilial = document.getElementById('postoFilial');
+            this.postoRazao = document.getElementById('postoRazao');
+            this.postoCnpj = document.getElementById('postoCnpj');
+            this.postoCidade = document.getElementById('postoCidade');
+            this.postoUf = document.getElementById('postoUf');
+            this.postoFaturado = document.getElementById('postoFaturado');
+            this.tableBodyPostos = document.getElementById('tableBodyPostos');
+            this.btnImportarPostos = document.getElementById('btnImportarPostos'); // Novo Botão Importar Postos
+            this.fileImportarPostos = document.getElementById('fileImportarPostos'); // Novo Input File Postos
+            this.extEditingId = null; // Variável para controlar edição
+            this.postoEditingId = null; // Variável para controlar edição de posto
+            this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
         },
 
         bind() {
@@ -98,6 +135,58 @@ document.addEventListener('DOMContentLoaded', () => {
             ths.forEach(th => {
                 th.addEventListener('click', () => this.handleSort(th.dataset.field));
             });
+
+            // Listeners Abastecimento Externo
+            if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
+            if (this.extVeiculo) this.extVeiculo.addEventListener('change', this.handleExtVeiculoChange.bind(this));
+            if (this.extKmAtual) this.extKmAtual.addEventListener('input', this.calculateKmRodado.bind(this));
+            if (this.extLitros) this.extLitros.addEventListener('input', this.calculateExtValorUnitario.bind(this));
+            if (this.extValorTotal) this.extValorTotal.addEventListener('input', this.calculateExtValorUnitario.bind(this));
+
+            // Listener para Tabela Externa (Editar/Excluir)
+            if (this.tableBodyExt) this.tableBodyExt.addEventListener('click', (e) => this.handleExtTableClick(e));
+
+            // Listener para Tabela de Postos (Editar/Excluir)
+            if (this.tableBodyPostos) this.tableBodyPostos.addEventListener('click', (e) => this.handlePostoTableClick(e));
+
+            // Listeners para Busca e Ordenação de Postos
+            if (this.searchPostoInput) {
+                this.searchPostoInput.addEventListener('input', () => this.renderPostosTable(false));
+            }
+            document.querySelectorAll('.sortable-posto').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sort;
+                    if (this.postosSort.key === key) {
+                        this.postosSort.asc = !this.postosSort.asc;
+                    } else {
+                        this.postosSort.key = key;
+                        this.postosSort.asc = true;
+                    }
+                    this.renderPostosTable(false);
+                });
+            });
+
+            // Listeners Importação
+            if (this.btnImportarExterno && this.fileImportarExterno) {
+                this.btnImportarExterno.addEventListener('click', () => this.fileImportarExterno.click());
+                this.fileImportarExterno.addEventListener('change', (e) => this.handleImportarExterno(e));
+            }
+
+            // Listeners Importação Postos
+            if (this.btnImportarPostos && this.fileImportarPostos) {
+                this.btnImportarPostos.addEventListener('click', () => this.fileImportarPostos.click());
+                this.fileImportarPostos.addEventListener('change', (e) => this.handleImportarPostos(e));
+            }
+
+            // Listeners Cadastro Posto
+            if (this.formPosto) this.formPosto.addEventListener('submit', this.handlePostoSubmit.bind(this));
+
+            // Inicialização das novas abas
+            if (this.extPosto) this.loadPostosOptions();
+            this.loadFiliaisOptions();
+            this.loadRotasOptions();
+            if (this.tableBodyPostos) this.renderPostosTable();
+            if (this.tableBodyExt) this.renderExtTable();
         },
 
         getUsuarioLogado() {
@@ -832,6 +921,635 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao excluir saída:', error);
                 alert('Erro ao excluir o registro.');
+            }
+        },
+
+        // --- LÓGICA ABASTEIMENTO EXTERNO ---
+
+        async loadFiliaisOptions() {
+            try {
+                const { data, error } = await supabaseClient.from('filiais').select('nome').order('nome');
+                if (error) throw error;
+                
+                const options = '<option value="">Selecione a Filial</option>' + 
+                    (data || []).map(f => `<option value="${f.nome}">${f.nome}</option>`).join('');
+
+                if (this.extFilial) this.extFilial.innerHTML = options;
+                if (this.postoFilial) this.postoFilial.innerHTML = options;
+            } catch (error) {
+                console.error('Erro ao carregar filiais:', error);
+            }
+        },
+
+        async loadRotasOptions() {
+            const datalist = document.getElementById('listaRotasExternas');
+            if (!datalist) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rotas')
+                    .select('numero')
+                    .order('numero');
+
+                if (error) throw error;
+
+                datalist.innerHTML = '';
+                // Ordena numericamente se possível
+                const sortedData = (data || []).sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' }));
+                
+                sortedData.forEach(r => {
+                    const option = document.createElement('option');
+                    option.value = r.numero;
+                    datalist.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar rotas:', error);
+            }
+        },
+
+        async loadPostosOptions() {
+            if (!this.extPosto) return;
+            const { data } = await supabaseClient.from('postos').select('id, razao_social').order('razao_social');
+            
+            // Inicializa data atual
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
+
+            this.extPosto.innerHTML = '<option value="">Selecione o Posto</option>';
+            data?.forEach(p => {
+                this.extPosto.add(new Option(p.razao_social, p.id));
+            });
+        },
+
+        async handleExtVeiculoChange() {
+            const placa = this.extVeiculo.value.toUpperCase();
+            if (!placa) return;
+
+            // 1. Buscar Tipo do Veículo
+            const { data: veiculo } = await supabaseClient.from('veiculos').select('*').eq('placa', placa).single();
+            if (veiculo && this.extTipo) {
+                this.extTipo.value = veiculo.tipo || '';
+            }
+            // Tenta exibir a capacidade se existir no cadastro, senão deixa traço
+            if (this.extCapacidadeTanque) {
+                this.extCapacidadeTanque.textContent = (veiculo && veiculo.capacidade_tanque) ? veiculo.capacidade_tanque : '--';
+            }
+
+            // 2. Buscar KM Anterior (último registro externo)
+            const { data: ultimoReg } = await supabaseClient
+                .from('abastecimento_externo')
+                .select('km_atual')
+                .eq('veiculo_placa', placa)
+                .order('data_hora', { ascending: false })
+                .limit(1)
+                .single();
+            
+            if (this.extKmAnterior) {
+                this.extKmAnterior.value = ultimoReg ? ultimoReg.km_atual : 0;
+                this.calculateKmRodado();
+            }
+        },
+
+        calculateKmRodado() {
+            const atual = parseFloat(this.extKmAtual.value) || 0;
+            const anterior = parseFloat(this.extKmAnterior.value) || 0;
+            if (this.extKmRodado) {
+                this.extKmRodado.value = atual > anterior ? (atual - anterior) : 0;
+            }
+        },
+
+        calculateExtValorUnitario() {
+            const litros = parseFloat(this.extLitros.value) || 0;
+            const total = parseFloat(this.extValorTotal.value) || 0;
+            if (litros > 0 && this.extValorUnitario) {
+                this.extValorUnitario.value = (total / litros).toFixed(3);
+            } else if (this.extValorUnitario) {
+                this.extValorUnitario.value = '';
+            }
+        },
+
+        async handleImportarExterno(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const btn = this.btnImportarExterno;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (json.length === 0) throw new Error('Arquivo vazio.');
+
+                    // 1. Carregar Postos para mapear CNPJ -> ID
+                    const { data: postos } = await supabaseClient.from('postos').select('id, cnpj');
+                    const mapPostos = new Map();
+                    if (postos) {
+                        postos.forEach(p => {
+                            if (p.cnpj) mapPostos.set(p.cnpj.replace(/\D/g, ''), p.id);
+                        });
+                    }
+
+                    const usuario = this.getUsuarioLogado();
+                    const payloads = [];
+                    let erros = 0;
+
+                    for (const row of json) {
+                        // Normalizar chaves
+                        const r = {};
+                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+
+                        // Mapeamento de Colunas conforme solicitação:
+                        // FILIAL, DATA E HORA, CNPJ, PLACA, ROTA, KM ATUAL, LITROS, VALOR TOTAL, VALOR UNITÁRIO
+                        const filial = r['FILIAL'] || '';
+                        const veiculo = r['PLACA'] || r['VEICULO'] || r['VEICULO(PLACA)'];
+                        const cnpjRaw = r['CNPJ'] || r['POSTO'] || r['POSTO(CNPJ)'];
+                        const rota = r['ROTA'] || '';
+                        const kmAtual = parseFloat(r['KM ATUAL'] || r['KM_ATUAL'] || r['KM']) || 0;
+                        const litros = parseFloat(r['LITROS'] || r['LITROS_ABASTECIDOS']) || 0;
+                        const valorTotal = parseFloat(r['VALOR TOTAL'] || r['TOTAL']) || 0;
+                        const valorUnitario = parseFloat(r['VALOR UNITÁRIO'] || r['VALOR UNITARIO'] || r['VALOR_UNITARIO'] || r['UNITARIO']) || 0;
+                        
+                        let dataHora = r['DATA E HORA'] || r['DATAEHORA'] || r['DATA'];
+                        if (dataHora instanceof Date) {
+                            dataHora = dataHora.toISOString();
+                        } else if (typeof dataHora === 'string') {
+                            // Tenta converter string PT-BR ou ISO
+                            // Se for data excel serial number, o cellDates: true já tratou
+                            const d = new Date(dataHora);
+                            if(!isNaN(d)) dataHora = d.toISOString();
+                            else dataHora = new Date().toISOString(); // Fallback
+                        } else {
+                            dataHora = new Date().toISOString();
+                        }
+
+                        if (!veiculo || !kmAtual || !litros) {
+                            console.warn('Linha ignorada por falta de dados essenciais:', r);
+                            erros++;
+                            continue;
+                        }
+
+                        // Tratamento de CNPJ para encontrar ID
+                        const cnpjLimpo = String(cnpjRaw).replace(/\D/g, '');
+                        const postoId = mapPostos.get(cnpjLimpo);
+
+                        if (!postoId) {
+                            console.warn(`Posto não encontrado para CNPJ: ${cnpjRaw} na linha do veículo ${veiculo}`);
+                            // Opcional: Criar posto ou pular? Vamos pular por segurança ou deixar nulo se o banco permitir
+                            // O banco exige foreign key se informado? Se posto_id for null, ok se a coluna permitir.
+                            // Mas para relatório é ruim. Vamos contar como erro ou tentar prosseguir sem posto?
+                            // Assumindo que posto é importante:
+                            // erros++; continue; 
+                            // Se quiser permitir sem posto, comente a linha abaixo.
+                        }
+
+                        // Buscar KM Anterior (Opcional: Pode deixar lento em grandes lotes, mas garante integridade)
+                        let kmAnterior = 0;
+                        const { data: ultReg } = await supabaseClient
+                            .from('abastecimento_externo')
+                            .select('km_atual')
+                            .eq('veiculo_placa', veiculo)
+                            .lt('data_hora', dataHora) // Busca anterior a esta data
+                            .order('data_hora', { ascending: false })
+                            .limit(1)
+                            .single();
+                        
+                        if (ultReg) kmAnterior = ultReg.km_atual;
+
+                        payloads.push({
+                            filial: filial,
+                            data_hora: dataHora,
+                            posto_id: postoId || null,
+                            veiculo_placa: veiculo,
+                            rota: rota,
+                            km_atual: kmAtual,
+                            km_anterior: kmAnterior,
+                            km_rodado: (kmAtual > kmAnterior) ? (kmAtual - kmAnterior) : 0,
+                            litros: litros,
+                            valor_total: valorTotal,
+                            valor_unitario: valorUnitario,
+                            usuario: usuario
+                        });
+                    }
+
+                    if (payloads.length > 0) {
+                        const { error } = await supabaseClient.from('abastecimento_externo').insert(payloads);
+                        if (error) throw error;
+                        alert(`Importação concluída! ${payloads.length} registros inseridos.${erros > 0 ? ` (${erros} ignorados)` : ''}`);
+                        this.renderExtTable();
+                    } else {
+                        alert('Nenhum dado válido encontrado para importação.');
+                    }
+
+                } catch (err) {
+                    console.error('Erro na importação:', err);
+                    alert('Erro ao processar arquivo: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        },
+
+        async handleExtSubmit(e) {
+            e.preventDefault();
+            const payload = {
+                data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
+                filial: this.extFilial.value,
+                posto_id: this.extPosto.value,
+                veiculo_placa: this.extVeiculo.value.toUpperCase(),
+                tipo_veiculo: this.extTipo.value,
+                km_atual: parseFloat(this.extKmAtual.value),
+                km_anterior: parseFloat(this.extKmAnterior.value),
+                km_rodado: parseFloat(this.extKmRodado.value),
+                litros: parseFloat(this.extLitros.value),
+                valor_total: parseFloat(this.extValorTotal.value),
+                valor_unitario: parseFloat(this.extValorUnitario.value),
+                rota: this.extRota.value,
+                usuario: this.getUsuarioLogado()
+            };
+
+            if (!payload.posto_id || !payload.veiculo_placa || !payload.km_atual) {
+                return alert('Preencha os campos obrigatórios.');
+            }
+
+            let error;
+            if (this.extEditingId) {
+                // Atualizar
+                const { error: updateError } = await supabaseClient
+                    .from('abastecimento_externo')
+                    .update(payload)
+                    .eq('id', this.extEditingId);
+                error = updateError;
+            } else {
+                // Inserir
+                const { error: insertError } = await supabaseClient.from('abastecimento_externo').insert(payload);
+                error = insertError;
+            }
+
+            if (error) {
+                alert('Erro ao salvar: ' + error.message);
+            } else {
+                alert(`Abastecimento externo ${this.extEditingId ? 'atualizado' : 'registrado'}!`);
+                this.resetExtForm();
+                this.renderExtTable();
+            }
+        },
+
+        async renderExtTable() {
+            if (!this.tableBodyExt) return;
+            this.tableBodyExt.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+            
+            const { data } = await supabaseClient
+                .from('abastecimento_externo')
+                .select('*, postos(razao_social)')
+                .order('data_hora', { ascending: false })
+                .limit(50);
+            
+            this.tableBodyExt.innerHTML = '';
+            if (!data || data.length === 0) {
+                this.tableBodyExt.innerHTML = '<tr><td colspan="8">Nenhum registro.</td></tr>';
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const dataF = new Date(item.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                const valTotal = item.valor_total ? item.valor_total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
+                tr.innerHTML = `
+                    <td>${dataF}</td>
+                    <td>${item.postos?.razao_social || '-'}</td>
+                    <td>${item.veiculo_placa}</td>
+                    <td>${item.litros || '-'} L</td>
+                    <td>${valTotal}</td>
+                    <td>${item.valor_unitario || '-'}</td>
+                    <td>${item.km_atual || '-'}</td>
+                    <td style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="btn-action btn-edit-ext" data-id="${item.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action btn-delete-ext" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                this.tableBodyExt.appendChild(tr);
+            });
+        },
+
+        handleExtTableClick(e) {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const id = btn.dataset.id;
+
+            if (btn.classList.contains('btn-edit-ext')) {
+                this.editExt(id);
+            } else if (btn.classList.contains('btn-delete-ext')) {
+                this.deleteExt(id);
+            }
+        },
+
+        async editExt(id) {
+            const { data, error } = await supabaseClient.from('abastecimento_externo').select('*').eq('id', id).single();
+            if (error || !data) return alert('Erro ao carregar dados.');
+
+            this.extEditingId = id;
+            
+            // Preenche o formulário
+            if (this.extDataHora) {
+                const date = new Date(data.data_hora);
+                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                this.extDataHora.value = date.toISOString().slice(0, 16);
+            }
+            this.extFilial.value = data.filial || '';
+            this.extPosto.value = data.posto_id || '';
+            this.extVeiculo.value = data.veiculo_placa || '';
+            this.extTipo.value = data.tipo_veiculo || '';
+            this.extRota.value = data.rota || '';
+            this.extKmAnterior.value = data.km_anterior || 0;
+            this.extKmAtual.value = data.km_atual || 0;
+            this.extKmRodado.value = data.km_rodado || 0;
+            this.extLitros.value = data.litros || '';
+            this.extValorTotal.value = data.valor_total || '';
+            this.extValorUnitario.value = data.valor_unitario || '';
+
+            // Atualiza botão
+            const btn = this.formExt.querySelector('button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Registro';
+            
+            this.formExt.scrollIntoView({ behavior: 'smooth' });
+        },
+
+        async deleteExt(id) {
+            if (!confirm('Deseja excluir este registro?')) return;
+            const { error } = await supabaseClient.from('abastecimento_externo').delete().eq('id', id);
+            if (error) alert('Erro ao excluir: ' + error.message);
+            else this.renderExtTable();
+        },
+
+        resetExtForm() {
+            this.formExt.reset();
+            this.extEditingId = null;
+            const btn = this.formExt.querySelector('button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Registro';
+        },
+
+        // --- LÓGICA CADASTRO POSTO ---
+
+        async handleImportarPostos(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const btn = this.btnImportarPostos;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (json.length === 0) throw new Error('Arquivo vazio.');
+                    
+                    // Carrega CNPJs existentes para verificação de duplicidade
+                    const { data: existingData } = await supabaseClient.from('postos').select('cnpj');
+                    const existingCnpjs = new Set();
+                    if (existingData) {
+                        existingData.forEach(p => {
+                            if (p.cnpj) existingCnpjs.add(p.cnpj.replace(/\D/g, ''));
+                        });
+                    }
+
+                    const payloads = [];
+                    let erros = 0;
+                    let duplicados = 0;
+                    const cnpjsNoArquivo = new Set(); // Para evitar duplicados no próprio arquivo
+
+                    for (const row of json) {
+                        const r = {};
+                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+
+                        // Campos: Razão Social, Cidade, UF, Filial, CNPJ
+                        const razao = r['RAZÃO SOCIAL'] || r['RAZAO SOCIAL'] || r['RAZAO'] || r['NOME'];
+                        if (!razao) { erros++; continue; }
+
+                        const cnpjRaw = r['CNPJ'] ? String(r['CNPJ']) : '';
+                        
+                        // Verificação de duplicidade
+                        if (cnpjRaw) {
+                            const cnpjClean = cnpjRaw.replace(/\D/g, '');
+                            if (cnpjClean) {
+                                if (existingCnpjs.has(cnpjClean) || cnpjsNoArquivo.has(cnpjClean)) {
+                                    duplicados++;
+                                    continue; // Pula este registro
+                                }
+                                cnpjsNoArquivo.add(cnpjClean);
+                            }
+                        }
+
+                        payloads.push({
+                            razao_social: razao,
+                            cidade: r['CIDADE'] || '',
+                            uf: r['UF'] || '',
+                            filial: r['FILIAL'] || '',
+                            cnpj: cnpjRaw,
+                            faturado: false // Padrão
+                        });
+                    }
+
+                    if (payloads.length > 0) {
+                        const { error } = await supabaseClient.from('postos').insert(payloads);
+                        if (error) throw error;
+                        
+                        let msg = `Importação concluída! ${payloads.length} postos cadastrados.`;
+                        if (duplicados > 0) msg += `\n(${duplicados} ignorados por CNPJ duplicado)`;
+                        
+                        alert(msg);
+                        this.renderPostosTable();
+                        this.loadPostosOptions();
+                    } else {
+                        if (duplicados > 0) alert(`Nenhum posto importado. ${duplicados} registros eram duplicados.`);
+                        else alert('Nenhum dado válido encontrado.');
+                    }
+                } catch (err) {
+                    console.error('Erro na importação de postos:', err);
+                    alert('Erro ao processar arquivo: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        },
+
+        async handlePostoSubmit(e) {
+            e.preventDefault();
+            
+            const cnpjInput = this.postoCnpj.value;
+
+            // Verificação de duplicidade manual
+            if (cnpjInput) {
+                const cnpjLimpo = cnpjInput.replace(/\D/g, '');
+                if (cnpjLimpo) {
+                    const { data: existingData, error } = await supabaseClient.from('postos').select('cnpj');
+                    if (!error && existingData) {
+                        const exists = existingData.some(p => (p.cnpj || '').replace(/\D/g, '') === cnpjLimpo);
+                        if (exists) {
+                            return alert('Já existe um posto cadastrado com este CNPJ.');
+                        }
+                    }
+                }
+            }
+
+            const payload = {
+                filial: this.postoFilial.value,
+                razao_social: this.postoRazao.value,
+                cnpj: this.postoCnpj.value,
+                cidade: this.postoCidade.value,
+                uf: this.postoUf.value,
+                faturado: this.postoFaturado.value === 'Sim'
+            };
+
+            let error;
+            if (this.postoEditingId) {
+                // Atualizar
+                const { error: updateError } = await supabaseClient
+                    .from('postos')
+                    .update(payload)
+                    .eq('id', this.postoEditingId);
+                error = updateError;
+            } else {
+                // Inserir
+                const { error: insertError } = await supabaseClient.from('postos').insert(payload);
+                error = insertError;
+            }
+
+            if (error) {
+                alert('Erro ao salvar posto: ' + error.message);
+            } else {
+                alert(`Posto ${this.postoEditingId ? 'atualizado' : 'cadastrado'} com sucesso!`);
+                this.resetPostoForm();
+                this.renderPostosTable();
+                this.loadPostosOptions(); // Atualiza dropdown da outra aba
+            }
+        },
+
+        async renderPostosTable(fetchData = true) {
+            if (!this.tableBodyPostos) return;
+            
+            if (fetchData) {
+                this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+                const { data } = await supabaseClient.from('postos').select('*');
+                this.postosData = data || [];
+            }
+
+            // Filtragem
+            const term = this.searchPostoInput ? this.searchPostoInput.value.toLowerCase() : '';
+            const filtered = this.postosData.filter(p => {
+                return (p.razao_social || '').toLowerCase().includes(term) ||
+                       (p.cnpj || '').toLowerCase().includes(term) ||
+                       (p.cidade || '').toLowerCase().includes(term);
+            });
+
+            // Ordenação
+            filtered.sort((a, b) => {
+                let valA = a[this.postosSort.key];
+                let valB = b[this.postosSort.key];
+                if (valA === null) valA = '';
+                if (valB === null) valB = '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                
+                if (valA < valB) return this.postosSort.asc ? -1 : 1;
+                if (valA > valB) return this.postosSort.asc ? 1 : -1;
+                return 0;
+            });
+
+            // Atualiza Ícones
+            document.querySelectorAll('.sortable-posto i').forEach(i => i.className = 'fas fa-sort');
+            const activeTh = document.querySelector(`.sortable-posto[data-sort="${this.postosSort.key}"] i`);
+            if (activeTh) activeTh.className = this.postosSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+            this.tableBodyPostos.innerHTML = '';
+            if (filtered.length === 0) {
+                this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum posto encontrado.</td></tr>';
+                return;
+            }
+
+            filtered.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.filial || '-'}</td>
+                    <td>${p.razao_social}</td>
+                    <td>${p.cnpj || '-'}</td>
+                    <td>${p.cidade || '-'}</td>
+                    <td>${p.uf || '-'}</td>
+                    <td>${p.faturado ? 'Sim' : 'Não'}</td>
+                    <td style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="btn-action btn-edit-posto" data-id="${p.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action btn-delete-posto" data-id="${p.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                this.tableBodyPostos.appendChild(tr);
+            });
+        },
+
+        handlePostoTableClick(e) {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const id = btn.dataset.id;
+
+            if (btn.classList.contains('btn-edit-posto')) {
+                this.editPosto(id);
+            } else if (btn.classList.contains('btn-delete-posto')) {
+                this.deletePosto(id);
+            }
+        },
+
+        async editPosto(id) {
+            const { data, error } = await supabaseClient.from('postos').select('*').eq('id', id).single();
+            if (error || !data) return alert('Erro ao carregar dados do posto.');
+
+            this.postoEditingId = id;
+            
+            this.postoFilial.value = data.filial || '';
+            this.postoRazao.value = data.razao_social || '';
+            this.postoCnpj.value = data.cnpj || '';
+            this.postoCidade.value = data.cidade || '';
+            this.postoUf.value = data.uf || '';
+            this.postoFaturado.value = data.faturado ? 'Sim' : 'Não';
+
+            const btn = this.formPosto.querySelector('button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Posto';
+            
+            this.formPosto.scrollIntoView({ behavior: 'smooth' });
+        },
+
+        resetPostoForm() {
+            this.formPosto.reset();
+            this.postoEditingId = null;
+            const btn = this.formPosto.querySelector('button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Posto';
+        },
+
+        async deletePosto(id) {
+            if(confirm('Excluir este posto?')) {
+                const { error } = await supabaseClient.from('postos').delete().eq('id', id);
+                if(error) alert('Erro ao excluir: ' + error.message);
+                else {
+                    this.renderPostosTable();
+                    this.loadPostosOptions();
+                }
             }
         },
     };
