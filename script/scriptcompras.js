@@ -88,12 +88,21 @@ const UI = {
     // sort state
     this._produtosSort = { field: 'nome', ascending: true };
     this._fornecedoresSort = { field: 'nome', ascending: true };
+    this._savedQuotationsSort = { field: 'updated_at', ascending: false }; // Estado inicial ordenação cotações
     this.renderProdutosGrid(); // carregar produtos no início
     this.renderFornecedoresGrid(); // carregar fornecedores no início
     this.editingQuotationId = null; // Controla o modo de edição
     this.setupUserAccess();
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } }); // Corrigido: &gt; para >
+
+    // --- CSS INJECTION PARA SCROLL NA TABELA ---
+    const style = document.createElement('style');
+    style.innerHTML = `
+      #sectionCotacoesSalvas .table-responsive { max-height: 450px; overflow-y: auto; }
+      #sectionCotacoesSalvas thead th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+    `;
+    document.head.appendChild(style);
   },
 
   cache(){
@@ -165,6 +174,9 @@ const UI = {
     this.btnRegistrarCotacoes.addEventListener('click', ()=>this.handleRegisterQuotation()); // Corrigido: &gt; para >
 
     this.btnSearchQuotation?.addEventListener('click', ()=>this.renderSavedQuotations()); // Corrigido: &gt; para >
+    this.searchQuotationInput?.addEventListener('keyup', (e) => {
+        if(e.key === 'Enter') this.renderSavedQuotations();
+    });
     this.filterStatusSelect?.addEventListener('change', ()=>this.renderSavedQuotations()); // Corrigido: &gt; para >
 
     this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e)); // Corrigido: &gt; para >
@@ -222,6 +234,13 @@ const UI = {
       fornThs.forEach(th=>{ // Corrigido: &gt; para >
         const field = th.getAttribute('data-field');
         th.addEventListener('click', ()=>{ this.toggleFornecedoresSort(field) }); // Corrigido: &gt; para >
+      });
+      
+      // Listeners de ordenação para Cotações Salvas
+      const quotThs = document.querySelectorAll('#sectionCotacoesSalvas .data-grid thead th[data-field]');
+      quotThs.forEach(th=>{
+        const field = th.getAttribute('data-field');
+        th.addEventListener('click', ()=>{ this.toggleSavedQuotationsSort(field) });
       });
 
       // Adiciona o listener para o novo campo de busca de produtos
@@ -828,21 +847,41 @@ const UI = {
     try{
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
-      // Query base
-      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))').order('updated_at',{ascending:false});
-      if(search) q = q.ilike('codigo_cotacao',`%${search}%`);
+      // Query base com ordenação dinâmica
+      let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))');
+      
+      // Aplica ordenação
+      if (this._savedQuotationsSort.field.includes('.')) {
+         const [table, col] = this._savedQuotationsSort.field.split('.');
+         q = q.order(col, { foreignTable: table, ascending: this._savedQuotationsSort.ascending });
+      } else {
+         q = q.order(this._savedQuotationsSort.field, { ascending: this._savedQuotationsSort.ascending });
+      }
+
+      // if(search) q = q.ilike('codigo_cotacao',`%${search}%`); // Removido para permitir filtro local (inclui Vencedor)
       if(status && status!=='Todas') q = q.eq('status',status);
       const { data, error } = await q;
       if(error) throw error;
       this.savedQuotationsTableBody.innerHTML = '';
-      if(!data || data.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`; // Corrigido: &lt; e &gt;
+
+      let filteredData = data || [];
+      if (search) {
+        const s = search.toLowerCase();
+        filteredData = filteredData.filter(item => {
+            const code = (item.codigo_cotacao || '').toLowerCase();
+            const winner = (item.fornecedores?.nome || '').toLowerCase();
+            return code.includes(s) || winner.includes(s);
+        });
+      }
+
+      if(!filteredData || filteredData.length===0) return this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="7">Nenhuma cotação encontrada.</td></tr>`; // Corrigido: &lt; e &gt;
 
       // Obter o nível do usuário logado para controlar a visibilidade dos botões
       const usuarioLogado = this._getCurrentUser();
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       const podeExcluir = !['compras', 'estoque'].includes(nivelUsuario);
 
-      data.forEach(c=>{ // Corrigido: &gt; para >
+      filteredData.forEach(c=>{ // Corrigido: &gt; para >
         const tr = document.createElement('tr');
         const winnerName = c.fornecedores ? c.fornecedores.nome : 'N/A';
         
@@ -891,6 +930,9 @@ const UI = {
       this.savedQuotationsTableBody.querySelectorAll('.btn-receive').forEach(b=>b.addEventListener('click', e=>this.openRecebimentoPanel(e.target.dataset.id)));
       // status change listeners
       this.savedQuotationsTableBody.querySelectorAll('.quotation-status-select').forEach(sel=>sel.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const newStatus = e.target.value; this.handleChangeQuotationStatus(id, newStatus); })); // Corrigido: &gt; para >
+      
+      // Atualiza ícones de ordenação visualmente
+      this.updateSortIcons('#sectionCotacoesSalvas', this._savedQuotationsSort);
     }catch(e){console.error('Erro renderSavedQuotations',e); this.savedQuotationsTableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar cotações.</td></tr>`} // Corrigido: &lt; e &gt;
   },
 
@@ -1385,6 +1427,16 @@ const UI = {
       this._fornecedoresSort.ascending = true;
     }
     this.renderFornecedoresGrid();
+  },
+
+  toggleSavedQuotationsSort(field){
+    if(this._savedQuotationsSort.field === field) {
+      this._savedQuotationsSort.ascending = !this._savedQuotationsSort.ascending;
+    } else {
+      this._savedQuotationsSort.field = field;
+      this._savedQuotationsSort.ascending = true;
+    }
+    this.renderSavedQuotations();
   },
 
   updateSortIcons(sectionId, sortState){
