@@ -14,6 +14,10 @@
 
   <!-- Biblioteca para ler arquivos Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Biblioteca para gerar PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Biblioteca para gerar QR Code -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -82,6 +86,7 @@
           <button type="button" id="btn-novo-veiculo" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo</button>
           <button type="button" id="btn-importar-massa" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar</button>
           <button type="button" id="btn-exportar-xls" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Excel</button>
+          <button type="button" id="btn-gerar-qrcode" class="btn-glass btn-blue"><i class="fas fa-qrcode"></i> Gerar QR</button>
         </div>
       </section>
     </div>
@@ -227,7 +232,37 @@
     </div>
   </div>
 
+  <!-- Modal para Gerar QR Codes -->
+  <div id="modalGerarQRCode" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-qrcode"></i> Gerar Etiquetas QR Code</h3>
+            <button class="close-button" id="btnCloseModalQRCode">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="qtdQRCode">Quantidade de Etiquetas</label>
+                <input type="number" id="qtdQRCode" class="glass-input" min="1" max="100" value="10">
+                <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Serão gerados códigos únicos que não existem no banco de dados.</p>
+            </div>
+            
+            <div id="previewQRCodes" style="max-height: 200px; overflow-y: auto; margin: 15px 0; border: 1px solid #eee; padding: 10px; display: none; background: #f9f9f9; border-radius: 4px;">
+                <!-- Lista prévia dos códigos gerados -->
+            </div>
+            
+            <!-- Container oculto para renderização do QR Code antes do PDF -->
+            <div id="qr-code-hidden-container" style="display: none;"></div>
+
+            <div class="form-actions">
+                <button type="button" id="btnGerarListaCodes" class="btn-glass btn-green"><i class="fas fa-cogs"></i> Gerar Códigos</button>
+                <button type="button" id="btnBaixarPDFQRCode" class="btn-glass btn-red hidden"><i class="fas fa-file-pdf"></i> Baixar PDF</button>
+            </div>
+        </div>
+    </div>
+  </div>
+
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/veiculos.js" defer></script>
+  <script type="module" src="./script/veiculos-qr.js" defer></script>
 </body>
 </html>
