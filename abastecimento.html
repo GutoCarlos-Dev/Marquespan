@@ -213,16 +213,21 @@
         <!-- Histórico de Saídas -->
         <div style="margin-top: 20px;">
             <h4 style="color: var(--primary-color); border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px; margin-bottom: 15px;"><i class="fas fa-history"></i> Histórico de Saídas Recentes</h4>
-            <div class="table-responsive">
+            
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="searchSaidaInput" class="glass-input" placeholder="🔍 Buscar por Veículo, Rota ou Data..." style="width: 100%;">
+            </div>
+
+            <div class="table-responsive table-scroll-y">
               <table class="glass-table data-grid">
                 <thead>
                   <tr>
-                    <th>Data/Hora</th>
-                    <th>Veículo</th>
-                    <th>Rota</th>
-                    <th>Litros</th>
-                    <th>KM</th>
-                    <th>Usuário</th>
+                    <th class="sortable-saida" data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="veiculo_placa" style="cursor: pointer;">Veículo <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="rota" style="cursor: pointer;">Rota <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="qtd_litros" style="cursor: pointer;">Litros <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="km_atual" style="cursor: pointer;">KM <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="usuario" style="cursor: pointer;">Usuário <i class="fas fa-sort"></i></th>
                     <th>Ações</th>
                   </tr>
                 </thead>

@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postosSort = { key: 'razao_social', asc: true }; // Estado de ordenação dos postos
             this.extData = []; // Cache dos dados de abastecimento externo
             this.extSort = { key: 'data_hora', asc: false }; // Estado de ordenação externo
+            this.saidasData = []; // Cache dos dados de saídas
+            this.saidasSort = { key: 'data_hora', asc: false }; // Estado de ordenação das saídas
             this.initTabs();
             this.cache();
             this.bind();
@@ -72,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidaLitros = document.getElementById('saidaLitros');
             this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
             this.tableBodySaidas = document.getElementById('tableBodySaidas');
+            this.searchSaidaInput = document.getElementById('searchSaidaInput'); // Busca Saídas
 
             // Elementos da Aba Estoque
             this.tbodyEstoque = document.getElementById('tbodyEstoqueAtual');
@@ -132,6 +135,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
             if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
+
+            // Listeners para Busca e Ordenação de Saídas
+            if (this.searchSaidaInput) {
+                this.searchSaidaInput.addEventListener('input', () => this.renderSaidasTable(false));
+            }
+            document.querySelectorAll('.sortable-saida').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sort;
+                    if (this.saidasSort.key === key) {
+                        this.saidasSort.asc = !this.saidasSort.asc;
+                    } else {
+                        this.saidasSort.key = key;
+                        this.saidasSort.asc = true;
+                    }
+                    this.renderSaidasTable(false);
+                });
+            });
 
             // Listeners para ordenação da tabela de histórico
             const ths = document.querySelectorAll('#containerHistoricoEntrada th[data-field]');
@@ -830,43 +850,74 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async renderSaidasTable() {
+        async renderSaidasTable(fetchData = true) {
             if (!this.tableBodySaidas) return;
-            this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+            
+            if (fetchData) {
+                this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('saidas_combustivel')
+                        .select('*')
+                        .order('data_hora', { ascending: false })
+                        .limit(200); // Aumentado para 200 para melhor experiência local
 
-            try {
-                const { data, error } = await supabaseClient
-                    .from('saidas_combustivel')
-                    .select('*')
-                    .order('data_hora', { ascending: false })
-                    .limit(50); // Limita aos 50 mais recentes para performance
-
-                if (error) throw error;
-
-                if (data.length === 0) {
-                    this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma saída registrada.</td></tr>';
+                    if (error) throw error;
+                    this.saidasData = data || [];
+                } catch (error) {
+                    console.error('Erro ao carregar histórico de saídas:', error);
+                    this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
                     return;
                 }
+            }
 
-                this.tableBodySaidas.innerHTML = data.map(saida => `
+            // Filtragem
+            const term = this.searchSaidaInput ? this.searchSaidaInput.value.toLowerCase() : '';
+            const filtered = this.saidasData.filter(item => {
+                const dataF = new Date(item.data_hora).toLocaleString('pt-BR').toLowerCase();
+                return (item.veiculo_placa || '').toLowerCase().includes(term) ||
+                       (item.rota || '').toLowerCase().includes(term) ||
+                       dataF.includes(term);
+            });
+
+            // Ordenação
+            filtered.sort((a, b) => {
+                let valA = a[this.saidasSort.key];
+                let valB = b[this.saidasSort.key];
+                if (valA === null) valA = '';
+                if (valB === null) valB = '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return this.saidasSort.asc ? -1 : 1;
+                if (valA > valB) return this.saidasSort.asc ? 1 : -1;
+                return 0;
+            });
+
+            // Atualiza Ícones
+            document.querySelectorAll('.sortable-saida i').forEach(i => i.className = 'fas fa-sort');
+            const activeTh = document.querySelector(`.sortable-saida[data-sort="${this.saidasSort.key}"] i`);
+            if (activeTh) activeTh.className = this.saidasSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+
+            this.tableBodySaidas.innerHTML = '';
+            if (filtered.length === 0) {
+                this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Nenhuma saída registrada.</td></tr>';
+                return;
+            }
+
+            this.tableBodySaidas.innerHTML = filtered.map(saida => `
                     <tr>
                         <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
                         <td>${saida.veiculo_placa || ''}</td>
                         <td>${saida.rota || ''}</td>
-                        <td>${saida.qtd_litros.toLocaleString('pt-BR')} L</td>
+                        <td>${parseFloat(saida.qtd_litros).toLocaleString('pt-BR')} L</td>
                         <td>${saida.km_atual || ''}</td>
                         <td>${saida.usuario || '-'}</td>
-                        <td class="actions-cell">
-                            <button class="btn-action btn-edit" data-id="${saida.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                            <button class="btn-action btn-delete" data-id="${saida.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        <td style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="btn-action btn-edit" data-id="${saida.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-delete" data-id="${saida.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                 `).join('');
-
-            } catch (error) {
-                console.error('Erro ao carregar histórico de saídas:', error);
-                this.tableBodySaidas.innerHTML = '<tr><td colspan="6" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
-            }
         },
 
         async handleSaidaTableClick(e) {
@@ -1025,18 +1076,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.extCapacidadeTanque.textContent = (veiculo && veiculo.capacidade_tanque) ? veiculo.capacidade_tanque : '--';
             }
 
-            // 2. Buscar KM Anterior (último registro externo)
-            const { data: ultimoReg } = await supabaseClient
-                .from('abastecimento_externo')
-                .select('km_atual')
-                .eq('veiculo_placa', placa)
-                .order('data_hora', { ascending: false })
-                .limit(1)
-                .single();
-            
-            if (this.extKmAnterior) {
-                this.extKmAnterior.value = ultimoReg ? ultimoReg.km_atual : 0;
-                this.calculateKmRodado();
+            // 2. Buscar Maior KM (Interno ou Externo)
+            try {
+                const [resExt, resInt] = await Promise.all([
+                    supabaseClient
+                        .from('abastecimento_externo')
+                        .select('km_atual')
+                        .eq('veiculo_placa', placa)
+                        .order('km_atual', { ascending: false })
+                        .limit(1),
+                    supabaseClient
+                        .from('saidas_combustivel')
+                        .select('km_atual')
+                        .eq('veiculo_placa', placa)
+                        .order('km_atual', { ascending: false })
+                        .limit(1)
+                ]);
+
+                const kmExt = (resExt.data && resExt.data.length > 0) ? (parseFloat(resExt.data[0].km_atual) || 0) : 0;
+                const kmInt = (resInt.data && resInt.data.length > 0) ? (parseFloat(resInt.data[0].km_atual) || 0) : 0;
+                
+                const maiorKm = Math.max(kmExt, kmInt);
+                
+                if (this.extKmAnterior) {
+                    this.extKmAnterior.value = maiorKm;
+                    this.calculateKmRodado();
+                }
+            } catch (error) {
+                console.error("Erro ao buscar KM anterior:", error);
             }
         },
 
