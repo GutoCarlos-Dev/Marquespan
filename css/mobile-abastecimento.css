@@ -237,3 +237,44 @@ body {
     border-top: 1px solid #eee;
     margin: 20px 0;
 }
+
+/* Estilos para Leitura de QR Code */
+.input-with-button {
+    display: flex;
+    gap: 5px;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+.btn-icon-scan {
+    padding: 0 15px;
+    background-color: #006937;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.panel-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}

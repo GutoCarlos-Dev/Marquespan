@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Biblioteca de QR Code -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
 
@@ -50,7 +52,10 @@
 
                 <div class="form-group">
                     <label for="saidaVeiculo">Veículo (Placa)</label>
-                    <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;">
+                    <div class="input-with-button">
+                        <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="AAA0000" required autocomplete="off" style="text-transform: uppercase;">
+                        <button type="button" id="btnScanQR" class="btn-icon-scan" title="Ler QR Code"><i class="fas fa-qrcode"></i></button>
+                    </div>
                     <datalist id="listaVeiculos"></datalist>
                 </div>
 
@@ -238,7 +243,46 @@
 
   </div>
 
+  <!-- Modal Scanner QR Code -->
+  <div id="modalScanner" class="panel-backdrop hidden" style="z-index: 9999;">
+    <div class="panel mobile-panel" style="height: 100%; max-height: 100%; width: 100%; max-width: 100%; border-radius: 0; display: flex; flex-direction: column;">
+        <div class="panel-header">
+            <h3><i class="fas fa-qrcode"></i> Escanear Veículo</h3>
+            <button class="close-button" id="btnCloseScanner">&times;</button>
+        </div>
+        <div class="panel-body" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0; background: #000;">
+            <div id="reader" style="width: 100%; max-width: 500px;"></div>
+            <p style="color: white; margin-top: 20px; text-align: center;">Aponte a câmera para o QR Code</p>
+        </div>
+    </div>
+  </div>
+
+  <!-- Modal Vincular QR Code -->
+  <div id="modalVincular" class="panel-backdrop hidden" style="z-index: 9998;">
+    <div class="panel mobile-panel">
+        <div class="panel-header">
+            <h3><i class="fas fa-link"></i> Vincular QR Code</h3>
+            <button class="close-button" id="btnCloseVincular">&times;</button>
+        </div>
+        <div class="panel-body">
+            <p style="margin-bottom: 15px; color: #555;">Este QR Code ainda não está cadastrado. Informe a placa para criar o vínculo.</p>
+            <div class="form-group">
+                <label>Código Lido</label>
+                <input type="text" id="qrCodeLido" readonly style="background-color: #e9ecef; font-family: monospace;">
+            </div>
+            <div class="form-group">
+                <label>Placa do Veículo</label>
+                <input type="text" id="placaVinculo" list="listaVeiculos" class="glass-input" placeholder="AAA0000" style="text-transform: uppercase;">
+            </div>
+            <div class="form-actions mobile-actions">
+                <button type="button" id="btnConfirmarVinculo" class="btn-primary btn-block btn-large">VINCULAR PLACA</button>
+            </div>
+        </div>
+    </div>
+  </div>
+
   <script type="module" src="script/mobile-abastecimento.js"></script>
+  <script type="module" src="script/mobile-abastecimento-qr.js"></script>
   <script>
     const usuarioLogado = localStorage.getItem('usuarioLogado');
     if (!usuarioLogado) {
