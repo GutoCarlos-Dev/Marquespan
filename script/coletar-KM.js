@@ -392,8 +392,12 @@ async function carregarHistorico() {
             .select('*')
             .order('data_coleta', { ascending: false });
 
+        // Verifica se é a versão Mobile pela existência da classe específica no HTML
+        const isMobile = document.querySelector('.mobile-container');
         const dataSelecionada = document.getElementById('coletaData').value;
-        if (dataSelecionada) {
+        
+        // Aplica filtro de data APENAS se for Mobile (App)
+        if (isMobile && dataSelecionada) {
             const dataIso = dataSelecionada.split('T')[0];
             query = query.gte('data_coleta', `${dataIso}T00:00:00`)
                          .lte('data_coleta', `${dataIso}T23:59:59`);
