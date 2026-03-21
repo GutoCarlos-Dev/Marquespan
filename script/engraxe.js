@@ -469,6 +469,7 @@ function getSemanaAtual() {
 async function carregarListas() {
     const tbody = document.getElementById('tbodyEngraxe');
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando listas...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando listas...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
@@ -479,6 +480,7 @@ async function carregarListas() {
         let query = supabaseClient
             .from('engraxe_listas')
             .select('*')
+            .select('*, engraxe_itens(status)')
             .order('created_at', { ascending: false });
 
         if (dataIni) query = query.gte('created_at', `${dataIni}T00:00:00`);
@@ -501,6 +503,7 @@ async function carregarListas() {
     } catch (error) {
         console.error('Erro ao carregar listas:', error);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
@@ -510,6 +513,7 @@ function renderizarTabelaListas(dados) {
     
     if (!dados || dados.length === 0) { 
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
         return; 
     }
 
@@ -517,12 +521,27 @@ function renderizarTabelaListas(dados) {
         const tr = document.createElement('tr');
         const dataCriacao = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-';
         
+        // Cálculo do Progresso
+        const totalItens = item.engraxe_itens ? item.engraxe_itens.length : 0;
+        const realizados = item.engraxe_itens ? item.engraxe_itens.filter(i => ['OK', 'REALIZADO'].includes(i.status)).length : 0;
+        const percentual = totalItens > 0 ? Math.round((realizados / totalItens) * 100) : 0;
+
+        let corProgresso = '#dc3545'; // Vermelho
+        if (percentual >= 50) corProgresso = '#ffc107'; // Amarelo
+        if (percentual === 100) corProgresso = '#28a745'; // Verde
+
         tr.innerHTML = `
             <td>${dataCriacao}</td>
             <td>${item.nome || 'Lista sem nome'}</td>
-            <td>${item.marcas_presentes ? item.marcas_presentes.join(', ') : '-'}</td>
             <td>${item.usuario || '-'}</td>
             <td><span class="badge ${item.status === 'ABERTA' ? 'badge-pendente' : 'badge-realizado'}">${item.status}</span></td>
+            <td>${item.marcas_presentes ? item.marcas_presentes.join(', ') : '-'}</td>
+            <td>
+                <div class="progress-bar-container" title="${realizados}/${totalItens}">
+                    <div class="progress-bar" style="width: ${percentual}%; background-color: ${corProgresso};"></div>
+                </div>
+                <small style="font-size: 0.8em; color: #666;">${percentual}% (${realizados}/${totalItens})</small>
+            </td>
             <td>
                 <button class="btn-icon btn-edit" onclick="abrirLista('${item.id}', '${item.nome}')" title="Abrir Lista"><i class="fas fa-folder-open"></i></button>
                 <button class="btn-icon btn-edit" onclick="editarNomeLista('${item.id}', '${item.nome}')" title="Editar Nome"><i class="fas fa-pen"></i></button>

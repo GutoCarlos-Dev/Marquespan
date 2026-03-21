@@ -12,6 +12,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Adiciona barra de rolagem e fixa o cabeçalho no grid principal */
+    .table-responsive { max-height: 600px; overflow-y: auto; }
+    #tabelaEngraxe th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+    
+    /* Estilos da barra de progresso (Igual Lavagem) */
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        height: 10px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -75,14 +93,15 @@
                 <tr>
                   <th>Data/Hora</th>
                   <th>Nome da Lista</th>
-                  <th>Marcas</th>
                   <th>Usuário Criou</th>
                   <th>Status</th>
+                  <th>Marcas</th>
+                  <th>Progresso</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody id="tbodyEngraxe">
-                <tr><td colspan="6" style="text-align: center;">Carregando dados...</td></tr>
+                <tr><td colspan="7" style="text-align: center;">Carregando dados...</td></tr>
               </tbody>
             </table>
           </div>
