@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Event Listeners
     document.getElementById('itemPlaca').addEventListener('change', aoSelecionarPlaca);
-    document.getElementById('coletaData').addEventListener('change', salvarRascunho); // Salvar ao mudar data
+    document.getElementById('coletaData').addEventListener('change', () => {
+        salvarRascunho();
+        carregarHistorico();
+    }); // Salvar e atualizar histórico ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
     document.getElementById('btnCancelarColeta')?.addEventListener('click', cancelarColeta);
@@ -384,12 +387,19 @@ async function carregarHistorico() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Carregando histórico...</td></tr>';
 
     try {
-        // Busca um número maior de coletas recentes para garantir que lotes completos sejam processados
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('coleta_km')
             .select('*')
-            // Ordena pela data da coleta para agrupar os lotes mais recentes primeiro
-            .order('data_coleta', { ascending: false }); // Removido limite para mostrar todos
+            .order('data_coleta', { ascending: false });
+
+        const dataSelecionada = document.getElementById('coletaData').value;
+        if (dataSelecionada) {
+            const dataIso = dataSelecionada.split('T')[0];
+            query = query.gte('data_coleta', `${dataIso}T00:00:00`)
+                         .lte('data_coleta', `${dataIso}T23:59:59`);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
