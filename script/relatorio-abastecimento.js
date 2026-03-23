@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cache();
             this.bind();
             this.loadTanques();
+            this.updateFilterOptions();
             
             // Define datas padrão (início do mês até hoje)
             const hoje = new Date();
@@ -61,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                // Limpa opções e adiciona "Todos" como padrão
+                this.filtroTanque.innerHTML = '<option value="">Todos</option>';
+
                 data.forEach(tanque => {
                     const option = document.createElement('option');
                     option.value = tanque.id;
@@ -72,13 +76,91 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        updateFilterOptions() {
+            if (document.getElementById('filtroTipoDisplay')) return;
+            const select = this.filtroTipo;
+            if (!select) return;
+
+            // Cria a estrutura do multiselect
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-multiselect';
+            wrapper.style.position = 'relative';
+
+            const display = document.createElement('div');
+            display.id = 'filtroTipoDisplay';
+            display.className = 'glass-input multiselect-display';
+            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px;';
+            display.innerHTML = '<span id="filtroTipoText">Todos</span> <i class="fas fa-chevron-down"></i>';
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.id = 'filtroTipoOptions';
+            optionsContainer.className = 'glass-dropdown hidden';
+            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%;';
+
+            const options = [
+                { value: 'ENTRADA', text: 'Entrada (Recebimento)' },
+                { value: 'SAIDA', text: 'Abastecimento Interno (Saída)' },
+                { value: 'EXTERNO', text: 'Abastecimento Externo' },
+                { value: 'AJUSTE', text: 'Ajuste de Estoque' }
+            ];
+
+            options.forEach(opt => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+                label.style.padding = '5px';
+                label.style.cursor = 'pointer';
+                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${opt.value}" style="margin-right: 8px;"> ${opt.text}`;
+                optionsContainer.appendChild(label);
+            });
+
+            wrapper.appendChild(display);
+            wrapper.appendChild(optionsContainer);
+            select.parentNode.replaceChild(wrapper, select);
+
+            this.filtroTipoDisplay = display;
+            this.filtroTipoOptions = optionsContainer;
+            this.filtroTipoText = document.getElementById('filtroTipoText');
+
+            this.bindMultiselectEvents();
+        },
+
+        bindMultiselectEvents() {
+            if (this.filtroTipoDisplay) {
+                this.filtroTipoDisplay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.filtroTipoOptions.classList.toggle('hidden');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!this.filtroTipoDisplay.contains(e.target) && !this.filtroTipoOptions.contains(e.target)) {
+                        this.filtroTipoOptions.classList.add('hidden');
+                    }
+                });
+                this.filtroTipoOptions.addEventListener('change', () => {
+                    this.updateMultiselectText();
+                });
+            }
+        },
+
+        updateMultiselectText() {
+            const checked = Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked'));
+            if (checked.length === 0) {
+                this.filtroTipoText.textContent = 'Todos';
+            } else if (checked.length <= 2) {
+                this.filtroTipoText.textContent = checked.map(cb => cb.parentElement.textContent.trim()).join(', ');
+            } else {
+                this.filtroTipoText.textContent = `${checked.length} selecionados`;
+            }
+        },
+
         async handleSearch(e) {
             e.preventDefault();
             
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
-            const tipoMov = this.filtroTipo.value;
+            const tiposMov = this.filtroTipoOptions 
+                ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
+                : [];
             const incluirAjuste = this.incluirAjusteCheckbox.checked;
 
             if (!dtIni || !dtFim) {
@@ -92,9 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let dadosEntradas = [];
                 let dadosSaidas = [];
+                let dadosExternos = [];
 
                 // 1. Buscar Entradas e Ajustes (se o filtro permitir)
-                if (!tipoMov || tipoMov === 'ENTRADA' || tipoMov === 'AJUSTE') {
+                if (tiposMov.length === 0 || tiposMov.includes('ENTRADA') || tiposMov.includes('AJUSTE')) {
                     let queryEntradas = supabaseClient
                         .from('abastecimentos')
                         .select('*, tanques(nome, tipo_combustivel)')
@@ -105,11 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         queryEntradas = queryEntradas.eq('tanque_id', tanqueId);
                     }
 
-                    if (tipoMov === 'ENTRADA') {
+                    const wantEntrada = tiposMov.length === 0 || tiposMov.includes('ENTRADA');
+                    const wantAjuste = tiposMov.length === 0 || tiposMov.includes('AJUSTE');
+
+                    if (wantEntrada && !wantAjuste) {
                         queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    } else if (tipoMov === 'AJUSTE') {
+                    } else if (!wantEntrada && wantAjuste) {
                         queryEntradas = queryEntradas.eq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    } else if (!incluirAjuste) {
+                    } else if (tiposMov.length === 0 && !incluirAjuste) {
+                        // Se "Todos" selecionado, respeita o checkbox de incluir ajuste
                         queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
                     }
 
@@ -134,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 2. Buscar Saídas (se o filtro permitir)
-                if (!tipoMov || tipoMov === 'SAIDA') {
+                if (tiposMov.length === 0 || tiposMov.includes('SAIDA')) {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
                         .select('*, bicos(bombas(tanques(nome, tipo_combustivel)))')
@@ -172,8 +259,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // 3. Unificar e Ordenar
-                this.dadosRelatorio = [...dadosEntradas, ...dadosSaidas].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+                // 3. Buscar Abastecimentos Externos (se o filtro permitir)
+                // Nota: Externo não tem 'tanque_id' da empresa, então ignoramos o filtro de tanque.
+                if (tiposMov.length === 0 || tiposMov.includes('EXTERNO')) {
+                    let queryExterno = supabaseClient
+                        .from('abastecimento_externo')
+                        .select('data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
+                        .gte('data_hora', `${dtIni}T00:00:00`)
+                        .lte('data_hora', `${dtFim}T23:59:59`);
+
+                    const { data: resExterno, error: errExterno } = await queryExterno;
+                    if (errExterno) throw errExterno;
+
+                    dadosExternos = (resExterno || []).map(e => ({
+                        tipo: 'EXTERNO',
+                        data_hora: e.data_hora,
+                        usuario: e.usuario,
+                        placa: e.veiculo_placa || '-',
+                        rota: e.rota || '-',
+                        km_atual: e.km_atual || '-',
+                        numero_nota: '-', // Externo usa controle interno geralmente
+                        tanque: e.postos ? e.postos.razao_social : 'Posto Externo', // Exibe o Posto no lugar do Tanque
+                        combustivel: '-', 
+                        litros: Number(e.litros),
+                        valor_litro: Number(e.valor_unitario),
+                        valor_total: Number(e.valor_total)
+                    }));
+                }
+
+                // 4. Unificar e Ordenar
+                this.dadosRelatorio = [...dadosEntradas, ...dadosSaidas, ...dadosExternos].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
                 this.renderTable();
 
             } catch (error) {
@@ -257,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let tipoClass = '';
                 if (reg.tipo === 'SAIDA') tipoClass = 'text-danger'; 
                 else if (reg.tipo === 'ENTRADA') tipoClass = 'text-success';
+                else if (reg.tipo === 'EXTERNO') tipoClass = 'text-warning'; // Laranja/Amarelo para Externo
                 else tipoClass = 'text-primary';
 
                 tr.innerHTML = `
@@ -268,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${reg.numero_nota}</td>
                     <td>${reg.tanque}</td>
                     <td>${reg.combustivel}</td>
-                    <td class="font-bold ${tipoClass}" style="text-align: right;">${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
+                    <td class="font-bold ${tipoClass}" style="text-align: right;">${reg.tipo === 'EXTERNO' ? '' : (reg.tipo === 'SAIDA' ? '-' : '+')}${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
                     <td style="text-align: right;">${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                     <td style="text-align: right;">${Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                 `;
@@ -454,7 +570,12 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFilters() {
             this.form.reset();
             this.incluirAjusteCheckbox.checked = true;
-            this.filtroTipo.value = "";
+            if (this.filtroTipoOptions) {
+                this.filtroTipoOptions.querySelectorAll('.tipo-checkbox').forEach(cb => cb.checked = false);
+                this.updateMultiselectText();
+            } else if (this.filtroTipo) {
+                this.filtroTipo.value = "";
+            }
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
