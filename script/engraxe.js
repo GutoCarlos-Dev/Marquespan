@@ -4,6 +4,7 @@ import { supabaseClient } from './supabase.js';
 let currentListItems = [];
 let currentVencimentosData = []; // Cache para os dados de vencimento
 let veiculosCacheNovaLista = []; // Cache para o modal de nova lista
+let displayedListItems = []; // Cache para itens exibidos no modal (filtrados/ordenados)
 let tiposSelecionadosNovaLista = []; // Cache para os tipos selecionados no filtro
 let currentListId = null;
 let sortStateNovaLista = { key: 'placa', asc: true };
@@ -161,6 +162,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // Listener para o botão de exportar PDF do modal (injetado dinamicamente ou existente)
+    document.body.addEventListener('click', (e) => {
+        if (e.target.id === 'btnExportarPDFModal' || e.target.closest('#btnExportarPDFModal')) {
+            if (!currentListId) return alert('Nenhuma lista aberta.');
+            const nomeLista = document.getElementById('modalTitle').textContent.replace('Lista: ', '');
+            gerarPDFLista(currentListId, displayedListItems, nomeLista);
+        }
+    });
+
+    // Injeção do botão de PDF ao lado do filtro no modal, se não existir
+    const filtroInput = document.getElementById('filtroModalInput');
+    if (filtroInput && !document.getElementById('btnExportarPDFModal')) {
+        const btnPdf = document.createElement('button');
+        btnPdf.id = 'btnExportarPDFModal';
+        btnPdf.className = 'btn-glass btn-red';
+        btnPdf.style.marginLeft = '10px';
+        btnPdf.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+        btnPdf.title = 'Exportar lista atual (PDF)';
+        filtroInput.parentNode.insertBefore(btnPdf, filtroInput.nextSibling);
+    }
 });
 
 async function abrirModalNovaLista() {
@@ -755,6 +777,8 @@ async function adicionarItemManual() {
 }
 
 function renderizarItensModal(itens) {
+    displayedListItems = itens; // Atualiza cache de visualização para exportação
+
     // Ordena os itens antes de renderizar
     const key = sortStateItensModal.key;
     const asc = sortStateItensModal.asc;
@@ -1660,30 +1684,36 @@ function updateSortIconsItensModal() {
     }
 }
 
-async function gerarPDFLista(id) {
+async function gerarPDFLista(id, itemsOverride = null, nomeOverride = null) {
     if (!window.jspdf) {
         alert('Biblioteca PDF não carregada.');
         return;
     }
 
     try {
-        // 1. Buscar dados da lista
-        const { data: lista, error: errLista } = await supabaseClient
-            .from('engraxe_listas')
-            .select('*')
-            .eq('id', id)
-            .single();
+        let lista = { nome: nomeOverride || 'Lista' };
+        let itens = itemsOverride;
 
-        if (errLista) throw errLista;
+        // Se não fornecidos itens pré-carregados (modo lista principal), busca do banco
+        if (!itens) {
+            // 1. Buscar dados da lista
+            const { data: listaDb, error: errLista } = await supabaseClient
+                .from('engraxe_listas')
+                .select('*')
+                .eq('id', id)
+                .single();
+            if (errLista) throw errLista;
+            lista = listaDb;
 
-        // 2. Buscar itens da lista
-        const { data: itens, error: errItens } = await supabaseClient
-            .from('engraxe_itens')
-            .select('*')
-            .eq('lista_id', id)
-            .order('placa');
-
-        if (errItens) throw errItens;
+            // 2. Buscar itens da lista
+            const { data: itensDb, error: errItens } = await supabaseClient
+                .from('engraxe_itens')
+                .select('*')
+                .eq('lista_id', id)
+                .order('placa');
+            if (errItens) throw errItens;
+            itens = itensDb;
+        }
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait' });
