@@ -21,8 +21,8 @@ const ColetarManutencaoUI = {
         this.carregarFiltrosDinamicos().then(() => {
             this.aplicarRestricoesPerfil(); 
         });
-        
-        this.carregarLancamentos(); // Carrega a lista ao iniciar
+
+        this.setupLancamentosTab(); // Prepara a aba de lançamentos sem carregar dados
         this.carregarChecklistDinamico().then(() => {
             // Verifica se o modal deve ser reaberto após atualização da página
             if (sessionStorage.getItem('marquespan_modal_coleta_open') === 'true') {
@@ -54,6 +54,9 @@ const ColetarManutencaoUI = {
         this.searchOficinaInput = document.getElementById('searchOficina');
         this.searchStatusInput = document.getElementById('searchStatus');
         this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
+        // Filtros de Data para Lançamentos
+        this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
+        this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
 
         // Modal Importação
         this.modalImportacao = document.getElementById('modalImportacaoMassa');
@@ -716,6 +719,21 @@ const ColetarManutencaoUI = {
                 document.getElementById(targetId)?.classList.remove('hidden');
             });
         });
+    },
+
+    // Configura o estado inicial da aba de Lançamentos
+    setupLancamentosTab() {
+        // Define datas padrão (mês atual)
+        const hoje = new Date();
+        const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        
+        if (this.filtroDataInicialLancamento) this.filtroDataInicialLancamento.valueAsDate = primeiroDia;
+        if (this.filtroDataFinalLancamento) this.filtroDataFinalLancamento.valueAsDate = hoje;
+
+        // Exibe mensagem inicial na tabela
+        if (this.tableBodyLancamentos) {
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Utilize os filtros e clique em "Filtrar" para buscar os lançamentos.</td></tr>';
+        }
     },
 
     // Abre o modal de lançamento de manutenção
@@ -1687,13 +1705,22 @@ const ColetarManutencaoUI = {
     // Carrega os lançamentos recentes para a tabela principal
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
         try {
+            // Captura dos filtros
+            const dataInicial = this.filtroDataInicialLancamento?.value;
+            const dataFinal = this.filtroDataFinalLancamento?.value;
             const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
             const searchItem = this.searchItemInput?.value;
             const searchOficina = this.searchOficinaInput?.value;
             const searchStatus = this.searchStatusInput?.value;
             
+            // Validação da Data
+            if (!dataInicial || !dataFinal) {
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Por favor, selecione o período de data.</td></tr>';
+                return;
+            }
+
             // Verifica nível do usuário para filtro automático
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
             const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
@@ -1713,6 +1740,10 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao')
                 .select('*, veiculos!inner(filial)');
 
+            // Adiciona filtro de data obrigatório
+            query = query.gte('data_hora', `${dataInicial}T00:00:00`);
+            query = query.lte('data_hora', `${dataFinal}T23:59:59`);
+
             // Filtra pela filial do usuário, se houver. Se não tiver, mostra tudo.
             if (filialUsuario) {
                 query = query.eq('veiculos.filial', filialUsuario);
@@ -1721,10 +1752,6 @@ const ColetarManutencaoUI = {
             // Filtro para usuários específicos (ROMO e MOLEIRO) verem apenas seus lançamentos
             if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nomeUsuario.toUpperCase() === 'ROMO DIESEL' || nivel === 'mecanica_externa' ||nomeUsuario.toUpperCase() === 'MOLEIRO' || nomeUsuario.toUpperCase() === 'TREVO DE MOLAS' || nivel === 'moleiro')) {
                 query = query.eq('usuario', nomeUsuario);
-            }
-
-            if (searchPlaca) {
-                query = query.ilike('placa', `%${searchPlaca}%`);
             }
 
             // Se houver filtros de item/status (filhos), precisamos filtrar os IDs primeiro
@@ -1744,11 +1771,15 @@ const ColetarManutencaoUI = {
                 const matchingIds = [...new Set(idData.map(item => item.coleta_id))];
 
                 if (matchingIds.length === 0) {
-                    this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado para os filtros.</td></tr>';
+                    this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lançamento encontrado para os filtros.</td></tr>';
                     return;
                 }
                 
                 query = query.in('id', matchingIds);
+            }
+
+            if (searchPlaca) {
+                query = query.ilike('placa', `%${searchPlaca}%`);
             }
 
             // Ordenação e Limite na tabela pai (evita timeout)
@@ -1759,7 +1790,7 @@ const ColetarManutencaoUI = {
             if (errorColetas) throw errorColetas;
 
             if (!coletas || coletas.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum lançamento encontrado.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
@@ -1789,9 +1820,9 @@ const ColetarManutencaoUI = {
 
             // Ocultar cabeçalho de Valor Total se restrito (Desktop)
             const headerValor = document.querySelector('#sectionLancamento .data-grid thead th:nth-child(5)');
-            if (headerValor) {
-                headerValor.style.display = isRestricted ? 'none' : '';
-            }
+            // if (headerValor) {
+            //     headerValor.style.display = isRestricted ? 'none' : '';
+            // }
 
             // A ordenação agora é feita diretamente na query do Supabase.
             // A lógica de exibir apenas o último lançamento por placa foi removida
@@ -1880,7 +1911,7 @@ const ColetarManutencaoUI = {
             });
         } catch (err) {
             console.error('Erro ao carregar lançamentos:', err);
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
 

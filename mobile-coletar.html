@@ -36,6 +36,16 @@
             <i class="fas fa-search"></i>
             <input type="text" id="searchPlaca" placeholder="Buscar placa...">
         </div>
+        <div class="filter-row" style="margin-bottom: 8px;">
+            <div style="flex: 1; padding-right: 5px;">
+                <label for="filtroDataInicialLancamento" style="font-size: 0.8rem; color: #555; display: block; margin-bottom: 2px;">Data Inicial</label>
+                <input type="date" id="filtroDataInicialLancamento" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div style="flex: 1; padding-left: 5px;">
+                <label for="filtroDataFinalLancamento" style="font-size: 0.8rem; color: #555; display: block; margin-bottom: 2px;">Data Final</label>
+                <input type="date" id="filtroDataFinalLancamento" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+        </div>
         <div class="filter-row">
             <select id="searchItem">
                 <option value="">Item: Todos</option>
