@@ -91,6 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
             realizarAjusteEstoque(id, nome, atual);
         }
     });
+
+    // Busca o Último KM ao selecionar um veículo (Aba Saída)
+    const inputVeiculo = document.getElementById('saidaVeiculo');
+    if (inputVeiculo) {
+        inputVeiculo.addEventListener('change', (e) => buscarUltimoKm(e.target.value));
+    }
 });
 
 async function carregarDadosIniciais() {
@@ -789,5 +795,34 @@ function updateLitrosRestantesMobile() {
     if(el) {
         el.textContent = restantes.toFixed(2);
         el.style.color = restantes < 0 ? 'red' : (Math.abs(restantes) < 0.01 ? 'green' : 'orange');
+    }
+}
+
+async function buscarUltimoKm(placaInput) {
+    const inputUltimoKm = document.getElementById('saidaUltimoKm');
+    if (!inputUltimoKm) return;
+
+    const placa = placaInput ? placaInput.trim().toUpperCase() : '';
+    if (!placa) {
+        inputUltimoKm.value = '';
+        return;
+    }
+
+    inputUltimoKm.value = '...';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('saidas_combustivel')
+            .select('km_atual')
+            .eq('veiculo_placa', placa)
+            .order('km_atual', { ascending: false })
+            .limit(1);
+
+        if (error) throw error;
+
+        inputUltimoKm.value = (data && data.length > 0) ? data[0].km_atual : 'Sem registro';
+    } catch (e) {
+        console.error('Erro ao buscar último KM:', e);
+        inputUltimoKm.value = '';
     }
 }

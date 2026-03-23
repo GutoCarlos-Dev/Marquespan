@@ -244,6 +244,15 @@ body {
     gap: 5px;
 }
 
+#saidaUltimoKm {
+    background-color: #e9ecef; /* Cinza claro para indicar desabilitado */
+    color: #6c757d;
+    font-weight: bold;
+    cursor: not-allowed;
+    opacity: 1; /* Garante legibilidade em alguns navegadores móveis */
+}
+
+
 .input-with-button input {
     flex: 1;
 }
