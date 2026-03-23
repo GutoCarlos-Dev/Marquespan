@@ -1399,9 +1399,13 @@ const UI = {
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;
-    if(btn.classList.contains('btn-delete') && this._getCurrentUser()?.nivel.toLowerCase() !== 'compras') {
-      if(confirm('Excluir fornecedor?')) {
-        SupabaseService.remove('fornecedores', {field:'id',value:id}).then(() => this.renderFornecedoresGrid());
+    
+    if (btn.classList.contains('btn-delete')) {
+      const usuario = this._getCurrentUser();
+      if (usuario && usuario.nivel.toLowerCase() === 'administrador') {
+        if(confirm('Excluir produto?')) {
+          SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
+        }
       }
     }
     if (btn.classList.contains('btn-edit')) {
@@ -1504,7 +1508,7 @@ const UI = {
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
              ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-right: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>` : ''}
-            <button class="btn-delete" data-id="${p.id}">Excluir</button>
+            ${nivelUsuario === 'administrador' ? `<button class="btn-delete" data-id="${p.id}">Excluir</button>` : ''}
           </td>
         </tr>`;
       }).join('');
@@ -1535,7 +1539,7 @@ const UI = {
           <td>${f.telefone || ''}</td>
           <td>
              ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-edit" data-id="${f.id}">Editar</button>` : ''}
-            <button class="btn-delete" data-id="${f.id}">Excluir</button>
+            ${nivelUsuario === 'administrador' ? `<button class="btn-delete" data-id="${f.id}">Excluir</button>` : ''}
           </td>
         </tr>`).join('');
 
