@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.initSaida(); // Inicializa a aba de saída
             this.renderSaidasTable();
             this.loadEstoqueAtual(); // Carrega a aba de estoque
+            this.populateUFs(); // Preenche lista de UFs
             
             // Define a data de hoje como padrão
             const now = new Date();
@@ -221,12 +222,54 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listeners Cadastro Posto
             if (this.formPosto) this.formPosto.addEventListener('submit', this.handlePostoSubmit.bind(this));
 
+            if (this.postoRazao) {
+                this.postoRazao.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
+
             // Inicialização das novas abas
             if (this.extPosto) this.loadPostosOptions();
             this.loadFiliaisOptions();
             this.loadRotasOptions();
             if (this.tableBodyPostos) this.renderPostosTable();
             if (this.tableBodyExt) this.renderExtTable();
+        },
+
+        populateUFs() {
+            if (!this.postoUf) return;
+            
+            const ufs = [
+                'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
+                'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+            ];
+
+            if (this.postoUf.tagName === 'SELECT') {
+                this.postoUf.innerHTML = '<option value="">UF</option>';
+                ufs.forEach(uf => {
+                    this.postoUf.add(new Option(uf, uf));
+                });
+            } else {
+                const datalistId = 'listaUFs';
+                let datalist = document.getElementById(datalistId);
+                if (!datalist) {
+                    datalist = document.createElement('datalist');
+                    datalist.id = datalistId;
+                    document.body.appendChild(datalist);
+                }
+                datalist.innerHTML = '';
+                ufs.forEach(uf => {
+                    const option = document.createElement('option');
+                    option.value = uf;
+                    datalist.appendChild(option);
+                });
+                this.postoUf.setAttribute('list', datalistId);
+                this.postoUf.setAttribute('placeholder', 'UF');
+                this.postoUf.style.textTransform = 'uppercase';
+                this.postoUf.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
         },
 
         getUsuarioLogado() {
