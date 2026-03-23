@@ -1462,18 +1462,28 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida', queryOptions);
-      this.produtosTableBody.innerHTML = produtos.map(p => `
-        <tr>
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida, status', queryOptions);
+      this.produtosTableBody.innerHTML = produtos.map(p => {
+        const status = p.status || 'Ativo';
+        const isInactive = status === 'Inativo';
+        const rowStyle = isInactive ? 'style="background-color: #fce8e6; opacity: 0.8;"' : '';
+        const btnLabel = isInactive ? 'ATIVAR' : 'INATIVAR';
+        const btnStyle = isInactive ? 'background-color: #28a745; color: white;' : 'background-color: #ff6a07; color: black;';
+
+        return `
+        <tr ${rowStyle}>
           <td>${p.codigo_principal || ''}</td>
           <td>${p.codigo_secundario || ''}</td>
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || ''}</td>
+          <td>${status}</td>
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
+            <button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-right: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>
             <button class="btn-delete" data-id="${p.id}">Excluir</button>
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
       
       // Atualiza os ícones de ordenação visualmente
       this.updateSortIcons('#sectionCadastrarProdutos', this._produtosSort);
