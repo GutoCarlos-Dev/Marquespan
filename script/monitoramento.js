@@ -21,8 +21,8 @@ const STATUS_COLORS = {
     'FINALIZADO ROTA': '#006400'   // Verde Muito Escuro
 };
 
-// Intervalo de atualização automática (30 segundos)
-const REFRESH_INTERVAL = 30000;
+// Intervalo de atualização automática (10 minutos)
+const REFRESH_INTERVAL = 600000;
 let refreshTimer;
 
 document.addEventListener('DOMContentLoaded', () => {
