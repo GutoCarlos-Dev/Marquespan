@@ -1454,6 +1454,27 @@ const UI = {
 
   async renderProdutosGrid(){
     try {
+      // Configuração dinâmica do cabeçalho da tabela para permitir ordenação nas colunas
+      const table = this.produtosTableBody?.closest('table');
+      if (table) {
+        let thead = table.querySelector('thead');
+        // Verifica se o cabeçalho precisa ser criado ou atualizado com os data-fields
+        if (!thead || !thead.querySelector('th[data-field]')) {
+          if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
+          thead.innerHTML = `<tr>
+            <th data-field="codigo_principal" style="cursor:pointer">CÓDIGO <i class="fas fa-sort"></i></th>
+            <th data-field="codigo_secundario" style="cursor:pointer">CÓD. SEC. <i class="fas fa-sort"></i></th>
+            <th data-field="nome" style="cursor:pointer">NOME <i class="fas fa-sort"></i></th>
+            <th data-field="unidade_medida" style="cursor:pointer">UN <i class="fas fa-sort"></i></th>
+            <th data-field="status" style="cursor:pointer">STATUS <i class="fas fa-sort"></i></th>
+            <th>AÇÕES</th></tr>`;
+          
+          thead.querySelectorAll('th[data-field]').forEach(th => {
+            th.addEventListener('click', () => this.toggleProdutosSort(th.dataset.field));
+          });
+        }
+      }
+
       const searchTerm = document.getElementById('searchProdutoInput')?.value.trim();
       let queryOptions = {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending};
 
