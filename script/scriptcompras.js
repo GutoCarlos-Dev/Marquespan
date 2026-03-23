@@ -83,6 +83,14 @@ const UI = {
     this.populateProductDropdown();
     this.populateSupplierDropdowns();
     this.renderCart();
+    
+    // Define datas padrão para o filtro (Últimos 7 dias)
+    const today = new Date();
+    const lastWeek = new Date();
+    lastWeek.setDate(today.getDate() - 7);
+    if(this.filterDataInicio) this.filterDataInicio.value = lastWeek.toISOString().split('T')[0];
+    if(this.filterDataFim) this.filterDataFim.value = today.toISOString().split('T')[0];
+
     this._produtosSort = { field: 'nome', ascending: true };
     this._fornecedoresSort = { field: 'nome', ascending: true };
     this._savedQuotationsSort = { field: 'updated_at', ascending: false }; // Estado inicial ordenação cotações
@@ -119,6 +127,8 @@ const UI = {
     this.orccardrow = document.getElementById('orccardrow');
     this.savedQuotationsTableBody = document.getElementById('savedQuotationsTableBody');
     this.searchQuotationInput = document.getElementById('searchQuotation');
+    this.filterDataInicio = document.getElementById('filterDataInicio');
+    this.filterDataFim = document.getElementById('filterDataFim');
     this.filterStatusSelect = document.getElementById('filterStatus');
     this.btnSearchQuotation = document.getElementById('btnSearchQuotation');
     this.formCadastrarProduto = document.getElementById('formCadastrarProduto');
@@ -847,6 +857,8 @@ const UI = {
     try{
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
+      const dtIni = this.filterDataInicio?.value;
+      const dtFim = this.filterDataFim?.value;
       // Query base com ordenação dinâmica
       let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))');
       
@@ -860,6 +872,11 @@ const UI = {
 
       // if(search) q = q.ilike('codigo_cotacao',`%${search}%`); // Removido para permitir filtro local (inclui Vencedor)
       if(status && status!=='Todas') q = q.eq('status',status);
+      
+      // Filtro de Data (usando created_at para consistência de criação)
+      if(dtIni) q = q.gte('created_at', `${dtIni}T00:00:00`);
+      if(dtFim) q = q.lte('created_at', `${dtFim}T23:59:59`);
+
       const { data, error } = await q;
       if(error) throw error;
       this.savedQuotationsTableBody.innerHTML = '';
