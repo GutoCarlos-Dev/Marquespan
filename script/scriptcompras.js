@@ -83,12 +83,12 @@ const UI = {
     this.populateProductDropdown();
     this.populateSupplierDropdowns();
     this.renderCart();
-    this.generateNextQuotationCode();
-    this.renderSavedQuotations();
-    // sort state
     this._produtosSort = { field: 'nome', ascending: true };
     this._fornecedoresSort = { field: 'nome', ascending: true };
     this._savedQuotationsSort = { field: 'updated_at', ascending: false }; // Estado inicial ordenação cotações
+    this.generateNextQuotationCode();
+    this.renderSavedQuotations();
+    // sort state
     this.renderProdutosGrid(); // carregar produtos no início
     this.renderFornecedoresGrid(); // carregar fornecedores no início
     this.editingQuotationId = null; // Controla o modo de edição
@@ -1380,18 +1380,32 @@ const UI = {
     }
   },
 
-  handleProdutoTableClick(e){
+    handleProdutoTableClick(e){
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;
-    // Oculta o botão de exclusão para o nível 'compras'
-    if(btn.classList.contains('btn-delete') && this._getCurrentUser()?.nivel.toLowerCase() !== 'compras') {
-      if(confirm('Excluir produto?')) {
-        SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
+    
+    // Verificação de segurança adicional no clique
+    const usuario = this._getCurrentUser();
+    const nivel = usuario ? usuario.nivel.toLowerCase() : '';
+
+    if(btn.classList.contains('btn-delete')) {
+      if (nivel === 'administrador') {
+        if(confirm('Excluir produto?')) {
+          SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
+        }
+      } else {
+        alert('Você não tem permissão para excluir.');
       }
     }
-    if (btn.classList.contains('btn-edit')) {
+
+    else if (btn.classList.contains('btn-edit')) {
       this.loadProductForEditing(id);
+    }
+    
+    else if (btn.classList.contains('btn-toggle-status')) {
+      const currentStatus = btn.dataset.status;
+      this.toggleProdutoStatus(id, currentStatus);
     }
   },
 
@@ -1399,17 +1413,63 @@ const UI = {
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;
-    
+    // Verificação de segurança adicional no clique
+    const usuario = this._getCurrentUser();
+    const nivel = usuario ? usuario.nivel.toLowerCase() : '';
+
     if (btn.classList.contains('btn-delete')) {
-      const usuario = this._getCurrentUser();
-      if (usuario && usuario.nivel.toLowerCase() === 'administrador') {
-        if(confirm('Excluir produto?')) {
-          SupabaseService.remove('produtos', {field:'id',value:id}).then(() => this.renderProdutosGrid());
+      if (nivel === 'administrador') {
+        if(confirm('Excluir fornecedor?')) {
+          SupabaseService.remove('fornecedores', {field:'id',value:id}).then(() => this.renderFornecedoresGrid());
         }
+      } else {
+        alert('Você não tem permissão para excluir.');
       }
     }
-    if (btn.classList.contains('btn-edit')) {
+        else if (btn.classList.contains('btn-edit')) {
       this.loadFornecedorForEditing(id);
+    }
+  },
+
+  async toggleProdutoStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'Inativo' ? 'Ativo' : 'Inativo';
+    if (confirm(`Deseja alterar o status do produto para ${newStatus}?`)) {
+      try {
+        await SupabaseService.update('produtos', { status: newStatus }, { field: 'id', value: id });
+        this.renderProdutosGrid();
+        this.populateProductDropdown();
+      } catch (e) {
+        console.error(e);
+        alert('Erro ao alterar status do produto.');
+      }
+    }
+  },
+
+  async toggleProdutoStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'Inativo' ? 'Ativo' : 'Inativo';
+    if (confirm(`Deseja alterar o status do produto para ${newStatus}?`)) {
+      try {
+        await SupabaseService.update('produtos', { status: newStatus }, { field: 'id', value: id });
+        this.renderProdutosGrid();
+        this.populateProductDropdown();
+      } catch (e) {
+        console.error(e);
+        alert('Erro ao alterar status do produto.');
+      }
+    }
+  },
+
+  async toggleProdutoStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'Inativo' ? 'Ativo' : 'Inativo';
+    if (confirm(`Deseja alterar o status do produto para ${newStatus}?`)) {
+      try {
+        await SupabaseService.update('produtos', { status: newStatus }, { field: 'id', value: id });
+        this.renderProdutosGrid();
+        this.populateProductDropdown(); // Atualiza o dropdown para refletir a mudança imediatamente
+      } catch (e) {
+        console.error(e);
+        alert('Erro ao alterar status do produto.');
+      }
     }
   },
 
@@ -1456,36 +1516,15 @@ const UI = {
     });
   },
 
-  async renderProdutosGrid(){
+   async renderProdutosGrid(){
     try {
-      // Obtenha o usuário logado e seu nível
+      // Obter usuário e nível para controle de botões
       const usuarioLogado = this._getCurrentUser();
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
-      // Configuração dinâmica do cabeçalho da tabela para permitir ordenação nas colunas
-      const table = this.produtosTableBody?.closest('table');
-      if (table) {
-        let thead = table.querySelector('thead');
-        // Verifica se o cabeçalho precisa ser criado ou atualizado com os data-fields
-        if (!thead || !thead.querySelector('th[data-field]')) {
-          if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
-          thead.innerHTML = `<tr>
-            <th data-field="codigo_principal" style="cursor:pointer">CÓDIGO <i class="fas fa-sort"></i></th>
-            <th data-field="codigo_secundario" style="cursor:pointer">CÓD. SEC. <i class="fas fa-sort"></i></th>
-            <th data-field="nome" style="cursor:pointer">NOME <i class="fas fa-sort"></i></th>
-            <th data-field="unidade_medida" style="cursor:pointer">UN <i class="fas fa-sort"></i></th>
-            <th data-field="status" style="cursor:pointer">STATUS <i class="fas fa-sort"></i></th>
-            <th>AÇÕES</th></tr>`;
-          
-          thead.querySelectorAll('th[data-field]').forEach(th => {
-            th.addEventListener('click', () => this.toggleProdutosSort(th.dataset.field));
-          });
-        }
-      }
 
       const searchTerm = document.getElementById('searchProdutoInput')?.value.trim();
       let queryOptions = {orderBy: this._produtosSort.field, ascending: this._produtosSort.ascending};
 
-      // Se houver um termo de busca, adiciona o filtro 'ilike' para o campo 'nome'
       if (searchTerm) {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
@@ -1494,9 +1533,20 @@ const UI = {
       this.produtosTableBody.innerHTML = produtos.map(p => {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
-        const rowStyle = isInactive ? 'style="background-color: #fce8e6; opacity: 0.8;"' : '';
         const btnLabel = isInactive ? 'ATIVAR' : 'INATIVAR';
-        const btnStyle = isInactive ? 'background-color: #28a745; color: white;' : 'background-color: #ff6a07; color: black;';
+        const btnStyle = isInactive ? 'background-color: #28a745; color: white;' : 'background-color: #ffc107; color: black;';
+        const rowStyle = isInactive ? 'style="opacity: 0.6; background-color: #f0f0f0;"' : '';
+        
+        let buttons = '';
+        // Botões visíveis para Adm, Compras e Gerencia
+        if (['administrador', 'compras', 'gerencia'].includes(nivelUsuario)) {
+             buttons += `<button class="btn-edit" data-id="${p.id}">Editar</button>`;
+             buttons += `<button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-left: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>`;
+        }
+        // Botão Excluir apenas para Administrador
+        if (nivelUsuario === 'administrador') {
+             buttons += `<button class="btn-delete" data-id="${p.id}" style="margin-left: 5px;">Excluir</button>`;
+        }
 
         return `
         <tr ${rowStyle}>
@@ -1506,11 +1556,9 @@ const UI = {
           <td>${p.unidade_medida || ''}</td>
           <td>${status}</td>
           <td>
-            <button class="btn-edit" data-id="${p.id}">Editar</button>
-             ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-right: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>` : ''}
-            ${nivelUsuario === 'administrador' ? `<button class="btn-delete" data-id="${p.id}">Excluir</button>` : ''}
+            ${buttons}
           </td>
-        </tr>`;
+        </tr>`
       }).join('');
       
       // Atualiza os ícones de ordenação visualmente
@@ -1522,7 +1570,6 @@ const UI = {
 
   async renderFornecedoresGrid(){
     try {
-       // Obtenha o usuário logado e seu nível
       const usuarioLogado = this._getCurrentUser();
       const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       const searchTerm = this.searchFornecedorInput?.value.trim();
@@ -1533,15 +1580,24 @@ const UI = {
       }
 
       const fornecedores = await SupabaseService.list('fornecedores', 'id, nome, telefone', queryOptions);
-      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => `
+      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => {
+        let buttons = '';
+        if (['administrador', 'compras', 'gerencia'].includes(nivelUsuario)) {
+            buttons += `<button class="btn-edit" data-id="${f.id}">Editar</button>`;
+        }
+        if (nivelUsuario === 'administrador') {
+            buttons += `<button class="btn-delete" data-id="${f.id}" style="margin-left: 5px;">Excluir</button>`;
+        }
+
+        return `
         <tr>
           <td>${f.nome || ''}</td>
           <td>${f.telefone || ''}</td>
           <td>
-             ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-edit" data-id="${f.id}">Editar</button>` : ''}
-            ${nivelUsuario === 'administrador' ? `<button class="btn-delete" data-id="${f.id}">Excluir</button>` : ''}
+            ${buttons}
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
 
       // Atualiza os ícones de ordenação visualmente
       this.updateSortIcons('#sectionCadastrarFornecedor', this._fornecedoresSort);
