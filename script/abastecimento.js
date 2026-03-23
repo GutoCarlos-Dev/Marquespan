@@ -1770,16 +1770,26 @@ document.addEventListener('DOMContentLoaded', () => {
             inputUltimoKm.value = 'Buscando...';
         
             try {
-                const { data, error } = await supabaseClient
-                    .from('saidas_combustivel')
-                    .select('km_atual')
-                    .eq('veiculo_placa', placa)
-                    .order('km_atual', { ascending: false })
-                    .limit(1);
+                const [resInt, resExt] = await Promise.all([
+                    supabaseClient
+                        .from('saidas_combustivel')
+                        .select('km_atual')
+                        .eq('veiculo_placa', placa)
+                        .order('km_atual', { ascending: false })
+                        .limit(1),
+                    supabaseClient
+                        .from('abastecimento_externo')
+                        .select('km_atual')
+                        .eq('veiculo_placa', placa)
+                        .order('km_atual', { ascending: false })
+                        .limit(1)
+                ]);
+
+                const kmInt = (resInt.data && resInt.data.length > 0) ? (parseFloat(resInt.data[0].km_atual) || 0) : 0;
+                const kmExt = (resExt.data && resExt.data.length > 0) ? (parseFloat(resExt.data[0].km_atual) || 0) : 0;
+                const maiorKm = Math.max(kmInt, kmExt);
         
-                if (error) throw error;
-        
-                inputUltimoKm.value = (data && data.length > 0) ? data[0].km_atual : 'Sem registro';
+                inputUltimoKm.value = maiorKm > 0 ? maiorKm : 'Sem registro';
             } catch (e) {
                 console.error('Erro ao buscar último KM:', e);
                 inputUltimoKm.value = 'Erro';
