@@ -1534,7 +1534,7 @@ const UI = {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
         const btnLabel = isInactive ? 'ATIVAR' : 'INATIVAR';
-        const btnStyle = isInactive ? 'background-color: #28a745; color: white;' : 'background-color: #ffc107; color: black;';
+        const btnStyle = isInactive ? 'background-color: #28a745; color: white;' : 'background-color: #ff7707; color: black;';
         const rowStyle = isInactive ? 'style="opacity: 0.6; background-color: #f0f0f0;"' : '';
         
         let buttons = '';
