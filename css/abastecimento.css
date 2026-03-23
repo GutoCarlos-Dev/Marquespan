@@ -352,3 +352,11 @@
     border: 1px solid #ced4da;
     border-radius: 4px;
 }
+
+#saidaUltimoKm {
+    background-color: #e9ecef; /* Cinza claro para indicar desabilitado */
+    color: #6c757d;
+    font-weight: bold;
+    cursor: not-allowed;
+    opacity: 1; /* Garante legibilidade em alguns navegadores móveis */
+}
