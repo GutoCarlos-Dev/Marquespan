@@ -1454,6 +1454,9 @@ const UI = {
 
   async renderProdutosGrid(){
     try {
+      // Obtenha o usuário logado e seu nível
+      const usuarioLogado = this._getCurrentUser();
+      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       // Configuração dinâmica do cabeçalho da tabela para permitir ordenação nas colunas
       const table = this.produtosTableBody?.closest('table');
       if (table) {
@@ -1500,7 +1503,7 @@ const UI = {
           <td>${status}</td>
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
-            <button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-right: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>
+             ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-toggle-status" data-id="${p.id}" data-status="${status}" style="margin-right: 5px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; ${btnStyle}">${btnLabel}</button>` : ''}
             <button class="btn-delete" data-id="${p.id}">Excluir</button>
           </td>
         </tr>`;
@@ -1515,6 +1518,9 @@ const UI = {
 
   async renderFornecedoresGrid(){
     try {
+       // Obtenha o usuário logado e seu nível
+      const usuarioLogado = this._getCurrentUser();
+      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
       const searchTerm = this.searchFornecedorInput?.value.trim();
       let queryOptions = {orderBy: this._fornecedoresSort.field, ascending: this._fornecedoresSort.ascending};
 
@@ -1528,7 +1534,7 @@ const UI = {
           <td>${f.nome || ''}</td>
           <td>${f.telefone || ''}</td>
           <td>
-            <button class="btn-edit" data-id="${f.id}">Editar</button>
+             ${['administrador', 'compras'].includes(nivelUsuario) ? `<button class="btn-edit" data-id="${f.id}">Editar</button>` : ''}
             <button class="btn-delete" data-id="${f.id}">Excluir</button>
           </td>
         </tr>`).join('');
