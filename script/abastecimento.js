@@ -141,6 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.searchSaidaInput) {
                 this.searchSaidaInput.addEventListener('input', () => this.renderSaidasTable(false));
             }
+
+            // Busca o Último KM ao selecionar um veículo (Aba Saída)
+            if (this.saidaVeiculo) {
+                this.saidaVeiculo.addEventListener('change', (e) => this.buscarUltimoKm(e.target.value));
+            }
             document.querySelectorAll('.sortable-saida').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.sort;
@@ -545,7 +550,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         toggleSaidaForm(enabled, mensagem = '') {
-            const campos = [this.saidaVeiculo, this.saidaRota, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
+            // Removemos this.saidaVeiculo da lista para que ele fique sempre habilitado
+            const campos = [this.saidaRota, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
             campos.forEach(campo => {
                 if (campo) campo.disabled = !enabled;
             });
@@ -1748,6 +1754,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.renderPostosTable();
                     this.loadPostosOptions();
                 }
+            }
+        },
+
+        async buscarUltimoKm(placaInput) {
+            const inputUltimoKm = document.getElementById('saidaUltimoKm');
+            if (!inputUltimoKm) return;
+        
+            const placa = placaInput ? placaInput.trim().toUpperCase() : '';
+            if (!placa) {
+                inputUltimoKm.value = '';
+                return;
+            }
+        
+            inputUltimoKm.value = 'Buscando...';
+        
+            try {
+                const { data, error } = await supabaseClient
+                    .from('saidas_combustivel')
+                    .select('km_atual')
+                    .eq('veiculo_placa', placa)
+                    .order('km_atual', { ascending: false })
+                    .limit(1);
+        
+                if (error) throw error;
+        
+                inputUltimoKm.value = (data && data.length > 0) ? data[0].km_atual : 'Sem registro';
+            } catch (e) {
+                console.error('Erro ao buscar último KM:', e);
+                inputUltimoKm.value = 'Erro';
             }
         },
     };

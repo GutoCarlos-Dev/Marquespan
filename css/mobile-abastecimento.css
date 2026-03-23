@@ -253,7 +253,8 @@ body {
 }
 
 
-.input-with-button input {
+.input-with-button input,
+.input-with-button select {
     flex: 1;
 }
 

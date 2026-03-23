@@ -146,7 +146,7 @@ async function carregarDadosIniciais() {
             veiculos.forEach(v => {
                 const opt = document.createElement('option');
                 opt.value = v.placa;
-                opt.textContent = `${v.modelo}`;
+                opt.textContent = v.modelo;
                 dlVeiculos.appendChild(opt);
             });
         }
