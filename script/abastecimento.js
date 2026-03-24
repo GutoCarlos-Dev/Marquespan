@@ -239,6 +239,17 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadRotasOptions();
             if (this.tableBodyPostos) this.renderPostosTable();
             if (this.tableBodyExt) this.renderExtTable();
+
+            // Inject Bulk Delete Button for Admin in External Supply Tab
+            if (this.getUserLevel() === 'administrador' && this.searchExtInput) {
+                const btn = document.createElement('button');
+                btn.id = 'btnBulkDeleteExt';
+                btn.style.cssText = 'background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; display: none; margin-left: 10px; font-size: 14px; vertical-align: middle;';
+                btn.innerHTML = '<i class="fas fa-trash"></i> Excluir Selecionados';
+                btn.onclick = () => this.handleBulkDeleteExt();
+                // Insert after the search input
+                this.searchExtInput.parentNode.insertBefore(btn, this.searchExtInput.nextSibling);
+            }
         },
 
         populateUFs() {
@@ -286,6 +297,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) { console.error(e); }
             return 'Desconhecido';
+        },
+
+        getUserLevel() {
+            try {
+                const usuarioLogado = localStorage.getItem('usuarioLogado');
+                if (usuarioLogado) {
+                    const usuario = JSON.parse(usuarioLogado);
+                    return (usuario.nivel || '').toLowerCase();
+                }
+            } catch (e) { console.error(e); }
+            return '';
         },
 
         calculateTotal() {
@@ -1376,6 +1398,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.extData = data || [];
             }
 
+            // --- ADMIN BULK DELETE SETUP ---
+            const isAdmin = this.getUserLevel() === 'administrador';
+            
+            // Inject Header Checkbox if needed
+            const table = this.tableBodyExt.closest('table');
+            if (table && isAdmin) {
+                const theadRow = table.querySelector('thead tr');
+                if (theadRow && !theadRow.querySelector('.th-chk-ext')) {
+                    const th = document.createElement('th');
+                    th.className = 'th-chk-ext';
+                    th.style.width = '40px';
+                    th.style.textAlign = 'center';
+                    th.innerHTML = '<input type="checkbox" id="selectAllExt" title="Selecionar Todos">';
+                    theadRow.insertBefore(th, theadRow.firstElementChild);
+                    
+                    const selectAll = th.querySelector('#selectAllExt');
+                    selectAll.addEventListener('change', (e) => {
+                        const checkboxes = this.tableBodyExt.querySelectorAll('.chk-ext-delete');
+                        checkboxes.forEach(cb => cb.checked = e.target.checked);
+                        this.toggleBulkDeleteButton();
+                    });
+                }
+            }
+            // -------------------------------
+
             // Filtragem
             const term = this.searchExtInput ? this.searchExtInput.value.toLowerCase() : '';
             const filtered = this.extData.filter(item => {
@@ -1414,8 +1461,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
             this.tableBodyExt.innerHTML = '';
+            const colCount = isAdmin ? 9 : 8; // 8 original columns + 1 checkbox
+
             if (filtered.length === 0) {
-                this.tableBodyExt.innerHTML = '<tr><td colspan="8">Nenhum registro.</td></tr>';
+                this.tableBodyExt.innerHTML = `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
                 return;
             }
 
@@ -1423,7 +1472,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tr = document.createElement('tr');
                 const dataF = new Date(item.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
                 const valTotal = item.valor_total ? item.valor_total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
+                
+                let checkboxHtml = '';
+                if (isAdmin) {
+                    checkboxHtml = `<td style="text-align:center;"><input type="checkbox" class="chk-ext-delete" value="${item.id}"></td>`;
+                }
+
                 tr.innerHTML = `
+                    ${checkboxHtml}
                     <td>${dataF}</td>
                     <td>${item.postos?.razao_social || '-'}</td>
                     <td>${item.veiculo_placa}</td>
@@ -1438,6 +1494,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 this.tableBodyExt.appendChild(tr);
             });
+
+            if (isAdmin) {
+                this.tableBodyExt.querySelectorAll('.chk-ext-delete').forEach(cb => {
+                    cb.addEventListener('change', () => this.toggleBulkDeleteButton());
+                });
+                const selectAll = document.getElementById('selectAllExt');
+                if(selectAll) selectAll.checked = false;
+                this.toggleBulkDeleteButton();
+            }
         },
 
         handleExtTableClick(e) {
@@ -1501,6 +1566,38 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extEditingId = null;
             const btn = this.formExt.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Registro';
+        },
+
+        async handleBulkDeleteExt() {
+            const checkboxes = this.tableBodyExt.querySelectorAll('.chk-ext-delete:checked');
+            if (checkboxes.length === 0) return alert('Selecione pelo menos um registro para excluir.');
+
+            if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} registros?`)) return;
+
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('abastecimento_externo')
+                    .delete()
+                    .in('id', ids);
+
+                if (error) throw error;
+
+                alert('Registros excluídos com sucesso!');
+                this.renderExtTable(); // Refresh table
+                
+            } catch (error) {
+                console.error('Erro ao excluir em massa:', error);
+                alert('Erro ao excluir registros: ' + error.message);
+            }
+        },
+
+        toggleBulkDeleteButton() {
+            const btn = document.getElementById('btnBulkDeleteExt');
+            if (!btn) return;
+            const checked = this.tableBodyExt.querySelectorAll('.chk-ext-delete:checked').length > 0;
+            btn.style.display = checked ? 'inline-block' : 'none';
         },
 
         // --- LÓGICA CADASTRO POSTO ---
