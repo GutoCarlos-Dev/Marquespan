@@ -122,6 +122,11 @@ const BicoManager = {
             this.tableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar.</td></tr>';
             return;
         }
+
+        if (data) {
+            data.sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
         this.tableBody.innerHTML = '';
         data.forEach(bico => {
             const tr = document.createElement('tr');
