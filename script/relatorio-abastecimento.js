@@ -172,6 +172,26 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cardResultados.classList.remove('hidden');
 
             try {
+                // --- Lógica de Preços ---
+                // 1. Busca o histórico de preços de compra (entradas) até a data final do relatório
+                const { data: priceHistory, error: priceError } = await supabaseClient
+                    .from('abastecimentos')
+                    .select('tanque_id, valor_litro, data')
+                    .neq('numero_nota', 'AJUSTE DE ESTOQUE') // Ignora ajustes de estoque
+                    .gt('valor_litro', 0) // Apenas entradas com preço válido
+                    .lte('data', `${dtFim}T23:59:59`) // Otimização: busca apenas até a data final do filtro
+                    .order('data', { ascending: false }); // Ordena do mais recente para o mais antigo
+
+                if (priceError) throw priceError;
+
+                // 2. Função auxiliar para encontrar o último preço de um tanque antes de uma data específica
+                const findLastPrice = (tanqueId, consumptionDate) => {
+                    const priceRecord = priceHistory.find(p => 
+                        p.tanque_id === tanqueId && new Date(p.data) <= new Date(consumptionDate)
+                    );
+                    return priceRecord ? priceRecord.valor_litro : 0; // Retorna 0 se nenhum preço for encontrado
+                };
+
                 let dadosEntradas = [];
                 let dadosSaidas = [];
                 let dadosExternos = [];
@@ -224,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tiposMov.length === 0 || tiposMov.includes('SAIDA')) {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*, bicos(bombas(tanques(nome, tipo_combustivel)))')
+                        .select('*, bicos(bombas(tanques(id, nome, tipo_combustivel)))')
                         .gte('data_hora', `${dtIni}T00:00:00`)
                         .lte('data_hora', `${dtFim}T23:59:59`);
 
@@ -242,6 +262,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Normalizar dados de saída
                     dadosSaidas = saidasFiltradas.map(s => {
                         const tanqueInfo = s.bicos?.bombas?.tanques;
+                        // Calcula o custo da saída com base no último preço de compra
+                        const valorLitroSaida = tanqueInfo ? findLastPrice(tanqueInfo.id, s.data_hora) : 0;
+                        const valorTotalSaida = (s.qtd_litros || 0) * valorLitroSaida;
+
                         return {
                             tipo: 'SAIDA',
                             data_hora: s.data_hora,
@@ -253,8 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             tanque: tanqueInfo ? tanqueInfo.nome : 'N/A',
                             combustivel: tanqueInfo ? tanqueInfo.tipo_combustivel : '-',
                             litros: Number(s.qtd_litros), // Saída é negativa no estoque, mas positiva no relatório de consumo
-                            valor_litro: 0, // Saída interna geralmente não tem valor unitário no momento
-                            valor_total: 0
+                            valor_litro: valorLitroSaida,
+                            valor_total: valorTotalSaida
                         };
                     });
                 }
