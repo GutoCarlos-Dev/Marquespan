@@ -1518,6 +1518,7 @@ const ColetarManutencaoUI = {
                     latestHeader = existingHeaders[0];
                     
                     let conflictWithFinalized = false;
+                    let matchWithPending = false;
 
                     // Verifica se algum dos itens que estão sendo salvos já existe como FINALIZADO nesta semana
                     for (const formItem of itemsToProcess) {
@@ -1533,10 +1534,22 @@ const ColetarManutencaoUI = {
                             conflictWithFinalized = true;
                             break;
                         }
+
+                        // Verifica se existe item PENDENTE correspondente para realizar merge automático
+                        const pendingMatch = existingHeaders.some(header => 
+                            header.coletas_manutencao_checklist && 
+                            header.coletas_manutencao_checklist.some(existingItem => 
+                                existingItem.item === formItem.item && 
+                                ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO'].includes(existingItem.status)
+                            )
+                        );
+                        if (pendingMatch) matchWithPending = true;
                     }
 
                     if (conflictWithFinalized) {
                         shouldMerge = false; // Força novo lançamento pois o item específico já foi finalizado anteriormente
+                    } else if (matchWithPending) {
+                        shouldMerge = true; // Mescla automaticamente se encontrar item pendente, sem perguntar
                     } else {
                         // Pergunta ao usuário o que fazer (Merge, Novo ou Cancelar)
                         const userChoice = await this.showConflictModal(placa);
