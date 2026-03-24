@@ -11,11 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.cache();
             this.bind();
+            this.updateFilterOptions();
+            this.updateTipoVeiculoFilterOptions();
             this.loadTanques();
             this.loadVeiculos();
             this.loadRotas();
             this.loadTiposVeiculo();
-            this.updateFilterOptions();
             
             // Define datas padrão (início do mês até hoje)
             const hoje = new Date();
@@ -30,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dataFinal = document.getElementById('dataFinal');
             this.filtroTanque = document.getElementById('filtroTanque');
             this.filtroTipo = document.getElementById('filtroTipoMovimentacao');
+            this.filtroTipoVeiculoDisplay = null;
+            this.filtroTipoVeiculoOptions = null;
+            this.filtroTipoVeiculoText = null;
             this.filtroTipoVeiculo = document.getElementById('filtroTipoVeiculo');
             this.filtroVeiculo = document.getElementById('filtroVeiculo');
             this.filtroRota = document.getElementById('filtroRota');
@@ -129,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async loadTiposVeiculo() {
-            if (!this.filtroTipoVeiculo) return;
+            if (!this.filtroTipoVeiculoOptions) return;
             try {
                 const { data, error } = await supabaseClient
                     .from('veiculos')
@@ -140,17 +144,79 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Pega valores únicos, remove nulos/vazios e ordena
                 const tipos = [...new Set(data.map(v => v.tipo).filter(Boolean))].sort();
 
-                this.filtroTipoVeiculo.innerHTML = '<option value="">Todos</option>';
+                this.filtroTipoVeiculoOptions.innerHTML = '';
                 tipos.forEach(tipo => {
-                    const option = document.createElement('option');
-                    option.value = tipo;
-                    option.textContent = tipo;
-                    this.filtroTipoVeiculo.appendChild(option);
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    label.style.padding = '5px';
+                    label.style.cursor = 'pointer';
+                    label.style.color = '#000';
+                    label.innerHTML = `<input type="checkbox" class="tipo-veiculo-checkbox" value="${tipo}" style="margin-right: 8px;"> ${tipo}`;
+                    this.filtroTipoVeiculoOptions.appendChild(label);
                 });
 
             } catch (error) {
                 console.error('Erro ao carregar tipos de veículo:', error);
-                this.filtroTipoVeiculo.innerHTML = '<option value="">Erro ao carregar</option>';
+                this.filtroTipoVeiculoOptions.innerHTML = '<div>Erro ao carregar</div>';
+            }
+        },
+
+        updateTipoVeiculoFilterOptions() {
+            if (document.getElementById('filtroTipoVeiculoDisplay')) return;
+            const select = this.filtroTipoVeiculo;
+            if (!select) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-multiselect';
+            wrapper.style.position = 'relative';
+
+            const display = document.createElement('div');
+            display.id = 'filtroTipoVeiculoDisplay';
+            display.className = 'glass-input multiselect-display';
+            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px; color: #000;';
+            display.innerHTML = '<span id="filtroTipoVeiculoText">Todos</span> <i class="fas fa-chevron-down"></i>';
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.id = 'filtroTipoVeiculoOptions';
+            optionsContainer.className = 'glass-dropdown hidden';
+            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;';
+
+            wrapper.appendChild(display);
+            wrapper.appendChild(optionsContainer);
+            select.parentNode.replaceChild(wrapper, select);
+
+            this.filtroTipoVeiculoDisplay = display;
+            this.filtroTipoVeiculoOptions = optionsContainer;
+            this.filtroTipoVeiculoText = document.getElementById('filtroTipoVeiculoText');
+
+            this.bindTipoVeiculoMultiselectEvents();
+        },
+
+        bindTipoVeiculoMultiselectEvents() {
+            if (this.filtroTipoVeiculoDisplay) {
+                this.filtroTipoVeiculoDisplay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.filtroTipoVeiculoOptions.classList.toggle('hidden');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!this.filtroTipoVeiculoDisplay.contains(e.target) && !this.filtroTipoVeiculoOptions.contains(e.target)) {
+                        this.filtroTipoVeiculoOptions.classList.add('hidden');
+                    }
+                });
+                this.filtroTipoVeiculoOptions.addEventListener('change', () => {
+                    this.updateTipoVeiculoMultiselectText();
+                });
+            }
+        },
+
+        updateTipoVeiculoMultiselectText() {
+            const checked = Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked'));
+            if (checked.length === 0) {
+                this.filtroTipoVeiculoText.textContent = 'Todos';
+            } else if (checked.length <= 2) {
+                this.filtroTipoVeiculoText.textContent = checked.map(cb => cb.value).join(', ');
+            } else {
+                this.filtroTipoVeiculoText.textContent = `${checked.length} selecionados`;
             }
         },
 
@@ -237,7 +303,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
-            const tipoVeiculo = this.filtroTipoVeiculo.value;
+            const tiposVeiculo = this.filtroTipoVeiculoOptions
+                ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value)
+                : [];
             const veiculoPlaca = this.filtroVeiculo.value.trim().toUpperCase();
             const rota = this.filtroRota.value.trim();
             const tiposMov = this.filtroTipoOptions 
@@ -256,11 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // --- Filtro por Tipo de Veículo ---
                 let placasPorTipo = [];
-                if (tipoVeiculo) {
+                if (tiposVeiculo.length > 0) {
                     const { data: veiculosDoTipo, error: veiculosError } = await supabaseClient
                         .from('veiculos')
                         .select('placa')
-                        .eq('tipo', tipoVeiculo);
+                        .in('tipo', tiposVeiculo);
                     
                     if (veiculosError) throw veiculosError;
                     
@@ -354,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (rota) {
                         querySaidas = querySaidas.eq('rota', rota);
                     }
-                    if (tipoVeiculo) {
+                    if (tiposVeiculo.length > 0) {
                         querySaidas = querySaidas.in('veiculo_placa', placasPorTipo);
                     }
 
@@ -408,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (rota) {
                         queryExterno = queryExterno.eq('rota', rota);
                     }
-                    if (tipoVeiculo) {
+                    if (tiposVeiculo.length > 0) {
                         queryExterno = queryExterno.in('veiculo_placa', placasPorTipo);
                     }
 
@@ -722,7 +790,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (this.filtroVeiculo) this.filtroVeiculo.value = '';
             if (this.filtroRota) this.filtroRota.value = '';
-            if (this.filtroTipoVeiculo) this.filtroTipoVeiculo.value = '';
+            if (this.filtroTipoVeiculoOptions) {
+                this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox').forEach(cb => cb.checked = false);
+                this.updateTipoVeiculoMultiselectText();
+            }
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
