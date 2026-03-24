@@ -115,6 +115,7 @@ async function carregarDadosIniciais() {
         selectBico2.innerHTML = '<option value="">Selecione o Bico</option>';
         
         if (bicos) {
+            bicos.sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true, sensitivity: 'base' }));
             bicos.forEach(bico => {
                 const nomeTanque = bico.bombas?.tanques?.nome || 'Tanque N/A';
                 const combustivel = bico.bombas?.tanques?.tipo_combustivel || '';

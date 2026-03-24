@@ -557,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) throw error;
 
                 this.bicosDisponiveis = data || [];
+                this.bicosDisponiveis.sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true, sensitivity: 'base' }));
                 this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 this.bicosDisponiveis.forEach(bico => {
                     const tanqueInfo = bico.bombas?.tanques?.nome || 'Tanque desconhecido';
