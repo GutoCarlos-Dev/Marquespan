@@ -75,7 +75,19 @@ async function buscarManutencao() {
   
   if (countError) {
       console.error('Erro ao contar registros:', countError);
-      alert('Erro ao verificar quantidade de registros.');
+      
+      let msg = 'Erro ao verificar quantidade de registros.';
+      if (countError.message) {
+          msg += `\nDetalhes: ${countError.message}`;
+          // Tratamento específico para erro de conexão/DNS (ERR_NAME_NOT_RESOLVED geralmente resulta em Failed to fetch)
+          if (countError.message.includes('Failed to fetch')) {
+              msg = 'Erro de Conexão: Não foi possível conectar ao servidor. Verifique sua internet ou DNS.';
+          }
+      } else {
+          msg += '\nVerifique sua conexão com a internet.';
+      }
+      
+      alert(msg);
       return;
   }
 
@@ -280,6 +292,7 @@ async function visualizarManutencao(id) {
     }
 
     document.getElementById('modalVisualizar').classList.remove('hidden');
+    document.getElementById('modalVisualizar').style.display = 'flex';
   } catch (e) {
     console.error('Erro ao visualizar manutenção:', e);
     alert('Erro ao carregar detalhes da manutenção.');
@@ -338,6 +351,7 @@ window.downloadArquivo = async function(path) {
 // ❌ Fechar modal
 window.fecharModalVisualizacao = function() {
   document.getElementById('modalVisualizar').classList.add('hidden');
+  document.getElementById('modalVisualizar').style.display = 'none';
 }
 
 function exportarExcel() {
@@ -414,6 +428,7 @@ function createResizableColumn(col, resizer) {
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarFiltros();
+  injectVisualizarModal(); // Injeta o modal de visualização se não existir
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
@@ -714,4 +729,55 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
   } else {
       throw new Error('Nenhum registro válido encontrado na planilha.');
   }
+}
+
+function injectVisualizarModal() {
+    if (document.getElementById('modalVisualizar')) return;
+
+    const modalHtml = `
+    <div id="modalVisualizar" class="hidden" style="position: fixed; z-index: 99999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7) !important; display: none; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background-color: #ffffff !important; color: #333333 !important; margin: auto; padding: 20px; border: 1px solid #ccc; width: 600px; max-width: 90%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; max-height: 90vh; overflow-y: auto; display: block;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <h3 style="margin: 0; color: #333 !important; font-size: 1.25rem;">Detalhes da Manutenção #<span id="viewId"></span></h3>
+                <span onclick="fecharModalVisualizacao()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; text-align: left;">
+                <div><strong style="color:#555;">Data:</strong> <span id="viewData" style="color:#333;"></span></div>
+                <div><strong style="color:#555;">Status:</strong> <span id="viewStatus" style="font-weight:bold;"></span></div>
+                <div><strong style="color:#555;">Filial:</strong> <span id="viewFilial"></span></div>
+                <div><strong style="color:#555;">Usuário:</strong> <span id="viewUsuario"></span></div>
+                <div><strong style="color:#555;">Veículo:</strong> <span id="viewVeiculo" style="font-weight:bold;"></span></div>
+                <div><strong style="color:#555;">KM:</strong> <span id="viewKm"></span></div>
+                <div><strong style="color:#555;">Motorista:</strong> <span id="viewMotorista"></span></div>
+                <div><strong style="color:#555;">Valor Total:</strong> <span id="viewValor" style="color:#28a745; font-weight:bold;"></span></div>
+            </div>
+
+            <div style="margin-bottom: 15px; text-align: left;">
+                <strong style="color:#555;">Título:</strong>
+                <div id="viewTitulo" style="background:#f9f9f9; padding:8px; border-radius:4px; margin-top:5px; border: 1px solid #eee;"></div>
+            </div>
+
+            <div style="margin-bottom: 15px; text-align: left;">
+                <strong style="color:#555;">Descrição:</strong>
+                <div id="viewDescricao" style="background:#f9f9f9; padding:8px; border-radius:4px; margin-top:5px; white-space: pre-wrap; border: 1px solid #eee;"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeeba; text-align: left;">
+                <div><strong style="color:#856404;">Fornecedor:</strong> <span id="viewFornecedor" style="color:#856404;"></span></div>
+                <div><strong style="color:#856404;">Notas Fiscais:</strong> <span id="viewNotas" style="color:#856404;"></span></div>
+            </div>
+
+            <div style="margin-bottom: 15px; text-align: left;">
+                <strong style="color:#555;">Anexos:</strong>
+                <ul id="viewListaArquivos" style="list-style: none; padding: 0; margin-top: 5px;"></ul>
+            </div>
+
+            <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+                <button onclick="fecharModalVisualizacao()" style="padding: 10px 20px; background-color: #6c757d !important; color: white !important; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Fechar</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
