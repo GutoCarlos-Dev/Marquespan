@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cache();
             this.bind();
             this.loadTanques();
+            this.loadVeiculos();
+            this.loadRotas();
             this.updateFilterOptions();
             
             // Define datas padrão (início do mês até hoje)
@@ -27,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dataFinal = document.getElementById('dataFinal');
             this.filtroTanque = document.getElementById('filtroTanque');
             this.filtroTipo = document.getElementById('filtroTipoMovimentacao');
+            this.filtroVeiculo = document.getElementById('filtroVeiculo');
+            this.filtroRota = document.getElementById('filtroRota');
             this.incluirAjusteCheckbox = document.getElementById('incluirAjusteEstoque');
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
@@ -76,6 +80,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        async loadVeiculos() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('veiculos')
+                    .select('placa')
+                    .order('placa');
+                if (error) throw error;
+    
+                const datalist = document.getElementById('listaVeiculosFiltro');
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    data.forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.placa;
+                        datalist.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar veículos para filtro:', error);
+            }
+        },
+    
+        async loadRotas() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rotas')
+                    .select('numero')
+                    .order('numero');
+                if (error) throw error;
+    
+                const datalist = document.getElementById('listaRotasFiltro');
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    // Ordenação numérica correta
+                    data.sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' }));
+                    data.forEach(r => {
+                        const option = document.createElement('option');
+                        option.value = r.numero;
+                        datalist.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar rotas para filtro:', error);
+            }
+        },
+
         updateFilterOptions() {
             if (document.getElementById('filtroTipoDisplay')) return;
             const select = this.filtroTipo;
@@ -89,13 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const display = document.createElement('div');
             display.id = 'filtroTipoDisplay';
             display.className = 'glass-input multiselect-display';
-            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px;';
+            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px; color: #000;';
             display.innerHTML = '<span id="filtroTipoText">Todos</span> <i class="fas fa-chevron-down"></i>';
 
             const optionsContainer = document.createElement('div');
             optionsContainer.id = 'filtroTipoOptions';
             optionsContainer.className = 'glass-dropdown hidden';
-            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%;';
+            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;';
 
             const options = [
                 { value: 'ENTRADA', text: 'Entrada (Recebimento)' },
@@ -109,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 label.style.display = 'block';
                 label.style.padding = '5px';
                 label.style.cursor = 'pointer';
+                label.style.color = '#000';
                 label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${opt.value}" style="margin-right: 8px;"> ${opt.text}`;
                 optionsContainer.appendChild(label);
             });
@@ -158,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
+            const veiculoPlaca = this.filtroVeiculo.value.trim().toUpperCase();
+            const rota = this.filtroRota.value.trim();
             const tiposMov = this.filtroTipoOptions 
                 ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
                 : [];
@@ -248,6 +301,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         .gte('data_hora', `${dtIni}T00:00:00`)
                         .lte('data_hora', `${dtFim}T23:59:59`);
 
+                    if (veiculoPlaca) {
+                        querySaidas = querySaidas.eq('veiculo_placa', veiculoPlaca);
+                    }
+                    if (rota) {
+                        querySaidas = querySaidas.eq('rota', rota);
+                    }
+
                     // Filtro de tanque para saídas é mais complexo pois está aninhado
                     // Faremos o filtro no cliente para simplificar, já que o volume filtrado por data não deve ser gigante
                     
@@ -291,6 +351,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         .select('data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
                         .gte('data_hora', `${dtIni}T00:00:00`)
                         .lte('data_hora', `${dtFim}T23:59:59`);
+
+                    if (veiculoPlaca) {
+                        queryExterno = queryExterno.eq('veiculo_placa', veiculoPlaca);
+                    }
+                    if (rota) {
+                        queryExterno = queryExterno.eq('rota', rota);
+                    }
 
                     const { data: resExterno, error: errExterno } = await queryExterno;
                     if (errExterno) throw errExterno;
@@ -600,6 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (this.filtroTipo) {
                 this.filtroTipo.value = "";
             }
+            if (this.filtroVeiculo) this.filtroVeiculo.value = '';
+            if (this.filtroRota) this.filtroRota.value = '';
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
