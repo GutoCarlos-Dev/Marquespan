@@ -353,6 +353,7 @@ async function visualizarManutencao(id) {
 
                 <div class="box">
                     <div class="field"><strong>Título</strong><span style="color:#0056b3;">${m.titulo || '-'}</span></div>
+                    <div class="field" style="margin-top:15px;"><strong>Nº OS</strong><span style="color:#333;">${m.numeroOS || '-'}</span></div>
                     <div class="field" style="margin-top:15px;"><strong>Descrição</strong><div style="white-space: pre-wrap;">${m.descricao || '-'}</div></div>
                 </div>
 
