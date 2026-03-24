@@ -82,13 +82,17 @@
                     <input type="text" id="saidaUltimoKm" class="glass-input" disabled readonly placeholder="Aguardando veículo...">
                 </div>
 
-
+                <div class="form-row-mobile">
                 <div class="form-group">
                     <label for="saidaRota">Rota</label>
                     <input type="text" id="saidaRota" list="listaRotas" placeholder="Selecione a Rota" autocomplete="off" inputmode="numeric">
                     <datalist id="listaRotas"></datalist>
                 </div>
-
+                <div class="form-group">
+                    <label for="saidaKm">KM / Horímetro</label>
+                    <input type="number" id="saidaKm" placeholder="0" inputmode="numeric" required>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="saidaBico">Bico de Origem</label>
                     <select id="saidaBico" required>
@@ -96,17 +100,11 @@
                     </select>
                 </div>
 
-                <div class="form-row-mobile">
-                    <div class="form-group">
-                        <label for="saidaKm">KM / Horímetro</label>
-                        <input type="number" id="saidaKm" placeholder="0" inputmode="numeric" required>
-                    </div>
                     <div class="form-group">
                         <label for="saidaLitros">Litros</label>
                         <input type="number" id="saidaLitros" step="0.01" placeholder="0.00" inputmode="decimal" required style="font-weight: bold; color: #006937;">
                     </div>
-                </div>
-
+                
                 <!-- Campos para o segundo bico (inicialmente ocultos) -->
                 <div id="camposBico2" class="hidden" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
                     <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">2º Abastecimento (Simultâneo)</h4>
