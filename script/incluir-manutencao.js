@@ -187,7 +187,6 @@ async function salvarManutencao() {
     data: document.getElementById('data').value,
     tipo: document.getElementById('tipoManutencao').value,
     veiculo: document.getElementById('veiculo').value,
-    modelo: document.getElementById('modeloVeiculo').value,
     km: parseInt(document.getElementById('km').value.replace(/\D/g, '')) || null,
     motorista: document.getElementById('motorista').value,
     fornecedor: document.getElementById('fornecedor').value,
@@ -718,6 +717,14 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.classList.add('hidden');
         }
     });
+  });
+
+  // Atalho de teclado Ctrl+S para salvar
+  document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+          e.preventDefault(); // Previne a ação padrão do navegador (Salvar página)
+          document.getElementById('btnSalvarManutencao').click(); // Simula o clique no botão de salvar
+      }
   });
 });
 
