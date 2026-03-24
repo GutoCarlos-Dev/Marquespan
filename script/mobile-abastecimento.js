@@ -136,7 +136,6 @@ async function carregarDadosIniciais() {
         const { data: veiculos, error: errVeic } = await supabaseClient
             .from('veiculos')
             .select('placa, modelo')
-            .eq('situacao', 'ativo')
             .order('placa');
         
         if (errVeic) throw errVeic;

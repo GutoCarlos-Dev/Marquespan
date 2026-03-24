@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carregar Veículos
             try {
-                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
+                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').order('placa');
                 if (veiculos) {
                     this.listaVeiculos.innerHTML = veiculos.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
                 }
