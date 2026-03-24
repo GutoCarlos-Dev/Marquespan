@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroTipoVeiculo = document.getElementById('filtroTipoVeiculo');
             this.filtroVeiculo = document.getElementById('filtroVeiculo');
             this.filtroRota = document.getElementById('filtroRota');
-            this.incluirAjusteCheckbox = document.getElementById('incluirAjusteEstoque');
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
             this.cardResultados = document.getElementById('cardResultados');
@@ -311,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tiposMov = this.filtroTipoOptions 
                 ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
                 : [];
-            const incluirAjuste = this.incluirAjusteCheckbox.checked;
 
             if (!dtIni || !dtFim) {
                 alert('Por favor, selecione o período.');
@@ -381,11 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (wantEntrada && !wantAjuste) {
                         queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    } else if (!wantEntrada && wantAjuste) {
+                    } else if (!wantEntrada && wantAjuste) { // Only adjustments
                         queryEntradas = queryEntradas.eq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    } else if (tiposMov.length === 0 && !incluirAjuste) {
-                        // Se "Todos" selecionado, respeita o checkbox de incluir ajuste
-                        queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
                     }
 
                     const { data: resEntradas, error: errEntradas } = await queryEntradas;
@@ -781,7 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clearFilters() {
             this.form.reset();
-            this.incluirAjusteCheckbox.checked = true;
             if (this.filtroTipoOptions) {
                 this.filtroTipoOptions.querySelectorAll('.tipo-checkbox').forEach(cb => cb.checked = false);
                 this.updateMultiselectText();
