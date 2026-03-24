@@ -658,6 +658,17 @@ async function excluirTituloTab(id) {
 
 // 🚀 Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
+  // --- CORREÇÃO DE ESTILO E COMPORTAMENTO DAS ABAS ---
+  // Garante que as abas secundárias tenham as classes necessárias para alinhamento (glass-panel)
+  // e para a lógica de alternância (painel-conteudo) funcionar corretamente.
+  ['abaFornecedores', 'abaTitulos', 'cadastroInterno'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+          el.classList.add('painel-conteudo');
+          if (id !== 'cadastroInterno') el.classList.add('glass-panel'); // Aplica o estilo visual de card
+      }
+  });
+
   preencherUsuarioLogado();
   carregarPlacas();
   carregarFiliais();
