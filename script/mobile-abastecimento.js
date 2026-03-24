@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
 let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
+let veiculosDisponiveisCache = []; // Cache para validação de placa
 
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data/hora atual no input
@@ -140,6 +141,8 @@ async function carregarDadosIniciais() {
         
         if (errVeic) throw errVeic;
 
+        veiculosDisponiveisCache = veiculos || []; // Armazena no cache
+
         const dlVeiculos = document.getElementById('listaVeiculos');
         dlVeiculos.innerHTML = '';
         if (veiculos) {
@@ -191,6 +194,14 @@ async function salvarAbastecimento(e) {
     const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
     const rota = document.getElementById('saidaRota').value;
     const km = document.getElementById('saidaKm').value;
+
+    // Validação da Placa
+    const veiculoValido = veiculosDisponiveisCache.some(v => v.placa === placa);
+    if (!veiculoValido) {
+        alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
+        document.getElementById('saidaVeiculo').focus();
+        return;
+    }
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 

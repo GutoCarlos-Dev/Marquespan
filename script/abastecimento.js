@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.tanquesDisponiveis = [];
             this.bicosDisponiveis = [];
+            this.veiculosDisponiveis = []; // Cache para validação de placa
             this.sortState = { field: 'data', ascending: false }; // Estado inicial da ordenacao
             this.postosData = []; // Cache dos dados de postos
             this.postosSort = { key: 'razao_social', asc: true }; // Estado de ordenação dos postos
@@ -523,7 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').order('placa');
                 if (veiculos) {
-                    this.listaVeiculos.innerHTML = veiculos.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
+                    this.veiculosDisponiveis = veiculos; // Armazena no cache
+                    this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar veículos', e); }
             
@@ -573,8 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         toggleSaidaForm(enabled, mensagem = '') {
-            // Removemos this.saidaVeiculo da lista para que ele fique sempre habilitado
-            const campos = [this.saidaRota, this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
+            // O campo Rota agora fica sempre habilitado, junto com o campo Veículo.
+            const campos = [this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
             campos.forEach(campo => {
                 if (campo) campo.disabled = !enabled;
             });
@@ -890,10 +892,19 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleSaidaSubmit(e) {
             e.preventDefault();
             
+            // Validação da Placa
+            const placaInput = this.saidaVeiculo.value.toUpperCase();
+            const veiculoValido = this.veiculosDisponiveis.some(v => v.placa === placaInput);
+            if (!veiculoValido) {
+                alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
+                this.saidaVeiculo.focus();
+                return;
+            }
+
             const payload = {
                 data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
                 bico_id: parseInt(this.saidaBico.value),
-                veiculo_placa: this.saidaVeiculo.value.toUpperCase(),
+                veiculo_placa: placaInput,
                 rota: this.saidaRota.value,
                 km_atual: parseFloat(this.saidaKm.value),
                 qtd_litros: parseFloat(this.saidaLitros.value),
