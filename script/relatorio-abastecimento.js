@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadTanques();
             this.loadVeiculos();
             this.loadRotas();
+            this.loadTiposVeiculo();
             this.updateFilterOptions();
             
             // Define datas padrão (início do mês até hoje)
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dataFinal = document.getElementById('dataFinal');
             this.filtroTanque = document.getElementById('filtroTanque');
             this.filtroTipo = document.getElementById('filtroTipoMovimentacao');
+            this.filtroTipoVeiculo = document.getElementById('filtroTipoVeiculo');
             this.filtroVeiculo = document.getElementById('filtroVeiculo');
             this.filtroRota = document.getElementById('filtroRota');
             this.incluirAjusteCheckbox = document.getElementById('incluirAjusteEstoque');
@@ -126,6 +128,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        async loadTiposVeiculo() {
+            if (!this.filtroTipoVeiculo) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('veiculos')
+                    .select('tipo');
+
+                if (error) throw error;
+
+                // Pega valores únicos, remove nulos/vazios e ordena
+                const tipos = [...new Set(data.map(v => v.tipo).filter(Boolean))].sort();
+
+                this.filtroTipoVeiculo.innerHTML = '<option value="">Todos</option>';
+                tipos.forEach(tipo => {
+                    const option = document.createElement('option');
+                    option.value = tipo;
+                    option.textContent = tipo;
+                    this.filtroTipoVeiculo.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar tipos de veículo:', error);
+                this.filtroTipoVeiculo.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        },
+
         updateFilterOptions() {
             if (document.getElementById('filtroTipoDisplay')) return;
             const select = this.filtroTipo;
@@ -209,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
+            const tipoVeiculo = this.filtroTipoVeiculo.value;
             const veiculoPlaca = this.filtroVeiculo.value.trim().toUpperCase();
             const rota = this.filtroRota.value.trim();
             const tiposMov = this.filtroTipoOptions 
@@ -225,6 +254,24 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cardResultados.classList.remove('hidden');
 
             try {
+                // --- Filtro por Tipo de Veículo ---
+                let placasPorTipo = [];
+                if (tipoVeiculo) {
+                    const { data: veiculosDoTipo, error: veiculosError } = await supabaseClient
+                        .from('veiculos')
+                        .select('placa')
+                        .eq('tipo', tipoVeiculo);
+                    
+                    if (veiculosError) throw veiculosError;
+                    
+                    placasPorTipo = veiculosDoTipo.map(v => v.placa);
+                    
+                    if (placasPorTipo.length === 0) {
+                        this.dadosRelatorio = [];
+                        this.renderTable();
+                        return;
+                    }
+                }
                 // --- Lógica de Preços ---
                 // 1. Busca o histórico de preços de compra (entradas) até a data final do relatório
                 const { data: priceHistory, error: priceError } = await supabaseClient
@@ -307,6 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (rota) {
                         querySaidas = querySaidas.eq('rota', rota);
                     }
+                    if (tipoVeiculo) {
+                        querySaidas = querySaidas.in('veiculo_placa', placasPorTipo);
+                    }
 
                     // Filtro de tanque para saídas é mais complexo pois está aninhado
                     // Faremos o filtro no cliente para simplificar, já que o volume filtrado por data não deve ser gigante
@@ -357,6 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (rota) {
                         queryExterno = queryExterno.eq('rota', rota);
+                    }
+                    if (tipoVeiculo) {
+                        queryExterno = queryExterno.in('veiculo_placa', placasPorTipo);
                     }
 
                     const { data: resExterno, error: errExterno } = await queryExterno;
@@ -669,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (this.filtroVeiculo) this.filtroVeiculo.value = '';
             if (this.filtroRota) this.filtroRota.value = '';
+            if (this.filtroTipoVeiculo) this.filtroTipoVeiculo.value = '';
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
