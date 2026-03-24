@@ -250,49 +250,137 @@ async function visualizarManutencao(id) {
 
     if (error) throw error;
 
-    // 2. Preencher campos do modal
-    document.getElementById('viewId').textContent = m.id;
-    document.getElementById('viewData').textContent = formatarData(m.data);
-    document.getElementById('viewStatus').textContent = m.status || '-';
-    document.getElementById('viewFilial').textContent = m.filial || '-';
-    document.getElementById('viewUsuario').textContent = m.usuario || '-';
-    document.getElementById('viewVeiculo').textContent = m.veiculo || '-';
-    document.getElementById('viewKm').textContent = m.km || '-';
-    document.getElementById('viewMotorista').textContent = m.motorista || '-';
-    document.getElementById('viewTitulo').textContent = m.titulo || '-';
-    document.getElementById('viewDescricao').textContent = m.descricao || '-';
-    document.getElementById('viewFornecedor').textContent = m.fornecedor || '-';
-    document.getElementById('viewNotas').textContent = `NF: ${m.notaFiscal || '-'} | NFS: ${m.notaServico || '-'}`;
-    
-    // Calcular valor total (NF + NFS)
-    const total = (parseFloat(m.valorNfe) || 0) + (parseFloat(m.valorNfse) || 0);
-    document.getElementById('viewValor').textContent = `R$ ${formatarValor(total)}`;
-
-    // 3. Buscar arquivos anexados
+    // 2. Buscar arquivos anexados
     const { data: arquivos } = await supabaseClient
       .from('manutencao_arquivos')
       .select('*')
       .eq('id_manutencao', id);
 
-    const listaArquivos = document.getElementById('viewListaArquivos');
-    listaArquivos.innerHTML = '';
-
+    let arquivosHtml = '';
     if (arquivos && arquivos.length > 0) {
-      arquivos.forEach(arq => {
-        const li = document.createElement('li');
-        li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9; margin-bottom: 5px; border-radius: 4px;';
-        li.innerHTML = `
-            <span><i class="fas fa-file-alt"></i> ${arq.nome_arquivo}</span>
-            <button onclick="downloadArquivo('${arq.caminho_arquivo}')" class="btn-icon view" title="Baixar"><i class="fas fa-download"></i></button>
-        `;
-        listaArquivos.appendChild(li);
-      });
+        for (const arq of arquivos) {
+            // Gera link assinado válido por 1 hora
+            const { data: signed } = await supabaseClient.storage
+                .from('manutencao_arquivos')
+                .createSignedUrl(arq.caminho_arquivo, 3600);
+            
+            if (signed?.signedUrl) {
+                arquivosHtml += `<li style="margin-bottom:5px;"><a href="${signed.signedUrl}" target="_blank" style="text-decoration:none; color:#007bff; display:flex; align-items:center; gap:5px;">📄 ${arq.nome_arquivo} <small>(Clique para baixar)</small></a></li>`;
+            }
+        }
     } else {
-      listaArquivos.innerHTML = '<li style="color: #999; font-style: italic;">Nenhum arquivo anexado.</li>';
+        arquivosHtml = '<li style="color:#999; font-style:italic;">Nenhum arquivo anexado.</li>';
+    }
+    
+    // Calcular valor total (NF + NFS)
+    const total = (parseFloat(m.valorNfe) || 0) + (parseFloat(m.valorNfse) || 0);
+    const valorFormatado = `R$ ${formatarValor(total)}`;
+    const dataFormatada = formatarData(m.data);
+
+    // Buscar Logo
+    const getLogoBase64 = async () => {
+        try {
+            const response = await fetch('logo.png');
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.warn('Logo não encontrado');
+            return null;
+        }
+    };
+    const logoBase64 = await getLogoBase64();
+
+    // 3. Montar HTML da Nova Janela
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <title>Detalhes Manutenção #${m.id}</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; padding: 20px; color: #333; margin: 0; }
+                .container { max-width: 850px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #006937; }
+                .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+                .header-content { display: flex; align-items: center; gap: 20px; }
+                .logo { height: 60px; width: auto; object-fit: contain; }
+                h2 { color: #006937; margin: 0; font-size: 1.8rem; }
+                .subtitle { color: #666; font-size: 0.9em; margin-top: 5px; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+                .field strong { display: block; font-size: 0.8em; color: #666; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+                .field span { font-size: 1.1em; font-weight: 500; display: block; color: #333; }
+                .box { background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e9ecef; margin-bottom: 20px; }
+                .money { color: #28a745; font-weight: bold; font-size: 1.2em; }
+                ul { list-style: none; padding: 0; margin: 0; }
+                .btn-print { background: #006937; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
+                .btn-print:hover { background: #00562b; }
+                @media print { body { background: #fff; padding: 0; } .container { box-shadow: none; max-width: 100%; border: none; padding: 0; margin: 0; } .no-print { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="header-content">
+                        ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo Marquespan">` : ''}
+                        <div>
+                            <h2>Relatório de Manutenção #${m.id}</h2>
+                            <div class="subtitle">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="btn-print no-print">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+                        </svg>
+                        Imprimir
+                    </button>
+                </div>
+
+                <div class="grid">
+                    <div class="field"><strong>Data</strong><span>${dataFormatada}</span></div>
+                    <div class="field"><strong>Status</strong><span>${m.status || '-'}</span></div>
+                    <div class="field"><strong>Filial</strong><span>${m.filial || '-'}</span></div>
+                    <div class="field"><strong>Usuário</strong><span>${m.usuario || '-'}</span></div>
+                    <div class="field"><strong>Veículo</strong><span>${m.veiculo || '-'}</span></div>
+                    <div class="field"><strong>KM</strong><span>${m.km || '-'}</span></div>
+                    <div class="field"><strong>Motorista</strong><span>${m.motorista || '-'}</span></div>
+                    <div class="field"><strong>Valor Total</strong><span class="money">${valorFormatado}</span></div>
+                </div>
+
+                <div class="box">
+                    <div class="field"><strong>Título</strong><span style="color:#0056b3;">${m.titulo || '-'}</span></div>
+                    <div class="field" style="margin-top:15px;"><strong>Descrição</strong><div style="white-space: pre-wrap;">${m.descricao || '-'}</div></div>
+                </div>
+
+                <div class="grid box" style="background:#fff3cd; border-color:#ffeeba; color:#856404;">
+                    <div class="field"><strong>Fornecedor</strong><span>${m.fornecedor || '-'}</span></div>
+                    <div class="field"><strong>Notas Fiscais</strong><span>NF: ${m.notaFiscal || '-'} | NFS: ${m.notaServico || '-'}</span></div>
+                </div>
+
+                <div class="box">
+                    <strong>Anexos / Arquivos</strong>
+                    <ul style="margin-top:10px;">${arquivosHtml}</ul>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    // 4. Abrir Nova Janela
+    const win = window.open('', '_blank', 'width=900,height=800,scrollbars=yes,resizable=yes');
+    if (win) {
+        win.document.open();
+        win.document.write(htmlContent);
+        win.document.close();
+        win.focus();
+    } else {
+        alert('Pop-up bloqueado. Por favor, permita pop-ups para visualizar os detalhes.');
     }
 
-    document.getElementById('modalVisualizar').classList.remove('hidden');
-    document.getElementById('modalVisualizar').style.display = 'flex';
   } catch (e) {
     console.error('Erro ao visualizar manutenção:', e);
     alert('Erro ao carregar detalhes da manutenção.');
@@ -346,12 +434,6 @@ window.downloadArquivo = async function(path) {
     console.error('Erro ao baixar arquivo:', err);
     alert('Erro ao gerar link de download.');
   }
-}
-
-// ❌ Fechar modal
-window.fecharModalVisualizacao = function() {
-  document.getElementById('modalVisualizar').classList.add('hidden');
-  document.getElementById('modalVisualizar').style.display = 'none';
 }
 
 function exportarExcel() {
@@ -428,7 +510,6 @@ function createResizableColumn(col, resizer) {
 document.addEventListener('DOMContentLoaded', () => {
   preencherUsuarioLogado();
   carregarFiltros();
-  injectVisualizarModal(); // Injeta o modal de visualização se não existir
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
@@ -447,12 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('modalImportar').classList.remove('hidden');
     });
   }
-
-  // Fechar modal ao clicar fora
-  window.addEventListener('click', (e) => {
-    const modal = document.getElementById('modalVisualizar');
-    if (e.target === modal) modal.classList.add('hidden');
-  });
 
   setupColumnResizing();
 
@@ -729,55 +804,4 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
   } else {
       throw new Error('Nenhum registro válido encontrado na planilha.');
   }
-}
-
-function injectVisualizarModal() {
-    if (document.getElementById('modalVisualizar')) return;
-
-    const modalHtml = `
-    <div id="modalVisualizar" class="hidden" style="position: fixed; z-index: 99999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7) !important; display: none; align-items: center; justify-content: center;">
-        <div class="modal-content" style="background-color: #ffffff !important; color: #333333 !important; margin: auto; padding: 20px; border: 1px solid #ccc; width: 600px; max-width: 90%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; max-height: 90vh; overflow-y: auto; display: block;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                <h3 style="margin: 0; color: #333 !important; font-size: 1.25rem;">Detalhes da Manutenção #<span id="viewId"></span></h3>
-                <span onclick="fecharModalVisualizacao()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; text-align: left;">
-                <div><strong style="color:#555;">Data:</strong> <span id="viewData" style="color:#333;"></span></div>
-                <div><strong style="color:#555;">Status:</strong> <span id="viewStatus" style="font-weight:bold;"></span></div>
-                <div><strong style="color:#555;">Filial:</strong> <span id="viewFilial"></span></div>
-                <div><strong style="color:#555;">Usuário:</strong> <span id="viewUsuario"></span></div>
-                <div><strong style="color:#555;">Veículo:</strong> <span id="viewVeiculo" style="font-weight:bold;"></span></div>
-                <div><strong style="color:#555;">KM:</strong> <span id="viewKm"></span></div>
-                <div><strong style="color:#555;">Motorista:</strong> <span id="viewMotorista"></span></div>
-                <div><strong style="color:#555;">Valor Total:</strong> <span id="viewValor" style="color:#28a745; font-weight:bold;"></span></div>
-            </div>
-
-            <div style="margin-bottom: 15px; text-align: left;">
-                <strong style="color:#555;">Título:</strong>
-                <div id="viewTitulo" style="background:#f9f9f9; padding:8px; border-radius:4px; margin-top:5px; border: 1px solid #eee;"></div>
-            </div>
-
-            <div style="margin-bottom: 15px; text-align: left;">
-                <strong style="color:#555;">Descrição:</strong>
-                <div id="viewDescricao" style="background:#f9f9f9; padding:8px; border-radius:4px; margin-top:5px; white-space: pre-wrap; border: 1px solid #eee;"></div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeeba; text-align: left;">
-                <div><strong style="color:#856404;">Fornecedor:</strong> <span id="viewFornecedor" style="color:#856404;"></span></div>
-                <div><strong style="color:#856404;">Notas Fiscais:</strong> <span id="viewNotas" style="color:#856404;"></span></div>
-            </div>
-
-            <div style="margin-bottom: 15px; text-align: left;">
-                <strong style="color:#555;">Anexos:</strong>
-                <ul id="viewListaArquivos" style="list-style: none; padding: 0; margin-top: 5px;"></ul>
-            </div>
-
-            <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
-                <button onclick="fecharModalVisualizacao()" style="padding: 10px 20px; background-color: #6c757d !important; color: white !important; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Fechar</button>
-            </div>
-        </div>
-    </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
