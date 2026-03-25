@@ -28,6 +28,14 @@
         width: 100% !important;
         height: 100% !important;
     }
+    .header-meta-info {
+        font-size: 0.65rem;
+        font-weight: normal;
+        opacity: 0.8;
+        margin-left: 8px;
+        white-space: nowrap;
+    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -36,7 +44,13 @@
   <header class="mobile-header">
     <div class="header-content">
       <img src="logo.png" alt="Logo" class="mobile-logo">
-      <h1>Abastecimento</h1>
+      <h1>
+        Abastecimento 
+        <span class="header-meta-info">
+            <span id="displayDataHora">--/--/-- --:--</span> | 
+            <span id="displayUsuario">Carregando...</span>
+        </span>
+      </h1>
     </div>
     <a href="abastecimento.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
   </header>
@@ -58,15 +72,9 @@
         </div>
         <div class="panel-body">
             <form id="formMobileAbastecimento">
-                <div class="form-group">
-                    <label for="saidaDataHora">Data e Hora</label>
-                    <input type="datetime-local" id="saidaDataHora" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="saidaUsuario">Usuário Responsável</label>
-                    <input type="text" id="saidaUsuario" readonly style="background-color: #e9ecef; font-weight: bold; color: #555;">
-                </div>
+                <!-- Campos discretos agora exibidos no cabeçalho -->
+                <input type="datetime-local" id="saidaDataHora" class="hidden" required>
+                <input type="text" id="saidaUsuario" class="hidden" readonly>
 
                 <div class="form-group">
                     <label for="saidaVeiculo">Veículo (Placa)</label>
@@ -153,14 +161,10 @@
         </div>
         <div class="panel-body">
             <form id="formMobileEntrada">
-                <div class="form-group">
-                    <label for="entradaData">Data e Hora</label>
-                    <input type="datetime-local" id="entradaData" required>
-                </div>
-                <div class="form-group">
-                    <label for="entradaUsuario">Usuário Responsável</label>
-                    <input type="text" id="entradaUsuario" readonly style="background-color: #e9ecef; font-weight: bold; color: #555;">
-                </div>
+                <!-- Campos discretos agora exibidos no cabeçalho -->
+                <input type="datetime-local" id="entradaData" class="hidden" required>
+                <input type="text" id="entradaUsuario" class="hidden" readonly>
+
                 <div class="form-group">
                     <label for="entradaNota">Nº Nota Fiscal</label>
                     <input type="text" id="entradaNota" placeholder="Ex: 123456" required>
@@ -304,6 +308,24 @@
   </div>
 
   <script type="module" src="script/mobile-abastecimento.js"></script>
+  <script>
+    // Sincroniza os dados dos campos ocultos com o cabeçalho da página
+    function syncHeaderInfo() {
+      const dataField = document.getElementById('saidaDataHora') || document.getElementById('entradaData');
+      const userField = document.getElementById('saidaUsuario') || document.getElementById('entradaUsuario');
+      
+      if (dataField && dataField.value) {
+        const date = new Date(dataField.value);
+        document.getElementById('displayDataHora').textContent = date.toLocaleString('pt-BR', { 
+          day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
+        });
+      }
+      if (userField && userField.value) {
+        document.getElementById('displayUsuario').textContent = userField.value;
+      }
+    }
+    setInterval(syncHeaderInfo, 1000);
+  </script>
   <script type="module" src="script/mobile-abastecimento-qr.js"></script>
   <script>
     const usuarioLogado = localStorage.getItem('usuarioLogado');
