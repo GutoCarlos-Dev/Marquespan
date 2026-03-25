@@ -1195,8 +1195,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
 
             try {
-                const { data } = await supabaseClient.from('postos').select('id, razao_social, cnpj').order('razao_social');
-                this.postosCache = data || []; // Cache para lookup de ID ao salvar
+                // --- CORREÇÃO: Busca todos os postos, contornando o limite padrão de 1000 registros ---
+                let allPostos = [];
+                let from = 0;
+                const step = 1000;
+                let keepFetching = true;
+
+                while(keepFetching) {
+                    const { data, error } = await supabaseClient
+                        .from('postos')
+                        .select('id, razao_social, cnpj')
+                        .order('razao_social')
+                        .range(from, from + step - 1);
+                    
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        allPostos.push(...data);
+                        if (data.length < step) {
+                            keepFetching = false; // Última página
+                        } else {
+                            from += step; // Prepara para a próxima página
+                        }
+                    } else {
+                        keepFetching = false; // Não há mais dados
+                    }
+                }
+                this.postosCache = allPostos || []; // Cache para lookup de ID ao salvar
 
                 datalist.innerHTML = '';
                 this.postosCache.forEach(p => {
@@ -1206,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } catch (error) {
                 console.error('Erro ao carregar postos:', error);
+                alert('Ocorreu um erro ao carregar a lista de postos para o formulário. Verifique o console para mais detalhes.');
             }
         },
 
@@ -1302,6 +1328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const usuario = this.getUsuarioLogado();
                     const payloads = [];
+                    const rejectedRows = []; // Array para armazenar linhas rejeitadas
                     let erros = 0;
 
                     for (const row of json) {
@@ -1336,11 +1363,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!veiculo || !kmAtual || !litros) {
                             console.warn('Linha ignorada por falta de dados essenciais:', r);
                             erros++;
+                            rejectedRows.push({ ...row, motivo_rejeicao: 'Faltam dados essenciais (Placa, KM ou Litros).' });
                             continue;
                         }
 
                         // Tratamento de CNPJ para encontrar ID
-                        const cnpjLimpo = String(cnpjRaw).replace(/\D/g, '');
+                        const cnpjLimpo = String(cnpjRaw || '').replace(/\D/g, '');
                         const postoId = mapPostos.get(cnpjLimpo);
 
                         if (!postoId) {
@@ -1351,24 +1379,32 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Assumindo que posto é importante:
                             // erros++; continue; 
                             // Se quiser permitir sem posto, comente a linha abaixo.
+                            rejectedRows.push({ ...row, motivo_rejeicao: `Posto com CNPJ '${cnpjRaw || 'vazio'}' não encontrado.` });
+                            continue;
                         }
 
-                        // Buscar KM Anterior (Opcional: Pode deixar lento em grandes lotes, mas garante integridade)
+                        // Buscar KM Anterior
                         let kmAnterior = 0;
-                        const { data: ultReg } = await supabaseClient
+                        const { data: ultRegArray, error: kmError } = await supabaseClient
                             .from('abastecimento_externo')
                             .select('km_atual')
                             .eq('veiculo_placa', veiculo)
-                            .lt('data_hora', dataHora) // Busca anterior a esta data
+                            .lt('data_hora', dataHora)
                             .order('data_hora', { ascending: false })
-                            .limit(1)
-                            .single();
+                            .limit(1);
                         
-                        if (ultReg) kmAnterior = ultReg.km_atual;
+                        if (kmError && kmError.code !== 'PGRST116') { // PGRST116 = no rows found, o que é ok
+                            console.error(`Erro ao buscar KM anterior para ${veiculo}:`, kmError);
+                        }
+
+                        if (ultRegArray && ultRegArray.length > 0) {
+                            kmAnterior = ultRegArray[0].km_atual;
+                        }
 
                         payloads.push({
                             filial: filial,
                             data_hora: dataHora,
+                            posto_id: postoId,
                             posto_id: postoId || null,
                             veiculo_placa: veiculo,
                             rota: rota,
@@ -1381,13 +1417,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             usuario: usuario
                         });
                     }
+                    // Se houver linhas rejeitadas, gera o arquivo de texto
+                    if (rejectedRows.length > 0) {
+                        this.gerarTxtRejeitados(rejectedRows);
+                    }
 
                     if (payloads.length > 0) {
                         const { error } = await supabaseClient.from('abastecimento_externo').insert(payloads);
                         if (error) throw error;
+                        alert(`Importação concluída! ${payloads.length} registros inseridos.${rejectedRows.length > 0 ? `\n(${rejectedRows.length} registros foram rejeitados - verifique o arquivo .txt baixado).` : ''}`);
                         alert(`Importação concluída! ${payloads.length} registros inseridos.${erros > 0 ? ` (${erros} ignorados)` : ''}`);
                         this.renderExtTable();
                     } else {
+                        alert(`Nenhum dado válido encontrado para importação.${rejectedRows.length > 0 ? `\n(${rejectedRows.length} registros foram rejeitados - verifique o arquivo .txt baixado).` : ''}`);
                         alert('Nenhum dado válido encontrado para importação.');
                     }
 
@@ -1401,6 +1443,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             reader.readAsArrayBuffer(file);
+        },
+
+        gerarTxtRejeitados(rejectedRows) {
+            let txtContent = "Linhas Rejeitadas na Importação de Abastecimento Externo\n";
+            txtContent += "============================================================\n\n";
+
+            rejectedRows.forEach((row, index) => {
+                txtContent += `Registro ${index + 1}:\n`;
+                txtContent += `  Motivo da Rejeição: ${row.motivo_rejeicao}\n`;
+                txtContent += `  Dados da Linha:\n`;
+                for (const key in row) {
+                    if (key !== 'motivo_rejeicao') {
+                        txtContent += `    - ${key}: ${row[key]}\n`;
+                    }
+                }
+                txtContent += "\n------------------------------------------------------------\n\n";
+            });
+
+            const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            link.setAttribute('download', `rejeitados_abastecimento_${timestamp}.txt`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         },
 
         async handleExtSubmit(e) {
@@ -1841,8 +1911,33 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (fetchData) {
                 this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
-                const { data } = await supabaseClient.from('postos').select('*');
-                this.postosData = data || [];
+                
+                // --- CORREÇÃO: Busca todos os postos para a tabela, contornando o limite padrão de 1000 ---
+                let allPostos = [];
+                let from = 0;
+                const step = 1000;
+                let keepFetching = true;
+
+                while(keepFetching) {
+                    const { data, error } = await supabaseClient
+                        .from('postos')
+                        .select('*')
+                        .range(from, from + step - 1);
+
+                    if (error) {
+                        console.error("Erro ao buscar postos para a tabela:", error);
+                        this.postosData = [];
+                        keepFetching = false;
+                        break;
+                    }
+
+                    if (data && data.length > 0) {
+                        allPostos.push(...data);
+                        if (data.length < step) keepFetching = false;
+                        else from += step;
+                    } else keepFetching = false;
+                }
+                this.postosData = allPostos;
             }
 
             // Filtragem
