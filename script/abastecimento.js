@@ -87,6 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidaKm = document.getElementById('saidaKm');
             this.saidaLitros = document.getElementById('saidaLitros');
             this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
+            this.saidaBico2 = document.getElementById('saidaBico2');
+            this.saidaLitros2 = document.getElementById('saidaLitros2');
+            this.btnToggleBico2 = document.getElementById('btnToggleBico2');
+            this.camposBico2 = document.getElementById('camposBico2');
             this.tableBodySaidas = document.getElementById('tableBodySaidas');
             this.searchSaidaInput = document.getElementById('searchSaidaInput'); // Busca Saídas
 
@@ -159,8 +163,25 @@ document.addEventListener('DOMContentLoaded', () => {
             this.distribuicaoContainer.addEventListener('click', this.handleDistribuicaoClick.bind(this));
 
             this.formSaida.addEventListener('submit', this.handleSaidaSubmit.bind(this));
-            this.saidaBico.addEventListener('change', this.verificarLeituraBomba.bind(this));
             this.tableBodySaidas.addEventListener('click', this.handleSaidaTableClick.bind(this));
+
+            // Toggle Bico 2
+            if (this.btnToggleBico2) {
+                this.btnToggleBico2.addEventListener('click', () => {
+                    const isHidden = this.camposBico2.classList.contains('hidden');
+                    if (isHidden) {
+                        this.camposBico2.classList.remove('hidden');
+                        this.btnToggleBico2.innerHTML = '<i class="fas fa-minus"></i> Remover 2º Bico';
+                        this.btnToggleBico2.style.backgroundColor = '#dc3545'; // Red
+                    } else {
+                        this.camposBico2.classList.add('hidden');
+                        this.saidaBico2.value = '';
+                        this.saidaLitros2.value = '';
+                        this.btnToggleBico2.innerHTML = '<i class="fas fa-plus"></i> Adicionar 2º Bico';
+                        this.btnToggleBico2.style.backgroundColor = '#6c757d'; // Gray
+                    }
+                });
+            }
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
             if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
@@ -555,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
             if(this.saidaUsuario) this.saidaUsuario.value = this.getUsuarioLogado();
 
-            this.toggleSaidaForm(false); // Bloqueia o formulário inicialmente
+            this.toggleSaidaForm(true); // Garante que o formulário esteja habilitado por padrão
             // Carregar Bicos
             this.loadBicos();
 
@@ -600,12 +621,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.bicosDisponiveis = data || [];
                 this.bicosDisponiveis.sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true, sensitivity: 'base' }));
                 this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
+                if (this.saidaBico2) this.saidaBico2.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 this.bicosDisponiveis.forEach(bico => {
                     const tanqueInfo = bico.bombas?.tanques?.nome || 'Tanque desconhecido';
                     const bombaInfo = bico.bombas?.nome || 'Bomba desconhecida';
                     const option = new Option(`${bico.nome} (Bomba: ${bombaInfo} - Tanque: ${tanqueInfo})`, bico.id);
                     option.dataset.bombaId = bico.bombas?.id; // Armazena o ID da bomba
                     this.saidaBico.appendChild(option);
+                    if (this.saidaBico2) this.saidaBico2.appendChild(option.cloneNode(true));
                 });
             } catch (error) {
                 console.error('Erro ao carregar bicos:', error);
@@ -614,11 +637,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         toggleSaidaForm(enabled, mensagem = '') {
-            // O campo Rota agora fica sempre habilitado, junto com o campo Veículo.
-            const campos = [this.saidaKm, this.saidaLitros, this.btnSalvarSaida];
-            campos.forEach(campo => {
-                if (campo) campo.disabled = !enabled;
-            });
+            // Todos os campos de entrada ficam sempre habilitados para preenchimento.
+            // A validação de leitura de bomba foi removida conforme solicitação.
+            if (this.btnSalvarSaida) this.btnSalvarSaida.disabled = !enabled;
+            if (this.btnToggleBico2) this.btnToggleBico2.disabled = false;
 
             let alertDiv = document.getElementById('saida-form-alert');
             if (!alertDiv) {
@@ -633,25 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alertDiv.style.display = 'block';
             } else {
                 alertDiv.style.display = 'none';
-            }
-        },
-
-        async verificarLeituraBomba() {
-            const selectedOption = this.saidaBico.options[this.saidaBico.selectedIndex];
-            const bombaId = selectedOption?.dataset.bombaId;
-
-            if (!bombaId) {
-                this.toggleSaidaForm(false);
-                return;
-            }
-
-            const hoje = new Date().toISOString().slice(0, 10);
-            const { data, error } = await supabaseClient.from('leituras_bomba').select('id').eq('bomba_id', bombaId).eq('data', hoje).single();
-
-            if (error || !data) {
-                this.toggleSaidaForm(false, `É necessário registrar a leitura inicial da bomba para hoje. <a href="leituras-bomba.html" target="_blank">Registrar agora</a>.`);
-            } else {
-                this.toggleSaidaForm(true);
             }
         },
 
@@ -933,6 +936,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.formSaida.reset();
             this.saidaEditingId.value = '';
             this.btnSalvarSaida.innerHTML = '<i class="fas fa-gas-pump"></i> CONFIRMAR ABASTECIMENTO';
+            if (this.camposBico2) {
+                this.camposBico2.classList.add('hidden');
+                this.btnToggleBico2.innerHTML = '<i class="fas fa-plus"></i> Adicionar 2º Bico';
+                this.btnToggleBico2.style.backgroundColor = '#6c757d';
+            }
             // Reseta a data para o momento atual
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -952,30 +960,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const payload = {
+            const commonData = {
                 data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
-                bico_id: parseInt(this.saidaBico.value),
                 veiculo_placa: placaInput,
                 rota: this.saidaRota.value,
                 km_atual: parseFloat(this.saidaKm.value),
-                qtd_litros: parseFloat(this.saidaLitros.value),
+
                 usuario: this.getUsuarioLogado()
             };
 
             if (this.saidaEditingId.value) {
                 payload.id = parseInt(this.saidaEditingId.value);
             }
+const payloads = [];
 
-            if (!payload.bico_id || !payload.qtd_litros || payload.qtd_litros <= 0) {
-                alert('Preencha os campos obrigatórios.');
+            // Bico 1 (Obrigatório)
+            const bico1 = parseInt(this.saidaBico.value);
+            const litros1 = parseFloat(this.saidaLitros.value);
+            if (bico1 && litros1 > 0) {
+                payloads.push({ ...commonData, bico_id: bico1, qtd_litros: litros1 });
+            } else {
+                alert('Informe o Bico e a Quantidade de Litros para o primeiro abastecimento.');
                 return;
             }
 
-            try {
-                const { error } = await supabaseClient.from('saidas_combustivel').upsert(payload);
-                if (error) throw error;
+            // Bico 2 (Opcional - se visível e preenchido)
+            const isBico2Visible = !this.camposBico2.classList.contains('hidden');
+            const bico2 = parseInt(this.saidaBico2.value);
+            const litros2 = parseFloat(this.saidaLitros2.value);
 
-                alert(`Abastecimento ${this.saidaEditingId.value ? 'atualizado' : 'registrado'} com sucesso!`);
+            if (isBico2Visible && bico2 && litros2 > 0) {
+                if (bico1 === bico2) {
+                    alert('Não é possível utilizar o mesmo bico duas vezes no mesmo registro.');
+                    return;
+                }
+                payloads.push({ ...commonData, bico_id: bico2, qtd_litros: litros2 });
+            }
+
+            try {
+                if (this.saidaEditingId.value) {
+                    const { error } = await supabaseClient.from('saidas_combustivel').update(payloads[0]).eq('id', this.saidaEditingId.value);
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
+                    if (error) throw error;
+                }
+
+                alert(`Abastecimento(s) ${this.saidaEditingId.value ? 'atualizado' : 'registrado'} com sucesso!`);
                 this.clearSaidaForm();
                 this.renderSaidasTable();
             } catch (error) {
