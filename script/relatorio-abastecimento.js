@@ -7,10 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
             column: null,
             direction: 'asc'
         },
+        charts: {
+            mediaConsumo: null,
+            evolucaoConsumo: null,
+            topVeiculos: null,
+            tiposMovimentacao: null
+        },
 
         init() {
             this.cache();
             this.bind();
+            this.iniciarRolagemAutomatica();
             this.updateFilterOptions();
             this.updateTipoVeiculoFilterOptions();
             this.loadTanques();
@@ -40,12 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
             this.cardResultados = document.getElementById('cardResultados');
+            this.dashboardAbastecimento = document.getElementById('dashboardAbastecimento');
             this.tableBody = document.getElementById('tableBodyRelatorio');
             this.totalLitrosEl = document.getElementById('totalLitros');
             this.totalValorEl = document.getElementById('totalValor');
             
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
+
+            // Canvas do Dashboard
+            this.chartMediaConsumoCanvas = document.getElementById('chartMediaConsumo');
+            this.chartEvolucaoConsumoCanvas = document.getElementById('chartEvolucaoConsumo');
+            this.chartTopVeiculosCanvas = document.getElementById('chartTopVeiculos');
+            this.chartTiposMovimentacaoCanvas = document.getElementById('chartTiposMovimentacao');
         },
 
         bind() {
@@ -497,11 +511,130 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 4. Unificar e Ordenar
                 this.dadosRelatorio = [...dadosEntradas, ...dadosSaidas, ...dadosExternos].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
                 this.renderTable();
+                this.renderizarGraficos(this.dadosRelatorio);
 
             } catch (error) {
                 console.error('Erro na busca:', error);
                 this.tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao buscar dados.</td></tr>';
             }
+        },
+
+        renderizarGraficos(data) {
+            if (!data || data.length === 0) {
+                if (this.dashboardAbastecimento) this.dashboardAbastecimento.classList.add('hidden');
+                return;
+            }
+
+            if (this.dashboardAbastecimento) this.dashboardAbastecimento.classList.remove('hidden');
+
+            // 1. Média de Consumo (KM/L) por Veículo
+            const statsVeiculos = data.reduce((acc, item) => {
+                if ((item.tipo === 'SAIDA' || item.tipo === 'EXTERNO') && item.placa !== '-' && item.km_atual !== '-' && !isNaN(parseFloat(item.km_atual))) {
+                    const placa = item.placa;
+                    const km = parseFloat(item.km_atual);
+                    const litros = Math.abs(parseFloat(item.litros));
+
+                    if (!acc[placa]) acc[placa] = { minKm: km, maxKm: km, totalLitros: 0 };
+                    if (km < acc[placa].minKm) acc[placa].minKm = km;
+                    if (km > acc[placa].maxKm) acc[placa].maxKm = km;
+                    acc[placa].totalLitros += litros;
+                }
+                return acc;
+            }, {});
+
+            const kmlLabels = [];
+            const kmlValues = [];
+            Object.entries(statsVeiculos).forEach(([placa, stats]) => {
+                const dist = stats.maxKm - stats.minKm;
+                if (dist > 0 && stats.totalLitros > 0) {
+                    kmlLabels.push(placa);
+                    kmlValues.push(Number((dist / stats.totalLitros).toFixed(2)));
+                }
+            });
+
+            // 2. Agrupar por Dia (Evolução de Consumo)
+            const evolucaoMap = data.reduce((acc, item) => {
+                const dataFmt = item.data_hora.split('T')[0];
+                acc[dataFmt] = (acc[dataFmt] || 0) + Math.abs(item.litros);
+                return acc;
+            }, {});
+            const sortedDates = Object.keys(evolucaoMap).sort();
+
+            // 3. Agrupar por Veículo (Top 10)
+            const veiculoMap = data.reduce((acc, item) => {
+                if (item.placa !== '-') {
+                    acc[item.placa] = (acc[item.placa] || 0) + Math.abs(item.litros);
+                }
+                return acc;
+            }, {});
+            const topVeiculos = Object.entries(veiculoMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+            // 4. Agrupar por Tipo de Movimentação
+            const tiposMap = data.reduce((acc, item) => {
+                acc[item.tipo] = (acc[item.tipo] || 0) + Math.abs(item.litros);
+                return acc;
+            }, {});
+
+            // Criar/Atualizar os Gráficos
+            this.criarGrafico('mediaConsumo', this.chartMediaConsumoCanvas, 'bar', kmlLabels, kmlValues, 'KM/L');
+            this.criarGrafico('evolucaoConsumo', this.chartEvolucaoConsumoCanvas, 'line', sortedDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')), sortedDates.map(d => evolucaoMap[d]), 'Consumo Diário (L)');
+            this.criarGrafico('topVeiculos', this.chartTopVeiculosCanvas, 'bar', topVeiculos.map(v => v[0]), topVeiculos.map(v => v[1]), 'Consumo (L)', { indexAxis: 'y' });
+            this.criarGrafico('tiposMovimentacao', this.chartTiposMovimentacaoCanvas, 'doughnut', Object.keys(tiposMap), Object.values(tiposMap), 'Movimentação');
+        },
+
+        criarGrafico(id, canvas, type, labels, values, label, extraOptions = {}) {
+            if (!canvas) return;
+            if (this.charts[id]) this.charts[id].destroy();
+
+            this.charts[id] = new Chart(canvas.getContext('2d'), {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: ['#006937', '#28a745', '#007bff', '#17a2b8', '#ffc107', '#dc3545', '#6c757d', '#343a40', '#fd7e14', '#20c997'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: (type === 'pie' || type === 'doughnut') ? 'right' : 'top',
+                            labels: { boxWidth: 12, font: { size: 10 } }
+                        }
+                    },
+                    ...extraOptions
+                }
+            });
+        },
+
+        iniciarRolagemAutomatica() {
+            const wrapper = document.querySelector('.charts-scroll-container');
+            if (!wrapper) return;
+
+            let direction = 1; 
+            const speed = 0.8; 
+
+            const step = () => {
+                if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) {
+                    direction = -1;
+                } else if (wrapper.scrollLeft <= 0) {
+                    direction = 1;
+                }
+                wrapper.scrollLeft += speed * direction;
+                requestAnimationFrame(step);
+            };
+            
+            requestAnimationFrame(step);
+
+            wrapper.addEventListener('mouseenter', () => direction = 0);
+            wrapper.addEventListener('mouseleave', () => {
+                if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 10) direction = -1;
+                else direction = 1;
+            });
         },
 
         handleSort(column) {

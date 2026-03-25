@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/relatorio-abastecimento.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <link rel="icon" href="logo.png" type="image/png">
@@ -138,6 +139,46 @@
                 </table>
             </div>
         </section>
+
+        <!-- Dashboard de Abastecimento (Rolagem Automática) -->
+        <div id="dashboardAbastecimento" class="glass-panel hidden" style="margin-top: 20px; overflow: hidden;">
+            <div class="panel-header-actions">
+                <h3><i class="fas fa-chart-line"></i> Análise de Consumo e Movimentação</h3>
+            </div>
+            
+            <div class="charts-scroll-container" style="overflow-x: auto; white-space: nowrap; padding: 10px 0; scroll-behavior: smooth;">
+                <div style="display: inline-flex; gap: 20px; padding: 0 10px;">
+                    <!-- Gráfico 1: Média Consumo KM/L -->
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Média Consumo (KM/L)</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartMediaConsumo"></canvas>
+                        </div>
+                    </div>
+                    <!-- Gráfico 2: Evolução Diária -->
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Evolução Diária (Litros)</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartEvolucaoConsumo"></canvas>
+                        </div>
+                    </div>
+                    <!-- Gráfico 3: Top 10 Veículos -->
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos (Consumo L)</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartTopVeiculos"></canvas>
+                        </div>
+                    </div>
+                    <!-- Gráfico 4: Tipos de Movimentação -->
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Distribuição por Tipo</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartTiposMovimentacao"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer class="footer">
