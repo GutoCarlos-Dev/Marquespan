@@ -130,8 +130,14 @@
 
           <!-- Tabela -->
           <div>
-            <h4 style="margin-bottom: 10px; color: var(--primary-color);">Histórico de Abastecimentos</h4>
-            <div class="table-responsive table-scroll-y" id="containerHistoricoEntrada">
+            <h3 style="margin: 0;">Histórico de Abastecimentos</h3>
+        <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
+        <label for="filtroDataInicial">De:</label>
+        <input type="date" id="filtroDataInicial" class="glass-input" style="padding: 5px;">
+        <label for="filtroDataFinal">Até:</label>
+        <input type="date" id="filtroDataFinal" class="glass-input" style="padding: 5px;">
+        <button id="btnFiltrarHistorico" class="btn-glass" style="padding: 5px 10px;"><i class="fas fa-search"></i> Filtrar</button>
+        </div>
               <table class="glass-table data-grid">
                 <thead>
                   <tr>

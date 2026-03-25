@@ -17,6 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.initTabs();
             this.cache();
             this.bind();
+
+             // Define a data de hoje como padrão para o formulário de entrada e filtros
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            this.dataInput.value = now.toISOString().slice(0, 16);
+            if (this.filtroDataInicial) this.filtroDataInicial.value = new Date().toISOString().slice(0, 10);
+            if (this.filtroDataFinal) this.filtroDataFinal.value = new Date().toISOString().slice(0, 10);
+
             this.loadTanques();
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
@@ -24,10 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadEstoqueAtual(); // Carrega a aba de estoque
             this.populateUFs(); // Preenche lista de UFs
             
-            // Define a data de hoje como padrão
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            this.dataInput.value = now.toISOString().slice(0, 16);
 
         },
 
@@ -116,6 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extEditingId = null; // Variável para controlar edição
             this.postoEditingId = null; // Variável para controlar edição de posto
             this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
+       // Elementos do filtro de histórico de entrada
+            this.filtroDataInicial = document.getElementById('filtroDataInicial');
+            this.filtroDataFinal = document.getElementById('filtroDataFinal');
+            this.btnFiltrarHistorico = document.getElementById('btnFiltrarHistorico');
+
         },
 
         bind() {
@@ -165,7 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
             ths.forEach(th => {
                 th.addEventListener('click', () => this.handleSort(th.dataset.field));
             });
-
+// Listener para o filtro de histórico
+            if (this.btnFiltrarHistorico) {
+                this.btnFiltrarHistorico.addEventListener('click', () => this.renderTable());
+            }
             // Listeners Abastecimento Externo
             if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
             if (this.extVeiculo) this.extVeiculo.addEventListener('change', this.handleExtVeiculoChange.bind(this));
@@ -670,6 +682,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     .from('abastecimentos')
                     .select('*, tanques(nome, tipo_combustivel)');
                 
+                // Adiciona filtro de data
+                if (this.filtroDataInicial && this.filtroDataFinal) {
+                    const dataInicial = this.filtroDataInicial.value;
+                    const dataFinal = this.filtroDataFinal.value;
+
+                    if (dataInicial && dataFinal) {
+                        // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
+                        query = query.gte('data', `${dataInicial}T00:00:00`);
+                        query = query.lte('data', `${dataFinal}T23:59:59`);
+                    }
+                }    
+
                 // Aplica a ordenação baseada no estado atual
                 const { field, ascending } = this.sortState;
                 if (field.includes('.')) {
