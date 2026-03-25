@@ -228,9 +228,15 @@
 
         <!-- Histórico de Saídas -->
         <div style="margin-top: 20px;">
-            <h4 style="color: var(--primary-color); border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px; margin-bottom: 15px;"><i class="fas fa-history"></i> Histórico de Saídas Recentes</h4>
-            
-            <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <h4 style="color: var(--primary-color); border-bottom: none; padding-bottom: 0; margin: 0;"><i class="fas fa-history"></i> Histórico de Saídas Recentes</h4>
+              <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
+                <label for="filtroSaidaDataInicial">De:</label>
+                <input type="date" id="filtroSaidaDataInicial" class="glass-input" style="padding: 5px;">
+                <label for="filtroSaidaDataFinal">Até:</label>
+                <input type="date" id="filtroSaidaDataFinal" class="glass-input" style="padding: 5px;">
+                <button id="btnFiltrarHistoricoSaida" class="btn-glass" style="padding: 5px 10px; color: black;"><i class="fas fa-search"></i> Filtrar</button>
+              </div>
                 <input type="text" id="searchSaidaInput" class="glass-input" placeholder="🔍 Buscar por Veículo, Rota ou Data..." style="width: 100%;">
             </div>
 

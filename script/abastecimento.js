@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.filtroDataInicial) this.filtroDataInicial.value = new Date().toISOString().slice(0, 10);
             if (this.filtroDataFinal) this.filtroDataFinal.value = new Date().toISOString().slice(0, 10);
 
+            // Adiciona para o filtro de saída
+            if (this.filtroSaidaDataInicial) this.filtroSaidaDataInicial.value = new Date().toISOString().slice(0, 10);
+            if (this.filtroSaidaDataFinal) this.filtroSaidaDataFinal.value = new Date().toISOString().slice(0, 10);
+
             this.loadTanques();
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
@@ -125,6 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroDataFinal = document.getElementById('filtroDataFinal');
             this.btnFiltrarHistorico = document.getElementById('btnFiltrarHistorico');
 
+            // Elementos do filtro de histórico de SAÍDA
+            this.filtroSaidaDataInicial = document.getElementById('filtroSaidaDataInicial');
+            this.filtroSaidaDataFinal = document.getElementById('filtroSaidaDataFinal');
+            this.btnFiltrarHistoricoSaida = document.getElementById('btnFiltrarHistoricoSaida');
+
         },
 
         bind() {
@@ -177,6 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // Listener para o filtro de histórico
             if (this.btnFiltrarHistorico) {
                 this.btnFiltrarHistorico.addEventListener('click', () => this.renderTable());
+            }
+            
+            // Listener para o filtro de histórico de SAÍDA
+            if (this.btnFiltrarHistoricoSaida) {
+                this.btnFiltrarHistoricoSaida.addEventListener('click', () => this.renderSaidasTable(true));
             }
             // Listeners Abastecimento Externo
             if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
@@ -963,12 +977,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fetchData) {
                 this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
                 try {
-                    const { data, error } = await supabaseClient
+                    let query = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*')
-                        .order('data_hora', { ascending: false })
-                        .limit(200); // Aumentado para 200 para melhor experiência local
+                        .select('*');
 
+                    // Adiciona filtro de data
+                    if (this.filtroSaidaDataInicial && this.filtroSaidaDataFinal) {
+                        const dataInicial = this.filtroSaidaDataInicial.value;
+                        const dataFinal = this.filtroSaidaDataFinal.value;
+
+                        if (dataInicial && dataFinal) {
+                            // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
+                            query = query.gte('data_hora', `${dataInicial}T00:00:00`);
+                            query = query.lte('data_hora', `${dataFinal}T23:59:59`);
+                        }
+                    }
+
+                    query = query.order('data_hora', { ascending: false });
+
+                    const { data, error } = await query;
                     if (error) throw error;
                     this.saidasData = data || [];
                 } catch (error) {
