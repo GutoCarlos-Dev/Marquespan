@@ -344,8 +344,15 @@
             </div>
           </form>
 
-          <div style="margin-top: 20px; margin-bottom: 10px;">
-              <input type="text" id="searchExtInput" class="glass-input" placeholder="🔍 Buscar por Placa, Posto ou Data..." style="width: 100%;">
+          <div style="margin-top: 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
+                <label for="filtroExtDataInicial">De:</label>
+                <input type="date" id="filtroExtDataInicial" class="glass-input" style="padding: 5px;">
+                <label for="filtroExtDataFinal">Até:</label>
+                <input type="date" id="filtroExtDataFinal" class="glass-input" style="padding: 5px;">
+                <button id="btnFiltrarHistoricoExt" class="btn-glass" style="padding: 5px 10px; color: black;"><i class="fas fa-search"></i> Filtrar</button>
+              </div>
+              <input type="text" id="searchExtInput" class="glass-input" placeholder="🔍 Buscar por Placa, Posto ou Data..." style="flex: 1; min-width: 200px;">
           </div>
 
           <div class="table-responsive table-scroll-y">

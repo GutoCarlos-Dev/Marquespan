@@ -29,6 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.filtroSaidaDataInicial) this.filtroSaidaDataInicial.value = new Date().toISOString().slice(0, 10);
             if (this.filtroSaidaDataFinal) this.filtroSaidaDataFinal.value = new Date().toISOString().slice(0, 10);
 
+            // Adiciona para o filtro externo
+            if (this.filtroExtDataInicial) this.filtroExtDataInicial.value = new Date().toISOString().slice(0, 10);
+            if (this.filtroExtDataFinal) this.filtroExtDataFinal.value = new Date().toISOString().slice(0, 10);
+
             this.loadTanques();
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
@@ -134,6 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroSaidaDataFinal = document.getElementById('filtroSaidaDataFinal');
             this.btnFiltrarHistoricoSaida = document.getElementById('btnFiltrarHistoricoSaida');
 
+            // Elementos do filtro de histórico EXTERNO
+            this.filtroExtDataInicial = document.getElementById('filtroExtDataInicial');
+            this.filtroExtDataFinal = document.getElementById('filtroExtDataFinal');
+            this.btnFiltrarHistoricoExt = document.getElementById('btnFiltrarHistoricoExt');
+
         },
 
         bind() {
@@ -191,6 +200,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listener para o filtro de histórico de SAÍDA
             if (this.btnFiltrarHistoricoSaida) {
                 this.btnFiltrarHistoricoSaida.addEventListener('click', () => this.renderSaidasTable(true));
+            }
+            // Listener para o filtro de histórico EXTERNO
+            if (this.btnFiltrarHistoricoExt) {
+                this.btnFiltrarHistoricoExt.addEventListener('click', () => this.renderExtTable(true));
             }
             // Listeners Abastecimento Externo
             if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
@@ -1452,12 +1465,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fetchData) {
                 this.tableBodyExt.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
                 // Aumentei o limite para 200 para permitir uma ordenação/busca local mais fluida
-                const { data } = await supabaseClient
+                let query = supabaseClient
                     .from('abastecimento_externo')
-                    .select('*, postos(razao_social)')
-                    .order('data_hora', { ascending: false })
-                    .limit(200);
+                    .select('*, postos(razao_social)');
+
+                // Adiciona filtro de data
+                if (this.filtroExtDataInicial && this.filtroExtDataFinal) {
+                    const dataInicial = this.filtroExtDataInicial.value;
+                    const dataFinal = this.filtroExtDataFinal.value;
+
+                    if (dataInicial && dataFinal) {
+                        query = query.gte('data_hora', `${dataInicial}T00:00:00`);
+                        query = query.lte('data_hora', `${dataFinal}T23:59:59`);
+                    }
+                }
                 
+                query = query.order('data_hora', { ascending: false });
+
+                const { data } = await query;
                 this.extData = data || [];
             }
 
