@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .select('tanque_id, valor_litro, data')
                     .neq('numero_nota', 'AJUSTE DE ESTOQUE') // Ignora ajustes de estoque
                     .gt('valor_litro', 0) // Apenas entradas com preço válido
-                    .lte('data', `${dtFim}T23:59:59`) // Otimização: busca apenas até a data final do filtro
+                    .lte('data', `${dtFim}T23:59:59-03:00`) // Otimização: busca apenas até a data final do filtro
                     .order('data', { ascending: false }); // Ordena do mais recente para o mais antigo
 
                 if (priceError) throw priceError;
@@ -367,8 +367,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let queryEntradas = supabaseClient
                         .from('abastecimentos')
                         .select('*, tanques(nome, tipo_combustivel)')
-                        .gte('data', `${dtIni}T00:00:00`)
-                        .lte('data', `${dtFim}T23:59:59`);
+                        .gte('data', `${dtIni}T00:00:00-03:00`)
+                        .lte('data', `${dtFim}T23:59:59-03:00`);
 
                     if (tanqueId) {
                         queryEntradas = queryEntradas.eq('tanque_id', tanqueId);
@@ -408,8 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
                         .select('*, bicos(bombas(tanques(id, nome, tipo_combustivel)))')
-                        .gte('data_hora', `${dtIni}T00:00:00`)
-                        .lte('data_hora', `${dtFim}T23:59:59`);
+                        .gte('data_hora', `${dtIni}T00:00:00-03:00`)
+                        .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
                     if (veiculoPlaca) {
                         querySaidas = querySaidas.eq('veiculo_placa', veiculoPlaca);
@@ -462,8 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let queryExterno = supabaseClient
                         .from('abastecimento_externo')
                         .select('data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
-                        .gte('data_hora', `${dtIni}T00:00:00`)
-                        .lte('data_hora', `${dtFim}T23:59:59`);
+                        .gte('data_hora', `${dtIni}T00:00:00-03:00`)
+                        .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
                     if (veiculoPlaca) {
                         queryExterno = queryExterno.eq('veiculo_placa', veiculoPlaca);
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.text("Relatório de Movimentação de Combustível", 14, 28);
                 
                 doc.setFontSize(10);
-                doc.text(`Período: ${new Date(this.dataInicial.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFinal.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 34);
+                doc.text(`Período: ${new Date(this.dataInicial.value + 'T00:00:00-03:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFinal.value + 'T00:00:00-03:00').toLocaleDateString('pt-BR')}`, 14, 34);
 
                 const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
                 const nomeUsuario = usuarioLogado?.nome || 'Sistema';
