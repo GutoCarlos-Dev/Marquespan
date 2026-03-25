@@ -11,6 +11,7 @@
   <style>
     /* Barra de rolagem para tabelas extensas com cabeçalho fixo */
     .table-scroll-y { max-height: 450px; overflow-y: auto; }
+    .table-responsive { overflow-x: auto; }
     .table-scroll-y th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
   </style>
 </head>
@@ -130,14 +131,17 @@
 
           <!-- Tabela -->
           <div>
-            <h3 style="margin: 0;">Histórico de Abastecimentos</h3>
-        <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
-        <label for="filtroDataInicial">De:</label>
-        <input type="date" id="filtroDataInicial" class="glass-input" style="padding: 5px;">
-        <label for="filtroDataFinal">Até:</label>
-        <input type="date" id="filtroDataFinal" class="glass-input" style="padding: 5px;">
-        <button id="btnFiltrarHistorico" class="btn-glass" style="padding: 5px 10px;"><i class="fas fa-search"></i> Filtrar</button>
-        </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <h3 style="margin: 0;">Histórico de Abastecimentos</h3>
+              <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
+                <label for="filtroDataInicial">De:</label>
+                <input type="date" id="filtroDataInicial" class="glass-input" style="padding: 5px;">
+                <label for="filtroDataFinal">Até:</label>
+                <input type="date" id="filtroDataFinal" class="glass-input" style="padding: 5px;">
+                <button id="btnFiltrarHistorico" class="btn-glass" style="padding: 5px 10px; color: black;"><i class="fas fa-search"></i> Filtrar</button>
+              </div>
+            </div>
+            <div id="containerHistoricoEntrada" class="table-responsive table-scroll-y">
               <table class="glass-table data-grid">
                 <thead>
                   <tr>
