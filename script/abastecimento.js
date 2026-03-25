@@ -1783,27 +1783,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async handlePostoSubmit(e) {
             e.preventDefault();
-            
-            const cnpjInput = this.postoCnpj.value;
 
             // Verificação de duplicidade manual
-            if (cnpjInput) {
-                const cnpjLimpo = cnpjInput.replace(/\D/g, '');
-                if (cnpjLimpo) {
-                    const { data: existingData, error } = await supabaseClient.from('postos').select('cnpj');
-                    if (!error && existingData) {
-                        const exists = existingData.some(p => (p.cnpj || '').replace(/\D/g, '') === cnpjLimpo);
-                        if (exists) {
-                            return alert('Já existe um posto cadastrado com este CNPJ.');
-                        }
-                    }
+            const cnpjValue = this.postoCnpj.value;
+            if (cnpjValue) {
+                const { data: existingPosto, error } = await supabaseClient
+                    .from('postos')
+                    .select('id')
+                    .eq('cnpj', cnpjValue)
+                    .limit(1)
+                    .single();
+
+                // Se um posto foi encontrado E (não estamos editando OU o ID encontrado é diferente do que estamos editando)
+                if (existingPosto && (!this.postoEditingId || existingPosto.id != this.postoEditingId)) {
+                    return alert('Já existe um posto cadastrado com este CNPJ.');
+                }
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found, o que é bom.
+                    return alert('Erro ao verificar CNPJ: ' + error.message);
                 }
             }
 
             const payload = {
                 filial: this.postoFilial.value,
                 razao_social: this.postoRazao.value,
-                cnpj: this.postoCnpj.value,
+                cnpj: cnpjValue,
                 cidade: this.postoCidade.value,
                 uf: this.postoUf.value,
                 faturado: this.postoFaturado.value === 'Sim'
