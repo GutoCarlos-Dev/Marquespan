@@ -66,6 +66,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Listener para o modal de materiais (peças) na versão mobile
+    document.getElementById('matRetornoPecas').addEventListener('change', (e) => {
+        const detailsContainer = document.getElementById('pecas-details-mobile');
+        const show = e.target.value === '1';
+        detailsContainer.classList.toggle('hidden', !show);
+
+        if (!show) {
+            detailsContainer.querySelectorAll('select, textarea').forEach(el => el.value = '');
+        }
+    });
+
     // Event delegation para abrir o modal ao clicar no card
     document.getElementById('listaRetornoMobile').addEventListener('click', (e) => {
         const card = e.target.closest('.retorno-card');
@@ -134,7 +145,11 @@ function renderCards() {
             lateClass = 'late-return';
         }
         
-        const whatsappIcon = hasDevolucoes ? `<i class="fab fa-whatsapp whatsapp-icon" onclick="event.stopPropagation(); shareRetornoOnWhatsApp('${item.id}')"></i>` : '';
+        const whatsappIcon = hasDevolucoes ? `<i class="fab fa-whatsapp whatsapp-icon" onclick="event.stopPropagation(); shareRetornoOnWhatsApp('${item.id}')" title="Compartilhar Devoluções"></i>` : '';
+
+        // Verifica se há retorno de peças para mostrar o ícone azul
+        const hasPecas = item.retorno_pecas === 1;
+        const whatsappPecasIcon = hasPecas ? `<i class="fab fa-whatsapp whatsapp-icon" onclick="event.stopPropagation(); sharePecasOnWhatsApp('${item.id}')" title="Compartilhar Retorno de Peças" style="color: #007bff; ${hasDevolucoes ? 'margin-left: 35px;' : ''}"></i>` : '';
 
         // Removida a linha duplicada de Rota
         return `
@@ -144,7 +159,7 @@ function renderCards() {
                     <i class="fas ${iconClass} card-status-icon"></i>
                 </div>
                 <div class="card-body">
-                    ${whatsappIcon}
+                    ${whatsappIcon} ${whatsappPecasIcon}
                     <p><i class="fas fa-route"></i> <strong>Rota:</strong> ${item.rota || 'N/A'}</p>
                     <p><i class="fas fa-user-tie"></i> <strong>Motorista:</strong> ${item.nome_mot || 'N/A'}</p>
                     ${isOk ? `<p class="${lateClass}"><i class="fas fa-hourglass-end"></i> <strong>Retorno:</strong> ${item.hora_mot}</p>` : ''}
@@ -164,6 +179,9 @@ function openEditModal(item) {
     const temPaletesSelect = document.getElementById('matTemPaletes');
     const temPaletes = item.paletes > 0;
 
+    const temPecasSelect = document.getElementById('matRetornoPecas');
+    const temPecas = item.retorno_pecas === 1;
+
     document.getElementById('matCarrinhos').value = item.carrinhos || '';
     temPaletesSelect.value = temPaletes ? 'true' : 'false';
     document.getElementById('matMadeira').value = item.madeira_qtd || '';
@@ -171,8 +189,19 @@ function openEditModal(item) {
     document.getElementById('matCaixaBranca').value = item.caixa_branca_qtd || '';
     document.getElementById('matObsCarrinhos').value = item.obs_carrinhos || '';
 
-    // Dispara o evento change para mostrar/ocultar a seção de detalhes dos paletes
+    // Preenche campos de peças
+    temPecasSelect.value = temPecas ? '1' : '0';
+    document.getElementById('matDescPecas').value = item.pecas_desc || '';
+    
+    // Popula select de supervisor de peças
+    const supervisorPecasSelect = document.getElementById('matSupervisorPecas');
+    supervisorPecasSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
+    supervisoresCache.forEach(sup => supervisorPecasSelect.add(new Option(sup, sup)));
+    supervisorPecasSelect.value = item.nome_supervisor || '';
+
+    // Dispara os eventos change para atualizar a visibilidade das seções
     temPaletesSelect.dispatchEvent(new Event('change'));
+    temPecasSelect.dispatchEvent(new Event('change'));
 
     document.getElementById('modalRetorno').classList.remove('hidden');
 }
@@ -293,6 +322,7 @@ async function saveRetorno() {
 
     // Coleta dados do modal de materiais
     const temPaletes = document.getElementById('matTemPaletes').value === 'true';
+    const temPecas = document.getElementById('matRetornoPecas').value === '1';
     const carrinhos = document.getElementById('matCarrinhos').value;
     const obsCarrinhos = document.getElementById('matObsCarrinhos').value;
 
@@ -305,6 +335,15 @@ async function saveRetorno() {
         madeira = null;
         plastico = null;
         caixaBranca = null;
+    }
+
+    let supervisorPecas, descPecas;
+    if (temPecas) {
+        supervisorPecas = document.getElementById('matSupervisorPecas').value;
+        descPecas = document.getElementById('matDescPecas').value;
+    } else {
+        supervisorPecas = null;
+        descPecas = null;
     }
 
     const parseNum = (val) => {
@@ -323,11 +362,13 @@ async function saveRetorno() {
         madeira_qtd: parseNum(madeira),
         plastico_qtd: parseNum(plastico),
         caixa_branca_qtd: parseNum(caixaBranca),
+        retorno_pecas: temPecas ? 1 : 0,
+        pecas_desc: descPecas || null,
         obs_carrinhos: obsCarrinhos || null,
         operador_recebimento: getCurrentUserName(),
         // Removido o fallback '|| false' para permitir que o valor seja enviado como null se não preenchido
         supervisor_ciente: currentItem.supervisor_ciente,
-        nome_supervisor: currentItem.nome_supervisor || null,
+        nome_supervisor: temPecas ? (supervisorPecas || null) : (currentItem.nome_supervisor || null),
     };
 
     // Adiciona os dados de devolução que podem ter sido editados
@@ -399,6 +440,24 @@ window.shareRetornoOnWhatsApp = function(itemId) {
         message += "\nNenhuma devolução registrada para clientes específicos.\n";
     }
     message += `\n*Observação Geral:* ${item.obs || 'N/A'}\n`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+};
+
+// Função para compartilhar dados de retorno de peças no WhatsApp
+window.sharePecasOnWhatsApp = function(itemId) {
+    const item = allData.find(d => d.id === itemId);
+    if (!item) {
+        alert('Dados do retorno não encontrados para compartilhar.');
+        return;
+    }
+
+    let message = "Olá, Segue Dados de Retorno\n";
+    message += `*Rota:* ${item.rota || 'N/A'}\n`;
+    message += `*Placa:* ${item.placa || 'N/A'}\n`;
+    message += `*Retorno:* Peças\n`;
+    message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
+    message += `*Descrição:* ${item.pecas_desc || 'N/A'}\n`;
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 };
