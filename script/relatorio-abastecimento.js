@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Buscando dados...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Buscando dados...</td></tr>';
             this.cardResultados.classList.remove('hidden');
 
             try {
@@ -410,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         km_atual: '-',
                         numero_nota: e.numero_nota,
                         tanque: e.tanques ? e.tanques.nome : 'N/A',
+                        bico: '-',
                         combustivel: e.tanques ? e.tanques.tipo_combustivel : '-',
                         litros: Number(e.qtd_litros),
                         valor_litro: Number(e.valor_litro),
@@ -421,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tiposMov.length === 0 || tiposMov.includes('SAIDA')) {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*, bicos(bombas(tanques(id, nome, tipo_combustivel)))')
+                        .select('*, bicos(nome, bombas(tanques(id, nome, tipo_combustivel)))')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -449,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Normalizar dados de saída
                     dadosSaidas = saidasFiltradas.map(s => {
                         const tanqueInfo = s.bicos?.bombas?.tanques;
+                        const bicoNome = s.bicos?.nome || '-';
                         // Calcula o custo da saída com base no último preço de compra
                         const valorLitroSaida = tanqueInfo ? findLastPrice(tanqueInfo.id, s.data_hora) : 0;
                         const valorTotalSaida = (s.qtd_litros || 0) * valorLitroSaida;
@@ -462,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             km_atual: s.km_atual || '-',
                             numero_nota: '-',
                             tanque: tanqueInfo ? tanqueInfo.nome : 'N/A',
+                            bico: bicoNome,
                             combustivel: tanqueInfo ? tanqueInfo.tipo_combustivel : '-',
                             litros: Number(s.qtd_litros), // Saída é negativa no estoque, mas positiva no relatório de consumo
                             valor_litro: valorLitroSaida,
@@ -501,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         km_atual: e.km_atual || '-',
                         numero_nota: '-', // Externo usa controle interno geralmente
                         tanque: e.postos ? e.postos.razao_social : 'Posto Externo', // Exibe o Posto no lugar do Tanque
+                        bico: '-',
                         combustivel: '-', 
                         litros: Number(e.litros),
                         valor_litro: Number(e.valor_unitario),
@@ -515,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error('Erro na busca:', error);
-                this.tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao buscar dados.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:red;">Erro ao buscar dados.</td></tr>';
             }
         },
 
@@ -692,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let somaValor = 0;
 
             if (this.dadosRelatorio.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
                 this.totalLitrosEl.textContent = '0,00 L';
                 this.totalValorEl.textContent = 'R$ 0,00';
                 return;
@@ -723,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${reg.km_atual}</td>
                     <td>${reg.numero_nota}</td>
                     <td>${reg.tanque}</td>
+                    <td>${reg.bico}</td>
                     <td>${reg.combustivel}</td>
                     <td class="font-bold ${tipoClass}" style="text-align: right;">${reg.tipo === 'EXTERNO' ? '' : (reg.tipo === 'SAIDA' ? '-' : '+')}${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
                     <td style="text-align: right;">${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
@@ -747,6 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'KM Atual': reg.km_atual,
                 'Nº Nota': reg.numero_nota,
                 'Tanque': reg.tanque,
+                'Bico': reg.bico,
                 'Combustível': reg.combustivel,
                 'Litros': Number(reg.litros),
                 'Vlr. Litro': Number(reg.valor_litro),
@@ -766,6 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'KM Atual': '',
                 'Nº Nota': '',
                 'Tanque': '',
+                'Bico': '',
                 'Combustível': '',
                 'Litros': totalLitros,
                 'Vlr. Litro': '',
@@ -830,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nomeUsuario = usuarioLogado?.nome || 'Sistema';
                 doc.text(`Gerado por: ${nomeUsuario}`, 14, 39);
 
-                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Combustível", "Litros", "Vlr. Unit", "Total"];
+                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Bico", "Combustível", "Litros", "Vlr. Unit", "Total"];
                 const tableRows = [];
                 let totalLitros = 0;
                 let totalValor = 0;
@@ -847,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         reg.km_atual,
                         reg.numero_nota,
                         reg.tanque,
+                        reg.bico,
                         reg.combustivel,
                         Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2}),
                         Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
@@ -857,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Adiciona linha de total
                 tableRows.push([
-                    { content: 'TOTAL GERAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'TOTAL GERAL', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: totalLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold' } },
                     '',
                     { content: totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}), styles: { fontStyle: 'bold' } }
@@ -871,9 +879,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     styles: { fontSize: 8 },
                     columnStyles: {
                         0: { cellWidth: 25 }, // Data
-                        8: { halign: 'right' }, // Litros
-                        9: { halign: 'right' }, // Vlr Unit
-                        10: { halign: 'right' } // Total
+                        9: { halign: 'right' }, // Litros
+                        10: { halign: 'right' }, // Vlr Unit
+                        11: { halign: 'right' } // Total
                     }
                 });
 
