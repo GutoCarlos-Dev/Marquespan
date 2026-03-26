@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.updateFilterOptions();
             this.updateTipoVeiculoFilterOptions();
             this.loadTanques();
+            this.loadBicos(); // Carrega os bicos para o novo filtro
             this.loadVeiculos();
             this.loadRotas();
             this.loadTiposVeiculo();
@@ -39,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroTanque = document.getElementById('filtroTanque');
             this.filtroTipo = document.getElementById('filtroTipoMovimentacao');
             this.filtroTipoVeiculoDisplay = null;
+            this.filtroBicoDisplay = null; // Novo elemento
+            this.filtroBicoOptions = null; // Novo elemento
+            this.filtroBicoText = null; // Novo elemento
             this.filtroTipoVeiculoOptions = null;
             this.filtroTipoVeiculoText = null;
             this.filtroTipoVeiculo = document.getElementById('filtroTipoVeiculo');
@@ -174,6 +178,69 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        async loadBicos() {
+            // Verifica se o multiselect já foi criado para evitar recriá-lo
+            if (!this.filtroBicoDisplay) {
+                this.updateBicoFilterOptions();
+            }
+            if (!this.filtroBicoOptions) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('bicos')
+                    .select('id, nome, bombas(nome, tanques(nome, tipo_combustivel))')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.filtroBicoOptions.innerHTML = '';
+                data.forEach(bico => {
+                    const tanqueInfo = bico.bombas?.tanques?.nome || 'N/A';
+                    const bombaInfo = bico.bombas?.nome || 'N/A';
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    label.style.padding = '5px';
+                    label.style.cursor = 'pointer';
+                    label.style.color = '#000';
+                    label.innerHTML = `<input type="checkbox" class="bico-checkbox" value="${bico.id}" style="margin-right: 8px;"> ${bico.nome} (Bomba: ${bombaInfo} - Tanque: ${tanqueInfo})`;
+                    this.filtroBicoOptions.appendChild(label);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar bicos para filtro:', error);
+                this.filtroBicoOptions.innerHTML = '<div>Erro ao carregar</div>';
+            }
+        },
+
+        updateBicoFilterOptions() {
+            if (document.getElementById('filtroBicoDisplay')) return;
+            const select = document.getElementById('filtroBico'); // O div onde o multiselect será injetado
+            if (!select) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-multiselect';
+            wrapper.style.position = 'relative';
+
+            const display = document.createElement('div');
+            display.id = 'filtroBicoDisplay';
+            display.className = 'glass-input multiselect-display';
+            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px; color: #000;';
+            display.innerHTML = '<span id="filtroBicoText">Todos</span> <i class="fas fa-chevron-down"></i>';
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.id = 'filtroBicoOptions';
+            optionsContainer.className = 'glass-dropdown hidden';
+            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;';
+
+            wrapper.appendChild(display);
+            wrapper.appendChild(optionsContainer);
+            select.appendChild(wrapper); // Adiciona ao div existente
+
+            this.filtroBicoDisplay = display;
+            this.filtroBicoOptions = optionsContainer;
+            this.filtroBicoText = document.getElementById('filtroBicoText');
+            this.bindBicoMultiselectEvents();
+        },
+
         updateTipoVeiculoFilterOptions() {
             if (document.getElementById('filtroTipoVeiculoDisplay')) return;
             const select = this.filtroTipoVeiculo;
@@ -233,6 +300,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        bindBicoMultiselectEvents() {
+            if (this.filtroBicoDisplay) {
+                this.filtroBicoDisplay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.filtroBicoOptions.classList.toggle('hidden');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!this.filtroBicoDisplay.contains(e.target) && !this.filtroBicoOptions.contains(e.target)) {
+                        this.filtroBicoOptions.classList.add('hidden');
+                    }
+                });
+                this.filtroBicoOptions.addEventListener('change', () => {
+                    this.updateBicoMultiselectText();
+                });
+            }
+        },
+
+        updateBicoMultiselectText() {
+            const checked = Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked'));
+            this.filtroBicoText.textContent = checked.length === 0 ? 'Todos' : (checked.length <= 2 ? checked.map(cb => cb.parentElement.textContent.trim().split(' ')[0]).join(', ') : `${checked.length} selecionados`);
+        },
         updateFilterOptions() {
             if (document.getElementById('filtroTipoDisplay')) return;
             const select = this.filtroTipo;
@@ -323,6 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const rota = this.filtroRota.value.trim();
             const tiposMov = this.filtroTipoOptions 
                 ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
+                : [];
+            const bicosSelecionados = this.filtroBicoOptions
+                ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => parseInt(cb.value))
                 : [];
 
             if (!dtIni || !dtFim) {
@@ -434,6 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (tiposVeiculo.length > 0) {
                         querySaidas = querySaidas.in('veiculo_placa', placasPorTipo);
+                    }
+                    if (bicosSelecionados.length > 0) {
+                        querySaidas = querySaidas.in('bico_id', bicosSelecionados);
                     }
 
                     // Filtro de tanque para saídas é mais complexo pois está aninhado
@@ -928,6 +1022,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.filtroTipoVeiculoOptions) {
                 this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox').forEach(cb => cb.checked = false);
                 this.updateTipoVeiculoMultiselectText();
+            }
+            if (this.filtroBicoOptions) {
+                this.filtroBicoOptions.querySelectorAll('.bico-checkbox').forEach(cb => cb.checked = false);
+                this.updateBicoMultiselectText();
             }
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
