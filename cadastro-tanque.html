@@ -33,6 +33,12 @@
               <label for="tanqueNome">Nome do Tanque</label>
               <input type="text" id="tanqueNome" placeholder="Ex: Tanque Principal Diesel" required />
               
+              <label for="tanqueFilial">Filial</label>
+              <select id="tanqueFilial" required>
+                <option value="">-- Selecione a Filial --</option>
+                <!-- Preenchido via JS -->
+              </select>
+
               <label for="tanqueCapacidade">Capacidade Máxima (Litros)</label>
               <input type="text" inputmode="decimal" id="tanqueCapacidade" placeholder="Ex: 7500,50" required />
 
@@ -64,6 +70,7 @@
                 <thead>
                   <tr>
                     <th>Nome</th>
+                    <th>Filial</th>
                     <th>Capacidade (L)</th>
                     <th>Tipo de Combustível</th>
                     <th>Ações</th>

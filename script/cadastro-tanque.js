@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.cache();
             this.bind();
+            this.loadFiliais();
             this.renderTable();
         },
 
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.form = document.getElementById('formTanque');
             this.editingIdInput = document.getElementById('tanqueEditingId');
             this.nomeInput = document.getElementById('tanqueNome');
+            this.filialSelect = document.getElementById('tanqueFilial');
             this.capacidadeInput = document.getElementById('tanqueCapacidade');
             this.tipoCombustivelSelect = document.getElementById('tanqueTipoCombustivel');
             this.tableBody = document.getElementById('tableBodyTanques');
@@ -24,6 +26,29 @@ document.addEventListener('DOMContentLoaded', () => {
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
             this.tableBody.addEventListener('click', this.handleTableClick.bind(this));
             this.btnLimpar.addEventListener('click', this.clearForm.bind(this));
+        },
+
+        async loadFiliais() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('filiais')
+                    .select('nome, sigla')
+                    .order('nome');
+
+                if (error) throw error;
+
+                if (this.filialSelect) {
+                    this.filialSelect.innerHTML = '<option value="">Selecione a Filial</option>';
+                    data.forEach(f => {
+                        const option = document.createElement('option');
+                        option.value = f.sigla || f.nome;
+                        option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                        this.filialSelect.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Erro ao carregar filiais:', err);
+            }
         },
 
         async getTanques() {
@@ -58,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const payload = {
                 nome: this.nomeInput.value,
+                filial: this.filialSelect.value,
                 capacidade: capacidadeValue,
                 tipo_combustivel: this.tipoCombustivelSelect.value
             };
@@ -81,12 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async renderTable() {
-            this.tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
             const tanques = await this.getTanques();
             this.tableBody.innerHTML = '';
 
             if (tanques.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="4">Nenhum tanque cadastrado.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="5">Nenhum tanque cadastrado.</td></tr>';
                 return;
             }
 
@@ -95,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 tr.innerHTML = `
                     <td>${tanque.nome}</td>
+                    <td>${tanque.filial || '-'}</td>
                     <td>${tanque.capacidade.toLocaleString('pt-BR')} L</td>
                     <td>${tanque.tipo_combustivel || '-'}</td>
                     <td class="actions-cell">
@@ -134,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.editingIdInput.value = tanque.id;
                 this.nomeInput.value = tanque.nome;
+                this.filialSelect.value = tanque.filial || '';
                 // Formata o número para o padrão brasileiro (ex: 7500.5 vira "7.500,5") para exibição.
                 this.capacidadeInput.value = (tanque.capacidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
                 this.tipoCombustivelSelect.value = tanque.tipo_combustivel || "";
