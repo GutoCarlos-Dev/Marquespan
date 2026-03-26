@@ -15,7 +15,8 @@ const COLUMN_MAP = [
     'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'nf_dev2', 'obs_nf_dev2',
     'cliente3', 'frances_diurno3', 'frances_noturno3', 'variedades3', 'motivo3', 'nf_dev3', 'obs_nf_dev3',
     'cliente4', 'frances_diurno4', 'frances_noturno4', 'variedades4', 'motivo4', 'nf_dev4', 'obs_nf_dev4',
-    'supervisor_ciente', 'nome_supervisor', 'obs'
+    'supervisor_ciente', 'nome_supervisor', 'obs',
+    'retorno_pecas', 'pecas_desc'
 ];
 
 function getCurrentUserName() {
@@ -78,6 +79,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!show) {
             detailsContainer.querySelectorAll('input').forEach(input => input.value = '');
         }
+    });
+
+    // Listener para o retorno de peças (mostrar/ocultar campos)
+    document.getElementById('matRetornoPecas').addEventListener('change', (e) => {
+        const detailsContainer = document.getElementById('pecas-details');
+        const show = e.target.value === '1';
+        detailsContainer.classList.toggle('hidden', !show);
     });
 
     // Listener para delegação de eventos na tabela
@@ -328,6 +336,16 @@ function renderGrid() {
     dataToRender.forEach((rowData) => {
         // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
         const index = gridData.indexOf(rowData);
+        
+        // Verifica se há retorno de pão para mostrar o ícone verde
+        const hasBreadReturn = !!(rowData.cliente1 || rowData.nf_dev1 || rowData.frances_diurno1 || rowData.frances_noturno1 || rowData.variedades1 || rowData.motivo1 || rowData.obs_nf_dev1);
+        const whatsappBreadIcon = hasBreadReturn ? 
+            `<i class="fab fa-whatsapp whatsapp-btn green" onclick="event.stopPropagation(); shareBreadReturnOnWhatsApp(${index})" title="Compartilhar Devolução de Pão"></i>` : '';
+        
+        // Verifica se há retorno de peças para mostrar o ícone azul
+        const hasPartsReturn = rowData.retorno_pecas === 1;
+        const whatsappPartsIcon = hasPartsReturn ? 
+            `<i class="fab fa-whatsapp whatsapp-btn blue" onclick="event.stopPropagation(); sharePartsReturnOnWhatsApp(${index})" title="Compartilhar Retorno de Peças"></i>` : '';
 
         const tr = document.createElement('tr');
         tr.dataset.rowIndex = index;
@@ -344,10 +362,16 @@ function renderGrid() {
             <td><input type="text" value="${rowData.nome_terceiro || ''}" data-field="nome_terceiro"></td>
             <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro"></td>
             <td>
-                <button class="btn-modal-action btn-materiais">Materiais</button>
+                <div class="cell-action-container">
+                    <button class="btn-modal-action btn-materiais">Materiais</button>
+                    ${whatsappPartsIcon}
+                </div>
             </td>
             <td>
-                <button class="btn-modal-action btn-devolucoes">Devoluções</button>
+                <div class="cell-action-container">
+                    <button class="btn-modal-action btn-devolucoes">Devoluções</button>
+                    ${whatsappBreadIcon}
+                </div>
             </td>
             <td><input type="text" value="${rowData.obs || ''}" data-field="obs"></td>
             <td><button class="btn-custom btn-delete-row"><i class="fas fa-trash"></i></button></td>
@@ -487,6 +511,16 @@ function openMateriaisModal(index) {
     currentRowIndex = index;
     const rowData = gridData[index];
     const modal = document.getElementById('modalMateriais');
+    
+    // Populate supervisor dropdown
+    const supSelect = modal.querySelector('#matSupervisorPecas');
+    supSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
+    supervisoresCache.forEach(sup => supSelect.add(new Option(sup, sup)));
+    
+    const retPecas = rowData.retorno_pecas === 1;
+    modal.querySelector('#matRetornoPecas').value = retPecas ? "1" : "0";
+    modal.querySelector('#matSupervisorPecas').value = rowData.nome_supervisor || '';
+    modal.querySelector('#matDescPecas').value = rowData.pecas_desc || '';
 
     const temPaletesSelect = modal.querySelector('#matTemPaletes');
     const temPaletes = rowData.paletes > 0;
@@ -500,6 +534,7 @@ function openMateriaisModal(index) {
     
     // Dispara o evento change para mostrar/ocultar a seção de detalhes dos paletes
     temPaletesSelect.dispatchEvent(new Event('change'));
+    modal.querySelector('#matRetornoPecas').dispatchEvent(new Event('change'));
 
     modal.classList.remove('hidden');
 }
@@ -513,9 +548,16 @@ async function saveMateriaisData() {
     const rowData = gridData[currentRowIndex];
 
     const temPaletes = modal.querySelector('#matTemPaletes').value === 'true';
+    const retornoPecas = modal.querySelector('#matRetornoPecas').value === '1';
 
     rowData.carrinhos = modal.querySelector('#matCarrinhos').value;
     rowData.paletes = temPaletes ? 1 : 0; // Salva 1 para 'Sim', 0 para 'Não'
+    rowData.retorno_pecas = retornoPecas ? 1 : 0;
+    rowData.pecas_desc = retornoPecas ? modal.querySelector('#matDescPecas').value : null;
+    
+    if (retornoPecas) {
+        rowData.nome_supervisor = modal.querySelector('#matSupervisorPecas').value;
+    }
 
     if (temPaletes) {
         rowData.madeira_qtd = modal.querySelector('#matMadeira').value;
@@ -568,7 +610,10 @@ function mapRowToPayload(rowData, dataRetorno) {
         tipo_retorno: rowData.tipo_retorno,
         qtd_clientes: parseNum(rowData.qtd_clientes),
         
-        supervisor_ciente: parseNum(rowData.supervisor_ciente),
+        retorno_pecas: parseNum(rowData.retorno_pecas),
+        pecas_desc: rowData.pecas_desc || null,
+
+        supervisor_ciente: rowData.supervisor_ciente === undefined ? null : parseNum(rowData.supervisor_ciente),
         nome_supervisor: rowData.nome_supervisor,
         obs: rowData.obs
     };
@@ -703,3 +748,43 @@ async function saveAllData() {
         alert('❌ Erro ao salvar os dados: ' + (error.message || JSON.stringify(error)));
     }
 }
+
+// --- FUNÇÕES DE COMPARTILHAMENTO WHATSAPP ---
+
+window.sharePartsReturnOnWhatsApp = function(index) {
+    const item = gridData[index];
+    if (!item) return;
+
+    let message = "Olá, Segue Dados de Retorno de Materiais\n\n";
+    message += `*Rota:* ${item.rota || 'N/A'}\n`;
+    message += `*Placa:* ${item.placa || 'N/A'}\n`;
+    message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
+    message += `*Descrição:* ${item.pecas_desc || 'N/A'}\n`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+};
+
+window.shareBreadReturnOnWhatsApp = function(index) {
+    const item = gridData[index];
+    if (!item) return;
+
+    let message = "Olá, Segue Dados de Retorno\n";
+    message += `*Rota:* ${item.rota || 'N/A'}\n`;
+    message += `*Placa:* ${item.placa || 'N/A'}\n`;
+    message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
+
+    for (let i = 1; i <= 4; i++) {
+        if (item[`cliente${i}`]) {
+            message += `\n*Cliente ${i}:* ${item[`cliente${i}`]}\n`;
+            message += `  *Francês Diurno:* ${item[`frances_diurno${i}`] || '0'}\n`;
+            message += `  *Francês Noturno:* ${item[`frances_noturno${i}`] || '0'}\n`;
+            message += `  *Variedades:* ${item[`variedades${i}`] || 'N/A'}\n`;
+            message += `  *Motivo:* ${item[`motivo${i}`] || 'N/A'}\n`;
+            message += `  *NFE-DEV:* ${item[`nf_dev${i}`] || 'N/A'}\n`;
+            message += `  *Obs NFE-DEV:* ${item[`obs_nf_dev${i}`] || 'N/A'}\n`;
+        }
+    }
+    message += `\n*Observação Geral:* ${item.obs || 'N/A'}\n`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+};

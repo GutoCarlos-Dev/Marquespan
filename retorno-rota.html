@@ -136,17 +136,22 @@
                          <input type="number" id="matCarrinhos" class="glass-input">
                      </div>
                      <div class="form-group">
-                         <label for="matTemPaletes">Houve retorno de Paletes?</label>
-                         <select id="matTemPaletes" class="glass-input">
-                             <option value="false">Não</option>
-                             <option value="true">Sim</option>
-                         </select>
+                         <label for="matObsCarrinhos">Obs. Carrinhos</label>
+                         <input type="text" id="matObsCarrinhos" class="glass-input">
                      </div>
                  </div>
  
+                 <div class="form-group" style="margin-top: 1rem;">
+                     <label for="matTemPaletes">Houve retorno de Paletes?</label>
+                     <select id="matTemPaletes" class="glass-input">
+                         <option value="false">Não</option>
+                         <option value="true">Sim</option>
+                     </select>
+                 </div>
+
                  <!-- Detalhes dos Paletes (inicialmente oculto) -->
                  <div id="paletes-details" class="hidden" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
-                     <div class="form-grid-2-cols">
+                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
                          <div class="form-group">
                              <label for="matMadeira">Madeira (Qtd)</label>
                              <input type="number" id="matMadeira" class="glass-input">
@@ -162,9 +167,27 @@
                      </div>
                  </div>
  
-                 <div class="form-group form-group-full" style="margin-top: 1rem;">
-                     <label for="matObsCarrinhos">Obs. Carrinhos</label>
-                     <input type="text" id="matObsCarrinhos" class="glass-input">
+                 <div class="form-group" style="margin-top: 1rem;">
+                     <label for="matRetornoPecas">Retorno de Peças?</label>
+                     <select id="matRetornoPecas" class="glass-input">
+                         <option value="0">Não</option>
+                         <option value="1">Sim</option>
+                     </select>
+                 </div>
+
+                 <!-- Detalhes do Retorno de Peças (inicialmente oculto) -->
+                 <div id="pecas-details" class="hidden" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                     <div class="form-group">
+                         <label for="matSupervisorPecas">Supervisor</label>
+                         <select id="matSupervisorPecas" class="glass-input">
+                             <option value="">Selecione o Supervisor</option>
+                             <!-- Populated via JS -->
+                         </select>
+                     </div>
+                     <div class="form-group" style="margin-top: 1rem;">
+                         <label for="matDescPecas">Descrição da Ocorrência (Texto Livre)</label>
+                         <textarea id="matDescPecas" class="glass-input" rows="3" placeholder="Descreva as peças e o motivo do retorno..." style="resize: vertical; min-height: 80px;"></textarea>
+                     </div>
                  </div>
              </div>
              <div class="modal-footer">
