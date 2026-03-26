@@ -125,7 +125,18 @@ function renderCards() {
         const isOk = !!item.hora_mot; // Verifica se o horário do motorista já foi preenchido
         const statusClass = isOk ? 'status-ok' : '';
         const iconClass = isOk ? 'fa-check-circle' : 'fa-clock';
+        const hasDevolucoes = item.cliente1 || item.nf_dev1 || item.frances_diurno1 || item.frances_noturno1 || item.variedades1 || item.motivo1 || item.obs_nf_dev1;
+        
+        let lateClass = '';
+        // Exemplo de lógica para definir 'lateClass' (pode ser ajustada conforme a regra de negócio)
+        // Por exemplo, se o retorno for após as 20:00, adiciona uma classe 'late-return'
+        if (isOk && item.hora_mot && item.hora_mot >= '20:00') {
+            lateClass = 'late-return';
+        }
+        
+        const whatsappIcon = hasDevolucoes ? `<i class="fab fa-whatsapp whatsapp-icon" onclick="event.stopPropagation(); shareRetornoOnWhatsApp('${item.id}')"></i>` : '';
 
+        // Removida a linha duplicada de Rota
         return `
             <div class="retorno-card ${statusClass}" data-id="${item.id}">
                 <div class="card-header">
@@ -133,9 +144,10 @@ function renderCards() {
                     <i class="fas ${iconClass} card-status-icon"></i>
                 </div>
                 <div class="card-body">
+                    ${whatsappIcon}
                     <p><i class="fas fa-route"></i> <strong>Rota:</strong> ${item.rota || 'N/A'}</p>
                     <p><i class="fas fa-user-tie"></i> <strong>Motorista:</strong> ${item.nome_mot || 'N/A'}</p>
-                    ${isOk ? `<p><i class="fas fa-hourglass-end"></i> <strong>Retorno:</strong> ${item.hora_mot}</p>` : ''}
+                    ${isOk ? `<p class="${lateClass}"><i class="fas fa-hourglass-end"></i> <strong>Retorno:</strong> ${item.hora_mot}</p>` : ''}
                 </div>
             </div>
         `;
@@ -281,7 +293,6 @@ async function saveRetorno() {
 
     // Coleta dados do modal de materiais
     const temPaletes = document.getElementById('matTemPaletes').value === 'true';
-    const paletesFlag = temPaletes ? 1 : 0;
     const carrinhos = document.getElementById('matCarrinhos').value;
     const obsCarrinhos = document.getElementById('matObsCarrinhos').value;
 
@@ -307,15 +318,15 @@ async function saveRetorno() {
         hora_aux: horaMotorista || null, // Preenche hora do auxiliar
         hora_terceiro: horaMotorista || null, // Preenche hora do terceiro
         obs: obs || null,
-        carrinhos: parseNum(carrinhos),
-        paletes: paletesFlag,
+        carrinhos: parseNum(carrinhos), // Assumindo que 'carrinhos' é numérico
+        paletes: temPaletes ? 1 : 0, // A coluna 'paletes' é do tipo INTEGER (0 ou 1)
         madeira_qtd: parseNum(madeira),
         plastico_qtd: parseNum(plastico),
         caixa_branca_qtd: parseNum(caixaBranca),
         obs_carrinhos: obsCarrinhos || null,
         operador_recebimento: getCurrentUserName(),
-        // --- NEW: Add centralized supervisor fields to the final save payload ---
-        supervisor_ciente: currentItem.supervisor_ciente || false,
+        // Removido o fallback '|| false' para permitir que o valor seja enviado como null se não preenchido
+        supervisor_ciente: currentItem.supervisor_ciente,
         nome_supervisor: currentItem.nome_supervisor || null,
     };
 
@@ -350,10 +361,44 @@ async function saveRetorno() {
 
     } catch (err) {
         console.error("Erro ao salvar retorno:", err);
-        alert('Erro ao salvar: ' + err.message);
+        alert('Erro ao salvar: ' + (err.message || JSON.stringify(err))); // Melhoria na mensagem de erro
     } finally {
         btn.disabled = false;
         btn.textContent = 'Salvar';
         currentItem = null;
     }
 }
+
+// Nova função para compartilhar dados no WhatsApp
+window.shareRetornoOnWhatsApp = function(itemId) {
+    const item = allData.find(d => d.id === itemId);
+    if (!item) {
+        alert('Dados do retorno não encontrados para compartilhar.');
+        return;
+    }
+
+    let message = "Olá, Segue Dados de Retorno\n";
+    message += `Rota: ${item.rota || 'N/A'}\n`;
+    message += `Placa: ${item.placa || 'N/A'}\n`;
+    message += `SUPERVISOR: ${item.nome_supervisor || 'N/A'}\n`;
+
+    let hasAnyClientDevolution = false;
+    for (let i = 1; i <= 4; i++) {
+        if (item[`cliente${i}`]) {
+            hasAnyClientDevolution = true;
+            message += `\nCliente ${i}: ${item[`cliente${i}`]}\n`;
+            message += `  Francês Diurno: ${item[`frances_diurno${i}`] || '0'}\n`;
+            message += `  Francês Noturno: ${item[`frances_noturno${i}`] || '0'}\n`;
+            message += `  Variedades: ${item[`variedades${i}`] || 'N/A'}\n`;
+            message += `  Motivo: ${item[`motivo${i}`] || 'N/A'}\n`;
+            message += `  NFE-DEV: ${item[`nf_dev${i}`] || 'N/A'}\n`;
+            message += `  Obs NFE-DEV: ${item[`obs_nf_dev${i}`] || 'N/A'}\n`;
+        }
+    }
+    if (!hasAnyClientDevolution) {
+        message += "\nNenhuma devolução registrada para clientes específicos.\n";
+    }
+    message += `\nObservação Geral: ${item.obs || 'N/A'}\n`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+};

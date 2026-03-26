@@ -23,6 +23,12 @@ tr.saved-error td {
     animation: fadeOutError 2.5s ease-out forwards;
 }
 
+/* Estilo para retornos atrasados */
+.late-return {
+    color: red;
+    font-weight: bold;
+}
+
 /* Garante que a cor do texto da linha (vermelho/negrito) seja visível sobre o fundo de feedback */
 tr.saved-success input, tr.saved-error input, tr.saving input {
     background-color: transparent;

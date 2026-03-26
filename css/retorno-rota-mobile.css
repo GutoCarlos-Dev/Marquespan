@@ -315,3 +315,23 @@ body {
         opacity: 1;
     }
 }
+
+/* Estilo para o ícone do WhatsApp nos cards mobile */
+.whatsapp-icon {
+    color: #25D366; /* Verde do WhatsApp */
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-left: 10px; /* Espaçamento à esquerda do ícone */
+    transition: transform 0.2s ease;
+}
+
+/* Efeito de hover para o ícone do WhatsApp */
+.whatsapp-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Estilo para retornos atrasados nos cards mobile */
+.retorno-card .card-body p.late-return {
+    color: red;
+    font-weight: bold;
+}
