@@ -395,7 +395,7 @@ function openDevolucoesModal(index) {
     });
 
     // Set initial values from rowData
-    supervisorCienteSelect.value = rowData.supervisor_ciente === true ? 'true' : 'false';
+    supervisorCienteSelect.value = (rowData.supervisor_ciente === true || rowData.supervisor_ciente === 1) ? 'true' : 'false';
     nomeSupervisorSelect.value = rowData.nome_supervisor || '';
     // --- END ---
 
@@ -467,7 +467,7 @@ async function saveDevolucoesData() {
     const modal = document.getElementById('modalDevolucoes');
 
     // --- Save centralized supervisor data ---
-    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
+    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true' ? 1 : 0;
     const nomeSupervisor = document.getElementById('nomeSupervisorDevolucao').value;
     gridData[currentRowIndex].supervisor_ciente = supervisorCiente;
     gridData[currentRowIndex].nome_supervisor = nomeSupervisor || null;
@@ -571,7 +571,7 @@ function mapRowToPayload(rowData, dataRetorno) {
         tipo_retorno: rowData.tipo_retorno,
         qtd_clientes: parseNum(rowData.qtd_clientes),
         
-        supervisor_ciente: rowData.supervisor_ciente,
+        supervisor_ciente: parseNum(rowData.supervisor_ciente),
         nome_supervisor: rowData.nome_supervisor,
         obs: rowData.obs
     };
@@ -642,6 +642,7 @@ async function saveRow(index) {
             tr.classList.remove('saving');
             tr.classList.add('saved-error');
         }
+        alert('Erro ao salvar linha: ' + (error.message || JSON.stringify(error)));
     }
 }
 
@@ -702,6 +703,6 @@ async function saveAllData() {
         loadDataFromSupabase(); // Recarrega os dados para obter IDs e confirmar
     } catch (error) {
         console.error('Erro ao salvar dados:', error);
-        alert('❌ Erro ao salvar os dados. Verifique o console para mais detalhes.');
+        alert('❌ Erro ao salvar os dados: ' + (error.message || JSON.stringify(error)));
     }
 }
