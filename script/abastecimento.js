@@ -969,10 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 usuario: this.getUsuarioLogado()
             };
 
-            if (this.saidaEditingId.value) {
-                payload.id = parseInt(this.saidaEditingId.value);
-            }
-const payloads = [];
+            const payloads = [];
 
             // Bico 1 (Obrigatório)
             const bico1 = parseInt(this.saidaBico.value);
@@ -999,8 +996,20 @@ const payloads = [];
 
             try {
                 if (this.saidaEditingId.value) {
-                    const { error } = await supabaseClient.from('saidas_combustivel').update(payloads[0]).eq('id', this.saidaEditingId.value);
-                    if (error) throw error;
+                    // Atualiza o registro principal que está sendo editado
+                    const { error: updateError } = await supabaseClient
+                        .from('saidas_combustivel')
+                        .update(payloads[0])
+                        .eq('id', this.saidaEditingId.value);
+                    if (updateError) throw updateError;
+
+                    // Se um segundo bico foi adicionado durante a edição, insere-o como um novo registro
+                    if (payloads.length > 1) {
+                        const { error: insertError } = await supabaseClient
+                            .from('saidas_combustivel')
+                            .insert([payloads[1]]);
+                        if (insertError) throw insertError;
+                    }
                 } else {
                     const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
                     if (error) throw error;
