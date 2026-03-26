@@ -4,6 +4,7 @@ import { supabaseClient } from './supabase.js';
 let gridData = [];
 let currentRowIndex = null; // Índice da linha sendo editada nos modais
 let supervisoresCache = []; // Cache para a lista de supervisores
+let sortConfig = { key: null, asc: true }; // Estado da ordenação
 
 // Mapeamento de colunas da planilha para os nomes dos campos no objeto de dados
 // A ordem aqui DEVE corresponder à ordem das colunas na planilha do usuário
@@ -60,6 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupModalListeners('modalDevolucoes', 'btnSalvarDevolucoes', saveDevolucoesData);
     setupModalListeners('modalMateriais', 'btnSalvarMateriais', saveMateriaisData);
 
+    // Listeners para ordenação nos cabeçalhos
+    document.querySelectorAll('#tableRetornoRota thead th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => handleSort(th.dataset.sort));
+    });
+
     // Carrega dados auxiliares
     await carregarSupervisores();
 
@@ -94,6 +100,34 @@ async function setupModalListeners(modalId, saveBtnId, saveFunction) {
         await saveFunction();
         modal.classList.add('hidden');
     });
+}
+
+/**
+ * Lida com a ordenação da grid.
+ * @param {string} key - A chave (campo) pela qual ordenar.
+ */
+function handleSort(key) {
+    if (sortConfig.key === key) {
+        sortConfig.asc = !sortConfig.asc;
+    } else {
+        sortConfig.key = key;
+        sortConfig.asc = true;
+    }
+    updateSortIcons();
+    renderGrid();
+}
+
+/**
+ * Atualiza visualmente os ícones de ordenação nos cabeçalhos.
+ */
+function updateSortIcons() {
+    document.querySelectorAll('#tableRetornoRota thead th[data-sort] i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+    });
+    const activeTh = document.querySelector(`#tableRetornoRota thead th[data-sort="${sortConfig.key}"] i`);
+    if (activeTh) {
+        activeTh.className = sortConfig.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
 }
 
 /**
@@ -260,7 +294,7 @@ function renderGrid() {
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
 
-    const dataToRender = searchTerm
+    let dataToRender = searchTerm
         ? gridData.filter(row =>
             (row.placa || '').toUpperCase().includes(searchTerm) ||
             (row.rota || '').toUpperCase().includes(searchTerm) ||
@@ -268,7 +302,25 @@ function renderGrid() {
             (row.nome_aux || '').toUpperCase().includes(searchTerm) ||
             (row.nome_terceiro || '').toUpperCase().includes(searchTerm)
           )
-        : gridData;
+        : [...gridData];
+
+    // Aplica a ordenação se houver uma chave definida
+    if (sortConfig.key) {
+        dataToRender.sort((a, b) => {
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+
+            if (valA === null || valA === undefined) valA = '';
+            if (valB === null || valB === undefined) valB = '';
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return sortConfig.asc ? -1 : 1;
+            if (valA > valB) return sortConfig.asc ? 1 : -1;
+            return 0;
+        });
+    }
 
     if (dataToRender.length === 0) {
         const colCount = document.querySelector('#tableRetornoRota thead tr')?.children.length || 13;
