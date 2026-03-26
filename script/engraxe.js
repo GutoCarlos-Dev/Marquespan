@@ -108,13 +108,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Filtros do Modal de Vencimentos
     document.getElementById('filtroVencimentoFilial').addEventListener('change', filtrarTabelaVencimentos);
-    document.getElementById('filtroVencimentoStatus').addEventListener('change', filtrarTabelaVencimentos);
     document.getElementById('chkAllVencimentos').addEventListener('change', toggleAllVencimentos);
 
     // Configura os novos multiselects
     setupCustomMultiselect('filtroVencimentoMarcaDisplay', 'filtroVencimentoMarcaOptions', 'filtroVencimentoMarcaText', 'Todas as Marcas');
     setupCustomMultiselect('filtroVencimentoModeloDisplay', 'filtroVencimentoModeloOptions', 'filtroVencimentoModeloText', 'Todos os Modelos');
     setupCustomMultiselect('filtroVencimentoTipoDisplay', 'filtroVencimentoTipoOptions', 'filtroVencimentoTipoText', 'Todos os Tipos');
+    setupCustomMultiselect('filtroVencimentoStatusDisplay', 'filtroVencimentoStatusOptions', 'filtroVencimentoStatusText', 'Todos os Status');
 
     document.getElementById('btnAplicarStatusVencimentos').addEventListener('click', aplicarStatusEmMassa);
     document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
@@ -1298,6 +1298,10 @@ async function popularFiltrosVencimentos() {
     populateMultiselect(document.getElementById('filtroVencimentoMarcaOptions'), marcas, 'Limpar Marcas');
     populateMultiselect(document.getElementById('filtroVencimentoModeloOptions'), modelos, 'Limpar Modelos');
     populateMultiselect(document.getElementById('filtroVencimentoTipoOptions'), tipos, 'Limpar Tipos');
+
+    // Popula o multiselect de Status
+    const statusList = ['VENCIDO', 'EM_DIA', 'PENDENTE', 'NAO_ENGRAXAR'];
+    populateMultiselect(document.getElementById('filtroVencimentoStatusOptions'), statusList, 'Limpar Status');
 }
 
 function renderizarTabelaVencimentos(dados) {
@@ -1335,10 +1339,10 @@ function renderizarTabelaVencimentos(dados) {
 
 function filtrarTabelaVencimentos() {
     const filial = document.getElementById('filtroVencimentoFilial').value;
-    const status = document.getElementById('filtroVencimentoStatus').value;
     const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroVencimentoMarcaOptions input:checked')).map(cb => cb.value);
     const modelosSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoModeloOptions input:checked')).map(cb => cb.value);
     const tiposSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoTipoOptions input:checked')).map(cb => cb.value);
+    const statusSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoStatusOptions input:checked')).map(cb => cb.value);
 
     let filtrados = currentVencimentosData;
 
@@ -1354,8 +1358,8 @@ function filtrarTabelaVencimentos() {
     if (modelosSelecionados.length > 0) {
         filtrados = filtrados.filter(item => modelosSelecionados.includes(item.modelo));
     }
-    if (status !== 'TODOS') {
-        filtrados = filtrados.filter(item => item.status === status);
+    if (statusSelecionados.length > 0) {
+        filtrados = filtrados.filter(item => statusSelecionados.includes(item.status));
     }
 
     renderizarTabelaVencimentos(filtrados);

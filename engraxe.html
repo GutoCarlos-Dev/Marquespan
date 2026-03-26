@@ -213,12 +213,15 @@
                             <!-- Opções carregadas via JS -->
                         </div>
                     </div>
-                    <select id="filtroVencimentoStatus" class="glass-input">
-                        <option value="TODOS">Todos os Status</option>
-                        <option value="VENCIDO">Vencidos</option>
-                        <option value="EM_DIA">Em Dia</option>
-                        <option value="PENDENTE">Nunca Realizado</option>
-                    </select>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoStatusDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoStatusText">Todos os Status</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoStatusOptions" class="glass-dropdown hidden">
+                            <!-- Opções populadas via JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
             <!-- Card 2: Ações -->
