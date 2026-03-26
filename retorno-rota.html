@@ -19,26 +19,34 @@
                 <button onclick="window.location.href='retorno-rota-mobile.html'" class="btn-glass btn-blue"><i class="fas fa-mobile-alt"></i> MODO APP</button>
             </header>
 
-            <section class="glass-panel">
-                <div class="panel-header-actions">
-                    <h3><i class="fas fa-list"></i> Lançamentos do Dia</h3>
-                    <div class="acoes-grid-header">
+            <div class="filters-actions-container">
+                <!-- Card de Filtros -->
+                <div class="filter-card">
+                    <h3><i class="fas fa-filter"></i> Filtros de Pesquisa</h3>
+                    <div class="filters-container">
+                        <div class="form-group-filter">
+                            <label for="dataRetorno">Data do Retorno</label>
+                            <input type="date" id="dataRetorno" class="glass-input">
+                        </div>
+                        <div class="form-group-filter">
+                            <label for="searchInput">Buscar na Grade</label>
+                            <input type="text" id="searchInput" class="glass-input" placeholder="Placa, rota, motorista...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card de Ações -->
+                <div class="action-card">
+                    <h3><i class="fas fa-cogs"></i> Ações Rápidas</h3>
+                    <div class="actions-container">
                         <button id="btnAdicionarLinha" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
                         <button id="btnSalvarTudo" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Tudo</button>
                     </div>
                 </div>
+            </div>
 
-                <div class="filtros-container" style="margin-bottom: 20px;">
-                    <div class="form-group-filter">
-                        <label for="dataRetorno">Data do Retorno</label>
-                        <input type="date" id="dataRetorno" class="glass-input">
-                    </div>
-                    <div class="form-group-filter">
-                        <label for="searchInput">Buscar na Grade</label>
-                        <input type="text" id="searchInput" class="glass-input" placeholder="Placa, rota, motorista...">
-                    </div>
-                </div>
-
+            <section class="glass-panel">
+                <h3><i class="fas fa-list"></i> Lançamentos do Dia</h3>
                 <div class="info-paste" style="margin-bottom: 20px;">
                     <p><i class="fas fa-info-circle"></i> <strong>Dica:</strong> Copie as colunas da sua planilha e cole na tabela para preencher várias linhas de uma vez.</p>
                 </div>

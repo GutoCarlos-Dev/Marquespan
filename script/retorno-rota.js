@@ -260,17 +260,14 @@ function applyRowStyle(trElement, rowData) {
     const horaTerceiro = rowData.hora_terceiro || '';
 
     const isLate = horaMot >= '20:00' || horaAux >= '20:00' || horaTerceiro >= '20:00';
-    const color = isLate ? 'red' : '';
-    const fontWeight = isLate ? 'bold' : '';
 
-    // Verifica se alguma das horas é 20:00 ou posterior. A comparação de strings 'HH:mm' funciona.
-    trElement.style.color = color;
-    trElement.style.fontWeight = fontWeight;
-
-    // Aplica o estilo diretamente nos inputs, pois eles podem não herdar a cor do <tr>.
+    // Aplica ou remove a classe late-return conforme necessário
     trElement.querySelectorAll('input').forEach(input => {
-        input.style.color = color;
-        input.style.fontWeight = fontWeight;
+        if (isLate) {
+            input.classList.add('late-return');
+        } else {
+            input.classList.remove('late-return');
+        }
     });
 }
 
