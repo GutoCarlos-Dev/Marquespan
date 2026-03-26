@@ -378,27 +378,27 @@ window.shareRetornoOnWhatsApp = function(itemId) {
     }
 
     let message = "Olá, Segue Dados de Retorno\n";
-    message += `Rota: ${item.rota || 'N/A'}\n`;
-    message += `Placa: ${item.placa || 'N/A'}\n`;
-    message += `SUPERVISOR: ${item.nome_supervisor || 'N/A'}\n`;
+    message += `*Rota:* ${item.rota || 'N/A'}\n`;
+    message += `*Placa:* ${item.placa || 'N/A'}\n`;
+    message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
 
     let hasAnyClientDevolution = false;
     for (let i = 1; i <= 4; i++) {
         if (item[`cliente${i}`]) {
             hasAnyClientDevolution = true;
-            message += `\nCliente ${i}: ${item[`cliente${i}`]}\n`;
-            message += `  Francês Diurno: ${item[`frances_diurno${i}`] || '0'}\n`;
-            message += `  Francês Noturno: ${item[`frances_noturno${i}`] || '0'}\n`;
-            message += `  Variedades: ${item[`variedades${i}`] || 'N/A'}\n`;
-            message += `  Motivo: ${item[`motivo${i}`] || 'N/A'}\n`;
-            message += `  NFE-DEV: ${item[`nf_dev${i}`] || 'N/A'}\n`;
-            message += `  Obs NFE-DEV: ${item[`obs_nf_dev${i}`] || 'N/A'}\n`;
+            message += `\n*Cliente ${i}:* ${item[`cliente${i}`]}\n`;
+            message += `  *Francês Diurno:* ${item[`frances_diurno${i}`] || '0'}\n`;
+            message += `  *Francês Noturno:* ${item[`frances_noturno${i}`] || '0'}\n`;
+            message += `  *Variedades:* ${item[`variedades${i}`] || 'N/A'}\n`;
+            message += `  *Motivo:* ${item[`motivo${i}`] || 'N/A'}\n`;
+            message += `  *NFE-DEV:* ${item[`nf_dev${i}`] || 'N/A'}\n`;
+            message += `  *Obs NFE-DEV:* ${item[`obs_nf_dev${i}`] || 'N/A'}\n`;
         }
     }
     if (!hasAnyClientDevolution) {
         message += "\nNenhuma devolução registrada para clientes específicos.\n";
     }
-    message += `\nObservação Geral: ${item.obs || 'N/A'}\n`;
+    message += `\n*Observação Geral:* ${item.obs || 'N/A'}\n`;
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 };
