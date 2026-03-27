@@ -1,5 +1,8 @@
 import { supabaseClient } from './supabase.js';
 
+let usuariosCache = [];
+let sortConfig = { column: 'nome', direction: 'asc' };
+
 document.addEventListener('DOMContentLoaded', () => {
     carregarUsuarios();
     carregarNiveis();
@@ -36,6 +39,20 @@ function setupEventListeners() {
         linhas.forEach(linha => {
             const texto = linha.textContent.toLowerCase();
             linha.style.display = texto.includes(termo) ? '' : 'none';
+        });
+    });
+
+    // Ordenação da tabela
+    document.querySelectorAll('#tabelaUsuarios thead th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.dataset.sort;
+            if (sortConfig.column === column) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.column = column;
+                sortConfig.direction = 'asc';
+            }
+            renderTable(usuariosCache);
         });
     });
 }
@@ -111,7 +128,8 @@ async function carregarUsuarios() {
 
         if (error) throw error;
 
-        renderTable(data);
+        usuariosCache = data;
+        renderTable(usuariosCache);
     } catch (err) {
         console.error('Erro ao carregar usuários:', err);
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -127,17 +145,34 @@ function renderTable(usuarios) {
         return;
     }
 
-    usuarios.forEach(u => {
-        // Lógica de expiração visual para o status TEMPORARIO
-        let statusExibicao = u.status || 'ATIVO';
-        if (statusExibicao === 'TEMPORARIO' && u.status_updated_at) {
-            const dataInicio = new Date(u.status_updated_at);
-            const agora = new Date();
-            const diffHoras = (agora - dataInicio) / (1000 * 60 * 60);
-            if (diffHoras >= 24) {
-                statusExibicao = 'INATIVO';
-            }
+    // Ordenar dados localmente antes de renderizar
+    const sorted = [...usuarios].sort((a, b) => {
+        let valA = a[sortConfig.column];
+        let valB = b[sortConfig.column];
+
+        if (sortConfig.column === 'nomecompleto') {
+            valA = a.nomecompleto || a.nome_completo || '';
+            valB = b.nomecompleto || b.nome_completo || '';
         }
+
+        if (sortConfig.column === 'status') {
+            valA = getExibicaoStatus(a);
+            valB = getExibicaoStatus(b);
+        }
+
+        if (valA === null || valA === undefined) valA = '';
+        if (valB === null || valB === undefined) valB = '';
+
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    sorted.forEach(u => {
+        const statusExibicao = getExibicaoStatus(u);
 
         const statusClass = `status-${statusExibicao.toLowerCase()}`;
 
@@ -162,6 +197,29 @@ function renderTable(usuarios) {
 
         tbody.appendChild(tr);
     });
+
+    updateSortIcons();
+}
+
+function getExibicaoStatus(u) {
+    let statusExibicao = u.status || 'ATIVO';
+    if (statusExibicao === 'TEMPORARIO' && u.status_updated_at) {
+        const dataInicio = new Date(u.status_updated_at);
+        const agora = new Date();
+        const diffHoras = (agora - dataInicio) / (1000 * 60 * 60);
+        if (diffHoras >= 24) return 'INATIVO';
+    }
+    return statusExibicao;
+}
+
+function updateSortIcons() {
+    document.querySelectorAll('#tabelaUsuarios thead th[data-sort] i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+        const th = icon.closest('th');
+        if (th.dataset.sort === sortConfig.column) {
+            icon.className = sortConfig.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+    });
 }
 
 async function salvarUsuario(e) {
@@ -173,6 +231,7 @@ async function salvarUsuario(e) {
     const email = document.getElementById('email').value;
     const nivel = document.getElementById('nivel').value;
     const filial = document.getElementById('filial').value;
+    const status = document.getElementById('status').value;
     const senha = document.getElementById('senha').value;
 
     const usuarioData = {
@@ -180,6 +239,7 @@ async function salvarUsuario(e) {
         nomecompleto, // ou nome_completo dependendo do banco, ajustando conforme necessidade
         email,
         nivel,
+        status,
         filial: filial || null
     };
 
@@ -219,6 +279,7 @@ function editarUsuario(usuario) {
     document.getElementById('nomecompleto').value = usuario.nomecompleto || usuario.nome_completo || '';
     document.getElementById('email').value = usuario.email || '';
     document.getElementById('nivel').value = usuario.nivel;
+    document.getElementById('status').value = usuario.status || 'ATIVO';
     document.getElementById('filial').value = usuario.filial || '';
     document.getElementById('senha').value = ''; // Senha fica vazia para não alterar
 
