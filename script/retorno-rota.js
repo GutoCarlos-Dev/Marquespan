@@ -24,6 +24,16 @@ function getCurrentUserName() {
     return usuario ? usuario.nome : null;
 }
 
+function getUserLevel() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? (usuario.nivel || '').toLowerCase() : null;
+}
+
+function canDelete() {
+    const nivel = getUserLevel();
+    return nivel === 'administrador' || nivel === 'gerencia';
+}
+
 async function carregarSupervisores() {
     try {
         const { data, error } = await supabaseClient
@@ -99,6 +109,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const checkboxes = document.querySelectorAll('.row-selector');
         checkboxes.forEach(cb => cb.checked = e.target.checked);
     });
+
+    // Oculta funcionalidades de exclusão para usuários não autorizados
+    if (!canDelete()) {
+        const btnExcluir = document.getElementById('btnExcluirSelecionados');
+        if (btnExcluir) btnExcluir.style.display = 'none';
+        
+        const table = document.getElementById('gridRetornoRota') || document.getElementById('tableRetornoRota');
+        const headers = table?.querySelectorAll('thead th');
+        if (headers && headers.length > 0) {
+            headers[0].style.display = 'none'; // Coluna do Checkbox de Seleção
+            headers[headers.length - 1].style.display = 'none'; // Coluna da Lixeira
+        }
+    }
 });
 
 /**
@@ -176,6 +199,11 @@ async function handleTableClick(e) {
  * Exclui múltiplas linhas selecionadas na grade.
  */
 async function deleteSelectedRows() {
+    if (!canDelete()) {
+        alert('Você não tem permissão para excluir registros.');
+        return;
+    }
+
     const checkboxes = document.querySelectorAll('.row-selector:checked');
     if (checkboxes.length === 0) {
         alert('Selecione pelo menos uma linha para excluir.');
@@ -386,6 +414,8 @@ function renderGrid() {
         return;
     }
 
+    const userCanDelete = canDelete();
+
     dataToRender.forEach((rowData) => {
         // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
         const index = gridData.indexOf(rowData);
@@ -431,9 +461,12 @@ function renderGrid() {
         const tr = document.createElement('tr');
         tr.dataset.rowIndex = index;
 
+        const selectCell = userCanDelete ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
+        const deleteCell = userCanDelete ? `<td><button class="btn-custom btn-delete-row"><i class="fas fa-trash"></i></button></td>` : '<td style="display:none"></td>';
+
         // Cria as células principais
         tr.innerHTML = `
-            <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>
+            ${selectCell}
             <td><input type="text" value="${rowData.placa || ''}" data-field="placa"></td>
             <td><input type="text" value="${rowData.rota || ''}" data-field="rota"></td>
             <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
@@ -456,7 +489,7 @@ function renderGrid() {
                 </div>
             </td>
             <td><input type="text" value="${rowData.obs || ''}" data-field="obs"></td>
-            <td><button class="btn-custom btn-delete-row"><i class="fas fa-trash"></i></button></td>
+            ${deleteCell}
         `;
         
         // Aplica o estilo condicional na linha APÓS os inputs serem criados
@@ -776,6 +809,11 @@ async function saveRow(index) {
  * @param {number} index - O índice da linha a ser excluída.
  */
 async function deleteRow(index) {
+    if (!canDelete()) {
+        alert('Você não tem permissão para excluir registros.');
+        return;
+    }
+
     const rowData = gridData[index];
     
     if (rowData && rowData.id) {

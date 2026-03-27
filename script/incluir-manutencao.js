@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 // 📦 Importação do Supabase
 
 // Estado dos arquivos
@@ -616,6 +617,69 @@ async function excluirFornecedorTab(id) {
     carregarFornecedores();
 }
 
+async function handleImportarFornecedores(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        // 1. Carregar Filiais para o usuário escolher
+        const { data: filiais, error: errF } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
+        if (errF) throw errF;
+
+        const opcoes = filiais.map(f => f.sigla || f.nome);
+        const escolha = prompt(`Escolha a Filial para realizar a importação:\nOpções: ${opcoes.join(', ')}`);
+
+        if (!escolha) return; 
+        const filialSinc = escolha.toUpperCase().trim();
+
+        if (!opcoes.map(o => o.toUpperCase()).includes(filialSinc)) {
+            alert('Filial inválida. Por favor, utilize uma das siglas exibidas.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                if (json.length === 0) throw new Error('A planilha está vazia.');
+
+                const payloads = json.map(row => {
+                    const r = {};
+                    Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+                    return {
+                        nome: r['NOME'] || r['FORNECEDOR'],
+                        cnpj: r['CNPJ'] ? String(r['CNPJ']) : null,
+                        telefone: r['TELEFONE'] ? String(r['TELEFONE']) : null,
+                        filial: filialSinc
+                    };
+                }).filter(p => p.nome);
+
+                if (payloads.length === 0) throw new Error('Nenhum fornecedor válido (com nome) encontrado.');
+
+                const { error } = await supabaseClient.from('fornecedor_manutencao').insert(payloads);
+                if (error) throw error;
+
+                alert(`✅ Importação concluída! ${payloads.length} fornecedores inseridos para a filial ${filialSinc}.`);
+                carregarTabelaFornecedores();
+                carregarFornecedores();
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao processar planilha: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao carregar lista de filiais.');
+    } finally {
+        e.target.value = '';
+    }
+}
+
 // Títulos
 async function carregarTabelaTitulos() {
     const tbody = document.getElementById('tabelaTitulosTab');
@@ -673,6 +737,14 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarFiliais();
   carregarTitulosManutencao();
   carregarFornecedores();
+
+  // Listener Importação Fornecedores
+  const btnImportarFornecedores = document.getElementById('btnImportarFornecedores');
+  const fileImportarFornecedores = document.getElementById('fileImportarFornecedores');
+  if (btnImportarFornecedores && fileImportarFornecedores) {
+      btnImportarFornecedores.addEventListener('click', () => fileImportarFornecedores.click());
+      fileImportarFornecedores.addEventListener('change', handleImportarFornecedores);
+  }
 
   // Listener para preencher o modelo quando a placa muda
   const veiculoInput = document.getElementById('veiculo');
