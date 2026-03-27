@@ -230,6 +230,30 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
 
 /* === ESTILOS DOS MODAIS (Materiais e Devoluções) === */
 
+/* Overlay fixo: Garante que o modal apareça no centro da tela atual, independente do scroll */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Garante que fique acima de todos os elementos da grade */
+}
+
+.modal-content {
+    background-color: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh; /* Evita que o modal ultrapasse a altura da tela */
+    overflow-y: auto; /* Permite scroll interno se o conteúdo do modal for grande */
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
 /* Cabeçalho do Modal */
 .modal-header {
     display: flex;

@@ -408,12 +408,20 @@ function renderGrid() {
         // Construção do resumo para o tooltip de Devoluções
         let devolucoesTooltip = '';
         for (let i = 1; i <= 4; i++) {
-            if (rowData[`cliente${i}`] || rowData[`nf_dev${i}`]) {
-                const cli = rowData[`cliente${i}`] || `Cliente ${i}`;
-                const mot = rowData[`motivo${i}`] || 'Motivo N/I';
-                const paes = `${rowData[`frances_diurno${i}`] || 0}D/${rowData[`frances_noturno${i}`] || 0}N`;
-                const variedades = rowData[`variedades${i}`] ? `\n  ↳ Variedades: ${rowData[`variedades${i}`]}` : '';
-                devolucoesTooltip += `• ${cli}: ${mot} (${paes})${variedades}\n`;
+            const cliVal = rowData[`cliente${i}`];
+            const nfVal = rowData[`nf_dev${i}`];
+            const fdVal = rowData[`frances_diurno${i}`];
+            const fnVal = rowData[`frances_noturno${i}`];
+            const varVal = rowData[`variedades${i}`];
+            const motVal = rowData[`motivo${i}`];
+
+            // Verifica se algum dado relevante foi preenchido para este slot de cliente
+            if (cliVal || nfVal || fdVal || fnVal || varVal || motVal) {
+                const cliName = cliVal ? `${cliVal}` : `CLIENTE ${i}`;
+                const nf = nfVal ? ` | NF: ${nfVal}` : '';
+                const paes = `${fdVal || 0}D/${fnVal || 0}N`;
+                const variedades = varVal ? `\n  ↳ Variedades: ${varVal}` : '';
+                devolucoesTooltip += `• ${cliName}${nf}\n  └─ ${motVal || 'Motivo N/I'} (${paes})${variedades}\n\n`;
             }
         }
         if (!devolucoesTooltip) devolucoesTooltip = 'Nenhuma devolução registrada';
