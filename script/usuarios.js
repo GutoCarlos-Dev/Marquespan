@@ -101,7 +101,7 @@ async function carregarFiliais() {
 
 async function carregarUsuarios() {
     const tbody = document.getElementById('corpoTabelaUsuarios');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     try {
         const { data, error } = await supabaseClient
@@ -114,7 +114,7 @@ async function carregarUsuarios() {
         renderTable(data);
     } catch (err) {
         console.error('Erro ao carregar usuários:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
@@ -123,11 +123,24 @@ function renderTable(usuarios) {
     tbody.innerHTML = '';
 
     if (usuarios.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
         return;
     }
 
     usuarios.forEach(u => {
+        // Lógica de expiração visual para o status TEMPORARIO
+        let statusExibicao = u.status || 'ATIVO';
+        if (statusExibicao === 'TEMPORARIO' && u.status_updated_at) {
+            const dataInicio = new Date(u.status_updated_at);
+            const agora = new Date();
+            const diffHoras = (agora - dataInicio) / (1000 * 60 * 60);
+            if (diffHoras >= 24) {
+                statusExibicao = 'INATIVO';
+            }
+        }
+
+        const statusClass = `status-${statusExibicao.toLowerCase()}`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${u.id}</td>
@@ -136,6 +149,7 @@ function renderTable(usuarios) {
             <td>${u.email || '-'}</td>
             <td>${u.nivel || '-'}</td>
             <td>${u.filial || 'Todas'}</td>
+            <td style="text-align:center;"><span class="badge-status ${statusClass}">${statusExibicao}</span></td>
             <td>
                 <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>

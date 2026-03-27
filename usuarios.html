@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="css/index.css">
   <link rel="stylesheet" href="css/usuarios.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .badge-status { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; color: white; display: inline-block; min-width: 85px; text-align: center; }
+    .status-ativo { background-color: #28a745; }
+    .status-inativo { background-color: #dc3545; }
+    .status-temporario { background-color: #fd7e14; }
+  </style>
 </head>
 <body>
 
@@ -47,6 +53,15 @@
                 </select>
               </div>
               
+              <div class="form-group">
+                <label for="status">Status *</label>
+                <select id="status" required class="glass-input">
+                  <option value="ATIVO" selected>ATIVO</option>
+                  <option value="INATIVO">INATIVO</option>
+                  <option value="TEMPORARIO">TEMPORARIO (24 HORAS)</option>
+                </select>
+              </div>
+
               <div class="form-group">
                 <label for="filial">Filial</label>
                 <select id="filial" class="glass-input">
@@ -94,6 +109,7 @@
                 <th>EMAIL</th>
                 <th>NÍVEL</th>
                 <th>FILIAL</th>
+                <th style="text-align: center;">STATUS</th>
                 <th>AÇÕES</th>
               </tr>
             </thead>

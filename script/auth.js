@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // O correto é migrar o cadastro de usuários para usar `supabase.auth.signUp()`.
         const { data: userData, error: userError } = await supabaseClient
           .from('usuarios')
-          .select('id, nome, nivel, senha, filial') // Seleciona também a filial
+          .select('id, nome, nivel, senha, filial, status, status_updated_at')
           .eq('nome', usuario)
           .single();
 
@@ -31,6 +31,24 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Erro ao buscar usuário ou usuário não encontrado:', userError);
           alert('❌ Usuário ou senha inválidos.');
           return;
+        }
+
+        // Validação de Status e Expiração de 24h
+        let statusEfetivo = userData.status || 'ATIVO';
+        if (statusEfetivo === 'TEMPORARIO' && userData.status_updated_at) {
+            const dataInicio = new Date(userData.status_updated_at);
+            const agora = new Date();
+            const diffHoras = (agora - dataInicio) / (1000 * 60 * 60);
+            
+            if (diffHoras >= 24) {
+                await supabaseClient.from('usuarios').update({ status: 'INATIVO' }).eq('id', userData.id);
+                statusEfetivo = 'INATIVO';
+            }
+        }
+
+        if (statusEfetivo === 'INATIVO') {
+            alert('❌ Acesso negado: Usuário INATIVO ou acesso temporário expirado.');
+            return;
         }
 
         // Se a verificação for bem-sucedida, armazena os dados do perfil do usuário.
