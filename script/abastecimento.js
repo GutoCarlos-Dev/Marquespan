@@ -753,8 +753,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (dataInicial && dataFinal) {
                         // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
-                        query = query.gte('data', `${dataInicial}T00:00:00`);
-                        query = query.lte('data', `${dataFinal}T23:59:59`);
+                        query = query.gte('data', `${dataInicial}T00:00:00-03:00`);
+                        query = query.lte('data', `${dataFinal}T23:59:59-03:00`);
                     }
                 }    
 
@@ -1080,8 +1080,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (dataInicial && dataFinal) {
                             // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
-                            query = query.gte('data_hora', `${dataInicial}T00:00:00`);
-                            query = query.lte('data_hora', `${dataFinal}T23:59:59`);
+                            query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
+                            query = query.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
                         }
                     }
 
@@ -1654,8 +1654,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dataFinal = this.filtroExtDataFinal.value;
 
                     if (dataInicial && dataFinal) {
-                        query = query.gte('data_hora', `${dataInicial}T00:00:00`);
-                        query = query.lte('data_hora', `${dataFinal}T23:59:59`);
+                        query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
+                        query = query.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
                     }
                 }
                 
