@@ -12,16 +12,19 @@ function preencherUsuarioLogado() {
   }
 }
 
+function getUserFilial() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario?.filial || null;
+}
+
 async function carregarFiltros() {
-  const [placas, titulos, filiais, fornecedores] = await Promise.all([
-    supabaseClient.from('veiculos').select('placa'),
-    supabaseClient.from('titulomanutencao').select('manutencao'),
+  const [titulos, filiais, fornecedores] = await Promise.all([
+    supabaseClient.from('titulo_manutencao').select('titulo').order('titulo'),
     supabaseClient.from('filiais').select('nome, sigla').order('nome'),
-    supabaseClient.from('fornecedor').select('fornecedor')
+    supabaseClient.from('fornecedor_manutencao').select('nome, cnpj').order('nome')
   ]);
 
-  preencherDatalist('listaPlacas', placas.data, 'placa');
-  preencherDatalist('listaTitulos', titulos.data, 'manutencao');
+  preencherDatalist('listaTitulos', titulos.data, 'titulo');
   
   const selectFilial = document.getElementById('filial');
   selectFilial.innerHTML = '<option value="">Todas</option>';
@@ -32,7 +35,23 @@ async function carregarFiltros() {
       });
   }
 
-  preencherDatalist('listaFornecedores', fornecedores.data, 'fornecedor');
+  const userFilial = getUserFilial();
+  if (userFilial && selectFilial) {
+      selectFilial.value = userFilial;
+      selectFilial.disabled = true;
+  }
+
+  // Preenche datalist de fornecedores seguindo o padrão da aba de inclusão (Nome + CNPJ)
+  const listaFornecedores = document.getElementById('listaFornecedores');
+  if (listaFornecedores) {
+    listaFornecedores.innerHTML = '';
+    fornecedores.data?.forEach(f => {
+      if (f.nome) {
+        const displayValue = f.cnpj ? `${f.nome} (CNPJ: ${f.cnpj})` : f.nome;
+        listaFornecedores.appendChild(new Option(displayValue));
+      }
+    });
+  }
 }
 
 function preencherDatalist(id, data, campo) {
@@ -154,13 +173,21 @@ async function buscarManutencao() {
 }
 
 function aplicarFiltrosQuery(query, filtros) {
+  const userFilial = getUserFilial();
+
   if (filtros.dataInicial) query = query.gte('data', filtros.dataInicial);
   if (filtros.dataFinal) query = query.lte('data', filtros.dataFinal);
   if (filtros.titulo) query = query.ilike('titulo', `%${filtros.titulo}%`);
   if (filtros.nfse) query = query.ilike('notaServico', `%${filtros.nfse}%`);
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
   if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
-  if (filtros.filial) query = query.eq('filial', filtros.filial);
+  
+  if (userFilial) {
+    query = query.eq('filial', userFilial);
+  } else if (filtros.filial) {
+    query = query.eq('filial', filtros.filial);
+  }
+
   if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
   if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
