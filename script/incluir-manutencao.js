@@ -121,12 +121,18 @@ async function carregarTitulosManutencao() {
 }
 
 async function carregarFornecedores() {
-  const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('nome').order('nome');
+  const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('nome, cnpj').order('nome');
   const lista = document.getElementById('listaFornecedores');
   if (error) return console.error('Erro ao carregar fornecedores:', error);
   lista.innerHTML = '';
   listaFornecedoresCache = data || [];
-  listaFornecedoresCache.forEach(f => f.nome && lista.appendChild(new Option(f.nome)));
+  listaFornecedoresCache.forEach(f => {
+    if (f.nome) {
+      // Exibe Nome e CNPJ na lista de sugestões para facilitar a diferenciação
+      const displayValue = f.cnpj ? `${f.nome} (CNPJ: ${f.cnpj})` : f.nome;
+      lista.appendChild(new Option(displayValue));
+    }
+  });
 }
 
 // 💰 Calcular Total Fiscal
@@ -574,7 +580,8 @@ function handleBuscaFornecedorModal(e) {
         resultados.forEach(f => {
             const div = document.createElement('div');
             div.style.cssText = 'padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9em; color: #333;';
-            div.textContent = f.nome || f.fornecedor;
+            div.textContent = f.cnpj ? `${f.nome || f.fornecedor} - CNPJ: ${f.cnpj}` : (f.nome || f.fornecedor);
+            if (f.cnpj) div.title = `CNPJ do Fornecedor: ${f.cnpj}`; // Exibe CNPJ ao passar o mouse
             container.appendChild(div);
         });
     } else {
