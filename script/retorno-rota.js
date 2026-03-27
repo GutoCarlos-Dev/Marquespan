@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupModalListeners('modalMateriais', 'btnSalvarMateriais', saveMateriaisData);
 
     // Listeners para ordenação nos cabeçalhos
-    document.querySelectorAll('#tableRetornoRota thead th[data-sort]').forEach(th => {
+    document.querySelectorAll('#gridRetornoRota thead th[data-sort]').forEach(th => {
         th.addEventListener('click', () => handleSort(th.dataset.sort));
     });
 
@@ -138,13 +138,17 @@ function handleSort(key) {
  * Atualiza visualmente os ícones de ordenação nos cabeçalhos.
  */
 function updateSortIcons() {
-    document.querySelectorAll('#tableRetornoRota thead th[data-sort] i').forEach(icon => {
-        icon.className = 'fas fa-sort';
+    document.querySelectorAll('#gridRetornoRota thead th[data-sort]').forEach(th => {
+        let icon = th.querySelector('i');
+        if (!icon) {
+            icon = document.createElement('i');
+            icon.style.marginLeft = '5px';
+            th.appendChild(icon);
+        }
+        icon.className = th.dataset.sort === sortConfig.key 
+            ? (sortConfig.asc ? 'fas fa-sort-up' : 'fas fa-sort-down') 
+            : 'fas fa-sort';
     });
-    const activeTh = document.querySelector(`#tableRetornoRota thead th[data-sort="${sortConfig.key}"] i`);
-    if (activeTh) {
-        activeTh.className = sortConfig.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
-    }
 }
 
 /**
@@ -366,15 +370,13 @@ function renderGrid() {
             let valA = a[sortConfig.key];
             let valB = b[sortConfig.key];
 
-            if (valA === null || valA === undefined) valA = '';
-            if (valB === null || valB === undefined) valB = '';
+            // Comparação inteligente para strings numéricas (ex: rotas) e textos
+            const comparison = String(valA || '').localeCompare(String(valB || ''), undefined, { 
+                numeric: true, 
+                sensitivity: 'base' 
+            });
 
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-
-            if (valA < valB) return sortConfig.asc ? -1 : 1;
-            if (valA > valB) return sortConfig.asc ? 1 : -1;
-            return 0;
+            return sortConfig.asc ? comparison : -comparison;
         });
     }
 
