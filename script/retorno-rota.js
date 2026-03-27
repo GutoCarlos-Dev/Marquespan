@@ -9,7 +9,7 @@ let sortConfig = { key: null, asc: true }; // Estado da ordenação
 // Mapeamento de colunas da planilha para os nomes dos campos no objeto de dados
 // A ordem aqui DEVE corresponder à ordem das colunas na planilha do usuário
 const COLUMN_MAP = [
-    'placa', 'rota', 'operador_recebimento', 'nome_mot', 'hora_mot', 'nome_aux', 'hora_aux', 'nome_terceiro', 'hora_terceiro',
+    'placa', 'rota', 'operador_recebimento', 'created_at', 'nome_mot', 'hora_mot', 'nome_aux', 'hora_aux', 'nome_terceiro', 'hora_terceiro',
     'carrinhos', 'obs_carrinhos', 'paletes', 'madeira_qtd', 'plastico_qtd', 'caixa_branca_qtd', 'tipo_retorno', 'qtd_clientes',
     'cliente1', 'frances_diurno1', 'frances_noturno1', 'variedades1', 'motivo1', 'nf_dev1', 'obs_nf_dev1',
     'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'nf_dev2', 'obs_nf_dev2',
@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('tbodyRetornoRota').addEventListener('paste', handlePaste);
     document.getElementById('btnSalvarTudo').addEventListener('click', saveAllData);
+    document.getElementById('btnExportarPao').addEventListener('click', () => exportToPDF('pao'));
+    document.getElementById('btnExportarPecas').addEventListener('click', () => exportToPDF('pecas'));
+    document.getElementById('btnExcluirSelecionados').addEventListener('click', deleteSelectedRows);
 
     // Listener para o novo campo de busca
     const searchInput = document.getElementById('searchInput');
@@ -90,6 +93,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listener para delegação de eventos na tabela
     document.getElementById('tbodyRetornoRota').addEventListener('click', handleTableClick);
+
+    // Listener para selecionar tudo
+    document.getElementById('selectAllRows').addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('.row-selector');
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
 });
 
 /**
@@ -157,6 +166,44 @@ async function handleTableClick(e) {
             await deleteRow(rowIndex);
         }
     }
+}
+
+/**
+ * Exclui múltiplas linhas selecionadas na grade.
+ */
+async function deleteSelectedRows() {
+    const checkboxes = document.querySelectorAll('.row-selector:checked');
+    if (checkboxes.length === 0) {
+        alert('Selecione pelo menos uma linha para excluir.');
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} linha(s)?`)) return;
+
+    // Obtém os índices em ordem decrescente para não bagunçar o splice
+    const indices = Array.from(checkboxes)
+        .map(cb => parseInt(cb.dataset.index, 10))
+        .sort((a, b) => b - a);
+
+    const idsToDelete = indices
+        .map(index => gridData[index].id)
+        .filter(Boolean);
+
+    if (idsToDelete.length > 0) {
+        try {
+            const { error } = await supabaseClient
+                .from('retorno_rota')
+                .delete()
+                .in('id', idsToDelete);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Erro ao excluir registros do banco:', error);
+            alert('Erro ao excluir alguns registros do banco de dados.');
+        }
+    }
+
+    indices.forEach(index => gridData.splice(index, 1));
+    renderGrid();
 }
 
 /**
@@ -296,6 +343,10 @@ function renderGrid() {
     const tbody = document.getElementById('tbodyRetornoRota');
     tbody.innerHTML = '';
 
+    // Resetar o checkbox de selecionar tudo
+    const selectAll = document.getElementById('selectAllRows');
+    if (selectAll) selectAll.checked = false;
+
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
 
@@ -352,6 +403,7 @@ function renderGrid() {
 
         // Cria as células principais
         tr.innerHTML = `
+            <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>
             <td><input type="text" value="${rowData.placa || ''}" data-field="placa"></td>
             <td><input type="text" value="${rowData.rota || ''}" data-field="rota"></td>
             <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
@@ -763,6 +815,124 @@ window.sharePartsReturnOnWhatsApp = function(index) {
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 };
+
+/**
+ * Gera um PDF detalhado com todas as devoluções registradas na data selecionada.
+ * @param {string} type - O tipo de exportação ('pao' ou 'pecas').
+ */
+async function exportToPDF(type) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    const dataSelecionada = document.getElementById('dataRetorno').value;
+    if (!dataSelecionada) {
+        alert('Por favor, selecione uma data para exportar.');
+        return;
+    }
+    const dataFormatada = new Date(dataSelecionada + 'T00:00:00').toLocaleDateString('pt-BR');
+
+    // Filtrar apenas registros que possuem algum tipo de retorno/devolução
+    const rowsWithReturns = gridData.filter(row => {
+        if (type === 'pao') {
+            return !!(row.cliente1 || row.nf_dev1 || row.frances_diurno1 || row.frances_noturno1 || row.variedades1 || row.motivo1 || row.obs_nf_dev1);
+        } else if (type === 'pecas') {
+            return row.retorno_pecas === 1;
+        }
+        return false;
+    });
+
+    if (rowsWithReturns.length === 0) {
+        alert(`Nenhuma devolução de ${type === 'pao' ? 'pão' : 'peças'} encontrada para os dados atuais.`);
+        return;
+    }
+
+    // --- CABEÇALHO ---
+    const getLogoBase64 = async () => {
+        try {
+            const response = await fetch('logo.png');
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) { return null; }
+    };
+    const logoBase64 = await getLogoBase64();
+
+    if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 10, 40, 15);
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 105, 55); // Verde Marquespan
+    const relatorioTitulo = type === 'pao' ? 'Relatório de Devoluções de Pão' : 'Relatório de Retorno de Peças';
+    doc.text(relatorioTitulo, 60, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Data de Referência: ${dataFormatada}`, 60, 27);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 27, { align: 'right' });
+
+    // --- PREPARAÇÃO DOS DADOS ---
+    const tableRows = [];
+
+    rowsWithReturns.forEach(row => {
+        if (type === 'pao') {
+            // Devoluções de Pão (Clientes 1 a 4)
+            for (let i = 1; i <= 4; i++) {
+                if (row[`cliente${i}`] || row[`nf_dev${i}`]) {
+                    const detalhes = [
+                        `Cliente: ${row[`cliente${i}`] || '-'}`,
+                        `NF: ${row[`nf_dev${i}`] || '-'}`,
+                        `Motivo: ${row[`motivo${i}`] || '-'}`,
+                        `Francês (D/N): ${row[`frances_diurno${i}`] || 0} / ${row[`frances_noturno${i}`] || 0}`,
+                        `Variedades: ${row[`variedades${i}`] || '-'}`,
+                        `Obs: ${row[`obs_nf_dev${i}`] || '-'}`
+                    ].join(' | ');
+
+                    tableRows.push([
+                        row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-',
+                        row.operador_recebimento || '-',
+                        row.rota || '-',
+                        row.placa || '-',
+                        row.nome_mot || '-',
+                        'DEVOLUÇÃO PÃO',
+                        detalhes,
+                        row.nome_supervisor || '-'
+                    ]);
+                }
+            }
+        } else if (type === 'pecas') {
+            // Retorno de Peças
+            tableRows.push([
+                row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-',
+                row.operador_recebimento || '-',
+                row.rota || '-',
+                row.placa || '-',
+                row.nome_mot || '-',
+                'RETORNO PEÇAS',
+                `Descrição: ${row.pecas_desc || 'Não informada'}`,
+                row.nome_supervisor || '-'
+            ]);
+        }
+    });
+
+    doc.autoTable({
+        startY: 35,
+        head: [['Lançamento', 'Operador', 'Rota', 'Placa', 'Motorista', 'Tipo Evento', 'Descrição Detalhada para Auditoria', 'Supervisor']],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
+        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+        columnStyles: {
+            4: { cellWidth: 35 }, // Motorista (espaço otimizado)
+            6: { cellWidth: 120 } // Descrição Detalhada para Auditoria (espaço ampliado)
+        }
+    });
+
+    const filename = type === 'pao' ? `auditoria_devolucoes_pao_${dataSelecionada}.pdf` : `auditoria_retorno_pecas_${dataSelecionada}.pdf`;
+    doc.save(filename);
+}
 
 window.shareBreadReturnOnWhatsApp = function(index) {
     const item = gridData[index];

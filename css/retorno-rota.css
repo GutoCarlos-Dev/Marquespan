@@ -80,6 +80,11 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     vertical-align: middle;
 }
 
+/* Padding para células que contêm apenas texto (como a Data de Lançamento) */
+.data-grid td:not(:has(input)) {
+    padding: 10px 12px;
+}
+
 /* Estilo dos inputs dentro da tabela */
 .data-grid td input[type="text"],
 .data-grid td input[type="time"] {
@@ -183,8 +188,9 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: 100%;
+    min-height: 100%;
     justify-content: center;
+    padding-bottom: 10px; /* Espaço adicional solicitado após o último botão */
 }
 
 .actions-container .btn-glass {
