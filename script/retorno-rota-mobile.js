@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 let allData = []; // Cache dos dados do dia
 let currentItem = null; // Item sendo editado no modal
 let supervisoresCache = []; // Cache para a lista de supervisores
+let motoristasCache = []; // Cache para a lista de motoristas
 
 function getCurrentUserName() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -19,6 +20,20 @@ async function carregarSupervisores() {
         supervisoresCache = [...new Set(data.map(item => item.supervisor).filter(Boolean))].sort();
     } catch (err) {
         console.error('Erro ao carregar supervisores:', err);
+    }
+}
+
+async function carregarMotoristas() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('funcionario')
+            .select('nome')
+            .eq('funcao', 'Motorista')
+            .eq('status', 'Ativo');
+        if (error) throw error;
+        motoristasCache = data.map(item => item.nome).filter(Boolean).sort();
+    } catch (err) {
+        console.error('Erro ao carregar motoristas:', err);
     }
 }
 
@@ -52,7 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
     document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
 
-    // Carrega dados auxiliares
+    // Carrega dados auxiliares (Supervisores e Motoristas)
+    await carregarMotoristas();
     await carregarSupervisores();
 
     // Listener para o modal de materiais (paletes) na versão mobile
@@ -173,9 +189,25 @@ function openEditModal(item) {
     currentItem = item;
     document.getElementById('modalTitle').textContent = `Registrar Retorno - ${item.placa}`;
 
-    // Se não houver horário de retorno registrado, preenche automaticamente com o horário atual (HH:mm)
+    // Popula o select de motoristas
+    const selectMotorista = document.getElementById('modalMotorista');
+    if (selectMotorista) {
+        const motoristaAtual = item.nome_mot || '';
+        
+        // Criar um Set para garantir que o motorista atual esteja na lista mesmo que não esteja no cache de ativos
+        const motoristasParaExibir = new Set(motoristasCache);
+        if (motoristaAtual) motoristasParaExibir.add(motoristaAtual);
+        const listaOrdenada = Array.from(motoristasParaExibir).sort();
+
+        selectMotorista.innerHTML = '<option value="">Selecione o Motorista</option>';
+        listaOrdenada.forEach(m => selectMotorista.add(new Option(m, m)));
+        selectMotorista.value = motoristaAtual;
+    }
+
+    // Preenche automaticamente com o horário atual se estiver vazio
     const agora = new Date();
-    const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + agora.getMinutes().toString().padStart(2, '0');
+    // Formato HH:mm:ss para ser compatível com o step="1" do input
+    const horaAtual = agora.toTimeString().split(' ')[0];
     
     document.getElementById('modalHoraMotorista').value = item.hora_mot || horaAtual;
     document.getElementById('modalObs').value = item.obs || '';
@@ -322,6 +354,7 @@ async function saveRetorno() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
     // Coleta dados do modal principal
+    const motorista = document.getElementById('modalMotorista').value;
     const horaMotorista = document.getElementById('modalHoraMotorista').value;
     const obs = document.getElementById('modalObs').value;
 
@@ -358,6 +391,7 @@ async function saveRetorno() {
     };
 
     const updateData = {
+        nome_mot: motorista || null,
         hora_mot: horaMotorista || null,
         hora_aux: horaMotorista || null, // Preenche hora do auxiliar
         hora_terceiro: horaMotorista || null, // Preenche hora do terceiro
