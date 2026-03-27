@@ -98,7 +98,7 @@ async function carregarFiliais() {
   const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
   if (error) return console.error('Erro ao carregar filiais:', error);
   
-  const selects = ['filial', 'tabFornFilial', 'modalFornFilial'];
+  const selects = ['filial', 'tabFornFilial', 'modalFornFilial', 'tabTituloFilial'];
   selects.forEach(id => {
       const select = document.getElementById(id);
       if (select) {
@@ -806,6 +806,7 @@ function renderTabelaTitulos() {
 
         tr.innerHTML = `
             <td>${t.titulo}</td>
+            <td>${t.filial || '-'}</td>
             <td style="text-align:center; display: flex; gap: 8px; justify-content: center;">${btnEditar} ${btnExcluir}</td>
         `;
         tbody.appendChild(tr);
@@ -823,6 +824,7 @@ window.editarTituloTab = (id) => {
 
     tituloTabEditingId = id;
     document.getElementById('tabTituloNome').value = tit.titulo || '';
+    document.getElementById('tabTituloFilial').value = tit.filial || '';
 
     const btn = document.querySelector('button[onclick="salvarTituloTab()"]');
     if (btn) {
@@ -839,14 +841,15 @@ window.editarTituloTab = (id) => {
 
 async function salvarTituloTab() {
     const titulo = document.getElementById('tabTituloNome').value.trim();
+    const filial = document.getElementById('tabTituloFilial').value;
     if (!titulo) return alert('Título é obrigatório');
     
     let error;
     if (tituloTabEditingId) {
-        const { error: err } = await supabaseClient.from('titulo_manutencao').update({ titulo }).eq('id', tituloTabEditingId);
+        const { error: err } = await supabaseClient.from('titulo_manutencao').update({ titulo, filial }).eq('id', tituloTabEditingId);
         error = err;
     } else {
-        const { error: err } = await supabaseClient.from('titulo_manutencao').insert([{ titulo }]);
+        const { error: err } = await supabaseClient.from('titulo_manutencao').insert([{ titulo, filial }]);
         error = err;
     }
 
@@ -861,6 +864,7 @@ async function salvarTituloTab() {
     }
 
     document.getElementById('tabTituloNome').value = '';
+    document.getElementById('tabTituloFilial').value = '';
     carregarTabelaTitulos();
     carregarTitulosManutencao(); // Atualiza o datalist principal
 }
