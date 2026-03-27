@@ -398,6 +398,26 @@ function renderGrid() {
         const whatsappPartsIcon = hasPartsReturn ? 
             `<i class="fab fa-whatsapp whatsapp-btn blue" onclick="event.stopPropagation(); sharePartsReturnOnWhatsApp(${index})" title="Compartilhar Retorno de Peças"></i>` : '';
 
+        // Construção do resumo para o tooltip de Materiais
+        let materiaisTooltip = '';
+        if (rowData.carrinhos) materiaisTooltip += `• Carrinhos: ${rowData.carrinhos}${rowData.obs_carrinhos ? ` (${rowData.obs_carrinhos})` : ''}\n`;
+        if (rowData.paletes) materiaisTooltip += `• Paletes: Madeira(${rowData.madeira_qtd || 0}) Plástico(${rowData.plastico_qtd || 0}) Branca(${rowData.caixa_branca_qtd || 0})\n`;
+        if (rowData.retorno_pecas === 1) materiaisTooltip += `• Retorno de Peças: ${rowData.pecas_desc || 'Sim'}`;
+        if (!materiaisTooltip) materiaisTooltip = 'Nenhum material registrado';
+
+        // Construção do resumo para o tooltip de Devoluções
+        let devolucoesTooltip = '';
+        for (let i = 1; i <= 4; i++) {
+            if (rowData[`cliente${i}`] || rowData[`nf_dev${i}`]) {
+                const cli = rowData[`cliente${i}`] || `Cliente ${i}`;
+                const mot = rowData[`motivo${i}`] || 'Motivo N/I';
+                const paes = `${rowData[`frances_diurno${i}`] || 0}D/${rowData[`frances_noturno${i}`] || 0}N`;
+                const variedades = rowData[`variedades${i}`] ? `\n  ↳ Variedades: ${rowData[`variedades${i}`]}` : '';
+                devolucoesTooltip += `• ${cli}: ${mot} (${paes})${variedades}\n`;
+            }
+        }
+        if (!devolucoesTooltip) devolucoesTooltip = 'Nenhuma devolução registrada';
+
         const tr = document.createElement('tr');
         tr.dataset.rowIndex = index;
 
@@ -415,13 +435,13 @@ function renderGrid() {
             <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro"></td>
             <td>
                 <div class="cell-action-container">
-                    <button class="btn-modal-action btn-materiais">Materiais</button>
+                    <button class="btn-modal-action btn-materiais" title="${materiaisTooltip.trim()}">Materiais</button>
                     ${whatsappPartsIcon}
                 </div>
             </td>
             <td>
                 <div class="cell-action-container">
-                    <button class="btn-modal-action btn-devolucoes">Devoluções</button>
+                    <button class="btn-modal-action btn-devolucoes" title="${devolucoesTooltip.trim()}">Devoluções</button>
                     ${whatsappBreadIcon}
                 </div>
             </td>
