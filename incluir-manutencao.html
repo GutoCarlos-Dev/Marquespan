@@ -411,12 +411,15 @@
             
             <div class="glass-panel-inner" style="grid-column: 1 / -1;">
                 <h3><i class="fas fa-list"></i> Títulos Cadastrados</h3>
-                <div class="table-responsive">
-                    <table>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="text" id="searchTituloTab" placeholder="🔍 Buscar por título..." class="glass-input">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;">
+                    <table class="data-grid">
                         <thead>
                             <tr>
-                                <th>Título</th>
-                                <th style="width: 80px;">Ações</th>
+                                <th class="sortable-tit" data-field="titulo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 1;">Título <i class="fas fa-sort"></i></th>
+                                <th style="width: 100px; position: sticky; top: 0; background: #f8f9fa; z-index: 1; text-align: center;">AÇÕES</th>
                             </tr>
                         </thead>
                         <tbody id="tabelaTitulosTab"></tbody>

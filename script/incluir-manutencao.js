@@ -10,6 +10,9 @@ let listaFornecedoresCache = []; // Cache para busca rápida no modal
 let fornecedoresGridData = []; // Dados originais para o grid da aba
 let fornecedoresSort = { field: 'nome', asc: true };
 let fornecedorTabEditingId = null;
+let titulosGridData = []; // Dados originais para o grid da aba títulos
+let titulosSort = { field: 'titulo', asc: true };
+let tituloTabEditingId = null;
 
 // 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
@@ -760,30 +763,103 @@ async function handleImportarFornecedores(e) {
 
 // Títulos
 async function carregarTabelaTitulos() {
+    try {
+        const { data, error } = await supabaseClient.from('titulo_manutencao').select('*');
+        if (error) throw error;
+        titulosGridData = data || [];
+        renderTabelaTitulos();
+    } catch (error) {
+        console.error('Erro ao carregar títulos:', error);
+    }
+}
+
+function renderTabelaTitulos() {
     const tbody = document.getElementById('tabelaTitulosTab');
-    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Carregando...</td></tr>';
-    
-    const { data, error } = await supabaseClient.from('titulo_manutencao').select('*').order('titulo');
-    if (error) return console.error(error);
-    
+    if (!tbody) return;
+
+    const searchTerm = document.getElementById('searchTituloTab')?.value.toLowerCase() || '';
+    const userCanDelete = canDelete();
+
+    // Filtragem
+    let filtered = titulosGridData.filter(t => 
+        (t.titulo || '').toLowerCase().includes(searchTerm)
+    );
+
+    // Ordenação
+    filtered.sort((a, b) => {
+        let valA = a[titulosSort.field] || '';
+        let valB = b[titulosSort.field] || '';
+        const comparison = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+        return titulosSort.asc ? comparison : -comparison;
+    });
+
     tbody.innerHTML = '';
-    data.forEach(t => {
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">Nenhum título encontrado.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(t => {
         const tr = document.createElement('tr');
+        const btnExcluir = userCanDelete ? `<button class="btn-icon delete" onclick="excluirTituloTab('${t.id}')" title="Excluir"><i class="fas fa-trash"></i></button>` : '';
+        const btnEditar = `<button class="btn-icon edit" onclick="editarTituloTab('${t.id}')" style="color: #007bff;" title="Editar"><i class="fas fa-edit"></i></button>`;
+
         tr.innerHTML = `
             <td>${t.titulo}</td>
-            <td><button class="btn-icon delete" onclick="excluirTituloTab('${t.id}')"><i class="fas fa-trash"></i></button></td>
+            <td style="text-align:center; display: flex; gap: 8px; justify-content: center;">${btnEditar} ${btnExcluir}</td>
         `;
         tbody.appendChild(tr);
     });
+
+    // Atualiza ícones de ordenação
+    document.querySelectorAll('.sortable-tit i').forEach(i => i.className = 'fas fa-sort');
+    const activeIcon = document.querySelector(`.sortable-tit[data-field="${titulosSort.field}"] i`);
+    if (activeIcon) activeIcon.className = titulosSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+}
+
+window.editarTituloTab = (id) => {
+    const tit = titulosGridData.find(t => t.id == id);
+    if (!tit) return;
+
+    tituloTabEditingId = id;
+    document.getElementById('tabTituloNome').value = tit.titulo || '';
+
+    const btn = document.querySelector('button[onclick="salvarTituloTab()"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-sync"></i> Atualizar Título';
+        btn.classList.remove('btn-green');
+        btn.classList.add('btn-blue');
+    }
+    
+    // Foco e scroll para o campo de edição
+    const input = document.getElementById('tabTituloNome');
+    input.focus();
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function salvarTituloTab() {
     const titulo = document.getElementById('tabTituloNome').value.trim();
     if (!titulo) return alert('Título é obrigatório');
     
-    const { error } = await supabaseClient.from('titulo_manutencao').insert([{ titulo }]);
+    let error;
+    if (tituloTabEditingId) {
+        const { error: err } = await supabaseClient.from('titulo_manutencao').update({ titulo }).eq('id', tituloTabEditingId);
+        error = err;
+    } else {
+        const { error: err } = await supabaseClient.from('titulo_manutencao').insert([{ titulo }]);
+        error = err;
+    }
+
     if (error) return alert('Erro ao salvar: ' + error.message);
     
+    tituloTabEditingId = null;
+    const btn = document.querySelector('button[onclick="salvarTituloTab()"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-plus"></i> Adicionar Título';
+        btn.classList.remove('btn-blue');
+        btn.classList.add('btn-green');
+    }
+
     document.getElementById('tabTituloNome').value = '';
     carregarTabelaTitulos();
     carregarTitulosManutencao(); // Atualiza o datalist principal
@@ -838,6 +914,23 @@ document.addEventListener('DOMContentLoaded', () => {
               fornecedoresSort.asc = true;
           }
           renderTabelaFornecedores();
+      });
+  });
+
+  // Listeners para Busca e Ordenação na aba Títulos
+  const searchTit = document.getElementById('searchTituloTab');
+  if (searchTit) searchTit.addEventListener('input', renderTabelaTitulos);
+
+  document.querySelectorAll('.sortable-tit').forEach(th => {
+      th.addEventListener('click', () => {
+          const field = th.dataset.field;
+          if (titulosSort.field === field) {
+              titulosSort.asc = !titulosSort.asc;
+          } else {
+              titulosSort.field = field;
+              titulosSort.asc = true;
+          }
+          renderTabelaTitulos();
       });
   });
 
