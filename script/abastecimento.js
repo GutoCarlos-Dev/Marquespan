@@ -294,8 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            if (this.extFilial) {
+                this.extFilial.addEventListener('change', () => this.loadPostosOptions());
+            }
+
             // Inicialização das novas abas
-            if (this.extPosto) this.loadPostosOptions();
             this.loadFiliaisOptions();
             this.loadRotasOptions();
             if (this.tableBodyPostos) this.renderPostosTable();
@@ -1222,14 +1225,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadFiliaisOptions() {
             try {
-                const { data, error } = await supabaseClient.from('filiais').select('nome').order('nome');
+                const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
                 if (error) throw error;
                 
                 const options = '<option value="">Selecione a Filial</option>' + 
-                    (data || []).map(f => `<option value="${f.nome}">${f.nome}</option>`).join('');
+                    (data || []).map(f => {
+                        const val = f.sigla || f.nome;
+                        const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                        return `<option value="${val}">${text}</option>`;
+                    }).join('');
 
-                if (this.extFilial) this.extFilial.innerHTML = options;
-                if (this.postoFilial) this.postoFilial.innerHTML = options;
+                const userFilial = this.getUserFilial();
+                if (this.extFilial) {
+                    this.extFilial.innerHTML = options;
+                    if (userFilial) {
+                        this.extFilial.value = userFilial;
+                        this.extFilial.disabled = true;
+                    }
+                    this.loadPostosOptions(); // Carrega postos filtrados pela filial definida
+                }
+                if (this.postoFilial) {
+                    this.postoFilial.innerHTML = options;
+                    if (userFilial) {
+                        this.postoFilial.value = userFilial;
+                        this.postoFilial.disabled = true;
+                    }
+                }
             } catch (error) {
                 console.error('Erro ao carregar filiais:', error);
             }
@@ -1270,6 +1291,8 @@ document.addEventListener('DOMContentLoaded', () => {
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
 
+            const filialFiltro = this.extFilial ? this.extFilial.value : this.getUserFilial();
+
             try {
                 // --- CORREÇÃO: Busca todos os postos, contornando o limite padrão de 1000 registros ---
                 let allPostos = [];
@@ -1278,11 +1301,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 let keepFetching = true;
 
                 while(keepFetching) {
-                    const { data, error } = await supabaseClient
+                    let query = supabaseClient
                         .from('postos')
                         .select('id, razao_social, cnpj')
-                        .order('razao_social')
-                        .range(from, from + step - 1);
+                        .order('razao_social');
+
+                    if (filialFiltro) {
+                        query = query.eq('filial', filialFiltro);
+                    }
+
+                    const { data, error } = await query.range(from, from + step - 1);
                     
                     if (error) throw error;
 
@@ -1614,6 +1642,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 let query = supabaseClient
                     .from('abastecimento_externo')
                     .select('*, postos(razao_social)');
+
+                const userFilial = this.getUserFilial();
+                if (userFilial) {
+                    query = query.eq('filial', userFilial);
+                }
 
                 // Adiciona filtro de data
                 if (this.filtroExtDataInicial && this.filtroExtDataFinal) {
@@ -1994,11 +2027,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const step = 1000;
                 let keepFetching = true;
 
+                const userFilial = this.getUserFilial();
+
                 while(keepFetching) {
-                    const { data, error } = await supabaseClient
+                    let query = supabaseClient
                         .from('postos')
-                        .select('*')
-                        .range(from, from + step - 1);
+                        .select('*');
+
+                    if (userFilial) query = query.eq('filial', userFilial);
+
+                    const { data, error } = await query.range(from, from + step - 1);
 
                     if (error) {
                         console.error("Erro ao buscar postos para a tabela:", error);
