@@ -464,6 +464,7 @@ function renderGrid() {
         tr.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', async (e) => {
                 const field = e.target.dataset.field;
+                if (!field) return; // Ignora inputs que não possuem mapeamento de campo (ex: checkbox de seleção)
                 gridData[index][field] = e.target.value;
                 if (field.startsWith('hora_')) {
                     applyRowStyle(e.target.closest('tr'), gridData[index]);
@@ -697,10 +698,10 @@ function mapRowToPayload(rowData, dataRetorno) {
         nome_supervisor: rowData.nome_supervisor,
         obs: rowData.obs
     };
-
-    if (rowData.id) {
-        item.id = rowData.id;
-    }
+    
+    // Removido o envio do ID no payload para evitar erros de restrição nula em salvamentos em massa (batch upsert).
+    // O banco de dados usará a constraint 'data_retorno, placa' para identificar se deve atualizar ou inserir.
+    // if (rowData.id) { item.id = rowData.id; }
 
     for (let i = 1; i <= 4; i++) {
         item[`cliente${i}`] = rowData[`cliente${i}`];
