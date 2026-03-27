@@ -7,6 +7,9 @@ let veiculosCache = []; // Cache para busca rápida de modelo
 let arquivosParaUpload = []; // Novos arquivos (File objects)
 let arquivosExistentes = []; // Arquivos já salvos no banco ({nome, path})
 let listaFornecedoresCache = []; // Cache para busca rápida no modal
+let fornecedoresGridData = []; // Dados originais para o grid da aba
+let fornecedoresSort = { field: 'nome', asc: true };
+let fornecedorTabEditingId = null;
 
 // 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
@@ -38,6 +41,16 @@ function mostrarPainelInterno(id) {
   } else if (id === 'abaTitulos') {
       carregarTabelaTitulos();
   }
+}
+
+function getUserLevel() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? (usuario.nivel || '').toLowerCase() : null;
+}
+
+function canDelete() {
+    const nivel = getUserLevel();
+    return nivel === 'administrador' || nivel === 'gerencia';
 }
 
 // 👤 Preencher campo de usuário logado
@@ -570,25 +583,78 @@ function handleBuscaFornecedorModal(e) {
 
 // Fornecedores
 async function carregarTabelaFornecedores() {
+    try {
+        const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('*');
+        if (error) throw error;
+        fornecedoresGridData = data || [];
+        renderTabelaFornecedores();
+    } catch (error) {
+        console.error('Erro ao carregar fornecedores:', error);
+    }
+}
+
+function renderTabelaFornecedores() {
     const tbody = document.getElementById('tabelaFornecedoresTab');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
-    
-    const { data, error } = await supabaseClient.from('fornecedor_manutencao').select('*').order('nome');
-    if (error) return console.error(error);
-    
+    if (!tbody) return;
+
+    const searchTerm = document.getElementById('searchFornecedorTab')?.value.toLowerCase() || '';
+    const userCanDelete = canDelete();
+
+    // Filtragem
+    let filtered = fornecedoresGridData.filter(f => 
+        (f.nome || '').toLowerCase().includes(searchTerm) || 
+        (f.cnpj || '').toLowerCase().includes(searchTerm)
+    );
+
+    // Ordenação
+    filtered.sort((a, b) => {
+        let valA = a[fornecedoresSort.field] || '';
+        let valB = b[fornecedoresSort.field] || '';
+        const comparison = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+        return fornecedoresSort.asc ? comparison : -comparison;
+    });
+
     tbody.innerHTML = '';
-    data.forEach(f => {
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum fornecedor encontrado.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(f => {
         const tr = document.createElement('tr');
+        const btnExcluir = userCanDelete ? `<button class="btn-icon delete" onclick="excluirFornecedorTab('${f.id}')" title="Excluir"><i class="fas fa-trash"></i></button>` : '';
+        const btnEditar = `<button class="btn-icon edit" onclick="editarFornecedorTab('${f.id}')" style="color: #007bff;" title="Editar"><i class="fas fa-edit"></i></button>`;
+        
         tr.innerHTML = `
             <td>${f.nome}</td>
             <td>${f.cnpj || '-'}</td>
             <td>${f.telefone || '-'}</td>
             <td>${f.filial || '-'}</td>
-            <td><button class="btn-icon delete" onclick="excluirFornecedorTab('${f.id}')"><i class="fas fa-trash"></i></button></td>
+            <td style="text-align:center; display: flex; gap: 8px; justify-content: center;">${btnEditar} ${btnExcluir}</td>
         `;
         tbody.appendChild(tr);
     });
+
+    // Atualiza ícones de ordenação
+    document.querySelectorAll('.sortable-forn i').forEach(i => i.className = 'fas fa-sort');
+    const activeIcon = document.querySelector(`.sortable-forn[data-field="${fornecedoresSort.field}"] i`);
+    if (activeIcon) activeIcon.className = fornecedoresSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 }
+
+window.editarFornecedorTab = (id) => {
+    const forn = fornecedoresGridData.find(f => f.id == id);
+    if (!forn) return;
+
+    fornecedorTabEditingId = id;
+    document.getElementById('tabFornNome').value = forn.nome || '';
+    document.getElementById('tabFornCnpj').value = forn.cnpj || '';
+    document.getElementById('tabFornTelefone').value = forn.telefone || '';
+    document.getElementById('tabFornFilial').value = forn.filial || '';
+
+    const btn = document.querySelector('button[onclick="salvarFornecedorTab()"]');
+    if (btn) btn.innerHTML = '<i class="fas fa-sync"></i> Atualizar Fornecedor';
+    document.getElementById('tabFornNome').focus();
+};
 
 async function salvarFornecedorTab() {
     const nome = document.getElementById('tabFornNome').value.trim();
@@ -598,9 +664,21 @@ async function salvarFornecedorTab() {
     
     if (!nome) return alert('Nome é obrigatório');
     
-    const { error } = await supabaseClient.from('fornecedor_manutencao').insert([{ nome, cnpj, telefone, filial }]);
+    let error;
+    if (fornecedorTabEditingId) {
+        const { error: err } = await supabaseClient.from('fornecedor_manutencao').update({ nome, cnpj, telefone, filial }).eq('id', fornecedorTabEditingId);
+        error = err;
+    } else {
+        const { error: err } = await supabaseClient.from('fornecedor_manutencao').insert([{ nome, cnpj, telefone, filial }]);
+        error = err;
+    }
+
     if (error) return alert('Erro ao salvar: ' + error.message);
     
+    fornecedorTabEditingId = null;
+    const btn = document.querySelector('button[onclick="salvarFornecedorTab()"]');
+    if (btn) btn.innerHTML = '<i class="fas fa-plus"></i> Adicionar Fornecedor';
+
     document.getElementById('tabFornNome').value = '';
     document.getElementById('tabFornCnpj').value = '';
     document.getElementById('tabFornTelefone').value = '';
@@ -745,6 +823,23 @@ document.addEventListener('DOMContentLoaded', () => {
       btnImportarFornecedores.addEventListener('click', () => fileImportarFornecedores.click());
       fileImportarFornecedores.addEventListener('change', handleImportarFornecedores);
   }
+
+  // Listeners para Busca e Ordenação na aba Fornecedores
+  const searchForn = document.getElementById('searchFornecedorTab');
+  if (searchForn) searchForn.addEventListener('input', renderTabelaFornecedores);
+
+  document.querySelectorAll('.sortable-forn').forEach(th => {
+      th.addEventListener('click', () => {
+          const field = th.dataset.field;
+          if (fornecedoresSort.field === field) {
+              fornecedoresSort.asc = !fornecedoresSort.asc;
+          } else {
+              fornecedoresSort.field = field;
+              fornecedoresSort.asc = true;
+          }
+          renderTabelaFornecedores();
+      });
+  });
 
   // Listener para preencher o modelo quando a placa muda
   const veiculoInput = document.getElementById('veiculo');
