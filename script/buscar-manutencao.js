@@ -3,6 +3,8 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
+let currentSort = { column: 'data', direction: 'desc' };
+
 // Paginação removida para exibir todos os resultados
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -15,6 +17,16 @@ function preencherUsuarioLogado() {
 function getUserFilial() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   return usuario?.filial || null;
+}
+
+function getUserLevel() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  return usuario ? (usuario.nivel || '').toLowerCase() : null;
+}
+
+function canDelete() {
+  const nivel = getUserLevel();
+  return ['administrador', 'gerencia', 'adm_logistica'].includes(nivel);
 }
 
 async function carregarFiltros() {
@@ -169,14 +181,53 @@ async function buscarManutencao() {
   todosRegistros = manutencoesComValor;
 
   // Preencher a tabela com os dados enriquecidos
-  renderizarTabelaCompleta();
+  filtrarERenderizarTabela();
+}
+
+function filtrarERenderizarTabela() {
+    const searchTerm = document.getElementById('searchResultadosLocal')?.value.toLowerCase() || '';
+    
+    // 1. Filtragem Local (Placa e Descrição)
+    let filtrados = todosRegistros.filter(m => 
+        (m.veiculo || '').toLowerCase().includes(searchTerm) || 
+        (m.descricao || '').toLowerCase().includes(searchTerm)
+    );
+
+    // 2. Ordenação
+    const { column, direction } = currentSort;
+    const factor = direction === 'asc' ? 1 : -1;
+
+    filtrados.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        if (column === 'data') {
+            valA = new Date(valA || 0);
+            valB = new Date(valB || 0);
+        } else if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = (valB || '').toLowerCase();
+        }
+
+        if (valA < valB) return -1 * factor;
+        if (valA > valB) return 1 * factor;
+        return 0;
+    });
+
+    // 3. Atualiza Totais da busca filtrada
+    const valorTotalFiltrado = filtrados.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+    document.getElementById('totalRegistros').textContent = filtrados.length;
+    document.getElementById('valorTotal').textContent = formatarValor(valorTotalFiltrado);
+
+    preencherTabela(filtrados);
+    updateSortIcons();
 }
 
 function aplicarFiltrosQuery(query, filtros) {
   const userFilial = getUserFilial();
 
-  if (filtros.dataInicial) query = query.gte('data', filtros.dataInicial);
-  if (filtros.dataFinal) query = query.lte('data', filtros.dataFinal);
+  if (filtros.dataInicial) query = query.gte('data', `${filtros.dataInicial}T00:00:00-03:00`);
+  if (filtros.dataFinal) query = query.lte('data', `${filtros.dataFinal}T23:59:59-03:00`);
   if (filtros.titulo) query = query.ilike('titulo', `%${filtros.titulo}%`);
   if (filtros.nfse) query = query.ilike('notaServico', `%${filtros.nfse}%`);
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
@@ -211,30 +262,24 @@ async function fetchItensEmLotes(ids) {
     return allItems;
 }
 
-function renderizarTabelaCompleta() {
-    preencherTabela(todosRegistros); // Renderiza todos os registros de uma vez
-
-    // Atualiza totais gerais
-    const valorTotalGeral = todosRegistros.reduce((acc, curr) => acc + (curr.valor || 0), 0);
-    const totalRegistrosCount = todosRegistros.length;
-
-    document.getElementById('totalRegistros').textContent = totalRegistrosCount;
-    document.getElementById('valorTotal').textContent = formatarValor(valorTotalGeral);
-    document.getElementById('paginationContainer').classList.add('hidden'); // Sempre esconde a paginação
-}
-
 // 📋 Preencher tabela de resultados
 function preencherTabela(registros) {
   const tabela = document.getElementById('tabelaResultados');
   tabela.innerHTML = '';
 
+  const userCanDelete = canDelete();
+
   registros.forEach(m => {
+    const btnExcluirHtml = userCanDelete 
+      ? `<button class="btn-icon delete btn-excluir" data-id="${m.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>`
+      : '';
+
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td style="display: flex; gap: 5px;">
         <button class="btn-icon view btn-visualizar" data-id="${m.id}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button class="btn-icon edit btn-editar" data-id="${m.id}" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon delete btn-excluir" data-id="${m.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+        ${btnExcluirHtml}
       </td>
       <td>${m.usuario || ''}</td>
       <td>${m.titulo || ''}</td>
@@ -258,6 +303,26 @@ function formatarValor(valor) {
   const v = parseFloat(valor);
   if (isNaN(v)) return '0,00';
   return v.toFixed(2).replace('.', ',');
+}
+
+function handleSort(column) {
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+    filtrarERenderizarTabela();
+}
+
+function updateSortIcons() {
+    document.querySelectorAll('th.sortable i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+        const th = icon.closest('th');
+        if (th.dataset.sort === currentSort.column) {
+            icon.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+    });
 }
 
 // 🔗 Abrir manutenção
@@ -417,6 +482,11 @@ async function visualizarManutencao(id) {
 
 // �️ Excluir manutenção
 async function excluirManutencao(id) {
+  if (!canDelete()) {
+    alert('Você não tem permissão para excluir registros.');
+    return;
+  }
+
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
   try {
@@ -557,7 +627,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  setupColumnResizing();
+  // Listener para busca local
+  document.getElementById('searchResultadosLocal')?.addEventListener('input', filtrarERenderizarTabela);
+
+  // Listeners para ordenação
+  document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+          handleSort(th.dataset.sort);
+      });
+  });
+
+  if (typeof setupColumnResizing === 'function') setupColumnResizing();
 
   // ✅ Delegação de Eventos para a Tabela de Resultados
   const tabelaResultados = document.getElementById('tabelaResultados');

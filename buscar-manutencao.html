@@ -137,24 +137,25 @@
     <section class="glass-panel">
         <div class="resumo-header">
             <h3><i class="fas fa-list"></i> Resultados</h3>
-            <div class="resumo-valores">
+            <div class="resumo-valores" style="display: flex; align-items: center; gap: 15px;">
+                <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa ou descrição..." class="glass-input" style="width: 250px; margin-bottom: 0;">
                 <strong>Registros:</strong> <span id="totalRegistros">0</span> |
                 <strong>Total:</strong> R$ <span id="valorTotal">0.00</span>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table>
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;">
+            <table class="data-grid">
                 <thead>
                     <tr>
-                        <th>Ações</th>
-                        <th>Usuário</th>
-                        <th>Título</th>
-                        <th>Placa</th>
-                        <th>Descrição</th>
-                        <th>OS</th>
-                        <th>Data</th>
-                        <th>Valor (R$)</th>
+                        <th style="width: 100px; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Ações</th>
+                        <th class="sortable" data-sort="usuario" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Usuário <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="titulo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Título <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="veiculo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Placa <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="descricao" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Descrição <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="numeroOS" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">OS <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="data" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Data <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="valor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Valor (R$) <i class="fas fa-sort"></i></th>
                     </tr>
                 </thead>
                 <tbody id="tabelaResultados"></tbody>
