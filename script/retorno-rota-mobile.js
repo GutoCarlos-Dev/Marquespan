@@ -172,7 +172,12 @@ function renderCards() {
 function openEditModal(item) {
     currentItem = item;
     document.getElementById('modalTitle').textContent = `Registrar Retorno - ${item.placa}`;
-    document.getElementById('modalHoraMotorista').value = item.hora_mot || '';
+
+    // Se não houver horário de retorno registrado, preenche automaticamente com o horário atual (HH:mm)
+    const agora = new Date();
+    const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + agora.getMinutes().toString().padStart(2, '0');
+    
+    document.getElementById('modalHoraMotorista').value = item.hora_mot || horaAtual;
     document.getElementById('modalObs').value = item.obs || '';
 
     // Limpa e preenche o modal de materiais
