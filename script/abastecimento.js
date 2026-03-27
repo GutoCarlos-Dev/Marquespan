@@ -360,6 +360,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return 'Desconhecido';
         },
 
+        getUserFilial() {
+            try {
+                const usuarioLogado = localStorage.getItem('usuarioLogado');
+                if (usuarioLogado) {
+                    const usuario = JSON.parse(usuarioLogado);
+                    return usuario.filial || '';
+                }
+            } catch (e) { console.error(e); }
+            return '';
+        },
+
         getUserLevel() {
             try {
                 const usuarioLogado = localStorage.getItem('usuarioLogado');
@@ -381,11 +392,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadTanques() {
             try {
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('tanques')
-                    .select('id, nome, tipo_combustivel')
-                    .order('nome');
+                    .select('id, nome, tipo_combustivel');
 
+                const userFilial = this.getUserFilial();
+                if (userFilial) {
+                    query = query.eq('filial', userFilial);
+                }
+
+                const { data, error } = await query.order('nome');
                 if (error) throw error;
 
                 this.tanquesDisponiveis = data || [];                
@@ -402,9 +418,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // 1. Buscar todos os tanques
-                const { data: tanques, error: tanquesError } = await supabaseClient
+                let queryTanques = supabaseClient
                     .from('tanques')
                     .select('id, nome, capacidade, tipo_combustivel');
+                
+                const userFilial = this.getUserFilial();
+                if (userFilial) queryTanques = queryTanques.eq('filial', userFilial);
+
+                const { data: tanques, error: tanquesError } = await queryTanques;
                 if (tanquesError) throw tanquesError;
 
                 // 2. Buscar todas as entradas (abastecimentos)
@@ -611,11 +632,16 @@ document.addEventListener('DOMContentLoaded', () => {
         async loadBicos() {
             if (!this.saidaBico) return;
             try {
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('bicos')
-                    .select('id, nome, bombas(nome, tanques(nome))')
-                    .order('nome');
+                    .select('id, nome, bombas!inner(nome, tanques!inner(nome, filial))');
 
+                const userFilial = this.getUserFilial();
+                if (userFilial) {
+                    query = query.eq('bombas.tanques.filial', userFilial);
+                }
+
+                const { data, error } = await query.order('nome');
                 if (error) throw error;
 
                 this.bicosDisponiveis = data || [];
@@ -710,7 +736,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Faz join com a tabela de tanques para pegar o nome
                 let query = supabaseClient
                     .from('abastecimentos')
-                    .select('*, tanques(nome, tipo_combustivel)');
+                    .select('*, tanques!inner(nome, tipo_combustivel, filial)');
+                
+                const userFilial = this.getUserFilial();
+                if (userFilial) {
+                    query = query.eq('tanques.filial', userFilial);
+                }
                 
                 // Adiciona filtro de data
                 if (this.filtroDataInicial && this.filtroDataFinal) {
@@ -1032,7 +1063,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     let query = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*');
+                        .select('*, bicos!inner(bombas!inner(tanques!inner(filial)))');
+
+                    const userFilial = this.getUserFilial();
+                    if (userFilial) {
+                        query = query.eq('bicos.bombas.tanques.filial', userFilial);
+                    }
 
                     // Adiciona filtro de data
                     if (this.filtroSaidaDataInicial && this.filtroSaidaDataFinal) {
