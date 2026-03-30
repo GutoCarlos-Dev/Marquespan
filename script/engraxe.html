@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Engraxe - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/engraxe.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Libraries for Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Adiciona barra de rolagem e fixa o cabeçalho no grid principal */
+    .table-responsive { max-height: 600px; overflow-y: auto; }
+    #tabelaEngraxe th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+    
+    /* Estilos da barra de progresso (Igual Lavagem) */
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        height: 10px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <div class="glass-header">
+        <h1><i class="fas fa-oil-can"></i> Controle de Engraxe</h1>
+        <a href="mobile-engraxe.html" class="btn-glass btn-green"><i class="fas fa-mobile-alt"></i> Modo App</a>
+      </div>
+
+      <section class="section">
+        <div class="engraxe-layout">
+          <!-- Card de Filtros -->
+          <div class="glass-panel">
+            <h3><i class="fas fa-filter"></i> Filtros</h3>
+            <div class="filtros-container">
+              <div class="form-group">
+                <label for="filtroMarca">Marca</label>
+                <input type="text" id="filtroMarca" class="glass-input" placeholder="Buscar Marca...">
+              </div>
+              <div class="form-group">
+                <label for="filtroStatus">Status</label>
+                <select id="filtroStatus" class="glass-input">
+                  <option value="">Todos</option>
+                  <option value="ABERTA">Aberta</option>
+                  <option value="FECHADA">Fechada</option>
+                  <option value="EM_ANDAMENTO">Em Andamento</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroDataIni">Data Início</label>
+                <input type="date" id="filtroDataIni" class="glass-input">
+              </div>
+              <div class="form-group">
+                <label for="filtroDataFim">Data Fim</label>
+                <input type="date" id="filtroDataFim" class="glass-input">
+              </div>
+              <div class="form-group actions">
+                <label>&nbsp;</label>
+                <button id="btnBuscar" class="btn-glass btn-blue btn-full"><i class="fas fa-search"></i> Buscar</button>
+              </div>
+            </div>
+          </div>
+          <!-- Card de Ações -->
+          <div class="glass-panel">
+            <h3><i class="fas fa-cogs"></i> Ações</h3>
+            <div class="acoes-grid-vertical">
+              <button id="btnNovoLancamento" class="btn-glass btn-green btn-full"><i class="fas fa-plus"></i> Nova Lista</button>
+              <button id="btnControleVencimentos" class="btn-glass btn-info btn-full"><i class="fas fa-calendar-check"></i> Controle de Vencimentos</button>
+              <button id="btnExportarPDF" class="btn-glass btn-red btn-full"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="glass-panel">
+          <div class="table-responsive">
+            <table class="glass-table" id="tabelaEngraxe">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Nome da Lista</th>
+                  <th>Usuário Criou</th>
+                  <th>Status</th>
+                  <th>Marcas</th>
+                  <th>Progresso</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyEngraxe">
+                <tr><td colspan="7" style="text-align: center;">Carregando dados...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal Detalhes da Lista -->
+  <div id="modalEngraxe" class="panel-backdrop hidden">
+    <div class="panel" style="max-width: 1200px; width: 95%;">
+      <div class="panel-header">
+        <h3 id="modalTitle"><i class="fas fa-list"></i> Detalhes da Lista</h3>
+        <button class="close-button" id="btnCloseModal">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="modal-details-grid">
+            <!-- Card Informações -->
+            <div class="details-card">
+                <h4><i class="fas fa-info-circle"></i> Informações</h4>
+                <div class="form-group">
+                    <label for="dataListaDetalhes">Data de Referência</label>
+                    <input type="date" id="dataListaDetalhes" class="glass-input" readonly style="background-color: #e9ecef;">
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 15px; font-size: 0.9rem;">
+                    <span style="color: #28a745; font-weight: bold;">Realizados: <span id="contadorRealizados">0</span></span>
+                    <span style="color: #dc3545; font-weight: bold;">Não Realizados: <span id="contadorNaoRealizados">0</span></span>
+                </div>
+            </div>
+
+            <!-- Card Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações e Filtros</h4>
+                <div class="actions-row">
+                    <input type="text" id="filtroModalInput" class="glass-input" placeholder="Filtrar itens..." style="flex: 1; min-width: 150px;">
+                    <button id="btnAdicionarItemModal" class="btn-glass btn-green" title="Adicionar Linha"><i class="fas fa-plus"></i></button>
+                    <button id="btnImportarListaModal" class="btn-glass btn-blue" title="Importar Excel"><i class="fas fa-file-import"></i></button>
+                    <button id="btnLimparListaModal" class="btn-glass btn-red" title="Limpar Lista"><i class="fas fa-trash"></i></button>
+                    <button id="btnFinalizarLista" class="btn-glass btn-green"><i class="fas fa-check"></i> Finalizar Lista</button>
+                    <input type="file" id="fileImportarListaModal" accept=".xlsx, .xls" style="display: none;">
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="data-grid">
+                <thead>
+                    <tr>
+                        <th>PLACA</th>
+                        <th>MODELO</th>
+                        <th>MARCA</th>
+                        <th>REALIZADO</th>
+                        <th>PRÓXIMO</th>
+                        <th>PLAQUETA (S/N)</th>
+                        <th>FEITO</th>
+                        <th>SEG</th>
+                        <th>KM</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyModalItens">
+                    <!-- Itens carregados via JS -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Controle de Vencimentos -->
+  <div id="modalVencimentos" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-calendar-alt"></i> Controle de Vencimentos e Histórico</h3>
+        <button class="close-button" id="btnCloseModalVencimentos">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-details-grid" style="margin-bottom: 20px;">
+            <!-- Card 1: Filtros -->
+            <div class="details-card">
+                <h4><i class="fas fa-filter"></i> Filtros de Vencimento</h4>
+                <div class="filtros-grid-vencimentos">
+                    <select id="filtroVencimentoFilial" class="glass-input">
+                        <option value="">Todas Filiais</option>
+                    </select>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoMarcaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoMarcaText">Todas as Marcas</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoMarcaOptions" class="glass-dropdown hidden">
+                            <!-- Opções carregadas via JS -->
+                        </div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoModeloDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoModeloText">Todos os Modelos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoModeloOptions" class="glass-dropdown hidden">
+                            <!-- Opções carregadas via JS -->
+                        </div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoTipoDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoTipoText">Todos os Tipos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoTipoOptions" class="glass-dropdown hidden">
+                            <!-- Opções carregadas via JS -->
+                        </div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroVencimentoStatusDisplay" class="glass-input multiselect-display">
+                            <span id="filtroVencimentoStatusText">Todos os Status</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroVencimentoStatusOptions" class="glass-dropdown hidden">
+                            <!-- Opções populadas via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Card 2: Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações</h4>
+                <div class="acoes-grid-vencimentos">
+                    <div class="form-group">
+                        <label for="dataListaVencimentos">Data da Lista</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="date" id="dataListaVencimentos" class="glass-input">
+                            <button id="btnRecalcularVencimentos" class="btn-glass btn-blue" title="Recalcular Status"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button id="btnGerarListaVencidos" class="btn-glass btn-green btn-full"><i class="fas fa-list-ul"></i> Gerar Lista</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="selStatusVencimentos">Mudar Status</label>
+                        <select id="selStatusVencimentos" class="glass-input">
+                            <option value="">Selecione...</option>
+                            <option value="REALIZADO">Realizado (Hoje)</option>
+                            <option value="INTERNADO">Internado</option>
+                            <option value="ATIVO">Ativo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button id="btnAplicarStatusVencimentos" class="btn-glass btn-blue btn-full"><i class="fas fa-check"></i> Aplicar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="glass-table" id="tabelaVencimentos">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" id="chkAllVencimentos"></th>
+                        <th>FILIAL</th>
+                        <th>PLACA</th>
+                        <th>MARCA</th>
+                        <th>MODELO</th>
+                        <th>DATA REALIZAÇÃO (Última)</th>
+                        <th>PRÓXIMO (Vencimento)</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyVencimentos">
+                    <!-- Preenchido via JS -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nova Lista (Seleção de Placas) -->
+  <div id="modalNovaLista" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 1200px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-plus"></i> Nova Lista de Engraxe</h3>
+        <button class="close-button" id="btnCloseModalNovaLista">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-details-grid" style="margin-bottom: 20px;">
+            <!-- Card 1: Filtros -->
+            <div class="details-card">
+                <h4><i class="fas fa-filter"></i> Filtros</h4>
+                <div class="filtros-grid-vencimentos">
+                    <select id="filtroFilialNovaLista" class="glass-input">
+                        <option value="">Todas Filiais</option>
+                    </select>
+                    <div class="custom-multiselect">
+                        <div id="filtroMarcaNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroMarcaNovaListaText">Todas as Marcas</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroMarcaNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroModeloNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroModeloNovaListaText">Todos os Modelos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroModeloNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <div class="custom-multiselect">
+                        <div id="filtroTipoNovaListaDisplay" class="glass-input multiselect-display">
+                            <span id="filtroTipoNovaListaText">Todos os Tipos</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="filtroTipoNovaListaOptions" class="glass-dropdown hidden"></div>
+                    </div>
+                    <input type="text" id="filtroPlacaNovaLista" class="glass-input" placeholder="Buscar Placa...">
+                </div>
+            </div>
+            <!-- Card 2: Ações -->
+            <div class="details-card">
+                <h4><i class="fas fa-cogs"></i> Ações da Lista</h4>
+                <div class="acoes-grid-vencimentos">
+                    <div class="form-group"><label for="nomeNovaLista">Nome da Lista</label><input type="text" id="nomeNovaLista" class="glass-input" placeholder="Ex: Engraxe Semana Atual"></div>
+                    <div class="form-group"><label for="dataDaLista">Data da Lista</label><input type="date" id="dataDaLista" class="glass-input"></div>
+                    <div class="form-group"><label>&nbsp;</label><button id="btnConfirmarNovaLista" class="btn-glass btn-green btn-full"><i class="fas fa-check"></i> Criar Lista</button></div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="glass-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" id="chkAllNovaLista"></th>
+                        <th>FILIAL</th>
+                        <th>PLACA</th>
+                        <th>MARCA</th>
+                        <th>MODELO</th>
+                        <th>ÚLTIMA REALIZAÇÃO</th>
+                        <th>PRÓXIMO VENCIMENTO</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyNovaListaVeiculos">
+                    <!-- Veículos carregados via JS -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/engraxe.js"></script>
+  <footer class="footer">
+    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+  </footer>
+</body>
+</html>

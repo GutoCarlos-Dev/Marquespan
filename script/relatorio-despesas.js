@@ -746,7 +746,7 @@ const RelatorioDespesasUI = {
         doc.setFontSize(10);
         doc.text(`Período: ${new Date(this.dataInicio.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFim.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 30);
 
-        const tableColumn = ["Data", "Rota", "Hotel", "Funcionários", "Valor"];
+        const tableColumn = ["Data", "Rota", "Hotel", "Funcionários", "Diárias", "Valor"];
         const tableRows = this.filteredData.map(item => [
             new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
             item.numero_rota,
@@ -754,10 +754,12 @@ const RelatorioDespesasUI = {
             { func1: item.funcionario1?.nome_completo || '', func2: item.funcionario2?.nome_completo || '' },
             (item.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
         ]);
+        // Adiciona a coluna de diárias ao mapeamento
+        tableRows.forEach(row => row.splice(4, 0, row[3].func1 ? this.filteredData.find(item => item.funcionario1?.nome_completo === row[3].func1).qtd_diarias : '-'));
 
         // Adiciona linha de total
         const totalValor = this.filteredData.reduce((acc, item) => acc + (item.valor_total || 0), 0);
-        tableRows.push(['', '', '', 'TOTAL GERAL', totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+        tableRows.push(['', '', '', 'TOTAL GERAL', '', totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
 
         doc.autoTable({
             head: [tableColumn],
@@ -766,8 +768,9 @@ const RelatorioDespesasUI = {
             theme: 'grid',
             styles: { fontSize: 8 },
             headStyles: { fillColor: [0, 105, 55] },
-            columnStyles: { 
-                4: { halign: 'right', fontStyle: 'bold', cellWidth: 40 } 
+            columnStyles: {
+                4: { halign: 'center' }, // Alinha a coluna Diárias ao centro
+                5: { halign: 'right', fontStyle: 'bold', cellWidth: 40 } // Alinha a coluna Valor à direita
             },
             didParseCell: function(data) {
                 if (data.section === 'body' && data.column.index === 3) {

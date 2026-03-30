@@ -255,8 +255,8 @@ window.prepararEdicaoMobile = function(id) {
     
     // Normaliza status para o select
     let statusVal = item.status || 'PENDENTE';
-    if (statusVal === 'REALIZADO') statusVal = 'OK';
-    if (statusVal === 'PENDENTE') statusVal = 'OK'; // Já vem selecionado OK
+    if (statusVal === 'REALIZADO') statusVal = 'OK'; // 'REALIZADO' é equivalente a 'OK' para exibição
+    // Removido: Não mudar PENDENTE para OK automaticamente ao abrir o modal.
     document.getElementById('editStatus').value = statusVal;
     
     document.getElementById('editKm').value = item.km || '';
