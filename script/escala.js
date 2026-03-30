@@ -2591,6 +2591,73 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.appendChild(tr);
     }
 
+    // --- LÓGICA BOTÃO FLUTUANTE (FAB) ---
+    const btnFabAdd = document.getElementById('btnFabAdd');
+    const btnFabRemove = document.getElementById('btnFabRemove');
+
+    if (btnFabAdd) {
+        btnFabAdd.addEventListener('click', () => {
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (!activeTab) return;
+
+            if (activeTab.dataset.tab === 'planejamento') {
+                adicionarLinhaPlanejamento();
+            } else {
+                const selected = document.querySelector('.selected-cell');
+                if (!selected) {
+                    // Se nada selecionado, adiciona na seção padrão
+                    adicionarLinhaManual('Padrao');
+                } else {
+                    const tr = selected.closest('tr');
+                    const tbody = tr.closest('tbody');
+                    const sectionName = tbody.id.replace('tbody', '');
+                    adicionarLinhaManual(sectionName);
+                }
+            }
+        });
+    }
+
+    if (btnFabRemove) {
+        btnFabRemove.addEventListener('click', async () => {
+            const selectedCells = document.querySelectorAll('.selected-cell');
+            const selectedPlan = document.querySelectorAll('.row-selector-plan:checked');
+            
+            if (selectedCells.length === 0 && selectedPlan.length === 0) {
+                return alert('Selecione pelo menos uma célula ou linha para excluir.');
+            }
+
+            if (!confirm('Tem certeza que deseja excluir as linhas selecionadas?')) return;
+
+            const toDelete = { escala: [], faltas_afastamentos: [], planejamento_semanal: [] };
+
+            selectedCells.forEach(el => {
+                const tr = el.closest('tr');
+                if (tr && tr.dataset.id && tr.dataset.tabela) {
+                    if (!toDelete[tr.dataset.tabela].includes(tr.dataset.id)) {
+                        toDelete[tr.dataset.tabela].push(tr.dataset.id);
+                    }
+                }
+            });
+
+            selectedPlan.forEach(chk => {
+                if (chk.dataset.id) toDelete.planejamento_semanal.push(chk.dataset.id);
+            });
+
+            try {
+                for (const table in toDelete) {
+                    if (toDelete[table].length > 0) {
+                        const { error } = await supabaseClient.from(table).delete().in('id', toDelete[table]);
+                        if (error) throw error;
+                    }
+                }
+                alert('Exclusão realizada com sucesso.');
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab.dataset.tab === 'planejamento') carregarPlanejamento(selectSemana.value);
+                else carregarDadosDia(activeTab.dataset.dia, selectSemana.value);
+            } catch (err) { alert('Erro ao excluir: ' + err.message); }
+        });
+    }
+
     // Inicialização
     carregarSemanas();
     preencherCacheDatas();
