@@ -207,25 +207,38 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     background: linear-gradient(135deg, #ff0e06 0%, #740202 100%);
 }
 
-/* Botão de Excluir (Ícone Sofisticado) */
-.btn-delete-row {
-    background: transparent;
+/* Estilo de ícone limpo (Igual ao Cadastro de Tanques) */
+.btn-icon {
+    background: none;
     border: none;
-    color: #e74c3c;
-    font-size: 14px;
+    box-shadow: none;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    display: flex;
+    font-size: 1.1rem;
+    padding: 5px;
+    transition: transform 0.2s, color 0.2s;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-.btn-delete-row:hover {
-    background-color: rgba(231, 76, 60, 0.1); /* Fundo vermelho bem claro ao passar o mouse */
-    transform: scale(1.15);
-    color: #c0392b;
+.btn-icon:hover {
+    transform: scale(1.2);
+}
+
+.btn-icon.edit {
+    color: #007bff;
+}
+
+.btn-icon.delete {
+    color: #dc3545;
+}
+
+.btn-icon.edit:hover {
+    color: #0056b3;
+}
+
+.btn-icon.delete:hover {
+    color: #a71d2a;
 }
 
 /* === ESTILOS DOS MODAIS (Materiais e Devoluções) === */

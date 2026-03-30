@@ -364,7 +364,6 @@ function applyRowStyle(trElement, rowData) {
 function addEmptyRow() {
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
-    newRow.operador_recebimento = getCurrentUserName(); // Preenche com o usuário logado
     gridData.push(newRow);
 }
 
@@ -462,7 +461,7 @@ function renderGrid() {
         tr.dataset.rowIndex = index;
 
         const selectCell = userCanDelete ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
-        const deleteCell = userCanDelete ? `<td><button class="btn-custom btn-delete-row"><i class="fas fa-trash"></i></button></td>` : '<td style="display:none"></td>';
+        const deleteCell = userCanDelete ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
 
         // Cria as células principais
         tr.innerHTML = `
@@ -708,7 +707,7 @@ function mapRowToPayload(rowData, dataRetorno) {
         data_retorno: dataRetorno,
         placa: rowData.placa ? rowData.placa.trim().toUpperCase() : null,
         rota: rowData.rota,
-        operador_recebimento: rowData.operador_recebimento || getCurrentUserName(),
+        operador_recebimento: rowData.operador_recebimento || null,
         
         nome_mot: rowData.nome_mot,
         hora_mot: rowData.hora_mot || null,
