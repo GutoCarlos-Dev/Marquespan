@@ -174,32 +174,45 @@
 .actions-cell {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 5px;
 }
 
-.btn-action {
-    background-color: transparent;
-    border: 1px solid transparent;
-    color: #6c757d;
-    padding: 5px 8px;
-    border-radius: 4px;
+/* Estilo de ícone limpo (Igual ao Cadastro de Tanques) */
+.btn-icon {
+    background: none;
+    border: none;
+    box-shadow: none;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    font-size: 1.1rem;
+    padding: 5px;
+    transition: transform 0.2s, color 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-.btn-action:hover {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
+/* Efeito de aumento ao passar o mouse */
+.btn-icon:hover {
+    transform: scale(1.2);
 }
 
-.btn-action.btn-edit { color: #007bff; }
-.btn-action.btn-edit:hover { background-color: #e7f1ff; border-color: #b8d6fb; }
+/* Cores específicas para as ações */
+.btn-icon.edit {
+    color: #007bff; /* Azul para edição */
+}
 
-.btn-action.btn-delete { color: #dc3545; }
-.btn-action.btn-delete:hover { background-color: #fbebed; border-color: #f5c6cb; }
+.btn-icon.delete {
+    color: #dc3545; /* Vermelho para exclusão */
+}
+
+.btn-icon.edit:hover {
+    color: #0056b3;
+}
+
+.btn-icon.delete:hover {
+    color: #a71d2a;
+}
 
 /* Media Queries para Responsividade */
 @media (max-width: 768px) {

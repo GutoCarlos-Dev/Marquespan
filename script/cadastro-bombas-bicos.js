@@ -39,8 +39,8 @@ const BombaManager = {
                 <td>${bomba.nome}</td>
                 <td>${bomba.tanques.nome}</td>
                 <td class="actions-cell">
-                    <button class="btn-action btn-edit" data-id="${bomba.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button class="btn-action btn-delete" data-id="${bomba.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon edit" data-id="${bomba.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete" data-id="${bomba.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                 </td>
             `;
             this.tableBody.appendChild(tr);
@@ -67,8 +67,8 @@ const BombaManager = {
         const btn = e.target.closest('button');
         if (!btn) return;
         const id = btn.dataset.id;
-        if (btn.classList.contains('btn-edit')) this.loadForEditing(id);
-        if (btn.classList.contains('btn-delete')) this.delete(id);
+        if (btn.classList.contains('edit')) this.loadForEditing(id);
+        if (btn.classList.contains('delete')) this.delete(id);
     },
     async loadForEditing(id) {
         const { data, error } = await supabaseClient.from('bombas').select('*').eq('id', id).single();
@@ -134,8 +134,8 @@ const BicoManager = {
                 <td>${bico.nome}</td>
                 <td>${bico.bombas.nome} (Tanque: ${bico.bombas.tanques.nome})</td>
                 <td class="actions-cell">
-                    <button class="btn-action btn-edit" data-id="${bico.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button class="btn-action btn-delete" data-id="${bico.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon edit" data-id="${bico.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete" data-id="${bico.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                 </td>
             `;
             this.tableBody.appendChild(tr);
@@ -161,8 +161,8 @@ const BicoManager = {
         const btn = e.target.closest('button');
         if (!btn) return;
         const id = btn.dataset.id;
-        if (btn.classList.contains('btn-edit')) this.loadForEditing(id);
-        if (btn.classList.contains('btn-delete')) this.delete(id);
+        if (btn.classList.contains('edit')) this.loadForEditing(id);
+        if (btn.classList.contains('delete')) this.delete(id);
     },
     async loadForEditing(id) {
         const { data, error } = await supabaseClient.from('bicos').select('*').eq('id', id).single();
