@@ -125,8 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${tanque.capacidade.toLocaleString('pt-BR')} L</td>
                     <td>${tanque.tipo_combustivel || '-'}</td>
                     <td class="actions-cell">
-                        <button class="btn-action btn-edit" data-id="${tanque.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-delete" data-id="${tanque.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        <button class="btn-icon edit" data-id="${tanque.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon delete" data-id="${tanque.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 this.tableBody.appendChild(tr);
