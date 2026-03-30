@@ -39,8 +39,8 @@ const BombaManager = {
                 <td>${bomba.nome}</td>
                 <td>${bomba.tanques.nome}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" data-id="${bomba.id}"><i class="fas fa-pen"></i></button>
-                    <button class="btn-delete" data-id="${bomba.id}"><i class="fas fa-trash"></i></button>
+                    <button class="btn-action btn-edit" data-id="${bomba.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button class="btn-action btn-delete" data-id="${bomba.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             this.tableBody.appendChild(tr);
@@ -134,8 +134,8 @@ const BicoManager = {
                 <td>${bico.nome}</td>
                 <td>${bico.bombas.nome} (Tanque: ${bico.bombas.tanques.nome})</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" data-id="${bico.id}"><i class="fas fa-pen"></i></button>
-                    <button class="btn-delete" data-id="${bico.id}"><i class="fas fa-trash"></i></button>
+                    <button class="btn-action btn-edit" data-id="${bico.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button class="btn-action btn-delete" data-id="${bico.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             this.tableBody.appendChild(tr);
