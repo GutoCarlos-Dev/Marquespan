@@ -63,8 +63,22 @@ const RelatorioEstatistica = {
         const rota = document.getElementById('filtroRota').value.trim();
 
         try {
+            // 0. Buscar histórico de preços de compra para abastecimentos internos
+            const { data: priceHistory } = await supabaseClient
+                .from('abastecimentos')
+                .select('tanque_id, valor_litro, data')
+                .neq('numero_nota', 'AJUSTE DE ESTOQUE')
+                .gt('valor_litro', 0)
+                .order('data', { ascending: false });
+
+            const getInternalPrice = (tanqueId, supplyDate) => {
+                if (!priceHistory) return 0;
+                const record = priceHistory.find(p => p.tanque_id === tanqueId && new Date(p.data) <= new Date(supplyDate));
+                return record ? record.valor_litro : 0;
+            };
+
             // 1. Buscar Abastecimentos Internos (Saídas)
-            let querySaidas = supabaseClient.from('saidas_combustivel').select('*')
+            let querySaidas = supabaseClient.from('saidas_combustivel').select('*, bicos(bombas(tanque_id))')
                 .gte('data_hora', `${dtIni}T00:00:00`)
                 .lte('data_hora', `${dtFim}T23:59:59`);
             if (placa) querySaidas = querySaidas.eq('veiculo_placa', placa);
@@ -89,15 +103,19 @@ const RelatorioEstatistica = {
 
             // Unificar Abastecimentos
             const rawSupplies = [
-                ...(resSaidas.data || []).map(s => ({
-                    data: s.data_hora.split('T')[0],
-                    data_hora: s.data_hora,
-                    placa: s.veiculo_placa,
-                    rota: s.rota,
-                    litros: s.qtd_litros,
-                    valor: 0, 
-                    km_atual: s.km_atual
-                })),
+                ...(resSaidas.data || []).map(s => {
+                    const tanqueId = s.bicos?.bombas?.tanque_id;
+                    const precoCusto = tanqueId ? getInternalPrice(tanqueId, s.data_hora) : 0;
+                    return {
+                        data: s.data_hora.split('T')[0],
+                        data_hora: s.data_hora,
+                        placa: s.veiculo_placa,
+                        rota: s.rota,
+                        litros: s.qtd_litros,
+                        valor: s.qtd_litros * precoCusto, 
+                        km_atual: s.km_atual
+                    };
+                }),
                 ...(resExt.data || []).map(e => ({
                     data: e.data_hora.split('T')[0],
                     data_hora: e.data_hora,
