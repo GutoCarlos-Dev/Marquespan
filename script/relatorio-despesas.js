@@ -15,7 +15,7 @@ const RelatorioDespesasUI = {
         this.chartRotas = null;
         this.chartDespesasPorRota = null;
         this.chartTopHoteis = null;
-        this.chartEvolucaoDiaria = null;
+        this.chartEvolucaoMensal = null;
         this.chartTopFuncionarios = null;
         this.rotasCache = []; // Cache para buscar supervisores
         this.currentSort = { column: 'data_checkin', direction: 'desc' }; // Estado de ordenação
@@ -46,7 +46,7 @@ const RelatorioDespesasUI = {
         this.chartRotasCanvas = document.getElementById('chartRotas');
         this.chartDespesasPorRotaCanvas = document.getElementById('chartDespesasPorRota');
         this.chartTopHoteisCanvas = document.getElementById('chartTopHoteis');
-        this.chartEvolucaoDiariaCanvas = document.getElementById('chartEvolucaoDiaria');
+        this.chartEvolucaoMensalCanvas = document.getElementById('chartEvolucaoMensal');
         this.chartTopFuncionariosCanvas = document.getElementById('chartTopFuncionarios');
         
         this.btnExportarExcel = document.getElementById('btnExportarExcel');
@@ -373,11 +373,16 @@ const RelatorioDespesasUI = {
             const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
 
+            // Define o intervalo de busca para o ano inteiro baseado na Data Início
+            const anoReferencia = new Date(this.dataInicio.value).getFullYear();
+            const dataInicioAno = `${anoReferencia}-01-01`;
+            const dataFimAno = `${anoReferencia}-12-31`;
+
             let baseQuery = supabaseClient
                 .from('despesas')
                 .select('*, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
-                .gte('data_checkin', this.dataInicio.value)
-                .lte('data_checkin', this.dataFim.value);
+                .gte('data_checkin', dataInicioAno)
+                .lte('data_checkin', dataFimAno);
 
             // Lógica de paginação para buscar todos os registros sem o limite de 1000
             let allData = [];
@@ -466,10 +471,15 @@ const RelatorioDespesasUI = {
                 });
             }
 
-            this.filteredData = allData;
+            // Filtra os dados no cliente para o período selecionado (afeta Tabela e KPIs)
+            const dadosFiltradosPeriodo = allData.filter(item => {
+                return item.data_checkin >= this.dataInicio.value && item.data_checkin <= this.dataFim.value;
+            });
+
+            this.filteredData = dadosFiltradosPeriodo;
 
             this.atualizarKPIs(this.filteredData);
-            this.renderizarGraficos(this.filteredData);
+            this.renderizarGraficos(this.filteredData, allData);
             this.renderizarTabela(this.filteredData);
             
         } catch (err) {
@@ -486,7 +496,7 @@ const RelatorioDespesasUI = {
         this.kpiTotalDiarias.textContent = totalDiarias;
     },
 
-    renderizarGraficos(data) {
+    renderizarGraficos(data, dataAnoTodo) {
         // Agrupar por Hotel
         const hotelMap = {};
         const rotaMap = {};
@@ -503,7 +513,7 @@ const RelatorioDespesasUI = {
         this.criarGrafico(this.chartRotasCanvas, 'bar', Object.keys(rotaMap), Object.values(rotaMap), 'Custos por Rota');
         this.renderChartDespesasPorRota(data);
         this.renderChartTopHoteis(data);
-        this.renderChartEvolucaoDiaria(data);
+        this.renderChartEvolucaoMensal(dataAnoTodo || data);
         this.renderChartTopFuncionarios(data);
     },
 
@@ -527,15 +537,28 @@ const RelatorioDespesasUI = {
         this.criarGrafico(this.chartTopHoteisCanvas, 'doughnut', sortedHoteis.map(([k]) => k), sortedHoteis.map(([,v]) => v), 'Top 5 Hotéis');
     },
 
-    renderChartEvolucaoDiaria(data) {
-        const dailyCosts = data.reduce((acc, item) => {
-            const date = item.data_checkin;
-            if (date) acc[date] = (acc[date] || 0) + (item.valor_total || 0);
-            return acc;
-        }, {});
-        const sortedDates = Object.keys(dailyCosts).sort((a, b) => new Date(a) - new Date(b));
-        const values = sortedDates.map(date => dailyCosts[date]);
-        this.criarGrafico(this.chartEvolucaoDiariaCanvas, 'line', sortedDates.map(d => new Date(d+'T00:00:00').toLocaleDateString('pt-BR')), values, 'Custo Diário');
+    renderChartEvolucaoMensal(data) {
+        const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const custosPorMes = new Array(12).fill(0);
+        
+        // Obtém o ano atual do filtro ou do sistema
+        const anoReferencia = new Date(this.dataInicio.value).getFullYear();
+
+        data.forEach(item => {
+            if (item.data_checkin) {
+                const dataCheckin = new Date(item.data_checkin + 'T00:00:00');
+                // Agrupa apenas se for do mesmo ano que o filtro inicial para manter consistência
+                if (dataCheckin.getFullYear() === anoReferencia) {
+                    const mesIndex = dataCheckin.getMonth();
+                    custosPorMes[mesIndex] += (item.valor_total || 0);
+                }
+            }
+        });
+
+        this.criarGrafico(this.chartEvolucaoMensalCanvas, 'line', mesesLabels, custosPorMes, `Custo Mensal (${anoReferencia})`, {
+            fill: true,
+            tension: 0.3
+        });
     },
 
     renderChartTopFuncionarios(data) {
