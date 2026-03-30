@@ -35,12 +35,26 @@ const RelatorioEstatistica = {
     async loadFilters() {
         // Carrega Filiais
         const { data: filiais } = await supabaseClient.from('filiais').select('sigla, nome').order('nome');
-        const selectFilial = document.getElementById('filtroFilial');
-        filiais?.forEach(f => selectFilial.add(new Option(f.sigla || f.nome, f.sigla || f.nome)));
+        const selFilial = document.getElementById('filtroFilial');
+        filiais?.forEach(f => selFilial.add(new Option(f.sigla || f.nome, f.sigla || f.nome)));
+
+        // Carrega Rotas para Datalist
+        const { data: rotas } = await supabaseClient.from('rotas').select('numero').order('numero');
+        const dlRotas = document.getElementById('listaRotasEstatistica');
+        if (dlRotas && rotas) {
+            dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(num => `<option value="${num}">`).join('');
+        }
+
+        // Carrega Veículos para Datalist
+        const { data: veiculos } = await supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa');
+        const dlVeic = document.getElementById('listaVeiculosEstatistica');
+        if (dlVeic && veiculos) {
+            dlVeic.innerHTML = veiculos.map(v => `<option value="${v.placa}">`).join('');
+        }
     },
 
     async fetchData() {
-        this.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Processando dados...</td></tr>';
+        this.tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Calculando KM e agrupando bicos...</td></tr>';
         
         const dtIni = document.getElementById('dataInicio').value;
         const dtFim = document.getElementById('dataFim').value;
@@ -50,7 +64,7 @@ const RelatorioEstatistica = {
 
         try {
             // 1. Buscar Abastecimentos Internos (Saídas)
-            let querySaidas = supabaseClient.from('saidas_combustivel').select('*, bicos(bombas(tanque_id))')
+            let querySaidas = supabaseClient.from('saidas_combustivel').select('*')
                 .gte('data_hora', `${dtIni}T00:00:00`)
                 .lte('data_hora', `${dtFim}T23:59:59`);
             if (placa) querySaidas = querySaidas.eq('veiculo_placa', placa);
@@ -68,61 +82,103 @@ const RelatorioEstatistica = {
             let queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota')
                 .gte('data_checkin', dtIni)
                 .lte('data_checkin', dtFim);
-            if (rota) queryHosp = queryHosp.ilike('numero_rota', `%${rota}%`);
-
+            
+            if (rota) queryHosp = queryHosp.eq('numero_rota', rota);
+            
             const [resSaidas, resExt, resHosp] = await Promise.all([querySaidas, queryExt, queryHosp]);
 
             // Unificar Abastecimentos
-            const supplies = [
+            const rawSupplies = [
                 ...(resSaidas.data || []).map(s => ({
                     data: s.data_hora.split('T')[0],
+                    data_hora: s.data_hora,
                     placa: s.veiculo_placa,
                     rota: s.rota,
                     litros: s.qtd_litros,
-                    valor: 0, // Valor interno geralmente é calculado por custo médio, deixaremos 0 ou buscar do histórico
+                    valor: 0, 
                     km_atual: s.km_atual
                 })),
                 ...(resExt.data || []).map(e => ({
                     data: e.data_hora.split('T')[0],
+                    data_hora: e.data_hora,
                     placa: e.veiculo_placa,
                     rota: e.rota,
                     litros: e.litros,
                     valor: e.valor_total,
-                    km_atual: e.km_atual,
-                    km_rodado: e.km_rodado
+                    km_atual: e.km_atual
                 }))
             ];
 
-            // Processar Dados Finais
-            this.data = supplies.map(sup => {
-                // Encontra hospedagem para a mesma rota e data
-                const hosp = resHosp.data?.filter(h => 
-                    h.data_checkin === sup.data && 
-                    String(h.numero_rota).includes(sup.rota)
+            // 4. Agrupar por Placa e Timestamp (Soma bicos usados juntos no mesmo momento)
+            const groupedMap = new Map();
+            rawSupplies.forEach(s => {
+                const key = `${s.placa}_${s.data_hora}`;
+                if (!groupedMap.has(key)) {
+                    groupedMap.set(key, { ...s });
+                } else {
+                    const existing = groupedMap.get(key);
+                    existing.litros += s.litros;
+                    existing.valor += s.valor;
+                }
+            });
+
+            const sortedSupplies = Array.from(groupedMap.values()).sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+            // 5. Processar Dados Finais com cálculo de KM (Diferença para o registro anterior)
+            this.data = [];
+            for (const sup of sortedSupplies) {
+                // Busca o KM do abastecimento anterior para este veículo
+                const [prevInt, prevExt] = await Promise.all([
+                    supabaseClient.from('saidas_combustivel')
+                        .select('km_atual')
+                        .eq('veiculo_placa', sup.placa)
+                        .lt('data_hora', sup.data_hora)
+                        .order('data_hora', { ascending: false }).limit(1),
+                    supabaseClient.from('abastecimento_externo')
+                        .select('km_atual')
+                        .eq('veiculo_placa', sup.placa)
+                        .lt('data_hora', sup.data_hora)
+                        .order('data_hora', { ascending: false }).limit(1)
+                ]);
+
+                const kmAnteriorInt = prevInt.data?.[0]?.km_atual || 0;
+                const kmAnteriorExt = prevExt.data?.[0]?.km_atual || 0;
+                const kmAnterior = Math.max(kmAnteriorInt, kmAnteriorExt);
+
+                const kmRodado = (sup.km_atual > kmAnterior && kmAnterior > 0) ? (sup.km_atual - kmAnterior) : 0;
+
+                // Encontra hospedagem vinculada à ROTA EXATA e DATA
+                const valorHospedagem = resHosp.data?.filter(h => 
+                    h.data_checkin === sup.data && String(h.numero_rota) === String(sup.rota)
                 ).reduce((acc, curr) => acc + (curr.valor_total || 0), 0) || 0;
 
-                return {
+                this.data.push({
                     data: sup.data,
+                    rota: sup.rota,
                     placa: sup.placa,
-                    km_rodado: sup.km_rodado || 0,
+                    km_rodado: kmRodado,
                     litros: sup.litros,
                     valor_diesel: sup.valor,
-                    valor_hospedagem: hosp
-                };
-            });
+                    valor_hospedagem: valorHospedagem
+                });
+            }
 
             this.renderTable();
 
         } catch (error) {
             console.error(error);
-            this.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao processar relatório.</td></tr>';
+            this.tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Erro ao processar relatório.</td></tr>';
         }
+    },
+
+    formatCurrency(val) {
+        return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     },
 
     renderTable() {
         this.tbody.innerHTML = '';
         if (this.data.length === 0) {
-            this.tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum dado encontrado.</td></tr>';
+            this.tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum dado encontrado para os filtros selecionados.</td></tr>';
             return;
         }
 
@@ -130,11 +186,12 @@ const RelatorioEstatistica = {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                <td style="font-weight: bold; color: var(--primary-color);">${item.rota || '-'}</td>
                 <td>${item.placa}</td>
-                <td>${item.km_rodado} km</td>
+                <td>${item.km_rodado > 0 ? item.km_rodado + ' km' : '<span style="color:#999">N/I</span>'}</td>
                 <td>${item.litros.toFixed(2)} L</td>
-                <td>${item.valor_diesel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                <td>${item.valor_hospedagem.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td>${this.formatCurrency(item.valor_diesel)}</td>
+                <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
             `;
             this.tbody.appendChild(tr);
         });
@@ -144,6 +201,7 @@ const RelatorioEstatistica = {
         if (this.data.length === 0) return alert('Sem dados para exportar.');
         const ws = XLSX.utils.json_to_sheet(this.data.map(i => ({
             'Data': i.data,
+            'Rota': i.rota,
             'Placa': i.placa,
             'KM Rodado': i.km_rodado,
             'Litros Diesel': i.litros,
