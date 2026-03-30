@@ -19,86 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // --- ESTILOS DE PLANILHA (Injetados dinamicamente) ---
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = `
-        /* Reset de tabela para estilo planilha */
-        table { border-collapse: collapse !important; width: auto; min-width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); table-layout: fixed; }
-        th { background-color: #f8f9fa; color: #495057; font-weight: 600; border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; position: relative; }
-        td { border: 1px solid #dee2e6; padding: 0 !important; height: 34px; vertical-align: middle; position: relative; }
-        tbody tr:nth-child(even) { background-color: #ffffff; }
-        tbody tr:nth-child(odd) { background-color: #ffffff; }
-        tbody tr:hover { background-color: #f1f3f5; }
-        input.table-input { width: 100%; height: 100%; border: none !important; border-radius: 0 !important; padding: 0 10px; background: transparent; font-size: 11px; color: #212529; outline: none; box-shadow: none !important; margin: 0; display: block; box-sizing: border-box; }
-        input.table-input:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff !important; z-index: 2; }
-        td[contenteditable="true"] { padding: 8px 10px !important; outline: none; cursor: text; }
-        td[contenteditable="true"]:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #007bff; }
-        .btn-acao.excluir { background: transparent; border: none; color: #dc3545; cursor: pointer; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; transition: all 0.2s; font-size: 14px; }
-        .btn-acao.excluir:hover { opacity: 1; background-color: #ffebee; }
-        .resizer { position: absolute; right: 0; top: 0; height: 100%; width: 5px; background: rgba(0,0,0,0.05); cursor: col-resize; user-select: none; touch-action: none; z-index: 10; }
-        .resizer:hover, .resizing { background: #007bff; }
-        .status-saving { color: #ffc107; font-size: 0.8em; margin-left: 10px; }
-        .status-saved { color: #28a745; font-size: 0.8em; margin-left: 10px; }
-        .status-error { color: #dc3545; font-size: 0.8em; margin-left: 10px; }
-        /* Menu de Contexto */
-        .context-menu {
-            position: absolute;
-            display: none;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            border-radius: 5px;
-            z-index: 1000;
-            padding: 5px 0;
-        }
-        .context-menu-item {
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .context-menu-item:hover {
-            background-color: #f0f0f0;
-        }
-        /* Modal Expedição */
-        .modal-expedicao {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); display: none; justify-content: center;
-            align-items: center; z-index: 2000;
-        }
-        .modal-expedicao-content {
-            background: #fdfdfd; padding: 25px; border-radius: 8px;
-            width: 90%; max-width: 1200px; height: 90vh;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column;
-        }
-        .modal-expedicao-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #006937; padding-bottom: 15px; margin-bottom: 15px;
-        }
-        .modal-expedicao-header h3 { margin: 0; font-size: 1.5rem; color: #006937; }
-        .modal-expedicao-header .close-btn { font-size: 2rem; color: #666; cursor: pointer; background: none; border: none; }
-        .modal-expedicao-subheader { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: #555; }
-        .modal-expedicao-table-container { flex-grow: 1; overflow: auto; }
-        .modal-expedicao-table { width: 100%; border-collapse: collapse; }
-        .modal-expedicao-table th, .modal-expedicao-table td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; vertical-align: top; }
-        .modal-expedicao-table th { background-color: #f2f2f2; }
-        .modal-expedicao-table .filter-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; height: 100px; }
-        .modal-expedicao-footer { border-top: 2px solid #006937; padding-top: 15px; margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-start; max-height: 30vh; }
-        #modalExpedicaoTotalizador { flex-grow: 1; display: flex; justify-content: center; overflow-y: auto; max-height: 100%; }
-        .card-acoes { background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-acoes h4 { margin: 0; font-size: 0.9em; text-align: center; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .btn-acao-exp { padding: 8px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
-        .btn-acao-exp:hover { opacity: 0.9; }
-        .btn-acao-exp.pdf { background-color: #dc3545; }
-        .btn-acao-exp.xlsx { background-color: #28a745; }
-        .btn-acao-exp.fechar { background-color: #6c757d; }
-        /* Estilos de Seleção Múltipla */
-        .selected-cell { outline: 2px solid #007bff !important; box-shadow: 0 0 5px rgba(0,123,255,0.5) !important; z-index: 10; }
-        .selected-header { background-color: #cce5ff !important; color: #004085 !important; }
-    `;
-    document.head.appendChild(styleSheet);
+    // Removido: Injeção de estilos via JavaScript (centralizado no escala.css)
 
     // --- ELEMENTOS DO DOM ---
     const selectSemana = document.getElementById('escalaSemana');
@@ -676,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td contenteditable="true" data-key="motivo_motorista" style="${getCellStyle('faltas_afastamentos', item.id, 'motivo_motorista')}">${item.motivo_motorista || ''}</td>
                                 <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar_ausente || ''}" data-key="auxiliar_ausente" placeholder="Auxiliar" style="${getCellStyle('faltas_afastamentos', item.id, 'auxiliar_ausente')}"></td>
                                 <td contenteditable="true" data-key="motivo_auxiliar" style="${getCellStyle('faltas_afastamentos', item.id, 'motivo_auxiliar')}">${item.motivo_auxiliar || ''}</td>
-                                <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
+                                <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
                             `;
                         } else {
                             tr.innerHTML = `
@@ -687,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('escala', item.id, 'motorista')}"></td>
                                 <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('escala', item.id, 'auxiliar')}"></td>
                                 <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('escala', item.id, 'terceiro')}"></td>
-                                <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
+                                <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
                             `;
                         }
                         tbody.appendChild(tr);
@@ -2581,7 +2502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
             <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('planejamento_semanal', item.id, 'auxiliar')}"></td>
             <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('planejamento_semanal', item.id, 'terceiro')}"></td>
-            <td><button class="btn-acao excluir" title="Remover"><i class="fas fa-trash"></i></button></td>
+            <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
         `;
         tbody.appendChild(tr);
     }
