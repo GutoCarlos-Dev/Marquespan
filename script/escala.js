@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Botão Excluir
-            const btnExcluir = e.target.closest('.btn-acao.excluir');
+            const btnExcluir = e.target.closest('.btn-delete-row');
             if (btnExcluir) {
                 const tr = btnExcluir.closest('tr');
                 const id = tr.dataset.id;
@@ -810,6 +810,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Atualiza cor se for Status
         if (key === 'status') updateInputColor(target);
+
+        // Atualiza cor no Planejamento (se preenchido)
+        if (tabela === 'planejamento_semanal' && (key.includes('_rota') || key.includes('_status'))) {
+            updatePlanningInputColor(target);
+        }
 
         verificarDuplicidades();
 
@@ -1412,6 +1417,16 @@ document.addEventListener('DOMContentLoaded', () => {
         selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')} - 2026`;
     }
 
+    const PLANNING_DAY_COLORS = {
+        'domingo': '#ffcccc',
+        'segunda': '#cce5ff',
+        'terca': '#fff3cd',
+        'quarta': '#d4edda',
+        'quinta': '#ffdfcc',
+        'sexta': '#f2f2f2',
+        'sabado': '#e0d6cc'
+    };
+
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
 
@@ -1474,6 +1489,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
     }
     function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
+
+    function updatePlanningInputColor(input) {
+        const key = input.dataset.key;
+        if (!key) return;
+        
+        const day = key.split('_')[0];
+        const val = input.value.trim();
+        
+        if (val && PLANNING_DAY_COLORS[day]) {
+            input.style.setProperty('background-color', PLANNING_DAY_COLORS[day], 'important');
+            input.style.color = '#000';
+            input.style.fontWeight = 'bold';
+        } else {
+            input.style.backgroundColor = '';
+            input.style.color = '';
+            input.style.fontWeight = '';
+        }
+    }
 
     // --- LISTENERS GERAIS ---
     const btnAdicionarLinhaPlanejamento = document.getElementById('btnAdicionarLinhaPlanejamento');
@@ -1585,6 +1618,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnModeloPlanejamento = document.getElementById('btnModeloPlanejamento');
     if (btnModeloPlanejamento) {
         btnModeloPlanejamento.addEventListener('click', baixarModeloPlanejamento);
+    }
+
+    const selectAllPlan = document.getElementById('selectAllPlanejamento');
+    if (selectAllPlan) {
+        selectAllPlan.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('#tbodyPlanejamento .row-selector-plan').forEach(chk => {
+                chk.checked = isChecked;
+            });
+        });
+    }
+
+    const btnExcluirSelecionadosPlan = document.getElementById('btnExcluirSelecionadosPlan');
+    if (btnExcluirSelecionadosPlan) {
+        btnExcluirSelecionadosPlan.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('#tbodyPlanejamento .row-selector-plan:checked');
+            if (checkboxes.length === 0) return alert('Selecione pelo menos uma linha para excluir.');
+
+            if (!confirm(`Tem certeza que deseja excluir as ${checkboxes.length} linhas selecionadas do planejamento?`)) return;
+
+            const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+            try {
+                const { error } = await supabaseClient
+                    .from('planejamento_semanal')
+                    .delete()
+                    .in('id', ids);
+
+                if (error) throw error;
+                alert('Itens excluídos com sucesso!');
+                carregarPlanejamento(selectSemana.value);
+                if (selectAllPlan) selectAllPlan.checked = false;
+            } catch (err) {
+                console.error('Erro ao excluir em massa:', err);
+                alert('Erro ao excluir registros.');
+            }
+        });
     }
 
     if (btnBaixarModelo) btnBaixarModelo.addEventListener('click', () => alert('Função de baixar modelo mantida do original (requer SheetJS).'));
@@ -2285,6 +2355,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getCellStyle(tabela, id, key, valueForStatus = null) {
         let style = '';
+
+        // 1. Cores de Planejamento por coluna (se preenchido)
+        if (tabela === 'planejamento_semanal' && valueForStatus) {
+            const dayMatch = key.match(/^(domingo|segunda|terca|quarta|quinta|sexta|sabado)_/);
+            if (dayMatch) {
+                const day = dayMatch[1];
+                const color = PLANNING_DAY_COLORS[day];
+                if (color) {
+                    return `background-color: ${color} !important; color: #000; font-weight: bold;`;
+                }
+            }
+        }
+
         // 1. Estilo de Status (se houver)
         if (key === 'status' && valueForStatus) {
              style += getStatusStyle(valueForStatus);
@@ -2458,7 +2541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarPlanejamento(semana) {
         const tbody = document.getElementById('tbodyPlanejamento');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;">Carregando...</td></tr>';
 
         try {
             const { data, error } = await supabaseClient
@@ -2490,12 +2573,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         dias.forEach(dia => {
             diasHtml += `
-                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getCellStyle('planejamento_semanal', item.id, dia + '_rota')}"></td>
-                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status')}"></td>
+                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getCellStyle('planejamento_semanal', item.id, dia + '_rota', item[dia + '_rota'])}"></td>
+                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status', item[dia + '_status'])}"></td>
             `;
         });
 
         tr.innerHTML = `
+            <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-plan" data-id="${item.id}"></td>
             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('planejamento_semanal', item.id, 'placa')}"></td>
             <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'modelo')}"></td>
             ${diasHtml}
