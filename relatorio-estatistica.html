@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Estatística - Marquespan</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/relatorio-estatistica.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+        <header class="header glass-header">
+            <h1><i class="fas fa-chart-line"></i> Relatório Estatística</h1>
+        </header>
+
+        <div class="filters-actions-container">
+            <div class="filter-card">
+                <h3><i class="fas fa-filter"></i> Filtros</h3>
+                <form id="formFiltroEstatistica" class="filters-container">
+                    <div class="form-group-filter">
+                        <label>Filial</label>
+                        <select id="filtroFilial" class="glass-input">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Período</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="date" id="dataInicio" class="glass-input">
+                            <input type="date" id="dataFim" class="glass-input">
+                        </div>
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Rota</label>
+                        <input type="text" id="filtroRota" class="glass-input" list="listaRotas" placeholder="Ex: 101">
+                    </div>
+                    <div class="form-group-filter">
+                        <label>Placa</label>
+                        <input type="text" id="filtroPlaca" class="glass-input" list="listaVeiculos" placeholder="ABC1234">
+                    </div>
+                    <button type="submit" class="btn-glass btn-blue" style="margin-top: 15px;"><i class="fas fa-search"></i> Buscar</button>
+                </form>
+            </div>
+
+            <div class="action-card">
+                <h3><i class="fas fa-download"></i> Exportar</h3>
+                <div class="actions-container">
+                    <button id="btnExportarExcel" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <section class="glass-panel">
+            <div class="table-responsive">
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th>DATA</th>
+                            <th>PLACA</th>
+                            <th>KM RODADO</th>
+                            <th>LITROS DIESEL</th>
+                            <th>VALOR DIESEL</th>
+                            <th>HOSPEDAGEM</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyEstatistica">
+                        <tr><td colspan="6" style="text-align: center;">Selecione os filtros e clique em buscar.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="script/menu.js"></script>
+    <script type="module" src="script/relatorio-estatistica.js"></script>
+</body>
+</html>
