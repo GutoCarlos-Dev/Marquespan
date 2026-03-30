@@ -1,33 +1,3 @@
-/* Estilos específicos para Cadastro de Tanque */
-/* Atualmente utiliza estilos globais e de comodato.css */
-
-/* Ajuste de layout para a coluna de ações */
-#tableBodyTanques td:last-child {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Estilos para o botão Editar (Azul) */
-.btn-action.btn-edit,
-.btn-acao.editar {
-    background-color: #007bff;
-    color: white;
-}
-.btn-action.btn-edit:hover,
-.btn-acao.editar:hover {
-    background-color: #0056b3;
-}
-
-/* Estilos para o botão Excluir (Vermelho) */
-.btn-action.btn-delete,
-.btn-acao.excluir {
-    background-color: #dc3545;
-    color: white;
-}
-.btn-action.btn-delete:hover,
-.btn-acao.excluir:hover {
 /* css/cadastro-tanque.css - Estilo Glassmorphism e Layout */
 
 :root {
@@ -201,16 +171,35 @@
 }
 
 /* Botões de Ação na Tabela */
-.btn-action {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    transition: color 0.2s;
-    margin: 0 5px;
+.actions-cell {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
 }
-.btn-edit { color: #007bff; }
-.btn-delete { color: #dc3545; }
+
+.btn-action {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #6c757d;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-action:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.btn-action.btn-edit { color: #007bff; }
+.btn-action.btn-edit:hover { background-color: #e7f1ff; border-color: #b8d6fb; }
+
+.btn-action.btn-delete { color: #dc3545; }
+.btn-action.btn-delete:hover { background-color: #fbebed; border-color: #f5c6cb; }
 
 /* Media Queries para Responsividade */
 @media (max-width: 768px) {
@@ -223,6 +212,4 @@
     .btn-glass {
         width: 100%;
     }
-}
-    background-color: #c82333;
 }
