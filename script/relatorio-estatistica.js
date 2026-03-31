@@ -192,7 +192,8 @@ const RelatorioEstatistica = {
                     km_rodado: kmRodado,
                     litros: sup.litros,
                     valor_diesel: sup.valor,
-                    valor_hospedagem: valorHospedagem
+                    valor_hospedagem: valorHospedagem,
+                    gasto_total: (sup.valor || 0) + (valorHospedagem || 0)
                 });
             }
 
@@ -211,7 +212,7 @@ const RelatorioEstatistica = {
     renderTable() {
         this.tbody.innerHTML = '';
         if (this.data.length === 0) {
-            this.tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum dado encontrado para os filtros selecionados.</td></tr>';
+            this.tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum dado encontrado para os filtros selecionados.</td></tr>';
             return;
         }
 
@@ -225,6 +226,7 @@ const RelatorioEstatistica = {
                 <td>${item.litros.toFixed(2)} L</td>
                 <td>${this.formatCurrency(item.valor_diesel)}</td>
                 <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
+                <td style="font-weight: 700; color: var(--primary-color);">${this.formatCurrency(item.gasto_total)}</td>
             `;
             this.tbody.appendChild(tr);
         });
@@ -233,13 +235,14 @@ const RelatorioEstatistica = {
     exportExcel() {
         if (this.data.length === 0) return alert('Sem dados para exportar.');
         const ws = XLSX.utils.json_to_sheet(this.data.map(i => ({
-            'Data': i.data,
-            'Rota': i.rota,
-            'Placa': i.placa,
-            'KM Rodado': i.km_rodado,
-            'Litros Diesel': i.litros,
-            'Valor Diesel': i.valor_diesel,
-            'Hospedagem': i.valor_hospedagem
+            'DATA': i.data,
+            'ROTA': i.rota,
+            'PLACA': i.placa,
+            'KM RODADO': i.km_rodado,
+            'LITROS DIESEL': i.litros,
+            'VALOR DIESEL': i.valor_diesel,
+            'HOSPEDAGEM': i.valor_hospedagem,
+            'TOTAL GASTO': i.gasto_total
         })));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Estatistica");
@@ -282,7 +285,7 @@ const RelatorioEstatistica = {
         doc.text(`Período: ${document.getElementById('dataInicio').value} a ${document.getElementById('dataFim').value}`, 14, 35);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
 
-        const columns = ['DATA', 'ROTA', 'PLACA', 'KM RODADO', 'LITROS DIESEL', 'VALOR DIESEL', 'HOSPEDAGEM'];
+        const columns = ['DATA', 'ROTA', 'PLACA', 'KM RODADO', 'LITROS DIESEL', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO'];
         const rows = this.data.map(i => [
             new Date(i.data + 'T00:00:00').toLocaleDateString('pt-BR'),
             i.rota || '-',
@@ -290,7 +293,8 @@ const RelatorioEstatistica = {
             i.km_rodado > 0 ? i.km_rodado + ' km' : 'N/I',
             i.litros.toFixed(2) + ' L',
             this.formatCurrency(i.valor_diesel),
-            this.formatCurrency(i.valor_hospedagem)
+            this.formatCurrency(i.valor_hospedagem),
+            this.formatCurrency(i.gasto_total)
         ]);
 
         doc.autoTable({
