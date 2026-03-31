@@ -169,7 +169,7 @@ function renderizarItens() {
                         <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
                     </div>
                     <div style="text-align:right;">
-                        <span class="status">${item.status}</span>
+                        <span class="status">${item.status === 'PULAR_LAVAGEM' ? 'DISPENSADO' : item.status}</span>
                         ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
                     </div>
                 </div>

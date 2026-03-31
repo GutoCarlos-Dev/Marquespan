@@ -13,6 +13,12 @@ let precosCache = [];
 let editingPriceId = null;
 let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
 
+function getDisplayStatus(status, isPdf = false) {
+    if (status === 'PULAR_LAVAGEM') return 'DISPENSADO';
+    if (isPdf && status === 'INTERNADO') return 'MANUTENÇÃO';
+    return status;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
@@ -505,8 +511,8 @@ function filtrarVeiculosModal() {
     const checkedTypes = Array.from(document.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value);
 
     const filtrados = veiculosAptosCache.filter(v => {
-        const matchPlaca = !placa || v.placa.includes(placa);
-        const matchFilial = !filial || v.filial === filial;
+        const matchPlaca = !placa || v.placa.toUpperCase().includes(placa.trim());
+        const matchFilial = !filial || (v.filial && v.filial.trim() === filial.trim());
         const matchSituacao = !situacao || v.situacao === situacao;
         const matchTipo = checkedTypes.length === 0 || checkedTypes.includes(v.tipo);
         return matchPlaca && matchFilial && matchTipo && matchSituacao;
@@ -816,7 +822,7 @@ function renderizarItensDetalhes(itens) {
                 <span class="badge ${badgeClass}" 
                       style="${isDisabled ? 'cursor: default;' : 'cursor:pointer;'}" 
                       onclick="${isDisabled ? '' : `toggleStatusItem('${item.id}', '${item.status}')`}">
-                    ${item.status}
+                    ${getDisplayStatus(item.status)}
                 </span>
             </td>
             <td>${dataRealizado}</td>
@@ -899,7 +905,7 @@ window.atualizarItem = async function(id, campo, valor) {
 
         const item = currentListItems.find(i => i.id === id);
         if (item && (item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO')) {
-            return alert(`Não é possível editar o tipo de lavagem de um item com status "${item.status}".`);
+            return alert(`Não é possível editar o tipo de lavagem de um item com status "${getDisplayStatus(item.status)}".`);
         }
 
         const { error } = await supabaseClient
@@ -937,7 +943,7 @@ function calcularValorPeloPrecoAtual(item) {
 
 window.toggleStatusItem = async function(id, statusAtual) {
     if (statusAtual === 'PULAR_LAVAGEM' || statusAtual === 'INTERNADO') {
-        return alert(`Não é possível alterar o status de um item com "${statusAtual}". Remova-o e adicione novamente se necessário.`);
+        return alert(`Não é possível alterar o status de um item com "${getDisplayStatus(statusAtual)}". Remova-o e adicione novamente se necessário.`);
     }
 
     let novoStatus = 'PENDENTE';
@@ -949,16 +955,21 @@ window.toggleStatusItem = async function(id, statusAtual) {
     }
 
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
-    const dataRealizado = novoStatus === 'REALIZADO' ? new Date().toISOString() : null;
+    const dataRealizado = (novoStatus === 'REALIZADO' || novoStatus === 'AGENDADO') ? new Date().toISOString() : null;
 
     let valorParaSalvar = null;
     if (novoStatus === 'REALIZADO') {
-        const item = currentListItems.find(i => i.id === id);
+        const item = currentListItems.find(i => String(i.id) === String(id));
         const select = document.querySelector(`select[onchange*="${id}"]`);
         const tipoSelecionado = select ? select.value : item.tipo_lavagem;
-        
+
+        if (!select) {
+            console.error('Select de tipo de lavagem não encontrado para o item:', id);
+        }
+
         if (!tipoSelecionado) {
             alert('Selecione o Tipo de Lavagem antes de marcar como Realizado.');
+            if(select) select.focus();
             return;
         }
         // Calcula o valor para salvar no banco
@@ -1217,7 +1228,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 tipoVeiculo,
                 item.marca || '',
                 item.tipo_lavagem || '-',
-                item.status,
+                getDisplayStatus(item.status, true),
                 (() => {
                     if (!item.data_realizado) return '-';
                     const dateString = item.data_realizado.length === 10 && !item.data_realizado.includes('T')
@@ -1306,9 +1317,11 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                             textColor = [255, 193, 7]; // #ffc107
                             break;
                         case 'INTERNADO':
+                        case 'MANUTENÇÃO':
                             textColor = [0, 123, 255]; // #007bff
                             break;
                         case 'PULAR_LAVAGEM':
+                        case 'DISPENSADO':
                             textColor = [108, 117, 125]; // #6c757d
                             break;
                         default:
@@ -1333,7 +1346,7 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
         ]);
 
         const statusRows = Object.keys(statusSummary).map(status => [
-            status,
+            getDisplayStatus(status, true),
             statusSummary[status]
         ]);
 
@@ -1516,12 +1529,12 @@ async function bulkSetStatus(novoStatus) {
     }
 
     if (novoStatus === 'PULAR_LAVAGEM') {
-        if (!confirm(`Deseja marcar ${ids.length} item(ns) como "PULAR LAVAGEM"? Itens com este status não poderão ser editados.`)) return;
+        if (!confirm(`Deseja marcar ${ids.length} item(ns) como "DISPENSADO"? Itens com este status não poderão ser editados.`)) return;
     }
 
     if (novoStatus === 'REALIZADO') {
         for (const id of ids) {
-            const item = currentListItems.find(i => i.id == id);
+            const item = currentListItems.find(i => String(i.id) === String(id));
             if (!item.tipo_lavagem) {
                 alert(`O veículo ${item.placa} não possui um tipo de lavagem definido. Não é possível marcá-lo como "Realizado".`);
                 return;
@@ -1538,7 +1551,7 @@ async function bulkSetStatus(novoStatus) {
 
     // Prepara atualizações individuais para calcular valor corretamente se for REALIZADO
     const updatesPromises = ids.map(id => {
-        const item = currentListItems.find(i => i.id == id);
+        const item = currentListItems.find(i => String(i.id) === String(id));
         let valorParaSalvar = null;
         
         if (novoStatus === 'REALIZADO') {
@@ -1561,7 +1574,7 @@ async function bulkSetStatus(novoStatus) {
         if (errors.length > 0) throw errors[0];
 
         ids.forEach(id => {
-            const itemIndex = currentListItems.findIndex(i => i.id == id);
+            const itemIndex = currentListItems.findIndex(i => String(i.id) === String(id));
             if (itemIndex > -1) {
                 currentListItems[itemIndex].status = novoStatus;
                 currentListItems[itemIndex].data_realizado = dataRealizado;
