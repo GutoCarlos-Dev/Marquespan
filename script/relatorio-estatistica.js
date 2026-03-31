@@ -282,7 +282,10 @@ const RelatorioEstatistica = {
         doc.text("Relatório Estatística", 14, 28);
         
         doc.setFontSize(10);
-        doc.text(`Período: ${document.getElementById('dataInicio').value} a ${document.getElementById('dataFim').value}`, 14, 35);
+        const dtIniFmt = new Date(document.getElementById('dataInicio').value + 'T00:00:00').toLocaleDateString('pt-BR');
+        const dtFimFmt = new Date(document.getElementById('dataFim').value + 'T00:00:00').toLocaleDateString('pt-BR');
+
+        doc.text(`Período: ${dtIniFmt} a ${dtFimFmt}`, 14, 35);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
 
         const columns = ['DATA', 'ROTA', 'PLACA', 'KM RODADO', 'LITROS DIESEL', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO'];
