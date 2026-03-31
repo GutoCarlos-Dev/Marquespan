@@ -12,6 +12,9 @@ let currentSort = { key: null, asc: true };
 let precosCache = [];
 let editingPriceId = null;
 let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
+let chartStatusInstance = null;
+let chartProgressoInstance = null;
+let aoVivoInterval = null;
 
 function getDisplayStatus(status, isPdf = false) {
     if (status === 'PULAR_LAVAGEM') return 'DISPENSADO';
@@ -59,6 +62,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.remove('hidden');
+
+            // Gerenciamento da aba Ao Vivo
+            if (btn.dataset.tab === 'tab-ao-vivo') {
+                iniciarAoVivo();
+            } else {
+                pararAoVivo();
+            }
         });
     });
 
@@ -175,6 +185,127 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Injeta os campos de fornecedor na interface se não existirem
     injectFornecedorFields();
 });
+
+async function iniciarAoVivo() {
+    atualizarPainelAoVivo();
+    // Atualiza a cada 30 segundos
+    if (!aoVivoInterval) {
+        aoVivoInterval = setInterval(atualizarPainelAoVivo, 30000);
+    }
+}
+
+function pararAoVivo() {
+    if (aoVivoInterval) {
+        clearInterval(aoVivoInterval);
+        aoVivoInterval = null;
+    }
+}
+
+async function atualizarPainelAoVivo() {
+    try {
+        // 1. Buscar Listas Abertas
+        const { data: listas, error: errListas } = await supabaseClient
+            .from('lavagem_listas')
+            .select('id, nome')
+            .eq('status', 'ABERTA');
+
+        if (errListas) throw errListas;
+
+        if (!listas || listas.length === 0) {
+            document.getElementById('last-update-ao-vivo').textContent = "Nenhuma lista aberta para monitorar.";
+            return;
+        }
+
+        // 2. Buscar itens dessas listas
+        const idsListas = listas.map(l => l.id);
+        const { data: itens, error: errItens } = await supabaseClient
+            .from('lavagem_itens')
+            .select('status, lista_id')
+            .in('lista_id', idsListas);
+
+        if (errItens) throw errItens;
+
+        // 3. Processar Dados para Gráfico de Pizza (Status Geral)
+        const statusCounts = itens.reduce((acc, it) => {
+            const label = getDisplayStatus(it.status);
+            acc[label] = (acc[label] || 0) + 1;
+            return acc;
+        }, {});
+
+        renderizarGraficoStatus(statusCounts);
+
+        // 4. Processar Dados para Gráfico de Barras (Progresso por Lista)
+        const progressoPorLista = listas.map(lista => {
+            const itensDaLista = itens.filter(i => i.lista_id === lista.id);
+            const total = itensDaLista.filter(i => i.status !== 'PULAR_LAVAGEM').length;
+            const feitos = itensDaLista.filter(i => i.status === 'REALIZADO').length;
+            const perc = total > 0 ? Math.round((feitos / total) * 100) : 0;
+            return { nome: lista.nome, porcentagem: perc };
+        });
+
+        renderizarGraficoProgresso(progressoPorLista);
+
+        document.getElementById('last-update-ao-vivo').textContent = `Atualizado em: ${new Date().toLocaleTimeString('pt-BR')}`;
+
+    } catch (error) {
+        console.error('Erro no Ao Vivo:', error);
+    }
+}
+
+function renderizarGraficoStatus(counts) {
+    const ctx = document.getElementById('chartStatusAoVivo').getContext('2d');
+    const labels = Object.keys(counts);
+    const data = Object.values(counts);
+    const colors = labels.map(l => {
+        if (l === 'REALIZADO') return '#28a745';
+        if (l === 'PENDENTE') return '#dc3545';
+        if (l === 'AGENDADO') return '#ffc107';
+        if (l === 'INTERNADO' || l === 'MANUTENÇÃO') return '#007bff';
+        return '#6c757d';
+    });
+
+    if (chartStatusInstance) chartStatusInstance.destroy();
+
+    chartStatusInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 14 } } } }
+        }
+    });
+}
+
+function renderizarGraficoProgresso(dados) {
+    const ctx = document.getElementById('chartProgressoListas').getContext('2d');
+    
+    if (chartProgressoInstance) chartProgressoInstance.destroy();
+
+    chartProgressoInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dados.map(d => d.nome),
+            datasets: [{
+                label: '% Concluído',
+                data: dados.map(d => d.porcentagem),
+                backgroundColor: '#006937'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 
 function updateMultiselectText() {
     const all = document.querySelectorAll('.tipo-checkbox');
@@ -329,8 +460,8 @@ async function carregarListas() {
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${lista.nome}</td>
                 <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
-                <td>
+                <td style="text-align: center;"><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
+                <td style="text-align: center;">
                     <div class="progress-bar-container" title="${realizados}/${total}">
                         <div class="progress-bar" style="width: ${percent}%"></div>
                     </div>

@@ -1,92 +1,85 @@
-/* Estilos específicos para Lavagem */
-.lavagem-table-container {
-    max-height: 600px;
-    overflow-y: auto;
+/* Dashboard Ao Vivo */
+.dashboard-ao-vivo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
 }
 
-.badge {
-    padding: 5px 10px;
+.chart-card {
+    background: white;
+    padding: 20px;
     border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    text-align: center;
 }
 
-.badge-aberta { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
-.badge-finalizada { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.badge-pendente { background-color: #fff3cd; color: #856404; }
-.badge-realizado { background-color: #d4edda; color: #155724; }
-
-.select-tipo-lavagem {
-    padding: 5px;
-    border-radius: 6px;
-    border: 1px solid #ced4da;
+.chart-container-canvas {
+    position: relative;
+    height: 350px;
     width: 100%;
-    background-color: #fff;
 }
 
-.progress-bar-container {
-    width: 100%;
-    background-color: #e9ecef;
-    border-radius: 10px;
-    height: 10px;
-    overflow: hidden;
+@media (max-width: 900px) {
+    .dashboard-ao-vivo-grid { grid-template-columns: 1fr; }
 }
 
-.progress-bar {
-    height: 100%;
-    background-color: #006937;
-    transition: width 0.3s ease;
-}
-
+/* Estilos para organizar os filtros lado a lado e torná-los menores */
 .filtros-container {
     display: flex;
-    gap: 15px;
-    align-items: flex-end;
-    margin-bottom: 20px;
     flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .filtros-container .form-group {
     margin-bottom: 0;
 }
 
-/* --- Estilos de Modal --- */
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
+.filtros-container .glass-input {
+    width: 180px; /* Largura reduzida para os campos de data e status */
+    height: 38px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+/* Estilização dos Status das Listas (ABERTA / FINALIZADA) */
+.badge-aberta { 
+    background: linear-gradient(135deg, #007bff, #0056b3) !important; 
+    color: white !important; 
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+.badge-finalizada { 
+    background: linear-gradient(135deg, #28a745, #1e7e34) !important; 
+    color: white !important; 
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+/* Barra de Progresso na Tabela de Listas */
+.progress-bar-container {
     width: 100%;
+    max-width: 120px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    height: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    margin: 0 auto 4px auto; /* Centraliza na célula */
+}
+
+.progress-bar {
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
+    background: linear-gradient(90deg, #006937, #28a745);
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.hidden {
-    display: none !important;
+#tbodyListas td small {
+    font-weight: bold;
+    color: #555;
 }
 
-.glass-modal {
-    background: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    width: 90%;
-    max-width: 900px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
+/* Alinhamento dos cabeçalhos de Status e Progresso */
+#tab-listas .glass-table th:nth-child(4), 
+#tab-listas .glass-table th:nth-child(5) { text-align: center; }
