@@ -23,6 +23,7 @@ const RelatorioEstatistica = {
             this.fetchData();
         });
         this.btnExcel.addEventListener('click', () => this.exportExcel());
+        this.btnPDF.addEventListener('click', () => this.exportPDF());
     },
 
     setDefaultDates() {
@@ -92,12 +93,14 @@ const RelatorioEstatistica = {
             if (rota) queryExt = queryExt.eq('rota', rota);
             if (filial) queryExt = queryExt.eq('filial', filial);
 
-            // 3. Buscar Hospedagens (Despesas)
-            let queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota')
-                .gte('data_checkin', dtIni)
+            // 3. Buscar Hospedagens (Despesas) - Busca retroativa de 15 dias para capturar estadias que iniciaram antes do filtro mas cobrem o período
+            const dtIniDate = new Date(dtIni + 'T00:00:00');
+            dtIniDate.setDate(dtIniDate.getDate() - 15);
+            const dtIniRetroativa = dtIniDate.toISOString().split('T')[0];
+
+            let queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota, qtd_diarias')
+                .gte('data_checkin', dtIniRetroativa)
                 .lte('data_checkin', dtFim);
-            
-            if (rota) queryHosp = queryHosp.eq('numero_rota', rota);
             
             const [resSaidas, resExt, resHosp] = await Promise.all([querySaidas, queryExt, queryHosp]);
 
@@ -165,10 +168,22 @@ const RelatorioEstatistica = {
 
                 const kmRodado = (sup.km_atual > kmAnterior && kmAnterior > 0) ? (sup.km_atual - kmAnterior) : 0;
 
-                // Encontra hospedagem vinculada à ROTA EXATA e DATA
-                const valorHospedagem = resHosp.data?.filter(h => 
-                    h.data_checkin === sup.data && String(h.numero_rota) === String(sup.rota)
-                ).reduce((acc, curr) => acc + (curr.valor_total || 0), 0) || 0;
+                // Encontra hospedagem vinculada à ROTA e dentro do período de estada (Check-in + Diárias)
+                const valorHospedagem = resHosp.data?.filter(h => {
+                    // Suporta múltiplas rotas na despesa (separadas por vírgula)
+                    const rotasHosp = String(h.numero_rota || '').split(',').map(r => r.trim());
+                    const rotaSup = String(sup.rota || '').trim();
+                    
+                    if (rotaSup && !rotasHosp.includes(rotaSup)) return false;
+                    
+                    const checkin = new Date(h.data_checkin + 'T00:00:00');
+                    const dataAbastecimento = new Date(sup.data + 'T00:00:00');
+                    const checkout = new Date(checkin);
+                    checkout.setDate(checkout.getDate() + (parseInt(h.qtd_diarias) || 1));
+
+                    // Verifica se a data do abastecimento está entre o check-in (inclusive) e o check-out (inclusive)
+                    return dataAbastecimento >= checkin && dataAbastecimento <= checkout;
+                }).reduce((acc, curr) => acc + (curr.valor_total || 0), 0) || 0;
 
                 this.data.push({
                     data: sup.data,
@@ -229,6 +244,73 @@ const RelatorioEstatistica = {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Estatistica");
         XLSX.writeFile(wb, "Relatorio_Estatistica.xlsx");
+    },
+
+    async exportPDF() {
+        if (this.data.length === 0) return alert('Sem dados para exportar.');
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+
+        // Logo
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+        };
+
+        const logoBase64 = await getLogoBase64();
+        if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+
+        doc.setFontSize(18);
+        doc.text("Relatório Estatística", 14, 28);
+        
+        doc.setFontSize(10);
+        doc.text(`Período: ${document.getElementById('dataInicio').value} a ${document.getElementById('dataFim').value}`, 14, 35);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
+
+        const columns = ['DATA', 'ROTA', 'PLACA', 'KM RODADO', 'LITROS DIESEL', 'VALOR DIESEL', 'HOSPEDAGEM'];
+        const rows = this.data.map(i => [
+            new Date(i.data + 'T00:00:00').toLocaleDateString('pt-BR'),
+            i.rota || '-',
+            i.placa,
+            i.km_rodado > 0 ? i.km_rodado + ' km' : 'N/I',
+            i.litros.toFixed(2) + ' L',
+            this.formatCurrency(i.valor_diesel),
+            this.formatCurrency(i.valor_hospedagem)
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 45,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55] },
+            styles: { fontSize: 9 }
+        });
+
+        // Numeração de páginas
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.getWidth() - 25, doc.internal.pageSize.getHeight() - 10);
+        }
+
+        doc.save(`Relatorio_Estatistica_${new Date().toISOString().slice(0,10)}.pdf`);
     }
 };
 
