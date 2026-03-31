@@ -1228,6 +1228,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
                 if (error) throw error;
                 
+                this.filiaisCache = data || []; // Armazena para uso no filtro inteligente de postos
+
                 const options = '<option value="">Selecione a Filial</option>' + 
                     (data || []).map(f => {
                         const val = f.sigla || f.nome;
@@ -1238,8 +1240,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userFilial = this.getUserFilial();
                 if (this.extFilial) {
                     this.extFilial.innerHTML = options;
-                    if (userFilial) {
-                        this.extFilial.value = userFilial;
+                    if (userFilial && this.filiaisCache.length > 0) {
+                        // Tenta encontrar o valor correspondente no dropdown (seja sigla ou nome)
+                        const matchingFilial = this.filiaisCache.find(f => f.nome === userFilial || f.sigla === userFilial || (f.sigla || f.nome) === userFilial);
+                        if (matchingFilial) {
+                            this.extFilial.value = matchingFilial.sigla || matchingFilial.nome;
+                        } else {
+                            this.extFilial.value = userFilial;
+                        }
                         this.extFilial.disabled = true;
                     }
                     this.loadPostosOptions(); // Carrega postos filtrados pela filial definida
@@ -1291,7 +1299,24 @@ document.addEventListener('DOMContentLoaded', () => {
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
 
-            const filialFiltro = this.extFilial ? this.extFilial.value : this.getUserFilial();
+            const filialSelecionada = this.extFilial ? this.extFilial.value : this.getUserFilial();
+            
+            // Tenta encontrar o objeto da filial no cache para pegar Nome e Sigla e fazer um filtro mais flexível (Nome ou Sigla)
+            let filiaisParaFiltrar = [filialSelecionada];
+            if (this.filiaisCache && filialSelecionada) {
+                const f = this.filiaisCache.find(x => x.nome === filialSelecionada || x.sigla === filialSelecionada || (x.sigla || x.nome) === filialSelecionada);
+                if (f) {
+                    if (f.nome) filiaisParaFiltrar.push(f.nome);
+                    if (f.sigla) filiaisParaFiltrar.push(f.sigla);
+                }
+            }
+            filiaisParaFiltrar = [...new Set(filiaisParaFiltrar.filter(Boolean))];
+
+            // 1. Limpa o valor do campo Posto e garante que ele esteja habilitado para seleção
+            if (this.extPosto) {
+                this.extPosto.value = '';
+                this.extPosto.disabled = false;
+            }
 
             try {
                 // --- CORREÇÃO: Busca todos os postos, contornando o limite padrão de 1000 registros ---
@@ -1306,8 +1331,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         .select('id, razao_social, cnpj')
                         .order('razao_social');
 
-                    if (filialFiltro) {
-                        query = query.eq('filial', filialFiltro);
+                    if (filiaisParaFiltrar.length > 0) {
+                        query = query.in('filial', filiaisParaFiltrar);
                     }
 
                     const { data, error } = await query.range(from, from + step - 1);
@@ -1333,6 +1358,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.value = `${p.razao_social} (${p.cnpj || 'S/CNPJ'})`;
                     datalist.appendChild(option);
                 });
+
+                // 2. Feedback visual se não houver postos para a filial selecionada
+                if (this.postosCache.length === 0 && filialSelecionada) {
+                    console.warn(`Nenhum posto encontrado para a filial: ${filialSelecionada} (Filtros tentados: ${filiaisParaFiltrar.join(', ')})`);
+                    if (this.extPosto) this.extPosto.placeholder = "Nenhum posto encontrado...";
+                } else if (this.extPosto) {
+                    this.extPosto.placeholder = "Digite o nome ou CNPJ...";
+                }
+
             } catch (error) {
                 console.error('Erro ao carregar postos:', error);
                 alert('Ocorreu um erro ao carregar a lista de postos para o formulário. Verifique o console para mais detalhes.');
