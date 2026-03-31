@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .badge-agendado { background-color: #ffc107; color: #212529; }
         .badge-realizado { background-color: #28a745; color: white; }
@@ -49,7 +48,6 @@
             <button class="painel-btn active" data-tab="tab-listas">Listas de Lavagem</button>
             <button class="painel-btn" data-tab="tab-precificacao">Precificação</button>
             <button class="painel-btn" data-tab="tab-relatorios">Relatórios</button>
-            <button class="painel-btn" data-tab="tab-ao-vivo" id="btnAoVivo"><i class="fas fa-broadcast-tower"></i> Lavagem ao Vivo</button>
         </div>
 
         <section id="tab-listas" class="glass-panel tab-content">
@@ -169,28 +167,6 @@
                     </thead>
                     <tbody id="tbodyRelatorio"></tbody>
                 </table>
-            </div>
-        </section>
-
-        <section id="tab-ao-vivo" class="glass-panel tab-content hidden">
-            <div class="panel-header-actions">
-                <h3><i class="fas fa-tv"></i> Painel de Monitoramento em Tempo Real</h3>
-                <span id="last-update-ao-vivo" style="font-size: 0.8em; color: #666;">Atualizado em: --:--</span>
-            </div>
-            
-            <div class="dashboard-ao-vivo-grid">
-                <div class="chart-card">
-                    <h4>Distribuição Geral de Status (Total)</h4>
-                    <div class="chart-container-canvas">
-                        <canvas id="chartStatusAoVivo"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h4>Progresso por Lista Aberta</h4>
-                    <div class="chart-container-canvas">
-                        <canvas id="chartProgressoListas"></canvas>
-                    </div>
-                </div>
             </div>
         </section>
     </div>
