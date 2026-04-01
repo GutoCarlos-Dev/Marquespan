@@ -249,7 +249,9 @@
                 const filial = document.getElementById('filtroFilial').value;
                 
                 try {
-                    let query = supabaseClient.from('veiculos').select('tipo');
+                    let query = supabaseClient.from('veiculos')
+                        .select('tipo')
+                        .not('tipo', 'in', '("EMPILHADEIRA","GERADOR")');
                     
                     if (filial) {
                         query = query.eq('filial', filial);
