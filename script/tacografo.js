@@ -30,6 +30,7 @@ const TacografoUI = {
     cacheDOM() {
         this.tbody = document.getElementById('tbodyTacografo');
         this.searchInput = document.getElementById('searchTacografo');
+        this.filialFilter = document.getElementById('filterFilial');
         this.statusFilterDisplay = document.getElementById('filterStatusDisplay');
         this.statusFilterOptions = document.getElementById('filterStatusOptions');
         this.statusFilterText = document.getElementById('filterStatusText');
@@ -52,6 +53,7 @@ const TacografoUI = {
         this.btnImportar?.addEventListener('click', () => this.fileImportar.click());
         this.fileImportar?.addEventListener('change', (e) => this.importarXLSX(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
+        this.filialFilter?.addEventListener('change', () => this.renderGrid());
         
         this.statusFilterDisplay?.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -143,6 +145,15 @@ const TacografoUI = {
                 };
             });
 
+            // Popula o filtro de Filial dinamicamente
+            const filiais = [...new Set(this.data.map(v => v.filial).filter(f => f && f !== '-'))].sort();
+            if (this.filialFilter) {
+                const currentVal = this.filialFilter.value;
+                this.filialFilter.innerHTML = '<option value="">Todas</option>';
+                filiais.forEach(f => this.filialFilter.add(new Option(f, f)));
+                this.filialFilter.value = currentVal;
+            }
+
             this.renderGrid();
         } catch (err) {
             console.error('Erro:', err);
@@ -173,6 +184,7 @@ const TacografoUI = {
 
     renderGrid() {
         const term = this.searchInput.value.toUpperCase();
+        const filialFilter = this.filialFilter ? this.filialFilter.value : '';
         const selectedStatuses = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked')).map(cb => cb.value);
 
         const vencIni = this.vencIniFilter.value;
@@ -181,7 +193,8 @@ const TacografoUI = {
         let filtered = this.data.filter(item => {
             const matchSearch = item.placa.includes(term) || 
                                item.modelo.toUpperCase().includes(term) || 
-                               item.filial.toUpperCase().includes(term);
+                               (item.renavan || '').toUpperCase().includes(term);
+            const matchFilial = !filialFilter || item.filial === filialFilter;
             const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
 
             let matchVenc = true;
@@ -195,7 +208,7 @@ const TacografoUI = {
                 }
             }
 
-            return matchSearch && matchStatus && matchVenc;
+            return matchSearch && matchFilial && matchStatus && matchVenc;
         });
 
         this.filteredData = filtered; // Salva para exportação
