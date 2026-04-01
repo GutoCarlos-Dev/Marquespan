@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Biblioteca para ler arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Bibliotecas para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div id="menu-container"></div>
@@ -57,6 +60,9 @@
                     </button>
                     <button id="btnImportar" class="btn-glass btn-green">
                         <i class="fas fa-file-import"></i> Importar XLSX
+                    </button>
+                    <button id="btnExportarPDF" class="btn-glass btn-red">
+                        <i class="fas fa-file-pdf"></i> Exportar PDF
                     </button>
                     <input type="file" id="fileImportar" accept=".xlsx, .xls" class="hidden">
                 </div>

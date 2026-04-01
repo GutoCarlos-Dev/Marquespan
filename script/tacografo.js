@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const TacografoUI = {
     data: [],
+    filteredData: [], // Armazena os dados filtrados para exportação global
     sortConfig: { key: 'placa', asc: true },
 
     async init() {
@@ -18,6 +19,7 @@ const TacografoUI = {
         this.vencFimFilter = document.getElementById('filterVencFim');
         this.btnAtualizar = document.getElementById('btnAtualizar');
         this.btnImportar = document.getElementById('btnImportar');
+        this.btnExportarPDF = document.getElementById('btnExportarPDF'); // Botão global (se existir no HTML)
         this.fileImportar = document.getElementById('fileImportar');
         // Contadores de legenda
         this.counterPendente = document.getElementById('count-pendente');
@@ -36,6 +38,8 @@ const TacografoUI = {
         this.vencIniFilter.addEventListener('change', () => this.renderGrid());
         this.vencFimFilter.addEventListener('change', () => this.renderGrid());
         
+        this.btnExportarPDF?.addEventListener('click', () => this.exportarGridPDF());
+
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
         });
@@ -134,6 +138,8 @@ const TacografoUI = {
             return matchSearch && matchStatus && matchVenc;
         });
 
+        this.filteredData = filtered; // Salva para exportação
+
         // Calcular quantidades por status com base no que está filtrado
         const counts = { Pendente: 0, Preliminar: 0, Pago: 0, 'Em Dia': 0, Manutenção: 0 };
         filtered.forEach(item => {
@@ -181,7 +187,7 @@ const TacografoUI = {
                 <td>
                     <input type="text" class="table-date-input input-obs" value="${item.observacao || ''}" placeholder="Observações...">
                 </td>
-                <td>
+                <td style="display: flex; gap: 5px; justify-content: center;">
                     <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar">
                         <i class="fas fa-save"></i>
                     </button>
@@ -338,6 +344,104 @@ const TacografoUI = {
             return data;
         }
         return null;
+    },
+
+    /**
+     * Exporta os dados filtrados da grid para PDF
+     */
+    async exportarGridPDF() {
+        if (!this.filteredData || this.filteredData.length === 0) {
+            return alert('Não há dados para exportar.');
+        }
+        await this.gerarPDF(this.filteredData, "Relatório Geral de Tacógrafos");
+    },
+
+    /**
+     * Exporta os dados de um veículo específico via botão na coluna Ações
+     */
+    async exportarLinhaPDF(placa) {
+        const item = this.data.find(d => d.placa === placa);
+        if (!item) return;
+        await this.gerarPDF([item], `Ficha de Tacógrafo - ${placa}`);
+    },
+
+    /**
+     * Lógica principal de geração de PDF seguindo o padrão do sistema
+     */
+    async gerarPDF(dados, titulo) {
+        if (!window.jspdf) return alert('Biblioteca jsPDF não carregada.');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem
+
+        // Função para carregar o logo e garantir fundo branco
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF'; // Fundo branco solicitado
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+        };
+
+        const logoBase64 = await getLogoBase64();
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 12);
+        }
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55); // Verde Marquespan
+        doc.text(titulo, 60, 18);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
+
+        const columns = ['Filial', 'Placa', 'Modelo', 'Renavan', 'Tipo', 'Emissão', 'Vencimento', 'Status', 'Observação'];
+        const rows = dados.map(item => [
+            item.filial,
+            item.placa,
+            item.modelo,
+            item.renavan,
+            item.tipo,
+            item.data_emissao ? new Date(item.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            item.data_vencimento ? new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            item.status,
+            item.observacao || ''
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 25,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+            alternateRowStyles: { fillColor: [240, 240, 240] },
+            columnStyles: {
+                7: { fontStyle: 'bold' },
+                8: { cellWidth: 50 } // Mais espaço para observação
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 6) { // Vencimento
+                    const dateStr = data.cell.raw;
+                    if (dateStr && new Date(dateStr + 'T00:00:00') < new Date()) {
+                        data.cell.styles.textColor = [220, 53, 69]; // Vermelho se vencido
+                    }
+                }
+            }
+        });
+
+        doc.save(`Tacografo_${new Date().toISOString().split('T')[0]}.pdf`);
     },
 
     gerarRelatorioErros(placas) {
