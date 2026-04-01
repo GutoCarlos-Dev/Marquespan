@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Tacógrafo - Marquespan</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/tacografo.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+        <header class="page-header">
+            <div class="header-left">
+                <h1><i class="fas fa-stopwatch"></i> Controle de Tacógrafo</h1>
+                <p>Gerenciamento de emissões e vencimentos por veículo</p>
+            </div>
+            <div id="usuario-logado" class="user-info"></div>
+        </header>
+
+        <section class="glass-panel search-section">
+            <div class="filters-container">
+                <div class="form-group">
+                    <label for="searchTacografo"><i class="fas fa-search"></i> Buscar Veículo</label>
+                    <input type="text" id="searchTacografo" class="glass-input" placeholder="Placa, modelo ou filial...">
+                </div>
+                <div class="form-group">
+                    <label for="filterStatus"><i class="fas fa-filter"></i> Status</label>
+                    <select id="filterStatus" class="glass-input">
+                        <option value="">Todos</option>
+                        <option value="Preliminar">Preliminar</option>
+                        <option value="Pago">Pago</option>
+                        <option value="Batido">Batido</option>
+                    </select>
+                </div>
+                <div class="actions-header">
+                    <button id="btnAtualizar" class="btn-glass btn-blue">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="glass-panel table-section">
+            <div class="table-container">
+                <table class="data-grid" id="gridTacografo">
+                    <thead>
+                        <tr>
+                            <th data-sort="filial">Filial <i class="fas fa-sort"></i></th>
+                            <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>
+                            <th data-sort="modelo">Modelo <i class="fas fa-sort"></i></th>
+                            <th data-sort="renavan">Renavan <i class="fas fa-sort"></i></th>
+                            <th data-sort="tipo">Tipo <i class="fas fa-sort"></i></th>
+                            <th data-sort="data_emissao">Data Emissão <i class="fas fa-sort"></i></th>
+                            <th data-sort="data_vencimento">Dt. Vencimento <i class="fas fa-sort"></i></th>
+                            <th data-sort="status">Status <i class="fas fa-sort"></i></th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyTacografo">
+                        <!-- Dados carregados via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="script/menu.js"></script>
+    <script type="module" src="script/tacografo.js"></script>
+</body>
+</html>
