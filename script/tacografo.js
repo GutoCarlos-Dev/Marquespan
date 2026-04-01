@@ -240,7 +240,7 @@ const TacografoUI = {
                 <td>${item.filial}</td>
                 <td><strong>${item.placa}</strong></td>
                 <td>${item.modelo}</td>
-                <td>${item.renavan}</td>
+                <td class="renavan-cell" data-placa="${item.placa}" ondblclick="TacografoUI.startRenavanEdit(this)">${item.renavan || '-'}</td>
                 <td>${item.tipo}</td>
                 <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao}"></td>
                 <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}" onchange="TacografoUI.handleDateChange(this)"></td>
@@ -308,11 +308,59 @@ const TacografoUI = {
         input.className = `table-date-input input-vencimento ${this.checkVencimento(newVenc)}`;
     },
 
+    /**
+     * Inicia o modo de edição para o campo Renavan via duplo clique.
+     */
+    async startRenavanEdit(cell) {
+        if (!cell || cell.querySelector('input')) return;
+
+        const placa = cell.dataset.placa;
+        const originalRenavan = cell.textContent.trim() === '-' ? '' : cell.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'table-date-input';
+        input.value = originalRenavan;
+        input.style.width = '100%';
+        input.style.textAlign = 'center';
+
+        cell.innerHTML = '';
+        cell.appendChild(input);
+        input.focus();
+
+        const saveAndExit = async () => {
+            const newRenavan = input.value.trim().toUpperCase();
+            if (newRenavan === originalRenavan) {
+                cell.textContent = originalRenavan || '-';
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('veiculos')
+                    .update({ renavan: newRenavan || null })
+                    .eq('placa', placa);
+
+                if (error) throw error;
+
+                cell.textContent = newRenavan || '-';
+                // Atualiza o cache local para que a ordenação e filtros funcionem com o novo dado
+                const item = this.data.find(d => d.placa === placa);
+                if (item) item.renavan = newRenavan;
+            } catch (err) {
+                alert('Erro ao salvar Renavan: ' + err.message);
+                cell.textContent = originalRenavan || '-';
+            }
+        };
+        input.addEventListener('blur', saveAndExit);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    },
+
     async salvarLinha(placa) {
         const tr = document.querySelector(`tr[data-placa="${placa}"]`);
         const btn = tr.querySelector('.btn-icon.save');
         
-        const status = tr.querySelector('.status-select-grid').value;
+        const status = tr.querySelector('.status-select-grid:not(.guia-gru-select)').value;
         const guia_gru = tr.querySelector('.guia-gru-select').value;
         const data_emissao = tr.querySelector('.input-emissao').value;
         const data_vencimento = tr.querySelector('.input-vencimento').value;
