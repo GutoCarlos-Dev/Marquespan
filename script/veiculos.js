@@ -290,28 +290,39 @@ function setupMultiselect() {
 
     if (!display || !options) return;
 
+    // Toggle Dropdown
     display.addEventListener('click', (e) => {
         e.stopPropagation();
         options.classList.toggle('hidden');
     });
 
+    // Fechar ao clicar fora
     document.addEventListener('click', (e) => {
         if (!display.contains(e.target) && !options.contains(e.target)) {
             options.classList.add('hidden');
         }
     });
 
+    // Lógica de atualização de texto e busca (Identica ao Tacógrafo)
     options.addEventListener('change', () => {
-        const checked = Array.from(options.querySelectorAll('.filtro-tipo-checkbox:checked'));
-        if (checked.length === 0) {
-            text.textContent = 'Todos';
-        } else if (checked.length <= 2) {
-            text.textContent = checked.map(cb => cb.value).join(', ');
-        } else {
-            text.textContent = `${checked.length} selecionados`;
-        }
-        carregarVeiculos(); // Atualização em tempo real igual ao Tacógrafo
+        updateTipoFilterText(options, text);
+        carregarVeiculos();
     });
+}
+
+/**
+ * Atualiza o texto exibido no seletor de Tipos baseado nas seleções.
+ * Segue exatamente o padrão de TacografoUI.updateStatusFilterText
+ */
+function updateTipoFilterText(optionsContainer, textElement) {
+    const checked = Array.from(optionsContainer.querySelectorAll('.filtro-tipo-checkbox:checked'));
+    if (checked.length === 0) {
+        textElement.textContent = 'Todos';
+    } else if (checked.length <= 2) {
+        textElement.textContent = checked.map(cb => cb.value).join(', ');
+    } else {
+        textElement.textContent = `${checked.length} selecionados`;
+    }
 }
 
 function abrirModalVeiculo(veiculo = null) {
