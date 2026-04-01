@@ -121,14 +121,14 @@ const TacografoUI = {
 
             this.data = veiculos.map(v => {
                 const tData = tMap.get(v.placa) || {};
-                let status = tData.status || 'Pendente';
+                let status = tData.status || 'Vencido';
                 const venc = tData.data_vencimento;
 
                 // Automação: Sem data vira Dispensado. Com data, segue regra se não for manual.
                 if (!venc) {
                     status = 'Dispensado';
                 } else if (status !== 'Preliminar' && status !== 'Dispensado') {
-                    status = (venc > todayStr) ? 'Em Dia' : 'Pendente';
+                    status = (venc > todayStr) ? 'Em Dia' : 'Vencido';
                 }
 
                 return {
@@ -214,7 +214,7 @@ const TacografoUI = {
         this.filteredData = filtered; // Salva para exportação
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Pendente: 0, Preliminar: 0, 'Em Dia': 0, Dispensado: 0 };
+        const counts = { Vencido: 0, Preliminar: 0, 'Em Dia': 0, Dispensado: 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
         });
@@ -239,7 +239,7 @@ const TacografoUI = {
             const tr = document.createElement('tr');
             tr.dataset.placa = item.placa;
 
-            const statusOptions = ['Pendente', 'Preliminar', 'Em Dia', 'Dispensado'];
+            const statusOptions = ['Vencido', 'Preliminar', 'Em Dia', 'Dispensado'];
             let optionsHtml = statusOptions.map(opt => 
                 `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
             ).join('');
@@ -284,7 +284,7 @@ const TacografoUI = {
     },
 
     updateCounters(counts) {
-        if (this.counterPendente) this.counterPendente.textContent = counts.Pendente || 0;
+        if (this.counterPendente) this.counterPendente.textContent = counts.Vencido || 0;
         if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
         if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
         if (this.counterDispensado) this.counterDispensado.textContent = counts.Dispensado || 0;
@@ -293,7 +293,7 @@ const TacografoUI = {
     getStatusClass(status) {
         if (status === 'Preliminar') return 'status-preliminar';
         if (status === 'Em Dia') return 'status-em-dia';
-        if (status === 'Pendente') return 'status-pendente';
+        if (status === 'Vencido') return 'status-pendente';
         if (status === 'Dispensado') return 'status-dispensado';
         return '';
     },
@@ -312,7 +312,7 @@ const TacografoUI = {
             newStatus = 'Dispensado';
         } else if (currentStatus !== 'Preliminar' && currentStatus !== 'Dispensado') {
             const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
-            newStatus = (newVenc > todayStr) ? 'Em Dia' : 'Pendente';
+            newStatus = (newVenc > todayStr) ? 'Em Dia' : 'Vencido';
         }
 
         if (statusSelect.value !== newStatus) {
