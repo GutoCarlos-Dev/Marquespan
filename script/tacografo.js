@@ -31,35 +31,44 @@ const TacografoUI = {
         this.tbody.innerHTML = '<tr><td colspan="9" class="text-center">Buscando dados no banco...</td></tr>';
         
         try {
-            // Busca veículos e tenta trazer dados da tabela tacografos via Left Join
-            // Se a tabela tacografos não existir, trará apenas dados de veículos
-            const { data, error } = await supabaseClient
+            // Buscamos veículos ativos
+            const { data: veiculos, error: errV } = await supabaseClient
                 .from('veiculos')
-                .select(`
-                    filial, placa, modelo, renavan, tipo,
-                    tacografos (
-                        id, data_emissao, data_vencimento, status
-                    )
-                `)
+                .select('filial, placa, modelo, renavan, tipo')
+                .eq('situacao', 'ativo')
                 .order('placa');
 
-            if (error) throw error;
+            if (errV) throw errV;
 
-            this.data = data.map(v => ({
+            // Buscamos dados da tabela de tacógrafos separadamente para evitar erro 400 de join
+            const { data: tacografos, error: errT } = await supabaseClient
+                .from('tacografos')
+                .select('*');
+
+            // Criamos um mapa para busca rápida por placa
+            const tMap = new Map();
+            if (tacografos) {
+                tacografos.forEach(t => tMap.set(t.placa, t));
+            }
+
+            this.data = veiculos.map(v => {
+                const tData = tMap.get(v.placa) || {};
+                return {
                 filial: v.filial || '-',
                 placa: v.placa,
                 modelo: v.modelo || '-',
                 renavan: v.renavan || '-',
                 tipo: v.tipo || '-',
-                data_emissao: v.tacografos?.[0]?.data_emissao || null,
-                data_vencimento: v.tacografos?.[0]?.data_vencimento || null,
-                status: v.tacografos?.[0]?.status || 'Pendente'
-            }));
+                data_emissao: tData.data_emissao || '',
+                data_vencimento: tData.data_vencimento || '',
+                status: tData.status || 'Pendente'
+                };
+            });
 
             this.renderGrid();
         } catch (err) {
             console.error('Erro:', err);
-            this.tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao carregar dados do Supabase.</td></tr>';
+            this.tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Erro ao carregar dados: ${err.message}</td></tr>`;
         }
     },
 
@@ -111,14 +120,12 @@ const TacografoUI = {
         this.tbody.innerHTML = '';
         filtered.forEach(item => {
             const tr = document.createElement('tr');
-            
-            const dtEmissao = item.data_emissao ? new Date(item.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-            const dtVenc = item.data_vencimento ? new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-            
-            let statusClass = 'status-default';
-            if (item.status === 'Preliminar') statusClass = 'status-preliminar';
-            if (item.status === 'Pago') statusClass = 'status-pago';
-            if (item.status === 'Batido') statusClass = 'status-batido';
+            tr.dataset.placa = item.placa;
+
+            const statusOptions = ['Pendente', 'Preliminar', 'Pago', 'Batido'];
+            let optionsHtml = statusOptions.map(opt => 
+                `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
+            ).join('');
 
             tr.innerHTML = `
                 <td>${item.filial}</td>
@@ -126,15 +133,60 @@ const TacografoUI = {
                 <td>${item.modelo}</td>
                 <td>${item.renavan}</td>
                 <td>${item.tipo}</td>
-                <td>${dtEmissao}</td>
-                <td class="${this.checkVencimento(item.data_vencimento)}">${dtVenc}</td>
-                <td><span class="badge ${statusClass}">${item.status}</span></td>
+                <td><input type="date" class="glass-input input-emissao" value="${item.data_emissao}"></td>
+                <td><input type="date" class="glass-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
                 <td>
-                    <button class="btn-icon edit" title="Editar dados"><i class="fas fa-pen-to-square"></i></button>
+                    <select class="glass-input status-select-grid ${this.getStatusClass(item.status)}">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar Alterações">
+                        <i class="fas fa-save"></i>
+                    </button>
                 </td>
             `;
             this.tbody.appendChild(tr);
         });
+    },
+
+    getStatusClass(status) {
+        if (status === 'Preliminar') return 'status-preliminar';
+        if (status === 'Pago') return 'status-pago';
+        if (status === 'Batido') return 'status-batido';
+        return '';
+    },
+
+    async salvarLinha(placa) {
+        const tr = document.querySelector(`tr[data-placa="${placa}"]`);
+        const btn = tr.querySelector('.btn-icon.save');
+        
+        const status = tr.querySelector('.status-select-grid').value;
+        const data_emissao = tr.querySelector('.input-emissao').value;
+        const data_vencimento = tr.querySelector('.input-vencimento').value;
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            const { error } = await supabaseClient
+                .from('tacografos')
+                .upsert({
+                    placa: placa,
+                    status: status,
+                    data_emissao: data_emissao || null,
+                    data_vencimento: data_vencimento || null,
+                    atualizado_em: new Date().toISOString()
+                }, { onConflict: 'placa' });
+
+            if (error) throw error;
+
+            tr.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            setTimeout(() => tr.style.backgroundColor = '', 1000);
+        } catch (err) {
+            alert('Erro ao salvar: ' + err.message);
+        } finally {
+            btn.innerHTML = '<i class="fas fa-save"></i>';
+        }
     },
 
     checkVencimento(dataVenc) {

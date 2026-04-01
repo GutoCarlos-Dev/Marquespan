@@ -4,58 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Tacógrafo - Marquespan</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/tacografo.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="menu-container"></div>
 
     <main class="main-content">
-        <header class="page-header">
-            <div class="header-left">
-                <h1><i class="fas fa-stopwatch"></i> Controle de Tacógrafo</h1>
-                <p>Gerenciamento de emissões e vencimentos por veículo</p>
-            </div>
-            <div id="usuario-logado" class="user-info"></div>
+        <header class="header glass-header">
+            <h1><i class="fas fa-stopwatch"></i> Controle de Tacógrafo</h1>
         </header>
 
-        <section class="glass-panel search-section">
-            <div class="filters-container">
-                <div class="form-group">
-                    <label for="searchTacografo"><i class="fas fa-search"></i> Buscar Veículo</label>
-                    <input type="text" id="searchTacografo" class="glass-input" placeholder="Placa, modelo ou filial...">
+        <div class="tacografo-top-grid">
+            <!-- Filtros de Busca -->
+            <section class="glass-panel">
+                <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
+                <div class="filters-container">
+                    <div class="form-group-filter">
+                        <label for="searchTacografo">Buscar Veículo</label>
+                        <input type="text" id="searchTacografo" class="glass-input" placeholder="Placa, modelo ou filial...">
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filterStatus">Status</label>
+                        <select id="filterStatus" class="glass-input">
+                            <option value="">Todos</option>
+                            <option value="Preliminar">Preliminar</option>
+                            <option value="Pago">Pago</option>
+                            <option value="Batido">Batido</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="filterStatus"><i class="fas fa-filter"></i> Status</label>
-                    <select id="filterStatus" class="glass-input">
-                        <option value="">Todos</option>
-                        <option value="Preliminar">Preliminar</option>
-                        <option value="Pago">Pago</option>
-                        <option value="Batido">Batido</option>
-                    </select>
-                </div>
-                <div class="actions-header">
+            </section>
+
+            <!-- Ações -->
+            <section class="glass-panel acoes-panel">
+                <h3><i class="fas fa-cogs"></i> Ações</h3>
+                <div class="acoes-grid">
                     <button id="btnAtualizar" class="btn-glass btn-blue">
                         <i class="fas fa-sync-alt"></i> Atualizar
                     </button>
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
 
-        <section class="glass-panel table-section">
-            <div class="table-container">
+        <section class="glass-panel">
+            <div class="panel-header">
+                <h2><i class="fas fa-list"></i> Lista de Veículos</h2>
+            </div>
+            <div class="table-responsive">
                 <table class="data-grid" id="gridTacografo">
                     <thead>
                         <tr>
-                            <th data-sort="filial">Filial <i class="fas fa-sort"></i></th>
-                            <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>
-                            <th data-sort="modelo">Modelo <i class="fas fa-sort"></i></th>
-                            <th data-sort="renavan">Renavan <i class="fas fa-sort"></i></th>
-                            <th data-sort="tipo">Tipo <i class="fas fa-sort"></i></th>
-                            <th data-sort="data_emissao">Data Emissão <i class="fas fa-sort"></i></th>
-                            <th data-sort="data_vencimento">Dt. Vencimento <i class="fas fa-sort"></i></th>
-                            <th data-sort="status">Status <i class="fas fa-sort"></i></th>
+                            <th data-sort="filial" class="sortable">Filial <i class="fas fa-sort"></i></th>
+                            <th data-sort="placa" class="sortable">Placa <i class="fas fa-sort"></i></th>
+                            <th data-sort="modelo" class="sortable">Modelo <i class="fas fa-sort"></i></th>
+                            <th data-sort="renavan" class="sortable">Renavan <i class="fas fa-sort"></i></th>
+                            <th data-sort="tipo" class="sortable">Tipo <i class="fas fa-sort"></i></th>
+                            <th data-sort="data_emissao" class="sortable">Data Emissão <i class="fas fa-sort"></i></th>
+                            <th data-sort="data_vencimento" class="sortable">Dt. Vencimento <i class="fas fa-sort"></i></th>
+                            <th data-sort="status" class="sortable">Status <i class="fas fa-sort"></i></th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -66,6 +74,10 @@
             </div>
         </section>
     </main>
+
+    <footer class="footer">
+        &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+    </footer>
 
     <script type="module" src="script/menu.js"></script>
     <script type="module" src="script/tacografo.js"></script>
