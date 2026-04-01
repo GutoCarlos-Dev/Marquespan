@@ -14,6 +14,8 @@ const TacografoUI = {
         this.tbody = document.getElementById('tbodyTacografo');
         this.searchInput = document.getElementById('searchTacografo');
         this.statusFilter = document.getElementById('filterStatus');
+        this.vencIniFilter = document.getElementById('filterVencIni');
+        this.vencFimFilter = document.getElementById('filterVencFim');
         this.btnAtualizar = document.getElementById('btnAtualizar');
         this.btnImportar = document.getElementById('btnImportar');
         this.fileImportar = document.getElementById('fileImportar');
@@ -31,6 +33,8 @@ const TacografoUI = {
         this.fileImportar?.addEventListener('change', (e) => this.importarXLSX(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
         this.statusFilter.addEventListener('change', () => this.renderGrid());
+        this.vencIniFilter.addEventListener('change', () => this.renderGrid());
+        this.vencFimFilter.addEventListener('change', () => this.renderGrid());
         
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
@@ -107,13 +111,27 @@ const TacografoUI = {
     renderGrid() {
         const term = this.searchInput.value.toUpperCase();
         const statusFilter = this.statusFilter.value;
+        const vencIni = this.vencIniFilter.value;
+        const vencFim = this.vencFimFilter.value;
 
         let filtered = this.data.filter(item => {
             const matchSearch = item.placa.includes(term) || 
                                item.modelo.toUpperCase().includes(term) || 
                                item.filial.toUpperCase().includes(term);
             const matchStatus = !statusFilter || item.status === statusFilter;
-            return matchSearch && matchStatus;
+
+            let matchVenc = true;
+            if (vencIni || vencFim) {
+                if (!item.data_vencimento) {
+                    matchVenc = false;
+                } else {
+                    // Compara strings YYYY-MM-DD diretamente
+                    if (vencIni && item.data_vencimento < vencIni) matchVenc = false;
+                    if (vencFim && item.data_vencimento > vencFim) matchVenc = false;
+                }
+            }
+
+            return matchSearch && matchStatus && matchVenc;
         });
 
         // Calcular quantidades por status com base no que está filtrado

@@ -130,3 +130,9 @@
     margin-left: 20px;
     flex-wrap: wrap;
 }
+
+/* Ajuste para diminuir os campos de data no filtro e forçar alinhamento */
+.date-filter-group {
+    width: 150px;
+    flex: 0 0 auto !important;
+}
