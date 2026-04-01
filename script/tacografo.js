@@ -45,6 +45,7 @@ const TacografoUI = {
         this.counterPendente = document.getElementById('count-pendente');
         this.counterEmDia = document.getElementById('count-em-dia');
         this.counterDispensado = document.getElementById('count-dispensado');
+        this.counterPreliminar = document.getElementById('count-preliminar');
     },
 
     bindEvents() {
@@ -214,9 +215,10 @@ const TacografoUI = {
         this.filteredData = filtered; // Salva para exportação
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Vencido: 0, 'Em Dia': 0, Dispensado: 0 };
+        const counts = { Vencido: 0, 'Em Dia': 0, Dispensado: 0, Preliminar: 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
+            if (item.acao === 'Preliminar') counts.Preliminar++;
         });
 
         // Atualizar as legendas no cabeçalho
@@ -297,6 +299,7 @@ const TacografoUI = {
         if (this.counterPendente) this.counterPendente.textContent = counts.Vencido || 0;
         if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
         if (this.counterDispensado) this.counterDispensado.textContent = counts.Dispensado || 0;
+        if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
     },
 
     getStatusClass(status) {
