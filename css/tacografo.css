@@ -137,3 +137,19 @@
     border-radius: 4px;
     font-weight: bold;
 }
+
+/* Estilo para o botão roxo de exportação XLSX */
+.btn-purple {
+    background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%) !important;
+    color: white !important;
+}
+
+.btn-purple:hover {
+    background: linear-gradient(135deg, #5a32a3 0%, #482682 100%) !important;
+}
+
+.acoes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}

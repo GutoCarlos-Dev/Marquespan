@@ -39,6 +39,7 @@ const TacografoUI = {
         this.vencFimFilter = document.getElementById('filterVencFim');
         this.btnAtualizar = document.getElementById('btnAtualizar');
         this.btnImportar = document.getElementById('btnImportar');
+        this.btnExportarXLSX = document.getElementById('btnExportarXLSX');
         this.btnExportarPDF = document.getElementById('btnExportarPDF'); // Botão global (se existir no HTML)
         this.fileImportar = document.getElementById('fileImportar');
         // Contadores de legenda
@@ -74,6 +75,7 @@ const TacografoUI = {
         this.vencIniFilter.addEventListener('change', () => this.renderGrid());
         this.vencFimFilter.addEventListener('change', () => this.renderGrid());
         
+        this.btnExportarXLSX?.addEventListener('click', () => this.exportarGridXLSX());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarGridPDF());
 
         document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -565,6 +567,43 @@ const TacografoUI = {
             return alert('Não há dados para exportar.');
         }
         await this.gerarPDF(this.filteredData, "Relatório Geral de Tacógrafos");
+    },
+
+    /**
+     * Exporta os dados filtrados da grid para XLSX
+     */
+    exportarGridXLSX() {
+        if (!this.filteredData || this.filteredData.length === 0) {
+            return alert('Não há dados para exportar.');
+        }
+
+        const dataToExport = this.filteredData.map(item => ({
+            'Filial': item.filial,
+            'Placa': item.placa,
+            'Modelo': item.modelo,
+            'Renavan': item.renavan,
+            'Tipo': item.tipo,
+            'Data Emissão': item.data_emissao ? new Date(item.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Data Vencimento': item.data_vencimento ? new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Guia GRU': item.guia_gru || '-',
+            'Status': item.status,
+            'Ação': item.acao || '-',
+            'Observação': item.observacao || ''
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tacógrafos");
+
+        // Ajustar largura das colunas para melhor visualização
+        ws['!cols'] = [
+            { wch: 10 }, { wch: 12 }, { wch: 25 }, { wch: 15 }, { wch: 15 },
+            { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 15 },
+            { wch: 40 }
+        ];
+
+        const fileName = `Tacografo_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
     },
 
     /**
