@@ -49,22 +49,16 @@
             <label for="campo-modelo">Modelo</label>
             <input type="text" id="campo-modelo" placeholder="Ex: Volvo FH" />
           </div>
-          <div class="form-group-filter">
+          <div class="form-group-filter" style="min-width: 220px;">
             <label for="campo-tipo">Tipo</label>
-            <div class="custom-multiselect">
-              <div id="campo-tipo-display" class="glass-input">
-                <span id="campo-tipo-text">Todos os Tipos</span>
-                <i class="fas fa-chevron-down"></i>
+            <div class="custom-multiselect" style="position: relative;">
+              <div id="campo-tipo-display" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
+                <span id="campo-tipo-text">Todos</span> <i class="fas fa-chevron-down"></i>
               </div>
-              <div id="campo-tipo-options" class="glass-dropdown hidden">
-                <div class="dropdown-header">
-                  <button type="button" id="btn-limpar-tipo">Limpar Selecionados</button>
-                </div>
+              <div id="campo-tipo-options" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;">
                 <!-- Opções carregadas via JS -->
               </div>
             </div>
-            <!-- Input oculto para manter compatibilidade ou uso no JS -->
-            <input type="hidden" id="campo-tipo" value="">
           </div>
           <div class="form-group-filter">
             <label for="campo-situacao">Situação</label>
