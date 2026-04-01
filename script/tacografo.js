@@ -274,6 +274,9 @@ const TacografoUI = {
                     <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar">
                         <i class="fas fa-save"></i>
                     </button>
+                    <button class="btn-icon delete" onclick="TacografoUI.excluirLinha('${item.placa}')" title="Excluir informações de Tacógrafo">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </td>
             `;
             this.tbody.appendChild(tr);
@@ -319,6 +322,31 @@ const TacografoUI = {
         
         // Atualiza a cor do input de data
         input.className = `table-date-input input-vencimento ${this.checkVencimento(newVenc)}`;
+    },
+
+    /**
+     * Exclui apenas os dados de tacógrafo de um veículo.
+     * Não afeta a tabela principal de veículos.
+     */
+    async excluirLinha(placa) {
+        if (!confirm(`Deseja realmente excluir os dados de tacógrafo da placa ${placa}?\n\nEsta ação limpará as datas e o status nesta página, mas o veículo continuará cadastrado no sistema.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('tacografos')
+                .delete()
+                .eq('placa', placa);
+
+            if (error) throw error;
+
+            alert('Dados de tacógrafo removidos com sucesso!');
+            await this.carregarDados(); // Recarrega para resetar os campos na tela
+        } catch (err) {
+            console.error('Erro ao excluir:', err);
+            alert('Erro ao excluir registro: ' + err.message);
+        }
     },
 
     /**
