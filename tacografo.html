@@ -30,14 +30,19 @@
                         <label for="searchTacografo">Buscar Veículo</label>
                         <input type="text" id="searchTacografo" class="glass-input" placeholder="Placa, modelo ou filial...">
                     </div>
-                    <div class="form-group-filter">
-                        <label for="filterStatus">Status</label>
-                        <select id="filterStatus" class="glass-input">
-                            <option value="">Todos</option>
-                            <option value="Pendente">Pendente</option>
-                            <option value="Preliminar">Preliminar</option>
-                            <option value="Em Dia">Em Dia</option>
-                        </select>
+                    <div class="form-group-filter" style="min-width: 220px;">
+                        <label>Status</label>
+                        <div class="custom-multiselect" style="position: relative;">
+                            <div id="filterStatusDisplay" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
+                                <span id="filterStatusText">Todos</span> <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="filterStatusOptions" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;">
+                                <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Pendente"> Pendente</label>
+                                <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Preliminar"> Preliminar</label>
+                                <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Em Dia"> Em Dia</label>
+                                <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Dispensado"> Dispensado</label>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group-filter date-filter-group">
                         <label for="filterVencIni">Vencimento De</label>
@@ -75,6 +80,7 @@
                     <span class="badge status-pendente">Pendente: <span id="count-pendente">0</span></span>
                     <span class="badge status-preliminar">Preliminar: <span id="count-preliminar">0</span></span>
                     <span class="badge status-em-dia">Em Dia: <span id="count-em-dia">0</span></span>
+                    <span class="badge status-dispensado">Dispensado: <span id="count-dispensado">0</span></span>
                 </div>
             </div>
             <div class="table-responsive">

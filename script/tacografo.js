@@ -6,15 +6,34 @@ const TacografoUI = {
     sortConfig: { key: 'placa', asc: true },
 
     async init() {
+        this.injectStyles();
         this.cacheDOM();
         this.bindEvents();
         await this.carregarDados();
     },
 
+    injectStyles() {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .status-dispensado {
+                background-color: #6c757d !important;
+                color: white !important;
+            }
+            .badge.status-dispensado {
+                background-color: #6c757d !important;
+                color: white !important;
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
     cacheDOM() {
         this.tbody = document.getElementById('tbodyTacografo');
         this.searchInput = document.getElementById('searchTacografo');
-        this.statusFilter = document.getElementById('filterStatus');
+        this.statusFilterDisplay = document.getElementById('filterStatusDisplay');
+        this.statusFilterOptions = document.getElementById('filterStatusOptions');
+        this.statusFilterText = document.getElementById('filterStatusText');
+
         this.vencIniFilter = document.getElementById('filterVencIni');
         this.vencFimFilter = document.getElementById('filterVencFim');
         this.btnAtualizar = document.getElementById('btnAtualizar');
@@ -25,6 +44,7 @@ const TacografoUI = {
         this.counterPendente = document.getElementById('count-pendente');
         this.counterPreliminar = document.getElementById('count-preliminar');
         this.counterEmDia = document.getElementById('count-em-dia');
+        this.counterDispensado = document.getElementById('count-dispensado');
     },
 
     bindEvents() {
@@ -32,7 +52,23 @@ const TacografoUI = {
         this.btnImportar?.addEventListener('click', () => this.fileImportar.click());
         this.fileImportar?.addEventListener('change', (e) => this.importarXLSX(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
-        this.statusFilter.addEventListener('change', () => this.renderGrid());
+        
+        this.statusFilterDisplay?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.statusFilterOptions.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!this.statusFilterDisplay?.contains(e.target) && !this.statusFilterOptions?.contains(e.target)) {
+                this.statusFilterOptions?.classList.add('hidden');
+            }
+        });
+
+        this.statusFilterOptions?.addEventListener('change', () => {
+            this.updateStatusFilterText();
+            this.renderGrid();
+        });
+
         this.vencIniFilter.addEventListener('change', () => this.renderGrid());
         this.vencFimFilter.addEventListener('change', () => this.renderGrid());
         
@@ -41,6 +77,17 @@ const TacografoUI = {
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
         });
+    },
+
+    updateStatusFilterText() {
+        const checked = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked'));
+        if (checked.length === 0) {
+            this.statusFilterText.textContent = 'Todos';
+        } else if (checked.length <= 2) {
+            this.statusFilterText.textContent = checked.map(cb => cb.value).join(', ');
+        } else {
+            this.statusFilterText.textContent = `${checked.length} selecionados`;
+        }
     },
 
     async carregarDados() {
@@ -67,18 +114,31 @@ const TacografoUI = {
                 tacografos.forEach(t => tMap.set(t.placa, t));
             }
 
+            // Data de hoje no fuso do Brasil (AAAA-MM-DD)
+            const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
+
             this.data = veiculos.map(v => {
                 const tData = tMap.get(v.placa) || {};
+                let status = tData.status || 'Pendente';
+                const venc = tData.data_vencimento;
+
+                // Automação: Sem data vira Dispensado. Com data, segue regra se não for manual.
+                if (!venc) {
+                    status = 'Dispensado';
+                } else if (status !== 'Preliminar' && status !== 'Dispensado') {
+                    status = (venc > todayStr) ? 'Em Dia' : 'Pendente';
+                }
+
                 return {
-                filial: v.filial || '-',
-                placa: v.placa,
-                modelo: v.modelo || '-',
-                renavan: v.renavan || '-',
-                tipo: v.tipo || '-',
-                data_emissao: tData.data_emissao || '',
-                data_vencimento: tData.data_vencimento || '',
-                guia_gru: tData.guia_gru || '',
-                    status: tData.status || 'Pendente',
+                    filial: v.filial || '-',
+                    placa: v.placa,
+                    modelo: v.modelo || '-',
+                    renavan: v.renavan || '-',
+                    tipo: v.tipo || '-',
+                    data_emissao: tData.data_emissao || '',
+                    data_vencimento: venc || '',
+                    guia_gru: tData.guia_gru || '',
+                    status: status,
                     observacao: tData.observacao || ''
                 };
             });
@@ -113,7 +173,8 @@ const TacografoUI = {
 
     renderGrid() {
         const term = this.searchInput.value.toUpperCase();
-        const statusFilter = this.statusFilter.value;
+        const selectedStatuses = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked')).map(cb => cb.value);
+
         const vencIni = this.vencIniFilter.value;
         const vencFim = this.vencFimFilter.value;
 
@@ -121,7 +182,7 @@ const TacografoUI = {
             const matchSearch = item.placa.includes(term) || 
                                item.modelo.toUpperCase().includes(term) || 
                                item.filial.toUpperCase().includes(term);
-            const matchStatus = !statusFilter || item.status === statusFilter;
+            const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
 
             let matchVenc = true;
             if (vencIni || vencFim) {
@@ -140,7 +201,7 @@ const TacografoUI = {
         this.filteredData = filtered; // Salva para exportação
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Pendente: 0, Preliminar: 0, 'Em Dia': 0 };
+        const counts = { Pendente: 0, Preliminar: 0, 'Em Dia': 0, Dispensado: 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
         });
@@ -165,7 +226,7 @@ const TacografoUI = {
             const tr = document.createElement('tr');
             tr.dataset.placa = item.placa;
 
-            const statusOptions = ['Pendente', 'Preliminar', 'Em Dia'];
+            const statusOptions = ['Pendente', 'Preliminar', 'Em Dia', 'Dispensado'];
             let optionsHtml = statusOptions.map(opt => 
                 `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
             ).join('');
@@ -182,7 +243,7 @@ const TacografoUI = {
                 <td>${item.renavan}</td>
                 <td>${item.tipo}</td>
                 <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao}"></td>
-                <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
+                <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}" onchange="TacografoUI.handleDateChange(this)"></td>
                 <td>
                     <select class="status-select-grid guia-gru-select">
                         ${guiaGruHtml}
@@ -210,13 +271,41 @@ const TacografoUI = {
         if (this.counterPendente) this.counterPendente.textContent = counts.Pendente || 0;
         if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
         if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
+        if (this.counterDispensado) this.counterDispensado.textContent = counts.Dispensado || 0;
     },
 
     getStatusClass(status) {
         if (status === 'Preliminar') return 'status-preliminar';
         if (status === 'Em Dia') return 'status-em-dia';
         if (status === 'Pendente') return 'status-pendente';
+        if (status === 'Dispensado') return 'status-dispensado';
         return '';
+    },
+
+    /**
+     * Atualiza o status automaticamente quando a data de vencimento é alterada na grid
+     */
+    handleDateChange(input) {
+        const tr = input.closest('tr');
+        const statusSelect = tr.querySelector('.status-select-grid:not(.guia-gru-select)');
+        const currentStatus = statusSelect.value;
+        const newVenc = input.value;
+
+        let newStatus = currentStatus;
+        if (!newVenc) {
+            newStatus = 'Dispensado';
+        } else if (currentStatus !== 'Preliminar' && currentStatus !== 'Dispensado') {
+            const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
+            newStatus = (newVenc > todayStr) ? 'Em Dia' : 'Pendente';
+        }
+
+        if (statusSelect.value !== newStatus) {
+            statusSelect.value = newStatus;
+            statusSelect.className = 'status-select-grid ' + this.getStatusClass(newStatus);
+        }
+        
+        // Atualiza a cor do input de data
+        input.className = `table-date-input input-vencimento ${this.checkVencimento(newVenc)}`;
     },
 
     async salvarLinha(placa) {
@@ -257,9 +346,8 @@ const TacografoUI = {
 
     checkVencimento(dataVenc) {
         if (!dataVenc) return '';
-        const hoje = new Date();
-        const venc = new Date(dataVenc + 'T00:00:00');
-        return (venc < hoje) ? 'text-danger font-bold' : '';
+        const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
+        return (dataVenc <= todayStr) ? 'text-danger font-bold' : '';
     },
 
     async importarXLSX(e) {
@@ -444,6 +532,11 @@ const TacografoUI = {
                     const dateStr = data.cell.raw;
                     if (dateStr && new Date(dateStr + 'T00:00:00') < new Date()) {
                         data.cell.styles.textColor = [220, 53, 69]; // Vermelho se vencido
+                    }
+                }
+                if (data.section === 'body' && data.column.index === 8) { // Status
+                    if (data.cell.raw === 'Dispensado') {
+                        data.cell.styles.textColor = [108, 117, 125]; // Cinza #6c757d
                     }
                 }
             }
