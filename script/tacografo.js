@@ -105,6 +105,15 @@ const TacografoUI = {
             return matchSearch && matchStatus;
         });
 
+        // Calcular quantidades por status com base no que está filtrado
+        const counts = { Pendente: 0, Preliminar: 0, Pago: 0, Batido: 0 };
+        filtered.forEach(item => {
+            if (counts.hasOwnProperty(item.status)) counts[item.status]++;
+        });
+
+        // Atualizar as legendas no cabeçalho
+        this.updateCounters(counts);
+
         // Ordenação Dinâmica
         filtered.sort((a, b) => {
             let valA = a[this.sortConfig.key] || '';
@@ -136,12 +145,12 @@ const TacografoUI = {
                 <td><input type="date" class="glass-input input-emissao" value="${item.data_emissao}"></td>
                 <td><input type="date" class="glass-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
                 <td>
-                    <select class="glass-input status-select-grid ${this.getStatusClass(item.status)}">
+                    <select class="glass-input status-select-grid ${this.getStatusClass(item.status)}" onchange="this.className = 'glass-input status-select-grid ' + TacografoUI.getStatusClass(this.value)">
                         ${optionsHtml}
                     </select>
                 </td>
                 <td>
-                    <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar Alterações">
+                    <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar">
                         <i class="fas fa-save"></i>
                     </button>
                 </td>
@@ -150,10 +159,18 @@ const TacografoUI = {
         });
     },
 
+    updateCounters(counts) {
+        if (this.counterPendente) this.counterPendente.textContent = counts.Pendente;
+        if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar;
+        if (this.counterPago) this.counterPago.textContent = counts.Pago;
+        if (this.counterBatido) this.counterBatido.textContent = counts.Batido;
+    },
+
     getStatusClass(status) {
         if (status === 'Preliminar') return 'status-preliminar';
         if (status === 'Pago') return 'status-pago';
         if (status === 'Batido') return 'status-batido';
+        if (status === 'Pendente') return 'status-pendente';
         return '';
     },
 
@@ -198,3 +215,4 @@ const TacografoUI = {
 };
 
 document.addEventListener('DOMContentLoaded', () => TacografoUI.init());
+window.TacografoUI = TacografoUI;

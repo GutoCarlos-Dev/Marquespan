@@ -9,6 +9,12 @@
     display: inline-block;
 }
 
+.status-pendente {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
 .status-preliminar {
     background-color: #ffeeba;
     color: #856404;
@@ -37,6 +43,7 @@
 }
 
 .status-select-grid.status-preliminar { background-color: #ffeeba; color: #856404; font-weight: bold; }
+.status-select-grid.status-pendente { background-color: #f8d7da; color: #721c24; font-weight: bold; }
 .status-select-grid.status-pago { background-color: #d4edda; color: #155724; font-weight: bold; }
 .status-select-grid.status-batido { background-color: #cce5ff; color: #004085; font-weight: bold; }
 
@@ -89,4 +96,12 @@
     top: 0;
     background-color: #f8f9fa; /* Cor de fundo para o cabeçalho fixo */
     z-index: 10; /* Garante que o cabeçalho fique acima do conteúdo da tabela */
+}
+
+.status-legend-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-left: 20px;
+    flex-wrap: wrap;
 }
