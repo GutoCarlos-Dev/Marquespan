@@ -15,10 +15,20 @@ const TacografoUI = {
         this.searchInput = document.getElementById('searchTacografo');
         this.statusFilter = document.getElementById('filterStatus');
         this.btnAtualizar = document.getElementById('btnAtualizar');
+        this.btnImportar = document.getElementById('btnImportar');
+        this.fileImportar = document.getElementById('fileImportar');
+        // Contadores de legenda
+        this.counterPendente = document.getElementById('count-pendente');
+        this.counterPreliminar = document.getElementById('count-preliminar');
+        this.counterPago = document.getElementById('count-pago');
+        this.counterEmDia = document.getElementById('count-em-dia');
+        this.counterManutencao = document.getElementById('count-manutencao');
     },
 
     bindEvents() {
         this.btnAtualizar.addEventListener('click', () => this.carregarDados());
+        this.btnImportar?.addEventListener('click', () => this.fileImportar.click());
+        this.fileImportar?.addEventListener('change', (e) => this.importarXLSX(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
         this.statusFilter.addEventListener('change', () => this.renderGrid());
         
@@ -61,7 +71,8 @@ const TacografoUI = {
                 tipo: v.tipo || '-',
                 data_emissao: tData.data_emissao || '',
                 data_vencimento: tData.data_vencimento || '',
-                status: tData.status || 'Pendente'
+                    status: tData.status || 'Pendente',
+                    observacao: tData.observacao || ''
                 };
             });
 
@@ -106,7 +117,7 @@ const TacografoUI = {
         });
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Pendente: 0, Preliminar: 0, Pago: 0, Batido: 0 };
+        const counts = { Pendente: 0, Preliminar: 0, Pago: 0, 'Em Dia': 0, Manutenção: 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
         });
@@ -131,7 +142,7 @@ const TacografoUI = {
             const tr = document.createElement('tr');
             tr.dataset.placa = item.placa;
 
-            const statusOptions = ['Pendente', 'Preliminar', 'Pago', 'Batido'];
+            const statusOptions = ['Pendente', 'Preliminar', 'Pago', 'Em Dia', 'Manutenção'];
             let optionsHtml = statusOptions.map(opt => 
                 `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
             ).join('');
@@ -142,12 +153,15 @@ const TacografoUI = {
                 <td>${item.modelo}</td>
                 <td>${item.renavan}</td>
                 <td>${item.tipo}</td>
-                <td><input type="date" class="glass-input input-emissao" value="${item.data_emissao}"></td>
-                <td><input type="date" class="glass-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
+                <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao}"></td>
+                <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
                 <td>
-                    <select class="glass-input status-select-grid ${this.getStatusClass(item.status)}" onchange="this.className = 'glass-input status-select-grid ' + TacografoUI.getStatusClass(this.value)">
+                    <select class="status-select-grid ${this.getStatusClass(item.status)}" onchange="this.className = 'status-select-grid ' + TacografoUI.getStatusClass(this.value)">
                         ${optionsHtml}
                     </select>
+                </td>
+                <td>
+                    <input type="text" class="table-date-input input-obs" value="${item.observacao || ''}" placeholder="Observações...">
                 </td>
                 <td>
                     <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar">
@@ -160,16 +174,18 @@ const TacografoUI = {
     },
 
     updateCounters(counts) {
-        if (this.counterPendente) this.counterPendente.textContent = counts.Pendente;
-        if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar;
-        if (this.counterPago) this.counterPago.textContent = counts.Pago;
-        if (this.counterBatido) this.counterBatido.textContent = counts.Batido;
+        if (this.counterPendente) this.counterPendente.textContent = counts.Pendente || 0;
+        if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
+        if (this.counterPago) this.counterPago.textContent = counts.Pago || 0;
+        if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
+        if (this.counterManutencao) this.counterManutencao.textContent = counts.Manutenção || 0;
     },
 
     getStatusClass(status) {
         if (status === 'Preliminar') return 'status-preliminar';
         if (status === 'Pago') return 'status-pago';
-        if (status === 'Batido') return 'status-batido';
+        if (status === 'Em Dia') return 'status-em-dia';
+        if (status === 'Manutenção') return 'status-manutencao';
         if (status === 'Pendente') return 'status-pendente';
         return '';
     },
@@ -181,6 +197,7 @@ const TacografoUI = {
         const status = tr.querySelector('.status-select-grid').value;
         const data_emissao = tr.querySelector('.input-emissao').value;
         const data_vencimento = tr.querySelector('.input-vencimento').value;
+        const observacao = tr.querySelector('.input-obs').value;
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
@@ -192,6 +209,7 @@ const TacografoUI = {
                     status: status,
                     data_emissao: data_emissao || null,
                     data_vencimento: data_vencimento || null,
+                    observacao: observacao || null,
                     atualizado_em: new Date().toISOString()
                 }, { onConflict: 'placa' });
 
@@ -211,6 +229,114 @@ const TacografoUI = {
         const hoje = new Date();
         const venc = new Date(dataVenc + 'T00:00:00');
         return (venc < hoje) ? 'text-danger font-bold' : '';
+    },
+
+    async importarXLSX(e) {
+        const arquivo = e.target.files[0];
+        if (!arquivo) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                if (jsonData.length === 0) throw new Error('O arquivo está vazio.');
+
+                await this.processarImportacao(jsonData);
+            } catch (error) {
+                console.error('Erro na importação:', error);
+                alert('Erro ao processar arquivo: ' + error.message);
+            } finally {
+                this.fileImportar.value = ''; // Limpa o input
+            }
+        };
+        reader.readAsArrayBuffer(arquivo);
+    },
+
+    async processarImportacao(dados) {
+        const placasNaoEncontradas = [];
+        const atualizacoes = [];
+        
+        // Criamos um Set com as placas que temos no sistema para busca rápida
+        const placasNoSistema = new Set(this.data.map(v => v.placa.toUpperCase()));
+
+        for (const row of dados) {
+            // Normalização das chaves para ignorar case e espaços
+            const normalizedRow = {};
+            Object.keys(row).forEach(key => {
+                normalizedRow[key.trim().toUpperCase()] = row[key];
+            });
+
+            const placa = String(normalizedRow['PLACA'] || '').trim().toUpperCase();
+            const dataEmissao = normalizedRow['DATA EMISSÃO'] || normalizedRow['DATA EMISSAO'];
+            const dtVencimento = normalizedRow['DT VENCIMENTO'] || normalizedRow['DATA VENCIMENTO'];
+
+            if (!placa) continue;
+
+            if (placasNoSistema.has(placa)) {
+                atualizacoes.push({
+                    placa: placa,
+                    data_emissao: this.formatarDataExcel(dataEmissao),
+                    data_vencimento: this.formatarDataExcel(dtVencimento),
+                    atualizado_em: new Date().toISOString()
+                });
+            } else {
+                placasNaoEncontradas.push(placa);
+            }
+        }
+
+        if (atualizacoes.length > 0) {
+            const { error } = await supabaseClient
+                .from('tacografos')
+                .upsert(atualizacoes, { onConflict: 'placa' });
+
+            if (error) throw error;
+            alert(`${atualizacoes.length} veículos atualizados com sucesso!`);
+            await this.carregarDados();
+        }
+
+        if (placasNaoEncontradas.length > 0) {
+            this.gerarRelatorioErros(placasNaoEncontradas);
+            alert(`Atenção: ${placasNaoEncontradas.length} placas não foram localizadas no sistema. Um relatório foi baixado.`);
+        }
+    },
+
+    formatarDataExcel(data) {
+        if (!data) return null;
+        // Se for número (serial do Excel)
+        if (typeof data === 'number') {
+            const date = new Date((data - 25569) * 86400 * 1000);
+            return date.toISOString().split('T')[0];
+        }
+        // Se for string, tenta converter (esperado YYYY-MM-DD ou DD/MM/YYYY)
+        if (typeof data === 'string') {
+            if (data.includes('/')) {
+                const [d, m, y] = data.split('/');
+                return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+            return data;
+        }
+        return null;
+    },
+
+    gerarRelatorioErros(placas) {
+        const conteudo = "PLACAS NÃO LOCALIZADAS NO SISTEMA MARQUESPAN\n" + 
+                         "Data do Processamento: " + new Date().toLocaleString() + "\n" +
+                         "------------------------------------------\n\n" + 
+                         placas.join('\n');
+        
+        const blob = new Blob([conteudo], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `placas_nao_encontradas_tacografo_${new Date().getTime()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
     }
 };
 

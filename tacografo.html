@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/tacografo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Biblioteca para ler arquivos Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div id="menu-container"></div>
@@ -31,7 +33,8 @@
                             <option value="">Todos</option>
                             <option value="Preliminar">Preliminar</option>
                             <option value="Pago">Pago</option>
-                            <option value="Batido">Batido</option>
+                            <option value="Em Dia">Em Dia</option>
+                            <option value="Manutenção">Manutenção</option>
                         </select>
                     </div>
                 </div>
@@ -44,6 +47,10 @@
                     <button id="btnAtualizar" class="btn-glass btn-blue">
                         <i class="fas fa-sync-alt"></i> Atualizar
                     </button>
+                    <button id="btnImportar" class="btn-glass btn-green">
+                        <i class="fas fa-file-import"></i> Importar XLSX
+                    </button>
+                    <input type="file" id="fileImportar" accept=".xlsx, .xls" class="hidden">
                 </div>
             </section>
         </div>
@@ -55,7 +62,8 @@
                     <span class="badge status-pendente">Pendente: <span id="count-pendente">0</span></span>
                     <span class="badge status-preliminar">Preliminar: <span id="count-preliminar">0</span></span>
                     <span class="badge status-pago">Pago: <span id="count-pago">0</span></span>
-                    <span class="badge status-batido">Batido: <span id="count-batido">0</span></span>
+                    <span class="badge status-em-dia">Em Dia: <span id="count-em-dia">0</span></span>
+                    <span class="badge status-manutencao">Manutenção: <span id="count-manutencao">0</span></span>
                 </div>
             </div>
             <div class="table-responsive">
@@ -70,6 +78,7 @@
                             <th data-sort="data_emissao" class="sortable">Data Emissão <i class="fas fa-sort"></i></th>
                             <th data-sort="data_vencimento" class="sortable">Dt. Vencimento <i class="fas fa-sort"></i></th>
                             <th data-sort="status" class="sortable">Status <i class="fas fa-sort"></i></th>
+                            <th>OBS</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
