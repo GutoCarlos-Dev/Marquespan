@@ -24,9 +24,7 @@ const TacografoUI = {
         // Contadores de legenda
         this.counterPendente = document.getElementById('count-pendente');
         this.counterPreliminar = document.getElementById('count-preliminar');
-        this.counterPago = document.getElementById('count-pago');
         this.counterEmDia = document.getElementById('count-em-dia');
-        this.counterManutencao = document.getElementById('count-manutencao');
     },
 
     bindEvents() {
@@ -79,6 +77,7 @@ const TacografoUI = {
                 tipo: v.tipo || '-',
                 data_emissao: tData.data_emissao || '',
                 data_vencimento: tData.data_vencimento || '',
+                guia_gru: tData.guia_gru || '',
                     status: tData.status || 'Pendente',
                     observacao: tData.observacao || ''
                 };
@@ -141,7 +140,7 @@ const TacografoUI = {
         this.filteredData = filtered; // Salva para exportação
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Pendente: 0, Preliminar: 0, Pago: 0, 'Em Dia': 0, Manutenção: 0 };
+        const counts = { Pendente: 0, Preliminar: 0, 'Em Dia': 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
         });
@@ -166,9 +165,14 @@ const TacografoUI = {
             const tr = document.createElement('tr');
             tr.dataset.placa = item.placa;
 
-            const statusOptions = ['Pendente', 'Preliminar', 'Pago', 'Em Dia', 'Manutenção'];
+            const statusOptions = ['Pendente', 'Preliminar', 'Em Dia'];
             let optionsHtml = statusOptions.map(opt => 
                 `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+
+            const guiaGruOptions = ['', 'PAGO'];
+            let guiaGruHtml = guiaGruOptions.map(opt => 
+                `<option value="${opt}" ${item.guia_gru === opt ? 'selected' : ''}>${opt || '-'}</option>`
             ).join('');
 
             tr.innerHTML = `
@@ -179,6 +183,11 @@ const TacografoUI = {
                 <td>${item.tipo}</td>
                 <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao}"></td>
                 <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}"></td>
+                <td>
+                    <select class="status-select-grid guia-gru-select">
+                        ${guiaGruHtml}
+                    </select>
+                </td>
                 <td>
                     <select class="status-select-grid ${this.getStatusClass(item.status)}" onchange="this.className = 'status-select-grid ' + TacografoUI.getStatusClass(this.value)">
                         ${optionsHtml}
@@ -200,16 +209,12 @@ const TacografoUI = {
     updateCounters(counts) {
         if (this.counterPendente) this.counterPendente.textContent = counts.Pendente || 0;
         if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
-        if (this.counterPago) this.counterPago.textContent = counts.Pago || 0;
         if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
-        if (this.counterManutencao) this.counterManutencao.textContent = counts.Manutenção || 0;
     },
 
     getStatusClass(status) {
         if (status === 'Preliminar') return 'status-preliminar';
-        if (status === 'Pago') return 'status-pago';
         if (status === 'Em Dia') return 'status-em-dia';
-        if (status === 'Manutenção') return 'status-manutencao';
         if (status === 'Pendente') return 'status-pendente';
         return '';
     },
@@ -219,6 +224,7 @@ const TacografoUI = {
         const btn = tr.querySelector('.btn-icon.save');
         
         const status = tr.querySelector('.status-select-grid').value;
+        const guia_gru = tr.querySelector('.guia-gru-select').value;
         const data_emissao = tr.querySelector('.input-emissao').value;
         const data_vencimento = tr.querySelector('.input-vencimento').value;
         const observacao = tr.querySelector('.input-obs').value;
@@ -231,6 +237,7 @@ const TacografoUI = {
                 .upsert({
                     placa: placa,
                     status: status,
+                    guia_gru: guia_gru,
                     data_emissao: data_emissao || null,
                     data_vencimento: data_vencimento || null,
                     observacao: observacao || null,
@@ -406,7 +413,7 @@ const TacografoUI = {
         doc.setTextColor(100);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
-        const columns = ['Filial', 'Placa', 'Modelo', 'Renavan', 'Tipo', 'Emissão', 'Vencimento', 'Status', 'Observação'];
+        const columns = ['Filial', 'Placa', 'Modelo', 'Renavan', 'Tipo', 'Emissão', 'Vencimento', 'Guia GRU', 'Status', 'Observação'];
         const rows = dados.map(item => [
             item.filial,
             item.placa,
@@ -415,6 +422,7 @@ const TacografoUI = {
             item.tipo,
             item.data_emissao ? new Date(item.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             item.data_vencimento ? new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            item.guia_gru || '-',
             item.status,
             item.observacao || ''
         ]);
@@ -428,8 +436,8 @@ const TacografoUI = {
             styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
             alternateRowStyles: { fillColor: [240, 240, 240] },
             columnStyles: {
-                7: { fontStyle: 'bold' },
-                8: { cellWidth: 50 } // Mais espaço para observação
+                8: { fontStyle: 'bold' },
+                9: { cellWidth: 50 } // Mais espaço para observação
             },
             didParseCell: (data) => {
                 if (data.section === 'body' && data.column.index === 6) { // Vencimento
