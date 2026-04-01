@@ -43,7 +43,6 @@ const TacografoUI = {
         this.fileImportar = document.getElementById('fileImportar');
         // Contadores de legenda
         this.counterPendente = document.getElementById('count-pendente');
-        this.counterPreliminar = document.getElementById('count-preliminar');
         this.counterEmDia = document.getElementById('count-em-dia');
         this.counterDispensado = document.getElementById('count-dispensado');
     },
@@ -96,11 +95,11 @@ const TacografoUI = {
         this.tbody.innerHTML = '<tr><td colspan="9" class="text-center">Buscando dados no banco...</td></tr>';
         
         try {
-            // Buscamos veículos ativos
+            // Buscamos todos os veículos, exceto Empilhadeiras e Geradores, independente da situação
             const { data: veiculos, error: errV } = await supabaseClient
                 .from('veiculos')
                 .select('filial, placa, modelo, renavan, tipo')
-                .eq('situacao', 'ativo')
+                .not('tipo', 'in', '("EMPILHADEIRA","GERADOR")')
                 .order('placa');
 
             if (errV) throw errV;
@@ -127,7 +126,7 @@ const TacografoUI = {
                 // Automação: Sem data vira Dispensado. Com data, segue regra se não for manual.
                 if (!venc) {
                     status = 'Dispensado';
-                } else if (status !== 'Preliminar' && status !== 'Dispensado') {
+                } else if (status !== 'Dispensado') {
                     status = (venc > todayStr) ? 'Em Dia' : 'Vencido';
                 }
 
@@ -140,6 +139,7 @@ const TacografoUI = {
                     data_emissao: tData.data_emissao || '',
                     data_vencimento: venc || '',
                     guia_gru: tData.guia_gru || '',
+                    acao: tData.acao || '',
                     status: status,
                     observacao: tData.observacao || ''
                 };
@@ -214,7 +214,7 @@ const TacografoUI = {
         this.filteredData = filtered; // Salva para exportação
 
         // Calcular quantidades por status com base no que está filtrado
-        const counts = { Vencido: 0, Preliminar: 0, 'Em Dia': 0, Dispensado: 0 };
+        const counts = { Vencido: 0, 'Em Dia': 0, Dispensado: 0 };
         filtered.forEach(item => {
             if (counts.hasOwnProperty(item.status)) counts[item.status]++;
         });
@@ -239,7 +239,7 @@ const TacografoUI = {
             const tr = document.createElement('tr');
             tr.dataset.placa = item.placa;
 
-            const statusOptions = ['Vencido', 'Preliminar', 'Em Dia', 'Dispensado'];
+            const statusOptions = ['Vencido', 'Em Dia', 'Dispensado'];
             let optionsHtml = statusOptions.map(opt => 
                 `<option value="${opt}" ${item.status === opt ? 'selected' : ''}>${opt}</option>`
             ).join('');
@@ -247,6 +247,11 @@ const TacografoUI = {
             const guiaGruOptions = ['', 'PAGO'];
             let guiaGruHtml = guiaGruOptions.map(opt => 
                 `<option value="${opt}" ${item.guia_gru === opt ? 'selected' : ''}>${opt || '-'}</option>`
+            ).join('');
+
+            const acaoOptions = ['', 'Preliminar'];
+            let acaoHtml = acaoOptions.map(opt => 
+                `<option value="${opt}" ${item.acao === opt ? 'selected' : ''}>${opt || '-'}</option>`
             ).join('');
 
             tr.innerHTML = `
@@ -263,8 +268,13 @@ const TacografoUI = {
                     </select>
                 </td>
                 <td>
-                    <select class="status-select-grid ${this.getStatusClass(item.status)}" onchange="this.className = 'status-select-grid ' + TacografoUI.getStatusClass(this.value)">
+                    <select class="status-select-grid ${this.getStatusClass(item.status)} status-select" onchange="this.className = 'status-select-grid status-select ' + TacografoUI.getStatusClass(this.value)">
                         ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <select class="status-select-grid acao-select ${item.acao === 'Preliminar' ? 'acao-preliminar' : ''}" onchange="this.className = 'status-select-grid acao-select ' + (this.value === 'Preliminar' ? 'acao-preliminar' : '')">
+                        ${acaoHtml}
                     </select>
                 </td>
                 <td>
@@ -285,7 +295,6 @@ const TacografoUI = {
 
     updateCounters(counts) {
         if (this.counterPendente) this.counterPendente.textContent = counts.Vencido || 0;
-        if (this.counterPreliminar) this.counterPreliminar.textContent = counts.Preliminar || 0;
         if (this.counterEmDia) this.counterEmDia.textContent = counts['Em Dia'] || 0;
         if (this.counterDispensado) this.counterDispensado.textContent = counts.Dispensado || 0;
     },
@@ -303,14 +312,14 @@ const TacografoUI = {
      */
     handleDateChange(input) {
         const tr = input.closest('tr');
-        const statusSelect = tr.querySelector('.status-select-grid:not(.guia-gru-select)');
+        const statusSelect = tr.querySelector('.status-select');
         const currentStatus = statusSelect.value;
         const newVenc = input.value;
 
         let newStatus = currentStatus;
         if (!newVenc) {
             newStatus = 'Dispensado';
-        } else if (currentStatus !== 'Preliminar' && currentStatus !== 'Dispensado') {
+        } else if (currentStatus !== 'Dispensado') {
             const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
             newStatus = (newVenc > todayStr) ? 'Em Dia' : 'Vencido';
         }
@@ -401,8 +410,9 @@ const TacografoUI = {
         const tr = document.querySelector(`tr[data-placa="${placa}"]`);
         const btn = tr.querySelector('.btn-icon.save');
         
-        const status = tr.querySelector('.status-select-grid:not(.guia-gru-select)').value;
+        const status = tr.querySelector('.status-select').value;
         const guia_gru = tr.querySelector('.guia-gru-select').value;
+        const acao = tr.querySelector('.acao-select').value;
         const data_emissao = tr.querySelector('.input-emissao').value;
         const data_vencimento = tr.querySelector('.input-vencimento').value;
         const observacao = tr.querySelector('.input-obs').value;
@@ -415,6 +425,7 @@ const TacografoUI = {
                 .upsert({
                     placa: placa,
                     status: status,
+                    acao: acao,
                     guia_gru: guia_gru,
                     data_emissao: data_emissao || null,
                     data_vencimento: data_vencimento || null,
@@ -423,6 +434,19 @@ const TacografoUI = {
                 }, { onConflict: 'placa' });
 
             if (error) throw error;
+
+            // Atualiza o objeto no array local this.data para que os contadores sejam recalculados corretamente
+            const localItem = this.data.find(d => d.placa === placa);
+            if (localItem) {
+                localItem.status = status;
+                localItem.acao = acao;
+                localItem.guia_gru = guia_gru;
+                localItem.data_emissao = data_emissao;
+                localItem.data_vencimento = data_vencimento;
+                localItem.observacao = observacao;
+            }
+
+            this.renderGrid(); // Re-renderiza a grade, disparando a atualização dos contadores sem recarregar a página
 
             tr.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
             setTimeout(() => tr.style.backgroundColor = '', 1000);

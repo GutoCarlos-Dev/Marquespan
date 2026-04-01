@@ -15,12 +15,6 @@
     border: 1px solid #f5c6cb;
 }
 
-.status-preliminar {
-    background-color: #ffeeba;
-    color: #856404;
-    border: 1px solid #ffeeba;
-}
-
 .status-pago {
     background-color: #d4edda;
     color: #155724;
@@ -52,7 +46,6 @@
     min-width: 200px !important;
 }
 
-.status-select-grid.status-preliminar { background-color: #ffeeba; color: #856404; font-weight: bold; }
 .status-select-grid.status-pendente { background-color: #f8d7da; color: #721c24; font-weight: bold; }
 .status-select-grid.status-pago { background-color: #d4edda; color: #155724; font-weight: bold; }
 .status-select-grid.status-batido { background-color: #cce5ff; color: #004085; font-weight: bold; }
@@ -135,4 +128,12 @@
 .date-filter-group {
     width: 150px;
     flex: 0 0 auto !important;
+}
+
+.acao-preliminar {
+    background-color: #ffeeba;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
 }

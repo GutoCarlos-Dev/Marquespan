@@ -44,7 +44,6 @@
                             </div>
                             <div id="filterStatusOptions" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;">
                                 <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Vencido"> Vencido</label>
-                                <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Preliminar"> Preliminar</label>
                                 <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Em Dia"> Em Dia</label>
                                 <label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="status-checkbox" value="Dispensado"> Dispensado</label>
                             </div>
@@ -84,7 +83,6 @@
                 <h2><i class="fas fa-list"></i> Lista de Veículos</h2>
                 <div class="status-legend-container">
                     <span class="badge status-pendente">Vencido: <span id="count-pendente">0</span></span>
-                    <span class="badge status-preliminar">Preliminar: <span id="count-preliminar">0</span></span>
                     <span class="badge status-em-dia">Em Dia: <span id="count-em-dia">0</span></span>
                     <span class="badge status-dispensado">Dispensado: <span id="count-dispensado">0</span></span>
                 </div>
@@ -102,6 +100,8 @@
                             <th data-sort="data_vencimento" class="sortable">Dt. Vencimento <i class="fas fa-sort"></i></th>
                             <th data-sort="guia_gru" class="sortable">Guia GRU <i class="fas fa-sort"></i></th>
                             <th data-sort="status" class="sortable">Status <i class="fas fa-sort"></i></th>
+                            <th data-sort="acao" class="sortable">Ação <i class="fas fa-sort"></i></th>
+                            
                             <th>OBS</th>
                             <th>Ações</th>
                         </tr>
