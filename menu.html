@@ -6,8 +6,18 @@
   <nav>
     <!-- Link para o Dashboard -->
     <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-    <!-- Link para Veículos -->
-    <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
+    
+<!-- Menu Dropdown: Administração -->
+    <div class="menu-group">
+      <button class="menu-toggle">
+        <i class="fas fa-cogs"></i> <span>Administração</span> <i class="fas fa-caret-down"></i>
+      </button>
+      <div class="submenu">
+        <a href="usuarios.html">Usuários</a>
+        <a href="permissoes.html">Permissões</a>
+        <a href="filiais.html">Filiais</a>
+      </div>
+    </div>
     
     <!-- Link para Abastecimentos -->
     <div class="menu-group">      
@@ -24,19 +34,20 @@
       </div>
     </div>
 
-
-
-    <!-- Menu Dropdown: Administração -->
+    <!-- Menu Dropdown: Cadastro -->
     <div class="menu-group">
       <button class="menu-toggle">
-        <i class="fas fa-cogs"></i> <span>Administração</span> <i class="fas fa-caret-down"></i>
+        <i class="fas fa-address-book"></i> <span>Cadastro</span> <i class="fas fa-caret-down"></i>
       </button>
       <div class="submenu">
-        <a href="usuarios.html">Usuários</a>
-        <a href="permissoes.html">Permissões</a>
-        <a href="filiais.html">Filiais</a>
+        <a href="veiculos.html">Cadastro de Veículos</a>
+        <a href="rotas.html">Cadastro de Rotas</a>
+        <a href="funcionario.html">Cadastro de Funcionário</a>
+        <a href="supervisor.html">Cadastro de Supervisor</a>
+        <a href="oficina.html">Cadastro de Oficina</a>
       </div>
     </div>
+    
     <!-- Menu Dropdown: Manutenções -->
     <div class="menu-group">      
       <button class="menu-toggle">
@@ -45,7 +56,6 @@
       <div class="submenu">
         <a href="monitoramento.html">Monitoramento (Real-Time)</a>
         <a href="coletar-manutencao.html">Coletar Manutenção</a>
-        <a href="oficina.html">Oficina</a>
         <a href="coletar-KM.html">Coletar KM</a>
         <a href="engraxe.html">Controle de Engraxe</a>
         <a href="lavagem.html">Controle de Lavagem</a>
@@ -118,13 +128,11 @@
     <!-- Menu Dropdown: Logística -->
     <div class="menu-group">      
       <button class="menu-toggle">
-        <i class="fas fa-route"></i> <span>Logística</span> <i class="fas fa-caret-down"></i>
+        <i class="fas fa-route"></i> <span>Hotelaria</span> <i class="fas fa-caret-down"></i>
       </button>
       <div class="submenu">
-        <a href="rotas.html">Cadastro de Rotas</a>
         <a href="hotel.html">Cadastro de Hotel</a>
-        <a href="funcionario.html">Cadastro de Funcionário</a>
-        <a href="despesas.html">Cadastro de Despesas</a>
+        <a href="despesas.html">Lançamento de Despesas</a>
         <a href="relatorio-despesas.html">Relatório de Despesas</a>
         <a href="retorno-rota.html"><span>Retorno de Rota</span></a>
         <a href="mapa.html">Mapa de Rotas</a>
