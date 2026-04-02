@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Supervisores - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/supervisor.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="logo.png" type="image/png">
+  <!-- Biblioteca XLSX para importação -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-user-tie"></i> Cadastro de Supervisores</h1>
+    </header>
+
+    <section id="sectionCadastrarSupervisor" class="glass-panel">
+      <h3><i class="fas fa-user-plus"></i> Formulário de Supervisor</h3>
+      <form id="formCadastrarSupervisor">
+        <input type="hidden" id="supervisorEditingId">
+        
+        <div class="supervisor-layout">
+            <!-- Card de Campos -->
+            <div class="glass-panel-inner">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="supervisorNome">Nome</label>
+                        <input type="text" id="supervisorNome" required class="glass-input" placeholder="Ex: GULTEMBERGUE">
+                    </div>
+                    <div class="form-group">
+                        <label for="supervisorNomeCompleto">Nome Completo</label>
+                        <input type="text" id="supervisorNomeCompleto" class="glass-input" placeholder="Nome Completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="supervisorUf">UF</label>
+                        <input type="text" id="supervisorUf" class="glass-input" placeholder="Ex: SP" maxlength="2" style="text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label for="supervisorStatus">Status</label>
+                        <select id="supervisorStatus" required class="glass-input">
+                          <option value="ATIVO" selected>ATIVO</option>
+                          <option value="INATIVO">INATIVO</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Botões -->
+            <div class="glass-panel-inner actions-panel">
+                <div class="form-actions-vertical">
+                    <button type="submit" id="btnSubmitSupervisor" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+                    <button type="button" id="btnImportarLista" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar</button>
+                    <button type="button" id="btnClearSupervisorForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+                    <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;" />
+                </div>
+            </div>
+        </div>
+      </form>
+
+      <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
+
+      <h3><i class="fas fa-list"></i> Supervisores Cadastrados</h3>
+      <div class="form-group" style="margin-bottom: 15px;">
+          <input type="text" id="searchSupervisorInput" placeholder="🔍 Buscar por nome, UF ou status..." class="glass-input">
+      </div>
+
+      <div class="table-responsive">
+          <table class="glass-table data-grid">
+              <thead>
+              <tr>
+                  <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
+                  <th data-field="nome_completo">NOME COMPLETO <i class="fas fa-sort"></i></th>
+                  <th data-field="uf">UF <i class="fas fa-sort"></i></th>
+                  <th data-field="status">STATUS <i class="fas fa-sort"></i></th>
+                  <th style="width: 120px; text-align: center;">AÇÕES</th>
+              </tr>
+              </thead>
+              <tbody id="supervisorTableBody"></tbody>
+          </table>
+      </div>
+      
+      <div id="supervisorSummary" class="supervisor-summary" style="margin-top: 20px;"></div>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="script/supervisor.js"></script>
+</body>
+</html>
