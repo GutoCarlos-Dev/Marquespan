@@ -656,7 +656,7 @@ const TacografoUI = {
         doc.setTextColor(100);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
-        const columns = ['Filial', 'Placa', 'Modelo', 'Renavan', 'Tipo', 'Emissão', 'Vencimento', 'Guia GRU', 'Status', 'Observação'];
+        const columns = ['Filial', 'Placa', 'Modelo', 'Renavan', 'Tipo', 'Emissão', 'Vencimento', 'Guia GRU', 'Status', 'Ação', 'Observação'];
         const rows = dados.map(item => [
             item.filial,
             item.placa,
@@ -667,6 +667,7 @@ const TacografoUI = {
             item.data_vencimento ? new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             item.guia_gru || '-',
             item.status,
+            item.acao || '-',
             item.observacao || ''
         ]);
 
@@ -680,7 +681,7 @@ const TacografoUI = {
             alternateRowStyles: { fillColor: [240, 240, 240] },
             columnStyles: {
                 8: { fontStyle: 'bold' },
-                9: { cellWidth: 50 } // Mais espaço para observação
+                10: { cellWidth: 50 } // Mais espaço para observação
             },
             didParseCell: (data) => {
                 if (data.section === 'body' && data.column.index === 6) { // Vencimento
