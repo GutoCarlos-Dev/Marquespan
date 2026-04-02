@@ -623,6 +623,13 @@ const TacografoUI = {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4'); // Paisagem
 
+        // Mapeamento de status para cores RGB para o PDF
+        const statusColors = {
+            'Vencido': [255, 0, 0],   // Vermelho Vivo
+            'Em Dia': [0, 77, 64],      // Verde escuro
+            'Dispensado': [108, 117, 125] // Cinza
+        };
+
         // Função para carregar o logo e garantir fundo branco
         const getLogoBase64 = async () => {
             return new Promise((resolve) => {
@@ -681,18 +688,36 @@ const TacografoUI = {
             alternateRowStyles: { fillColor: [240, 240, 240] },
             columnStyles: {
                 8: { fontStyle: 'bold' },
-                10: { cellWidth: 50 } // Mais espaço para observação
+                10: { cellWidth: 50 } // Mais espaço para observação (Observação é a 11ª coluna, índice 10)
             },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 6) { // Vencimento
-                    const dateStr = data.cell.raw;
-                    if (dateStr && new Date(dateStr + 'T00:00:00') < new Date()) {
-                        data.cell.styles.textColor = [220, 53, 69]; // Vermelho se vencido
+                if (data.section === 'body') {
+                    // Lógica para a coluna de Vencimento (índice 6)
+                    if (data.column.index === 6) {
+                        const dateStr = data.cell.raw;
+                        if (dateStr) {
+                            const vencDate = new Date(dateStr + 'T00:00:00');
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0); // Normaliza a data de hoje para o início do dia
+                            if (vencDate < today) {
+                                data.cell.styles.textColor = [220, 53, 69]; // Vermelho se vencido
+                            }
+                        }
                     }
-                }
-                if (data.section === 'body' && data.column.index === 8) { // Status
-                    if (data.cell.raw === 'Dispensado') {
-                        data.cell.styles.textColor = [108, 117, 125]; // Cinza #6c757d
+                    // Lógica para a coluna de Status (índice 8)
+                    if (data.column.index === 8) {
+                        const status = data.cell.raw;
+                        const color = statusColors[status];
+                        if (color) {
+                            data.cell.styles.textColor = color;
+                        }
+                    }
+                    // Lógica para a coluna de Ação (índice 9)
+                    if (data.column.index === 9) {
+                        if (data.cell.raw === 'Preliminar') {
+                            data.cell.styles.textColor = [253, 126, 20]; // Laranja para Preliminar
+                            data.cell.styles.fontStyle = 'bold';
+                        }
                     }
                 }
             }
