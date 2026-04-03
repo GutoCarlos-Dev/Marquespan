@@ -251,3 +251,13 @@
 }
 
 .hidden { display: none !important; }
+
+/* Ajustes para a nova estrutura de formulário com seções (Cards) */
+.glass-panel-inner h4 {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 8px;
+}
+
+.form-grid {
+    align-items: end;
+}
