@@ -391,6 +391,14 @@ function renderGrid() {
           )
         : [...gridData];
 
+    // Calcular e atualizar os contadores (Retornaram vs Aguardando)
+    const countRetornaram = dataToRender.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '').length;
+    const countAguardando = dataToRender.length - countRetornaram;
+    const elRetornaram = document.getElementById('count-retornaram');
+    const elAguardando = document.getElementById('count-aguardando');
+    if (elRetornaram) elRetornaram.textContent = countRetornaram;
+    if (elAguardando) elAguardando.textContent = countAguardando;
+
     // Aplica a ordenação se houver uma chave definida
     if (sortConfig.key) {
         dataToRender.sort((a, b) => {
@@ -502,6 +510,10 @@ function renderGrid() {
                 gridData[index][field] = e.target.value;
                 if (field.startsWith('hora_')) {
                     applyRowStyle(e.target.closest('tr'), gridData[index]);
+                }
+                // Se o campo for o operador, atualizamos os contadores imediatamente
+                if (field === 'operador_recebimento') {
+                    renderGrid(); // Re-renderiza para atualizar os totais no cabeçalho
                 }
                 await saveRow(index);
             });

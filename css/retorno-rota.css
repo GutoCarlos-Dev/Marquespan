@@ -381,3 +381,33 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
 .tab-content.active {
     display: block; /* Mostra apenas a aba ativa */
 }
+
+/* === ESTILOS PARA OS CONTADORES NO CABEÇALHO === */
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.status-legend-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.badge {
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: inline-block;
+}
+
+.status-realizado { background-color: #28a745; }
+.status-pendente { background-color: #dc3545; }
