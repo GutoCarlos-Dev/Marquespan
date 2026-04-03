@@ -143,6 +143,14 @@ function renderCards() {
         return placa.toUpperCase().includes(termoBusca) || rota.toUpperCase().includes(termoBusca) || motorista.toUpperCase().includes(termoBusca);
     });
 
+    // Calcular e atualizar os contadores (Retornaram vs Aguardando)
+    const countRetornaram = filteredData.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '').length;
+    const countAguardando = filteredData.length - countRetornaram;
+    const elRetornaram = document.getElementById('count-retornaram');
+    const elAguardando = document.getElementById('count-aguardando');
+    if (elRetornaram) elRetornaram.textContent = countRetornaram;
+    if (elAguardando) elAguardando.textContent = countAguardando;
+
     if (filteredData.length === 0) {
         container.innerHTML = `<div class="loading-placeholder">Nenhum retorno encontrado.</div>`;
         return;

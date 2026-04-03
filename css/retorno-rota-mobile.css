@@ -66,6 +66,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-height: 65vh; /* Limita a altura a aproximadamente 65% da tela */
+    overflow-y: auto; /* Habilita a rolagem vertical */
+    padding: 10px 5px; /* Padding para não cortar a sombra dos cards */
+    scrollbar-width: thin; /* Barra de rolagem fina para Firefox */
+}
+
+/* Estilização da barra de rolagem para Chrome, Safari e Edge */
+.card-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.card-list::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
 }
 
 .retorno-card {

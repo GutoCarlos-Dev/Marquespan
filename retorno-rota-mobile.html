@@ -7,6 +7,32 @@
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/retorno-rota-mobile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilos adicionais para os contadores no topo da lista mobile */
+        .status-summary-mobile {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+        .status-badge-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .status-summary-mobile .badge {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .status-summary-mobile .status-realizado { background-color: #28a745; }
+        .status-summary-mobile .status-pendente { background-color: #dc3545; }
+        #count-retornaram, #count-aguardando { font-size: 1rem; margin-left: 5px; }
+    </style>
     <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -25,6 +51,13 @@
                 <div class="form-group">
                     <label for="buscaMobile">Buscar</label>
                     <input type="search" id="buscaMobile" class="glass-input" placeholder="Placa, Motorista, Rota...">
+                </div>
+            </div>
+
+            <div class="status-summary-mobile">
+                <div class="status-badge-wrapper">
+                    <span class="badge status-realizado">Retornaram: <span id="count-retornaram">0</span></span>
+                    <span class="badge status-pendente">Aguardando: <span id="count-aguardando">0</span></span>
                 </div>
             </div>
 
