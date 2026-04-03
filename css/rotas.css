@@ -265,6 +265,18 @@ select.glass-input {
 
 .hidden { display: none !important; }
 
+/* Status Badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fff;
+}
+.status-ativa { background-color: #28a745; }
+.status-inativa { background-color: #dc3545; }
+
 /* Estilos para pneu.html */
 .hidden {
     display: none;

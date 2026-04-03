@@ -120,12 +120,13 @@ const RotasUI = {
             supervisor: document.getElementById('rotaSupervisor').value,
             cidades: document.getElementById('rotaCidades').value,
             dias: parseInt(document.getElementById('rotaDias').value),
+            status: document.getElementById('rotaStatus').value,
             // Incluímos o ID para o caso de estarmos editando, mas o upsert cuidará disso.
             // Se o ID existir, ele atualiza. Se não, o upsert usará o 'numero' para o conflito.
             id: this.editingIdInput.value || undefined
         };
 
-        if (!payload.numero || !payload.semana || !payload.responsavel || !payload.cidades || !payload.dias) {
+        if (!payload.numero || !payload.semana || !payload.responsavel || !payload.status || !payload.cidades || !payload.dias) {
             return alert('Todos os campos da rota são obrigatórios.');
         }
 
@@ -161,6 +162,7 @@ const RotasUI = {
             document.getElementById('rotaSupervisor').value = rota.supervisor || '';
             document.getElementById('rotaCidades').value = rota.cidades || '';
             document.getElementById('rotaDias').value = rota.dias || '';
+            document.getElementById('rotaStatus').value = rota.status || 'ATIVA';
 
             this.btnSubmit.textContent = 'Atualizar Rota';
             this.form.scrollIntoView({ behavior: 'smooth' });
@@ -246,7 +248,8 @@ const RotasUI = {
             responsavel: row.RESPONSÁVEL,
             supervisor: row.SUPERVISOR,
             cidades: row.CIDADES,
-            dias: row.DIAS
+            dias: row.DIAS,
+            status: row.STATUS || 'ATIVA'
         })).filter(r => r.numero); // Garante que a rota tenha um número
 
         if (upsertPayload.length === 0) {
@@ -294,7 +297,8 @@ const RotasUI = {
                     `numero.ilike.%${searchTerm}%`, // Busca pelo número da rota como texto
                     `responsavel.ilike.%${searchTerm}%`,
                     `supervisor.ilike.%${searchTerm}%`,
-                    `cidades.ilike.%${searchTerm}%`
+                    `cidades.ilike.%${searchTerm}%`,
+                    `status.ilike.%${searchTerm}%`
                 ];
                 queryOptions.or = searchConditions.join(',');
             }
@@ -319,6 +323,7 @@ const RotasUI = {
                     <td>${r.supervisor || ''}</td>
                     <td>${r.cidades || ''}</td>
                     <td>${r.dias || ''}</td>
+                    <td><span class="status-badge ${r.status === 'INATIVA' ? 'status-inativa' : 'status-ativa'}">${r.status || 'ATIVA'}</span></td>
                     <td>
                         <button class="btn-edit" data-id="${r.id}">Editar</button>
                         <button class="btn-delete" data-id="${r.id}">Excluir</button>
