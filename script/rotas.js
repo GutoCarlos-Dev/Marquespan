@@ -37,6 +37,7 @@ const RotasUI = {
         this.cache();
         this.bind();
         this.setupInitialState();
+        this.carregarSupervisores();
     },
 
     cache() {
@@ -48,6 +49,7 @@ const RotasUI = {
         this.searchInput = document.getElementById('searchRotaInput');
         this.rotaSummary = document.getElementById('rotaSummary');
         this.editingIdInput = document.getElementById('rotaEditingId');
+        this.supervisorSelect = document.getElementById('rotaSupervisor');
 
         // Botão e input de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
@@ -84,6 +86,28 @@ const RotasUI = {
 
     setupInitialState() {
         this._sort = { field: 'numero', ascending: true };
+    },
+
+    async carregarSupervisores() {
+        try {
+            // Busca a lista de supervisores ativos da base de supervisores
+            const { data, error } = await supabaseClient
+                .from('supervisores') // Tabela alimentada pela página supervisor.html
+                .select('nome')
+                .eq('status', 'ATIVO');
+            
+            if (error) throw error;
+
+            if (this.supervisorSelect && data) {
+                this.supervisorSelect.innerHTML = '<option value="">Selecione o Supervisor</option>';
+                const supervisores = [...new Set(data.map(s => s.nome).filter(Boolean))].sort();
+                supervisores.forEach(sup => {
+                    this.supervisorSelect.add(new Option(sup, sup));
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar lista de supervisores:', err);
+        }
     },
 
     async handleFormSubmit(e) {
