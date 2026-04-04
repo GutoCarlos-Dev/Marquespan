@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = btn.dataset.id;
             const nome = btn.dataset.nome;
             const atual = parseFloat(btn.dataset.atual);
-            realizarAjusteEstoque(id, nome, atual);
+            realizarAjusteEstoque(id, nome, atual, btn);
         }
     });
 
@@ -196,89 +196,72 @@ async function salvarAbastecimento(e) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
     
-    // Dados comuns
-    const dataHoraInput = document.getElementById('saidaDataHora').value;
-    const dataHora = dataHoraInput ? new Date(dataHoraInput).toISOString() : new Date().toISOString();
-    const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
-    const rota = document.getElementById('saidaRota').value;
-    const km = document.getElementById('saidaKm').value;
+    try {
+        // Dados comuns
+        const dataHoraInput = document.getElementById('saidaDataHora').value;
+        const dataHora = dataHoraInput ? new Date(dataHoraInput).toISOString() : new Date().toISOString();
+        const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
+        const rota = document.getElementById('saidaRota').value;
+        const km = document.getElementById('saidaKm').value;
 
-    // Validação da Placa
-    const veiculoValido = veiculosDisponiveisCache.some(v => v.placa === placa);
-    if (!veiculoValido) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
-        document.getElementById('saidaVeiculo').focus();
-        return;
-    }
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-    const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
-
-    // Dados do Bico 1
-    const bicoId1 = document.getElementById('saidaBico').value;
-    const litros1 = document.getElementById('saidaLitros').value;
-
-    // Dados do Bico 2 (opcional)
-    const bicoId2 = document.getElementById('saidaBico2').value;
-    const litros2 = document.getElementById('saidaLitros2').value;
-
-    if (!placa || !km) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Preencha a Placa e o KM.');
-        return;
-    }
-
-    const payloads = [];
-
-    // Prepara payload para o Bico 1 (obrigatório)
-    if (bicoId1 && litros1 > 0) {
-        payloads.push({
-            data_hora: dataHora,
-            bico_id: bicoId1,
-            veiculo_placa: placa,
-            rota: rota, // Salva no campo rota
-            km_atual: km,
-            qtd_litros: litros1,
-            usuario: usuario
-        });
-    } else {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Preencha os dados do Bico 1 (Bico e Litros).');
-        return;
-    }
-
-    // Prepara payload para o Bico 2 (se preenchido)
-    if (bicoId2 && litros2 > 0) {
-        // Validação: não pode usar o mesmo bico duas vezes
-        if (bicoId1 === bicoId2) {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-            }
-            alert('Não é possível usar o mesmo bico duas vezes no mesmo abastecimento.');
+        // Validação da Placa
+        const veiculoValido = veiculosDisponiveisCache.some(v => v.placa === placa);
+        if (!veiculoValido) {
+            alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
+            document.getElementById('saidaVeiculo').focus();
             return;
         }
-        payloads.push({
-            data_hora: dataHora,
-            bico_id: bicoId2,
-            veiculo_placa: placa,
-            rota: rota, // Salva no campo rota
-            km_atual: km,
-            qtd_litros: litros2,
-            usuario: usuario
-        });
-    }
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 
-    try {
+        // Dados do Bico 1
+        const bicoId1 = document.getElementById('saidaBico').value;
+        const litros1 = document.getElementById('saidaLitros').value;
+
+        // Dados do Bico 2 (opcional)
+        const bicoId2 = document.getElementById('saidaBico2').value;
+        const litros2 = document.getElementById('saidaLitros2').value;
+
+        if (!placa || !km) {
+            alert('Preencha a Placa e o KM.');
+            return;
+        }
+
+        const payloads = [];
+
+        // Prepara payload para o Bico 1 (obrigatório)
+        if (bicoId1 && litros1 > 0) {
+            payloads.push({
+                data_hora: dataHora,
+                bico_id: bicoId1,
+                veiculo_placa: placa,
+                rota: rota, 
+                km_atual: km,
+                qtd_litros: litros1,
+                usuario: usuario
+            });
+        } else {
+            alert('Preencha os dados do Bico 1 (Bico e Litros).');
+            return;
+        }
+
+        // Prepara payload para o Bico 2 (se preenchido)
+        if (bicoId2 && litros2 > 0) {
+            if (bicoId1 === bicoId2) {
+                alert('Não é possível usar o mesmo bico duas vezes no mesmo abastecimento.');
+                return;
+            }
+            payloads.push({
+                data_hora: dataHora,
+                bico_id: bicoId2,
+                veiculo_placa: placa,
+                rota: rota,
+                km_atual: km,
+                qtd_litros: litros2,
+                usuario: usuario
+            });
+        }
+
         // Salva um ou dois registros de uma vez
         const { error } = await supabaseClient
             .from('saidas_combustivel')
@@ -496,73 +479,57 @@ async function salvarEntrada(e) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
     }
     
-    const dataInput = document.getElementById('entradaData').value;
-    const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
-    const nota = document.getElementById('entradaNota').value;
-    const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value.replace(',', '.')) || 0;
-    const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value.replace(',', '.')) || 0;
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-    const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
-
-    // Validação da Distribuição
-    const linhas = document.querySelectorAll('.distribuicao-row');
-    if (linhas.length === 0) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Adicione pelo menos um tanque para distribuição.');
-        return;
-    }
-
-    const payloads = [];
-    let totalDistribuido = 0;
-    const tanquesUsados = new Set();
-
-    for (const linha of linhas) {
-        const tanqueId = linha.querySelector('.tanque-select').value;
-        const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
-
-        if (!tanqueId || isNaN(qtd) || qtd <= 0) {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-            }
-            alert('Preencha todos os campos de tanque e quantidade corretamente.');
-            return;
-        }
-        if (tanquesUsados.has(tanqueId)) {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-            }
-            alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
-            return;
-        }
-        tanquesUsados.add(tanqueId);
-        totalDistribuido += qtd;
-
-        payloads.push({
-            data: data,
-            numero_nota: nota,
-            tanque_id: parseInt(tanqueId),
-            qtd_litros: qtd,
-            valor_litro: vlrLitro,
-            valor_total: qtd * vlrLitro,
-            usuario: usuario
-        });
-    }
-
-    if (Math.abs(totalDistribuido - litrosTotal) > 0.01) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert(`A soma distribuída (${totalDistribuido.toFixed(2)} L) não corresponde ao total da nota (${litrosTotal.toFixed(2)} L).`);
-        return;
-    }
-
     try {
+        const dataInput = document.getElementById('entradaData').value;
+        const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
+        const nota = document.getElementById('entradaNota').value;
+        const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value.replace(',', '.')) || 0;
+        const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value.replace(',', '.')) || 0;
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+
+        // Validação da Distribuição
+        const linhas = document.querySelectorAll('.distribuicao-row');
+        if (linhas.length === 0) {
+            alert('Adicione pelo menos um tanque para distribuição.');
+            return;
+        }
+
+        const payloads = [];
+        let totalDistribuido = 0;
+        const tanquesUsados = new Set();
+
+        for (const linha of linhas) {
+            const tanqueId = linha.querySelector('.tanque-select').value;
+            const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
+
+            if (!tanqueId || isNaN(qtd) || qtd <= 0) {
+                alert('Preencha todos os campos de tanque e quantidade corretamente.');
+                return;
+            }
+            if (tanquesUsados.has(tanqueId)) {
+                alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
+                return;
+            }
+            tanquesUsados.add(tanqueId);
+            totalDistribuido += qtd;
+
+            payloads.push({
+                data: data,
+                numero_nota: nota,
+                tanque_id: parseInt(tanqueId),
+                qtd_litros: qtd,
+                valor_litro: vlrLitro,
+                valor_total: qtd * vlrLitro,
+                usuario: usuario
+            });
+        }
+
+        if (Math.abs(totalDistribuido - litrosTotal) > 0.01) {
+            alert(`A soma distribuída (${totalDistribuido.toFixed(2)} L) não corresponde ao total da nota (${litrosTotal.toFixed(2)} L).`);
+            return;
+        }
+
         // 1. Insere na tabela de entradas
         const { error: errInsert } = await supabaseClient
             .from('abastecimentos')
@@ -606,40 +573,28 @@ async function salvarTransferencia(e) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transferindo...';
     }
 
-    const dataInput = document.getElementById('transfData').value;
-    const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
-    const origemId = document.getElementById('transfOrigem').value;
-    const destinoId = document.getElementById('transfDestino').value;
-    const qtd = parseFloat(document.getElementById('transfQtd').value);
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-    const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
-
-    if (!origemId || !destinoId) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Selecione os tanques de origem e destino.');
-        return;
-    }
-    if (origemId === destinoId) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Origem e Destino devem ser diferentes.');
-        return;
-    }
-    if (isNaN(qtd) || qtd <= 0) {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
-        }
-        alert('Quantidade inválida.');
-        return;
-    }
-
     try {
+        const dataInput = document.getElementById('transfData').value;
+        const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
+        const origemId = document.getElementById('transfOrigem').value;
+        const destinoId = document.getElementById('transfDestino').value;
+        const qtd = parseFloat(document.getElementById('transfQtd').value);
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
+
+        if (!origemId || !destinoId) {
+            alert('Selecione os tanques de origem e destino.');
+            return;
+        }
+        if (origemId === destinoId) {
+            alert('Origem e Destino devem ser diferentes.');
+            return;
+        }
+        if (isNaN(qtd) || qtd <= 0) {
+            alert('Quantidade inválida.');
+            return;
+        }
+
         const records = [
             { data: data, numero_nota: 'TRANSFERENCIA', tanque_id: origemId, qtd_litros: -qtd, valor_litro: 0, valor_total: 0, usuario: usuario },
             { data: data, numero_nota: 'TRANSFERENCIA', tanque_id: destinoId, qtd_litros: qtd, valor_litro: 0, valor_total: 0, usuario: usuario }
@@ -669,9 +624,21 @@ async function salvarTransferencia(e) {
     }
 }
 
-async function realizarAjusteEstoque(id, nome, estoqueCalculado) {
+async function realizarAjusteEstoque(id, nome, estoqueCalculado, btn) {
+    if (btn) {
+        btn.disabled = true;
+        btn.dataset.originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
     const novoValorStr = prompt(`Informe a quantidade real (física) para o tanque ${nome}:`, estoqueCalculado);
-    if (novoValorStr === null) return; // Cancelado pelo usuário
+    if (novoValorStr === null) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.originalContent;
+        }
+        return;
+    }
 
     const novoValor = parseFloat(novoValorStr.replace(',', '.'));
     if (isNaN(novoValor) || novoValor < 0) {
@@ -708,6 +675,11 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado) {
     } catch (err) {
         console.error('Erro ao ajustar estoque:', err);
         alert('Erro ao salvar ajuste: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.originalContent;
+        }
     }
 }
 
