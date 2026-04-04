@@ -122,6 +122,14 @@
     filter: brightness(1.1);
 }
 
+.btn-glass:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+    filter: grayscale(0.4);
+}
+
 .btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
 .btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
 .btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
