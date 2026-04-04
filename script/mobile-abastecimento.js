@@ -187,6 +187,14 @@ async function carregarDadosIniciais() {
 
 async function salvarAbastecimento(e) {
     e.preventDefault();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+
+    // Bloqueia o botão para evitar cliques duplos durante instabilidade de rede
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.dataset.originalContent = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
     
     // Dados comuns
     const dataHoraInput = document.getElementById('saidaDataHora').value;
@@ -198,6 +206,10 @@ async function salvarAbastecimento(e) {
     // Validação da Placa
     const veiculoValido = veiculosDisponiveisCache.some(v => v.placa === placa);
     if (!veiculoValido) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
         document.getElementById('saidaVeiculo').focus();
         return;
@@ -214,6 +226,10 @@ async function salvarAbastecimento(e) {
     const litros2 = document.getElementById('saidaLitros2').value;
 
     if (!placa || !km) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Preencha a Placa e o KM.');
         return;
     }
@@ -232,6 +248,10 @@ async function salvarAbastecimento(e) {
             usuario: usuario
         });
     } else {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Preencha os dados do Bico 1 (Bico e Litros).');
         return;
     }
@@ -240,6 +260,10 @@ async function salvarAbastecimento(e) {
     if (bicoId2 && litros2 > 0) {
         // Validação: não pode usar o mesmo bico duas vezes
         if (bicoId1 === bicoId2) {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+            }
             alert('Não é possível usar o mesmo bico duas vezes no mesmo abastecimento.');
             return;
         }
@@ -286,6 +310,11 @@ async function salvarAbastecimento(e) {
     } catch (err) {
         console.error('Erro ao salvar:', err);
         alert('Erro ao salvar abastecimento: ' + err.message);
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
     }
 }
 
@@ -459,6 +488,13 @@ async function carregarEstoque() {
 
 async function salvarEntrada(e) {
     e.preventDefault();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.dataset.originalContent = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    }
     
     const dataInput = document.getElementById('entradaData').value;
     const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
@@ -471,6 +507,10 @@ async function salvarEntrada(e) {
     // Validação da Distribuição
     const linhas = document.querySelectorAll('.distribuicao-row');
     if (linhas.length === 0) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Adicione pelo menos um tanque para distribuição.');
         return;
     }
@@ -484,10 +524,18 @@ async function salvarEntrada(e) {
         const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
 
         if (!tanqueId || isNaN(qtd) || qtd <= 0) {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+            }
             alert('Preencha todos os campos de tanque e quantidade corretamente.');
             return;
         }
         if (tanquesUsados.has(tanqueId)) {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+            }
             alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
             return;
         }
@@ -506,6 +554,10 @@ async function salvarEntrada(e) {
     }
 
     if (Math.abs(totalDistribuido - litrosTotal) > 0.01) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert(`A soma distribuída (${totalDistribuido.toFixed(2)} L) não corresponde ao total da nota (${litrosTotal.toFixed(2)} L).`);
         return;
     }
@@ -536,11 +588,24 @@ async function salvarEntrada(e) {
     } catch (err) {
         console.error('Erro ao salvar entrada:', err);
         alert('Erro ao registrar entrada: ' + err.message);
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
     }
 }
 
 async function salvarTransferencia(e) {
     e.preventDefault();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.dataset.originalContent = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transferindo...';
+    }
+
     const dataInput = document.getElementById('transfData').value;
     const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
     const origemId = document.getElementById('transfOrigem').value;
@@ -550,14 +615,26 @@ async function salvarTransferencia(e) {
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
 
     if (!origemId || !destinoId) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Selecione os tanques de origem e destino.');
         return;
     }
     if (origemId === destinoId) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Origem e Destino devem ser diferentes.');
         return;
     }
     if (isNaN(qtd) || qtd <= 0) {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
         alert('Quantidade inválida.');
         return;
     }
@@ -584,6 +661,11 @@ async function salvarTransferencia(e) {
     } catch (err) {
         console.error('Erro ao transferir:', err);
         alert('Erro ao realizar transferência: ' + err.message);
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = btnSubmit.dataset.originalContent;
+        }
     }
 }
 
