@@ -174,6 +174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     carregarTiposVeiculoParaPreco();
     // Injeta os campos de fornecedor na interface se não existirem
     injectFornecedorFields();
+
+    // Inicializa o tooltip
+    setupGlobalTooltip();
 });
 
 function updateMultiselectText() {
@@ -320,13 +323,19 @@ async function carregarListas() {
 
         data.forEach(lista => {
             const itensDestaLista = itensStatus.filter(i => i.lista_id === lista.id);
-            // O total agora contempla apenas Realizados + Pendentes + Agendados
-            const total = itensDestaLista.filter(i => 
-                i.status === 'REALIZADO' || 
-                i.status === 'PENDENTE' || 
-                i.status === 'AGENDADO').length;
-            const realizados = itensDestaLista.filter(i => i.status === 'REALIZADO').length;
-            const percent = total > 0 ? Math.round((realizados / total) * 100) : 0;
+
+            // Cálculo detalhado para o Tooltip
+            const statusCounts = {
+                realizados: itensDestaLista.filter(i => i.status === 'REALIZADO').length,
+                pendentes: itensDestaLista.filter(i => i.status === 'PENDENTE').length,
+                internados: itensDestaLista.filter(i => i.status === 'INTERNADO').length,
+                agendados: itensDestaLista.filter(i => i.status === 'AGENDADO').length,
+                dispensados: itensDestaLista.filter(i => i.status === 'PULAR_LAVAGEM').length
+            };
+
+            // Total para a barra de progresso (Realizados + Pendentes + Agendados)
+            const totalProgress = statusCounts.realizados + statusCounts.pendentes + statusCounts.agendados;
+            const percent = totalProgress > 0 ? Math.round((statusCounts.realizados / totalProgress) * 100) : 0;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -334,11 +343,11 @@ async function carregarListas() {
                 <td>${lista.nome}</td>
                 <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
-                <td>
-                    <div class="progress-bar-container" title="${realizados}/${total}">
+                <td class="progress-cell" data-status-counts='${JSON.stringify(statusCounts)}'>
+                    <div class="progress-bar-container">
                         <div class="progress-bar" style="width: ${percent}%"></div>
                     </div>
-                    <small>${percent}% (${realizados}/${total})</small>
+                    <small>${percent}% (${statusCounts.realizados}/${totalProgress})</small>
                 </td>
                 <td>
                     <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')"><i class="fas fa-folder-open"></i></button>
@@ -1040,6 +1049,41 @@ async function finalizarListaAtual() {
         }
         return;
     }
+
+/**
+ * Configura os event listeners para o tooltip global de progresso.
+ */
+function setupGlobalTooltip() {
+    const tbodyListas = document.getElementById('tbodyListas');
+    
+    tbodyListas.addEventListener('mouseover', (e) => {
+        const progressCell = e.target.closest('.progress-cell');
+        if (progressCell) {
+            const counts = JSON.parse(progressCell.dataset.statusCounts);
+            let tooltipContent = `
+                <strong>Total: ${counts.total}</strong><br>
+                Realizados: ${counts.realizado}<br>
+                Pendentes: ${counts.pendente}<br>
+                Agendados: ${counts.agendado}<br>
+                Internados: ${counts.internado}<br>
+                Dispensados: ${counts.dispensado}
+            `;
+            globalTooltip.innerHTML = tooltipContent;
+            globalTooltip.classList.remove('hidden');
+
+            const rect = progressCell.getBoundingClientRect();
+            globalTooltip.style.left = `${rect.left + rect.width / 2}px`;
+            globalTooltip.style.top = `${rect.top - globalTooltip.offsetHeight - 10}px`; // 10px offset
+            globalTooltip.style.transform = 'translateX(-50%)';
+        }
+    });
+
+    tbodyListas.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.progress-cell')) {
+            globalTooltip.classList.add('hidden');
+        }
+    });
+}
 
     if (!confirm('Deseja finalizar esta lista? Ao finalizar, os valores serão consolidados e não sofrerão alterações futuras.')) return;
     
@@ -2217,4 +2261,39 @@ async function adicionarVeiculosNaLista() {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check"></i> Adicionar Selecionados';
     }
+}
+
+/**
+ * Configura os event listeners para o tooltip global de progresso.
+ */
+function setupGlobalTooltip() {
+    const tooltip = document.getElementById('global-progress-tooltip');
+    const tbody = document.getElementById('tbodyListas');
+    if (!tooltip || !tbody) return;
+
+    tbody.addEventListener('mouseover', (e) => {
+        const cell = e.target.closest('.progress-cell');
+        if (cell && cell.dataset.statusCounts) {
+            const counts = JSON.parse(cell.dataset.statusCounts);
+            tooltip.innerHTML = `
+                Realizados: ${counts.realizados}<br>
+                Pendentes: ${counts.pendentes}<br>
+                Internados: ${counts.internados}<br>
+                Agendados: ${counts.agendados}<br>
+                Dispensados: ${counts.dispensados}
+            `;
+            tooltip.classList.remove('hidden');
+            
+            const rect = cell.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 10) + 'px';
+            tooltip.style.transform = 'translate(-50%, -100%)';
+        }
+    });
+
+    tbody.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.progress-cell')) {
+            tooltip.classList.add('hidden');
+        }
+    });
 }
