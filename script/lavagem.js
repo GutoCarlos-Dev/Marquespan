@@ -320,7 +320,11 @@ async function carregarListas() {
 
         data.forEach(lista => {
             const itensDestaLista = itensStatus.filter(i => i.lista_id === lista.id);
-            const total = itensDestaLista.filter(i => i.status !== 'PULAR_LAVAGEM').length;
+            // O total agora contempla apenas Realizados + Pendentes + Agendados
+            const total = itensDestaLista.filter(i => 
+                i.status === 'REALIZADO' || 
+                i.status === 'PENDENTE' || 
+                i.status === 'AGENDADO').length;
             const realizados = itensDestaLista.filter(i => i.status === 'REALIZADO').length;
             const percent = total > 0 ? Math.round((realizados / total) * 100) : 0;
 
@@ -334,7 +338,7 @@ async function carregarListas() {
                     <div class="progress-bar-container" title="${realizados}/${total}">
                         <div class="progress-bar" style="width: ${percent}%"></div>
                     </div>
-                    <small>${percent}%</small>
+                    <small>${percent}% (${realizados}/${total})</small>
                 </td>
                 <td>
                     <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')"><i class="fas fa-folder-open"></i></button>
