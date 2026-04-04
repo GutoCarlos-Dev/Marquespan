@@ -779,18 +779,27 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleFormSubmit(e) {
             e.preventDefault();
 
+            // Bloqueia o botão para evitar cliques duplos e duplicidade
+            this.btnSalvar.disabled = true;
+            const originalText = this.btnSalvar.innerHTML;
+            this.btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTRANDO...';
+
             const totalNota = parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0;
             const vlr = parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0;
             const notaFiscal = this.notaInput.value;
 
             if (totalNota <= 0 || vlr <= 0) {
                 alert('Quantidade Total e Valor por Litro devem ser maiores que zero.');
+                this.btnSalvar.disabled = false;
+                this.btnSalvar.innerHTML = originalText;
                 return;
             }
 
             const linhas = this.distribuicaoContainer.querySelectorAll('.distribuicao-row');
             if (linhas.length === 0) {
                 alert('Adicione pelo menos um tanque para a distribuição.');
+                this.btnSalvar.disabled = false;
+                this.btnSalvar.innerHTML = originalText;
                 return;
             }
 
@@ -804,10 +813,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!tanqueId || isNaN(qtd) || qtd <= 0) {
                     alert('Todas as linhas de distribuição devem ter um tanque e uma quantidade válida.');
+                    this.btnSalvar.disabled = false;
+                    this.btnSalvar.innerHTML = originalText;
                     return;
                 }
                 if (tanquesUsados.has(tanqueId)) {
                     alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
+                    this.btnSalvar.disabled = false;
+                    this.btnSalvar.innerHTML = originalText;
                     return;
                 }
 
@@ -827,6 +840,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (Math.abs(totalDistribuido - totalNota) > 0.001) {
                 alert(`A soma dos litros distribuídos (${totalDistribuido.toFixed(2)} L) não corresponde à Quantidade Total da Nota (${totalNota.toFixed(2)} L).`);
+                this.btnSalvar.disabled = false;
+                this.btnSalvar.innerHTML = originalText;
                 return;
             }
 
@@ -846,6 +861,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao salvar:', error);
                 alert('Erro ao salvar abastecimento: ' + error.message + '. Se estiver atualizando, os dados antigos podem ter sido removidos.');
+            } finally {
+                this.btnSalvar.disabled = false;
+                this.btnSalvar.innerHTML = originalText;
             }
         },
 
@@ -985,12 +1003,19 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleSaidaSubmit(e) {
             e.preventDefault();
             
+            // Bloqueia o botão para evitar cliques duplos e duplicidade
+            this.btnSalvarSaida.disabled = true;
+            const originalText = this.btnSalvarSaida.innerHTML;
+            this.btnSalvarSaida.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
+
             // Validação da Placa
             const placaInput = this.saidaVeiculo.value.toUpperCase();
             const veiculoValido = this.veiculosDisponiveis.some(v => v.placa === placaInput);
             if (!veiculoValido) {
                 alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
                 this.saidaVeiculo.focus();
+                this.btnSalvarSaida.disabled = false;
+                this.btnSalvarSaida.innerHTML = originalText;
                 return;
             }
 
@@ -1012,6 +1037,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 payloads.push({ ...commonData, bico_id: bico1, qtd_litros: litros1 });
             } else {
                 alert('Informe o Bico e a Quantidade de Litros para o primeiro abastecimento.');
+                this.btnSalvarSaida.disabled = false;
+                this.btnSalvarSaida.innerHTML = originalText;
                 return;
             }
 
@@ -1023,6 +1050,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isBico2Visible && bico2 && litros2 > 0) {
                 if (bico1 === bico2) {
                     alert('Não é possível utilizar o mesmo bico duas vezes no mesmo registro.');
+                    this.btnSalvarSaida.disabled = false;
+                    this.btnSalvarSaida.innerHTML = originalText;
                     return;
                 }
                 payloads.push({ ...commonData, bico_id: bico2, qtd_litros: litros2 });
@@ -1055,6 +1084,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao salvar saída:', error);
                 alert('Erro ao registrar saída: ' + error.message);
+            } finally {
+                this.btnSalvarSaida.disabled = false;
+                this.btnSalvarSaida.innerHTML = originalText;
             }
         },
 
@@ -1624,46 +1656,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!postoId) return alert('Selecione um posto válido da lista.');
 
-            const payload = {
-                data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
-                filial: this.extFilial.value,
-                posto_id: postoId,
-                veiculo_placa: this.extVeiculo.value.toUpperCase(),
-                tipo_veiculo: this.extTipo.value,
-                km_atual: parseFloat(this.extKmAtual.value),
-                km_anterior: parseFloat(this.extKmAnterior.value),
-                km_rodado: parseFloat(this.extKmRodado.value),
-                litros: parseFloat(this.extLitros.value),
-                valor_total: parseFloat(this.extValorTotal.value),
-                valor_unitario: parseFloat(this.extValorUnitario.value),
-                rota: this.extRota.value,
-                usuario: this.getUsuarioLogado()
-            };
+            const btnSubmit = this.formExt.querySelector('button[type="submit"]');
+            btnSubmit.disabled = true;
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
 
-            if (!payload.posto_id || !payload.veiculo_placa || !payload.km_atual) {
-                return alert('Preencha os campos obrigatórios.');
-            }
+            try {
+                const payload = {
+                    data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
+                    filial: this.extFilial.value,
+                    posto_id: postoId,
+                    veiculo_placa: this.extVeiculo.value.toUpperCase(),
+                    tipo_veiculo: this.extTipo.value,
+                    km_atual: parseFloat(this.extKmAtual.value),
+                    km_anterior: parseFloat(this.extKmAnterior.value),
+                    km_rodado: parseFloat(this.extKmRodado.value),
+                    litros: parseFloat(this.extLitros.value),
+                    valor_total: parseFloat(this.extValorTotal.value),
+                    valor_unitario: parseFloat(this.extValorUnitario.value),
+                    rota: this.extRota.value,
+                    usuario: this.getUsuarioLogado()
+                };
 
-            let error;
-            if (this.extEditingId) {
-                // Atualizar
-                const { error: updateError } = await supabaseClient
-                    .from('abastecimento_externo')
-                    .update(payload)
-                    .eq('id', this.extEditingId);
-                error = updateError;
-            } else {
-                // Inserir
-                const { error: insertError } = await supabaseClient.from('abastecimento_externo').insert(payload);
-                error = insertError;
-            }
+                if (!payload.posto_id || !payload.veiculo_placa || !payload.km_atual) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = originalText;
+                    return alert('Preencha os campos obrigatórios.');
+                }
 
-            if (error) {
-                alert('Erro ao salvar: ' + error.message);
-            } else {
-                alert(`Abastecimento externo ${this.extEditingId ? 'atualizado' : 'registrado'}!`);
-                this.resetExtForm();
-                this.renderExtTable();
+                let error;
+                if (this.extEditingId) {
+                    // Atualizar
+                    const { error: updateError } = await supabaseClient
+                        .from('abastecimento_externo')
+                        .update(payload)
+                        .eq('id', this.extEditingId);
+                    error = updateError;
+                } else {
+                    // Inserir
+                    const { error: insertError } = await supabaseClient.from('abastecimento_externo').insert(payload);
+                    error = insertError;
+                }
+
+                if (error) {
+                    alert('Erro ao salvar: ' + error.message);
+                } else {
+                    alert(`Abastecimento externo ${this.extEditingId ? 'atualizado' : 'registrado'}!`);
+                    this.resetExtForm();
+                    this.renderExtTable();
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
             }
         },
 
