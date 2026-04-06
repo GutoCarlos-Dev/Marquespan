@@ -40,6 +40,9 @@ const FuncionarioUI = {
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
         }
+        if (document.getElementById('funcAdmissao')) {
+            document.getElementById('funcAdmissao').addEventListener('paste', (e) => this.handleDatePaste(e));
+        }
         // Listeners para ordenação da tabela principal
         document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th[data-sort]').forEach(th => {
             const column = th.dataset.sort;
@@ -264,6 +267,32 @@ const FuncionarioUI = {
                 this.histFuncContainer.classList.add('hidden');
             }
         } catch (err) { console.error('Erro ao carregar histórico de função:', err); }
+    },
+
+    /**
+     * Lida com o evento de colar no campo de data de admissão, formatando a data.
+     * Suporta formatos DD/MM/YYYY e YYYY-MM-DD.
+     */
+    handleDatePaste(event) {
+        event.preventDefault();
+        const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+        const formattedDate = this.parseAndFormatDate(pastedText);
+        event.target.value = formattedDate;
+    },
+
+    parseAndFormatDate(dateString) {
+        if (!dateString) return '';
+
+        // Tenta o formato YYYY-MM-DD (já é o formato desejado)
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            return dateString;
+        }
+        // Tenta o formato DD/MM/YYYY
+        const parts = dateString.match(/^(\d{2})[./-](\d{2})[./-](\d{4})$/);
+        if (parts) {
+            return `${parts[3]}-${parts[2]}-${parts[1]}`; // Retorna YYYY-MM-DD
+        }
+        return ''; // Retorna vazio se não conseguir parsear
     },
 
     async renderSummary() {

@@ -4,10 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Funcionários - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/funcionario.css" />
+  <link rel="stylesheet" href="css/index.css?v=1.1" />
+  <link rel="stylesheet" href="css/funcionario.css?v=1.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    /* Estilos críticos antecipados para evitar salto visual (flicker) */
+    .funcionario-table-container { max-height: 500px; overflow-y: auto; border-bottom: 1px solid rgba(0,0,0,0.1); }
+    .glass-table th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; border-bottom: 2px solid rgba(0, 105, 55, 0.2); }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -192,6 +197,6 @@
   </div>
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/funcionario.js"></script>
+  <script type="module" src="script/funcionario.js?v=1.1"></script>
 </body>
 </html>
