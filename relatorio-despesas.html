@@ -50,32 +50,6 @@
     }
     .charts-scroll-container::-webkit-scrollbar { display: none; }
     .chart-card { min-width: 400px; flex: 0 0 auto; }
-
-    /* Estilos para Organização em Cards */
-    .filtros-cards-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
-    .filtro-card {
-        background: rgba(255, 255, 255, 0.5);
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-    }
-    .filtro-card h4 { 
-        margin-top: 0; margin-bottom: 12px; color: var(--primary-color); 
-        border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; font-size: 0.9rem; 
-    }
-    .filtro-card .form-group { margin-bottom: 10px; }
-    .filtro-card.action-card {
-        background: rgba(0, 105, 55, 0.05);
-        border: 1px solid rgba(0, 105, 55, 0.1);
-        justify-content: space-between;
-    }
   </style>
 </head>
 <body>
@@ -160,10 +134,15 @@
           <!-- Card de Ação -->
           <div class="filtro-card action-card">
             <h4><i class="fas fa-play"></i> Processar</h4>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Aplique os filtros desejados para atualizar os dados.</p>
-            <button type="submit" id="btnFiltrar" class="btn-glass btn-blue" style="width: 100%; height: 45px; margin-top: auto;">
-              <i class="fas fa-search"></i> FILTRAR RESULTADOS
-            </button>
+            <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">Aplique os filtros para atualizar os resultados.</p>
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button type="submit" id="btnFiltrar" class="btn-glass btn-blue" style="flex: 2; height: 45px; font-size: 0.85rem;">
+                <i class="fas fa-search"></i> FILTRAR RESULTADOS
+              </button>
+              <button type="button" class="btn-glass btn-red" style="flex: 1; height: 45px;" id="btnLimparFiltros" title="Limpar Filtros">
+                <i class="fas fa-eraser"></i>
+              </button>
+            </div>
           </div>
         </div>
       </form>
@@ -188,7 +167,7 @@
         <table class="glass-table data-grid">
           <thead>
             <tr>
-              <th class="sortable" data-key="data_checkin">DATA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-key="data_checkin">DATA Check-in <i class="fas fa-sort"></i></th>
               <th class="sortable" data-key="numero_rota">ROTA <i class="fas fa-sort"></i></th>
               <th class="sortable" data-key="hotel_nome">HOTEL <i class="fas fa-sort"></i></th>
               <th class="sortable" data-key="funcionarios">FUNCIONÁRIOS <i class="fas fa-sort"></i></th>
@@ -268,6 +247,15 @@
   <script>
     // Script para corrigir o cálculo da Média convertendo os valores corretamente
     document.addEventListener('DOMContentLoaded', () => {
+      // Garante que os campos de filtros iniciem zerados (vazios)
+      const limparCampos = () => {
+        const inputs = document.querySelectorAll('#formFiltros input[type="date"]');
+        inputs.forEach(input => input.value = '');
+      };
+      limparCampos();
+
+      document.getElementById('btnLimparFiltros')?.addEventListener('click', limparCampos);
+
       const calcularMedia = () => {
         const elCusto = document.getElementById('kpiCustoTotal');
         const elDiarias = document.getElementById('kpiTotalDiarias');

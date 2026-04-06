@@ -151,12 +151,9 @@ const RelatorioDespesasUI = {
     },
 
     setDefaultDates() {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        this.dataInicio.value = firstDay.toISOString().split('T')[0];
-        this.dataFim.value = lastDay.toISOString().split('T')[0];
+        // Comentado para que os campos de data iniciem vazios (zerados) conforme solicitado
+        // this.dataInicio.value = firstDay.toISOString().split('T')[0];
+        // this.dataFim.value = lastDay.toISOString().split('T')[0];
     },
 
     async carregarRotas() {
@@ -647,7 +644,7 @@ const RelatorioDespesasUI = {
 
         thead.innerHTML = `
             <tr>
-                <th data-sort="data_checkin" style="cursor:pointer">DATA <i class="fas fa-sort"></i></th>
+                <th data-sort="data_checkin" style="cursor:pointer">DATA Check-in <i class="fas fa-sort"></i></th>
                 <th data-sort="numero_rota" style="cursor:pointer">ROTA <i class="fas fa-sort"></i></th>
                 <th data-sort="supervisor" style="cursor:pointer">SUPERVISOR <i class="fas fa-sort"></i></th>
                 <th data-sort="hotel" style="cursor:pointer">HOTEL <i class="fas fa-sort"></i></th>
