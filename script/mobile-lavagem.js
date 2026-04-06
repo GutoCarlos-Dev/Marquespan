@@ -146,7 +146,8 @@ function renderizarItens() {
 
     const itensFiltrados = currentItems.filter(item => {
         const matchTermo = item.placa.includes(termo);
-        const matchStatus = currentFilter === 'TODOS' || item.status === currentFilter;
+        const itemStatus = item.status === 'DISPENSADO' ? 'DISPENSADO' : item.status; // Normalize DISPENSADO to DISPENSADO for filter
+        const matchStatus = currentFilter === 'TODOS' || itemStatus === currentFilter;
         return matchTermo && matchStatus;
     });
     
@@ -155,21 +156,29 @@ function renderizarItens() {
         return;
     }
 
+    // Determine card class based on status
+    function getCardStatusClass(status) {
+        if (status === 'REALIZADO') return 'status-realizado';
+        if (status === 'DISPENSADO' || status === 'DISPENSADO') return 'status-dispensado';
+        return 'status-pendente';
+    }
+
     // Otimização: constrói uma string HTML e a insere de uma só vez, o que é muito mais rápido.
     const cardsHtml = itensFiltrados.map(item => {
         const isRealizado = item.status === 'REALIZADO';
         // Adicionado verificação se tipo_lavagem existe
         let infoExtra = isRealizado && item.tipo_lavagem ? `<br><small>Lavagem: ${item.tipo_lavagem}</small>` : '';
-
+        const cardClass = getCardStatusClass(item.status);
+        
         return `
-            <div class="card ${isRealizado ? 'status-realizado' : 'status-pendente'}" data-item-id="${item.id}">
+            <div class="card ${cardClass}" data-item-id="${item.id}">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <h4>${item.placa}</h4>
                         <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
                     </div>
                     <div style="text-align:right;">
-                        <span class="status">${item.status === 'PULAR_LAVAGEM' ? 'DISPENSADO' : item.status}</span>
+                        <span class="status">${item.status === 'DISPENSADO' ? 'DISPENSADO' : item.status}</span>
                         ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
                     </div>
                 </div>

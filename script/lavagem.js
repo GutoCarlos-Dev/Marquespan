@@ -14,7 +14,7 @@ let editingPriceId = null;
 let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
 
 function getDisplayStatus(status, isPdf = false) {
-    if (status === 'PULAR_LAVAGEM') return 'DISPENSADO';
+    if (status === 'DISPENSADO') return 'DISPENSADO';
     if (isPdf && status === 'INTERNADO') return 'MANUTENÇÃO';
     return status;
 }
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-bulk-realizado')?.addEventListener('click', () => bulkSetStatus('REALIZADO'));
     document.getElementById('btn-bulk-pendente')?.addEventListener('click', () => bulkSetStatus('PENDENTE'));
     document.getElementById('btn-bulk-remover')?.addEventListener('click', bulkRemover);
-    document.getElementById('btn-bulk-pular-lavagem')?.addEventListener('click', () => bulkSetStatus('PULAR_LAVAGEM'));
+    document.getElementById('btn-bulk-pular-lavagem')?.addEventListener('click', () => bulkSetStatus('DISPENSADO'));
     document.getElementById('btn-bulk-internado')?.addEventListener('click', () => bulkSetStatus('INTERNADO'));
     document.getElementById('btn-bulk-aplicar-tipo')?.addEventListener('click', bulkAplicarTipo);
     document.getElementById('btn-bulk-agendar')?.addEventListener('click', bulkAgendar);
@@ -330,7 +330,7 @@ async function carregarListas() {
                 pendentes: itensDestaLista.filter(i => i.status === 'PENDENTE').length,
                 internados: itensDestaLista.filter(i => i.status === 'INTERNADO').length,
                 agendados: itensDestaLista.filter(i => i.status === 'AGENDADO').length,
-                dispensados: itensDestaLista.filter(i => i.status === 'PULAR_LAVAGEM').length
+                dispensados: itensDestaLista.filter(i => i.status === 'DISPENSADO').length
             };
 
             // Total para a barra de progresso (Realizados + Pendentes + Agendados)
@@ -760,14 +760,14 @@ function renderizarItensDetalhes(itens) {
     itens.forEach(item => {
         if (item.status === 'REALIZADO') realizados++;
         else if (item.status === 'AGENDADO') agendados++;
-        else if (item.status === 'PULAR_LAVAGEM') pulados++;
+        else if (item.status === 'DISPENSADO') pulados++;
         else if (item.status === 'INTERNADO') internados++;
         else pendentes++;
 
         const tr = document.createElement('tr');
         
-        // Desabilita campos se o status for PULAR_LAVAGEM
-        const isDisabled = item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO' || isFinalizada;
+        // Desabilita campos se o status for DISPENSADO
+        const isDisabled = item.status === 'DISPENSADO' || item.status === 'INTERNADO' || isFinalizada;
         
         // Lógica para filtrar os tipos de lavagem com base no fornecedor do item
         let tiposLavagemDisponiveis = [];
@@ -809,8 +809,8 @@ function renderizarItensDetalhes(itens) {
             badgeClass = 'badge-realizado';
         } else if (item.status === 'AGENDADO') {
             badgeClass = 'badge-agendado';
-        } else if (item.status === 'PULAR_LAVAGEM') {
-            badgeClass = 'badge-pular-lavagem';
+        } else if (item.status === 'DISPENSADO') {
+            badgeClass = 'badge-dispensado';
         } else if (item.status === 'INTERNADO') {
             badgeClass = 'badge-internado';
         }
@@ -917,7 +917,7 @@ window.atualizarItem = async function(id, campo, valor) {
         if (campo === 'tipo') updateData.tipo_lavagem = valor;
 
         const item = currentListItems.find(i => i.id === id);
-        if (item && (item.status === 'PULAR_LAVAGEM' || item.status === 'INTERNADO')) {
+        if (item && (item.status === 'DISPENSADO' || item.status === 'INTERNADO')) {
             return alert(`Não é possível editar o tipo de lavagem de um item com status "${getDisplayStatus(item.status)}".`);
         }
 
@@ -955,7 +955,7 @@ function calcularValorPeloPrecoAtual(item) {
 }
 
 window.toggleStatusItem = async function(id, statusAtual) {
-    if (statusAtual === 'PULAR_LAVAGEM' || statusAtual === 'INTERNADO') {
+    if (statusAtual === 'DISPENSADO' || statusAtual === 'INTERNADO') {
         return alert(`Não é possível alterar o status de um item com "${getDisplayStatus(statusAtual)}". Remova-o e adicione novamente se necessário.`);
     }
 
@@ -1368,7 +1368,6 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                         case 'MANUTENÇÃO':
                             textColor = [0, 123, 255]; // #007bff
                             break;
-                        case 'PULAR_LAVAGEM':
                         case 'DISPENSADO':
                             textColor = [108, 117, 125]; // #6c757d
                             break;
@@ -1576,7 +1575,7 @@ async function bulkSetStatus(novoStatus) {
         return alert('Nenhum item selecionado.');
     }
 
-    if (novoStatus === 'PULAR_LAVAGEM') {
+    if (novoStatus === 'DISPENSADO') {
         if (!confirm(`Deseja marcar ${ids.length} item(ns) como "DISPENSADO"? Itens com este status não poderão ser editados.`)) return;
     }
 
@@ -1610,7 +1609,7 @@ async function bulkSetStatus(novoStatus) {
             status: novoStatus,
             data_realizado: dataRealizado,
             usuario_realizou: novoStatus === 'REALIZADO' ? usuario : null,
-            tipo_lavagem: novoStatus === 'PULAR_LAVAGEM' ? null : undefined,
+            tipo_lavagem: novoStatus === 'DISPENSADO' ? null : undefined,
             valor: valorParaSalvar
         }).eq('id', id);
     });
@@ -1633,7 +1632,7 @@ async function bulkSetStatus(novoStatus) {
                     currentListItems[itemIndex].valor = null;
                 }
 
-                if (novoStatus === 'PULAR_LAVAGEM') {
+                if (novoStatus === 'DISPENSADO') {
                     currentListItems[itemIndex].tipo_lavagem = null;
                 }
             }
