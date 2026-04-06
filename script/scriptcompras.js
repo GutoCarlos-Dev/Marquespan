@@ -327,9 +327,10 @@ const UI = {
     try{
       const productList = document.getElementById('productList');
       if (!productList) return;
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida', {orderBy:'nome'});
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, nome, unidade_medida, status', {orderBy:'nome'});
       productList.innerHTML = ''; // Limpa a lista de sugestões
       produtos.forEach(p=>{ // Corrigido: &gt; para >
+        if (p.status === 'Inativo') return; // Não mostra produtos inativos na lista de compra
         const opt = document.createElement('option');
         opt.value = `${p.codigo_principal} - ${p.nome} ${p.unidade_medida?`(${p.unidade_medida})`:''}`;
         opt.dataset.id = p.id; // Armazena o ID do produto no dataset da opção
