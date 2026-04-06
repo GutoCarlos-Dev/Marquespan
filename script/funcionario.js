@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
+    sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
     init() {
         this.cache();
         this.bind();
@@ -39,6 +40,11 @@ const FuncionarioUI = {
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
         }
+        // Listeners para ordenação da tabela principal
+        document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th[data-sort]').forEach(th => {
+            const column = th.dataset.sort;
+            th.addEventListener('click', () => this.handleSort(column));
+        });
     },
 
     toggleDesligamentoField() {
@@ -75,6 +81,7 @@ const FuncionarioUI = {
             rh_registro: rh,
             nome: document.getElementById('funcNome').value,
             nome_completo: document.getElementById('funcNomeCompleto').value,
+            cpf: document.getElementById('funcCPF').value,
             data_admissao: document.getElementById('funcAdmissao').value,
             funcao: novaFuncao,
             contato_corp: document.getElementById('funcContatoCorp').value,
@@ -118,9 +125,24 @@ const FuncionarioUI = {
     async renderGrid() {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         try {
-            let query = supabaseClient.from('funcionario').select('*').order('nome');
+            let query = supabaseClient.from('funcionario').select('*');
+
+            // Aplica a ordenação
+            query = query.order(this.sortConfig.column, { ascending: this.sortConfig.direction === 'asc' });
+
+            // Se a coluna de ordenação for 'contato_corp', precisamos ordenar por ela e depois por 'contato_pessoal'
+            // O Supabase não permite múltiplos `order` com `select *` e `or` ao mesmo tempo de forma simples.
+            // A melhor abordagem para ordenação secundária complexa seria buscar tudo e ordenar em JS,
+            // ou criar uma view no Supabase que combine os contatos.
+            // Por simplicidade, a ordenação será primária pela coluna selecionada.
+            if (this.sortConfig.column === 'contato_corp') {
+                query = query.order('contato_pessoal', { ascending: this.sortConfig.direction === 'asc' });
+            }
+            // Para 'data_admissao', 'data_desligamento', 'data_alteracao_funcao', o Supabase ordena datas corretamente.
+            // Para 'cpf', 'rh_registro', 'nome', 'nome_completo', 'funcao', a ordenação padrão de texto funciona.
+
             if (searchTerm) {
-                query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`);
+                query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
             }
             const { data: list, error } = await query;
             if (error) throw error;
@@ -139,7 +161,34 @@ const FuncionarioUI = {
                     </td>
                 </tr>
             `).join('');
+            this.updateSortIcons(); // Atualiza os ícones após renderizar
         } catch (e) { console.error('Erro ao carregar grid:', e); }
+    },
+
+    handleSort(column) {
+        // Se a coluna clicada for a mesma, inverte a direção
+        if (this.sortConfig.column === column) {
+            this.sortConfig.direction = this.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            // Se for uma nova coluna, define como padrão ascendente
+            this.sortConfig.column = column;
+            this.sortConfig.direction = 'asc';
+        }
+        this.updateSortIcons();
+        this.renderGrid(); // Re-renderiza a grid com a nova ordenação
+    },
+
+    updateSortIcons() {
+        // Remove todos os ícones de ordenação
+        document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th i').forEach(icon => {
+            icon.className = 'fas fa-sort'; // Ícone neutro
+        });
+
+        // Adiciona o ícone correto à coluna ativa
+        const activeHeader = document.querySelector(`#sectionCadastrarFuncionarios .data-grid thead th[data-sort="${this.sortConfig.column}"] i`);
+        if (activeHeader) {
+            activeHeader.className = this.sortConfig.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
     },
 
     async handleHistoricoDblClick(e) {
@@ -279,6 +328,7 @@ const FuncionarioUI = {
         document.getElementById('funcRH').value = f.rh_registro;
         document.getElementById('funcNome').value = f.nome;
         document.getElementById('funcNomeCompleto').value = f.nome_completo || '';
+        document.getElementById('funcCPF').value = f.cpf || '';
         document.getElementById('funcAdmissao').value = f.data_admissao;
         document.getElementById('funcFuncao').value = f.funcao;
         document.getElementById('funcContatoCorp').value = f.contato_corp || '';
