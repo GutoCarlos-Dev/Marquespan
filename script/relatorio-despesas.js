@@ -8,7 +8,6 @@ const RelatorioDespesasUI = {
         // Garante que rotas sejam carregadas antes dos dados para mapear o supervisor
         this.carregarRotas().then(() => {
             this.carregarHoteis();
-            this.carregarDados();
         });
         this.filteredData = []; // Armazena dados filtrados para exportação
         this.chartHoteis = null;
