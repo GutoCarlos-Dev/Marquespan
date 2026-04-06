@@ -17,6 +17,8 @@ const FuncionarioUI = {
         this.editingIdInput = document.getElementById('funcEditingId');
         this.statusSelect = document.getElementById('funcStatus');
         this.groupDesligamento = document.getElementById('groupDesligamento');
+        this.histFuncContainer = document.getElementById('historicoFuncaoContainer');
+        this.histFuncTableBody = document.getElementById('histFuncTableBody');
     },
 
     bind() {
@@ -31,6 +33,9 @@ const FuncionarioUI = {
         }
         if (this.statusSelect) {
             this.statusSelect.addEventListener('change', () => this.toggleDesligamentoField());
+        }
+        if (this.histFuncTableBody) {
+            this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
         }
     },
 
@@ -86,6 +91,7 @@ const FuncionarioUI = {
             const { error } = await supabaseClient.from('funcionario').upsert(payload, options);
             if (error) throw error;
 
+            if (this.editingIdInput.value) await this.carregarHistoricoFuncao(rh);
             alert('✅ Colaborador salvo com sucesso!');
             this.clearForm();
             this.renderGrid();
@@ -102,6 +108,8 @@ const FuncionarioUI = {
         this.btnSubmit.textContent = 'Salvar Registro';
         this.btnClearForm.classList.add('hidden');
         this.toggleDesligamentoField();
+        if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
+        if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
     },
 
     async renderGrid() {
@@ -131,6 +139,81 @@ const FuncionarioUI = {
         } catch (e) { console.error('Erro ao carregar grid:', e); }
     },
 
+    async handleHistoricoDblClick(e) {
+        const td = e.target.closest('td');
+        const tr = td?.closest('tr');
+        if (!td || !tr || !tr.dataset.id) return;
+
+        const key = td.dataset.key;
+        if (!key) return;
+
+        if (td.querySelector('input')) return;
+
+        const originalValue = key === 'data_mudanca' ? td.dataset.value : td.textContent.trim();
+        const input = document.createElement('input');
+        input.type = key === 'data_mudanca' ? 'date' : 'text';
+        input.className = 'glass-input';
+        input.value = originalValue || '';
+        input.style.width = '100%';
+        input.style.padding = '2px 5px';
+        input.style.height = 'auto';
+
+        td.innerHTML = '';
+        td.appendChild(input);
+        input.focus();
+
+        const save = async () => {
+            const newValue = input.value.trim();
+            const rh = document.getElementById('funcRH').value;
+            if (newValue === originalValue) {
+                this.carregarHistoricoFuncao(rh);
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.from('funcionario_historico_funcao').update({ [key]: newValue || null }).eq('id', tr.dataset.id);
+                if (error) throw error;
+                this.carregarHistoricoFuncao(rh);
+            } catch (err) {
+                console.error('Erro ao atualizar histórico:', err);
+                this.carregarHistoricoFuncao(rh);
+            }
+        };
+
+        input.onblur = save;
+        input.onkeydown = (ev) => {
+            if (ev.key === 'Enter') input.blur();
+            if (ev.key === 'Escape') { input.value = originalValue; input.blur(); }
+        };
+    },
+
+    async carregarHistoricoFuncao(rh) {
+        if (!this.histFuncTableBody) return;
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario_historico_funcao')
+                .select('*')
+                .eq('rh_registro', rh)
+                .order('data_mudanca', { ascending: false });
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                this.histFuncContainer.classList.remove('hidden');
+                this.histFuncTableBody.innerHTML = data.map(h => `
+                    <tr data-id="${h.id}">
+                        <td data-key="funcao_anterior">${h.funcao_anterior}</td>
+                        <td data-key="funcao_nova">${h.funcao_nova}</td>
+                        <td data-key="data_mudanca" data-value="${h.data_mudanca || ''}">${h.data_mudanca ? new Date(h.data_mudanca + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                    </tr>
+                `).join('');
+            } else {
+                this.histFuncContainer.classList.add('hidden');
+            }
+        } catch (err) { console.error('Erro ao carregar histórico de função:', err); }
+    },
+
     async loadForEditing(id) {
         const { data: f } = await supabaseClient.from('funcionario').select('*').eq('id', id).single();
         if (!f) return;
@@ -148,6 +231,7 @@ const FuncionarioUI = {
         document.getElementById('funcPromocao').value = f.funcao_anterior || '';
         document.getElementById('funcDataPromocao').value = f.data_alteracao_funcao || '';
         this.toggleDesligamentoField();
+        await this.carregarHistoricoFuncao(f.rh_registro);
         this.btnSubmit.textContent = 'Atualizar Registro';
         this.btnClearForm.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
