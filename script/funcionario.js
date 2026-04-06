@@ -277,7 +277,11 @@ const FuncionarioUI = {
         event.preventDefault();
         const pastedText = (event.clipboardData || window.clipboardData).getData('text');
         const formattedDate = this.parseAndFormatDate(pastedText);
-        event.target.value = formattedDate;
+
+        // Usa uma microtask para garantir que a atualização do DOM ocorra após o evento de paste ser totalmente processado
+        Promise.resolve().then(() => {
+            event.target.value = formattedDate;
+        });
     },
 
     parseAndFormatDate(dateString) {
