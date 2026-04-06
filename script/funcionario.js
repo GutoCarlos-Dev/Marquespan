@@ -40,9 +40,6 @@ const FuncionarioUI = {
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
         }
-        if (document.getElementById('funcAdmissao')) {
-            document.getElementById('funcAdmissao').addEventListener('paste', (e) => this.handleDatePaste(e));
-        }
         // Listeners para ordenação da tabela principal
         document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th[data-sort]').forEach(th => {
             const column = th.dataset.sort;
@@ -128,22 +125,7 @@ const FuncionarioUI = {
     async renderGrid() {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         try {
-            let query = supabaseClient.from('funcionario').select('*');
-
-            // Aplica a ordenação
-            query = query.order(this.sortConfig.column, { ascending: this.sortConfig.direction === 'asc' });
-
-            // Se a coluna de ordenação for 'contato_corp', precisamos ordenar por ela e depois por 'contato_pessoal'
-            // O Supabase não permite múltiplos `order` com `select *` e `or` ao mesmo tempo de forma simples.
-            // A melhor abordagem para ordenação secundária complexa seria buscar tudo e ordenar em JS,
-            // ou criar uma view no Supabase que combine os contatos.
-            // Por simplicidade, a ordenação será primária pela coluna selecionada.
-            if (this.sortConfig.column === 'contato_corp') {
-                query = query.order('contato_pessoal', { ascending: this.sortConfig.direction === 'asc' });
-            }
-            // Para 'data_admissao', 'data_desligamento', 'data_alteracao_funcao', o Supabase ordena datas corretamente.
-            // Para 'cpf', 'rh_registro', 'nome', 'nome_completo', 'funcao', a ordenação padrão de texto funciona.
-
+            let query = supabaseClient.from('funcionario').select('*').order('nome');
             if (searchTerm) {
                 query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
             }
@@ -155,7 +137,7 @@ const FuncionarioUI = {
                     <td><strong>${f.rh_registro}</strong></td>
                     <td title="${f.nome_completo || ''}">${f.nome}</td>
                     <td>${f.funcao}</td>
-                    <td>${f.data_admissao ? new Date(f.data_admissao).toLocaleDateString('pt-BR') : '-'}</td>
+                    <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao).toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.contato_corp || f.contato_pessoal || '-'}</td>
                     <td><span class="status-badge status-${f.status.toLowerCase()}">${f.status}</span></td>
                     <td>
@@ -270,33 +252,36 @@ const FuncionarioUI = {
     },
 
     /**
-     * Lida com o evento de colar no campo de data de admissão, formatando a data.
-     * Suporta formatos DD/MM/YYYY e YYYY-MM-DD.
+     * Calcula a duração entre a data de admissão e a data atual em anos, meses e dias.
+     * @param {string} admissionDateStr - Data de admissão no formato YYYY-MM-DD.
+     * @returns {string} Duração formatada (ex: "3 anos, 5 meses, 10 dias").
      */
-    handleDatePaste(event) {
-        event.preventDefault();
-        const pastedText = (event.clipboardData || window.clipboardData).getData('text');
-        const formattedDate = this.parseAndFormatDate(pastedText);
+    calculateTenure(admissionDateStr) {
+        if (!admissionDateStr) return '';
 
-        // Usa uma microtask para garantir que a atualização do DOM ocorra após o evento de paste ser totalmente processado
-        Promise.resolve().then(() => {
-            event.target.value = formattedDate;
-        });
-    },
+        const admission = new Date(admissionDateStr + 'T00:00:00'); // Garante que a data seja interpretada corretamente
+        const today = new Date();
 
-    parseAndFormatDate(dateString) {
-        if (!dateString) return '';
+        let years = today.getFullYear() - admission.getFullYear();
+        let months = today.getMonth() - admission.getMonth();
+        let days = today.getDate() - admission.getDate();
 
-        // Tenta o formato YYYY-MM-DD (já é o formato desejado)
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-            return dateString;
+        if (days < 0) {
+            months--;
+            const prevMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+            days = prevMonthLastDay - admission.getDate() + today.getDate();
         }
-        // Tenta o formato DD/MM/YYYY
-        const parts = dateString.match(/^(\d{2})[./-](\d{2})[./-](\d{4})$/);
-        if (parts) {
-            return `${parts[3]}-${parts[2]}-${parts[1]}`; // Retorna YYYY-MM-DD
+        if (months < 0) {
+            years--;
+            months += 12;
         }
-        return ''; // Retorna vazio se não conseguir parsear
+
+        const result = [];
+        if (years > 0) result.push(`${years} ano${years > 1 ? 's' : ''}`);
+        if (months > 0) result.push(`${months} mês${months > 1 ? 'es' : ''}`);
+        if (days > 0) result.push(`${days} dia${days > 1 ? 's' : ''}`);
+
+        return result.length > 0 ? result.join(', ') : 'Menos de 1 dia';
     },
 
     async renderSummary() {
