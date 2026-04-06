@@ -32,10 +32,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Inject CSS for Pular Lavagem badge
+    // Inject CSS for DISPENSADO status badge
     const style = document.createElement('style');
     style.innerHTML = `
-        .badge-pular-lavagem {
+        .badge-dispensado {
             background-color: #6c757d !important; /* Cinza */
             color: white !important;
         }

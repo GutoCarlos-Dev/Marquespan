@@ -146,7 +146,7 @@ function renderizarItens() {
 
     const itensFiltrados = currentItems.filter(item => {
         const matchTermo = item.placa.includes(termo);
-        const itemStatus = item.status === 'DISPENSADO' ? 'DISPENSADO' : item.status; // Normalize DISPENSADO to DISPENSADO for filter
+        const itemStatus = (item.status === 'PULAR_LAVAGEM' || item.status === 'DISPENSADO') ? 'DISPENSADO' : item.status; // Normaliza para filtro
         const matchStatus = currentFilter === 'TODOS' || itemStatus === currentFilter;
         return matchTermo && matchStatus;
     });
@@ -159,7 +159,7 @@ function renderizarItens() {
     // Determine card class based on status
     function getCardStatusClass(status) {
         if (status === 'REALIZADO') return 'status-realizado';
-        if (status === 'DISPENSADO' || status === 'DISPENSADO') return 'status-dispensado';
+        if (status === 'DISPENSADO' || status === 'PULAR_LAVAGEM') return 'status-dispensado';
         return 'status-pendente';
     }
 
@@ -178,7 +178,7 @@ function renderizarItens() {
                         <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
                     </div>
                     <div style="text-align:right;">
-                        <span class="status">${item.status === 'DISPENSADO' ? 'DISPENSADO' : item.status}</span>
+                        <span class="status">${(item.status === 'PULAR_LAVAGEM' || item.status === 'DISPENSADO') ? 'DISPENSADO' : item.status}</span>
                         ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
                     </div>
                 </div>
