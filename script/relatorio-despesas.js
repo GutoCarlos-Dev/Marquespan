@@ -562,7 +562,8 @@ const RelatorioDespesasUI = {
         const custosPorMes = new Array(12).fill(0);
         
         // Obtém o ano atual do filtro ou do sistema
-        const anoReferencia = new Date(this.dataInicio.value).getFullYear();
+        const dataBase = this.dataInicio.value || this.filtroCheckinIni.value || this.filtroCheckoutIni.value || new Date().toISOString();
+        const anoReferencia = new Date(dataBase).getFullYear();
 
         data.forEach(item => {
             if (item.data_checkin) {
