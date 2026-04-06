@@ -6,6 +6,7 @@ const FuncionarioUI = {
         this.cache();
         this.bind();
         this.renderGrid();
+        this.renderSummary(); // Adiciona a chamada para renderizar o resumo
     },
 
     cache() {
@@ -19,6 +20,7 @@ const FuncionarioUI = {
         this.groupDesligamento = document.getElementById('groupDesligamento');
         this.histFuncContainer = document.getElementById('historicoFuncaoContainer');
         this.histFuncTableBody = document.getElementById('histFuncTableBody');
+        this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
     },
 
     bind() {
@@ -92,6 +94,7 @@ const FuncionarioUI = {
             if (error) throw error;
 
             if (this.editingIdInput.value) await this.carregarHistoricoFuncao(rh);
+            await this.renderSummary();
             alert('✅ Colaborador salvo com sucesso!');
             this.clearForm();
             this.renderGrid();
@@ -214,6 +217,60 @@ const FuncionarioUI = {
         } catch (err) { console.error('Erro ao carregar histórico de função:', err); }
     },
 
+    async renderSummary() {
+        if (!this.funcSummaryBody) return;
+
+        try {
+            const { data: list, error } = await supabaseClient.from('funcionario').select('funcao, status');
+            if (error) throw error;
+
+            const summaryData = {}; 
+            const grandTotals = { 'Ativo': 0, 'Desligado': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
+
+            list.forEach(f => {
+                const funcao = f.funcao || 'Não Definida';
+                const status = f.status || 'Ativo'; 
+
+                if (!summaryData[funcao]) {
+                    summaryData[funcao] = { 'Ativo': 0, 'Desligado': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
+                }
+
+                if (summaryData[funcao][status] !== undefined) summaryData[funcao][status]++;
+                if (grandTotals[status] !== undefined) grandTotals[status]++;
+
+                // A coluna "Total" agora contabiliza apenas funcionários ativos (exclui desligados)
+                if (status !== 'Desligado') {
+                    summaryData[funcao]['Total']++;
+                    grandTotals['Total']++;
+                }
+            });
+
+            this.funcSummaryBody.innerHTML = '';
+            for (const funcao in summaryData) {
+                const data = summaryData[funcao];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${funcao}</strong></td>
+                    <td>${data['Ativo']}</td>
+                    <td>${data['Desligado']}</td>
+                    <td>${data['Ferias']}</td>
+                    <td>${data['Afastado']}</td>
+                    <td><strong>${data['Total']}</strong></td>
+                `;
+                this.funcSummaryBody.appendChild(tr);
+            }
+            this.funcSummaryBody.innerHTML += `
+                <tr style="font-weight: bold; background-color: rgba(0,0,0,0.05);">
+                    <td>TOTAIS GERAIS</td>
+                    <td>${grandTotals['Ativo']}</td>
+                    <td>${grandTotals['Desligado']}</td>
+                    <td>${grandTotals['Ferias']}</td>
+                    <td>${grandTotals['Afastado']}</td>
+                    <td>${grandTotals['Total']}</td>
+                </tr>`;
+        } catch (e) { console.error('Erro ao carregar resumo:', e); }
+    },
+
     async loadForEditing(id) {
         const { data: f } = await supabaseClient.from('funcionario').select('*').eq('id', id).single();
         if (!f) return;
@@ -241,6 +298,7 @@ const FuncionarioUI = {
         if (confirm('Deseja realmente excluir este colaborador?')) {
             await supabaseClient.from('funcionario').delete().eq('id', id);
             this.renderGrid();
+            await this.renderSummary();
         }
     }
 };
