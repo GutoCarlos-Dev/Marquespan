@@ -103,14 +103,6 @@ const UI = {
     this.setupUserAccess();
     // Close panels/modals on Escape
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ this.closeModal?.(); this.closeImportPanel?.(); this.closeDetailPanel?.(); } }); // Corrigido: &gt; para >
-
-    // --- CSS INJECTION PARA SCROLL NA TABELA ---
-    const style = document.createElement('style');
-    style.innerHTML = `
-      #sectionCotacoesSalvas .table-responsive { max-height: 450px; overflow-y: auto; }
-      #sectionCotacoesSalvas thead th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
-    `;
-    document.head.appendChild(style);
   },
 
   cache(){

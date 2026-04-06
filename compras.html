@@ -4,13 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestão de Compras - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/compras.css">
+  <link rel="stylesheet" href="css/index.css?v=1.1">
+  <link rel="stylesheet" href="css/compras.css?v=1.1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* Estilos críticos movidos do JS para evitar o flicker (pisca-pisca) */
+    #sectionCotacoesSalvas .table-responsive { max-height: 450px; overflow-y: auto; }
+    #sectionCotacoesSalvas thead th { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body>
 
@@ -294,6 +299,6 @@
 
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/scriptcompras.js"></script>
+  <script type="module" src="./script/scriptcompras.js?v=1.1"></script>
 </body>
 </html>
