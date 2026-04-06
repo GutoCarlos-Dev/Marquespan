@@ -174,6 +174,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Injeção do botão de PDF ao lado do filtro no modal, se não existir
     const filtroInput = document.getElementById('filtroModalInput');
+    if (filtroInput && !document.getElementById('filtroStatusModal')) {
+        const selStatus = document.createElement('select');
+        selStatus.id = 'filtroStatusModal';
+        selStatus.className = 'glass-input';
+        selStatus.style.width = '160px';
+        selStatus.style.marginLeft = '10px';
+        selStatus.innerHTML = `
+            <option value="TODOS">Todos os Status</option>
+            <option value="REALIZADOS">Somente Realizados</option>
+            <option value="NAO_REALIZADOS">Não Realizados</option>
+        `;
+        filtroInput.parentNode.insertBefore(selStatus, filtroInput.nextSibling);
+        selStatus.addEventListener('change', filtrarItensModal);
+    }
+
     if (filtroInput && !document.getElementById('btnExportarPDFModal')) {
         const btnPdf = document.createElement('button');
         btnPdf.id = 'btnExportarPDFModal';
@@ -618,6 +633,12 @@ window.abrirLista = async function(id, nome) {
     document.getElementById('modalTitle').textContent = `Lista: ${nome}`;
     currentListId = id;
 
+    // Reseta filtros ao abrir uma nova lista
+    const inputFiltro = document.getElementById('filtroModalInput');
+    if (inputFiltro) inputFiltro.value = '';
+    const selStatus = document.getElementById('filtroStatusModal');
+    if (selStatus) selStatus.value = 'TODOS';
+
     // --- Injeção do Campo Data da Lista ---
     // Busca a lista para pegar a data
     const { data: listaAtual } = await supabaseClient
@@ -993,11 +1014,25 @@ window.excluirItemLista = async function(id) {
 
 function filtrarItensModal() {
     const termo = document.getElementById('filtroModalInput').value.toLowerCase();
-    const itensFiltrados = currentListItems.filter(item => 
-        (item.marca && item.marca.toLowerCase().includes(termo)) || 
-        (item.modelo && item.modelo.toLowerCase().includes(termo)) ||
-        (item.placa && item.placa.toLowerCase().includes(termo))
-    );
+    const statusFiltro = document.getElementById('filtroStatusModal')?.value || 'TODOS';
+
+    const itensFiltrados = currentListItems.filter(item => {
+        const matchTermo = (item.marca && item.marca.toLowerCase().includes(termo)) || 
+                           (item.modelo && item.modelo.toLowerCase().includes(termo)) ||
+                           (item.placa && item.placa.toLowerCase().includes(termo));
+        
+        let matchStatus = true;
+        const status = (item.status || 'PENDENTE').toUpperCase();
+        const isRealizado = status === 'OK' || status === 'REALIZADO';
+
+        if (statusFiltro === 'REALIZADOS') {
+            matchStatus = isRealizado;
+        } else if (statusFiltro === 'NAO_REALIZADOS') {
+            matchStatus = !isRealizado;
+        }
+
+        return matchTermo && matchStatus;
+    });
     renderizarItensModal(itensFiltrados);
 }
 
