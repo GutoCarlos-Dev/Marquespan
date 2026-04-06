@@ -27,6 +27,13 @@ const RelatorioDespesasUI = {
         this.formFiltros = document.getElementById('formFiltros');
         this.dataInicio = document.getElementById('dataInicio');
         this.dataFim = document.getElementById('dataFim');
+        
+        // Novos filtros de data
+        this.filtroCheckinIni = document.getElementById('filtroCheckinIni');
+        this.filtroCheckinFim = document.getElementById('filtroCheckinFim');
+        this.filtroCheckoutIni = document.getElementById('filtroCheckoutIni');
+        this.filtroCheckoutFim = document.getElementById('filtroCheckoutFim');
+
         this.filtroRotaDisplay = document.getElementById('filtroRotaDisplay');
         this.filtroRotaOptions = document.getElementById('filtroRotaOptions');
         this.filtroRotaText = document.getElementById('filtroRotaText');
@@ -373,8 +380,10 @@ const RelatorioDespesasUI = {
             const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
 
-            // Define o intervalo de busca para o ano inteiro baseado na Data Início
-            const anoReferencia = new Date(this.dataInicio.value).getFullYear();
+            // Define o ano de busca baseado na primeira data disponível informada
+            const dataBase = this.dataInicio.value || this.filtroCheckinIni.value || this.filtroCheckoutIni.value || new Date().toISOString();
+            const anoReferencia = new Date(dataBase).getFullYear();
+            
             const dataInicioAno = `${anoReferencia}-01-01`;
             const dataFimAno = `${anoReferencia}-12-31`;
 
@@ -473,7 +482,22 @@ const RelatorioDespesasUI = {
 
             // Filtra os dados no cliente para o período selecionado (afeta Tabela e KPIs)
             const dadosFiltradosPeriodo = allData.filter(item => {
-                return item.data_checkin >= this.dataInicio.value && item.data_checkin <= this.dataFim.value;
+                // Filtro por Data de Reserva (Campos principais)
+                let matchReserva = true;
+                if (this.dataInicio?.value && item.data_reserva < this.dataInicio.value) matchReserva = false;
+                if (this.dataFim?.value && item.data_reserva > this.dataFim.value) matchReserva = false;
+
+                // Filtros específicos de Check-in
+                let matchCheckin = true;
+                if (this.filtroCheckinIni?.value && item.data_checkin < this.filtroCheckinIni.value) matchCheckin = false;
+                if (this.filtroCheckinFim?.value && item.data_checkin > this.filtroCheckinFim.value) matchCheckin = false;
+
+                // Filtros específicos de Check-out
+                let matchCheckout = true;
+                if (this.filtroCheckoutIni?.value && item.data_checkout < this.filtroCheckoutIni.value) matchCheckout = false;
+                if (this.filtroCheckoutFim?.value && item.data_checkout > this.filtroCheckoutFim.value) matchCheckout = false;
+
+                return matchReserva && matchCheckin && matchCheckout;
             });
 
             this.filteredData = dadosFiltradosPeriodo;
