@@ -32,8 +32,12 @@
                           <input type="text" id="funcRH" required class="glass-input" placeholder="Registro RH">
                       </div>
                       <div class="form-group">
-                          <label for="funcNome">Nome Completo</label>
-                          <input type="text" id="funcNome" required class="glass-input" placeholder="Nome do colaborador">
+                          <label for="funcNome">Nome (Ex: JOÃO)</label>
+                          <input type="text" id="funcNome" required class="glass-input" placeholder="Nome para exibição">
+                      </div>
+                      <div class="form-group">
+                          <label for="funcNomeCompleto">Nome Completo</label>
+                          <input type="text" id="funcNomeCompleto" required class="glass-input" placeholder="Nome completo do colaborador">
                       </div>
                       <div class="form-group">
                           <label for="funcAdmissao">Data Admissão</label>
@@ -81,10 +85,10 @@
                   </div>
 
                   <!-- Sub-card de Promoção -->
-                  <h4 style="margin: 25px 0 15px 0; color: var(--primary-color); font-size: 0.9rem; text-transform: uppercase;"><i class="fas fa-arrow-up"></i> Histórico de Promoção</h4>
+                  <h4 style="margin: 25px 0 15px 0; color: var(--primary-color); font-size: 0.9rem; text-transform: uppercase;"><i class="fas fa-history"></i> Alteração de Função</h4>
                   <div class="form-grid">
                       <div class="form-group">
-                          <label for="funcPromocao">Função da Promoção</label>
+                          <label for="funcPromocao">Função Anterior (Auditado)</label>
                           <select id="funcPromocao" class="glass-input">
                               <option value="">Nenhuma registrada</option>
                               <option value="Jovem Aprendiz">Jovem Aprendiz</option>
@@ -102,7 +106,7 @@
                           </select>
                       </div>
                       <div class="form-group">
-                          <label for="funcDataPromocao">Data da Promoção</label>
+                          <label for="funcDataPromocao">Data da Mudança</label>
                           <input type="date" id="funcDataPromocao" class="glass-input">
                       </div>
                   </div>

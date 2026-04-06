@@ -252,6 +252,10 @@
 
 .hidden { display: none !important; }
 
+.full-width {
+    grid-column: 1 / -1;
+}
+
 /* Ajustes para a nova estrutura de formulário com seções (Cards) */
 .glass-panel-inner h4 {
     border-bottom: 1px solid rgba(0,0,0,0.05);
