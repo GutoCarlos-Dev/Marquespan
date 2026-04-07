@@ -63,23 +63,37 @@ function initDashboard() {
     document.addEventListener('fullscreenchange', () => {
         const btn = document.getElementById('btn-fullscreen');
         const sidebar = document.getElementById('sidebar');
+        const menuContainer = document.getElementById('menu-container');
+        const container = document.querySelector('.container');
+        const header = document.querySelector('header, .header, .glass-header'); // Seleciona o Menu Superior (tag ou classes)
 
         if (document.fullscreenElement) {
             btn.innerHTML = '<i class="fas fa-compress"></i>';
             btn.title = "Sair da Tela Cheia";
 
-            // Ocultar menu ao entrar em tela cheia
-            if (sidebar) {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('mobile-open');
-                } else {
-                    sidebar.classList.add('collapsed');
-                }
-            }
+            if (container) container.classList.add('fullscreen-active');
+            if (header) header.classList.add('hidden');
+            if (menuContainer) menuContainer.classList.add('hidden');
+            if (sidebar) sidebar.classList.add('hidden');
+            
         } else {
             btn.innerHTML = '<i class="fas fa-expand"></i>';
             btn.title = "Tela Cheia";
+
+            if (container) container.classList.remove('fullscreen-active');
+            if (header) header.classList.remove('hidden');
+            if (menuContainer) menuContainer.classList.remove('hidden');
+
+            if (sidebar) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.remove('collapsed');
+            }
         }
+
+        // Dispara um evento de resize após a transição para que os gráficos ocupem o novo espaço
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 300);
     });
 }
 

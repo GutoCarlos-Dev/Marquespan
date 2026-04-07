@@ -39,6 +39,22 @@
         color: #ffffff !important;
         background-color: rgba(255, 193, 7, 1) !important;
     }
+
+    /* Regras para quebrar o layout e preencher a tela no modo Tela Cheia */
+    .container.fullscreen-active {
+        display: block !important;
+        width: 100vw !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .container.fullscreen-active .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: none !important; /* "Quebra" a regra de tamanho limitado */
+        padding: 15px !important;
+    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
