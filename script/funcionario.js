@@ -21,6 +21,9 @@ const FuncionarioUI = {
         this.groupDesligamento = document.getElementById('groupDesligamento');
         this.histFuncContainer = document.getElementById('historicoFuncaoContainer');
         this.histFuncTableBody = document.getElementById('histFuncTableBody');
+        this.statusFilterDisplay = document.getElementById('statusFilterDisplay');
+        this.statusFilterOptions = document.getElementById('statusFilterOptions');
+        this.statusFilterText = document.getElementById('statusFilterText');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
     },
 
@@ -40,11 +43,44 @@ const FuncionarioUI = {
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
         }
+        
+        // Listeners para o filtro de status
+        if (this.statusFilterDisplay) {
+            this.statusFilterDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.statusFilterOptions.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!this.statusFilterDisplay.contains(e.target) && !this.statusFilterOptions.contains(e.target)) {
+                    this.statusFilterOptions.classList.add('hidden');
+                }
+            });
+            this.statusFilterOptions.querySelectorAll('.status-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    this.updateStatusFilterText();
+                    this.renderGrid();
+                });
+            });
+        }
+
         // Listeners para ordenação da tabela principal
         document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th[data-sort]').forEach(th => {
             const column = th.dataset.sort;
             th.addEventListener('click', () => this.handleSort(column));
         });
+    },
+
+    updateStatusFilterText() {
+        const checked = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked'));
+        if (checked.length === 0) {
+            this.statusFilterText.textContent = 'Nenhum';
+        } else if (checked.length === 4) {
+            this.statusFilterText.textContent = 'Todos';
+        } else if (checked.length <= 2) {
+            this.statusFilterText.textContent = checked.map(cb => cb.parentElement.textContent.trim()).join(', ');
+        } else {
+            this.statusFilterText.textContent = `${checked.length} selecionados`;
+        }
     },
 
     toggleDesligamentoField() {
@@ -124,11 +160,24 @@ const FuncionarioUI = {
 
     async renderGrid() {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
+        const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
+
         try {
-            let query = supabaseClient.from('funcionario').select('*').order('nome');
+            let query = supabaseClient.from('funcionario').select('*');
+            
+            if (selectedStatuses.length > 0) {
+                query = query.in('status', selectedStatuses);
+            } else {
+                query = query.in('status', []); // Mostra nada se nenhum estiver marcado
+            }
+
             if (searchTerm) {
                 query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
             }
+            
+            // Aplica a ordenação configurada
+            query = query.order(this.sortConfig.column, { ascending: this.sortConfig.direction === 'asc' });
+
             const { data: list, error } = await query;
             if (error) throw error;
 
