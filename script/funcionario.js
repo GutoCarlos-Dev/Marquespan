@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
+    listData: [], // Armazena os dados atuais da grid para exportação
     init() {
         this.cache();
         this.bind();
@@ -24,6 +25,8 @@ const FuncionarioUI = {
         this.statusFilterDisplay = document.getElementById('statusFilterDisplay');
         this.statusFilterOptions = document.getElementById('statusFilterOptions');
         this.statusFilterText = document.getElementById('statusFilterText');
+        this.btnExportXLSX = document.getElementById('btnExportXLSX');
+        this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
     },
 
@@ -42,6 +45,13 @@ const FuncionarioUI = {
         }
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
+        }
+        
+        if (this.btnExportXLSX) {
+            this.btnExportXLSX.addEventListener('click', () => this.exportToXLSX());
+        }
+        if (this.btnExportPDF) {
+            this.btnExportPDF.addEventListener('click', () => this.exportToPDF());
         }
         
         // Listeners para o filtro de status
@@ -181,6 +191,7 @@ const FuncionarioUI = {
             const { data: list, error } = await query;
             if (error) throw error;
 
+            this.listData = list; // Atualiza cache para exportação
             this.tableBody.innerHTML = list.map(f => `
                 <tr>
                     <td><strong>${f.rh_registro}</strong></td>
@@ -417,6 +428,104 @@ const FuncionarioUI = {
             this.renderGrid();
             await this.renderSummary();
         }
+    },
+
+    /**
+     * Exporta os dados atuais da grid para XLSX
+     */
+    exportToXLSX() {
+        if (!this.listData || this.listData.length === 0) return alert('Não há dados para exportar.');
+
+        const dataToExport = this.listData.map(f => ({
+            'RH Registro': f.rh_registro,
+            'Nome': f.nome,
+            'Nome Completo': f.nome_completo,
+            'CPF': f.cpf || '-',
+            'Data Admissão': f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Função': f.funcao,
+            'Contato Corp': f.contato_corp || '-',
+            'Contato Pessoal': f.contato_pessoal || '-',
+            'Status': f.status,
+            'Data Desligamento': f.data_desligamento ? new Date(f.data_desligamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Função Anterior': f.funcao_anterior || '-',
+            'Data Alt. Função': f.data_alteracao_funcao ? new Date(f.data_alteracao_funcao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(wb, ws, "Funcionários");
+        XLSX.writeFile(wb, `Quadro_Funcionarios_${new Date().toISOString().split('T')[0]}.xlsx`);
+    },
+
+    /**
+     * Exporta os dados atuais da grid para PDF com padrão visual do sistema
+     */
+    async exportToPDF() {
+        if (!this.listData || this.listData.length === 0) return alert('Não há dados para exportar.');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4'); // Alterado para Vertical (Portrait)
+
+        // Função para garantir logo com fundo branco (padrão world-class)
+        const getLogoBase64 = async () => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
+        };
+
+        const logo = await getLogoBase64();
+        if (logo) doc.addImage(logo, 'JPEG', 14, 10, 40, 12);
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55); // Verde Marquespan
+        doc.text('Relatório: Quadro de Funcionários', 60, 18);
+
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 196, 18, { align: 'right' }); // Ajustado para margem da folha vertical
+
+        const headers = [['RH', 'Nome', 'CPF', 'Admissão', 'Função', 'Status', 'Contato', 'Alt. Função']];
+        const rows = this.listData.map(f => [
+            f.rh_registro,
+            f.nome,
+            f.cpf || '-',
+            f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            f.funcao,
+            f.status,
+            f.contato_corp || f.contato_pessoal || '-',
+            f.data_alteracao_funcao ? new Date(f.data_alteracao_funcao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'
+        ]);
+
+        doc.autoTable({
+            head: headers,
+            body: rows,
+            startY: 25,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], fontSize: 7 }, // Fonte reduzida no cabeçalho
+            styles: { fontSize: 6, cellPadding: 1.5 }, // Fonte reduzida e menos padding no corpo
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 5) { // Coluna Status
+                    const status = data.cell.raw;
+                    if (status === 'Ativo') data.cell.styles.textColor = [40, 167, 69];
+                    if (status === 'Desligado') data.cell.styles.textColor = [220, 53, 69];
+                }
+            }
+        });
+
+        doc.save(`Quadro_Funcionarios_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 };
 

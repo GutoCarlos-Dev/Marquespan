@@ -29,118 +29,141 @@
         <form id="formCadastrarFuncionario">
           <input type="hidden" id="funcEditingId">
           <div class="funcionario-layout">
-              <!-- Card Principal: Dados de Registro e Contato -->
-              <div class="glass-panel-inner">
-                  <div class="form-grid">
-                      <div class="form-group">
-                          <label for="funcRH">Nº Identificador (RH)</label>
-                          <input type="text" id="funcRH" required class="glass-input" placeholder="Registro RH">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcNome">Nome (Ex: JOÃO)</label>
-                          <input type="text" id="funcNome" required class="glass-input" placeholder="Nome para exibição">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcNomeCompleto">Nome Completo</label>
-                          <input type="text" id="funcNomeCompleto" required class="glass-input" placeholder="Nome completo do colaborador">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcCPF">CPF</label>
-                          <input type="text" id="funcCPF" class="glass-input" placeholder="000.000.000-00">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcAdmissao">Data Admissão</label>
-                          <input type="date" id="funcAdmissao" required class="glass-input">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcFuncao">Função Atual</label>
-                          <select id="funcFuncao" required class="glass-input">
-                              <option value="" disabled selected>-- Selecione --</option>
-                              <option value="Jovem Aprendiz">Jovem Aprendiz</option>
-                              <option value="Auxiliar de Transporte">Auxiliar de Transporte</option>
-                              <option value="Auxiliar de Logistica">Auxiliar de Logistica</option>
-                              <option value="Auxiliar de Logistica ADM">Auxiliar de Logistica ADM</option>
-                              <option value="Motorista">Motorista</option>
-                              <option value="Motorista Patio">Motorista Patio</option>
-                              <option value="Motorista Carreta">Motorista Carreta</option>
-                              <option value="Motorista Bitrem">Motorista Bitrem</option>
-                              <option value="Motorista Munck">Motorista Munck</option>
-                              <option value="Líder Logística">Líder Logística</option>
-                              <option value="Encarregado Operacional">Encarregado Operacional</option>
-                              <option value="Gerente Operacional">Gerente Operacional</option>
-                          </select>
-                      </div>
-                      <div class="form-group">
-                          <label for="funcContatoCorp">Contato Corporativo</label>
-                          <input type="text" id="funcContatoCorp" class="glass-input" placeholder="Celular Empresa">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcContatoPessoal">Contato Pessoal</label>
-                          <input type="text" id="funcContatoPessoal" class="glass-input" placeholder="Celular Particular">
-                      </div>
-                      <div class="form-group">
-                          <label for="funcStatus">Status</label>
-                          <select id="funcStatus" required class="glass-input">
-                              <option value="Ativo">ATIVO</option>
-                              <option value="Desligado">DESLIGADO</option>
-                              <option value="Ferias">FÉRIAS</option>
-                              <option value="Afastado">AFASTADO</option>
-                          </select>
-                      </div>
-                      <div class="form-group hidden" id="groupDesligamento">
-                          <label for="funcDesligamento">Data Desligamento</label>
-                          <input type="date" id="funcDesligamento" class="glass-input">
+              <!-- Container de Cards do Formulário -->
+              <div class="funcionario-main-cards">
+                  <!-- Card 1: Identificação Básica -->
+                  <div class="glass-panel-inner">
+                      <h4><i class="fas fa-id-card-alt"></i> Identificação</h4>
+                      <div class="form-grid">
+                          <div class="form-group">
+                              <label for="funcRH">Nº Identificador (RH)</label>
+                              <input type="text" id="funcRH" required class="glass-input" placeholder="Registro RH">
+                          </div>
+                          <div class="form-group">
+                              <label for="funcNome">Nome Curto (Exibição)</label>
+                              <input type="text" id="funcNome" required class="glass-input" placeholder="Ex: JOÃO">
+                          </div>
+                          <div class="form-group">
+                              <label for="funcNomeCompleto">Nome Completo</label>
+                              <input type="text" id="funcNomeCompleto" required class="glass-input" placeholder="Nome completo do colaborador">
+                          </div>
+                          <div class="form-group">
+                              <label for="funcCPF">CPF</label>
+                              <input type="text" id="funcCPF" class="glass-input" placeholder="000.000.000-00">
+                          </div>
                       </div>
                   </div>
 
-                  <!-- Sub-card de Promoção -->
-                  <h4 style="margin: 25px 0 15px 0; color: var(--primary-color); font-size: 0.9rem; text-transform: uppercase;"><i class="fas fa-history"></i> Alteração de Função</h4>
-                  <div class="form-grid">
-                      <div class="form-group">
-                          <label for="funcPromocao">Função Anterior (Auditado)</label>
-                          <select id="funcPromocao" class="glass-input">
-                              <option value="">Nenhuma registrada</option>
-                              <option value="Jovem Aprendiz">Jovem Aprendiz</option>
-                              <option value="Auxiliar de Transporte">Auxiliar de Transporte</option>
-                              <option value="Auxiliar de Logistica">Auxiliar de Logistica</option>
-                              <option value="Auxiliar de Logistica ADM">Auxiliar de Logistica ADM</option>
-                              <option value="Motorista">Motorista</option>
-                              <option value="Motorista Patio">Motorista Patio</option>
-                              <option value="Motorista Carreta">Motorista Carreta</option>
-                              <option value="Motorista Bitrem">Motorista Bitrem</option>
-                              <option value="Motorista Munck">Motorista Munck</option>
-                              <option value="Líder Logística">Líder Logística</option>
-                              <option value="Encarregado Operacional">Encarregado Operacional</option>
-                              <option value="Gerente Operacional">Gerente Operacional</option>
-                          </select>
-                      </div>
-                      <div class="form-group">
-                          <label for="funcDataPromocao">Data da Mudança</label>
-                          <input type="date" id="funcDataPromocao" class="glass-input">
+                  <!-- Card 2: Dados Contratuais -->
+                  <div class="glass-panel-inner">
+                      <h4><i class="fas fa-briefcase"></i> Dados Contratuais</h4>
+                      <div class="form-grid">
+                          <div class="form-group">
+                              <label for="funcAdmissao">Data Admissão</label>
+                              <input type="date" id="funcAdmissao" required class="glass-input">
+                          </div>
+                          <div class="form-group">
+                              <label for="funcFuncao">Função Atual</label>
+                              <select id="funcFuncao" required class="glass-input">
+                                  <option value="" disabled selected>-- Selecione --</option>
+                                  <option value="Jovem Aprendiz">Jovem Aprendiz</option>
+                                  <option value="Auxiliar de Transporte">Auxiliar de Transporte</option>
+                                  <option value="Auxiliar de Logistica">Auxiliar de Logistica</option>
+                                  <option value="Auxiliar de Logistica ADM">Auxiliar de Logistica ADM</option>
+                                  <option value="Motorista">Motorista</option>
+                                  <option value="Motorista Patio">Motorista Patio</option>
+                                  <option value="Motorista Carreta">Motorista Carreta</option>
+                                  <option value="Motorista Bitrem">Motorista Bitrem</option>
+                                  <option value="Motorista Munck">Motorista Munck</option>
+                                  <option value="Líder Logística">Líder Logística</option>
+                                  <option value="Encarregado Operacional">Encarregado Operacional</option>
+                                  <option value="Gerente Operacional">Gerente Operacional</option>
+                              </select>
+                          </div>
+                          <div class="form-group">
+                              <label for="funcStatus">Status</label>
+                              <select id="funcStatus" required class="glass-input">
+                                  <option value="Ativo">ATIVO</option>
+                                  <option value="Desligado">DESLIGADO</option>
+                                  <option value="Ferias">FÉRIAS</option>
+                                  <option value="Afastado">AFASTADO</option>
+                              </select>
+                          </div>
+                          <div class="form-group hidden" id="groupDesligamento">
+                              <label for="funcDesligamento">Data Desligamento</label>
+                              <input type="date" id="funcDesligamento" class="glass-input">
+                          </div>
                       </div>
                   </div>
 
-                  <!-- Grid de Histórico Discreto -->
-                  <div id="historicoFuncaoContainer" class="hidden" style="margin-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 10px;">
-                      <h5 style="font-size: 0.75rem; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-list-ul"></i> Log de Alterações (Auditado)</h5>
-                      <table class="glass-table table-compact">
-                          <thead>
-                              <tr>
-                                  <th>De</th>
-                                  <th>Para</th>
-                                  <th>Data</th>
-                              </tr>
-                          </thead>
-                          <tbody id="histFuncTableBody"></tbody>
-                      </table>
+                  <!-- Card 3: Comunicação -->
+                  <div class="glass-panel-inner">
+                      <h4><i class="fas fa-address-book"></i> Comunicação</h4>
+                      <div class="form-grid">
+                          <div class="form-group">
+                              <label for="funcContatoCorp">Contato Corporativo</label>
+                              <input type="text" id="funcContatoCorp" class="glass-input" placeholder="Celular Empresa">
+                          </div>
+                          <div class="form-group">
+                              <label for="funcContatoPessoal">Contato Pessoal</label>
+                              <input type="text" id="funcContatoPessoal" class="glass-input" placeholder="Celular Particular">
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Card 4: Sub-card de Promoção / Histórico -->
+                  <div class="glass-panel-inner">
+                      <h4><i class="fas fa-history"></i> Alteração de Função</h4>
+                      <div class="form-grid">
+                          <div class="form-group">
+                              <label for="funcPromocao">Função Anterior (Auditado)</label>
+                              <select id="funcPromocao" class="glass-input">
+                                  <option value="">Nenhuma registrada</option>
+                                  <option value="Jovem Aprendiz">Jovem Aprendiz</option>
+                                  <option value="Auxiliar de Transporte">Auxiliar de Transporte</option>
+                                  <option value="Auxiliar de Logistica">Auxiliar de Logistica</option>
+                                  <option value="Auxiliar de Logistica ADM">Auxiliar de Logistica ADM</option>
+                                  <option value="Motorista">Motorista</option>
+                                  <option value="Motorista Patio">Motorista Patio</option>
+                                  <option value="Motorista Carreta">Motorista Carreta</option>
+                                  <option value="Motorista Bitrem">Motorista Bitrem</option>
+                                  <option value="Motorista Munck">Motorista Munck</option>
+                                  <option value="Líder Logística">Líder Logística</option>
+                                  <option value="Encarregado Operacional">Encarregado Operacional</option>
+                                  <option value="Gerente Operacional">Gerente Operacional</option>
+                              </select>
+                          </div>
+                          <div class="form-group">
+                              <label for="funcDataPromocao">Data da Mudança</label>
+                              <input type="date" id="funcDataPromocao" class="glass-input">
+                          </div>
+                      </div>
+
+                      <!-- Log de Alterações (Auditado) -->
+                      <div id="historicoFuncaoContainer" class="hidden" style="margin-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 10px;">
+                          <h5 style="font-size: 0.75rem; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-list-ul"></i> Log de Alterações</h5>
+                          <table class="glass-table table-compact">
+                              <thead>
+                                  <tr>
+                                      <th>De</th>
+                                      <th>Para</th>
+                                      <th>Data</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="histFuncTableBody"></tbody>
+                          </table>
+                      </div>
                   </div>
               </div>
 
               <!-- Card de Ações Laterais -->
               <div class="glass-panel-inner actions-panel">
+                  <h4><i class="fas fa-cogs"></i> Ações</h4>
                   <div class="form-actions-vertical">
                       <button type="submit" id="btnSubmitFunc" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Registro</button>
                       <button type="button" id="btnClearFuncForm" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
+                      <button type="button" id="btnExportXLSX" class="btn-glass btn-blue"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
+                      <button type="button" id="btnExportPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
                   </div>
               </div>
           </div>
@@ -212,6 +235,10 @@
     </div>
   </div>
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <!-- Bibliotecas de Exportação -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="script/funcionario.js?v=1.1"></script>
 </body>
