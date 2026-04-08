@@ -202,7 +202,7 @@ const EstoqueGeralUI = {
     async carregarListaProdutosDatalist() {
         const { data } = await supabaseClient
             .from('produtos')
-            .select('id, codigo_principal, nome, quantidade_em_estoque')
+            .select('*') // Busca todos os campos para cache completo (id, codigo, nome, estoque, unidade, minima, etc)
             .order('nome');
         
         if (data) {
@@ -241,6 +241,7 @@ const EstoqueGeralUI = {
                     <td>${p.codigo_secundario || '-'}</td>
                     <td>${p.nome}</td>
                     <td>${p.unidade_medida || 'UN'}</td>
+                    <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
                     <td><span class="status-badge ${isInactive ? 'status-inativo' : 'status-ativo'}">${status}</span></td>
                     <td style="text-align: center;">
                         <button class="btn-icon edit btn-edit-prod" data-id="${p.id}" title="Editar"><i class="fas fa-edit"></i></button>
@@ -263,6 +264,7 @@ const EstoqueGeralUI = {
             codigo_secundario: document.getElementById('produtoCodigo2').value.trim(),
             nome: document.getElementById('produtoNome').value.trim().toUpperCase(),
             unidade_medida: document.getElementById('produtoUnidade').value.trim().toUpperCase(),
+            quantidade_minima: parseFloat(document.getElementById('produtoQtdMinima').value) || 0
         };
 
         try {
@@ -290,6 +292,7 @@ const EstoqueGeralUI = {
                 document.getElementById('produtoCodigo2').value = p.codigo_secundario || '';
                 document.getElementById('produtoNome').value = p.nome || '';
                 document.getElementById('produtoUnidade').value = p.unidade_medida || '';
+                document.getElementById('produtoQtdMinima').value = p.quantidade_minima || 0;
                 this.btnSubmitProduto.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -311,6 +314,7 @@ const EstoqueGeralUI = {
     clearProdutoForm() {
         this.formProduto.reset();
         this.produtoEditingId.value = '';
+        document.getElementById('produtoQtdMinima').value = '0';
         this.btnSubmitProduto.innerHTML = '<i class="fas fa-save"></i> Salvar';
     },
 

@@ -225,6 +225,10 @@
                 <label>Unidade</label>
                 <input type="text" id="produtoUnidade" class="glass-input" placeholder="Ex: UN, KG, LT">
               </div>
+              <div class="form-group">
+                <label>Qtd. Mínima</label>
+                <input type="number" id="produtoQtdMinima" class="glass-input" placeholder="0" step="0.01" value="0">
+              </div>
               <div class="form-group" style="display: flex; gap: 10px;">
                 <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green" style="flex: 1;"><i class="fas fa-save"></i> Salvar</button>
                 <button type="button" id="btnClearProdutoForm" class="btn-glass btn-muted"><i class="fas fa-times"></i></button>
@@ -248,6 +252,7 @@
                   <th>Cód. Secundário</th>
                   <th>Nome do Produto</th>
                   <th>Unidade</th>
+                  <th style="text-align: center;">Mínimo</th>
                   <th>Status</th>
                   <th style="text-align: center;">Ações</th>
                 </tr>

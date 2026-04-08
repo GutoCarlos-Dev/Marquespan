@@ -107,7 +107,7 @@ const UI = {
 
   cache(){
     this.navLinks = document.querySelectorAll('#menu-compras button.painel-btn');
-    this.sections = document.querySelectorAll('section.glass-panel');
+    this.sections = document.querySelectorAll('section[id^="section"]');
     this.cartBody = document.getElementById('cartBody'); // Cache do corpo do carrinho
     this.cartProductInput = document.getElementById('cartProductInput'); // Novo input de produto
     this.cartQtd = document.getElementById('cartQtd');
@@ -925,7 +925,7 @@ const UI = {
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: &lt; e &gt;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${statusSelect}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${usuarioCell}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`; // Corrigido: < e >
 
         this.savedQuotationsTableBody.appendChild(tr);
         // set selected value and ensure class matches status
@@ -1287,6 +1287,7 @@ const UI = {
       codigo_secundario: document.getElementById('produtoCodigo2').value,
       nome: document.getElementById('produtoNome').value,
       unidade_medida: document.getElementById('produtoUnidade').value,
+      quantidade_minima: parseFloat(document.getElementById('produtoQtdMinima').value) || 0
     };
 
     if (!payload.codigo_principal || !payload.nome) {
@@ -1316,6 +1317,7 @@ const UI = {
   clearProductForm() {
     this.formCadastrarProduto.reset();
     this.formCadastrarProduto.dataset.editingId = ''; // Limpa o ID de edição
+    if(document.getElementById('produtoQtdMinima')) document.getElementById('produtoQtdMinima').value = '0';
     this.btnSubmitProduto.textContent = 'Cadastrar'; // Restaura o texto do botão
   },
 
@@ -1329,6 +1331,7 @@ const UI = {
       document.getElementById('produtoCodigo2').value = product.codigo_secundario || '';
       document.getElementById('produtoNome').value = product.nome || '';
       document.getElementById('produtoUnidade').value = product.unidade_medida || '';
+      if(document.getElementById('produtoQtdMinima')) document.getElementById('produtoQtdMinima').value = product.quantidade_minima || 0;
 
       this.btnSubmitProduto.textContent = 'Atualizar'; // Muda o texto do botão
       this.formCadastrarProduto.scrollIntoView({ behavior: 'smooth' });
@@ -1539,7 +1542,7 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida, status', queryOptions);
+      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida, status, quantidade_minima', queryOptions);
       this.produtosTableBody.innerHTML = produtos.map(p => {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
@@ -1564,6 +1567,7 @@ const UI = {
           <td>${p.codigo_secundario || ''}</td>
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || ''}</td>
+          <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
           <td>${status}</td>
           <td>
             ${buttons}

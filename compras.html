@@ -97,22 +97,48 @@
     </section>
 
     <!-- SEÇÃO: COTAÇÕES SALVAS -->
-    <section id="sectionCotacoesSalvas" class="glass-panel hidden">
-      <div class="panel-header-actions">
-        <h3>Histórico de Cotações</h3>
-        <div class="filtros-inline">
-            <input type="date" id="filterDataInicio" class="glass-input" title="Data Inicial">
-            <input type="date" id="filterDataFim" class="glass-input" title="Data Final">
-            <input type="text" id="searchQuotation" placeholder="Pedido e Vencedor..." class="glass-input">
-            <select id="filterStatus" class="glass-input">
-                <option value="Todas">Todas</option>
-                <option value="Pendente">Pendente</option>
-                <option value="Aprovada">Aprovada</option>
-                <option value="Recebido">Recebido</option>
-            </select>
-            <button id="btnSearchQuotation" class="btn-glass btn-blue"><i class="fas fa-search"></i></button>
+    <section id="sectionCotacoesSalvas" class="hidden">
+      <div class="compras-top-grid">
+        <div class="glass-panel">
+          <h3><i class="fas fa-filter"></i> Filtros de Pesquisa</h3>
+          <div class="filtros-wrapper-cards">
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-calendar-alt"></i> Período</h4>
+              <div class="form-row">
+                <div class="form-group"><label>De</label><input type="date" id="filterDataInicio" class="glass-input"></div>
+                <div class="form-group"><label>Até</label><input type="date" id="filterDataFim" class="glass-input"></div>
+              </div>
+            </div>
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-info-circle"></i> Status e Termo</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Busca</label>
+                  <input type="text" id="searchQuotation" placeholder="Pedido ou Vencedor..." class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label>Situação</label>
+                  <select id="filterStatus" class="glass-input">
+                    <option value="Todas">Todas</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Aprovada">Aprovada</option>
+                    <option value="Recebido">Recebido</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Ações</h3>
+          <div class="acoes-grid">
+            <button id="btnSearchQuotation" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          </div>
         </div>
       </div>
+
+      <div class="glass-panel">
+        <h3><i class="fas fa-history"></i> Histórico de Cotações</h3>
       <div class="table-responsive">
         <table class="glass-table compact-table data-grid">
             <thead>
@@ -142,11 +168,12 @@
             <button id="btnOpenImportExportModal" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar/Exportar</button>
         </div>
       </div>
-      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr auto;">
+      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr 1fr auto;">
         <input type="text" id="produtoCodigo1" placeholder="Cód. Principal" class="glass-input">
         <input type="text" id="produtoCodigo2" placeholder="Cód. Secundário" class="glass-input">
         <input type="text" id="produtoNome" placeholder="Nome do Produto" required class="glass-input">
         <input type="text" id="produtoUnidade" placeholder="UN (KG, LT...)" class="glass-input">
+        <input type="number" id="produtoQtdMinima" placeholder="Qtd. Mín." class="glass-input" step="0.01" value="0">
         <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green">Cadastrar</button>
       </form>
       
@@ -162,6 +189,7 @@
                     <th data-field="codigo_secundario">CÓD. SEC.</th>
                     <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
                     <th data-field="unidade_medida">UN</th>
+                    <th>MÍNIMO</th>
                     <th data-field="status">STATUS</th>
                     <th>AÇÕES</th>
                 </tr>
