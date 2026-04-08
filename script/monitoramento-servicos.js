@@ -5,6 +5,8 @@ let chartProgressoEngraxe = null;
 let chartsPizzaLavagem = []; 
 let chartsPizzaEngraxe = [];
 let chartStatus = null;
+let chartGastoMensal = null;
+let chartGastoEngraxe = null;
 
 const REFRESH_INTERVAL = 300000; // 5 minutos
 
@@ -87,6 +89,8 @@ async function carregarDados() {
 
         atualizarKPIs(dadosLavagem, dadosEngraxe);
         renderizarGraficos(dadosLavagem, dadosEngraxe);
+        carregarGraficoGastoMensal();
+        carregarGraficoGastoEngraxe();
 
         document.getElementById('last-update').textContent = `Atualizado às: ${new Date().toLocaleTimeString()}`;
     } catch (error) {
@@ -116,6 +120,130 @@ function renderizarGraficos(lavagem, engraxe) {
     renderChartPizzaLavagem(lavagem);
     renderChartPizzaEngraxe(engraxe);
     renderChartStatus(lavagem, engraxe);
+}
+
+async function carregarGraficoGastoMensal() {
+    try {
+        // Busca itens realizados de listas que já foram finalizadas
+        // Ignora os filtros da página para mostrar o acumulado total conforme solicitado
+        const { data, error } = await supabaseClient
+            .from('lavagem_itens')
+            .select('valor, fornecedor, status, lavagem_listas!inner(status)')
+            .eq('status', 'REALIZADO')
+            .eq('lavagem_listas.status', 'FINALIZADA');
+
+        if (error) throw error;
+
+        // Agrupar dados por Fornecedor
+        const resumo = (data || []).reduce((acc, item) => {
+            const f = item.fornecedor || 'Não Informado';
+            if (!acc[f]) acc[f] = { qtd: 0, valor: 0 };
+            acc[f].qtd++;
+            acc[f].valor += parseFloat(item.valor || 0);
+            return acc;
+        }, {});
+
+        const labels = Object.keys(resumo);
+        const valores = labels.map(l => resumo[l].valor);
+
+        const ctx = document.getElementById('chartGastoMensalLavagem').getContext('2d');
+        if (chartGastoMensal) chartGastoMensal.destroy();
+
+        chartGastoMensal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Gasto Total (R$)',
+                    data: valores,
+                    backgroundColor: 'rgba(0, 105, 55, 0.7)',
+                    borderColor: '#006937',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: (context) => `Qtd. Lavagens: ${resumo[context.label].qtd}`
+                        }
+                    },
+                    datalabels: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Erro ao carregar gráfico de gasto mensal:', e);
+    }
+}
+
+async function carregarGraficoGastoEngraxe() {
+    try {
+        // Busca itens realizados em listas finalizadas
+        const { data, error } = await supabaseClient
+            .from('engraxe_itens')
+            .select('status, engraxe_listas!inner(status)')
+            .in('status', ['OK', 'REALIZADO'])
+            .eq('engraxe_listas.status', 'FINALIZADA');
+
+        if (error) throw error;
+
+        const totalQtd = data ? data.length : 0;
+        const valorPadrao = 60.00;
+        const valorTotal = totalQtd * valorPadrao;
+
+        const ctx = document.getElementById('chartGastoTotalEngraxe').getContext('2d');
+        if (chartGastoEngraxe) chartGastoEngraxe.destroy();
+
+        chartGastoEngraxe = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Engraxe Total (Acumulado)'],
+                datasets: [{
+                    label: 'Investimento Total (R$)',
+                    data: [valorTotal],
+                    backgroundColor: 'rgba(253, 126, 20, 0.7)', // Laranja para combinar com o tema Engraxe
+                    borderColor: '#fd7e14',
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: () => `Quantidade: ${totalQtd} veículos`
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (val) => 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits: 2})
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    } catch (e) {
+        console.error('Erro ao carregar gráfico de gasto engraxe:', e);
+    }
 }
 
 function renderChartProgressoLavagem(lavagem) {
