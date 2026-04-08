@@ -47,14 +47,11 @@ function initDashboard() {
     document.addEventListener('fullscreenchange', () => {
         const container = document.querySelector('.container');
         const menuContainer = document.getElementById('menu-container');
-        const header = document.querySelector('.glass-header');
         if (document.fullscreenElement) {
             container.classList.add('fullscreen-active');
-            if (header) header.classList.add('hidden');
             if (menuContainer) menuContainer.classList.add('hidden');
         } else {
             container.classList.remove('fullscreen-active');
-            if (header) header.classList.remove('hidden');
             if (menuContainer) menuContainer.classList.remove('hidden');
         }
         setTimeout(() => window.dispatchEvent(new Event('resize')), 300);

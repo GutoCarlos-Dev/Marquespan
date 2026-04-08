@@ -8,18 +8,6 @@ body {
     background-color: #f4f7f6 !important; /* Fundo da página levemente cinza para destacar os cards brancos */
 }
 
-/* Sobrescreve o header para o modo clean */
-.glass-header {
-    background: #ffffff !important;
-    color: var(--primary-color) !important;
-    border-bottom: 2px solid var(--primary-color) !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-}
-
-.glass-header span, .glass-header i {
-    color: var(--primary-color) !important;
-}
-
 .glass-panel {
     background: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
@@ -30,16 +18,17 @@ body {
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 15px !important;
 }
 
 .glass-card {
     background: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
     border-radius: 12px;
-    padding: 15px;
+    padding: 10px 15px !important;
+    min-height: auto !important;
     display: flex;
     align-items: center;
     gap: 15px;
@@ -51,19 +40,24 @@ body {
 .glass-card.yellow { border-left-color: #ffc107; }
 .glass-card.green { border-left-color: #28a745; }
 
+/* Cores específicas para os fundos dos ícones baseadas na categoria do card */
+.glass-card.blue .kpi-icon { background-color: rgba(0, 123, 255, 0.15); color: white; }
+.glass-card.orange .kpi-icon { background-color: rgba(253, 126, 20, 0.15); color: white; }
+.glass-card.yellow .kpi-icon { background-color: rgb(255, 193, 7); color: white; }
+.glass-card.green .kpi-icon { background-color: rgba(40, 167, 69, 0.15); color: white; }
+
 .kpi-icon {
-    font-size: 1.5rem;
-    width: 45px;
-    height: 45px;
-    background: rgba(0,0,0,0.05);
+    font-size: 1.1rem !important;
+    width: 35px !important;
+    height: 35px !important;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 10px;
 }
 
-.kpi-info h3 { margin: 0; font-size: 0.85rem; color: #666; text-transform: uppercase; }
-.kpi-info p { margin: 0; font-size: 1.5rem; font-weight: bold; color: #333; }
+.kpi-info h3 { margin: 0; font-size: 0.8rem !important; margin-bottom: 2px !important; color: #666; text-transform: uppercase; }
+.kpi-info p { margin: 0; font-size: 1.3rem !important; font-weight: bold; color: #333; }
 
 .filter-bar {
     display: flex;
@@ -141,12 +135,17 @@ body {
 
 .hidden { display: none !important; }
 
-.fullscreen-active .main-content {
+.container.fullscreen-active {
+    display: block !important;
     width: 100vw !important;
     max-width: none !important;
-    margin-left: 0 !important;
-    padding: 20px !important;
-    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-.container.fullscreen-active { display: block !important; width: 100% !important; }
+.container.fullscreen-active .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 15px !important;
+}
