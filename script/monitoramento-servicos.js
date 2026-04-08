@@ -627,13 +627,22 @@ function iniciarRolagemAutomatica() {
     const wrapper = document.querySelector('.marquee-wrapper');
     if (!wrapper) return;
     let direction = 1;
+    let isPaused = false;
     const speed = 1;
+
     function step() {
-        if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) direction = -1;
-        else if (wrapper.scrollLeft <= 0) direction = 1;
-        wrapper.scrollLeft += speed * direction;
+        if (!isPaused) {
+            if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) direction = -1;
+            else if (wrapper.scrollLeft <= 0) direction = 1;
+            wrapper.scrollLeft += speed * direction;
+        }
         requestAnimationFrame(step);
     }
+
+    // Eventos para pausar e retomar a animação
+    wrapper.addEventListener('mouseenter', () => isPaused = true);
+    wrapper.addEventListener('mouseleave', () => isPaused = false);
+
     requestAnimationFrame(step);
 }
 
