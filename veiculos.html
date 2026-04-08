@@ -4,13 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Veículos - Marquespan</title>
-
-  <!-- ✅ CSS modularizado -->
- <link rel="stylesheet" href="css/index.css" />  
+  <!-- Fundação e Layout Moderno -->
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <!-- Estilo Específico -->
   <link rel="stylesheet" href="css/veiculos.css" />
 
   <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
 
   <!-- Biblioteca para ler arquivos Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -20,54 +24,80 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+  <div class="container">
+    <!-- Container para injeção do Menu Lateral -->
+    <div id="menu-container"></div>
 
-  <!-- Container para injeção do Menu Lateral -->
-  <div id="menu-container"></div>
-
-  <!-- 🧩 Conteúdo principal -->
-  <main class="main-content">
-    <header class="header glass-header">
-      <h1><i class="fas fa-truck"></i> Gestão de Veículos</h1>
-    </header>
+    <!-- 🧩 Conteúdo principal -->
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-truck"></i> Gestão de Veículos</h1>
+      </header>
 
     <div class="veiculos-top-grid">
       <!-- Card 1: Gestão de Veículos (Filtros) -->
       <section class="glass-panel">
         <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
-        <div class="filtros-container">
-          <div class="form-group-filter">
-            <label for="campo-filial">Filial</label>
-            <select id="campo-filial">
-              <option value="">Todas</option>
-            </select>
-          </div>
-          <div class="form-group-filter">
-            <label for="campo-placa">Placa</label>
-            <input type="text" id="campo-placa" placeholder="Ex: ABC1234" />
-          </div>
-          <div class="form-group-filter">
-            <label for="campo-modelo">Modelo</label>
-            <input type="text" id="campo-modelo" placeholder="Ex: Volvo FH" />
-          </div>
-          <div class="form-group-filter" style="min-width: 230px;">
-            <label>Tipo</label>
-            <div class="custom-multiselect" style="position: relative;">
-              <div id="campo-tipo-display" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
-                <span id="campo-tipo-text">Todos</span> <i class="fas fa-chevron-down"></i>
+        <div class="filtros-wrapper-cards">
+          <!-- Grupo 1: Veículo -->
+          <div class="glass-panel-inner">
+            <h4><i class="fas fa-truck"></i> Veículo</h4>
+            <div class="filtros-container">
+              <div class="form-group-filter">
+                <label for="campo-placa">Placa</label>
+                <input type="text" id="campo-placa" class="glass-input" placeholder="Ex: ABC1234" />
               </div>
-              <div id="campo-tipo-options" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;">
-                <!-- Opções carregadas via JS -->
+              <div class="form-group-filter">
+                <label for="campo-modelo">Modelo</label>
+                <input type="text" id="campo-modelo" class="glass-input" placeholder="Ex: Volvo FH" />
               </div>
             </div>
           </div>
-          <div class="form-group-filter">
-            <label for="campo-situacao">Situação</label>
-            <select id="campo-situacao">
-              <option value="">Todas as Situações</option>
-              <option value="ativo">ATIVO</option>
-              <option value="INTERNADO">INTERNADO</option>
-              <option value="inativo">INATIVO</option>
-            </select>
+
+          <!-- Grupo 2: Status e Filial -->
+          <div class="glass-panel-inner">
+            <h4><i class="fas fa-info-circle"></i> Status e Filial</h4>
+            <div class="filtros-container">
+              <div class="form-group-filter">
+                <label for="campo-filial">Filial</label>
+                <select id="campo-filial" class="glass-input">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="form-group-filter">
+                <label for="campo-situacao">Situação</label>
+                <select id="campo-situacao" class="glass-input">
+                  <option value="">Todas</option>
+                  <option value="ativo">ATIVO</option>
+                  <option value="INTERNADO">INTERNADO</option>
+                  <option value="inativo">INATIVO</option>
+                </select>
+              </div>
+              <div class="form-group-filter" style="min-width: 200px;">
+                <label>Tipo</label>
+                <div class="custom-multiselect" style="position: relative;">
+                  <div id="campo-tipo-display" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
+                    <span id="campo-tipo-text">Todos</span> <i class="fas fa-chevron-down"></i>
+                  </div>
+                  <div id="campo-tipo-options" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grupo 3: Período -->
+          <div class="glass-panel-inner">
+            <h4><i class="fas fa-calendar-alt"></i> Período</h4>
+            <div class="filtros-container">
+              <div class="form-group-filter">
+                <label for="dataInicial">De:</label>
+                <input type="date" id="dataInicial" class="glass-input">
+              </div>
+              <div class="form-group-filter">
+                <label for="dataFinal">Até:</label>
+                <input type="date" id="dataFinal" class="glass-input">
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -88,7 +118,7 @@
     <!-- ✅ Grid com rolagem horizontal -->
     <div class="glass-panel">
       <div class="panel-header">
-        <h2><i class="fas fa-list"></i> Lista de Veículos</h2>
+        <h3><i class="fas fa-list"></i> Lista de Veículos</h3>
         <span id="grid-records-count" class="veiculos-count-badge"></span>
       </div>
       <div class="table-responsive veiculos-table-container">
@@ -111,7 +141,8 @@
         </table>
       </div>
     </div>
-  </main>
+    </div>
+  </div>
 
   <!-- 🦶 Rodapé -->
   <footer class="footer">
@@ -130,14 +161,14 @@
             <form id="formImportacao">
                 <div class="form-group">
                     <label for="importFilial">Filial para todos os veículos *</label>
-                    <select id="importFilial" required>
+                    <select id="importFilial" class="glass-input" required>
                       <option value="">Selecione a Filial</option>
                     </select>
                 </div>
                 
                 <div class="form-group file-upload-container">
                     <label>Arquivo Excel (.xlsx)</label>
-                    <div class="file-upload-wrapper" id="dropZoneImportacao">
+                    <div class="file-upload-wrapper glass-input" id="dropZoneImportacao" style="height: auto; min-height: 100px;">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
                         <span class="upload-text" id="arquivoImportacaoLabel">Clique ou arraste o arquivo aqui</span>
                         <p class="helper-text" style="font-size: 0.8rem; color: #888; margin-top: 5px;">Colunas: PLACA (Obrigatório), MODELO, TIPO, etc.</p>
@@ -167,33 +198,33 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="veiculoFilial">Filial *</label>
-                        <select id="veiculoFilial" required>
+                        <select id="veiculoFilial" class="glass-input" required>
                             <option value="">Selecione</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="veiculoPlaca">Placa *</label>
-                        <input type="text" id="veiculoPlaca" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234">
+                        <input type="text" id="veiculoPlaca" class="glass-input" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="veiculoMarca">Marca</label>
-                        <input type="text" id="veiculoMarca" placeholder="Ex: Volvo">
+                        <input type="text" id="veiculoMarca" class="glass-input" placeholder="Ex: Volvo">
                     </div>
                     <div class="form-group">
                         <label for="veiculoModelo">Modelo *</label>
-                        <input type="text" id="veiculoModelo" required placeholder="Ex: FH 540">
+                        <input type="text" id="veiculoModelo" class="glass-input" required placeholder="Ex: FH 540">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="veiculoRenavan">Renavan</label>
-                        <input type="text" id="veiculoRenavan">
+                        <input type="text" id="veiculoRenavan" class="glass-input">
                     </div>
                     <div class="form-group">
                         <label for="veiculoTipo">Tipo *</label>
-                        <select id="veiculoTipo" required>
+                        <select id="veiculoTipo" class="glass-input" required>
                             <option value="">Selecione</option>
                             <!-- Opções preenchidas via JS -->
                         </select>
@@ -202,11 +233,11 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="veiculoVolumeTanque">Volume do Tanque Total (L)</label>
-                        <input type="number" id="veiculoVolumeTanque" step="0.01" placeholder="Ex: 200">
+                        <input type="number" id="veiculoVolumeTanque" class="glass-input" step="0.01" placeholder="Ex: 200">
                     </div>
                     <div class="form-group">
                         <label for="veiculoSituacao">Situação *</label>
-                        <select id="veiculoSituacao" required>
+                        <select id="veiculoSituacao" class="glass-input" required>
                             <option value="ativo">ATIVO</option>
                             <option value="inativo">INATIVO</option>
                             <option value="INTERNADO">INTERNADO</option>
@@ -214,7 +245,7 @@
                     </div>
                     <div class="form-group">
                         <label for="veiculoQrcode">QR Code</label>
-                        <input type="text" id="veiculoQrcode" placeholder="Código do QR">
+                        <input type="text" id="veiculoQrcode" class="glass-input" placeholder="Código do QR">
                     </div>
                 </div>
                 <div class="form-actions">
