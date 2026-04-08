@@ -8,6 +8,23 @@ body {
     background-color: #f4f7f6 !important; /* Fundo da página levemente cinza para destacar os cards brancos */
 }
 
+/* Cabeçalho Compacto Glass (Baseado em monitoramento.html) */
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95)) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    margin-bottom: 15px !important;
+    color: white !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.glass-header span, .glass-header i {
+    color: white !important;
+}
+
 .glass-panel {
     background: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
@@ -45,6 +62,33 @@ body {
 .glass-card.orange .kpi-icon { background-color: rgba(253, 126, 20, 0.15); color: white; }
 .glass-card.yellow .kpi-icon { background-color: rgb(255, 193, 7); color: white; }
 .glass-card.green .kpi-icon { background-color: rgba(40, 167, 69, 0.15); color: white; }
+
+/* Estilo dos Botões da Barra Superior */
+.btn-glass {
+    padding: 8px 15px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    color: white !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    transition: all 0.3s ease !important;
+    font-size: 0.85rem !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    text-transform: uppercase !important;
+}
+
+.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3) !important; }
+.btn-blue:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+.last-update-text {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.8rem;
+    margin-right: 10px;
+}
 
 .kpi-icon {
     font-size: 1.1rem !important;
@@ -134,6 +178,12 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* Rodapé */
+.footer {
+    color: #666;
+    margin-top: 30px;
+}
 
 .container.fullscreen-active {
     display: block !important;
