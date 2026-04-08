@@ -7,6 +7,8 @@ let chartsPizzaEngraxe = [];
 let chartStatus = null;
 let chartGastoMensal = null;
 let chartGastoEngraxe = null;
+let chartGastoAnualLavagem = null;
+let chartGastoAnualEngraxe = null;
 
 const REFRESH_INTERVAL = 300000; // 5 minutos
 
@@ -90,7 +92,9 @@ async function carregarDados() {
         atualizarKPIs(dadosLavagem, dadosEngraxe);
         renderizarGraficos(dadosLavagem, dadosEngraxe);
         carregarGraficoGastoMensal();
+        carregarGraficoGastoAnualLavagem();
         carregarGraficoGastoEngraxe();
+        carregarGraficoGastoAnualEngraxe();
 
         document.getElementById('last-update').textContent = `Atualizado às: ${new Date().toLocaleTimeString()}`;
     } catch (error) {
@@ -185,6 +189,69 @@ async function carregarGraficoGastoMensal() {
     }
 }
 
+async function carregarGraficoGastoAnualLavagem() {
+    try {
+        const anoAtual = new Date().getFullYear();
+        // Busca itens realizados de listas que já foram finalizadas dentro do ano atual
+        const { data, error } = await supabaseClient
+            .from('lavagem_itens')
+            .select('valor, status, lavagem_listas!inner(status, data_lista)')
+            .eq('status', 'REALIZADO')
+            .eq('lavagem_listas.status', 'FINALIZADA')
+            .gte('lavagem_listas.data_lista', `${anoAtual}-01-01`)
+            .lte('lavagem_listas.data_lista', `${anoAtual}-12-31`);
+
+        if (error) throw error;
+
+        const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const valoresMensais = new Array(12).fill(0);
+
+        (data || []).forEach(item => {
+            const dataStr = item.lavagem_listas.data_lista;
+            if (dataStr) {
+                const mes = new Date(dataStr + 'T00:00:00').getMonth();
+                valoresMensais[mes] += parseFloat(item.valor || 0);
+            }
+        });
+
+        const ctx = document.getElementById('chartGastoAnualLavagem').getContext('2d');
+        if (chartGastoAnualLavagem) chartGastoAnualLavagem.destroy();
+
+        chartGastoAnualLavagem = new Chart(ctx, {
+            type: 'line', // Tipo linha para mostrar a evolução temporal
+            data: {
+                labels: mesesLabels,
+                datasets: [{
+                    label: `Gasto Lavagem em ${anoAtual} (R$)`,
+                    data: valoresMensais,
+                    borderColor: '#006937', // Verde Marquespan
+                    backgroundColor: 'rgba(0, 105, 55, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#006937'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Erro ao carregar gráfico de gasto anual lavagem:', e);
+    }
+}
+
 async function carregarGraficoGastoEngraxe() {
     try {
         // Busca itens realizados em listas finalizadas
@@ -243,6 +310,69 @@ async function carregarGraficoGastoEngraxe() {
         });
     } catch (e) {
         console.error('Erro ao carregar gráfico de gasto engraxe:', e);
+    }
+}
+
+async function carregarGraficoGastoAnualEngraxe() {
+    try {
+        const anoAtual = new Date().getFullYear();
+        // Busca itens realizados em listas finalizadas dentro do ano atual
+        const { data, error } = await supabaseClient
+            .from('engraxe_itens')
+            .select('status, engraxe_listas!inner(status, data_lista)')
+            .in('status', ['OK', 'REALIZADO'])
+            .eq('engraxe_listas.status', 'FINALIZADA')
+            .gte('engraxe_listas.data_lista', `${anoAtual}-01-01`)
+            .lte('engraxe_listas.data_lista', `${anoAtual}-12-31`);
+
+        if (error) throw error;
+
+        const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const valoresMensais = new Array(12).fill(0);
+
+        (data || []).forEach(item => {
+            const dataStr = item.engraxe_listas.data_lista;
+            if (dataStr) {
+                const mes = new Date(dataStr + 'T00:00:00').getMonth();
+                valoresMensais[mes] += 60.00;
+            }
+        });
+
+        const ctx = document.getElementById('chartGastoAnualEngraxe').getContext('2d');
+        if (chartGastoAnualEngraxe) chartGastoAnualEngraxe.destroy();
+
+        chartGastoAnualEngraxe = new Chart(ctx, {
+            type: 'line', // Tipo linha é melhor para ver a evolução no tempo
+            data: {
+                labels: mesesLabels,
+                datasets: [{
+                    label: `Gasto em ${anoAtual} (R$)`,
+                    data: valoresMensais,
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fd7e14'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Erro ao carregar gráfico de gasto anual engraxe:', e);
     }
 }
 
