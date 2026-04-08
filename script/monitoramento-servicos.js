@@ -8,6 +8,22 @@ let chartStatus = null;
 
 const REFRESH_INTERVAL = 300000; // 5 minutos
 
+// Configurações de Status e Cores conforme lavagem.html e mobile-engraxe.css
+const lavagemConfig = {
+    'REALIZADO': { color: '#28a745', label: 'Realizado' },
+    'PENDENTE': { color: '#dc3545', label: 'Pendente' },
+    'INTERNADO': { color: '#007bff', label: 'Internado' },
+    'AGENDADO': { color: '#ffc107', label: 'Agendado' },
+    'DISPENSADO': { color: '#6c757d', label: 'Dispensado' }
+};
+
+const engraxeConfig = {
+    'OK': { color: '#28a745', label: 'Realizado' },
+    'PENDENTE': { color: '#dc3545', label: 'Pendente' },
+    'INTERNADO': { color: '#007bff', label: 'Internado' },
+    'ROTA': { color: '#17a2b8', label: 'Em Rota' }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
     carregarFiliais();
@@ -116,26 +132,28 @@ function renderChartProgressoLavagem(lavagem) {
     if (chartProgressoLavagem) chartProgressoLavagem.destroy();
 
     const labels = [];
-    const concluidos = [];
-    const pendentes = [];
+    const statusKeys = Object.keys(lavagemConfig);
+    const dataMatrix = statusKeys.reduce((acc, key) => { acc[key] = []; return acc; }, {});
 
     lavagem.forEach(lista => {
         labels.push(lista.nome);
         const itens = lista.lavagem_itens || [];
-        const done = itens.filter(i => ['REALIZADO', 'OK'].includes(i.status)).length;
-        const pending = itens.length - done;
-        concluidos.push(done);
-        pendentes.push(pending);
+        statusKeys.forEach(key => {
+            dataMatrix[key].push(itens.filter(i => i.status === key).length);
+        });
     });
+
+    const datasets = statusKeys.map(key => ({
+        label: lavagemConfig[key].label,
+        data: dataMatrix[key],
+        backgroundColor: lavagemConfig[key].color
+    }));
 
     chartProgressoLavagem = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [
-                { label: 'Concluídos', data: concluidos, backgroundColor: '#28a745' },
-                { label: 'Pendentes', data: pendentes, backgroundColor: '#dc3545' }
-            ]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -144,7 +162,9 @@ function renderChartProgressoLavagem(lavagem) {
                 x: { stacked: true, grid: { display: false } }, 
                 y: { stacked: true, grid: { color: '#f0f0f0' } } 
             },
-            plugins: { legend: { labels: { color: '#333' } } }
+            plugins: { 
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: '#333' } } 
+            }
         }
     });
 }
@@ -154,26 +174,28 @@ function renderChartProgressoEngraxe(engraxe) {
     if (chartProgressoEngraxe) chartProgressoEngraxe.destroy();
 
     const labels = [];
-    const concluidos = [];
-    const pendentes = [];
+    const statusKeys = Object.keys(engraxeConfig);
+    const dataMatrix = statusKeys.reduce((acc, key) => { acc[key] = []; return acc; }, {});
 
     engraxe.forEach(lista => {
         labels.push(lista.nome);
         const itens = lista.engraxe_itens || [];
-        const done = itens.filter(i => ['REALIZADO', 'OK'].includes(i.status)).length;
-        const pending = itens.length - done;
-        concluidos.push(done);
-        pendentes.push(pending);
+        statusKeys.forEach(key => {
+            dataMatrix[key].push(itens.filter(i => i.status === key).length);
+        });
     });
+
+    const datasets = statusKeys.map(key => ({
+        label: engraxeConfig[key].label,
+        data: dataMatrix[key],
+        backgroundColor: engraxeConfig[key].color
+    }));
 
     chartProgressoEngraxe = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [
-                { label: 'Concluídos', data: concluidos, backgroundColor: '#28a745' },
-                { label: 'Pendentes', data: pendentes, backgroundColor: '#dc3545' }
-            ]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -182,7 +204,9 @@ function renderChartProgressoEngraxe(engraxe) {
                 x: { stacked: true, grid: { display: false } }, 
                 y: { stacked: true, grid: { color: '#f0f0f0' } } 
             },
-            plugins: { legend: { labels: { color: '#333' } } }
+            plugins: { 
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: '#333' } } 
+            }
         }
     });
 }
@@ -191,28 +215,46 @@ function renderChartStatus(lavagem, engraxe) {
     const ctx = document.getElementById('chartStatusServicos').getContext('2d');
     if (chartStatus) chartStatus.destroy();
 
-    let sRealizado = 0, sPendente = 0, sAgendado = 0, sInternado = 0;
+    const summary = {
+        'Realizado': { count: 0, color: '#28a745' },
+        'Pendente': { count: 0, color: '#dc3545' },
+        'Internado': { count: 0, color: '#007bff' },
+        'Agendado': { count: 0, color: '#ffc107' },
+        'Dispensado': { count: 0, color: '#6c757d' },
+        'Em Rota': { count: 0, color: '#17a2b8' }
+    };
 
     [...lavagem, ...engraxe].forEach(lista => {
         const itens = lista.lavagem_itens || lista.engraxe_itens || [];
         itens.forEach(i => {
-            if (['REALIZADO', 'OK'].includes(i.status)) sRealizado++;
-            else if (i.status === 'PENDENTE') sPendente++;
-            else if (i.status === 'AGENDADO') sAgendado++;
-            else if (i.status === 'INTERNADO') sInternado++;
+            const s = i.status;
+            if (s === 'REALIZADO' || s === 'OK') summary['Realizado'].count++;
+            else if (s === 'PENDENTE') summary['Pendente'].count++;
+            else if (s === 'INTERNADO') summary['Internado'].count++;
+            else if (s === 'AGENDADO') summary['Agendado'].count++;
+            else if (s === 'DISPENSADO' || s === 'PULAR_LAVAGEM') summary['Dispensado'].count++;
+            else if (s === 'ROTA') summary['Em Rota'].count++;
         });
     });
+
+    const activeLabels = Object.keys(summary).filter(k => summary[k].count > 0);
 
     chartStatus = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Realizado', 'Pendente', 'Agendado', 'Internado'],
+            labels: activeLabels,
             datasets: [{
-                data: [sRealizado, sPendente, sAgendado, sInternado],
-                backgroundColor: ['#28a745', '#dc3545', '#ffc107', '#007bff']
+                data: activeLabels.map(k => summary[k].count),
+                backgroundColor: activeLabels.map(k => summary[k].color)
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, color: '#333' } }
+            }
+        }
     });
 }
 
@@ -228,11 +270,12 @@ function renderChartPizzaLavagem(lavagem) {
     chartsPizzaLavagem.forEach(c => c.destroy());
     chartsPizzaLavagem = [];
 
+    const statusKeys = Object.keys(lavagemConfig);
+
     lavagem.forEach(lista => {
         const itens = lista.lavagem_itens || [];
-        const done = itens.filter(i => ['REALIZADO', 'OK'].includes(i.status)).length;
         const total = itens.length;
-        const pending = total - done;
+        const data = statusKeys.map(k => itens.filter(i => i.status === k).length);
 
         const wrapper = document.createElement('div');
         wrapper.className = 'pizza-item-wrapper';
@@ -248,10 +291,10 @@ function renderChartPizzaLavagem(lavagem) {
         const chart = new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: ['Concluídos', 'Pendentes'],
+                labels: statusKeys.map(k => lavagemConfig[k].label),
                 datasets: [{
-                    data: [done, pending],
-                    backgroundColor: ['#28a745', '#dc3545'],
+                    data: data,
+                    backgroundColor: statusKeys.map(k => lavagemConfig[k].color),
                     borderWidth: 1
                 }]
             },
