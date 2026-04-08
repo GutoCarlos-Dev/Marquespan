@@ -108,15 +108,9 @@ function atualizarKPIs(lavagem, engraxe) {
     const engraxePendentes = engraxe.reduce((acc, lista) => 
         acc + lista.engraxe_itens.filter(i => i.status === 'PENDENTE').length, 0);
 
-    const hojeStr = new Date().toISOString().split('T')[0];
-    const realizadosHoje = 
-        lavagem.reduce((acc, lista) => acc + lista.lavagem_itens.filter(i => i.status === 'REALIZADO' && i.data_realizado?.startsWith(hojeStr)).length, 0) +
-        engraxe.reduce((acc, lista) => acc + lista.engraxe_itens.filter(i => i.status === 'OK' && i.data_realizado?.startsWith(hojeStr)).length, 0);
-
     document.getElementById('kpi-listas-abertas').textContent = totalListas;
     document.getElementById('kpi-lavagem-pendente').textContent = lavagemPendentes;
     document.getElementById('kpi-engraxe-pendente').textContent = engraxePendentes;
-    document.getElementById('kpi-realizados-hoje').textContent = realizadosHoje;
 }
 
 function renderizarGraficos(lavagem, engraxe) {
