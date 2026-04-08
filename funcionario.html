@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Funcionários - Marquespan</title>
-  <link rel="stylesheet" href="css/index.css?v=1.1" />
-  <link rel="stylesheet" href="css/funcionario.css?v=1.1" />
+  <!-- Fundação e Layout Moderno -->
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <!-- Estilo Específico -->
+  <link rel="stylesheet" href="css/funcionario.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
   <style>
@@ -16,9 +21,7 @@
 </head>
 <body>
   <div class="container">
-    <div id="menu-container">
-      <!-- O menu será injetado aqui pelo menu.js -->
-    </div>
+    <div id="menu-container"></div>
     <div class="main-content">
       <header class="header glass-header">
         <h1><i class="fas fa-users"></i> Cadastro de Funcionários</h1>
@@ -242,6 +245,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/funcionario.js?v=1.1"></script>
+  <script type="module" src="script/funcionario.js"></script>
 </body>
 </html>
