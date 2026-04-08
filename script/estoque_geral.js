@@ -10,6 +10,7 @@ const EstoqueGeralUI = {
         // Carrega dados iniciais
         this.carregarEstoque();
         this.carregarListaProdutosDatalist();
+        this.carregarVeiculosRetirada();
         this.updateTime();
         setInterval(() => this.updateTime(), 60000);
     },
@@ -39,9 +40,18 @@ const EstoqueGeralUI = {
         this.gridItensRetirada = document.getElementById('grid-itens-retirada');
         this.totalItensRetirada = document.getElementById('total-itens-retirada');
         this.retiradaResponsavel = document.getElementById('retirada-responsavel');
+        this.retiradaVeiculo = document.getElementById('retirada-veiculo');
         this.retiradaObservacao = document.getElementById('retirada-observacao');
         this.btnRegistrarSaida = document.getElementById('btn-registrar-saida');
         this.btnGerarPdfSaida = document.getElementById('btn-gerar-pdf-saida');
+
+        // Aba Gerenciar Produtos
+        this.formProduto = document.getElementById('formCadastrarProduto');
+        this.produtoEditingId = document.getElementById('produtoEditingId');
+        this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
+        this.btnClearProdutoForm = document.getElementById('btnClearProdutoForm');
+        this.searchProdutoTab = document.getElementById('searchProdutoTab');
+        this.gridProdutosTabBody = document.getElementById('produtos-tab-body');
         this.listaProdutosRetirada = document.getElementById('lista-produtos-retirada');
 
         // Aba Batimento
@@ -84,6 +94,13 @@ const EstoqueGeralUI = {
         this.retiradaProdutoInput.addEventListener('change', (e) => this.handleProdutoSelect(e, 'retirada'));
         this.btnAdicionarItemRetirada.addEventListener('click', () => this.adicionarItemRetirada());
         this.gridItensRetirada.addEventListener('click', (e) => this.removerItemRetirada(e));
+
+        // Gerenciar Produtos
+        this.formProduto.addEventListener('submit', (e) => this.handleProdutoFormSubmit(e));
+        this.btnClearProdutoForm.addEventListener('click', () => this.clearProdutoForm());
+        this.searchProdutoTab.addEventListener('input', () => this.renderProdutosGrid());
+        this.gridProdutosTabBody.addEventListener('click', (e) => this.handleProdutoTableClick(e));
+
         this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
         if (this.btnGerarPdfSaida) this.btnGerarPdfSaida.addEventListener('click', () => this.gerarPdfSaida());
 
@@ -133,6 +150,9 @@ const EstoqueGeralUI = {
 
         if (targetId === 'tab-relatorios') {
             this.carregarRelatorio();
+        }
+        if (targetId === 'tab-produtos') {
+            this.renderProdutosGrid();
         }
     },
 
@@ -190,6 +210,126 @@ const EstoqueGeralUI = {
             const options = data.map(p => `<option value="${p.nome} (${p.codigo_principal})" data-id="${p.id}" data-estoque="${p.quantidade_em_estoque}">`).join('');
             this.listaProdutosRetirada.innerHTML = options;
             this.listaProdutosBatimento.innerHTML = options;
+        }
+    },
+
+    // --- LÓGICA DE GERENCIAMENTO DE PRODUTOS (Master Data) ---
+
+    async renderProdutosGrid() {
+        const term = this.searchProdutoTab.value.trim().toLowerCase();
+        this.gridProdutosTabBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+
+        try {
+            let query = supabaseClient.from('produtos').select('*').order('nome');
+            if (term) {
+                query = query.or(`nome.ilike.%${term}%,codigo_principal.ilike.%${term}%`);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            this.gridProdutosTabBody.innerHTML = (data || []).map(p => {
+                const status = p.status || 'Ativo';
+                const isInactive = status === 'Inativo';
+                const btnLabel = isInactive ? 'Ativar' : 'Inativar';
+                const btnClass = isInactive ? 'btn-green' : 'btn-orange';
+                const rowStyle = isInactive ? 'style="opacity: 0.6; background-color: #f9f9f9;"' : '';
+
+                return `
+                <tr ${rowStyle}>
+                    <td>${p.codigo_principal || '-'}</td>
+                    <td>${p.codigo_secundario || '-'}</td>
+                    <td>${p.nome}</td>
+                    <td>${p.unidade_medida || 'UN'}</td>
+                    <td><span class="status-badge ${isInactive ? 'status-inativo' : 'status-ativo'}">${status}</span></td>
+                    <td style="text-align: center;">
+                        <button class="btn-icon edit btn-edit-prod" data-id="${p.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-toggle-status" data-id="${p.id}" data-status="${status}" title="${btnLabel}"><i class="fas fa-power-off"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+        } catch (err) {
+            console.error('Erro ao listar produtos:', err);
+            this.gridProdutosTabBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
+        }
+    },
+
+    async handleProdutoFormSubmit(e) {
+        e.preventDefault();
+        const id = this.produtoEditingId.value;
+        const payload = {
+            codigo_principal: document.getElementById('produtoCodigo1').value.trim(),
+            codigo_secundario: document.getElementById('produtoCodigo2').value.trim(),
+            nome: document.getElementById('produtoNome').value.trim().toUpperCase(),
+            unidade_medida: document.getElementById('produtoUnidade').value.trim().toUpperCase(),
+        };
+
+        try {
+            const { error } = await supabaseClient.from('produtos').upsert({ id: id || undefined, ...payload });
+            if (error) throw error;
+
+            alert('✅ Produto salvo com sucesso!');
+            this.clearProdutoForm();
+            this.renderProdutosGrid();
+            this.carregarListaProdutosDatalist(); // Atualiza sugestões em outras abas
+        } catch (err) {
+            alert('Erro ao salvar produto: ' + err.message);
+        }
+    },
+
+    handleProdutoTableClick(e) {
+        const btnEdit = e.target.closest('.btn-edit-prod');
+        const btnStatus = e.target.closest('.btn-toggle-status');
+
+        if (btnEdit) {
+            const p = this.produtosCache.find(x => x.id == btnEdit.dataset.id);
+            if (p) {
+                this.produtoEditingId.value = p.id;
+                document.getElementById('produtoCodigo1').value = p.codigo_principal || '';
+                document.getElementById('produtoCodigo2').value = p.codigo_secundario || '';
+                document.getElementById('produtoNome').value = p.nome || '';
+                document.getElementById('produtoUnidade').value = p.unidade_medida || '';
+                this.btnSubmitProduto.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        if (btnStatus) {
+            const id = btnStatus.dataset.id;
+            const currentStatus = btnStatus.dataset.status;
+            const newStatus = currentStatus === 'Inativo' ? 'Ativo' : 'Inativo';
+            if (confirm(`Deseja alterar o status para ${newStatus}?`)) {
+                supabaseClient.from('produtos').update({ status: newStatus }).eq('id', id).then(() => {
+                    this.renderProdutosGrid();
+                    this.carregarListaProdutosDatalist();
+                });
+            }
+        }
+    },
+
+    clearProdutoForm() {
+        this.formProduto.reset();
+        this.produtoEditingId.value = '';
+        this.btnSubmitProduto.innerHTML = '<i class="fas fa-save"></i> Salvar';
+    },
+
+    async carregarVeiculosRetirada() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('veiculos')
+                .select('placa')
+                .neq('situacao', 'inativo')
+                .order('placa');
+
+            if (error) throw error;
+
+            const datalist = document.getElementById('lista-veiculos-retirada');
+            if (datalist) {
+                datalist.innerHTML = (data || []).map(v => `<option value="${v.placa}">`).join('');
+            }
+        } catch (err) {
+            console.error('Erro ao carregar veículos para retirada:', err);
         }
     },
 
@@ -293,6 +433,7 @@ const EstoqueGeralUI = {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
         const observacao = this.retiradaObservacao.value.trim();
         const obsFinal = `Retirado por: ${responsavel}. ${observacao}`;
+        const veiculo = this.retiradaVeiculo.value.trim().toUpperCase();
 
         try {
             for (const item of this.carrinhoRetirada) {
@@ -316,7 +457,8 @@ const EstoqueGeralUI = {
                         quantidade_anterior: item.estoqueAtual,
                         quantidade_nova: novaQtd,
                         usuario: usuarioLogado,
-                        observacao: obsFinal
+                        observacao: obsFinal,
+                        veiculo: veiculo || null
                     });
 
                 if (movError) throw movError;
@@ -326,6 +468,7 @@ const EstoqueGeralUI = {
             this.dadosUltimaSaida = {
                 itens: JSON.parse(JSON.stringify(this.carrinhoRetirada)),
                 responsavel,
+                veiculo,
                 observacao,
                 usuario: usuarioLogado,
                 data: new Date()
@@ -343,6 +486,7 @@ const EstoqueGeralUI = {
             this.carrinhoRetirada = [];
             this.renderCarrinhoRetirada();
             this.retiradaResponsavel.value = '';
+            this.retiradaVeiculo.value = '';
             this.retiradaObservacao.value = '';
             
             // Atualiza dados
@@ -396,18 +540,26 @@ const EstoqueGeralUI = {
         doc.setTextColor(0);
         doc.text(`Data: ${data.data.toLocaleString('pt-BR')}`, 14, 40);
         doc.text(`Responsável pela Retirada: ${data.responsavel}`, 14, 46);
-        doc.text(`Registrado por: ${data.usuario}`, 14, 52);
-        let startY = 58;
+        
+        let currentY = 52;
+        if (data.veiculo) {
+            doc.text(`Veículo: ${data.veiculo}`, 14, currentY);
+            currentY += 6;
+        }
+        
+        doc.text(`Registrado por: ${data.usuario}`, 14, currentY);
+        currentY += 6;
+
         if(data.observacao) {
-            doc.text(`Observação: ${data.observacao}`, 14, 58);
-            startY = 64;
+            doc.text(`Observação: ${data.observacao}`, 14, currentY);
+            currentY += 6;
         }
 
         const columns = ['Código', 'Produto', 'Qtd'];
         const rows = data.itens.map(i => [i.codigo, i.nome, i.qtd]);
 
         doc.autoTable({
-            startY: startY,
+            startY: currentY,
             head: [columns],
             body: rows,
             theme: 'grid',
@@ -533,6 +685,7 @@ const EstoqueGeralUI = {
                 <td>${m.quantidade}</td>
                 <td>${m.quantidade_anterior}</td>
                 <td>${m.quantidade_nova}</td>
+                <td>${m.veiculo || '-'}</td>
                 <td>${m.usuario}</td>
                 <td style="font-size: 0.85em; color: #555;">${m.observacao || '-'}</td>
                 <td style="text-align: center;">

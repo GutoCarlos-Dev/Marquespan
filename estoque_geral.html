@@ -28,6 +28,7 @@
         <button class="painel-btn active" data-tab="tab-estoque-atual" aria-selected="true"><i class="fas fa-boxes"></i> Estoque Atual</button>
         <button class="painel-btn" data-tab="tab-retirada" aria-selected="false"><i class="fas fa-dolly"></i> Retirada do Estoque</button>
         <button class="painel-btn" data-tab="tab-batimento" aria-selected="false"><i class="fas fa-clipboard-check"></i> Batimento</button>
+        <button class="painel-btn" data-tab="tab-produtos" aria-selected="false"><i class="fas fa-tags"></i> Gerenciar Produtos</button>
         <button class="painel-btn" data-tab="tab-relatorios" aria-selected="false"><i class="fas fa-chart-line"></i> Relatórios</button>
       </div>
 
@@ -153,9 +154,14 @@
               <label>Retirado Por (Nome Legível)</label>
               <input type="text" id="retirada-responsavel" class="glass-input" placeholder="Quem está levando a peça?" oninput="this.value = this.value.toUpperCase()">
             </div>
+            <div class="form-group">
+              <label>Veículo (Opcional)</label>
+              <input type="text" id="retirada-veiculo" list="lista-veiculos-retirada" class="glass-input" placeholder="Placa..." oninput="this.value = this.value.toUpperCase()">
+              <datalist id="lista-veiculos-retirada"></datalist>
+            </div>
             <div class="form-group" style="grid-column: span 2;">
               <label>Observação / Motivo</label>
-              <input type="text" id="retirada-observacao" class="glass-input" placeholder="Opcional" oninput="this.value = this.value.toUpperCase()">
+              <textarea id="retirada-observacao" class="glass-input" placeholder="Motivo da retirada..." oninput="this.value = this.value.toUpperCase()"></textarea>
             </div>
           </div>
           <div class="form-actions" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
@@ -193,6 +199,64 @@
               </div>
             </div>
           </form>
+        </div>
+      </section>
+
+      <!-- ABA: GERENCIAR PRODUTOS (Master Data) -->
+      <section id="tab-produtos" class="tab-content hidden">
+        <div class="glass-panel">
+          <h4><i class="fas fa-plus-circle"></i> Cadastro / Edição de Produto</h4>
+          <form id="formCadastrarProduto">
+            <input type="hidden" id="produtoEditingId">
+            <div class="grid-filtros">
+              <div class="form-group">
+                <label>Código Principal</label>
+                <input type="text" id="produtoCodigo1" class="glass-input" required placeholder="Ex: 1010">
+              </div>
+              <div class="form-group">
+                <label>Código Secundário</label>
+                <input type="text" id="produtoCodigo2" class="glass-input" placeholder="Opcional">
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Nome do Produto</label>
+                <input type="text" id="produtoNome" class="glass-input" required placeholder="Nome completo">
+              </div>
+              <div class="form-group">
+                <label>Unidade</label>
+                <input type="text" id="produtoUnidade" class="glass-input" placeholder="Ex: UN, KG, LT">
+              </div>
+              <div class="form-group" style="display: flex; gap: 10px;">
+                <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green" style="flex: 1;"><i class="fas fa-save"></i> Salvar</button>
+                <button type="button" id="btnClearProdutoForm" class="btn-glass btn-muted"><i class="fas fa-times"></i></button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4><i class="fas fa-list"></i> Lista de Produtos Cadastrados</h4>
+            <div class="form-group" style="margin: 0; width: 300px;">
+              <input type="text" id="searchProdutoTab" class="glass-input" placeholder="Filtrar produtos...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cód. Secundário</th>
+                  <th>Nome do Produto</th>
+                  <th>Unidade</th>
+                  <th>Status</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="produtos-tab-body">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -259,6 +323,7 @@
                   <th>Qtd. Mov.</th>
                   <th>Saldo Anterior</th>
                   <th>Saldo Novo</th>
+                  <th>Veículo</th>
                   <th>Usuário</th>
                   <th>Detalhes</th>
                   <th>Ações</th>
