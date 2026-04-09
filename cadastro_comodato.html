@@ -26,10 +26,8 @@
     <section id="sec-cli" class="section glass-panel">
       <h3><i class="fas fa-user-plus"></i> Cadastro de Cliente</h3>
       <form id="formCliente">
-        <div class="funcionario-layout">
-          <!-- Lado Esquerdo: Cards de Dados -->
-          <div class="funcionario-main-cards">
-          
+        <div class="comodato-grid-layout">
+            
             <!-- Card 1: Controle -->
             <div class="glass-panel-inner">
               <h4><i class="fas fa-info-circle"></i> Controle</h4>
@@ -70,22 +68,24 @@
               </div>
             </div>
 
-            <!-- Card 4: Documentação -->
-            <div class="glass-panel-inner">
+            <!-- Card 4: Ações -->
+            <div class="glass-panel-inner actions-panel">
+              <h4><i class="fas fa-cogs"></i> Ações</h4>
+              <div class="form-actions-vertical">
+                <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Cliente</button>
+                <button type="button" id="btnLimparCliente" class="btn-glass btn-blue"><i class="fas fa-eraser"></i> Limpar</button>
+              </div>
+            </div>
+
+            <!-- Linha de Baixo: Documentação (Ocupa as 4 colunas) -->
+            <div class="glass-panel-inner card-full-width">
               <h4><i class="fas fa-camera"></i> Documentação Fotográfica</h4>
-              <div class="form-group"><label>Fotos (Máx 5)</label><input type="file" id="cliFotos" multiple accept="image/*" class="glass-input"></div>
+              <div class="form-grid" style="grid-template-columns: 1fr;">
+                <div class="form-group"><label>Fotos (Máx 5)</label><input type="file" id="cliFotos" multiple accept="image/*" class="glass-input"></div>
+              </div>
               <div id="previewFotos" class="preview-container"></div>
             </div>
-          </div>
 
-          <!-- Lado Direito: Painel de Ações -->
-          <div class="glass-panel-inner actions-panel">
-            <h4><i class="fas fa-cogs"></i> Ações</h4>
-            <div class="form-actions-vertical">
-              <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Cliente</button>
-              <button type="button" id="btnLimparCliente" class="btn-glass btn-blue"><i class="fas fa-eraser"></i> Limpar</button>
-            </div>
-          </div>
         </div>
       </form>
 

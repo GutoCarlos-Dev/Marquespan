@@ -212,7 +212,7 @@ const FuncionarioUI = {
                 <tr>
                     <td><strong>${f.rh_registro}</strong></td>
                     <td title="${f.nome_completo || ''}">${f.nome}</td>
-                    <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '-'}</td>
+                    <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.funcao}</td>
                     <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao).toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.contato_corp || f.contato_pessoal || '-'}</td>
