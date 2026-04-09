@@ -10,6 +10,7 @@ const EstoqueGeralUI = {
         // Carrega dados iniciais
         this.carregarEstoque();
         this.carregarListaProdutosDatalist();
+        this.carregarPrateleirasNoSelect();
         this.carregarVeiculosRetirada();
         this.updateTime();
         setInterval(() => this.updateTime(), 60000);
@@ -52,6 +53,7 @@ const EstoqueGeralUI = {
         this.btnClearProdutoForm = document.getElementById('btnClearProdutoForm');
         this.searchProdutoTab = document.getElementById('searchProdutoTab');
         this.gridProdutosTabBody = document.getElementById('produtos-tab-body');
+        this.produtoPrateleira = document.getElementById('produtoPrateleira');
         this.listaProdutosRetirada = document.getElementById('lista-produtos-retirada');
 
         // Aba Batimento
@@ -237,10 +239,10 @@ const EstoqueGeralUI = {
 
     async renderProdutosGrid() {
         const term = this.searchProdutoTab.value.trim().toLowerCase();
-        this.gridProdutosTabBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+        this.gridProdutosTabBody.innerHTML = '<tr><td colspan="9" class="text-center">Carregando...</td></tr>';
 
         try {
-            let query = supabaseClient.from('produtos').select('*').order('nome');
+            let query = supabaseClient.from('produtos').select('*, prateleiras(nome, localizacao)').order('nome');
             if (term) {
                 query = query.or(`nome.ilike.%${term}%,codigo_principal.ilike.%${term}%`);
             }
@@ -261,6 +263,8 @@ const EstoqueGeralUI = {
                     <td>${p.codigo_secundario || '-'}</td>
                     <td>${p.nome}</td>
                     <td>${p.unidade_medida || 'UN'}</td>
+                    <td>${p.prateleiras?.nome || '-'}</td>
+                    <td>${p.prateleiras?.localizacao || '-'}</td>
                     <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
                     <td><span class="status-badge ${isInactive ? 'status-inativo' : 'status-ativo'}">${status}</span></td>
                     <td style="text-align: center;">
@@ -272,7 +276,7 @@ const EstoqueGeralUI = {
 
         } catch (err) {
             console.error('Erro ao listar produtos:', err);
-            this.gridProdutosTabBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
+            this.gridProdutosTabBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
         }
     },
 
@@ -284,7 +288,8 @@ const EstoqueGeralUI = {
             codigo_secundario: document.getElementById('produtoCodigo2').value.trim(),
             nome: document.getElementById('produtoNome').value.trim().toUpperCase(),
             unidade_medida: document.getElementById('produtoUnidade').value.trim().toUpperCase(),
-            quantidade_minima: parseFloat(document.getElementById('produtoQtdMinima').value) || 0
+            quantidade_minima: parseFloat(document.getElementById('produtoQtdMinima').value) || 0,
+            prateleira_id: this.produtoPrateleira.value || null
         };
 
         try {
@@ -313,6 +318,7 @@ const EstoqueGeralUI = {
                 document.getElementById('produtoNome').value = p.nome || '';
                 document.getElementById('produtoUnidade').value = p.unidade_medida || '';
                 document.getElementById('produtoQtdMinima').value = p.quantidade_minima || 0;
+                this.produtoPrateleira.value = p.prateleira_id || '';
                 this.btnSubmitProduto.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -335,7 +341,22 @@ const EstoqueGeralUI = {
         this.formProduto.reset();
         this.produtoEditingId.value = '';
         document.getElementById('produtoQtdMinima').value = '0';
+        this.produtoPrateleira.value = '';
         this.btnSubmitProduto.innerHTML = '<i class="fas fa-save"></i> Salvar';
+    },
+
+    async carregarPrateleirasNoSelect() {
+        try {
+            const { data, error } = await supabaseClient.from('prateleiras').select('*').order('nome');
+            if (error) throw error;
+            
+            if (this.produtoPrateleira) {
+                this.produtoPrateleira.innerHTML = '<option value="">Selecione uma prateleira</option>' + 
+                    (data || []).map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+            }
+        } catch (err) {
+            console.error('Erro ao carregar select de prateleiras:', err);
+        }
     },
 
     // --- LÓGICA DE PRATELEIRAS ---
@@ -386,6 +407,7 @@ const EstoqueGeralUI = {
             alert('✅ Prateleira salva com sucesso!');
             this.clearPrateleiraForm();
             this.renderPrateleirasGrid();
+            this.carregarPrateleirasNoSelect();
         } catch (err) {
             alert('Erro ao salvar prateleira: ' + err.message);
         }
@@ -408,7 +430,10 @@ const EstoqueGeralUI = {
         if (btnDelete) {
             const id = btnDelete.dataset.id;
             if (confirm('Deseja realmente excluir esta prateleira?')) {
-                supabaseClient.from('prateleiras').delete().eq('id', id).then(() => this.renderPrateleirasGrid());
+                supabaseClient.from('prateleiras').delete().eq('id', id).then(() => {
+                    this.renderPrateleirasGrid();
+                    this.carregarPrateleirasNoSelect();
+                });
             }
         }
     },

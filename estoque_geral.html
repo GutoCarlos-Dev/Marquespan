@@ -230,6 +230,12 @@
                 <label>Qtd. Mínima</label>
                 <input type="number" id="produtoQtdMinima" class="glass-input" placeholder="0" step="0.01" value="0">
               </div>
+              <div class="form-group">
+                <label>Prateleira</label>
+                <select id="produtoPrateleira" class="glass-input">
+                  <option value="">Selecione uma prateleira</option>
+                </select>
+              </div>
               <div class="form-group" style="display: flex; gap: 10px;">
                 <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green" style="flex: 1;"><i class="fas fa-save"></i> Salvar</button>
                 <button type="button" id="btnClearProdutoForm" class="btn-glass btn-muted"><i class="fas fa-times"></i></button>
@@ -253,6 +259,8 @@
                   <th>Cód. Secundário</th>
                   <th>Nome do Produto</th>
                   <th>Unidade</th>
+                  <th>Prateleira</th>
+                  <th>Localização</th>
                   <th style="text-align: center;">Mínimo</th>
                   <th>Status</th>
                   <th style="text-align: center;">Ações</th>
