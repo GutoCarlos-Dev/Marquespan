@@ -43,6 +43,30 @@
     gap: 10px;
 }
 
+/* Layout Lateral (Padrão Funcionário) */
+.funcionario-layout {
+    display: grid;
+    grid-template-columns: 1fr 250px;
+    gap: 20px;
+    align-items: start;
+}
+
+.funcionario-main-cards {
+    display: grid;
+    gap: 20px;
+}
+
+.actions-panel {
+    position: sticky;
+    top: 20px;
+}
+
+.form-actions-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* Navegação por Abas */
 .painel-botoes {
     display: flex;
@@ -162,4 +186,13 @@
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid #ddd;
+}
+
+@media (max-width: 992px) {
+    .funcionario-layout {
+        grid-template-columns: 1fr;
+    }
+    .actions-panel {
+        position: static;
+    }
 }

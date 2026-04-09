@@ -26,53 +26,66 @@
     <section id="sec-cli" class="section glass-panel">
       <h3><i class="fas fa-user-plus"></i> Cadastro de Cliente</h3>
       <form id="formCliente">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+        <div class="funcionario-layout">
+          <!-- Lado Esquerdo: Cards de Dados -->
+          <div class="funcionario-main-cards">
           
-          <!-- Card 1: Controle -->
-          <div class="glass-panel-inner">
-            <h4><i class="fas fa-info-circle"></i> Controle</h4>
-            <div class="form-group"><label>Data</label><input type="date" id="cliData" class="glass-input"></div>
-            <div class="form-group"><label>Rota</label><input type="text" id="cliRota" class="glass-input"></div>
-            <div class="form-group"><label>Status</label>
-              <select id="cliStatus" class="glass-input">
-                <option value="PENDENTE">PENDENTE</option>
-                <option value="APROVADO">APROVADO</option>
-                <option value="NEGADO">NEGADO</option>
-              </select>
+            <!-- Card 1: Controle -->
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-info-circle"></i> Controle</h4>
+              <div class="form-grid">
+                <div class="form-group"><label>Data</label><input type="date" id="cliData" class="glass-input"></div>
+                <div class="form-group"><label>Rota</label><input type="text" id="cliRota" class="glass-input"></div>
+                <div class="form-group"><label>Status</label>
+                  <select id="cliStatus" class="glass-input">
+                    <option value="PENDENTE">PENDENTE</option>
+                    <option value="APROVADO">APROVADO</option>
+                    <option value="NEGADO">NEGADO</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Supervisor</label><input type="text" id="cliSupervisor" class="glass-input" placeholder="Nome do Supervisor"></div>
+              </div>
             </div>
-            <div class="form-group"><label>Supervisor</label><input type="text" id="cliSupervisor" class="glass-input" placeholder="Nome do Supervisor"></div>
+
+            <!-- Card 2: Identificação -->
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-id-card"></i> Identificação</h4>
+              <div class="form-grid">
+                <div class="form-group"><label>Razão Social</label><input type="text" id="cliRazao" required class="glass-input"></div>
+                <div class="form-group"><label>Nome Fantasia</label><input type="text" id="cliFantasia" class="glass-input"></div>
+                <div class="form-group"><label>CNPJ</label><input type="text" id="cliCnpj" class="glass-input"></div>
+                <div class="form-group"><label>Inscrição Estadual</label><input type="text" id="cliIe" class="glass-input"></div>
+                <div class="form-group"><label>CNAE</label><input type="text" id="cliCnae" class="glass-input"></div>
+              </div>
+            </div>
+
+            <!-- Card 3: Contato e Localização -->
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-map-marker-alt"></i> Localização e Contato</h4>
+              <div class="form-grid">
+                <div class="form-group"><label>Contato</label><input type="text" id="cliContato" class="glass-input"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="cliEmail" class="glass-input"></div>
+                <div class="form-group"><label>Município</label><input type="text" id="cliMunicipio" class="glass-input"></div>
+                <div class="form-group"><label>Endereço Completo</label><input type="text" id="cliEndereco" class="glass-input"></div>
+              </div>
+            </div>
+
+            <!-- Card 4: Documentação -->
+            <div class="glass-panel-inner">
+              <h4><i class="fas fa-camera"></i> Documentação Fotográfica</h4>
+              <div class="form-group"><label>Fotos (Máx 5)</label><input type="file" id="cliFotos" multiple accept="image/*" class="glass-input"></div>
+              <div id="previewFotos" class="preview-container"></div>
+            </div>
           </div>
 
-          <!-- Card 2: Identificação -->
-          <div class="glass-panel-inner">
-            <h4><i class="fas fa-id-card"></i> Identificação</h4>
-            <div class="form-group"><label>Razão Social</label><input type="text" id="cliRazao" required class="glass-input"></div>
-            <div class="form-group"><label>Nome Fantasia</label><input type="text" id="cliFantasia" class="glass-input"></div>
-            <div class="form-group"><label>CNPJ</label><input type="text" id="cliCnpj" class="glass-input"></div>
-            <div class="form-group"><label>Inscrição Estadual</label><input type="text" id="cliIe" class="glass-input"></div>
-            <div class="form-group"><label>CNAE</label><input type="text" id="cliCnae" class="glass-input"></div>
+          <!-- Lado Direito: Painel de Ações -->
+          <div class="glass-panel-inner actions-panel">
+            <h4><i class="fas fa-cogs"></i> Ações</h4>
+            <div class="form-actions-vertical">
+              <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Cliente</button>
+              <button type="button" id="btnLimparCliente" class="btn-glass btn-blue"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
           </div>
-
-          <!-- Card 3: Contato e Localização -->
-          <div class="glass-panel-inner">
-            <h4><i class="fas fa-map-marker-alt"></i> Localização e Contato</h4>
-            <div class="form-group"><label>Contato</label><input type="text" id="cliContato" class="glass-input"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="cliEmail" class="glass-input"></div>
-            <div class="form-group"><label>Município</label><input type="text" id="cliMunicipio" class="glass-input"></div>
-            <div class="form-group"><label>Endereço Completo</label><input type="text" id="cliEndereco" class="glass-input"></div>
-          </div>
-
-          <!-- Card 4: Documentação -->
-          <div class="glass-panel-inner">
-            <h4><i class="fas fa-camera"></i> Documentação Fotográfica</h4>
-            <div class="form-group"><label>Fotos (Máx 5)</label><input type="file" id="cliFotos" multiple accept="image/*" class="glass-input"></div>
-            <div id="previewFotos" class="preview-container"></div>
-          </div>
-
-        </div>
-        <div class="form-actions" style="margin-top: 20px;">
-          <button type="button" id="btnLimparCliente" class="btn-glass btn-blue">Limpar</button>
-          <button type="submit" class="btn-glass btn-green">Salvar Cliente</button>
         </div>
       </form>
 

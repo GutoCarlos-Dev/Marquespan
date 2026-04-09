@@ -114,7 +114,7 @@ const UI = {
 
   cache(){
     this.navLinks = document.querySelectorAll('#menu-compras button.painel-btn');
-    this.sections = document.querySelectorAll('section.glass-panel');
+    this.sections = document.querySelectorAll('main.main-content > section');
     this.cartBody = document.getElementById('cartBody');
     this.cartProductInput = document.getElementById('cartProductInput');
     this.cartQtd = document.getElementById('cartQtd');
