@@ -1,7 +1,3 @@
-// Variáveis de estado para controlar a edição de equipamentos
-let isEditingEquipamento = false;
-let editingEquipamentoId = null;
-
 // Variáveis de estado para controlar a edição de clientes
 let isEditingCliente = false;
 let editingClienteId = null;
@@ -11,14 +7,16 @@ let clienteFotosBase64 = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
-  loadEquipamentos();
   loadClientes();
 
   // Event Listeners Formulários
-  document.getElementById('formEquipamento').addEventListener('submit', saveEquipamento);
   document.getElementById('formCliente').addEventListener('submit', saveCliente);
   document.getElementById('cliFotos').addEventListener('change', handlePhotoSelect);
   document.getElementById('btnLimparCliente').addEventListener('click', clearFormCliente);
+
+  // Event Listeners Requisição
+  document.getElementById('btnAddItemReq').addEventListener('click', addLinhaItemReq);
+  document.getElementById('btnSalvarRequisicao').addEventListener('click', saveRequisicao);
 });
 
 // --- Lógica de Abas ---
@@ -52,104 +50,6 @@ function getCurrentUserName() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
   return usuario ? usuario.nome : 'Sistema';
 }
-
-// --- Lógica de Equipamentos (Local Storage) ---
-const KEY_EQUIPAMENTOS = 'marquespan_comodato_equipamentos';
-
-function getEquipamentos() {
-  return JSON.parse(localStorage.getItem(KEY_EQUIPAMENTOS)) || [];
-}
-
-function saveEquipamento(e) {
-  e.preventDefault();
-  const nome = document.getElementById('equipNome').value;
-  const tipo = document.getElementById('equipTipo').value;
-
-  let lista = getEquipamentos();
-
-  if (isEditingEquipamento) {
-    // Atualiza um equipamento existente
-    const index = lista.findIndex(item => item.id === editingEquipamentoId);
-    if (index !== -1) {
-      lista[index].nome = nome;
-      lista[index].tipo = tipo;
-    }
-    alert('Equipamento atualizado com sucesso!');
-  } else {
-    // Adiciona um novo equipamento
-    const novoEquip = {
-      id: Date.now(),
-      nome,
-      tipo
-    };
-    lista.push(novoEquip);
-    alert('Equipamento salvo com sucesso!');
-  }
-
-  localStorage.setItem(KEY_EQUIPAMENTOS, JSON.stringify(lista));
-
-  // Reseta o formulário e o estado de edição
-  document.getElementById('formEquipamento').reset();
-  const submitButton = document.querySelector('#formEquipamento button[type="submit"]');
-  submitButton.innerHTML = '<i class="fas fa-save"></i> Salvar Equipamento';
-  isEditingEquipamento = false;
-  editingEquipamentoId = null;
-  
-  loadEquipamentos();
-}
-
-function loadEquipamentos() {
-  const lista = getEquipamentos();
-  const tbody = document.getElementById('tableBodyEquipamentos');
-  tbody.innerHTML = '';
-
-  // Ordena a lista em ordem alfabética pelo nome
-  lista.sort((a, b) => a.nome.localeCompare(b.nome));
-
-  lista.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${item.nome}</td>
-      <td>${item.tipo || 'NORMAL'}</td>
-      <td>
-        <button onclick="editEquipamento(${item.id})" class="btn-icon-small text-primary" title="Editar"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteEquipamento(${item.id})" class="btn-icon-small text-danger" title="Excluir"><i class="fas fa-trash"></i></button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// Expor função de exclusão globalmente para o onclick
-window.deleteEquipamento = function(id) {
-  if(!confirm('Deseja excluir este equipamento?')) return;
-  let lista = getEquipamentos();
-  lista = lista.filter(item => item.id !== id);
-  localStorage.setItem(KEY_EQUIPAMENTOS, JSON.stringify(lista));
-  loadEquipamentos();
-};
-
-// Expor função de edição globalmente para o onclick
-window.editEquipamento = function(id) {
-  const lista = getEquipamentos();
-  const item = lista.find(equip => equip.id === id);
-
-  if (item) {
-    // Preenche o formulário com os dados do item
-    document.getElementById('equipNome').value = item.nome;
-    document.getElementById('equipTipo').value = item.tipo || 'NORMAL';
-
-    // Define o estado de edição
-    isEditingEquipamento = true;
-    editingEquipamentoId = id;
-
-    // Altera o texto do botão para "Atualizar"
-    const submitButton = document.querySelector('#formEquipamento button[type="submit"]');
-    submitButton.innerHTML = '<i class="fas fa-save"></i> Atualizar Equipamento';
-
-    document.getElementById('formEquipamento').scrollIntoView({ behavior: 'smooth' });
-  }
-};
 
 // --- Lógica de Clientes (Local Storage) ---
 const KEY_CLIENTES = 'marquespan_comodato_clientes';
@@ -269,6 +169,12 @@ function loadClientes() {
   const tbody = document.getElementById('tableBodyClientes');
   tbody.innerHTML = '';
 
+  // Popula o datalist para busca na aba de Requisição
+  const datalist = document.getElementById('listaClientesReq');
+  if (datalist) {
+    datalist.innerHTML = lista.map(c => `<option value="${c.razao}">${c.cnpj}</option>`).join('');
+  }
+
   lista.forEach(item => {
     const tr = document.createElement('tr');
     
@@ -295,10 +201,10 @@ function loadClientes() {
       <td>${item.cnpj}</td>
       <td>${item.rota}</td>
       <td><span class="badge ${statusClass}">${item.status}</span></td>
-      <td>
-        <button onclick="viewCliente(${item.id})" class="btn-icon-small text-primary" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
-        <button onclick="editCliente(${item.id})" class="btn-icon-small text-warning" title="Editar"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteCliente(${item.id})" class="btn-icon-small text-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+      <td class="actions-cell">
+        <button onclick="viewCliente(${item.id})" class="btn-icon info" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
+        <button onclick="editCliente(${item.id})" class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteCliente(${item.id})" class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -356,3 +262,63 @@ window.viewCliente = function(id) {
     alert(info);
   }
 };
+
+// --- Lógica de Requisição ---
+
+function addLinhaItemReq() {
+  const tbody = document.getElementById('tbodyReqItens');
+  const tr = document.createElement('tr');
+  const id = Date.now();
+  
+  tr.dataset.id = id;
+  tr.innerHTML = `
+    <td><input type="text" class="glass-input req-item-nome" placeholder="Nome do Equipamento" style="text-transform: uppercase;"></td>
+    <td><input type="number" class="glass-input req-item-qtd" value="1" min="1" style="text-align: center;"></td>
+    <td class="actions-cell">
+      <button type="button" class="btn-icon delete" onclick="this.closest('tr').remove()" title="Remover"><i class="fas fa-trash"></i></button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function saveRequisicao() {
+  const cliente = document.getElementById('reqCliente').value;
+  const motivo = document.getElementById('reqMotivo').value;
+  const rows = document.querySelectorAll('#tbodyReqItens tr');
+  
+  if (!cliente) return alert('Selecione um cliente para a requisição.');
+  if (rows.length === 0) return alert('Adicione pelo menos um item à requisição.');
+
+  const itens = [];
+  let valid = true;
+
+  rows.forEach(row => {
+    const nome = row.querySelector('.req-item-nome').value.trim();
+    const qtd = parseInt(row.querySelector('.req-item-qtd').value);
+
+    if (!nome) {
+      valid = false;
+      row.querySelector('.req-item-nome').focus();
+    }
+    itens.push({ nome, qtd });
+  });
+
+  if (!valid) return alert('Preencha o nome de todos os equipamentos adicionados.');
+
+  const requisicao = {
+    id: Date.now(),
+    cliente,
+    motivo,
+    itens,
+    usuario: getCurrentUserName(),
+    data: new Date().toISOString()
+  };
+
+  // Mock de salvamento (pode ser integrado ao LocalStorage ou Banco de Dados)
+  console.log('Requisição Gerada:', requisicao);
+  alert('Requisição gerada com sucesso! Verifique os dados no console.');
+  
+  // Limpa o formulário de requisição
+  document.getElementById('reqCliente').value = '';
+  document.getElementById('tbodyReqItens').innerHTML = '';
+}

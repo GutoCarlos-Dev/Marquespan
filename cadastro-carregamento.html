@@ -4,42 +4,50 @@
   <meta charset="UTF-8">
   <title>Cadastro Carregamento - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/index.css"> 
+  <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css">
 </head>
 <body>
   <div id="menu-container"></div>
 
   <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
-    <header class="header">📦 Cadastro Carregamento</header>
+    <header class="header glass-header"><h1><i class="fas fa-truck-loading"></i> Cadastro Carregamento</h1></header>
 
-    <section id="itens" class="secao">
-      <h3>📦 Itens</h3>
+    <section id="itens" class="glass-panel">
+      <h3><i class="fas fa-boxes"></i> Itens</h3>
       
-      <div class="botoes-form">
-        <button type="button" id="btnIncluirItem">➕ Incluir Item</button>
+      <div class="form-actions" style="justify-content: flex-start; margin-bottom: 15px;">
+        <button type="button" id="btnIncluirItem" class="btn-glass btn-blue">➕ Incluir Item</button>
       </div>
-      <form id="formItem" class="formulario">
-        <label for="codigoItem">Código:</label>
-        <input type="text" id="codigoItem" placeholder="Código do Item" required disabled>
-        <label for="nomeItem">Nome:</label>
-        <input type="text" id="nomeItem" placeholder="Nome do Item" required disabled>
-        <label for="tipoItem">Tipo:</label>
-        <select id="tipoItem" required disabled>
-          <option value="" disabled selected>Selecione o tipo</option>
-          <option value="Novo">Novo</option>
-          <option value="Usado">Usado</option>
-        </select>
-        <div class="botoes-form">
-          <button type="submit" id="btnSalvarItem" disabled>✅ Salvar Item</button>
+      <form id="formItem">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="codigoItem">Código:</label>
+            <input type="text" id="codigoItem" placeholder="Código do Item" required disabled class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="nomeItem">Nome:</label>
+            <input type="text" id="nomeItem" placeholder="Nome do Item" required disabled class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="tipoItem">Tipo:</label>
+            <select id="tipoItem" required disabled class="glass-input">
+              <option value="" disabled selected>Selecione o tipo</option>
+              <option value="Novo">Novo</option>
+              <option value="Usado">Usado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 15px;">
+          <button type="submit" id="btnSalvarItem" disabled class="btn-glass btn-green">✅ Salvar Item</button>
         </div>
       </form>
          
-      <div class="table-container">
-        <table id="tabelaItens" class="tabela-usuarios">
+      <div class="table-responsive">
+        <table id="tabelaItens" class="glass-table data-grid">
           <thead>
             <tr>
               <th>Código</th>
@@ -53,23 +61,33 @@
       </div>
     </section>
 
-    <section id="clientes" class="secao">
-      <h3>👥 Clientes</h3>
-      <form id="formCliente" class="formulario">
-        <label for="codCliente">Código:</label>
-        <input type="text" id="codCliente" placeholder="Código do Cliente" required>
-        <label for="nomeCliente">Nome:</label>
-        <input type="text" id="nomeCliente" placeholder="Nome do Cliente" required>
-        <label for="cidadeCliente">Cidade:</label>
-        <input type="text" id="cidadeCliente" placeholder="Cidade" required>
-        <label for="estadoCliente">Estado:</label>
-        <input type="text" id="estadoCliente" placeholder="Estado" required>
-        <div class="botoes-form">
-          <button type="submit" id="btnSalvarCliente">✅ Salvar Cliente</button>
+    <section id="clientes" class="glass-panel">
+      <h3><i class="fas fa-users"></i> Clientes</h3>
+      <form id="formCliente">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="codCliente">Código:</label>
+            <input type="text" id="codCliente" placeholder="Código do Cliente" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="nomeCliente">Nome:</label>
+            <input type="text" id="nomeCliente" placeholder="Nome do Cliente" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="cidadeCliente">Cidade:</label>
+            <input type="text" id="cidadeCliente" placeholder="Cidade" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="estadoCliente">Estado:</label>
+            <input type="text" id="estadoCliente" placeholder="Estado" required class="glass-input">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 15px;">
+          <button type="submit" id="btnSalvarCliente" class="btn-glass btn-green">✅ Salvar Cliente</button>
         </div>
       </form>
-      <div class="table-container">
-        <table id="tabelaClientes" class="tabela-usuarios">
+      <div class="table-responsive">
+        <table id="tabelaClientes" class="glass-table data-grid">
           <thead>
             <tr>
               <th>Código</th>
@@ -84,19 +102,25 @@
       </div>
     </section>
 
-    <section id="motoristas" class="secao">
-      <h3>🚚 Motoristas</h3>
-      <form id="formMotorista" class="formulario">
-        <label for="nomeMotorista">Nome:</label>
-        <input type="text" id="nomeMotorista" placeholder="Nome do Motorista" required>
-        <label for="nomeCompletoMotorista">Nome Completo:</label>
-        <input type="text" id="nomeCompletoMotorista" placeholder="Nome Completo do Motorista">
-        <div class="botoes-form">
-          <button type="submit" id="btnSalvarMotorista">✅ Salvar Motorista</button>
+    <section id="motoristas" class="glass-panel">
+      <h3><i class="fas fa-truck-moving"></i> Motoristas</h3>
+      <form id="formMotorista">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="nomeMotorista">Nome:</label>
+            <input type="text" id="nomeMotorista" placeholder="Nome do Motorista" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="nomeCompletoMotorista">Nome Completo:</label>
+            <input type="text" id="nomeCompletoMotorista" placeholder="Nome Completo do Motorista" class="glass-input">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 15px;">
+          <button type="submit" id="btnSalvarMotorista" class="btn-glass btn-green">✅ Salvar Motorista</button>
         </div>
       </form>
-      <div class="table-container">
-        <table id="tabelaMotoristas" class="tabela-usuarios">
+      <div class="table-responsive">
+        <table id="tabelaMotoristas" class="glass-table data-grid">
           <thead>
             <tr>
               <th>Nome</th>

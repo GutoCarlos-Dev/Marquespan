@@ -65,6 +65,24 @@ function obterIdClientePorTexto(textoDigitado) {
 }
 
 /**
+ * Obtém o ID do motorista selecionado a partir do texto digitado.
+ * @param {string} textoDigitado O texto digitado no campo motorista
+ * @returns {string|null} O ID do motorista ou null se não encontrado
+ */
+function obterIdMotoristaPorTexto(textoDigitado) {
+    const datalist = document.getElementById('motoristasList');
+    if (!datalist) return null;
+
+    const options = datalist.querySelectorAll('option');
+    for (let option of options) {
+        if (option.value === textoDigitado) {
+            return option.getAttribute('data-id');
+        }
+    }
+    return null;
+}
+
+/**
  * Obtém o ID do item selecionado a partir do texto digitado.
  * @param {string} textoDigitado O texto digitado no campo item
  * @returns {string|null} O ID do item ou null se não encontrado
@@ -213,16 +231,16 @@ function renderizarTabelaItensModal(termoBusca = '') {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <input type="number" class="input-quantidade" data-item-id="${item.id}"
+                <input type="number" class="input-quantidade glass-input" data-item-id="${item.id}"
                        min="0" value="0">
             </td>
             <td>
-                <span class="nome-item">${item.codigo} - ${item.nome}</span>
+                <span class="nome-item" style="font-weight: 600;">${item.codigo} - ${item.nome}</span>
                 <input type="hidden" class="item-id" value="${item.id}">
                 <input type="hidden" class="item-tipo" value="${item.tipo}">
             </td>
             <td>
-                <input type="text" class="input-modelo" data-item-id="${item.id}"
+                <input type="text" class="input-modelo glass-input" data-item-id="${item.id}"
                        placeholder="Ex: VERTICAL">
             </td>
         `;
@@ -404,17 +422,19 @@ function limparSelecaoVisual() {
 }
 
 /**
- * Carrega os motoristas do banco de dados e os popula em um elemento <select>.
+ * Carrega os motoristas do banco de dados e os popula em um elemento <datalist>.
  */
-async function carregarMotoristasNoSelect() {
-    const selectMotorista = document.getElementById('motoristaSelect');
-    if (!selectMotorista) return;
+async function carregarMotoristasNoDatalist() {
+    const datalist = document.getElementById('motoristasList');
+    if (!datalist) return;
 
-    selectMotorista.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+    datalist.innerHTML = ''; 
 
     const { data: motoristas, error } = await supabase
-        .from('motoristas')
+        .from('funcionario')
         .select('id, nome')
+        .ilike('funcao', 'Motorista%')
+        .eq('status', 'Ativo')
         .order('nome', { ascending: true });
 
     if (error) {
@@ -423,12 +443,39 @@ async function carregarMotoristasNoSelect() {
         return;
     }
 
-    selectMotorista.innerHTML = '<option value="" disabled selected>Selecione o motorista</option>';
     motoristas.forEach(motorista => {
         const option = document.createElement('option');
-        option.value = motorista.id;
-        option.textContent = motorista.nome;
-        selectMotorista.appendChild(option);
+        option.value = motorista.nome;
+        option.setAttribute('data-id', motorista.id);
+        datalist.appendChild(option);
+    });
+}
+
+/**
+ * Carrega os supervisores do banco de dados e os popula em um elemento <datalist>.
+ */
+async function carregarSupervisoresNoDatalist() {
+    const datalist = document.getElementById('supervisoresList');
+    if (!datalist) return;
+
+    datalist.innerHTML = '';
+
+    const { data: supervisores, error } = await supabase
+        .from('supervisores')
+        .select('id, nome')
+        .eq('status', 'ATIVO')
+        .order('nome', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar supervisores:', error);
+        return;
+    }
+
+    supervisores.forEach(sup => {
+        const option = document.createElement('option');
+        option.value = sup.nome;
+        option.setAttribute('data-id', sup.id);
+        datalist.appendChild(option);
     });
 }
 
@@ -438,7 +485,7 @@ async function carregarMotoristasNoSelect() {
  * @returns {Promise<string|null>} O nome do motorista ou null.
  */
 async function getMotoristaNomeById(id) {
-    const { data, error } = await supabase.from('motoristas').select('nome').eq('id', id).single();
+    const { data, error } = await supabase.from('funcionario').select('nome').eq('id', id).single();
     return error ? null : data.nome;
 }
 
@@ -595,8 +642,8 @@ async function salvarNovoMotorista(event) {
     document.getElementById('modalMotorista').style.display = 'none';
 
     // Recarrega a lista de motoristas e seleciona o novo
-    await carregarMotoristasNoSelect();
-    document.getElementById('motoristaSelect').value = data.id;
+    await carregarMotoristasNoDatalist();
+    document.getElementById('motoristaInput').value = data.nome;
 }
 
 /**
@@ -670,7 +717,9 @@ async function handleAdicionarItemNaRequisicao(event) {
  */
 function renderizarItensRequisicaoAtual() {
     const tabela = document.getElementById('tabelaItensRequisicaoAtual');
-    tabela.innerHTML = `<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Qtd</th><th>Ação</th></tr></thead>`;
+    if (!tabela) return;
+    if (tabela) tabela.classList.add('glass-table');
+    tabela.innerHTML = `<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>QTD</th><th style="width: 60px;">AÇÃO</th></tr></thead>`;
     const tbody = document.createElement('tbody');
 
     requisicaoAtual.itens.forEach((item, index) => {
@@ -680,7 +729,7 @@ function renderizarItensRequisicaoAtual() {
             <td>${item.modelo}</td>
             <td>${item.tipo}</td>
             <td>${item.quantidade}</td>
-            <td><button type="button" class="btn-remover-item" data-index="${index}" title="Remover item">🗑️</button></td>
+            <td class="actions-cell"><button type="button" class="btn-icon delete btn-remover-item" data-index="${index}" title="Remover item"><i class="fas fa-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -747,7 +796,9 @@ function handleIncluirRequisicao() {
  */
 function renderizarTabelaCarregamento() {
     const tabela = document.getElementById('tabelaItensCarregados');
-    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th><th>Motivo</th></tr></thead>';
+    if (!tabela) return;
+    if (tabela) tabela.classList.add('glass-table');
+    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
@@ -802,7 +853,13 @@ async function gerarPDF() {
         const semana = document.getElementById('semana').value;
         const dataCarregamento = document.getElementById('dataCarregamento').value;
         const placa = document.getElementById('placa').value;
-        const motoristaId = document.getElementById('motoristaSelect').value;
+        const motoristaTexto = document.getElementById('motoristaInput').value.trim();
+        const motoristaId = obterIdMotoristaPorTexto(motoristaTexto);
+        
+        if (!motoristaId && motoristaTexto !== "") {
+            console.warn('Motorista selecionado não encontrado no cadastro ou inativo.');
+        }
+
         const conferente = document.getElementById('conferente').value;
         const supervisor = document.getElementById('supervisor').value;
 
@@ -1084,7 +1141,9 @@ function gerarLinhaResumoPDF() {
  */
 function renderizarTabelaTrocaRetirada() {
     const tabela = document.getElementById('tabelaItensTrocaRetirada');
-    tabela.innerHTML = '<thead><tr><th>Item</th><th>Modelo</th><th>Tipo</th><th>Quantidade Total</th><th>Motivo</th></tr></thead>';
+    if (!tabela) return;
+    if (tabela) tabela.classList.add('glass-table');
+    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
@@ -1128,13 +1187,19 @@ async function salvarCarregamentoCompleto() {
     const semana = document.getElementById('semana').value.trim();
     const data = document.getElementById('dataCarregamento').value;
     const placa = document.getElementById('placa').value.trim();
-    const motoristaId = document.getElementById('motoristaSelect').value;
+    const motoristaTexto = document.getElementById('motoristaInput').value.trim();
+    const motoristaId = obterIdMotoristaPorTexto(motoristaTexto);
     const conferente = document.getElementById('conferente').value.trim();
     const supervisor = document.getElementById('supervisor').value.trim();
 
+    if (!motoristaId) {
+        alert('⚠️ Selecione um motorista válido da lista.');
+        return;
+    }
+
     const motoristaNome = await getMotoristaNomeById(motoristaId);
 
-    if (!semana || !data || !placa || !motoristaId || !conferente) {
+    if (!semana || !data || !placa || !conferente) {
         alert('⚠️ Preencha todos os campos obrigatórios do cabeçalho (Semana, Data, Placa, Motorista, Conferente).');
         return;
     }
@@ -1330,7 +1395,8 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarClientesNoDatalist();
     carregarVeiculosNoDatalist();
     carregarItensNoModal();
-    carregarMotoristasNoSelect();
+    carregarMotoristasNoDatalist();
+    carregarSupervisoresNoDatalist();
 
     // Verifica se há dados importados do PDF
     checkForImportedData();
@@ -1352,10 +1418,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Lógica para o Modal de Veículos
     const modalVeiculo = document.getElementById('modalVeiculo');
-    const btnAbrirVeiculo = document.getElementById('btnAbrirModalVeiculo');
     const btnFecharVeiculo = document.getElementById('fecharModalVeiculo');
 
-    btnAbrirVeiculo.onclick = () => { modalVeiculo.style.display = 'block'; }
     btnFecharVeiculo.onclick = () => { modalVeiculo.style.display = 'none'; }
 
     // Lógica para o Modal de Adicionar Item
@@ -1400,10 +1464,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Lógica para o Modal de Motorista
     const modalMotorista = document.getElementById('modalMotorista');
-    const btnAbrirMotorista = document.getElementById('btnAbrirModalMotorista');
     const btnFecharMotorista = document.getElementById('fecharModalMotorista');
 
-    btnAbrirMotorista.onclick = () => { modalMotorista.style.display = 'block'; }
     btnFecharMotorista.onclick = () => { modalMotorista.style.display = 'none'; }
 
     // Lógica para fechar modais clicando fora
@@ -1441,22 +1503,23 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderizarTabelaResumo() {
     const tabela = document.getElementById('tabelaResumo');
     if (!tabela) return; // Se não existe a tabela, sai da função
+    tabela.className = 'glass-table data-grid';
 
     // Cabeçalho da tabela com todas as colunas solicitadas
     tabela.innerHTML = `
         <thead>
             <tr>
-                <th colspan="8" style="text-align: center; background-color: #f0f0f0; font-weight: bold;">📊 RESUMO GERAL DO CARREGAMENTO</th>
+                <th colspan="8" style="text-align: center; background-color: #f8f9fa; font-weight: bold;">📊 RESUMO GERAL DO CARREGAMENTO</th>
             </tr>
             <tr>
-                <th>Total de Itens</th>
-                <th>Clientes Novos</th>
-                <th>Aumento</th>
-                <th>Troca</th>
-                <th>Retirada Parcial</th>
-                <th>Retirada Empréstimo</th>
-                <th>Retirada Total</th>
-                <th>Total de Clientes</th>
+                <th>TOTAL ITENS</th>
+                <th>CLI. NOVOS</th>
+                <th>AUMENTO</th>
+                <th>TROCA</th>
+                <th>RET. PARCIAL</th>
+                <th>RET. EMPRÉS.</th>
+                <th>RET. TOTAL</th>
+                <th>TOTAL CLI.</th>
             </tr>
         </thead>
     `;

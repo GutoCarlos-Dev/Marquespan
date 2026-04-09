@@ -5,157 +5,115 @@
   <title>Iniciar Carregamento - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/iniciar-carregamento.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-<!-- 🟩 Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-    <img src="logo.png" alt="Logo Marquespan" class="logo">
-    <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
-    <nav>
-      <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-      <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
-      <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
-    <div class="menu-group">
-      <button class="menu-toggle">
-        <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
-      </button>
-      <div class="submenu">
-          <a href="incluir-manutencao.html">Incluir Manutenção</a>
-          <a href="buscar-manutencao.html">Buscar Manutenção</a>
-      </div>
-    </div>
-    <div class="menu-group">
-      <button class="menu-toggle">
-        <i class="fas fa-truck-loading"></i> <span>Carregamento</span> <i class="fas fa-caret-down"></i>
-      </button>
-      <div class="submenu">
-          <a href="cadastro-carregamento.html">Cadastro</a>
-          <a href="iniciar-carregamento.html">Iniciar Carregamento</a>
-          <a href="importar-xlsx.html">Importar XLSX</a>
-          <a href="buscar-carregamento.html">Buscar Carregamento</a>
-      </div>
-    </div>
-      <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
-      <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
-      <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
-    </nav>
-  </div>
+  <div id="menu-container"></div>
 
   <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
-    <header class="header">🚚 Iniciar Carregamento</header>
+    <header class="header glass-header"><h1><i class="fas fa-truck-loading"></i> Iniciar Carregamento</h1></header>
 
-    <section class="secao">
-      <h3>📋 Detalhes do Carregamento</h3>
-      <form id="formCabecalhoCarregamento" class="formulario">
-        <label for="semana">Semana:</label>
-        <input type="text" id="semana" placeholder="Número da Semana" required>
-        <label for="dataCarregamento">Data:</label>
-        <input type="date" id="dataCarregamento" required>
-        <div class="form-group-com-botao">
-          <label for="placa">Placa do Veículo:</label>
-          <input type="text" id="placa" placeholder="Digite ou selecione a placa" list="placasVeiculosList" required>
-          <datalist id="placasVeiculosList"></datalist>
-          <button type="button" id="btnAbrirModalVeiculo" class="btn-adicionar-pequeno" title="Adicionar Novo Veículo">➕</button>
+    <section class="glass-panel">
+      <h3><i class="fas fa-clipboard-list"></i> Detalhes do Carregamento</h3>
+      <form id="formCabecalhoCarregamento">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="semana">Semana:</label>
+            <input type="text" id="semana" placeholder="Número da Semana" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="dataCarregamento">Data:</label>
+            <input type="date" id="dataCarregamento" required class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="placa">Placa do Veículo:</label>
+            <input type="text" id="placa" placeholder="Placa" list="placasVeiculosList" required class="glass-input">
+            <datalist id="placasVeiculosList"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="motoristaInput">Motorista:</label>
+            <input type="text" id="motoristaInput" placeholder="Nome do Motorista" list="motoristasList" required class="glass-input">
+            <datalist id="motoristasList"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="conferente">Conferente:</label>
+            <input type="text" id="conferente" placeholder="Usuário logado" required disabled class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="supervisor">Supervisor:</label>
+            <input type="text" id="supervisor" placeholder="Nome do Supervisor" list="supervisoresList" class="glass-input">
+            <datalist id="supervisoresList"></datalist>
+          </div>
         </div>
-        <div class="form-group-com-botao">
-          <label for="motoristaSelect">Motorista:</label>
-          <select id="motoristaSelect" required>
-            <option value="" disabled selected>Carregando motoristas...</option>
-          </select>
-          <button type="button" id="btnAbrirModalMotorista" class="btn-adicionar-pequeno" title="Adicionar Novo Motorista">➕</button>
-        </div>
-        <label for="conferente">Conferente:</label>
-        <input type="text" id="conferente" placeholder="Usuário logado" required disabled>
-        <label for="supervisor">Supervisor:</label>
-        <input type="text" id="supervisor" placeholder="Nome do Supervisor">
       </form>
     </section>
 
-    <section class="secao">
-      <h3>📝 Dados das Requisições</h3>
-      <div id="formRequisicao" class="formulario">
-        <div class="form-group-com-botao">
-          <label for="clienteInput">Cliente:</label>
-          <input type="text" id="clienteInput" placeholder="Digite o nome ou código do cliente" list="clientesList" required>
-          <datalist id="clientesList"></datalist>
-          <button type="button" id="btnAbrirModalCliente" class="btn-adicionar-pequeno" title="Adicionar Novo Cliente">➕</button>
+    <section class="glass-panel">
+      <h3><i class="fas fa-edit"></i> Dados das Requisições</h3>
+      <div id="formRequisicao">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="clienteInput">Cliente:</label>
+            <div class="form-group-with-button">
+              <input type="text" id="clienteInput" placeholder="Nome ou código" list="clientesList" required class="glass-input">
+              <datalist id="clientesList"></datalist>
+              <button type="button" id="btnAbrirModalCliente" class="btn-glass btn-blue compact-btn" title="Novo Cliente"><i class="fas fa-plus"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="motivoRequisicao">Motivo:</label>
+            <select id="motivoRequisicao" class="glass-input">
+              <option value="Aumento">Aumento</option>
+              <option value="Troca">Troca</option>
+              <option value="Aumento+Troca">Aumento+Troca</option>
+              <option value="Cliente Novo">Cliente Novo</option>
+              <option value="Retirada Emprestimo">Retirada de Empréstimo</option>
+              <option value="Retirada Parcial">Retirada Parcial</option>
+              <option value="Retirada Total">Retirada Total</option> 
+            </select>
+          </div>
         </div>
-        <label for="motivoRequisicao">Motivo:</label>
-        <select id="motivoRequisicao">
-          <option value="Aumento">Aumento</option>
-          <option value="Troca">Troca</option>
-          <option value="Aumento+Troca">Aumento+Troca</option>
-          <option value="Cliente Novo">Cliente Novo</option>
-          <option value="Retirada Emprestimo">Retirada de Empréstimo</option>
-          <option value="Retirada Parcial">Retirada Parcial</option>
-          <option value="Retirada Total">Retirada Total</option> 
-        </select>
 
-        <h4>Itens da Requisição</h4>
-        <div class="table-container-small">
-          <table id="tabelaItensRequisicaoAtual"></table>
+        <h4 style="margin: 15px 0 10px; color: #555;">Itens da Requisição</h4>
+        <div class="table-responsive" style="max-height: 250px;">
+          <table id="tabelaItensRequisicaoAtual" class="glass-table data-grid"></table>
         </div>
-        <div class="botoes-form">
-          <button type="button" id="btnAbrirModalAdicionarItem">➕ Adicionar Item à Requisição</button>
-          <button type="button" id="btnIncluirRequisicao">➕ Incluir Requisição ao Carregamento</button>
+        <div class="form-actions" style="margin-top: 15px; justify-content: flex-start;">
+          <button type="button" id="btnAbrirModalAdicionarItem" class="btn-glass btn-blue">➕ Adicionar Item</button>
+          <button type="button" id="btnIncluirRequisicao" class="btn-glass btn-green">➕ Incluir Requisição</button>
         </div>
       </div>
     </section>
 
-    <section class="secao">
-      <h3>📦 Itens Carregados (Para Entrega)</h3>
-      <div class="table-container">
-        <table id="tabelaItensCarregados"></table>
+    <section class="glass-panel">
+      <h3><i class="fas fa-boxes"></i> Itens Carregados (Para Entrega)</h3>
+      <div class="table-responsive">
+        <table id="tabelaItensCarregados" class="glass-table data-grid"></table>
       </div>
     </section>
 
-    <section class="secao">
-      <h3>🔄 Itens de Troca e Retirada</h3>
-      <div class="table-container">
-        <table id="tabelaItensTrocaRetirada"></table>
+    <section class="glass-panel">
+      <h3><i class="fas fa-exchange-alt"></i> Itens de Troca e Retirada</h3>
+      <div class="table-responsive">
+        <table id="tabelaItensTrocaRetirada" class="glass-table data-grid"></table>
       </div>
     </section>
 
-    <section class="secao">
-      <h3>📊 Resumo Geral do Carregamento</h3>
-      <div class="table-container">
-        <table id="tabelaResumo" style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr>
-              <th colspan="8" style="text-align: center; background-color: #f0f0f0; font-weight: bold; padding: 15px;">📊 RESUMO GERAL DO CARREGAMENTO</th>
-            </tr>
-            <tr style="background-color: #e9ecef;">
-              <th style="padding: 10px; border: 1px solid #ddd;">Total de Itens</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Clientes Novos</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Aumento</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Troca</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Retirada Parcial</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Retirada Empréstimo</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Retirada Total</th>
-              <th style="padding: 10px; border: 1px solid #ddd;">Total de Clientes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="8" style="text-align: center; color: #666; padding: 20px;">
-                Carregando dados do resumo...
-              </td>
-            </tr>
-          </tbody>
+    <section class="glass-panel">
+      <h3><i class="fas fa-chart-pie"></i> Resumo Geral do Carregamento</h3>
+      <div class="table-responsive">
+        <table id="tabelaResumo" class="glass-table data-grid">
         </table>
       </div>
     </section>
 
-    <section class="secao">
-      <div class="botoes-form">
-        <button type="button" id="btnSalvarCarregamento">🚚 Salvar Carregamento Completo</button>
-        <button type="button" id="btnGerarPDF">📄 Gerar PDF</button>
-      </div>
+    <section class="form-actions" style="margin-bottom: 30px;">
+        <button type="button" id="btnSalvarCarregamento" class="btn-glass btn-green">🚚 Salvar Carregamento Completo</button>
+        <button type="button" id="btnGerarPDF" class="btn-glass btn-red">📄 Gerar PDF</button>
     </section>
 
     <footer class="footer">
@@ -164,125 +122,105 @@
   </div>
 
   <!-- Modal Cadastro Cliente -->
-  <div id="modalCliente" class="modal">
-    <div class="modal-conteudo">
-      <span class="fechar-modal" id="fecharModalCliente">&times;</span>
-      <h3>👥 Cadastrar Novo Cliente</h3>
-      <form id="formNovoCliente" class="formulario">
-        <label for="codClienteModal">Código:</label>
-        <input type="text" id="codClienteModal" placeholder="Código do Cliente" required>
-        <label for="nomeClienteModal">Nome:</label>
-        <input type="text" id="nomeClienteModal" placeholder="Nome do Cliente" required>
-        <label for="cidadeClienteModal">Cidade:</label>
-        <input type="text" id="cidadeClienteModal" placeholder="Cidade" required>
-        <label for="estadoClienteModal">Estado:</label>
-        <input type="text" id="estadoClienteModal" placeholder="Estado" required>
-        <div class="botoes-form">
-          <button type="submit">✅ Salvar Cliente</button>
-        </div>
-      </form>
+  <div id="modalCliente" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-users"></i> Cadastrar Novo Cliente</h3>
+        <button class="close-button" id="fecharModalCliente">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formNovoCliente">
+          <div class="form-grid">
+            <div class="form-group"><label>Código</label><input type="text" id="codClienteModal" required class="glass-input"></div>
+            <div class="form-group"><label>Nome</label><input type="text" id="nomeClienteModal" required class="glass-input"></div>
+            <div class="form-group"><label>Cidade</label><input type="text" id="cidadeClienteModal" required class="glass-input"></div>
+            <div class="form-group"><label>Estado</label><input type="text" id="estadoClienteModal" required class="glass-input"></div>
+          </div>
+          <div class="form-actions" style="margin-top: 20px;">
+            <button type="submit" class="btn-glass btn-green">✅ Salvar Cliente</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Modal Cadastro Veículo -->
-  <div id="modalVeiculo" class="modal">
-    <div class="modal-conteudo">
-      <span class="fechar-modal" id="fecharModalVeiculo">&times;</span>
-      <h3>🚚 Cadastrar Novo Veículo</h3>
-      <form id="formNovoVeiculo" class="formulario">
-        <label for="filialVeiculoModal">Filial:</label>
-        <input type="text" id="filialVeiculoModal" placeholder="Filial do Veículo" required>
-        <label for="placaVeiculoModal">Placa:</label>
-        <input type="text" id="placaVeiculoModal" placeholder="Placa do Veículo" required>
-        <label for="modeloVeiculoModal">Modelo:</label>
-        <input type="text" id="modeloVeiculoModal" placeholder="Modelo do Veículo" required>
-        <label for="renavanVeiculoModal">Renavan:</label>
-        <input type="text" id="renavanVeiculoModal" placeholder="Renavan" required>
-        <label for="tipoVeiculoModal">Tipo:</label>
-        <input type="text" id="tipoVeiculoModal" placeholder="Ex: Caminhão, Carro" required>
-        <label for="situacaoVeiculoModal">Situação:</label>
-        <select id="situacaoVeiculoModal" required>
-          <option value="Ativo">Ativo</option>
-          <option value="Inativo">Inativo</option>
-        </select>
-        <div class="botoes-form">
-          <button type="submit">✅ Salvar Veículo</button>
-        </div>
-      </form>
+  <div id="modalVeiculo" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-truck"></i> Cadastrar Novo Veículo</h3>
+        <button class="close-button" id="fecharModalVeiculo">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formNovoVeiculo">
+          <div class="form-grid">
+            <div class="form-group"><label>Filial</label><input type="text" id="filialVeiculoModal" required class="glass-input"></div>
+            <div class="form-group"><label>Placa</label><input type="text" id="placaVeiculoModal" required class="glass-input"></div>
+            <div class="form-group"><label>Modelo</label><input type="text" id="modeloVeiculoModal" required class="glass-input"></div>
+            <div class="form-group"><label>Renavan</label><input type="text" id="renavanVeiculoModal" required class="glass-input"></div>
+            <div class="form-group"><label>Tipo</label><input type="text" id="tipoVeiculoModal" required class="glass-input"></div>
+            <div class="form-group">
+              <label>Situação</label>
+              <select id="situacaoVeiculoModal" required class="glass-input">
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top: 20px;">
+            <button type="submit" class="btn-glass btn-green">✅ Salvar Veículo</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
-  <!-- Modal Adicionar Item à Requisição -->
-  <div id="modalAdicionarItem" class="modal modal-adicionar-item">
-    <div class="modal-conteudo">
-      <span class="fechar-modal" id="fecharModalAdicionarItem">&times;</span>
-      <h3>📦 Selecionar Itens para Adicionar</h3>
-
-      <!-- Campo de busca -->
-      <div class="campo-busca">
-        <input type="text" id="buscaItens" placeholder="🔍 Buscar itens..." class="input-busca">
+  <!-- Modal Adicionar Item -->
+  <div id="modalAdicionarItem" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-boxes"></i> Selecionar Itens</h3>
+        <button class="close-button" id="fecharModalAdicionarItem">&times;</button>
       </div>
-
-      <!-- Tabela de itens -->
       <div class="modal-body">
-        <table id="tabelaItensModal" class="tabela-itens-modal">
-          <thead>
-            <tr>
-              <th style="width: 80px;">QTD</th>
-              <th>Item</th>
-              <th style="width: 150px;">Modelo</th>
-            </tr>
-          </thead>
-          <tbody id="corpoTabelaItensModal">
-            <!-- Itens serão carregados dinamicamente -->
-          </tbody>
-        </table>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" id="btnAdicionarItensSelecionados">➕ Adicionar Itens</button>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <input type="text" id="buscaItens" placeholder="🔍 Buscar itens..." class="glass-input">
+        </div>
+        <div class="table-responsive" style="max-height: 400px;">
+          <table id="tabelaItensModal" class="glass-table data-grid">
+            <thead><tr><th style="width: 80px;">QTD</th><th>Item</th><th style="width: 150px;">Modelo</th></tr></thead>
+            <tbody id="corpoTabelaItensModal"></tbody>
+          </table>
+        </div>
+        <div class="form-actions" style="margin-top: 20px;">
+          <button type="button" id="btnAdicionarItensSelecionados" class="btn-glass btn-green">➕ Adicionar Itens</button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Modal Cadastro Motorista -->
-  <div id="modalMotorista" class="modal">
-    <div class="modal-conteudo">
-      <span class="fechar-modal" id="fecharModalMotorista">&times;</span>
-      <h3>🚚 Cadastrar Novo Motorista</h3>
-      <form id="formNovoMotorista" class="formulario">
-        <label for="nomeMotoristaModal">Nome:</label>
-        <input type="text" id="nomeMotoristaModal" placeholder="Nome do Motorista" required>
-        <label for="nomeCompletoMotoristaModal">Nome Completo:</label>
-        <input type="text" id="nomeCompletoMotoristaModal" placeholder="Nome Completo do Motorista">
-        <div class="botoes-form">
-          <button type="submit">✅ Salvar Motorista</button>
-        </div>
-      </form>
+  <div id="modalMotorista" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-truck-moving"></i> Cadastrar Novo Motorista</h3>
+        <button class="close-button" id="fecharModalMotorista">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formNovoMotorista">
+          <div class="form-grid">
+            <div class="form-group"><label>Nome</label><input type="text" id="nomeMotoristaModal" required class="glass-input"></div>
+            <div class="form-group"><label>Nome Completo</label><input type="text" id="nomeCompletoMotoristaModal" class="glass-input"></div>
+          </div>
+          <div class="form-actions" style="margin-top: 20px;">
+            <button type="submit" class="btn-glass btn-green">✅ Salvar Motorista</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
-  <!-- 🚀 Scripts -->
-  <script>
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-      const divUsuario = document.getElementById('usuario-logado');
-      if (usuario && usuario.nome) {
-        divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
-      }
-    });
-
-    document.querySelectorAll('.menu-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.parentElement.classList.toggle('active');
-      });
-    });
-  </script>
-
+  <script type="module" src="./script/menu.js"></script>
   <script type="module" src="./script/iniciar-carregamento.js"></script>
 </body>
 </html>
