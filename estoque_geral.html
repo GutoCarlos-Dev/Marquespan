@@ -29,6 +29,7 @@
         <button class="painel-btn" data-tab="tab-retirada" aria-selected="false"><i class="fas fa-dolly"></i> Retirada do Estoque</button>
         <button class="painel-btn" data-tab="tab-batimento" aria-selected="false"><i class="fas fa-clipboard-check"></i> Batimento</button>
         <button class="painel-btn" data-tab="tab-produtos" aria-selected="false"><i class="fas fa-tags"></i> Gerenciar Produtos</button>
+        <button class="painel-btn" data-tab="tab-prateleiras" aria-selected="false"><i class="fas fa-warehouse"></i> Prateleiras</button>
         <button class="painel-btn" data-tab="tab-relatorios" aria-selected="false"><i class="fas fa-chart-line"></i> Relatórios</button>
       </div>
 
@@ -258,6 +259,53 @@
                 </tr>
               </thead>
               <tbody id="produtos-tab-body">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA: PRATELEIRAS -->
+      <section id="tab-prateleiras" class="tab-content hidden">
+        <div class="glass-panel">
+          <h4><i class="fas fa-plus-circle"></i> Cadastro / Edição de Prateleira</h4>
+          <form id="formCadastrarPrateleira">
+            <input type="hidden" id="prateleiraEditingId">
+            <div class="grid-filtros">
+              <div class="form-group">
+                <label>Nome da Prateleira</label>
+                <input type="text" id="prateleiraNome" class="glass-input" required placeholder="Ex: Prateleira A1, Corredor 3">
+              </div>
+              <div class="form-group">
+                <label>Localização (Opcional)</label>
+                <input type="text" id="prateleiraLocalizacao" class="glass-input" placeholder="Ex: Setor de Secos, Armazém 1">
+              </div>
+              <div class="form-group" style="display: flex; gap: 10px;">
+                <button type="submit" id="btnSubmitPrateleira" class="btn-glass btn-green" style="flex: 1;"><i class="fas fa-save"></i> Salvar</button>
+                <button type="button" id="btnClearPrateleiraForm" class="btn-glass btn-muted"><i class="fas fa-times"></i></button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4><i class="fas fa-list"></i> Lista de Prateleiras Cadastradas</h4>
+            <div class="form-group" style="margin: 0; width: 300px;">
+              <input type="text" id="searchPrateleiraTab" class="glass-input" placeholder="Filtrar prateleiras...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Nome da Prateleira</th>
+                  <th>Localização</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="prateleiras-tab-body">
                 <!-- Preenchido via JS -->
               </tbody>
             </table>

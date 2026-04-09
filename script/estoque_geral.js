@@ -70,9 +70,20 @@ const EstoqueGeralUI = {
         this.btnBuscarRelatorio = document.getElementById('btn-buscar-relatorio');
         this.gridRelatorioBody = document.getElementById('grid-relatorio-body');
 
+        // Aba Prateleiras
+        this.formPrateleira = document.getElementById('formCadastrarPrateleira');
+        this.prateleiraEditingId = document.getElementById('prateleiraEditingId');
+        this.prateleiraNome = document.getElementById('prateleiraNome');
+        this.prateleiraLocalizacao = document.getElementById('prateleiraLocalizacao');
+        this.btnSubmitPrateleira = document.getElementById('btnSubmitPrateleira');
+        this.btnClearPrateleiraForm = document.getElementById('btnClearPrateleiraForm');
+        this.searchPrateleiraTab = document.getElementById('searchPrateleiraTab');
+        this.gridPrateleirasTabBody = document.getElementById('prateleiras-tab-body');
+
         // Variáveis de Estado
         this.carrinhoRetirada = [];
         this.produtosCache = [];
+        this.prateleirasCache = [];
     },
 
     bindEvents() {
@@ -100,6 +111,12 @@ const EstoqueGeralUI = {
         this.btnClearProdutoForm.addEventListener('click', () => this.clearProdutoForm());
         this.searchProdutoTab.addEventListener('input', () => this.renderProdutosGrid());
         this.gridProdutosTabBody.addEventListener('click', (e) => this.handleProdutoTableClick(e));
+
+        // Prateleiras
+        if (this.formPrateleira) this.formPrateleira.addEventListener('submit', (e) => this.handlePrateleiraFormSubmit(e));
+        if (this.btnClearPrateleiraForm) this.btnClearPrateleiraForm.addEventListener('click', () => this.clearPrateleiraForm());
+        if (this.searchPrateleiraTab) this.searchPrateleiraTab.addEventListener('input', () => this.renderPrateleirasGrid());
+        if (this.gridPrateleirasTabBody) this.gridPrateleirasTabBody.addEventListener('click', (e) => this.handlePrateleiraTableClick(e));
 
         this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
         if (this.btnGerarPdfSaida) this.btnGerarPdfSaida.addEventListener('click', () => this.gerarPdfSaida());
@@ -153,6 +170,9 @@ const EstoqueGeralUI = {
         }
         if (targetId === 'tab-produtos') {
             this.renderProdutosGrid();
+        }
+        if (targetId === 'tab-prateleiras') {
+            this.renderPrateleirasGrid();
         }
     },
 
@@ -316,6 +336,87 @@ const EstoqueGeralUI = {
         this.produtoEditingId.value = '';
         document.getElementById('produtoQtdMinima').value = '0';
         this.btnSubmitProduto.innerHTML = '<i class="fas fa-save"></i> Salvar';
+    },
+
+    // --- LÓGICA DE PRATELEIRAS ---
+
+    async renderPrateleirasGrid() {
+        const term = this.searchPrateleiraTab.value.trim().toLowerCase();
+        this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center">Carregando...</td></tr>';
+
+        try {
+            let query = supabaseClient.from('prateleiras').select('*').order('nome');
+            if (term) {
+                query = query.or(`nome.ilike.%${term}%,localizacao.ilike.%${term}%`);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            this.prateleirasCache = data || [];
+
+            this.gridPrateleirasTabBody.innerHTML = (data || []).map(p => `
+                <tr>
+                    <td>${p.nome}</td>
+                    <td>${p.localizacao || '-'}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-icon edit btn-edit-prateleira" data-id="${p.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete btn-delete-prateleira" data-id="${p.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+
+        } catch (err) {
+            console.error('Erro ao listar prateleiras:', err);
+            this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
+        }
+    },
+
+    async handlePrateleiraFormSubmit(e) {
+        e.preventDefault();
+        const id = this.prateleiraEditingId.value;
+        const payload = {
+            nome: this.prateleiraNome.value.trim().toUpperCase(),
+            localizacao: this.prateleiraLocalizacao.value.trim().toUpperCase()
+        };
+
+        try {
+            const { error } = await supabaseClient.from('prateleiras').upsert({ id: id || undefined, ...payload });
+            if (error) throw error;
+
+            alert('✅ Prateleira salva com sucesso!');
+            this.clearPrateleiraForm();
+            this.renderPrateleirasGrid();
+        } catch (err) {
+            alert('Erro ao salvar prateleira: ' + err.message);
+        }
+    },
+
+    handlePrateleiraTableClick(e) {
+        const btnEdit = e.target.closest('.btn-edit-prateleira');
+        const btnDelete = e.target.closest('.btn-delete-prateleira');
+
+        if (btnEdit) {
+            const p = this.prateleirasCache.find(x => x.id == btnEdit.dataset.id);
+            if (p) {
+                this.prateleiraEditingId.value = p.id;
+                this.prateleiraNome.value = p.nome || '';
+                this.prateleiraLocalizacao.value = p.localizacao || '';
+                this.btnSubmitPrateleira.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
+            }
+        }
+
+        if (btnDelete) {
+            const id = btnDelete.dataset.id;
+            if (confirm('Deseja realmente excluir esta prateleira?')) {
+                supabaseClient.from('prateleiras').delete().eq('id', id).then(() => this.renderPrateleirasGrid());
+            }
+        }
+    },
+
+    clearPrateleiraForm() {
+        this.formPrateleira.reset();
+        this.prateleiraEditingId.value = '';
+        this.btnSubmitPrateleira.innerHTML = '<i class="fas fa-save"></i> Salvar';
     },
 
     async carregarVeiculosRetirada() {
