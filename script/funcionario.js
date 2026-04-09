@@ -25,6 +25,7 @@ const FuncionarioUI = {
         this.statusFilterDisplay = document.getElementById('statusFilterDisplay');
         this.statusFilterOptions = document.getElementById('statusFilterOptions');
         this.statusFilterText = document.getElementById('statusFilterText');
+        this.monthFilter = document.getElementById('monthFilter');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
@@ -40,6 +41,9 @@ const FuncionarioUI = {
         }
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.renderGrid());
+        }
+        if (this.monthFilter) {
+            this.monthFilter.addEventListener('change', () => this.renderGrid());
         }
         if (this.statusSelect) {
             this.statusSelect.addEventListener('change', () => this.toggleDesligamentoField());
@@ -173,6 +177,7 @@ const FuncionarioUI = {
     async renderGrid() {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
+        const selectedMonth = this.monthFilter?.value || '';
 
         try {
             let query = supabaseClient.from('funcionario').select('*');
@@ -190,14 +195,24 @@ const FuncionarioUI = {
             // Aplica a ordenação configurada
             query = query.order(this.sortConfig.column, { ascending: this.sortConfig.direction === 'asc' });
 
-            const { data: list, error } = await query;
+            let { data: list, error } = await query;
             if (error) throw error;
+
+            // Filtro de mês (realizado no cliente para simplificar a lógica de data)
+            if (selectedMonth) {
+                list = list.filter(f => {
+                    if (!f.data_nascimento) return false;
+                    const mes = f.data_nascimento.split('-')[1];
+                    return mes === selectedMonth;
+                });
+            }
 
             this.listData = list; // Atualiza cache para exportação
             this.tableBody.innerHTML = list.map(f => `
                 <tr>
                     <td><strong>${f.rh_registro}</strong></td>
                     <td title="${f.nome_completo || ''}">${f.nome}</td>
+                    <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '-'}</td>
                     <td>${f.funcao}</td>
                     <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao).toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.contato_corp || f.contato_pessoal || '-'}</td>
@@ -444,6 +459,7 @@ const FuncionarioUI = {
             'Nome': f.nome,
             'Nome Completo': f.nome_completo,
             'CPF': f.cpf || '-',
+            'Data Nascimento': f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             'Data Admissão': f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             'Função': f.funcao,
             'Contato Corp': f.contato_corp || '-',
@@ -499,11 +515,11 @@ const FuncionarioUI = {
         doc.setTextColor(100);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 196, 18, { align: 'right' }); // Ajustado para margem da folha vertical
 
-        const headers = [['RH', 'Nome', 'CPF', 'Admissão', 'Função', 'Status', 'Contato', 'Alt. Função']];
+        const headers = [['RH', 'Nome', 'Nasc.', 'Admissão', 'Função', 'Status', 'Contato', 'Alt. Função']];
         const rows = this.listData.map(f => [
             f.rh_registro,
             f.nome,
-            f.cpf || '-',
+            f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '-',
             f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             f.funcao,
             f.status,
