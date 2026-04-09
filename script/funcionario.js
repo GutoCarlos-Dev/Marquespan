@@ -30,6 +30,7 @@ const FuncionarioUI = {
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
     },
 
+    // Adiciona o campo Data de Nascimento ao cache
     bind() {
         if (this.form) {
             this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -127,6 +128,7 @@ const FuncionarioUI = {
             rh_registro: rh,
             nome: document.getElementById('funcNome').value,
             nome_completo: document.getElementById('funcNomeCompleto').value,
+            data_nascimento: document.getElementById('funcDataNascimento').value || null, // Adiciona data de nascimento
             cpf: document.getElementById('funcCPF').value,
             data_admissao: document.getElementById('funcAdmissao').value,
             funcao: novaFuncao,
@@ -406,6 +408,7 @@ const FuncionarioUI = {
         document.getElementById('funcRH').value = f.rh_registro;
         document.getElementById('funcNome').value = f.nome;
         document.getElementById('funcNomeCompleto').value = f.nome_completo || '';
+        document.getElementById('funcDataNascimento').value = f.data_nascimento || ''; // Preenche data de nascimento
         document.getElementById('funcCPF').value = f.cpf || '';
         document.getElementById('funcAdmissao').value = f.data_admissao;
         document.getElementById('funcFuncao').value = f.funcao;
