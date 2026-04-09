@@ -192,9 +192,9 @@
                     <th data-field="codigo_secundario">CÓD. SEC.</th>
                     <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
                     <th data-field="unidade_medida">UN</th>
-                    <th>PRATELEIRA</th>
-                    <th>LOCALIZAÇÃO</th>
-                    <th>MÍNIMO</th>
+                    <th data-field="prateleiras.nome">PRATELEIRA <i class="fas fa-sort"></i></th>
+                    <th data-field="prateleiras.localizacao">LOCALIZAÇÃO <i class="fas fa-sort"></i></th>
+                    <th data-field="quantidade_minima">MÍNIMO <i class="fas fa-sort"></i></th>
                     <th data-field="status">STATUS</th>
                     <th>AÇÕES</th>
                 </tr>
@@ -213,7 +213,7 @@
         </div>
       </div>
       <form id="formCadastrarFornecedor" class="form-grid" style="grid-template-columns: 2fr 1fr auto;">
-        <input type="text" id="fornecedorNome" placeholder="Nome do Fornecedor" required class="glass-input">
+        <input type="text" id="fornecedorNome" placeholder="Nome do Fornecedor" required class="glass-input" oninput="this.value = this.value.toUpperCase()">
         <input type="text" id="fornecedorTelefone" placeholder="Telefone" class="glass-input">
         <button type="submit" id="btnSubmitFornecedor" class="btn-glass btn-green">Cadastrar</button>
       </form>

@@ -2,7 +2,14 @@ import { supabaseClient } from './supabase.js';
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
-    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
+    let q = supabaseClient.from(table).select(cols);
+    const sortField = opts.orderBy || 'id';
+    if (sortField.includes('.')) {
+      const [fTable, fCol] = sortField.split('.');
+      q = q.order(fCol, { foreignTable: fTable, ascending: !!opts.ascending });
+    } else {
+      q = q.order(sortField, { ascending: !!opts.ascending });
+    }
     if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
     if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
     const { data, error } = await q;
@@ -1268,7 +1275,7 @@ const UI = {
     const editingId = form.dataset.editingId;
 
     const payload = {
-      nome: document.getElementById('fornecedorNome').value,
+      nome: document.getElementById('fornecedorNome').value.trim().toUpperCase(),
       telefone: document.getElementById('fornecedorTelefone').value,
     };
 
@@ -1427,6 +1434,7 @@ const UI = {
           <td>${p.unidade_medida || ''}</td>
           <td>${p.prateleiras?.nome || '-'}</td>
           <td>${p.prateleiras?.localizacao || '-'}</td>
+          <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
           <td>${status}</td>
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
