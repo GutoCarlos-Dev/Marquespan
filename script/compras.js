@@ -76,16 +76,28 @@ const UI = {
   init(){
     this.cache();
     this.bind();
+
+    // Inicializa os estados de ordenação antes de carregar os dados
+    this._produtosSort = { field: 'nome', ascending: true };
+    this._fornecedoresSort = { field: 'nome', ascending: true };
+    this._savedQuotationsSort = { field: 'updated_at', ascending: false };
+
     this.cart = new Cart();
     this.renderCompanies(3);
     this.populateProductDropdown();
     this.populateSupplierDropdowns();
+    this.carregarPrateleirasNoSelect();
     this.renderCart();
+
+    // Define datas padrão para o filtro (Últimos 7 dias)
+    const today = new Date();
+    const lastWeek = new Date();
+    lastWeek.setDate(today.getDate() - 7);
+    if(this.filterDataInicio) this.filterDataInicio.value = lastWeek.toISOString().split('T')[0];
+    if(this.filterDataFim) this.filterDataFim.value = today.toISOString().split('T')[0];
+
     this.generateNextQuotationCode();
     this.renderSavedQuotations();
-    this._produtosSort = { field: 'nome', ascending: true };
-    this._fornecedoresSort = { field: 'nome', ascending: true };
-    this._savedQuotationsSort = { field: 'updated_at', ascending: false };
     this.renderProdutosGrid();
     this.renderFornecedoresGrid();
     this.editingQuotationId = null;
@@ -107,11 +119,14 @@ const UI = {
     this.orccardrow = document.getElementById('orccardrow');
     this.savedQuotationsTableBody = document.getElementById('savedQuotationsTableBody');
     this.searchQuotationInput = document.getElementById('searchQuotation');
+    this.filterDataInicio = document.getElementById('filterDataInicio');
+    this.filterDataFim = document.getElementById('filterDataFim');
     this.filterStatusSelect = document.getElementById('filterStatus');
     this.btnSearchQuotation = document.getElementById('btnSearchQuotation');
     this.formCadastrarProduto = document.getElementById('formCadastrarProduto');
     this.produtosTableBody = document.getElementById('produtosTableBody');
     this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
+    this.produtoPrateleira = document.getElementById('produtoPrateleira');
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
     this.btnSubmitFornecedor = document.getElementById('btnSubmitFornecedor');
@@ -137,6 +152,11 @@ const UI = {
     this.recebimentoItemsContainer = document.getElementById('recebimentoItems');
     this.nfContainer = document.getElementById('nfContainer');
     this.btnAddNF = document.getElementById('btnAddNF');
+
+    // Cache para Relatórios
+    this.searchRelatorioProduto = document.getElementById('searchRelatorioProduto');
+    this.btnSearchRelatorio = document.getElementById('btnSearchRelatorio');
+    this.relatoriosTableBody = document.getElementById('relatoriosTableBody');
   },
   
   bind(){
@@ -153,6 +173,9 @@ const UI = {
     this.btnRegistrarCotacoes.addEventListener('click', ()=>this.handleRegisterQuotation());
 
     this.btnSearchQuotation?.addEventListener('click', ()=>this.renderSavedQuotations());
+    this.searchQuotationInput?.addEventListener('keyup', (e) => {
+        if(e.key === 'Enter') this.renderSavedQuotations();
+    });
     this.filterStatusSelect?.addEventListener('change', ()=>this.renderSavedQuotations());
 
     this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e));
@@ -176,6 +199,12 @@ const UI = {
     this.btnSalvarRecebimento?.addEventListener('click', ()=>this.salvarRecebimento());
     this.btnAddNF?.addEventListener('click', ()=>this.addNFInput());
     
+    // Listener Relatórios
+    this.btnSearchRelatorio?.addEventListener('click', () => this.renderRelatoriosGrid());
+    this.searchRelatorioProduto?.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') this.renderRelatoriosGrid();
+    });
+
     this.btnGeneratePdf?.addEventListener('click', () => {
         if(this.detailPanel.dataset.id) this.exportSavedQuotationPdf(this.detailPanel.dataset.id);
     });
@@ -219,6 +248,9 @@ const UI = {
     if(id==='sectionCotacoesSalvas'){ this.renderSavedQuotations(); }
     if(id==='sectionCadastrarProdutos'){ this.renderProdutosGrid(); }
     if(id==='sectionCadastrarFornecedor'){ this.renderFornecedoresGrid(); }
+    if(id==='sectionRelatorios'){ 
+        setTimeout(() => this.searchRelatorioProduto?.focus(), 50);
+    }
   },
 
   setupUserAccess() {
@@ -231,11 +263,11 @@ const UI = {
     let abaInicial = 'sectionRealizarCotacoes';
 
     const permissoes = {
-      estoque: ['sectionCotacoesSalvas'],
-      compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
-      administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
-      gerencia: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor'],
-      default: []
+      estoque: ['sectionCotacoesSalvas', 'sectionRelatorios'],
+      compras: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
+      administrador: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
+      gerencia: ['sectionRealizarCotacoes', 'sectionCotacoesSalvas', 'sectionCadastrarProdutos', 'sectionCadastrarFornecedor', 'sectionRelatorios'],
+      default: ['sectionRelatorios']
     };
 
     const abasPermitidas = permissoes[nivel] || permissoes.default;
@@ -256,6 +288,8 @@ const UI = {
     const btnParaAtivar = menuCompras.querySelector(`[data-secao="${abaInicial}"]`);
     if (btnParaAtivar) {
       btnParaAtivar.click();
+    } else if (abasPermitidas.length > 0) {
+      menuCompras.querySelector(`[data-secao="${abasPermitidas[0]}"]`)?.click();
     }
   },
 
@@ -757,15 +791,21 @@ const UI = {
     try{
       const search = this.searchQuotationInput?.value?.trim();
       const status = this.filterStatusSelect?.value;
+      const dtIni = this.filterDataInicio?.value;
+      const dtFim = this.filterDataFim?.value;
       let q = supabaseClient.from('cotacoes').select('id,codigo_cotacao,data_cotacao,updated_at,status,valor_total_vencedor,nota_fiscal,usuario,data_recebimento,usuario_recebimento,fornecedores(nome), cotacao_itens(quantidade, produtos(nome))');
       
       if(status && status!=='Todas') q = q.eq('status',status);
       
-      if (this._savedQuotationsSort.field === 'fornecedores.nome') {
-        q = q.order('nome', { foreignTable: 'fornecedores', ascending: this._savedQuotationsSort.ascending });
+      if (this._savedQuotationsSort.field.includes('.')) {
+        const [table, col] = this._savedQuotationsSort.field.split('.');
+        q = q.order(col, { foreignTable: table, ascending: this._savedQuotationsSort.ascending });
       } else {
         q = q.order(this._savedQuotationsSort.field, { ascending: this._savedQuotationsSort.ascending });
       }
+
+      if(dtIni) q = q.gte('created_at', `${dtIni}T00:00:00`);
+      if(dtFim) q = q.lte('created_at', `${dtFim}T23:59:59`);
 
       const { data, error } = await q;
       if(error) throw error;
@@ -1150,6 +1190,20 @@ const UI = {
     this.detailPanelBackdrop.classList.add('hidden');
   },
 
+  async carregarPrateleirasNoSelect() {
+    try {
+      const { data, error } = await supabaseClient.from('prateleiras').select('*').order('nome');
+      if (error) throw error;
+      
+      if (this.produtoPrateleira) {
+        this.produtoPrateleira.innerHTML = '<option value="">Prateleira...</option>' + 
+          (data || []).map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+      }
+    } catch (err) {
+      console.error('Erro ao carregar select de prateleiras:', err);
+    }
+  },
+
   async handleProductForm(e){
     e.preventDefault();
     const form = this.formCadastrarProduto;
@@ -1160,6 +1214,7 @@ const UI = {
       codigo_secundario: document.getElementById('produtoCodigo2').value,
       nome: document.getElementById('produtoNome').value,
       unidade_medida: document.getElementById('produtoUnidade').value,
+      prateleira_id: this.produtoPrateleira?.value || null
     };
 
     if (!payload.codigo_principal || !payload.nome) {
@@ -1198,6 +1253,7 @@ const UI = {
       document.getElementById('produtoCodigo2').value = product.codigo_secundario || '';
       document.getElementById('produtoNome').value = product.nome || '';
       document.getElementById('produtoUnidade').value = product.unidade_medida || '';
+      if (this.produtoPrateleira) this.produtoPrateleira.value = product.prateleira_id || '';
 
       this.btnSubmitProduto.textContent = 'Atualizar';
       this.formCadastrarProduto.scrollIntoView({ behavior: 'smooth' });
@@ -1356,7 +1412,7 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
-      const produtos = await SupabaseService.list('produtos', 'id, codigo_principal, codigo_secundario, nome, unidade_medida, status', queryOptions);
+      const produtos = await SupabaseService.list('produtos', '*, prateleiras(nome, localizacao)', queryOptions);
       this.produtosTableBody.innerHTML = produtos.map(p => {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
@@ -1369,6 +1425,8 @@ const UI = {
           <td>${p.codigo_secundario || ''}</td>
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || ''}</td>
+          <td>${p.prateleiras?.nome || '-'}</td>
+          <td>${p.prateleiras?.localizacao || '-'}</td>
           <td>${status}</td>
           <td>
             <button class="btn-edit" data-id="${p.id}">Editar</button>
@@ -1393,16 +1451,28 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
+      const usuarioLogado = this._getCurrentUser();
+      const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : 'default';
+
       const fornecedores = await SupabaseService.list('fornecedores', 'id, nome, telefone', queryOptions);
-      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => `
+      this.fornecedoresTableBody.innerHTML = fornecedores.map(f => {
+        let buttons = '';
+        if (['administrador', 'compras', 'gerencia'].includes(nivelUsuario)) {
+            buttons += `<button class="btn-edit" data-id="${f.id}">Editar</button>`;
+        }
+        if (nivelUsuario === 'administrador') {
+            buttons += `<button class="btn-delete" data-id="${f.id}" style="margin-left: 5px;">Excluir</button>`;
+        }
+
+        return `
         <tr>
           <td>${f.nome || ''}</td>
           <td>${f.telefone || ''}</td>
           <td>
-            <button class="btn-edit" data-id="${f.id}">Editar</button>
-            <button class="btn-delete" data-id="${f.id}">Excluir</button>
+            ${buttons}
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
 
       this.updateSortIcons('#sectionCadastrarFornecedor', this._fornecedoresSort);
     } catch(e) {
@@ -1595,6 +1665,52 @@ const UI = {
         }
     } else {
         alert('Nenhum item válido para receber');
+    }
+  },
+
+  async renderRelatoriosGrid() {
+    const term = this.searchRelatorioProduto?.value.trim();
+    if(!term) return alert('Digite um nome de produto para buscar.');
+    
+    if(this.relatoriosTableBody) this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center">Carregando...</td></tr>';
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('cotacao_itens')
+        .select(`
+            quantidade,
+            produtos!inner(nome),
+            cotacoes!inner(
+                codigo_cotacao,
+                updated_at,
+                data_cotacao,
+                status,
+                fornecedores(nome)
+            )
+        `)
+        .ilike('produtos.nome', `%${term}%`);
+
+      if(error) throw error;
+
+      this.relatoriosTableBody.innerHTML = '';
+      if(!data || data.length === 0) {
+        this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma cotação encontrada com este produto.</td></tr>';
+        return;
+      }
+
+      data.sort((a,b) => new Date(b.cotacoes.updated_at || b.cotacoes.data_cotacao) - new Date(a.cotacoes.updated_at || a.cotacoes.data_cotacao));
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        const dataStr = new Date(item.cotacoes.updated_at || item.cotacoes.data_cotacao).toLocaleString('pt-BR');
+        const fornecedor = item.cotacoes.fornecedores ? item.cotacoes.fornecedores.nome : '-';
+        
+        tr.innerHTML = `<td>${dataStr}</td><td>${item.cotacoes.codigo_cotacao}</td><td>${item.produtos.nome}</td><td>${item.quantidade}</td><td><span class="status status-${item.cotacoes.status.replace(/\s+/g, '-')}">${item.cotacoes.status}</span></td><td>${fornecedor}</td>`;
+        this.relatoriosTableBody.appendChild(tr);
+      });
+    } catch(e) {
+        console.error(e);
+        if(this.relatoriosTableBody) this.relatoriosTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red">Erro ao buscar dados.</td></tr>';
     }
   }
 };

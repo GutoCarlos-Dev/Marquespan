@@ -239,7 +239,7 @@ const EstoqueGeralUI = {
 
     async renderProdutosGrid() {
         const term = this.searchProdutoTab.value.trim().toLowerCase();
-        this.gridProdutosTabBody.innerHTML = '<tr><td colspan="9" class="text-center">Carregando...</td></tr>';
+        this.gridProdutosTabBody.innerHTML = '<tr><td colspan="10" class="text-center">Carregando...</td></tr>';
 
         try {
             let query = supabaseClient.from('produtos').select('*, prateleiras(nome, localizacao)').order('nome');
@@ -276,7 +276,7 @@ const EstoqueGeralUI = {
 
         } catch (err) {
             console.error('Erro ao listar produtos:', err);
-            this.gridProdutosTabBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
+            this.gridProdutosTabBody.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
         }
     },
 

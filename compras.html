@@ -168,12 +168,15 @@
             <button id="btnOpenImportExportModal" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar/Exportar</button>
         </div>
       </div>
-      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr 1fr auto;">
+      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr 1fr 1.2fr auto;">
         <input type="text" id="produtoCodigo1" placeholder="Cód. Principal" class="glass-input">
         <input type="text" id="produtoCodigo2" placeholder="Cód. Secundário" class="glass-input">
         <input type="text" id="produtoNome" placeholder="Nome do Produto" required class="glass-input">
         <input type="text" id="produtoUnidade" placeholder="UN (KG, LT...)" class="glass-input">
         <input type="number" id="produtoQtdMinima" placeholder="Qtd. Mín." class="glass-input" step="0.01" value="0">
+        <select id="produtoPrateleira" class="glass-input">
+          <option value="">Selecione a Prateleira...</option>
+        </select>
         <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green">Cadastrar</button>
       </form>
       
@@ -189,6 +192,8 @@
                     <th data-field="codigo_secundario">CÓD. SEC.</th>
                     <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
                     <th data-field="unidade_medida">UN</th>
+                    <th>PRATELEIRA</th>
+                    <th>LOCALIZAÇÃO</th>
                     <th>MÍNIMO</th>
                     <th data-field="status">STATUS</th>
                     <th>AÇÕES</th>
@@ -327,6 +332,6 @@
 
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/scriptcompras.js?v=1.1"></script>
+  <script type="module" src="./script/compras.js"></script>
 </body>
 </html>
