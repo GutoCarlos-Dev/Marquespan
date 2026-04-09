@@ -126,11 +126,13 @@ const TacografoUI = {
                 let status = tData.status || 'Vencido';
                 const venc = tData.data_vencimento;
 
-                // Automação: Sem data vira Dispensado. Com data, segue regra se não for manual.
-                if (!venc) {
-                    status = 'Dispensado';
+                // Automação conforme pedido:
+                // Se existe vencimento, calcula baseada na data de hoje (Em Dia ou Pendente/Vencido).
+                // Se não existe, e o status NÃO for 'Dispensado' (que é manual), fica 'Vencido'.
+                if (venc) {
+                    status = (venc >= todayStr) ? 'Em Dia' : 'Vencido';
                 } else if (status !== 'Dispensado') {
-                    status = (venc > todayStr) ? 'Em Dia' : 'Vencido';
+                    status = 'Vencido';
                 }
 
                 return {
@@ -264,25 +266,25 @@ const TacografoUI = {
                 <td>${item.modelo}</td>
                 <td class="renavan-cell" data-placa="${item.placa}" ondblclick="TacografoUI.startRenavanEdit(this)">${item.renavan || '-'}</td>
                 <td>${item.tipo}</td>
-                <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao}"></td>
-                <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento}" onchange="TacografoUI.handleDateChange(this)"></td>
+                <td><input type="date" class="table-date-input input-emissao" value="${item.data_emissao || ''}" oninput="TacografoUI.handleInputChange(this, 'data_emissao', '${item.placa}')"></td>
+                <td><input type="date" class="table-date-input input-vencimento ${this.checkVencimento(item.data_vencimento)}" value="${item.data_vencimento || ''}" onchange="TacografoUI.handleDateChange(this)" oninput="TacografoUI.handleInputChange(this, 'data_vencimento', '${item.placa}')"></td>
                 <td>
-                    <select class="status-select-grid guia-gru-select">
+                    <select class="status-select-grid guia-gru-select" onchange="TacografoUI.handleInputChange(this, 'guia_gru', '${item.placa}')">
                         ${guiaGruHtml}
                     </select>
                 </td>
                 <td>
-                    <select class="status-select-grid ${this.getStatusClass(item.status)} status-select" onchange="this.className = 'status-select-grid status-select ' + TacografoUI.getStatusClass(this.value)">
+                    <select class="status-select-grid ${this.getStatusClass(item.status)} status-select" onchange="this.className = 'status-select-grid status-select ' + TacografoUI.getStatusClass(this.value); TacografoUI.handleInputChange(this, 'status', '${item.placa}')">
                         ${optionsHtml}
                     </select>
                 </td>
                 <td>
-                    <select class="status-select-grid acao-select ${item.acao === 'Preliminar' ? 'acao-preliminar' : ''}" onchange="this.className = 'status-select-grid acao-select ' + (this.value === 'Preliminar' ? 'acao-preliminar' : '')">
+                    <select class="status-select-grid acao-select ${item.acao === 'Preliminar' ? 'acao-preliminar' : ''}" onchange="this.className = 'status-select-grid acao-select ' + (this.value === 'Preliminar' ? 'acao-preliminar' : ''); TacografoUI.handleInputChange(this, 'acao', '${item.placa}')">
                         ${acaoHtml}
                     </select>
                 </td>
                 <td>
-                    <input type="text" class="table-date-input input-obs" value="${item.observacao || ''}" placeholder="Observações...">
+                    <input type="text" class="table-date-input input-obs" value="${item.observacao || ''}" placeholder="Observações..." oninput="TacografoUI.handleInputChange(this, 'observacao', '${item.placa}')">
                 </td>
                 <td style="display: flex; gap: 5px; justify-content: center;">
                     <button class="btn-icon save" onclick="TacografoUI.salvarLinha('${item.placa}')" title="Salvar">
@@ -295,6 +297,17 @@ const TacografoUI = {
             `;
             this.tbody.appendChild(tr);
         });
+    },
+
+    /**
+     * Sincroniza as alterações do DOM com o array de dados em memória.
+     */
+    handleInputChange(input, key, placa) {
+        const item = this.data.find(d => d.placa === placa);
+        if (item) {
+            item[key] = input.value;
+            if (key === 'status' || key === 'acao') this.renderGrid(); // Re-renderiza para atualizar contadores se mudar status/ação
+        }
     },
 
     updateCounters(counts) {
@@ -322,16 +335,26 @@ const TacografoUI = {
         const newVenc = input.value;
 
         let newStatus = currentStatus;
-        if (!newVenc) {
-            newStatus = 'Dispensado';
-        } else if (currentStatus !== 'Dispensado') {
+        if (newVenc) {
+            // Se tem data, automatiza entre Em Dia e Vencido (Pendente)
             const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
-            newStatus = (newVenc > todayStr) ? 'Em Dia' : 'Vencido';
+            newStatus = (newVenc >= todayStr) ? 'Em Dia' : 'Vencido';
+        } else {
+            // Se não tem data, e não foi marcado manualmente como Dispensado, volta para Vencido
+            if (currentStatus !== 'Dispensado') {
+                newStatus = 'Vencido';
+            }
         }
 
         if (statusSelect.value !== newStatus) {
             statusSelect.value = newStatus;
             statusSelect.className = 'status-select-grid ' + this.getStatusClass(newStatus);
+            
+            // Sincroniza com o array de dados e re-renderiza para atualizar contadores da legenda
+            const placa = tr.dataset.placa;
+            const item = this.data.find(d => d.placa === placa);
+            if (item) item.status = newStatus;
+            this.renderGrid();
         }
         
         // Atualiza a cor do input de data
@@ -453,8 +476,12 @@ const TacografoUI = {
 
             this.renderGrid(); // Re-renderiza a grade, disparando a atualização dos contadores sem recarregar a página
 
-            tr.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
-            setTimeout(() => tr.style.backgroundColor = '', 1000);
+            // Feedback visual na nova linha após o re-render
+            const newTr = document.querySelector(`tr[data-placa="${placa}"]`);
+            if (newTr) {
+                newTr.style.backgroundColor = 'rgba(40, 167, 69, 0.2)';
+                setTimeout(() => newTr.style.backgroundColor = '', 1000);
+            }
         } catch (err) {
             alert('Erro ao salvar: ' + err.message);
         } finally {
@@ -465,7 +492,7 @@ const TacografoUI = {
     checkVencimento(dataVenc) {
         if (!dataVenc) return '';
         const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
-        return (dataVenc <= todayStr) ? 'text-danger font-bold' : '';
+        return (dataVenc < todayStr) ? 'text-danger font-bold' : '';
     },
 
     async importarXLSX(e) {
