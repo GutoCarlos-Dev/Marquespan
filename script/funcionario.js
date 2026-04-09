@@ -509,7 +509,7 @@ const FuncionarioUI = {
 
         doc.setFontSize(18);
         doc.setTextColor(0, 105, 55); // Verde Marquespan
-        doc.text('Relatório: Quadro de Funcionários', 60, 18);
+        doc.text('Lista de Funcionários', 60, 18);
 
         doc.setFontSize(8);
         doc.setTextColor(100);
