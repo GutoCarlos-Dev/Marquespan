@@ -125,7 +125,7 @@ function atualizarMonitoramentoLavagemPorLista(lavagem) {
                 <div class="kpi-icon" style="background-color: #eee; color: #999;"><i class="fas fa-shower"></i></div>
                 <div class="kpi-info">
                     <h3>Lavagem</h3>
-                    <p>0 <small>Pendências</small></p>
+                    <p>0 <small>Pendentes</small></p>
                 </div>
             </div>`;
         return;
@@ -145,7 +145,7 @@ function atualizarMonitoramentoLavagemPorLista(lavagem) {
             <div class="kpi-icon"><i class="fas fa-shower"></i></div>
             <div class="kpi-info">
                 <h3>${lista.nome}</h3>
-                <p>${pendentes} <small>Pendências</small></p>
+                <p>${pendentes} <small>Pendentes</small></p>
             </div>
         `;
 
@@ -170,7 +170,7 @@ function atualizarMonitoramentoEngraxePorLista(engraxe) {
                 <div class="kpi-icon" style="background-color: #eee; color: #999;"><i class="fas fa-oil-can"></i></div>
                 <div class="kpi-info">
                     <h3>Engraxe</h3>
-                    <p>0 <small>Pendências</small></p>
+                    <p>0 <small>Pendentes</small></p>
                 </div>
             </div>`;
         return;
@@ -191,7 +191,7 @@ function atualizarMonitoramentoEngraxePorLista(engraxe) {
             <div class="kpi-icon"><i class="fas fa-oil-can"></i></div>
             <div class="kpi-info">
                 <h3>${lista.nome}</h3>
-                <p>${pendentes} <small>Pendências</small></p>
+                <p>${pendentes} <small>Pendentes</small></p>
             </div>
         `;
 
