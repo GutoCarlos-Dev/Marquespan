@@ -306,7 +306,6 @@ const TacografoUI = {
         const item = this.data.find(d => d.placa === placa);
         if (item) {
             item[key] = input.value;
-            if (key === 'status' || key === 'acao') this.renderGrid(); // Re-renderiza para atualizar contadores se mudar status/ação
         }
     },
 
@@ -348,13 +347,12 @@ const TacografoUI = {
 
         if (statusSelect.value !== newStatus) {
             statusSelect.value = newStatus;
-            statusSelect.className = 'status-select-grid ' + this.getStatusClass(newStatus);
+            statusSelect.className = 'status-select-grid status-select ' + this.getStatusClass(newStatus);
             
-            // Sincroniza com o array de dados e re-renderiza para atualizar contadores da legenda
+            // Sincroniza com o array de dados em memória
             const placa = tr.dataset.placa;
             const item = this.data.find(d => d.placa === placa);
             if (item) item.status = newStatus;
-            this.renderGrid();
         }
         
         // Atualiza a cor do input de data
@@ -436,7 +434,10 @@ const TacografoUI = {
 
     async salvarLinha(placa) {
         const tr = document.querySelector(`tr[data-placa="${placa}"]`);
+        if (!tr) return;
+
         const btn = tr.querySelector('.btn-icon.save');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         
         const status = tr.querySelector('.status-select').value;
         const guia_gru = tr.querySelector('.guia-gru-select').value;
@@ -444,8 +445,6 @@ const TacografoUI = {
         const data_emissao = tr.querySelector('.input-emissao').value;
         const data_vencimento = tr.querySelector('.input-vencimento').value;
         const observacao = tr.querySelector('.input-obs').value;
-
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
             const { error } = await supabaseClient
