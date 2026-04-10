@@ -117,7 +117,7 @@ const FuncionarioUI = {
 
         const rh = document.getElementById('funcRH').value;
         const novaFuncao = document.getElementById('funcFuncao').value;
-        const dataHoje = new Date().toISOString().split('T')[0];
+        const dataHoje = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
 
         // Lógica de Histórico: Se estiver editando e a função mudou, registra na tabela de histórico
         if (this.editingIdInput.value && this.currentFuncaoBeforeEdit && this.currentFuncaoBeforeEdit !== novaFuncao) {
@@ -233,7 +233,7 @@ const FuncionarioUI = {
                     <td title="${f.nome_completo || ''}">${f.nome}</td>
                     <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.funcao}</td>
-                    <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao).toLocaleDateString('pt-BR') : '-'}</td>
+                    <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${f.contato_corp || f.contato_pessoal || '-'}</td>
                     <td><span class="status-badge status-${f.status.toLowerCase()}">${f.status}</span></td>
                     <td>
