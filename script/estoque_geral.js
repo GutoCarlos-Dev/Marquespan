@@ -12,6 +12,7 @@ const EstoqueGeralUI = {
         this.carregarListaProdutosDatalist();
         this.carregarPrateleirasNoSelect();
         this.carregarVeiculosRetirada();
+        this.updateSortIcons();
         this.updateTime();
         setInterval(() => this.updateTime(), 60000);
     },
@@ -86,6 +87,7 @@ const EstoqueGeralUI = {
         this.carrinhoRetirada = [];
         this.produtosCache = [];
         this.prateleirasCache = [];
+        this._produtosSort = { field: 'nome', ascending: true };
     },
 
     bindEvents() {
@@ -112,6 +114,22 @@ const EstoqueGeralUI = {
         this.formProduto.addEventListener('submit', (e) => this.handleProdutoFormSubmit(e));
         this.btnClearProdutoForm.addEventListener('click', () => this.clearProdutoForm());
         this.searchProdutoTab.addEventListener('input', () => this.renderProdutosGrid());
+
+        // Adiciona listeners para ordenação dos cabeçalhos da tabela de produtos
+        const prodHeaders = document.querySelectorAll('#tab-produtos thead th[data-field]');
+        prodHeaders.forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.field;
+                if (this._produtosSort.field === field) {
+                    this._produtosSort.ascending = !this._produtosSort.ascending;
+                } else {
+                    this._produtosSort.field = field;
+                    this._produtosSort.ascending = true;
+                }
+                this.updateSortIcons();
+                this.renderProdutosGrid();
+            });
+        });
         this.gridProdutosTabBody.addEventListener('click', (e) => this.handleProdutoTableClick(e));
 
         // Prateleiras
@@ -242,9 +260,17 @@ const EstoqueGeralUI = {
         this.gridProdutosTabBody.innerHTML = '<tr><td colspan="10" class="text-center">Carregando...</td></tr>';
 
         try {
-            let query = supabaseClient.from('produtos').select('*, prateleiras(nome, localizacao)').order('nome');
+            let query = supabaseClient.from('produtos').select('*, prateleiras(nome, localizacao)');
             if (term) {
                 query = query.or(`nome.ilike.%${term}%,codigo_principal.ilike.%${term}%`);
+            }
+
+            // Aplica a ordenação configurada
+            if (this._produtosSort.field.includes('.')) {
+                const [table, col] = this._produtosSort.field.split('.');
+                query = query.order(col, { foreignTable: table, ascending: this._produtosSort.ascending });
+            } else {
+                query = query.order(this._produtosSort.field, { ascending: this._produtosSort.ascending });
             }
 
             const { data, error } = await query;
@@ -278,6 +304,17 @@ const EstoqueGeralUI = {
             console.error('Erro ao listar produtos:', err);
             this.gridProdutosTabBody.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
         }
+    },
+
+    updateSortIcons() {
+        const headers = document.querySelectorAll('#tab-produtos thead th[data-field] i');
+        headers.forEach(icon => {
+            icon.className = 'fas fa-sort'; // Reset
+            const th = icon.closest('th');
+            if (th && th.dataset.field === this._produtosSort.field) {
+                icon.className = this._produtosSort.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        });
     },
 
     async handleProdutoFormSubmit(e) {
