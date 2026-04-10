@@ -481,7 +481,10 @@ function renderChartProgressoLavagem(lavagem) {
     const datasets = statusKeys.map(key => ({
         label: lavagemConfig[key].label,
         data: dataMatrix[key],
-        backgroundColor: lavagemConfig[key].color
+        backgroundColor: lavagemConfig[key].color,
+        borderRadius: 4, // Cantos arredondados para elegância
+        borderSkipped: false,
+        barThickness: 25 // Espessura controlada para visual limpo
     }));
 
     chartProgressoLavagem = new Chart(ctx, {
@@ -491,11 +494,20 @@ function renderChartProgressoLavagem(lavagem) {
             datasets: datasets
         },
         options: {
+            indexAxis: 'y', // Transforma em barras horizontais (mais elegante para comparação)
             responsive: true,
             maintainAspectRatio: false,
             scales: { 
-                x: { stacked: true, grid: { display: false } }, 
-                y: { stacked: true, grid: { color: '#f0f0f0' } } 
+                x: { 
+                    stacked: true, 
+                    display: false, // Remove o eixo X para focar nos dados
+                    grid: { display: false } 
+                }, 
+                y: { 
+                    stacked: true, 
+                    grid: { display: false },
+                    ticks: { font: { weight: 'bold', size: 12 }, color: '#333' }
+                } 
             },
             plugins: { 
                 legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: '#333' } } 
@@ -523,7 +535,10 @@ function renderChartProgressoEngraxe(engraxe) {
     const datasets = statusKeys.map(key => ({
         label: engraxeConfig[key].label,
         data: dataMatrix[key],
-        backgroundColor: engraxeConfig[key].color
+        backgroundColor: engraxeConfig[key].color,
+        borderRadius: 4,
+        borderSkipped: false,
+        barThickness: 25
     }));
 
     chartProgressoEngraxe = new Chart(ctx, {
@@ -533,11 +548,20 @@ function renderChartProgressoEngraxe(engraxe) {
             datasets: datasets
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             scales: { 
-                x: { stacked: true, grid: { display: false } }, 
-                y: { stacked: true, grid: { color: '#f0f0f0' } } 
+                x: { 
+                    stacked: true, 
+                    display: false,
+                    grid: { display: false } 
+                }, 
+                y: { 
+                    stacked: true, 
+                    grid: { display: false },
+                    ticks: { font: { weight: 'bold', size: 12 }, color: '#333' }
+                } 
             },
             plugins: { 
                 legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: '#333' } } 
