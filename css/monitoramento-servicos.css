@@ -199,7 +199,7 @@ body {
     display: block;
     justify-content: center;
     align-items: center;
-    min-height: 300px;
+    min-height: 270px;
     width: 100%;
     overflow: hidden;
 }
@@ -253,7 +253,7 @@ body {
 }
 
 .marquee-item {
-    flex: 0 0 320px; /* Reduzido para deixar os gráficos mais estreitos */
+    flex: 0 0 370px; /* Aumentado para deixar os gráficos mais largos e "saírem" mais da página */
     display: inline-block;
 }
 
