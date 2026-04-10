@@ -90,7 +90,7 @@ async function carregarDados() {
         const dadosEngraxe = resEngraxe.data || [];
 
         atualizarKPIs(dadosLavagem, dadosEngraxe);
-        renderizarGraficos(dadosLavagem, dadosEngraxe);
+        renderizarGraficos(dadosLavagem, dadosEngraxe, filial); // Passa o filtro de filial para a função de renderização
         carregarGraficoGastoMensal();
         carregarGraficoGastoAnualLavagem();
         carregarGraficoGastoEngraxe();
@@ -106,24 +106,108 @@ async function carregarDados() {
 
 function atualizarKPIs(lavagem, engraxe) {
     const totalListas = lavagem.length + engraxe.length;
-    
-    const lavagemPendentes = lavagem.reduce((acc, lista) => 
-        acc + lista.lavagem_itens.filter(i => i.status === 'PENDENTE').length, 0);
-    
-    const engraxePendentes = engraxe.reduce((acc, lista) => 
-        acc + lista.engraxe_itens.filter(i => i.status === 'PENDENTE').length, 0);
-
     document.getElementById('kpi-listas-abertas').textContent = totalListas;
-    document.getElementById('kpi-lavagem-pendente').textContent = lavagemPendentes;
-    document.getElementById('kpi-engraxe-pendente').textContent = engraxePendentes;
 }
 
-function renderizarGraficos(lavagem, engraxe) {
+/**
+ * Gera cards individuais para cada lista de lavagem aberta no container dinâmico.
+ * @param {Array} lavagem - Array de objetos de listas de lavagem vindos do Supabase.
+ */
+function atualizarMonitoramentoLavagemPorLista(lavagem) {
+    const container = document.getElementById('lavagem-dynamic-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (lavagem.length === 0) {
+        container.innerHTML = `
+            <div class="kpi-card glass-card" style="border-left-color: #ccc; opacity: 0.6;">
+                <div class="kpi-icon" style="background-color: #eee; color: #999;"><i class="fas fa-shower"></i></div>
+                <div class="kpi-info">
+                    <h3>Lavagem</h3>
+                    <p>0 <small>Pendências</small></p>
+                </div>
+            </div>`;
+        return;
+    }
+
+    lavagem.forEach(lista => {
+        const pendentes = (lista.lavagem_itens || []).filter(item => 
+            !item.status || ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO'].includes(item.status.toUpperCase())
+        ).length;
+
+        const card = document.createElement('div');
+        const corClass = pendentes > 5 ? 'orange' : (pendentes > 0 ? 'yellow' : 'green');
+        card.className = `kpi-card glass-card card-lavagem ${corClass}`;
+        card.style.cursor = 'pointer';
+        
+        card.innerHTML = `
+            <div class="kpi-icon"><i class="fas fa-shower"></i></div>
+            <div class="kpi-info">
+                <h3>${lista.nome}</h3>
+                <p>${pendentes} <small>Pendências</small></p>
+            </div>
+        `;
+
+        card.onclick = () => window.location.href = `lavagem.html?id=${lista.id}`;
+        container.appendChild(card);
+    });
+}
+
+/**
+ * Gera cards individuais para cada lista de engraxe aberta no container dinâmico.
+ * @param {Array} engraxe - Array de objetos de listas de engraxe vindos do Supabase.
+ */
+function atualizarMonitoramentoEngraxePorLista(engraxe) {
+    const container = document.getElementById('engraxe-dynamic-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (engraxe.length === 0) {
+        container.innerHTML = `
+            <div class="kpi-card glass-card" style="border-left-color: #ccc; opacity: 0.6;">
+                <div class="kpi-icon" style="background-color: #eee; color: #999;"><i class="fas fa-oil-can"></i></div>
+                <div class="kpi-info">
+                    <h3>Engraxe</h3>
+                    <p>0 <small>Pendências</small></p>
+                </div>
+            </div>`;
+        return;
+    }
+
+    engraxe.forEach(lista => {
+        const pendentes = (lista.engraxe_itens || []).filter(item => 
+            !item.status || item.status.toUpperCase() === 'PENDENTE'
+        ).length;
+
+        const card = document.createElement('div');
+        // Amarelo se tiver pendência, laranja se tiver mais de 5, verde se estiver zerado
+        const corClass = pendentes > 5 ? 'orange' : (pendentes > 0 ? 'yellow' : 'green');
+        card.className = `kpi-card glass-card card-engraxe ${corClass}`;
+        card.style.cursor = 'pointer';
+        
+        card.innerHTML = `
+            <div class="kpi-icon"><i class="fas fa-oil-can"></i></div>
+            <div class="kpi-info">
+                <h3>${lista.nome}</h3>
+                <p>${pendentes} <small>Pendências</small></p>
+            </div>
+        `;
+
+        card.onclick = () => window.location.href = `engraxe.html?id=${lista.id}`;
+        container.appendChild(card);
+    });
+}
+
+function renderizarGraficos(lavagem, engraxe, filialFilter) {
     renderChartProgressoLavagem(lavagem);
     renderChartProgressoEngraxe(engraxe);
     renderChartPizzaLavagem(lavagem);
     renderChartPizzaEngraxe(engraxe);
     renderChartStatus(lavagem, engraxe);
+    atualizarMonitoramentoLavagemPorLista(lavagem);
+    atualizarMonitoramentoEngraxePorLista(engraxe);
 }
 
 async function carregarGraficoGastoMensal() {
@@ -277,7 +361,7 @@ async function carregarGraficoGastoEngraxe() {
                 datasets: [{
                     label: 'Investimento Total (R$)',
                     data: [valorTotal],
-                    backgroundColor: 'rgba(253, 126, 20, 0.7)', // Laranja para combinar com o tema Engraxe
+                    backgroundColor: 'rgba(253, 160, 20, 0.7)', // Laranja para combinar com o tema Engraxe
                     borderColor: '#fd7e14',
                     borderWidth: 1,
                     borderRadius: 8

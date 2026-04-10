@@ -60,20 +60,10 @@
                     <p id="kpi-listas-abertas">0</p>
                 </div>
             </div>
-            <div class="kpi-card glass-card orange">
-                <div class="kpi-icon"><i class="fas fa-shower"></i></div>
-                <div class="kpi-info">
-                    <h3>Lavagem Pendente</h3>
-                    <p id="kpi-lavagem-pendente">0</p>
-                </div>
-            </div>
-            <div class="kpi-card glass-card yellow">
-                <div class="kpi-icon"><i class="fas fa-oil-can"></i></div>
-                <div class="kpi-info">
-                    <h3>Engraxe Pendente</h3>
-                    <p id="kpi-engraxe-pendente">0</p>
-                </div>
-            </div>
+            <!-- Container para injeção dinâmica de cards de lavagem por lista -->
+            <div id="lavagem-dynamic-container" style="display: contents;"></div>
+            <!-- Container para injeção dinâmica de cards de engraxe por lista -->
+            <div id="engraxe-dynamic-container" style="display: contents;"></div>
         </div>
 
         <!-- Dashboard Principal -->
