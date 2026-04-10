@@ -26,9 +26,11 @@ const FuncionarioUI = {
         this.statusFilterOptions = document.getElementById('statusFilterOptions');
         this.statusFilterText = document.getElementById('statusFilterText');
         this.monthFilter = document.getElementById('monthFilter');
+        this.yearFilter = document.getElementById('yearFilter'); // Novo filtro por ano
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
+        this.gridCount = document.getElementById('countFuncGrid');
     },
 
     // Adiciona o campo Data de Nascimento ao cache
@@ -44,6 +46,9 @@ const FuncionarioUI = {
         }
         if (this.monthFilter) {
             this.monthFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.yearFilter) {
+            this.yearFilter.addEventListener('input', () => this.renderGrid());
         }
         if (this.statusSelect) {
             this.statusSelect.addEventListener('change', () => this.toggleDesligamentoField());
@@ -89,7 +94,7 @@ const FuncionarioUI = {
         const checked = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked'));
         if (checked.length === 0) {
             this.statusFilterText.textContent = 'Nenhum';
-        } else if (checked.length === 4) {
+        } else if (checked.length === 5) {
             this.statusFilterText.textContent = 'Todos';
         } else if (checked.length <= 2) {
             this.statusFilterText.textContent = checked.map(cb => cb.parentElement.textContent.trim()).join(', ');
@@ -99,7 +104,7 @@ const FuncionarioUI = {
     },
 
     toggleDesligamentoField() {
-        if (this.statusSelect.value === 'Desligado') {
+        if (this.statusSelect.value === 'Desligado' || this.statusSelect.value === 'Transferido') {
             this.groupDesligamento.classList.remove('hidden');
         } else {
             this.groupDesligamento.classList.add('hidden');
@@ -178,6 +183,7 @@ const FuncionarioUI = {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
         const selectedMonth = this.monthFilter?.value || '';
+        const selectedYear = this.yearFilter?.value || ''; // Captura o valor do ano digitado
 
         try {
             let query = supabaseClient.from('funcionario').select('*');
@@ -207,7 +213,20 @@ const FuncionarioUI = {
                 });
             }
 
+            // Filtro de ano de admissão (realizado no cliente)
+            if (selectedYear && selectedYear.length === 4) {
+                list = list.filter(f => {
+                    if (!f.data_admissao) return false;
+                    const ano = f.data_admissao.split('-')[0]; // Extrai o YYYY de YYYY-MM-DD
+                    return ano === selectedYear;
+                });
+            }
+
             this.listData = list; // Atualiza cache para exportação
+            if (this.gridCount) {
+                this.gridCount.textContent = `(${list.length})`;
+            }
+            
             this.tableBody.innerHTML = list.map(f => `
                 <tr>
                     <td><strong>${f.rh_registro}</strong></td>
@@ -369,21 +388,21 @@ const FuncionarioUI = {
             if (error) throw error;
 
             const summaryData = {}; 
-            const grandTotals = { 'Ativo': 0, 'Desligado': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
+            const grandTotals = { 'Ativo': 0, 'Desligado': 0, 'Transferido': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
 
             list.forEach(f => {
                 const funcao = f.funcao || 'Não Definida';
                 const status = f.status || 'Ativo'; 
 
                 if (!summaryData[funcao]) {
-                    summaryData[funcao] = { 'Ativo': 0, 'Desligado': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
+                    summaryData[funcao] = { 'Ativo': 0, 'Desligado': 0, 'Transferido': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
                 }
 
                 if (summaryData[funcao][status] !== undefined) summaryData[funcao][status]++;
                 if (grandTotals[status] !== undefined) grandTotals[status]++;
 
-                // A coluna "Total" agora contabiliza apenas funcionários ativos (exclui desligados)
-                if (status !== 'Desligado') {
+                // A coluna "Total" agora contabiliza apenas funcionários ativos (exclui desligados e transferidos)
+                if (status !== 'Desligado' && status !== 'Transferido') {
                     summaryData[funcao]['Total']++;
                     grandTotals['Total']++;
                 }
@@ -397,6 +416,7 @@ const FuncionarioUI = {
                     <td><strong>${funcao}</strong></td>
                     <td>${data['Ativo']}</td>
                     <td>${data['Desligado']}</td>
+                    <td>${data['Transferido']}</td>
                     <td>${data['Ferias']}</td>
                     <td>${data['Afastado']}</td>
                     <td><strong>${data['Total']}</strong></td>
@@ -408,6 +428,7 @@ const FuncionarioUI = {
                     <td>TOTAIS GERAIS</td>
                     <td>${grandTotals['Ativo']}</td>
                     <td>${grandTotals['Desligado']}</td>
+                    <td>${grandTotals['Transferido']}</td>
                     <td>${grandTotals['Ferias']}</td>
                     <td>${grandTotals['Afastado']}</td>
                     <td>${grandTotals['Total']}</td>

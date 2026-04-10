@@ -93,6 +93,7 @@
                               <select id="funcStatus" required class="glass-input">
                                   <option value="Ativo">ATIVO</option>
                                   <option value="Desligado">DESLIGADO</option>
+                                  <option value="Transferido">TRANSFERIDO</option>
                                   <option value="Ferias">FÉRIAS</option>
                                   <option value="Afastado">AFASTADO</option>
                               </select>
@@ -180,8 +181,8 @@
 
         <hr style="margin: 30px 0; border-color: rgba(0,0,0,0.1);">
 
-        <h3><i class="fas fa-id-card"></i> Quadro de Funcionários</h3>
-        <div class="filters-actions-grid" style="display: grid; grid-template-columns: 1fr 200px 250px; gap: 15px; margin-bottom: 15px; align-items: end;">
+        <h3><i class="fas fa-id-card"></i> Quadro de Funcionários <span id="countFuncGrid" style="font-size: 0.85rem; color: #666; font-weight: normal; margin-left: 8px;">(0)</span></h3>
+        <div class="filters-actions-grid" style="display: grid; grid-template-columns: 1fr 180px 140px 250px; gap: 15px; margin-bottom: 15px; align-items: end;">
             <div class="form-group">
                 <label for="searchFuncInput">Busca</label>
                 <input type="text" id="searchFuncInput" placeholder="🔍 Filtrar por nome, RH ou função..." class="glass-input">
@@ -204,6 +205,10 @@
                     <option value="12">Dezembro</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label for="yearFilter">Ano de Admissão</label>
+                <input type="number" id="yearFilter" class="glass-input" placeholder="Ex: 2025" min="1900" max="2099">
+            </div>
             <div class="form-group custom-multiselect">
                 <label>Filtrar Status</label>
                 <div class="multiselect-display glass-input" id="statusFilterDisplay">
@@ -213,6 +218,7 @@
                 <div class="glass-dropdown hidden" id="statusFilterOptions">
                     <label class="dropdown-item"><input type="checkbox" class="status-checkbox" value="Ativo" checked> ATIVO</label>
                     <label class="dropdown-item"><input type="checkbox" class="status-checkbox" value="Desligado" checked> DESLIGADO</label>
+                    <label class="dropdown-item"><input type="checkbox" class="status-checkbox" value="Transferido" checked> TRANSFERIDO</label>
                     <label class="dropdown-item"><input type="checkbox" class="status-checkbox" value="Ferias" checked> FÉRIAS</label>
                     <label class="dropdown-item"><input type="checkbox" class="status-checkbox" value="Afastado" checked> AFASTADO</label>
                 </div>
@@ -248,6 +254,7 @@
                             <th>FUNÇÃO</th>
                             <th>ATIVO</th>
                             <th>DESLIGADO</th>
+                            <th>TRANSFERIDO</th>
                             <th>FÉRIAS</th>
                             <th>AFASTADO</th>
                             <th>TOTAL</th>
