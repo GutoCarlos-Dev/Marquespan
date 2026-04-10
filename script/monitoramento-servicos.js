@@ -51,14 +51,27 @@ function initDashboard() {
     setInterval(carregarDados, REFRESH_INTERVAL);
 
     document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('btn-fullscreen');
         const container = document.querySelector('.container');
+        const header = document.querySelector('.glass-header');
         const menuContainer = document.getElementById('menu-container');
+        const sidebar = document.getElementById('sidebar');
+
         if (document.fullscreenElement) {
+            if (btn) btn.innerHTML = '<i class="fas fa-compress"></i>';
             container.classList.add('fullscreen-active');
+            if (header) header.classList.add('hidden');
             if (menuContainer) menuContainer.classList.add('hidden');
+            if (sidebar) sidebar.classList.add('hidden');
         } else {
+            if (btn) btn.innerHTML = '<i class="fas fa-expand"></i>';
             container.classList.remove('fullscreen-active');
+            if (header) header.classList.remove('hidden');
             if (menuContainer) menuContainer.classList.remove('hidden');
+            if (sidebar) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.remove('mobile-open');
+            }
         }
         setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
     });
