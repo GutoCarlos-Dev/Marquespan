@@ -921,7 +921,7 @@ const UI = {
         const btnPdfHtml = `<button class="btn-action btn-pdf" data-id="${c.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>`;
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : ''; // Corrigido: &lt; e &gt;
         // Permite receber se estiver Aprovada ou Recebido Parcial
-        const podeReceber = ['estoque', 'administrador'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
+        const podeReceber = ['estoque', 'administrador', 'compras'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         // O botão de editar só aparece se o status NÃO for 'Recebido'
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';

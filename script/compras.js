@@ -862,7 +862,7 @@ const UI = {
 
         const btnPdfHtml = `<button class="btn-action btn-pdf" data-id="${c.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>`;
         const btnExcluirHtml = podeExcluir ? ` <button class="btn-action btn-delete" data-id="${c.id}">Excluir</button>` : '';
-        const podeReceber = ['estoque', 'administrador', 'gerencia'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
+        const podeReceber = ['estoque', 'administrador', 'gerencia', 'compras'].includes(nivelUsuario) && (c.status === 'Aprovada' || c.status === 'Recebido Parcial');
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador' || nivelUsuario === 'gerencia') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
         
