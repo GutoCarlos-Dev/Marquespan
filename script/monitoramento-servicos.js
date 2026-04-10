@@ -9,6 +9,8 @@ let chartGastoMensal = null;
 let chartGastoEngraxe = null;
 let chartGastoAnualLavagem = null;
 let chartGastoAnualEngraxe = null;
+let lavagemRotationInterval = null;
+let engraxeRotationInterval = null;
 
 const REFRESH_INTERVAL = 300000; // 5 minutos
 
@@ -602,6 +604,7 @@ function renderChartPizzaLavagem(lavagem) {
     container.innerHTML = '';
     chartsPizzaLavagem.forEach(c => c.destroy());
     chartsPizzaLavagem = [];
+    if (lavagemRotationInterval) clearInterval(lavagemRotationInterval);
 
     const statusKeys = Object.keys(lavagemConfig);
 
@@ -614,7 +617,7 @@ function renderChartPizzaLavagem(lavagem) {
         wrapper.className = 'pizza-item-wrapper';
         wrapper.innerHTML = `
             <h4 class="pizza-title" title="${lista.nome}">${lista.nome}</h4>
-            <div class="chart-wrapper" style="height: 150px;">
+            <div class="chart-wrapper" style="height: 220px;">
                 <canvas></canvas>
             </div>
         `;
@@ -636,10 +639,10 @@ function renderChartPizzaLavagem(lavagem) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: `Total: ${total}`, font: { size: 12 }, padding: 2 },
+                    title: { display: true, text: `Total: ${total}`, font: { size: 14 }, padding: 2 },
                     datalabels: {
                         color: '#fff',
-                        font: { weight: 'bold', size: 11 },
+                        font: { weight: 'bold', size: 13 },
                         formatter: (value) => value > 0 ? value : ''
                     }
                 }
@@ -648,6 +651,21 @@ function renderChartPizzaLavagem(lavagem) {
         });
         chartsPizzaLavagem.push(chart);
     });
+
+    // Lógica de Alternância
+    const items = container.querySelectorAll('.pizza-item-wrapper');
+    if (items.length > 0) {
+        items[0].classList.add('active');
+        
+        if (items.length > 1) {
+            let currentIndex = 0;
+            lavagemRotationInterval = setInterval(() => {
+                items[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % items.length;
+                items[currentIndex].classList.add('active');
+            }, 6000); // Alterna a cada 6 segundos
+        }
+    }
 }
 
 /**
@@ -660,6 +678,7 @@ function renderChartPizzaEngraxe(engraxe) {
     container.innerHTML = '';
     chartsPizzaEngraxe.forEach(c => c.destroy());
     chartsPizzaEngraxe = [];
+    if (engraxeRotationInterval) clearInterval(engraxeRotationInterval);
 
     engraxe.forEach(lista => {
         const itens = lista.engraxe_itens || [];
@@ -671,7 +690,7 @@ function renderChartPizzaEngraxe(engraxe) {
         wrapper.className = 'pizza-item-wrapper';
         wrapper.innerHTML = `
             <h4 class="pizza-title" title="${lista.nome}">${lista.nome}</h4>
-            <div class="chart-wrapper" style="height: 150px;">
+            <div class="chart-wrapper" style="height: 220px;">
                 <canvas></canvas>
             </div>
         `;
@@ -693,10 +712,10 @@ function renderChartPizzaEngraxe(engraxe) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: `Total: ${total}`, font: { size: 12 }, padding: 2 },
+                    title: { display: true, text: `Total: ${total}`, font: { size: 14 }, padding: 2 },
                     datalabels: {
                         color: '#fff',
-                        font: { weight: 'bold', size: 11 },
+                        font: { weight: 'bold', size: 13 },
                         formatter: (value) => value > 0 ? value : ''
                     }
                 }
@@ -705,6 +724,21 @@ function renderChartPizzaEngraxe(engraxe) {
         });
         chartsPizzaEngraxe.push(chart);
     });
+
+    // Lógica de Alternância
+    const items = container.querySelectorAll('.pizza-item-wrapper');
+    if (items.length > 0) {
+        items[0].classList.add('active');
+        
+        if (items.length > 1) {
+            let currentIndex = 0;
+            engraxeRotationInterval = setInterval(() => {
+                items[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % items.length;
+                items[currentIndex].classList.add('active');
+            }, 6000); // Alterna a cada 6 segundos
+        }
+    }
 }
 
 function iniciarRolagemAutomatica() {
