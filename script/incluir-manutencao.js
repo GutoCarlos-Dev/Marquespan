@@ -5,7 +5,7 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 // Estado dos arquivos
 let veiculosCache = []; // Cache para busca rápida de modelo
 let arquivosParaUpload = []; // Novos arquivos (File objects)
-let arquivosExistentes = []; // Arquivos já salvos no banco ({nome, path})
+let arquivosExistentes = []; // Arquivos já salvos no banco ({nome: string, path: string, isZipped: boolean, originalNames?: string[]})
 let listaFornecedoresCache = []; // Cache para busca rápida no modal
 let fornecedoresGridData = []; // Dados originais para o grid da aba
 let fornecedoresSort = { field: 'nome', asc: true };
@@ -189,7 +189,7 @@ async function carregarManutencaoParaEdicao(id) {
       .eq('id_manutencao', id);
 
     if (!arquivosError && arquivos) {
-        arquivosExistentes = arquivos.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo }));
+        arquivosExistentes = arquivos.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped || false, originalNames: a.original_names || [] }));
         renderizarListaArquivos();
     }
 
@@ -359,11 +359,34 @@ function handleFileSelect(e) {
 }
 
 function confirmarAnexo() {
-    const input = document.getElementById('inputArquivoAnexo');
-    if (input.files.length > 0) {
-        Array.from(input.files).forEach(file => {
-            arquivosParaUpload.push(file);
+    const input = document.getElementById('inputArquivoAnexo'); // Este é o input type="file"
+    const files = input.files;
+
+    if (files.length === 0) return;
+
+    if (files.length > 1) {
+        // Se múltiplos arquivos, compacta em um ZIP
+        const zip = new JSZip();
+        const originalNames = [];
+        Array.from(files).forEach(file => {
+            zip.file(file.name, file);
+            originalNames.push(file.name);
         });
+
+        zip.generateAsync({ type: "blob" }).then(function(content) {
+            const zipFileName = `anexos_${Date.now()}.zip`;
+            arquivosParaUpload.push({
+                file: content,
+                name: zipFileName,
+                isZipped: true,
+                originalNames: originalNames
+            });
+            renderizarListaArquivos();
+            fecharModalAnexo();
+        });
+    } else {
+        // Se um único arquivo, adiciona diretamente
+        arquivosParaUpload.push({ file: files[0], name: files[0].name, isZipped: false });
         renderizarListaArquivos();
         fecharModalAnexo();
     }
@@ -384,7 +407,7 @@ function renderizarListaArquivos() {
         div.style.alignItems = 'center';
         
         div.innerHTML = `
-            <span><i class="fas fa-file-alt"></i> ${arq.nome}</span>
+            <span>${arq.isZipped ? '<i class="fas fa-file-archive"></i>' : '<i class="fas fa-file-alt"></i>'} ${arq.nome} ${arq.isZipped && arq.originalNames ? `(${arq.originalNames.join(', ')})` : ''}</span>
             <div>
                 <button type="button" class="btn-icon" onclick="downloadArquivo('${arq.path}')" title="Baixar"><i class="fas fa-download"></i></button>
                 <button type="button" class="btn-icon delete" onclick="removerArquivoExistente(${index})" title="Remover"><i class="fas fa-trash"></i></button>
@@ -405,7 +428,7 @@ function renderizarListaArquivos() {
         div.style.borderLeft = '4px solid #28a745'; // Marca verde para novos
 
         div.innerHTML = `
-            <span><i class="fas fa-file-upload"></i> ${file.name} (Novo)</span>
+            <span>${file.isZipped ? '<i class="fas fa-file-archive"></i>' : '<i class="fas fa-file-upload"></i>'} ${file.name} (Novo)</span>
             <button type="button" class="btn-icon delete" onclick="removerArquivoNovo(${index})" title="Remover"><i class="fas fa-trash"></i></button>
         `;
         container.appendChild(div);
@@ -439,10 +462,10 @@ async function salvarArquivosManutencao(idManutencao) {
     const novosRegistros = [];
     
     for (const file of arquivosParaUpload) {
-        const fileName = `${idManutencao}/${Date.now()}_${file.name}`;
+        const fileName = `${idManutencao}/${Date.now()}_${file.name}`; // Use file.name from the object
         const { data, error } = await supabaseClient.storage
             .from('manutencao_arquivos')
-            .upload(fileName, file);
+            .upload(fileName, file.file); // Use file.file from the object
         
         if (error) {
             console.error('Erro no upload:', error);
@@ -450,7 +473,9 @@ async function salvarArquivosManutencao(idManutencao) {
         } else {
             novosRegistros.push({
                 id_manutencao: idManutencao,
-                nome_arquivo: file.name,
+                nome_arquivo: file.name, // Store the name used for upload (e.g., zip name)
+                is_zipped: file.isZipped, // Store if it's a zipped file
+                original_names: file.originalNames || null, // Store original names if zipped
                 caminho_arquivo: data.path
             });
         }
@@ -466,7 +491,7 @@ async function salvarArquivosManutencao(idManutencao) {
 
     // Prepara lista final (Existentes + Novos)
     const listaFinal = [
-        ...arquivosExistentes.map(a => ({ id_manutencao: idManutencao, nome_arquivo: a.nome, caminho_arquivo: a.path })),
+        ...arquivosExistentes.map(a => ({ nome: a.nome, path: a.path, isZipped: a.isZipped, originalNames: a.originalNames })),
         ...novosRegistros
     ];
 
@@ -481,7 +506,7 @@ async function salvarArquivosManutencao(idManutencao) {
     // Limpa lista de upload após salvar
     arquivosParaUpload = [];
     // Recarrega lista de existentes com o que acabou de ser salvo
-    arquivosExistentes = listaFinal.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo }));
+    arquivosExistentes = listaFinal.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped, originalNames: a.original_names }));
     renderizarListaArquivos();
 }
 
