@@ -22,11 +22,16 @@
       <section id="sectionCadastrarRotas" class="glass-panel">
         <h3><i class="fas fa-plus-circle"></i> Formulário de Rota</h3>
         <form id="formCadastrarRota">
+
           <input type="hidden" id="rotaEditingId">
           <div class="rotas-layout">
               <!-- Card de Campos -->
               <div class="glass-panel-inner">
                   <div class="form-grid">
+                      <div class="form-group">
+                          <label for="rotaFilial">Filial</label>
+                          <select id="rotaFilial" class="glass-input" required></select>
+                      </div>
                       <div class="form-group">
                           <label for="rotaNumero">Número da Rota</label>
                           <input type="text" id="rotaNumero" required class="glass-input" placeholder="Ex: 101">
@@ -93,6 +98,7 @@
             <table class="glass-table data-grid">
                 <thead>
                 <tr>
+              <th data-field="filial">FILIAL <i class="fas fa-sort"></i></th>
                     <th data-field="numero">NÚMERO <i class="fas fa-sort"></i></th>
                     <th data-field="semana">SEMANA <i class="fas fa-sort"></i></th>
                     <th data-field="responsavel">RESPONSÁVEL <i class="fas fa-sort"></i></th>

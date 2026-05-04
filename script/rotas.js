@@ -38,6 +38,7 @@ const RotasUI = {
         this.bind();
         this.setupInitialState();
         this.carregarSupervisores();
+        this.carregarFiliais(); // Carrega as filiais ao iniciar
     },
 
     cache() {
@@ -50,6 +51,7 @@ const RotasUI = {
         this.rotaSummary = document.getElementById('rotaSummary');
         this.editingIdInput = document.getElementById('rotaEditingId');
         this.supervisorSelect = document.getElementById('rotaSupervisor');
+        this.filialSelect = document.getElementById('rotaFilial'); // Novo campo Filial
 
         // Botão e input de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
@@ -110,6 +112,27 @@ const RotasUI = {
         }
     },
 
+    async carregarFiliais() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('filiais') // Tabela alimentada pela página filiais.html
+                .select('nome, sigla')
+                .order('nome', { ascending: true });
+            
+            if (error) throw error;
+
+            if (this.filialSelect && data) {
+                this.filialSelect.innerHTML = '<option value="">Selecione a Filial</option>';
+                data.forEach(f => {
+                    const value = f.sigla || f.nome;
+                    this.filialSelect.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar lista de filiais:', err);
+        }
+    },
+
     async handleFormSubmit(e) {
         e.preventDefault();
 
@@ -119,10 +142,11 @@ const RotasUI = {
             responsavel: document.getElementById('rotaResponsavel').value,
             supervisor: document.getElementById('rotaSupervisor').value,
             cidades: document.getElementById('rotaCidades').value,
-            dias: parseInt(document.getElementById('rotaDias').value),
+            dias: parseInt(document.getElementById('rotaDias').value) || 0, // Garante que seja número
             status: document.getElementById('rotaStatus').value,
+            filial: document.getElementById('rotaFilial').value, // Novo campo Filial
             // Incluímos o ID para o caso de estarmos editando, mas o upsert cuidará disso.
-            // Se o ID existir, ele atualiza. Se não, o upsert usará o 'numero' para o conflito.
+            // Se o ID existir, ele atualiza. Se não, o upsert usará o 'numero' e 'filial' para o conflito.
             id: this.editingIdInput.value || undefined
         };
 
@@ -130,7 +154,7 @@ const RotasUI = {
             return alert('Todos os campos da rota são obrigatórios.');
         }
 
-        try {
+        try { // Assumindo que 'numero' e 'filial' juntos formam uma chave única para o upsert
             const { error } = await supabaseClient.from('rotas').upsert(payload, { onConflict: 'numero' });
             if (error) throw error;
 
@@ -163,6 +187,7 @@ const RotasUI = {
             document.getElementById('rotaCidades').value = rota.cidades || '';
             document.getElementById('rotaDias').value = rota.dias || '';
             document.getElementById('rotaStatus').value = rota.status || 'ATIVA';
+            document.getElementById('rotaFilial').value = rota.filial || ''; // Preenche Filial
 
             this.btnSubmit.textContent = 'Atualizar Rota';
             this.form.scrollIntoView({ behavior: 'smooth' });
@@ -249,7 +274,8 @@ const RotasUI = {
             supervisor: row.SUPERVISOR,
             cidades: row.CIDADES,
             dias: row.DIAS,
-            status: row.STATUS || 'ATIVA'
+            status: row.STATUS || 'ATIVA',
+            filial: row.FILIAL // Novo campo Filial
         })).filter(r => r.numero); // Garante que a rota tenha um número
 
         if (upsertPayload.length === 0) {
@@ -296,13 +322,13 @@ const RotasUI = {
                 const searchConditions = [
                     `numero.ilike.%${searchTerm}%`, // Busca pelo número da rota como texto
                     `responsavel.ilike.%${searchTerm}%`,
+                    `filial.ilike.%${searchTerm}%`, // Novo filtro por Filial
                     `supervisor.ilike.%${searchTerm}%`,
                     `cidades.ilike.%${searchTerm}%`,
                     `status.ilike.%${searchTerm}%`
                 ];
                 queryOptions.or = searchConditions.join(',');
             }
-
             rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
 
             const dayClassMap = {
@@ -317,6 +343,7 @@ const RotasUI = {
                 const rowClass = dayClassMap[r.semana] || '';
                 return `
                 <tr class="${rowClass}">
+                    <td>${r.filial || ''}</td> <!-- Nova primeira coluna -->
                     <td>${r.numero || ''}</td>
                     <td>${r.semana || ''}</td>
                     <td>${r.responsavel || ''}</td>
@@ -332,8 +359,8 @@ const RotasUI = {
                 </tr>`;
             }).join('');
         } catch (e) {
-            console.error('Erro ao carregar rotas', e);
-            this.tableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar rotas.</td></tr>`;
+            console.error('Erro ao carregar rotas', e); // Colspan ajustado para 8
+            this.tableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar rotas.</td></tr>`;
         }
 
         // Renderiza o resumo após carregar o grid
