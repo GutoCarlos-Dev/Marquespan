@@ -536,7 +536,7 @@ const DespesasUI = {
             const { data: motoristas, error: motoristasError } = await supabaseClient
                 .from('funcionario')
                 .select('nome_completo')
-                .eq('funcao', 'Motorista')
+                .ilike('funcao', '%Motorista%')
                 .order('nome_completo', { ascending: true });
             if (motoristasError) throw motoristasError;
             this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome_completo}"></option>`).join('');
@@ -544,7 +544,7 @@ const DespesasUI = {
             const { data: auxiliares, error: auxiliaresError } = await supabaseClient
                 .from('funcionario')
                 .select('nome_completo')
-                .eq('funcao', 'Auxiliar')
+                .ilike('funcao', '%Auxiliar%')
                 .order('nome_completo', { ascending: true });
             if (auxiliaresError) throw auxiliaresError;
             this.funcionarios2List.innerHTML = auxiliares.map(f => `<option value="${f.nome_completo}"></option>`).join('');
