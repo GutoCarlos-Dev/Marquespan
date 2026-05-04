@@ -87,6 +87,7 @@ const EstoqueGeralUI = {
         this.carrinhoRetirada = [];
         this.produtosCache = [];
         this.prateleirasCache = [];
+        this._prateleirasSort = { field: 'nome', ascending: true }; // Estado inicial da ordenação de prateleiras
         this._produtosSort = { field: 'nome', ascending: true };
     },
 
@@ -136,6 +137,22 @@ const EstoqueGeralUI = {
         if (this.formPrateleira) this.formPrateleira.addEventListener('submit', (e) => this.handlePrateleiraFormSubmit(e));
         if (this.btnClearPrateleiraForm) this.btnClearPrateleiraForm.addEventListener('click', () => this.clearPrateleiraForm());
         if (this.searchPrateleiraTab) this.searchPrateleiraTab.addEventListener('input', () => this.renderPrateleirasGrid());
+        
+        // Adiciona listeners para ordenação dos cabeçalhos da tabela de prateleiras
+        const prateleirasHeaders = document.querySelectorAll('#tab-prateleiras thead th[data-field]');
+        prateleirasHeaders.forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.field;
+                if (this._prateleirasSort.field === field) {
+                    this._prateleirasSort.ascending = !this._prateleirasSort.ascending;
+                } else {
+                    this._prateleirasSort.field = field;
+                    this._prateleirasSort.ascending = true;
+                }
+                this.updatePrateleirasSortIcons(); // Atualiza ícones e re-renderiza
+                this.renderPrateleirasGrid();
+            });
+        });
         if (this.gridPrateleirasTabBody) this.gridPrateleirasTabBody.addEventListener('click', (e) => this.handlePrateleiraTableClick(e));
 
         this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
@@ -403,17 +420,29 @@ const EstoqueGeralUI = {
         this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center">Carregando...</td></tr>';
 
         try {
-            let query = supabaseClient.from('prateleiras').select('*').order('nome');
+            let query = supabaseClient.from('prateleiras').select('*');
             if (term) {
                 query = query.or(`nome.ilike.%${term}%,localizacao.ilike.%${term}%`);
             }
 
-            const { data, error } = await query;
+            const { data, error } = await query; // Busca os dados sem ordenação no DB
             if (error) throw error;
 
             this.prateleirasCache = data || [];
+            
+            // Aplica ordenação no lado do cliente
+            const sortedData = [...this.prateleirasCache].sort((a, b) => {
+                const field = this._prateleirasSort.field;
+                const valA = String(a[field] || '').toLowerCase();
+                const valB = String(b[field] || '').toLowerCase();
 
-            this.gridPrateleirasTabBody.innerHTML = (data || []).map(p => `
+                // Usa localeCompare com numeric: true para ordenação alfanumérica correta
+                const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+
+                return this._prateleirasSort.ascending ? comparison : -comparison;
+            });
+
+            this.gridPrateleirasTabBody.innerHTML = sortedData.map(p => `
                 <tr>
                     <td>${p.nome}</td>
                     <td>${p.localizacao || '-'}</td>
@@ -423,10 +452,22 @@ const EstoqueGeralUI = {
                     </td>
                 </tr>`).join('');
 
+            this.updatePrateleirasSortIcons(); // Atualiza os ícones após renderizar
         } catch (err) {
             console.error('Erro ao listar prateleiras:', err);
             this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
         }
+    },
+
+    updatePrateleirasSortIcons() {
+        const headers = document.querySelectorAll('#tab-prateleiras thead th[data-field] i');
+        headers.forEach(icon => {
+            icon.className = 'fas fa-sort'; // Reset para ícone neutro
+            const th = icon.closest('th');
+            if (th && th.dataset.field === this._prateleirasSort.field) {
+                icon.className = this._prateleirasSort.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        });
     },
 
     async handlePrateleiraFormSubmit(e) {
