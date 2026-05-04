@@ -491,7 +491,13 @@ async function salvarArquivosManutencao(idManutencao) {
 
     // Prepara lista final (Existentes + Novos)
     const listaFinal = [
-        ...arquivosExistentes.map(a => ({ nome: a.nome, path: a.path, isZipped: a.isZipped, originalNames: a.originalNames })),
+        ...arquivosExistentes.map(a => ({ 
+            id_manutencao: idManutencao,
+            nome_arquivo: a.nome, 
+            caminho_arquivo: a.path, 
+            is_zipped: a.isZipped, 
+            original_names: a.originalNames 
+        })),
         ...novosRegistros
     ];
 
