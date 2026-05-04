@@ -139,7 +139,6 @@ const RotasUI = {
         const payload = {
             numero: document.getElementById('rotaNumero').value,
             semana: document.getElementById('rotaSemana').value,
-            responsavel: document.getElementById('rotaResponsavel').value,
             supervisor: document.getElementById('rotaSupervisor').value,
             cidades: document.getElementById('rotaCidades').value,
             dias: parseInt(document.getElementById('rotaDias').value) || 0, // Garante que seja número
@@ -150,7 +149,7 @@ const RotasUI = {
             id: this.editingIdInput.value || undefined
         };
 
-        if (!payload.numero || !payload.semana || !payload.responsavel || !payload.status || !payload.cidades || !payload.dias) {
+        if (!payload.numero || !payload.semana || !payload.status || !payload.cidades || !payload.dias) {
             return alert('Todos os campos da rota são obrigatórios.');
         }
 
@@ -182,7 +181,6 @@ const RotasUI = {
             this.editingIdInput.value = rota.id;
             document.getElementById('rotaNumero').value = rota.numero || '';
             document.getElementById('rotaSemana').value = rota.semana || '';
-            document.getElementById('rotaResponsavel').value = rota.responsavel || '';
             document.getElementById('rotaSupervisor').value = rota.supervisor || '';
             document.getElementById('rotaCidades').value = rota.cidades || '';
             document.getElementById('rotaDias').value = rota.dias || '';
@@ -270,7 +268,6 @@ const RotasUI = {
         const upsertPayload = importedRows.map(row => ({
             numero: row.ROTA,
             semana: row.SEMANA,
-            responsavel: row.RESPONSÁVEL,
             supervisor: row.SUPERVISOR,
             cidades: row.CIDADES,
             dias: row.DIAS,
@@ -321,7 +318,6 @@ const RotasUI = {
             if (searchTerm) {
                 const searchConditions = [
                     `numero.ilike.%${searchTerm}%`, // Busca pelo número da rota como texto
-                    `responsavel.ilike.%${searchTerm}%`,
                     `filial.ilike.%${searchTerm}%`, // Novo filtro por Filial
                     `supervisor.ilike.%${searchTerm}%`,
                     `cidades.ilike.%${searchTerm}%`,
@@ -346,7 +342,6 @@ const RotasUI = {
                     <td>${r.filial || ''}</td> <!-- Nova primeira coluna -->
                     <td>${r.numero || ''}</td>
                     <td>${r.semana || ''}</td>
-                    <td>${r.responsavel || ''}</td>
                     <td>${r.supervisor || ''}</td>
                     <td>${r.cidades || ''}</td>
                     <td>${r.dias || ''}</td>
