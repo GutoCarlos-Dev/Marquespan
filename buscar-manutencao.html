@@ -115,8 +115,13 @@
                 <input type="text" id="os">
             </div>
             <div class="form-group-filter">
-                <label for="usuarioBusca">Usuário</label>
-                <input type="text" id="usuarioBusca" placeholder="Quem lançou">
+                <label for="status">Status</label>
+                <select id="status">
+                    <option value="">Todos</option>
+                    <option value="finalizado">FINALIZADO</option>
+                    <option value="manutencao">MANUTENÇÃO</option>
+                    <option value="aberto">ABERTO</option>
+                </select>
             </div>
         </div>
       </section>
@@ -152,6 +157,7 @@
                         <th class="sortable" data-sort="usuario" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Usuário <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="titulo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Título <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="veiculo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Placa <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="fornecedor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Fornecedor <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="descricao" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Descrição <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="numeroOS" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">OS <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="data" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Data <i class="fas fa-sort"></i></th>

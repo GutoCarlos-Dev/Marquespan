@@ -95,7 +95,7 @@ async function buscarManutencao() {
     filial: document.getElementById('filial').value,
     tipo: document.getElementById('tipoManutencao').value,
     fornecedor: document.getElementById('fornecedor').value,
-    usuario: document.getElementById('usuarioBusca').value
+    status: document.getElementById('status').value
   };
 
   // 1. Primeiro, obter a contagem total para avisar o usuário
@@ -189,7 +189,8 @@ function filtrarERenderizarTabela() {
     
     // 1. Filtragem Local (Placa e Descrição)
     let filtrados = todosRegistros.filter(m => 
-        (m.veiculo || '').toLowerCase().includes(searchTerm) || 
+        (m.veiculo || '').toLowerCase().includes(searchTerm) ||
+        (m.fornecedor || '').toLowerCase().includes(searchTerm) || 
         (m.descricao || '').toLowerCase().includes(searchTerm)
     );
 
@@ -241,7 +242,7 @@ function aplicarFiltrosQuery(query, filtros) {
 
   if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
   if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
-  if (filtros.usuario) query = query.ilike('usuario', `%${filtros.usuario}%`);
+  if (filtros.status) query = query.eq('status', filtros.status);
   return query;
 }
 
@@ -284,6 +285,7 @@ function preencherTabela(registros) {
       <td>${m.usuario || ''}</td>
       <td>${m.titulo || ''}</td>
       <td>${m.veiculo || ''}</td>
+      <td>${m.fornecedor || ''}</td>
       <td>${m.descricao || ''}</td>
       <td>${m.numeroOS || ''}</td>
       <td>${formatarData(m.data)}</td>
