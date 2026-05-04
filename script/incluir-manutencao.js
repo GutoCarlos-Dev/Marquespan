@@ -6,6 +6,7 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 let veiculosCache = []; // Cache para busca rápida de modelo
 let arquivosParaUpload = []; // Novos arquivos (File objects)
 let arquivosExistentes = []; // Arquivos já salvos no banco ({nome: string, path: string, isZipped: boolean, originalNames?: string[]})
+let arquivosParaDeletar = []; // Caminhos dos arquivos a serem deletados do Storage
 let listaFornecedoresCache = []; // Cache para busca rápida no modal
 let fornecedoresGridData = []; // Dados originais para o grid da aba
 let fornecedoresSort = { field: 'nome', asc: true };
@@ -256,6 +257,7 @@ async function salvarManutencao() {
       // Se for novo, limpa respeitando os campos fixados
       limparFormularioInteligente();
       arquivosParaUpload = [];
+      arquivosParaDeletar = []; // Limpa a lista de arquivos para deletar
       arquivosExistentes = [];
       renderizarListaArquivos();
       preencherUsuarioLogado();
@@ -451,14 +453,30 @@ window.removerArquivoNovo = (index) => {
 };
 
 window.removerArquivoExistente = (index) => {
-    if(confirm('Remover este anexo? A exclusão será efetivada ao salvar.')) {
-        arquivosExistentes.splice(index, 1);
+    if (confirm('Remover este anexo? A exclusão será efetivada ao salvar.')) {
+        const removedFile = arquivosExistentes.splice(index, 1)[0]; // Pega o item removido
+        if (removedFile && removedFile.path) {
+            arquivosParaDeletar.push(removedFile.path); // Adiciona o caminho à lista de exclusão do Storage
+        }
         renderizarListaArquivos();
     }
 };
 
 async function salvarArquivosManutencao(idManutencao) {
     // 1. Upload de novos arquivos
+    // 2. Excluir arquivos do Supabase Storage que foram marcados para remoção
+    if (arquivosParaDeletar.length > 0) {
+        const { error: storageDeleteError } = await supabaseClient.storage
+            .from('manutencao_arquivos')
+            .remove(arquivosParaDeletar);
+        
+        if (storageDeleteError) {
+            console.error('Erro ao excluir arquivos do Storage:', storageDeleteError);
+            alert('Aviso: Erro ao excluir alguns arquivos do armazenamento. Eles podem precisar ser removidos manualmente.');
+        }
+        arquivosParaDeletar = []; // Limpa a lista após tentar a exclusão
+    }
+
     const novosRegistros = [];
     
     for (const file of arquivosParaUpload) {
@@ -487,7 +505,11 @@ async function salvarArquivosManutencao(idManutencao) {
     
     // Remove referências antigas
     const { error: deleteError } = await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
-    if (deleteError) console.error('Erro ao limpar referências antigas:', deleteError);
+    if (deleteError) {
+        console.error('Erro ao limpar referências antigas:', deleteError);
+        alert('Erro ao sincronizar arquivos no banco de dados. Tente salvar novamente.');
+        return;
+    }
 
     // Prepara lista final (Existentes + Novos)
     const listaFinal = [
@@ -501,18 +523,29 @@ async function salvarArquivosManutencao(idManutencao) {
         ...novosRegistros
     ];
 
+    let insertedFilesData = [];
     if (listaFinal.length > 0) {
-        const { error } = await supabaseClient.from('manutencao_arquivos').insert(listaFinal);
-        if (error) {
-            console.error('Erro ao salvar metadados dos arquivos:', error);
-            alert('Erro ao salvar referência do arquivo no banco: ' + (error.message || JSON.stringify(error)));
+        const { data: insertedData, error: insertError } = await supabaseClient.from('manutencao_arquivos').insert(listaFinal).select('*');
+        if (insertError) {
+            console.error('Erro ao salvar metadados dos arquivos:', insertError);
+            alert('Erro ao salvar referência do arquivo no banco: ' + (insertError.message || JSON.stringify(insertError)));
+            // If insert fails, re-fetch existing files to reflect the true database state
+            const { data: currentDbFiles, error: fetchError } = await supabaseClient.from('manutencao_arquivos').select('*').eq('id_manutencao', idManutencao);
+            if (!fetchError && currentDbFiles) {
+                arquivosExistentes = currentDbFiles.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped, originalNames: a.original_names }));
+            } else {
+                arquivosExistentes = []; // Fallback if re-fetch also fails
+            }
+            renderizarListaArquivos();
+            return; // Aborta a operação
         }
+        insertedFilesData = insertedData;
     }
 
     // Limpa lista de upload após salvar
     arquivosParaUpload = [];
     // Recarrega lista de existentes com o que acabou de ser salvo
-    arquivosExistentes = listaFinal.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped, originalNames: a.original_names }));
+    arquivosExistentes = insertedFilesData.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped, originalNames: a.original_names }));
     renderizarListaArquivos();
 }
 
