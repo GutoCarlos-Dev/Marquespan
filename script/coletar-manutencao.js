@@ -1380,6 +1380,13 @@ const ColetarManutencaoUI = {
     async registrarColeta(e) {
         e.preventDefault();
         
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        if (submitButton) {
+            this.submitButtonOriginalText = submitButton.innerHTML; // Armazena o texto original do botão
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; // Adiciona um spinner
+        }
+
         const semana = document.getElementById('coletaSemana').value;
         const dataHoraInput = document.getElementById('coletaDataHora').value;
         if (!dataHoraInput) return alert("Por favor, preencha a data e hora.");
@@ -1721,6 +1728,11 @@ const ColetarManutencaoUI = {
         } catch (err) {
             console.error('Erro ao salvar coleta:', err);
             alert('Erro ao salvar coleta: ' + err.message);
+        } finally {
+            if (submitButton && this.submitButtonOriginalText) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = this.submitButtonOriginalText; // Restaura o texto original do botão
+            }
         }
     },
 
