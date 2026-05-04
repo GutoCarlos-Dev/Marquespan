@@ -1160,7 +1160,16 @@ const ColetarManutencaoUI = {
                             dataHora = new Date();
                         }
 
-                        const semana = rowNormalized['SEMANA'] || this.calculateCurrentWeek(dataHora);
+                        let semana;
+                        const semanaRaw = rowNormalized['SEMANA'];
+                        if (semanaRaw && !isNaN(semanaRaw) && !String(semanaRaw).includes('-')) {
+                            // Se for um número sem o ano, adiciona o ano da dataHora
+                            semana = `${String(semanaRaw).padStart(2, '0')}-${dataHora.getFullYear()}`;
+                        } else if (semanaRaw) {
+                            semana = String(semanaRaw); // Usa como está se já for uma string (ex: "19-2026")
+                        } else {
+                            semana = this.calculateCurrentWeek(dataHora); // Calcula se não for fornecido
+                        }
                         const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
                         const modelo = rowNormalized['MODELO'] || '';
                         const km = parseInt(rowNormalized['KM']) || 0;
@@ -1249,7 +1258,7 @@ const ColetarManutencaoUI = {
         }
 
         // Preenche Semana (Calculada a partir de 28/12/2025)
-        const semana = this.calculateCurrentWeek();
+        const semana = this.calculateCurrentWeek(now); // Passa 'now' para obter o ano correto
         const semanaInput = document.getElementById('coletaSemana');
         if (semanaInput) {
             semanaInput.value = semana;
@@ -1262,9 +1271,9 @@ const ColetarManutencaoUI = {
         const diffInMs = dateObj.getTime() - startDate.getTime();
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
         
-        let weekNumber = Math.floor(diffInDays / 7) + 1;
+        let weekNumber = Math.floor(diffInDays / 7) + 1; // Número da semana relativo à startDate
         if (weekNumber < 1) weekNumber = 1; // Garante que não seja menor que 1
-        return String(weekNumber).padStart(2, ''); //Começa semana sem o zero
+        return String(weekNumber).padStart(2, '0') + '-' + dateObj.getFullYear();
     },
 
     // Carrega a lista de veículos para o datalist
@@ -1975,6 +1984,11 @@ const ColetarManutencaoUI = {
             this.editingId = id;
             document.getElementById('coletaSemana').value = coleta.semana;
             
+            // Garante que o formato da semana seja XX-YYYY ao carregar para edição
+            if (coleta.semana && !String(coleta.semana).includes('-')) {
+                const year = new Date(coleta.data_hora).getFullYear();
+                document.getElementById('coletaSemana').value = `${String(coleta.semana).padStart(2, '0')}-${year}`;
+            }
             // Ajuste de fuso horário para o input datetime-local
             const date = new Date(coleta.data_hora);
             date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
