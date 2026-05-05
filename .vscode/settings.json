@@ -1,3 +1,4 @@
 {
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "cmake.sourceDirectory": "C:/Users/gultembergue.carlos/Documents/Marquespan/mobile/marquespan/windows"
 }
