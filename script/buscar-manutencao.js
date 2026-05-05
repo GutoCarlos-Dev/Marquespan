@@ -5,6 +5,13 @@ let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
 let currentSort = { column: 'data', direction: 'desc' };
 
+// Função utilitária para escapar HTML e prevenir XSS
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str || '')); // Garante que str não seja null/undefined
+    return div.innerHTML;
+}
+
 // Paginação removida para exibir todos os resultados
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -279,17 +286,17 @@ function preencherTabela(registros) {
 
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td style="display: flex; gap: 5px;">
+      <td style="display: flex; gap: 5px; white-space: nowrap;">
         <button class="btn-icon view btn-visualizar" data-id="${m.id}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button class="btn-icon edit btn-editar" data-id="${m.id}" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
         ${btnExcluirHtml}
       </td>
-      <td>${m.usuario || ''}</td>
-      <td>${m.titulo || ''}</td>
-      <td>${m.veiculo || ''}</td>
-      <td>${m.fornecedor || ''}</td>
-      <td>${m.descricao || ''}</td>
-      <td>${m.numeroOS || ''}</td>
+      <td>${escapeHTML(m.usuario)}</td>
+      <td>${escapeHTML(m.titulo)}</td>
+      <td>${escapeHTML(m.veiculo)}</td>
+      <td>${escapeHTML(m.fornecedor)}</td>
+      <td>${escapeHTML(m.descricao)}</td>
+      <td>${escapeHTML(m.numeroOS)}</td>
       <td>${formatarData(m.data)}</td>
       <td>R$ ${formatarValor(m.valor || 0)}</td>
     `;
@@ -370,7 +377,7 @@ async function visualizarManutencao(id) {
             if (signed?.signedUrl) {
                 arquivosHtml += `<li style="margin-bottom:5px;"><a href="${signed.signedUrl}" target="_blank" style="text-decoration:none; color:#007bff; display:flex; align-items:center; gap:5px;">📄 ${arq.nome_arquivo} <small>(Clique para baixar)</small></a></li>`;
             }
-        }
+        } // Note: arq.nome_arquivo is escaped below in htmlContent
     } else {
         arquivosHtml = '<li style="color:#999; font-style:italic;">Nenhum arquivo anexado.</li>';
     }
@@ -427,7 +434,7 @@ async function visualizarManutencao(id) {
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="header-content">
+                    <div class="header-content" style="flex-grow: 1;">
                         ${logoBase64 ? `<img src="${logoBase64}" class="logo" alt="Logo Marquespan">` : ''}
                         <div>
                             <h2>Relatório de Manutenção #${m.id}</h2>
@@ -444,25 +451,31 @@ async function visualizarManutencao(id) {
                 </div>
 
                 <div class="grid">
-                    <div class="field"><strong>Data</strong><span>${dataFormatada}</span></div>
-                    <div class="field"><strong>Status</strong><span>${m.status || '-'}</span></div>
-                    <div class="field"><strong>Filial</strong><span>${m.filial || '-'}</span></div>
-                    <div class="field"><strong>Usuário</strong><span>${m.usuario || '-'}</span></div>
-                    <div class="field"><strong>Veículo</strong><span>${m.veiculo || '-'}</span></div>
-                    <div class="field"><strong>KM</strong><span>${m.km || '-'}</span></div>
-                    <div class="field"><strong>Motorista</strong><span>${m.motorista || '-'}</span></div>
+                    <div class="field"><strong>Data</strong><span>${escapeHTML(dataFormatada)}</span></div>
+                    <div class="field"><strong>Status</strong><span>${escapeHTML(m.status || '-')}</span></div>
+                    <div class="field"><strong>Filial</strong><span>${escapeHTML(m.filial || '-')}</span></div>
+                    <div class="field"><strong>Usuário</strong><span>${escapeHTML(m.usuario || '-')}</span></div>
+                    <div class="field"><strong>Veículo</strong><span>${escapeHTML(m.veiculo || '-')}</span></div>
+                    <div class="field"><strong>KM</strong><span>${escapeHTML(m.km || '-')}</span></div>
+                    <div class="field"><strong>Motorista</strong><span>${escapeHTML(m.motorista || '-')}</span></div>
                     <div class="field"><strong>Valor Total</strong><span class="money">${valorFormatado}</span></div>
                 </div>
 
                 <div class="box">
-                    <div class="field"><strong>Título</strong><span style="color:#0056b3;">${m.titulo || '-'}</span></div>
-                    <div class="field" style="margin-top:15px;"><strong>Nº OS</strong><span style="color:#333;">${m.numeroOS || '-'}</span></div>
-                    <div class="field" style="margin-top:15px;"><strong>Descrição</strong><div style="white-space: pre-wrap;">${m.descricao || '-'}</div></div>
+                    <div class="field"><strong>Título</strong><span style="color:#0056b3;">${escapeHTML(m.titulo || '-')}</span></div>
+                    <div class="field" style="margin-top:15px;"><strong>Nº OS</strong><span style="color:#333;">${escapeHTML(m.numeroOS || '-')}</span></div>
+                    <div class="field" style="margin-top:15px;"><strong>Descrição</strong><div style="white-space: pre-wrap;">${escapeHTML(m.descricao || '-')}</div></div>
                 </div>
 
                 <div class="grid box" style="background:#fff3cd; border-color:#ffeeba; color:#856404;">
-                    <div class="field"><strong>Fornecedor</strong><span>${m.fornecedor || '-'}</span></div>
-                    <div class="field"><strong>Notas Fiscais</strong><span>NF: ${m.notaFiscal || '-'} | NFS: ${m.notaServico || '-'}</span></div>
+                    <div class="field"><strong>Fornecedor</strong><span>${escapeHTML(m.fornecedor || '-')}</span></div>
+                    <div class="field"><strong>Notas Fiscais</strong><span>NF: ${escapeHTML(m.notaFiscal || '-')} | NFS: ${escapeHTML(m.notaServico || '-')}</span></div>
+                </div>
+
+                <div class="grid box">
+                    <div class="field"><strong>Valor NF-e</strong><span>R$ ${formatarValor(m.valorNfe || 0)}</span></div>
+                    <div class="field"><strong>Valor NFS-e</strong><span>R$ ${formatarValor(m.valorNfse || 0)}</span></div>
+                    <div class="field"><strong>Valor Total</strong><span class="money">${valorFormatado}</span></div>
                 </div>
 
                 <div class="box">
