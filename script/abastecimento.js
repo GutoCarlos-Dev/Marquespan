@@ -1837,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
             this.tableBodyExt.innerHTML = '';
-            const colCount = isAdmin ? 9 : 8; // 8 original columns + 1 checkbox
+            const colCount = isAdmin ? 11 : 10; // Colunas originais + KM Anterior/Rodado
 
             if (filtered.length === 0) {
                 this.tableBodyExt.innerHTML = `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
@@ -1862,7 +1862,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${item.litros || '-'} L</td>
                     <td>${valTotal}</td>
                     <td>${item.valor_unitario || '-'}</td>
+                    <td>${item.km_anterior || '0'}</td>
                     <td>${item.km_atual || '-'}</td>
+                    <td>${item.km_rodado || '0'}</td>
                     <td style="display: flex; gap: 5px; justify-content: center;">
                         <button class="btn-action btn-edit-ext" data-id="${item.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn-action btn-delete-ext" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
