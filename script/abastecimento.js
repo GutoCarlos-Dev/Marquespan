@@ -2174,6 +2174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${p.cidade || '-'}</td>
                     <td>${p.uf || '-'}</td>
                     <td>${p.faturado ? 'Sim' : 'Não'}</td>
+                    <td>${(p.valor_negociado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
                     <td style="display: flex; gap: 5px; justify-content: center;">
                         <button class="btn-action btn-edit-posto" data-id="${p.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn-action btn-delete-posto" data-id="${p.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
