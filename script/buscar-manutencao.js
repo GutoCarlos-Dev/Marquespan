@@ -203,8 +203,9 @@ function filtrarERenderizarTabela() {
         let valB = b[column];
 
         if (column === 'data') {
-            valA = new Date(valA || 0);
-            valB = new Date(valB || 0);
+            const fixDate = (v) => (typeof v === 'string' && v.length === 10 && !v.includes('T')) ? `${v}T00:00:00` : (v || 0);
+            valA = new Date(fixDate(valA));
+            valB = new Date(fixDate(valB));
         } else if (typeof valA === 'string') {
             valA = valA.toLowerCase();
             valB = (valB || '').toLowerCase();
@@ -297,7 +298,14 @@ function preencherTabela(registros) {
 
 function formatarData(data) {
   if (!data) return '';
-  const d = new Date(data);
+  
+  // Se a data vier no formato YYYY-MM-DD, o construtor Date assume UTC,
+  // o que exibe o dia anterior em fusos horários negativos (como o do Brasil).
+  const dateString = (typeof data === 'string' && data.length === 10 && !data.includes('T'))
+    ? `${data}T00:00:00`
+    : data;
+
+  const d = new Date(dateString);
   return d.toLocaleDateString('pt-BR');
 }
 
