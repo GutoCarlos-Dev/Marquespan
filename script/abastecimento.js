@@ -1447,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Exibe a média/KM
             if (this.extMediaKm) {
-                this.extMediaKm.textContent = (veiculo && veiculo.media_km) ? parseFloat(veiculo.media_km).toFixed(2) : '--';
+                this.extMediaKm.textContent = (veiculo && veiculo.media_km !== null && veiculo.media_km !== undefined) ? parseFloat(veiculo.media_km).toFixed(2) : '--';
             }
 
             // 2. Buscar Maior KM (Interno ou Externo)

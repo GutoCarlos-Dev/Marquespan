@@ -361,6 +361,9 @@ function abrirModalVeiculo(veiculo = null) {
 
         const volumeTanque = document.getElementById('veiculoVolumeTanque');
         if(volumeTanque) volumeTanque.value = veiculo.volume_tanque || '';
+
+        const mediaKm = document.getElementById('veiculoMediaKm');
+        if(mediaKm) mediaKm.value = (veiculo.media_km !== null && veiculo.media_km !== undefined) ? veiculo.media_km : '';
     } else {
         title.textContent = 'Novo Veículo';
         document.getElementById('veiculoId').value = '';
@@ -418,12 +421,21 @@ async function salvarVeiculo(e) {
         media_km: getVal('veiculoMediaKm') // Novo campo
     };
 
-    // Remove campos nulos que não devem ser enviados se vazios
+   // Processa media_km para lidar com vírgula como separador decimal
+    if (payload.media_km) {
+        const cleanedMediaKm = String(payload.media_km).replace(',', '.');
+        const parsedMediaKm = parseFloat(cleanedMediaKm);
+        payload.media_km = isNaN(parsedMediaKm) ? null : parsedMediaKm;
+    } else {
+        payload.media_km = null; // Garante que seja null se a string estiver vazia
+    }
+
+    // Remove campos que são nulos e não devem ser enviados
     if (!payload.anofab) delete payload.anofab;
     if (!payload.anomod) delete payload.anomod;
     if (!payload.qtdtanque) delete payload.qtdtanque;
     if (!payload.volume_tanque) delete payload.volume_tanque;
-    if (!payload.media_km) delete payload.media_km; // Remove se estiver vazio
+    if (payload.media_km === null) delete payload.media_km; // Remove se for null após o parsing
 
     try {
         let error;
