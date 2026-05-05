@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extLitros = document.getElementById('extLitros'); // Novo
             this.extValorTotal = document.getElementById('extValorTotal'); // Novo
             this.extValorUnitario = document.getElementById('extValorUnitario'); // Novo
+            this.extValorNegociadoDisplay = document.getElementById('extValorNegociadoDisplay'); // Novo Span de Valor Negociado
             this.extCapacidadeTanque = document.getElementById('extCapacidadeTanque'); // Span de capacidade
             this.extMediaKm = document.getElementById('extMediaKm'); // Novo Span de Média/KM
             this.btnImportarExterno = document.getElementById('btnImportarExterno'); // Novo Botão Importar
@@ -234,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.extKmAtual) this.extKmAtual.addEventListener('input', this.calculateKmRodado.bind(this));
             if (this.extLitros) this.extLitros.addEventListener('input', this.calculateExtValorUnitario.bind(this));
             if (this.extValorTotal) this.extValorTotal.addEventListener('input', this.calculateExtValorUnitario.bind(this));
+            if (this.extPosto) this.extPosto.addEventListener('change', this.handleExtPostoChange.bind(this)); // Listener para o posto
 
             // Listener para Tabela Externa (Editar/Excluir)
             if (this.tableBodyExt) this.tableBodyExt.addEventListener('click', (e) => this.handleExtTableClick(e));
@@ -1360,9 +1362,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 let keepFetching = true;
 
                 while(keepFetching) {
-                    let query = supabaseClient
+                    let query = supabaseClient // Adiciona valor_negociado à busca
                         .from('postos')
-                        .select('id, razao_social, cnpj')
+                        .select('id, razao_social, cnpj, valor_negociado')
                         .order('razao_social');
 
                     if (filiaisParaFiltrar.length > 0) {
@@ -1404,6 +1406,25 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao carregar postos:', error);
                 alert('Ocorreu um erro ao carregar a lista de postos para o formulário. Verifique o console para mais detalhes.');
+            }
+        },
+        
+        handleExtPostoChange() {
+            const postoText = this.extPosto.value;
+            let valorNegociado = null;
+
+            if (postoText && this.postosCache) {
+                const foundPosto = this.postosCache.find(p => {
+                    const displayValue = `${p.razao_social} (${p.cnpj || 'S/CNPJ'})`;
+                    return displayValue === postoText;
+                });
+                if (foundPosto && foundPosto.valor_negociado) {
+                    valorNegociado = parseFloat(foundPosto.valor_negociado);
+                }
+            }
+
+            if (this.extValorNegociadoDisplay) {
+                this.extValorNegociadoDisplay.textContent = (valorNegociado && valorNegociado > 0) ? `Valor Negociado: R$ ${valorNegociado.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}` : '';
             }
         },
 
