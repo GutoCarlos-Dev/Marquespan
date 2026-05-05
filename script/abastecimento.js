@@ -2073,7 +2073,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cnpj: cnpjValue,
                 cidade: this.postoCidade.value,
                 uf: this.postoUf.value,
-                faturado: this.postoFaturado.value === 'Sim'
+                faturado: this.postoFaturado.value === 'Sim',
+                valor_negociado: parseFloat(this.postoValorNegociadoInput.value) || null
             };
 
             let error;
