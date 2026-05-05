@@ -414,7 +414,8 @@ async function salvarVeiculo(e) {
         anofab: getVal('veiculoAnoFab'),
         anomod: getVal('veiculoAnoMod'),
         qtdtanque: getVal('veiculoQtdTanque'),
-        volume_tanque: getVal('veiculoVolumeTanque')
+        volume_tanque: getVal('veiculoVolumeTanque'),
+        media_km: getVal('veiculoMediaKm') // Novo campo
     };
 
     // Remove campos nulos que não devem ser enviados se vazios
@@ -422,6 +423,7 @@ async function salvarVeiculo(e) {
     if (!payload.anomod) delete payload.anomod;
     if (!payload.qtdtanque) delete payload.qtdtanque;
     if (!payload.volume_tanque) delete payload.volume_tanque;
+    if (!payload.media_km) delete payload.media_km; // Remove se estiver vazio
 
     try {
         let error;
