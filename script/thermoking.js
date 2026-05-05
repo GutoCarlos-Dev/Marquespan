@@ -85,7 +85,8 @@ function renderizarTabela() {
             <td>${v.modelo || '-'}</td>
             <td>${v.ano || '-'}</td>
             <td>${v.placa_vinculada || '-'}</td>
-            <td><span class="status-badge status-${v.status.replace(' ', '-').toLowerCase()}">${v.status}</span></td>
+            <td><span class="status-badge status-${v.status.replace(' ', '-').toLowerCase()}">${v.status}</span></td> 
+            <td>${v.descricao_status || '-'}</td>
             <td>
                 <button class="btn-icon edit btn-edit" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete btn-delete" data-id="${v.id}" title="Excluir"><i class="fas fa-trash"></i></button>
