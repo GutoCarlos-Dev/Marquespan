@@ -187,11 +187,12 @@ async function buscarManutencao() {
 function filtrarERenderizarTabela() {
     const searchTerm = document.getElementById('searchResultadosLocal')?.value.toLowerCase() || '';
     
-    // 1. Filtragem Local (Placa e Descrição)
+    // 1. Filtragem Local (Placa, Fornecedor, Descrição e OS)
     let filtrados = todosRegistros.filter(m => 
         (m.veiculo || '').toLowerCase().includes(searchTerm) ||
         (m.fornecedor || '').toLowerCase().includes(searchTerm) || 
-        (m.descricao || '').toLowerCase().includes(searchTerm)
+        (m.descricao || '').toLowerCase().includes(searchTerm) ||
+        (m.numeroOS || '').toLowerCase().includes(searchTerm)
     );
 
     // 2. Ordenação
