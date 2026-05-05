@@ -110,6 +110,7 @@
                         <div class="form-group">
                             <label>Valor Diária (R$)</label>
                             <input type="number" id="despesaValorDiaria" class="glass-input" step="0.01" min="0">
+                    <span id="valorNegociadoDisplay" style="font-size: 0.85em; display: block; margin-top: 4px; color: #666;"></span>
                         </div>
                         <div class="form-group">
                             <label>Valor Energia (R$)</label>
@@ -185,6 +186,10 @@
               <div class="form-inline" style="display: flex; gap: 10px; margin-bottom: 15px;">
                   <input type="text" id="novoTipoQuartoInput" placeholder="Novo Tipo de Quarto" class="glass-input" style="flex: 1;">
                   <button type="button" id="btnSalvarNovoQuarto" class="btn-glass btn-green" style="padding: 0 15px; width: auto;"><i class="fas fa-plus"></i></button>
+              </div>
+              <div class="form-group" style="margin-bottom: 15px;">
+                  <label for="novoTipoQuartoValorNegociado">Valor Negociado (Diária)</label>
+                  <input type="number" id="novoTipoQuartoValorNegociado" class="glass-input" step="0.01" min="0" placeholder="Ex: 150.00">
               </div>
               <div class="quarto-list-container table-responsive">
                   <ul id="listaQuartosEdicao" style="list-style: none; padding: 0; margin: 0;"></ul>

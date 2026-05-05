@@ -51,7 +51,9 @@ const DespesasUI = {
         this.tituloHotelQuartos = document.getElementById('tituloHotelQuartos');
         this.novoTipoQuartoInput = document.getElementById('novoTipoQuartoInput');
         this.btnSalvarNovoQuarto = document.getElementById('btnSalvarNovoQuarto');
+        this.novoTipoQuartoValorNegociadoInput = document.getElementById('novoTipoQuartoValorNegociado');
         this.listaQuartosEdicao = document.getElementById('listaQuartosEdicao');
+        this.valorNegociadoDisplay = document.getElementById('valorNegociadoDisplay');
     },
 
     bind() {
@@ -65,9 +67,20 @@ const DespesasUI = {
             this.calcularValorTotal();
             this.calcularCheckout();
         });
-        this.valorDiariaInput.addEventListener('input', () => this.calcularValorTotal());
+        this.valorDiariaInput.addEventListener('blur', () => {
+            this.calcularValorTotal();
+            this.checkValorDiariaConflito();
+        });
         this.valorEnergiaInput.addEventListener('input', () => this.calcularValorTotal());
         this.checkinInput.addEventListener('input', () => this.calcularCheckout());
+        
+        // Listeners para validação de valor negociado
+        this.tipoQuartoSelect.addEventListener('change', () => {
+            // Atualiza a exibição do valor negociado no span informativo
+            const selectedOption = this.tipoQuartoSelect.options[this.tipoQuartoSelect.selectedIndex];
+            this.exibirInformativoValorNegociado(selectedOption);
+            this.checkValorDiariaConflito();
+        });
 
         // Listener para o novo botão de adicionar hotel
         this.btnAdicionarHotel.addEventListener('click', () => this.abrirCadastroHotel());
@@ -92,7 +105,7 @@ const DespesasUI = {
             const btnDelete = e.target.closest('.btn-delete-quarto');
             const btnEdit = e.target.closest('.btn-edit-quarto');
             if (btnDelete) this.excluirQuarto(btnDelete.dataset.id);
-            if (btnEdit) this.prepararEdicaoQuarto(btnEdit.dataset.id, btnEdit.dataset.nome);
+            if (btnEdit) this.prepararEdicaoQuarto(btnEdit.dataset.id);
         });
 
         // Evento de clique para ordenação das colunas
@@ -586,11 +599,12 @@ const DespesasUI = {
     async loadTiposQuarto(hotelId, selectedTipo) {
         this.tipoQuartoSelect.disabled = true;
         this.tipoQuartoSelect.innerHTML = '<option value="">Carregando...</option>';
+        this.valorNegociadoDisplay.textContent = ''; // Limpa o display do valor negociado
 
         try {
             const { data: quartos, error: quartosError } = await supabaseClient
-                .from('hotel_quartos')
-                .select('nome_quarto')
+                .from('hotel_quartos') // Seleciona o novo campo
+                .select('nome_quarto, valor_negociado')
                 .eq('id_hotel', hotelId)
                 .order('nome_quarto');
 
@@ -598,10 +612,16 @@ const DespesasUI = {
 
             this.tipoQuartoSelect.innerHTML = '<option value="" disabled selected>-- Selecione o quarto --</option>';
             quartos.forEach(q => {
-                this.tipoQuartoSelect.add(new Option(q.nome_quarto, q.nome_quarto));
+                const option = new Option(q.nome_quarto, q.nome_quarto);
+                option.dataset.valorNegociado = q.valor_negociado || '';
+                this.tipoQuartoSelect.add(option);
             });
 
             if (selectedTipo) this.tipoQuartoSelect.value = selectedTipo;
+
+            // Chama a verificação inicial caso já haja um quarto selecionado (ex: na edição)
+            const initialOption = this.tipoQuartoSelect.options[this.tipoQuartoSelect.selectedIndex];
+            this.exibirInformativoValorNegociado(initialOption);
             this.tipoQuartoSelect.disabled = false;
         } catch (err) {
             console.error('Erro ao carregar tipos de quarto:', err);
@@ -658,12 +678,13 @@ const DespesasUI = {
             }
 
             quartos.forEach(q => {
+                const valorDisplay = q.valor_negociado ? ` (R$ ${parseFloat(q.valor_negociado).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : '';
                 const li = document.createElement('li');
                 li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;';
                 li.innerHTML = `
-                    <span>${q.nome_quarto}</span>
+                    <span>${q.nome_quarto}${valorDisplay}</span>
                     <div>
-                        <button type="button" class="btn-icon edit btn-edit-quarto" data-id="${q.id}" data-nome="${q.nome_quarto}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="btn-icon edit btn-edit-quarto" data-id="${q.id}" title="Editar"><i class="fas fa-pen"></i></button>
                         <button type="button" class="btn-icon delete btn-delete-quarto" data-id="${q.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
@@ -675,32 +696,51 @@ const DespesasUI = {
         }
     },
 
-    prepararEdicaoQuarto(id, nome) {
+async prepararEdicaoQuarto(id) {
+        const { data: quarto, error } = await supabaseClient
+            .from('hotel_quartos')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Erro ao buscar quarto para edição:', error);
+            alert('Erro ao carregar dados do quarto.');
+            return;
+        }
+
         this.editingQuartoId = id;
-        this.novoTipoQuartoInput.value = nome;
+        this.novoTipoQuartoInput.value = quarto.nome_quarto;
+        this.novoTipoQuartoValorNegociadoInput.value = quarto.valor_negociado || '';
         this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-check"></i>';
         this.novoTipoQuartoInput.focus();
     },
 
     async salvarNovoQuarto() {
         const nomeQuarto = this.novoTipoQuartoInput.value.trim();
+        const valorNegociado = parseFloat(this.novoTipoQuartoValorNegociadoInput.value) || null;
         if (!nomeQuarto || !this.currentHotelId) return;
 
         try {
             if (this.editingQuartoId) {
-                const { error } = await supabaseClient
-                    .from('hotel_quartos')
-                    .update({ nome_quarto: nomeQuarto })
-                    .eq('id', this.editingQuartoId);
+                const { error } = await supabaseClient.from('hotel_quartos').update({ 
+                    nome_quarto: nomeQuarto, 
+                    valor_negociado: valorNegociado 
+                }).eq('id', this.editingQuartoId);
                 if (error) throw error;
                 this.editingQuartoId = null;
                 this.btnSalvarNovoQuarto.innerHTML = '<i class="fas fa-plus"></i>';
             } else {
-                const { error } = await supabaseClient.from('hotel_quartos').insert({ id_hotel: this.currentHotelId, nome_quarto: nomeQuarto });
+                const { error } = await supabaseClient.from('hotel_quartos').insert({ 
+                    id_hotel: this.currentHotelId, 
+                    nome_quarto: nomeQuarto, 
+                    valor_negociado: valorNegociado 
+                });
                 if (error) throw error;
             }
 
             this.novoTipoQuartoInput.value = '';
+            this.novoTipoQuartoValorNegociadoInput.value = '';
             await this.listarQuartosNoModal();
             this.loadTiposQuarto(this.currentHotelId, nomeQuarto);
         } catch (err) {
@@ -721,6 +761,49 @@ const DespesasUI = {
         } catch (err) {
             console.error(err);
             alert('Erro ao excluir quarto.');
+        }
+    },
+
+    exibirInformativoValorNegociado(option) {
+        const negotiatedValue = (option && option.value !== "") ? option.dataset.valorNegociado : null;
+        
+        if (negotiatedValue && parseFloat(negotiatedValue) > 0) { // Só exibe se houver um valor negociado positivo
+            this.valorNegociadoDisplay.textContent = `Valor Negociado: R$ ${parseFloat(negotiatedValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            this.valorNegociadoDisplay.style.color = '#006937';
+            this.valorNegociadoDisplay.style.fontWeight = 'bold';
+        } else {
+            // Se não houver valor negociado ou for zero, não exibe nada.
+            this.valorNegociadoDisplay.textContent = '';
+            this.valorNegociadoDisplay.style.color = '';
+            this.valorNegociadoDisplay.style.fontWeight = '';
+        }
+    },
+
+    checkValorDiariaConflito() {
+        const enteredValue = parseFloat(this.valorDiariaInput.value) || 0;
+        
+        // Verifica se há uma opção selecionada e se ela não é o placeholder desabilitado
+        const selectedOption = this.tipoQuartoSelect.options[this.tipoQuartoSelect.selectedIndex];
+        const negotiatedValue = (selectedOption && selectedOption.value !== "")
+                                ? parseFloat(selectedOption.dataset.valorNegociado) || 0
+                                : 0;
+        
+        // Não alerta se o usuário ainda não digitou um valor (input está vazio ou 0)
+        if (enteredValue === 0) {
+            this.valorDiariaInput.style.borderColor = '';
+            this.valorDiariaInput.style.boxShadow = '';
+            return true;
+        }
+
+        if (negotiatedValue > 0 && enteredValue !== negotiatedValue) {
+            alert(`⚠️ Atenção: O valor da diária informado (R$ ${enteredValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) difere do valor negociado (R$ ${negotiatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`);
+            this.valorDiariaInput.style.borderColor = 'red';
+            this.valorDiariaInput.style.boxShadow = '0 0 5px red';
+            return false; // Indica que há um conflito
+        } else {
+            this.valorDiariaInput.style.borderColor = '';
+            this.valorDiariaInput.style.boxShadow = '';
+            return true; // Indica que não há conflito ou o valor negociado não existe
         }
     }
 };

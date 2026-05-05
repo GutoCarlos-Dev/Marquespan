@@ -27,6 +27,7 @@ class HotelManager {
         this.quartosPanel = document.querySelector('#modalQuartos .glass-modal');
         this.quartosPanelTitle = document.getElementById('modalHotelName');
         this.listaQuartos = document.getElementById('listaQuartos');
+        this.quartoValorNegociadoInput = document.getElementById('quartoValorNegociado');
         this.formQuarto = document.getElementById('formCadastrarQuarto');
         this.quartoHotelIdInput = document.getElementById('quartoHotelId');
         this.quartoNomeInput = document.getElementById('quartoNome');
@@ -339,9 +340,10 @@ Atenção:
                 const div = document.createElement('div');
                 div.className = 'quarto-item';
                 div.innerHTML = `
-                    <span class="quarto-item-name"><i class="fas fa-bed"></i> ${quarto.nome_quarto}</span>
+                    <span class="quarto-item-name"><i class="fas fa-bed"></i> ${quarto.nome_quarto}</span> 
+                    ${quarto.valor_negociado ? `<span class="quarto-item-value">R$ ${parseFloat(quarto.valor_negociado).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>` : ''}
                     <div>
-                        <button class="btn-icon edit btn-edit-quarto" data-id="${quarto.id}" data-nome="${quarto.nome_quarto}" title="Editar quarto"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon edit btn-edit-quarto" data-id="${quarto.id}" title="Editar quarto"><i class="fas fa-pen"></i></button>
                         <button class="btn-icon delete btn-delete-quarto" data-id="${quarto.id}" title="Excluir quarto"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 `;
@@ -354,6 +356,7 @@ Atenção:
         e.preventDefault();
         const hotelId = this.quartoHotelIdInput.value;
         const nomeQuarto = this.quartoNomeInput.value.trim();
+        const valorNegociado = parseFloat(this.quartoValorNegociadoInput.value) || null;
 
         if (!nomeQuarto || !hotelId) {
             alert('Por favor, preencha o nome do quarto.');
@@ -362,7 +365,7 @@ Atenção:
 
         if (this.editingQuartoId) {
             const { error } = await supabaseClient.from('hotel_quartos')
-                .update({ nome_quarto: nomeQuarto })
+                .update({ nome_quarto: nomeQuarto, valor_negociado: valorNegociado })
                 .eq('id', this.editingQuartoId);
 
             if (error) {
@@ -376,7 +379,8 @@ Atenção:
         } else {
             const { error } = await supabaseClient.from('hotel_quartos').insert([{
                 id_hotel: hotelId,
-                nome_quarto: nomeQuarto
+                nome_quarto: nomeQuarto,
+                valor_negociado: valorNegociado
             }]);
 
             if (error) {
@@ -405,13 +409,25 @@ Atenção:
                 }
             }
         } else if (target.closest('.btn-edit-quarto')) {
-            this.prepararEdicaoQuarto(target.dataset.id, target.dataset.nome);
+            this.prepararEdicaoQuarto(target.dataset.id);
         }
     }
 
-    prepararEdicaoQuarto(id, nome) {
+    async prepararEdicaoQuarto(id) {
+        const { data: quarto, error } = await supabaseClient
+            .from('hotel_quartos')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Erro ao buscar quarto para edição:', error);
+            alert('Erro ao carregar dados do quarto.');
+            return;
+        }
         this.editingQuartoId = id;
-        this.quartoNomeInput.value = nome;
+        this.quartoNomeInput.value = quarto.nome_quarto;
+        this.quartoValorNegociadoInput.value = quarto.valor_negociado || '';
         this.formQuarto.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-check"></i>';
         this.quartoNomeInput.focus();
     }
