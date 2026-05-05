@@ -73,7 +73,6 @@
 
         </div>
       </section>
-
       <!-- Card 2: Ações -->
       <section class="glass-panel acoes-panel">
         <h3><i class="fas fa-cogs"></i> Ações</h3>
@@ -115,42 +114,6 @@
     &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
   </footer>
   <!-- 🚀 Scripts -->
-
-  <!-- Modal para Importação em Massa -->
-  <div id="modalImportacao" class="modal-backdrop hidden">
-    <div class="glass-modal">
-        <div class="modal-header">
-            <h3><i class="fas fa-file-import"></i> Importação em Massa de Veículos</h3>
-            <button class="close-button">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="formImportacao">
-                <div class="form-group">
-                    <label for="importFilial">Filial para todos os veículos *</label>
-                    <select id="importFilial" class="glass-input" required>
-                      <option value="">Selecione a Filial</option>
-                    </select>
-                </div>
-                
-                <div class="form-group file-upload-container">
-                    <label>Arquivo Excel (.xlsx)</label>
-                    <div class="file-upload-wrapper glass-input" id="dropZoneImportacao" style="height: auto; min-height: 100px;">
-                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <span class="upload-text" id="arquivoImportacaoLabel">Clique ou arraste o arquivo aqui</span>
-                        <p class="helper-text" style="font-size: 0.8rem; color: #888; margin-top: 5px;">Colunas: PLACA (Obrigatório), MODELO, TIPO, etc.</p>
-                        <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn-glass btn-red close-button-action" onclick="document.getElementById('modalImportacao').classList.add('hidden')">Cancelar</button>
-                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-check"></i> Processar Arquivo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-  </div>
-
   <!-- Modal para Cadastro/Edição de Thermoking -->
   <div id="modalTk" class="modal-backdrop hidden">
     <div class="glass-modal" style="max-width: 750px;">
@@ -213,38 +176,6 @@
         </div>
     </div>
   </div>
-
-  <!-- Modal para Gerar QR Codes -->
-  <div id="modalGerarQRCode" class="modal-backdrop hidden">
-    <div class="glass-modal" style="max-width: 500px;">
-        <div class="modal-header">
-            <h3><i class="fas fa-qrcode"></i> Gerar Etiquetas QR Code</h3>
-            <button class="close-button" id="btnCloseModalQRCode">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="qtdQRCode">Quantidade de Etiquetas</label>
-                <input type="number" id="qtdQRCode" class="glass-input" min="1" max="100" value="10">
-                <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Serão gerados códigos únicos que não existem no banco de dados.</p>
-            </div>
-            
-            <div id="previewQRCodes" style="max-height: 200px; overflow-y: auto; margin: 15px 0; border: 1px solid #eee; padding: 10px; display: none; background: #f9f9f9; border-radius: 4px;">
-                <!-- Lista prévia dos códigos gerados -->
-            </div>
-            
-            <!-- Container oculto para renderização do QR Code antes do PDF -->
-            <div id="qr-code-hidden-container" style="display: none;"></div>
-
-            <div class="form-actions">
-                <button type="button" id="btnGerarListaCodes" class="btn-glass btn-green"><i class="fas fa-cogs"></i> Gerar Códigos</button>
-                <button type="button" id="btnBaixarPDFQRCode" class="btn-glass btn-red hidden"><i class="fas fa-file-pdf"></i> Baixar PDF</button>
-            </div>
-        </div>
-    </div>
-  </div>
-
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/veiculos.js" defer></script>
-  <script type="module" src="./script/veiculos-qr.js" defer></script>
 </body>
 </html>

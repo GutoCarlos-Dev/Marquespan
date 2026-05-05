@@ -1,15 +1,46 @@
 /* Layout e Estrutura */
-.thermoking-layout {
+.top-grid {
     display: grid;
-    grid-template-columns: 1fr 220px;
+    grid-template-columns: 1fr 240px; /* Filtros (espaço restante) e Ações (240px) */
     gap: 20px;
-    align-items: stretch;
+    margin-bottom: 25px;
+    align-items: start; /* Alinha os itens ao topo */
 }
 
 @media (max-width: 1024px) {
-    .thermoking-layout {
+    .top-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.filtros-wrapper-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.filtros-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    align-items: end; /* Alinha os inputs na base */
+}
+
+.form-group-filter {
+    display: flex;
+    flex-direction: column;
+}
+
+.acoes-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-grid { /* Mantido para compatibilidade, mas não usado no top-grid */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
 }
 
 .form-grid {
