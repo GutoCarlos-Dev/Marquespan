@@ -331,7 +331,7 @@ const DespesasUI = {
             this.valorEnergiaInput.value = despesa.valor_energia || 0;
             this.formaPagamentoSelect.value = despesa.forma_pagamento || "";
 
-            await this.loadTiposQuarto(despesa.hoteis?.nome, despesa.tipo_quarto);
+            await this.loadTiposQuarto(despesa.id_hotel, despesa.tipo_quarto);
 
             this.calcularValorTotal();
             this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Atualizar Despesa';
