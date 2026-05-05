@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoCidade = document.getElementById('postoCidade');
             this.postoUf = document.getElementById('postoUf');
             this.postoFaturado = document.getElementById('postoFaturado');
+            this.postoValorNegociadoInput = document.getElementById('postoValorNegociado'); // Adicionado ao cache
             this.tableBodyPostos = document.getElementById('tableBodyPostos');
             this.btnImportarPostos = document.getElementById('btnImportarPostos'); // Novo Botão Importar Postos
             this.fileImportarPostos = document.getElementById('fileImportarPostos'); // Novo Input File Postos
@@ -1411,16 +1412,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!placa) return;
 
             // 1. Buscar Tipo do Veículo, Capacidade do Tanque e Média/KM
-            const { data: veiculo } = await supabaseClient.from('veiculos').select('tipo, capacidade_tanque, media_km').eq('placa', placa).single();
+            const { data: veiculo } = await supabaseClient.from('veiculos').select('tipo, volume_tanque, media_km').eq('placa', placa).single();
             if (veiculo && this.extTipo) {
                 this.extTipo.value = veiculo.tipo || '';
                 // Exibe a capacidade do tanque
                 if (this.extCapacidadeTanque) this.extCapacidadeTanque.textContent = (veiculo.capacidade_tanque || '--');
             }
             // Tenta exibir a capacidade se existir no cadastro, senão deixa traço
+            // Exibe a capacidade do tanque
             if (this.extCapacidadeTanque) {
-                this.extCapacidadeTanque.textContent = (veiculo && veiculo.capacidade_tanque) ? veiculo.capacidade_tanque : '--';
+                this.extCapacidadeTanque.textContent = (veiculo && veiculo.volume_tanque) ? veiculo.volume_tanque : '--';
             }
+            
             // Exibe a média/KM
             if (this.extMediaKm) {
                 this.extMediaKm.textContent = (veiculo && veiculo.media_km) ? parseFloat(veiculo.media_km).toFixed(2) : '--';
