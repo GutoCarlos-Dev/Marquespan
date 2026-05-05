@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extValorTotal = document.getElementById('extValorTotal'); // Novo
             this.extValorUnitario = document.getElementById('extValorUnitario'); // Novo
             this.extCapacidadeTanque = document.getElementById('extCapacidadeTanque'); // Span de capacidade
+            this.extMediaKm = document.getElementById('extMediaKm'); // Novo Span de Média/KM
             this.btnImportarExterno = document.getElementById('btnImportarExterno'); // Novo Botão Importar
             this.fileImportarExterno = document.getElementById('fileImportarExterno'); // Novo Input File
             this.tableBodyExt = document.getElementById('tableBodyAbastecimentoExterno');
@@ -1409,14 +1410,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const placa = this.extVeiculo.value.toUpperCase();
             if (!placa) return;
 
-            // 1. Buscar Tipo do Veículo
-            const { data: veiculo } = await supabaseClient.from('veiculos').select('*').eq('placa', placa).single();
+            // 1. Buscar Tipo do Veículo, Capacidade do Tanque e Média/KM
+            const { data: veiculo } = await supabaseClient.from('veiculos').select('tipo, capacidade_tanque, media_km').eq('placa', placa).single();
             if (veiculo && this.extTipo) {
                 this.extTipo.value = veiculo.tipo || '';
+                // Exibe a capacidade do tanque
+                if (this.extCapacidadeTanque) this.extCapacidadeTanque.textContent = (veiculo.capacidade_tanque || '--');
             }
             // Tenta exibir a capacidade se existir no cadastro, senão deixa traço
             if (this.extCapacidadeTanque) {
                 this.extCapacidadeTanque.textContent = (veiculo && veiculo.capacidade_tanque) ? veiculo.capacidade_tanque : '--';
+            }
+            // Exibe a média/KM
+            if (this.extMediaKm) {
+                this.extMediaKm.textContent = (veiculo && veiculo.media_km) ? parseFloat(veiculo.media_km).toFixed(2) : '--';
             }
 
             // 2. Buscar Maior KM (Interno ou Externo)
