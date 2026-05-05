@@ -1,505 +1,86 @@
-/* Estilos específicos para a página de Veículos */
-
-:root {
-    --glass-bg: #ffffff;
-    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    --glass-blur: blur(10px);
-    --radius: 20px;
-    --primary-color: #006937;
-    --text-color: #333;
-}
-
-/* Header */
-.glass-header {
-    background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius);
-    padding: 20px 30px;
-    margin-bottom: 30px;
-    color: white;
-    box-shadow: var(--glass-shadow);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.glass-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 700;
-}
-
-/* --- Estilos Globais Glass (Herdados do Monitoramento) --- */
-.glass-panel {
-    background-color: #ffffff !important;
-    border: var(--glass-border) !important;
-    border-radius: var(--radius);
-    padding: 25px;
-    box-shadow: var(--glass-shadow);
-    margin-bottom: 25px;
-}
-
-.glass-panel h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: #006937; /* var(--primary-color) */
-    font-size: 1.2rem;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    padding-bottom: 10px;
-}
-
-/* --- Estilos para Cards Internos (Filtros Organizados) --- */
-.glass-panel-inner {
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0,0,0,0.05);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
-}
-
-.glass-panel-inner h4 {
-    margin-top: 0;
-    margin-bottom: 12px;
-    color: #006937;
-    font-size: 0.8rem;
-    font-weight: 700;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    padding-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.glass-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.glass-table th {
-    background-color: #f8f9fa;
-    color: #006937;
-    padding: 12px 15px;
-    text-align: left;
-    font-weight: 700;
-    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
-}
-
-.glass-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    color: #444;
-}
-
-.glass-table tr:hover {
-    background: rgba(0, 105, 55, 0.05);
-}
-
-/* configuração do modal incluir veiculo */
-.hidden {
-  display: none !important;
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-.glass-modal {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  max-width: 600px;
-  width: 100%;
-}
-
-/* --- Layout de Cards (Topo) --- */
-.veiculos-top-grid {
+/* Layout e Estrutura */
+.thermoking-layout {
     display: grid;
-    grid-template-columns: 3fr 1fr; /* Card Filtros (75%), Card Ações (25%) */
+    grid-template-columns: 1fr 220px;
     gap: 20px;
-    margin-bottom: 25px;
+    align-items: stretch;
 }
 
-.filtros-wrapper-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 15px;
-}
-
-/* Responsividade: Empilha em telas menores */
 @media (max-width: 1024px) {
-    .veiculos-top-grid {
+    .thermoking-layout {
         grid-template-columns: 1fr;
     }
 }
 
-/* --- Card 1: Filtros --- */
-.filtros-container {
+.form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
-    align-items: end;
 }
 
-.form-group-filter {
+.form-group {
     display: flex;
     flex-direction: column;
 }
 
-.form-group-filter label {
+.form-group label {
     font-size: 0.85rem;
     font-weight: 600;
     color: #555;
     margin-bottom: 5px;
 }
 
-.form-group-filter input,
-.form-group-filter select {
-    padding: 10px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #333;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-    outline: none;
-    height: 42px;
-    width: 100%;
-    box-sizing: border-box;
+.full-width {
+    grid-column: 1 / -1;
 }
 
-.form-group-filter input:focus,
-.form-group-filter select:focus,
-.glass-input:focus {
-    border-color: #006937;
-    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
-}
-
-.glass-input {
-    padding: 10px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    height: 42px;
-    outline: none;
-}
-
-/* --- Card 2: Ações --- */
-.acoes-panel {
+.actions-panel {
+    background: rgba(0, 105, 55, 0.02) !important;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    border-left: 1px solid rgba(0, 105, 55, 0.05);
 }
 
-.acoes-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 botões por linha */
+.form-actions-vertical {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     height: 100%;
-    align-content: center;
-}
-
-/* --- Botões Coloridos --- */
-.btn-glass {
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    text-transform: uppercase;
-    font-size: 0.85rem;
 }
 
-.btn-glass:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
-.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
-.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
-
-/* Cores Solicitadas */
-.btn-orange { background: linear-gradient(135deg, #fd7e14, #d35400); } /* Importar */
-.btn-purple { background: linear-gradient(135deg, #6f42c1, #5a32a3); } /* Excel */
-
-/* --- Estilos Aprimorados do Modal --- */
-.glass-modal {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 15px 50px rgba(0,0,0,0.2);
-    border: 1px solid rgba(0,0,0,0.05);
-    padding: 0; /* Padding removido do container principal para header encostar */
-    max-width: 700px;
-    width: 95%;
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-    transform: scale(0.95);
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Animação ao abrir (quando o backdrop perde a classe hidden) */
-.modal-backdrop:not(.hidden) .glass-modal {
-    transform: scale(1);
-    opacity: 1;
-}
-
-.modal-header {
-    padding: 20px 25px;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fcfcfc;
-    border-radius: 16px 16px 0 0;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #006937; /* Verde da marca */
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.close-button {
-    background: transparent;
-    border: none;
-    font-size: 1.8rem;
-    color: #999;
-    cursor: pointer;
-    transition: color 0.2s;
-    line-height: 1;
-    padding: 0;
-}
-
-.close-button:hover {
-    color: #dc3545;
-}
-
-.modal-body {
-    padding: 25px;
+.table-container {
+    max-height: 550px;
     overflow-y: auto;
 }
 
-/* Inputs do Modal */
-.modal-body input,
-.modal-body select {
-    width: 100%;
-    padding: 10px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #333;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-    outline: none;
-    height: 42px;
-    box-sizing: border-box;
-}
-
-.modal-body input:focus,
-.modal-body select:focus {
-    background-color: #fff;
-    border-color: #006937;
-    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
-    outline: none;
-}
-
-.modal-body label {
-    font-weight: 600;
-    color: #444;
-    margin-bottom: 6px;
-    display: block;
-    font-size: 0.9rem;
-}
-
-.form-row {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
-}
-
-.form-row .form-group {
-    flex: 1;
-}
-
-.form-actions {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-/* Botões de Ação na Tabela */
-.btn-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 5px;
-    transition: transform 0.2s;
-}
-
-.btn-icon:hover {
-    transform: scale(1.2);
-}
-
-.btn-icon.edit {
-    color: #007bff;
-}
-
-.btn-icon.delete {
-    color: #dc3545;
-}
-
-/* Status Badge */
+/* Badges de Status */
 .status-badge {
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: bold;
-    text-transform: uppercase;
+    color: white;
+    display: inline-block;
 }
 
 .status-ativo {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: #28a745;
 }
 
 .status-inativo {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #dc3545;
 }
 
-.status-manutencao {
-    background-color: #fff3cd;
-    color: #856404;
+.status-recuperado-peças {
+    background-color: #fd7e14;
 }
 
-/* --- Multiselect Dropdown --- */
-.custom-multiselect {
-    position: relative;
+.hidden {
+    display: none !important;
 }
 
-.glass-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    background-color: #ffffff;
-    border: 1px solid #ccc;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    max-height: 250px; /* Limita a altura máxima */
-    overflow-y: auto;  /* Adiciona barra de rolagem vertical se necessário */
-    z-index: 1000;     /* Garante que fique sobre outros elementos */
-}
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-size: 0.85rem;
-    color: #333;
-}
-
-.dropdown-item:hover { background-color: #f8f9fa; }
-
-.dropdown-item input[type="checkbox"] {
-    width: 15px; /* Tamanho reduzido do quadradinho */
-    height: 15px;
-    margin: 0;
-    cursor: pointer;
-}
-
-/* --- Ajustes da Tabela (Rolagem e Fonte) --- */
-.veiculos-table-container {
-    max-height: 550px; /* Define altura máxima para ativar a barra de rolagem */
-    overflow-y: auto;  /* Barra de rolagem vertical */
-    border-radius: 8px;
-}
-
-.glass-table {
-    font-size: 0.8rem; /* Reduz o tamanho da fonte (aprox 12.8px) */
-}
-
-.glass-table th, .glass-table td {
-    padding: 6px 10px; /* Reduz o espaçamento para ficar mais compacto */
-}
-
-.veiculos-table-head th {
-    position: sticky; /* Mantém o cabeçalho fixo ao rolar */
-    top: 0;
-    background-color: #f8f9fa; /* Cor de fundo para não ficar transparente */
-    z-index: 5;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-/* --- Upload de Arquivo Customizado --- */
-.file-upload-container {
-    position: relative;
-    margin-top: 10px;
-}
-
-.file-upload-wrapper {
-    border: 2px dashed #ccc;
-    border-radius: 12px;
-    padding: 30px 20px;
-    text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background-color: #fafafa;
-    position: relative;
-}
-
-.file-upload-wrapper:hover {
-    border-color: #006937;
-    background-color: #f0fff4;
-}
-
-.file-upload-wrapper input[type="file"] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.upload-icon {
-    font-size: 2.5rem;
-    color: #006937;
-    margin-bottom: 10px;
-    display: block;
-}
-
-.upload-text {
-    font-weight: 600;
-    color: #555;
-    display: block;
+.full-width {
+    grid-column: 1 / -1;
 }

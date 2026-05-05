@@ -3,19 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Veículos - Marquespan</title>
+  <title>Thermoking - Marquespan</title>
   <!-- Fundação e Layout Moderno -->
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/menu.css" />
-  <!-- Estilo Específico -->
-  <link rel="stylesheet" href="css/veiculos.css" />
-
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/thermoking.css" />
+  <link rel="icon" href="logo.png" type="image/png">
   <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" href="logo.png" type="image/png">
-
   <!-- Biblioteca para ler arquivos Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <!-- Biblioteca para gerar PDF -->
@@ -31,11 +26,11 @@
     <!-- 🧩 Conteúdo principal -->
     <div class="main-content">
       <header class="header glass-header">
-        <h1><i class="fas fa-truck"></i> Gestão de Veículos</h1>
+        <h1><i class="fas fa-snowflake"></i> Gestão de Thermoking</h1>
       </header>
 
-    <div class="veiculos-top-grid">
-      <!-- Card 1: Gestão de Veículos (Filtros) -->
+    <div class="top-grid">
+      <!-- Card 1: Filtros de Busca -->
       <section class="glass-panel">
         <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
         <div class="filtros-wrapper-cards">
@@ -52,35 +47,26 @@
               <div class="form-group-filter">
                 <label for="campo-situacao">Situação</label>
                 <select id="campo-situacao" class="glass-input">
-                  <option value="">Todas</option>
-                  <option value="ativo">ATIVO</option>
-                  <option value="INTERNADO">INTERNADO</option>
-                  <option value="inativo">INATIVO</option>
+                  <option value="">Todos</option>
+                  <option value="Ativo">ATIVO</option>
+                  <option value="Inativo">INATIVO</option>
+                  <option value="Recuperado Peças">RECUPERADO PEÇAS</option>
                 </select>
-              </div>
-              <div class="form-group-filter" style="min-width: 200px;">
-                <label>Tipo</label>
-                <div class="custom-multiselect" style="position: relative;">
-                  <div id="campo-tipo-display" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
-                    <span id="campo-tipo-text">Todos</span> <i class="fas fa-chevron-down"></i>
-                  </div>
-                  <div id="campo-tipo-options" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;"></div>
-                </div>
               </div>
             </div>
           </div>
 
-          <!-- Grupo 1: Veículo -->
+          <!-- Grupo 1: Equipamento -->
           <div class="glass-panel-inner">
-            <h4><i class="fas fa-truck"></i> Veículo</h4>
+            <h4><i class="fas fa-info-circle"></i> Equipamento</h4>
             <div class="filtros-container">
               <div class="form-group-filter">
-                <label for="campo-placa">Placa</label>
-                <input type="text" id="campo-placa" class="glass-input" placeholder="Ex: ABC1234" />
+                <label for="campo-serie">Nº de Série</label>
+                <input type="text" id="campo-serie" class="glass-input" placeholder="Buscar Série..." />
               </div>
               <div class="form-group-filter">
                 <label for="campo-modelo">Modelo</label>
-                <input type="text" id="campo-modelo" class="glass-input" placeholder="Ex: Volvo FH" />
+                <input type="text" id="campo-modelo" class="glass-input" placeholder="Ex: T-880" />
               </div>
             </div>
           </div>
@@ -92,38 +78,32 @@
       <section class="glass-panel acoes-panel">
         <h3><i class="fas fa-cogs"></i> Ações</h3>
         <div class="acoes-grid">
-          <button type="button" id="btn-buscar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
-          <button type="button" id="btn-novo-veiculo" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo</button>
-          <button type="button" id="btn-importar-massa" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar</button>
-          <button type="button" id="btn-exportar-xls" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Excel</button>
-          <button type="button" id="btn-gerar-qrcode" class="btn-glass btn-blue"><i class="fas fa-qrcode"></i> Gerar QR</button>
+          <button type="button" id="btn-buscar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Filtrar</button>
+          <button type="button" id="btn-novo-tk" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo Cadastro</button>
+          <button type="button" id="btn-exportar-xls" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Exportar</button>
         </div>
       </section>
     </div>
 
-    <!-- ✅ Grid com rolagem horizontal -->
     <div class="glass-panel">
       <div class="panel-header">
-        <h3><i class="fas fa-list"></i> Lista de Veículos</h3>
-        <span id="grid-records-count" class="veiculos-count-badge"></span>
+        <h3><i class="fas fa-list"></i> Equipamentos Cadastrados</h3>
+        <span id="grid-records-count" class="count-badge"></span>
       </div>
-      <div class="table-responsive veiculos-table-container">
+      <div class="table-responsive table-container">
         <table class="glass-table">
-          <thead class="veiculos-table-head">
+          <thead>
             <tr>
-              <th data-sort="filial" class="veiculos-table-th sortable">FILIAL <i class="fas fa-sort"></i></th>
-              <th data-sort="placa" class="veiculos-table-th sortable">PLACA <i class="fas fa-sort"></i></th>
-              <th data-sort="modelo" class="veiculos-table-th sortable">MODELO <i class="fas fa-sort"></i></th>
-              <th data-sort="renavan" class="veiculos-table-th sortable">RENAVAN <i class="fas fa-sort"></i></th>
-              <th data-sort="tipo" class="veiculos-table-th sortable">TIPO <i class="fas fa-sort"></i></th>
-              <th data-sort="situacao" class="veiculos-table-th sortable">SITUAÇÃO <i class="fas fa-sort"></i></th>
-              <th data-sort="qrcode" class="veiculos-table-th sortable">QRCODE <i class="fas fa-sort"></i></th>
-              <th class="veiculos-table-th">AÇÕES</th>
+              <th data-sort="filial" class="sortable">FILIAL <i class="fas fa-sort"></i></th>
+              <th data-sort="numero_serie" class="sortable">Nº SÉRIE <i class="fas fa-sort"></i></th>
+              <th data-sort="modelo" class="sortable">MODELO <i class="fas fa-sort"></i></th>
+              <th data-sort="ano" class="sortable">ANO <i class="fas fa-sort"></i></th>
+              <th data-sort="placa_vinculada" class="sortable">PLACA <i class="fas fa-sort"></i></th>
+              <th data-sort="status" class="sortable">SITUAÇÃO <i class="fas fa-sort"></i></th>
+              <th>AÇÕES</th>
             </tr>
           </thead>
-          <tbody id="grid-veiculos-body">
-            <!-- Preenchido via JS -->
-          </tbody>
+          <tbody id="grid-tk-body"></tbody>
         </table>
       </div>
     </div>
@@ -171,78 +151,62 @@
     </div>
   </div>
 
-  <!-- Modal para Cadastro/Edição de Veículo -->
-  <div id="modalVeiculo" class="modal-backdrop hidden">
+  <!-- Modal para Cadastro/Edição de Thermoking -->
+  <div id="modalTk" class="modal-backdrop hidden">
     <div class="glass-modal" style="max-width: 750px;">
         <div class="modal-header">
-            <h3 id="modalTitle">Novo Veículo</h3>
-            <button class="close-button" id="btnCloseModalVeiculo">&times;</button>
+            <h3 id="modalTitle">Novo Equipamento</h3>
+            <button class="close-button" id="btnCloseModalTk">&times;</button>
         </div>
         <div class="modal-body">
-            <form id="formVeiculo">
-                <input type="hidden" id="veiculoId">
+            <form id="formTk">
+                <input type="hidden" id="tkId">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="veiculoFilial">Filial *</label>
-                        <select id="veiculoFilial" class="glass-input" required>
+                        <label for="tkFilial">Filial *</label>
+                        <select id="tkFilial" class="glass-input" required>
                             <option value="">Selecione</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="veiculoPlaca">Placa *</label>
-                        <input type="text" id="veiculoPlaca" class="glass-input" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234">
+                        <label for="tkSerie">Número de Série *</label>
+                        <input type="text" id="tkSerie" class="glass-input" required placeholder="Digite o S/N">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="veiculoMarca">Marca</label>
-                        <input type="text" id="veiculoMarca" class="glass-input" placeholder="Ex: Volvo">
+                        <label for="tkModelo">Modelo *</label>
+                        <input type="text" id="tkModelo" class="glass-input" required placeholder="Ex: T-880R">
                     </div>
                     <div class="form-group">
-                        <label for="veiculoModelo">Modelo *</label>
-                        <input type="text" id="veiculoModelo" class="glass-input" required placeholder="Ex: FH 540">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoRenavan">Renavan</label>
-                        <input type="text" id="veiculoRenavan" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoTipo">Tipo *</label>
-                        <select id="veiculoTipo" class="glass-input" required>
-                            <option value="">Selecione</option>
-                            <!-- Opções preenchidas via JS -->
-                        </select>
+                        <label for="tkAno">Ano</label>
+                        <input type="number" id="tkAno" class="glass-input" placeholder="AAAA">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="veiculoVolumeTanque">Volume do Tanque Total (L)</label>
-                        <input type="number" id="veiculoVolumeTanque" class="glass-input" step="0.01" placeholder="Ex: 200">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoSituacao">Situação *</label>
-                        <select id="veiculoSituacao" class="glass-input" required>
-                            <option value="ativo">ATIVO</option>
-                            <option value="inativo">INATIVO</option>
-                            <option value="INTERNADO">INTERNADO</option>
+                        <label for="tkPlaca">Placa Vinculada</label>
+                        <select id="tkPlaca" class="glass-input">
+                            <option value="">Nenhuma</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="veiculoQrcode">QR Code</label>
-                        <input type="text" id="veiculoQrcode" class="glass-input" placeholder="Código do QR">
+                        <label for="tkStatus">Situação *</label>
+                        <select id="tkStatus" class="glass-input" required>
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                            <option value="Recuperado Peças">Recuperado Peças</option>
+                        </select>
                     </div>
                 </div>
-                <!-- Novo campo para Média/KM -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoMediaKm">Média/KM (Litros)</label>
-                        <input type="number" id="veiculoMediaKm" class="glass-input" step="0.01" min="0" placeholder="Ex: 0.25 (0.25L por KM)">
+                <div class="form-row hidden" id="rowDescricao">
+                    <div class="form-group full-width">
+                        <label for="tkDescricao">Descrição da Ocorrência</label>
+                        <textarea id="tkDescricao" class="glass-input" rows="3" placeholder="Relate o ocorrido..."></textarea>
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-glass btn-red" onclick="document.getElementById('modalVeiculo').classList.add('hidden')">Cancelar</button>
+                    <button type="button" class="btn-glass btn-red" id="btnCancelarTk">Cancelar</button>
                     <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
                 </div>
             </form>
