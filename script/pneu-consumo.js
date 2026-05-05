@@ -478,7 +478,15 @@ function renderizarGrid(lista) {
   lista.forEach(mov => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-            <td>${mov.data ? new Date(mov.data).toLocaleString('pt-BR') : ''}</td>
+            <td>${mov.data
+                ? new Date(mov.data).toLocaleString('pt-BR', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'America/Sao_Paulo' // Define explicitamente o fuso horário
+                  }) : ''}</td>
             <td class="uppercase">${mov.codigo_marca_fogo}</td>
             <td>${mov.tipo_operacao || ''}</td>
             <td class="uppercase">${mov.placa || ''}</td>

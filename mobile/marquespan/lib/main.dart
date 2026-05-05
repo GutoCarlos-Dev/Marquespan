@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:ui';
-import 'package:marquespan/models/user.dart';
-import 'package:marquespan/services/user_service.dart';
-import 'package:marquespan/pages/dashboard_page.dart';
+import 'package:marquespan/user.dart'; // Caminho corrigido
+import 'package:marquespan/user_service.dart'; // Caminho corrigido
+import 'package:marquespan/dashboard_page.dart'; // Caminho corrigido
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
