@@ -763,11 +763,11 @@ function baixarModeloImportacao() {
     let data = [];
 
     if (tipo === 'ENGRAXE') {
-        headers = ['TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'DATA', 'PLACA', 'KM', 'OS', 'NFS-E', 'Valor_NFS-E', 'DESCRIÇÃO'];
-        data = [['ENGRAXE', 'Oficina Exemplo', new Date().toLocaleDateString('pt-BR'), 'ABC1234', '10000', '123', '456', '150.00', 'Engraxe completo']];
+        headers = ['TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'DATA', 'PLACA', 'KM', 'OS', 'NFS-E', 'Valor_NFS-E', 'DESCRIÇÃO', 'TIPO', 'MOTORISTA'];
+        data = [['ENGRAXE', 'Oficina Exemplo', new Date().toLocaleDateString('pt-BR'), 'ABC1234', '10000', '123', '456', '150.00', 'Engraxe completo', 'PREVENTIVA', 'João da Silva']];
     } else {
-        headers = ['DATA', 'PLACA', 'DESCRICAO', 'VALOR', 'KM', 'FORNECEDOR', 'NF', 'FILIAL'];
-        data = [[new Date().toLocaleDateString('pt-BR'), 'ABC1234', `Exemplo de ${tipo}`, '150.00', '10000', 'Oficina Exemplo', '12345', 'SP']];
+        headers = ['DATA', 'PLACA', 'DESCRICAO', 'VALOR', 'KM', 'FORNECEDOR', 'NF', 'FILIAL', 'TIPO', 'MOTORISTA'];
+        data = [[new Date().toLocaleDateString('pt-BR'), 'ABC1234', `Exemplo de ${tipo}`, '150.00', '10000', 'Oficina Exemplo', '12345', 'SP', 'CORRETIVA', 'Maria Souza']];
     }
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -837,6 +837,16 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       return parseFloat(str) || 0;
   };
 
+  // Cache de veículos para preencher o modelo automaticamente
+  const { data: veiculosData, error: veiculosError } = await supabaseClient
+    .from('veiculos')
+    .select('placa, modelo');
+  if (veiculosError) {
+    console.error('Erro ao carregar veículos para preenchimento automático de modelo:', veiculosError);
+    throw new Error('Erro ao carregar dados de veículos.');
+  }
+  const veiculosMap = new Map(veiculosData.map(v => [v.placa.toUpperCase(), v.modelo]));
+
   for (const row of dados) {
       const r = {};
       Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
@@ -856,9 +866,13 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       const placa = (r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
       if (!placa) continue;
 
+      // Preencher MODELO automaticamente
+      const modelo = veiculosMap.get(placa) || '';
+
       // Mapeamento específico para Engraxe e genérico
       let titulo = r['TÍTULO_DA_MANUTENÇÃO'] || r['TITULO_DA_MANUTENCAO'] || r['TITULO'] || tipo;
-      let tipoManutencao = '';
+      let tipoManutencao = (r['TIPO'] || '').toUpperCase().trim(); // Novo campo TIPO
+      if (!tipoManutencao && tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA'; // Fallback para ENGRAXE
       if (tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA';
       const fornecedor = r['FORNECEDOR'] || r['OFICINA'] || '';
       const km = r['KM'] ? String(r['KM']) : '';
@@ -867,11 +881,13 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       const valorNfse = parseCurrency(r['VALOR_NFS-E'] || r['VALOR_NFSE']);
       const descricao = r['DESCRIÇÃO'] || r['DESCRICAO'] || r['SERVICO'] || r['OBS'] || `${tipo} Importado`;
       
+      const motorista = (r['MOTORISTA'] || '').trim(); // Novo campo MOTORISTA
+
       // Campos padrão/outros
       const valorNfe = parseCurrency(r['VALOR'] || r['TOTAL'] || r['CUSTO']);
       const notaFiscal = r['NF'] || r['NOTA'] || '';
       // Usa a filial selecionada no modal, ignorando a da planilha se houver
-
+      
       manutencoesParaInserir.push({
           data: dataISO,
           veiculo: placa,
@@ -881,6 +897,8 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
           valorNfe: valorNfe,
           valorNfse: valorNfse,
           km: km,
+          modelo: modelo, // Adicionado o modelo preenchido automaticamente
+          motorista: motorista, // Adicionado o motorista
           fornecedor: fornecedor,
           notaFiscal: notaFiscal,
           notaServico: notaServico,
