@@ -133,6 +133,8 @@ const UI = {
     this.formCadastrarProduto = document.getElementById('formCadastrarProduto');
     this.produtosTableBody = document.getElementById('produtosTableBody');
     this.btnSubmitProduto = document.getElementById('btnSubmitProduto');
+    this.produtoQtdMinima = document.getElementById('produtoQtdMinima');
+    this.produtoLocalizacao = document.getElementById('produtoLocalizacao');
     this.produtoPrateleira = document.getElementById('produtoPrateleira');
     this.formCadastrarFornecedor = document.getElementById('formCadastrarFornecedor');
     this.fornecedoresTableBody = document.getElementById('fornecedoresTableBody');
@@ -218,6 +220,10 @@ const UI = {
 
     this.formCadastrarProduto?.addEventListener('submit', e=>this.handleProductForm(e));
     this.formCadastrarFornecedor?.addEventListener('submit', e=>this.handleFornecedorForm(e));
+    
+    // Listener para atualizar a localização da prateleira ao selecionar
+    if (this.produtoPrateleira) this.produtoPrateleira.addEventListener('change', () => this.updatePrateleiraLocalizacaoDisplay());
+
 
     const searchProdutoInput = document.getElementById('searchProdutoInput');
     if(searchProdutoInput) searchProdutoInput.addEventListener('input', () => this.renderProdutosGrid());
@@ -1205,6 +1211,7 @@ const UI = {
       if (this.produtoPrateleira) {
         this.produtoPrateleira.innerHTML = '<option value="">Prateleira...</option>' + 
           (data || []).map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+        this._prateleirasCache = data || []; // Cacheia os dados das prateleiras
       }
     } catch (err) {
       console.error('Erro ao carregar select de prateleiras:', err);
@@ -1221,7 +1228,9 @@ const UI = {
       codigo_secundario: document.getElementById('produtoCodigo2').value,
       nome: document.getElementById('produtoNome').value,
       unidade_medida: document.getElementById('produtoUnidade').value,
-      prateleira_id: this.produtoPrateleira?.value || null
+      prateleira_id: this.produtoPrateleira?.value || null,
+      quantidade_minima: parseFloat(this.produtoQtdMinima?.value) || 0,
+      localizacao: this.produtoLocalizacao?.value?.toUpperCase() || null
     };
 
     if (!payload.codigo_principal || !payload.nome) {
@@ -1239,14 +1248,16 @@ const UI = {
       this.clearProductForm();
       this.renderProdutosGrid();
     } catch(err) {
-      console.error(err);
-      alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} produto.`);
+      console.error('Erro na operação de produto:', err);
+      alert(`❌ Erro ao ${editingId ? 'atualizar' : 'cadastrar'} produto: ${err.message || 'Verifique se as colunas existem no banco de dados.'}`);
     }
   },
 
   clearProductForm() {
     this.formCadastrarProduto.reset();
     this.formCadastrarProduto.dataset.editingId = '';
+    if (this.produtoQtdMinima) this.produtoQtdMinima.value = '0';
+    if (this.produtoLocalizacao) this.produtoLocalizacao.value = '';
     this.btnSubmitProduto.textContent = 'Cadastrar';
   },
 
@@ -1255,11 +1266,20 @@ const UI = {
       const [product] = await SupabaseService.list('produtos', '*', { eq: { field: 'id', value: id } });
       if (!product) return alert('Produto não encontrado.');
 
+      // Busca a prateleira apenas se o produto possuir uma vinculada, evitando erro 400
+      let prateleira = null;
+      if (product.prateleira_id) {
+          const result = await SupabaseService.list('prateleiras', '*', { eq: { field: 'id', value: product.prateleira_id } });
+          prateleira = result ? result[0] : null;
+      }
+
       this.formCadastrarProduto.dataset.editingId = id;
       document.getElementById('produtoCodigo1').value = product.codigo_principal || '';
       document.getElementById('produtoCodigo2').value = product.codigo_secundario || '';
       document.getElementById('produtoNome').value = product.nome || '';
       document.getElementById('produtoUnidade').value = product.unidade_medida || '';
+      if (this.produtoQtdMinima) this.produtoQtdMinima.value = product.quantidade_minima ?? 0;
+      if (this.produtoLocalizacao) this.produtoLocalizacao.value = product.localizacao ?? '';
       if (this.produtoPrateleira) this.produtoPrateleira.value = product.prateleira_id || '';
 
       this.btnSubmitProduto.textContent = 'Atualizar';
@@ -1433,7 +1453,7 @@ const UI = {
           <td>${p.nome || ''}</td>
           <td>${p.unidade_medida || ''}</td>
           <td>${p.prateleiras?.nome || '-'}</td>
-          <td>${p.prateleiras?.localizacao || '-'}</td>
+          <td>${p.localizacao || '-'}</td>
           <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
           <td>${status}</td>
           <td>

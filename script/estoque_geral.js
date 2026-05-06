@@ -55,6 +55,7 @@ const EstoqueGeralUI = {
         this.searchProdutoTab = document.getElementById('searchProdutoTab');
         this.gridProdutosTabBody = document.getElementById('produtos-tab-body');
         this.produtoPrateleira = document.getElementById('produtoPrateleira');
+        this.produtoLocalizacao = document.getElementById('produtoLocalizacao');
         this.listaProdutosRetirada = document.getElementById('lista-produtos-retirada');
 
         // Aba Batimento
@@ -277,7 +278,7 @@ const EstoqueGeralUI = {
         this.gridProdutosTabBody.innerHTML = '<tr><td colspan="10" class="text-center">Carregando...</td></tr>';
 
         try {
-            let query = supabaseClient.from('produtos').select('*, prateleiras(nome, localizacao)');
+            let query = supabaseClient.from('produtos').select('*, prateleiras(nome)'); // Localização agora é campo direto do produto
             if (term) {
                 query = query.or(`nome.ilike.%${term}%,codigo_principal.ilike.%${term}%`);
             }
@@ -307,7 +308,7 @@ const EstoqueGeralUI = {
                     <td>${p.nome}</td>
                     <td>${p.unidade_medida || 'UN'}</td>
                     <td>${p.prateleiras?.nome || '-'}</td>
-                    <td>${p.prateleiras?.localizacao || '-'}</td>
+                    <td>${p.localizacao || '-'}</td>
                     <td style="text-align: center; font-weight: bold;">${p.quantidade_minima || 0}</td>
                     <td><span class="status-badge ${isInactive ? 'status-inativo' : 'status-ativo'}">${status}</span></td>
                     <td style="text-align: center;">
@@ -343,6 +344,7 @@ const EstoqueGeralUI = {
             nome: document.getElementById('produtoNome').value.trim().toUpperCase(),
             unidade_medida: document.getElementById('produtoUnidade').value.trim().toUpperCase(),
             quantidade_minima: parseFloat(document.getElementById('produtoQtdMinima').value) || 0,
+            localizacao: this.produtoLocalizacao?.value.trim().toUpperCase() || null,
             prateleira_id: this.produtoPrateleira.value || null
         };
 
@@ -372,6 +374,7 @@ const EstoqueGeralUI = {
                 document.getElementById('produtoNome').value = p.nome || '';
                 document.getElementById('produtoUnidade').value = p.unidade_medida || '';
                 document.getElementById('produtoQtdMinima').value = p.quantidade_minima || 0;
+                if (this.produtoLocalizacao) this.produtoLocalizacao.value = p.localizacao || '';
                 this.produtoPrateleira.value = p.prateleira_id || '';
                 this.btnSubmitProduto.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -395,6 +398,7 @@ const EstoqueGeralUI = {
         this.formProduto.reset();
         this.produtoEditingId.value = '';
         document.getElementById('produtoQtdMinima').value = '0';
+        if (this.produtoLocalizacao) this.produtoLocalizacao.value = '';
         this.produtoPrateleira.value = '';
         this.btnSubmitProduto.innerHTML = '<i class="fas fa-save"></i> Salvar';
     },

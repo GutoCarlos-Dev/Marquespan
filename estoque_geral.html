@@ -236,6 +236,10 @@
                   <option value="">Selecione uma prateleira</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label>Localização</label>
+                <input type="text" id="produtoLocalizacao" placeholder="Localização" class="glass-input">
+              </div>
               <div class="form-group" style="display: flex; gap: 10px;">
                 <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green" style="flex: 1;"><i class="fas fa-save"></i> Salvar</button>
                 <button type="button" id="btnClearProdutoForm" class="btn-glass btn-muted"><i class="fas fa-times"></i></button>
@@ -260,7 +264,7 @@
                   <th data-field="nome">Nome do Produto <i class="fas fa-sort"></i></th>
                   <th data-field="unidade_medida">Unidade <i class="fas fa-sort"></i></th>
                   <th data-field="prateleiras.nome">Prateleira <i class="fas fa-sort"></i></th>
-                  <th data-field="prateleiras.localizacao">Localização <i class="fas fa-sort"></i></th>
+                  <th data-field="localizacao">Localização <i class="fas fa-sort"></i></th>
                   <th data-field="quantidade_minima" style="text-align: center;">Mínimo <i class="fas fa-sort"></i></th>
                   <th data-field="status">Status <i class="fas fa-sort"></i></th>
                   <th style="text-align: center;">Ações</th>

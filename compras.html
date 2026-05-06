@@ -169,7 +169,7 @@
             <button id="btnOpenImportExportModal" class="btn-glass btn-orange"><i class="fas fa-file-import"></i> Importar/Exportar</button>
         </div>
       </div>
-      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr 1fr 1.2fr auto;">
+      <form id="formCadastrarProduto" class="form-grid" style="grid-template-columns: 1fr 1fr 2fr 1fr 1fr 1fr 1.2fr auto;">
         <input type="text" id="produtoCodigo1" placeholder="Cód. Principal" class="glass-input">
         <input type="text" id="produtoCodigo2" placeholder="Cód. Secundário" class="glass-input">
         <input type="text" id="produtoNome" placeholder="Nome do Produto" required class="glass-input">
@@ -178,6 +178,7 @@
         <select id="produtoPrateleira" class="glass-input">
           <option value="">Selecione a Prateleira...</option>
         </select>
+        <input type="text" id="produtoLocalizacao" placeholder="Localização" class="glass-input">
         <button type="submit" id="btnSubmitProduto" class="btn-glass btn-green">Cadastrar</button>
       </form>
       
@@ -194,7 +195,7 @@
                     <th data-field="nome">NOME <i class="fas fa-sort"></i></th>
                     <th data-field="unidade_medida">UN</th>
                     <th data-field="prateleiras.nome">PRATELEIRA <i class="fas fa-sort"></i></th>
-                    <th data-field="prateleiras.localizacao">LOCALIZAÇÃO <i class="fas fa-sort"></i></th>
+                    <th data-field="localizacao">LOCALIZAÇÃO <i class="fas fa-sort"></i></th>
                     <th data-field="quantidade_minima">MÍNIMO <i class="fas fa-sort"></i></th>
                     <th data-field="status">STATUS</th>
                     <th>AÇÕES</th>
