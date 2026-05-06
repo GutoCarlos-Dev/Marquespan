@@ -763,7 +763,7 @@ function baixarModeloImportacao() {
     let data = [];
 
     headers = ['DATA', 'TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'TIPO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
-    data = [[new Date().toLocaleDateString('pt-BR'),'ALMOXARIFADO', 'MUNIQUE TATUÍ', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
+    data = [[new Date().toLocaleDateString('pt-BR'),'ALMOXARIFADO', 'MUNIQUE TATUÍ (CNPJ: 03.800.017/0007-07)', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
