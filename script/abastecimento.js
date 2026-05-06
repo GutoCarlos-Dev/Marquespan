@@ -1290,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (this.extFilial.querySelector('option[value="SP"]')) {
                             this.extFilial.value = 'SP';
                         }
-                        this.extFilial.disabled = true;
+                        this.extFilial.disabled = false; // Permite seleção para usuários sem filial definida
                     }
                     this.loadPostosOptions(); // Carrega postos filtrados pela filial definida
                 }
