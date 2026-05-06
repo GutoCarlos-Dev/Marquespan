@@ -624,7 +624,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 4. Unificar e Ordenar
-                this.dadosRelatorio = [...dadosEntradas, ...dadosSaidas, ...dadosExternos].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+                let allConsumptions = [...dadosEntradas, ...dadosSaidas, ...dadosExternos];
+
+                // --- CÁLCULO DE KM ANTERIOR, KM RODADO E MÉDIA KM/L ---
+                // Processar apenas os tipos que possuem KM (SAIDA e EXTERNO)
+                let consumptionsForKML = allConsumptions.filter(item => item.tipo === 'SAIDA' || item.tipo === 'EXTERNO');
+                let otherRecords = allConsumptions.filter(item => item.tipo !== 'SAIDA' && item.tipo !== 'EXTERNO');
+
+                // Ordenar por placa, depois por data_hora para calcular km_anterior corretamente
+                consumptionsForKML.sort((a, b) => {
+                    if (a.placa < b.placa) return -1;
+                    if (a.placa > b.placa) return 1;
+                    return new Date(a.data_hora) - new Date(b.data_hora);
+                });
+
+                const lastKmByPlaca = {}; // Armazena o último km_atual para cada placa
+
+                consumptionsForKML.forEach(record => {
+                    const placa = record.placa;
+                    const currentKm = parseFloat(record.km_atual);
+                    const litros = parseFloat(record.litros);
+
+                    if (!isNaN(currentKm) && currentKm > 0) {
+                        const previousKm = lastKmByPlaca[placa] !== undefined ? lastKmByPlaca[placa] : null;
+                        record.km_anterior = previousKm;
+
+                        if (previousKm !== null && currentKm >= previousKm) {
+                            const kmRodado = currentKm - previousKm;
+                            record.km_rodado = kmRodado;
+                            record.media_kml = litros > 0 ? (kmRodado / litros) : 0;
+                        } else if (previousKm !== null && currentKm < previousKm) {
+                            // Tratamento para odômetro zerado ou erro de leitura
+                            record.km_rodado = 'Erro (KM menor)';
+                            record.media_kml = 'Erro';
+                        } else {
+                            // Primeiro registro para este veículo ou sem KM anterior
+                            record.km_rodado = null;
+                            record.media_kml = null;
+                        }
+                        lastKmByPlaca[placa] = currentKm; // Atualiza o último KM para esta placa
+                    } else {
+                        record.km_anterior = null;
+                        record.km_rodado = null;
+                        record.media_kml = null;
+                    }
+                });
+
+                // Combina todos os registros novamente e ordena por data_hora decrescente
+                this.dadosRelatorio = [...otherRecords, ...consumptionsForKML].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
                 this.renderTable();
                 this.renderizarGraficos(this.dadosRelatorio);
 
@@ -808,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let somaValor = 0;
 
             if (this.dadosRelatorio.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="15" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
                 this.totalLitrosEl.textContent = '0,00 L';
                 this.totalValorEl.textContent = 'R$ 0,00';
                 return;
@@ -830,13 +877,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (reg.tipo === 'ENTRADA') tipoClass = 'text-success';
                 else if (reg.tipo === 'EXTERNO') tipoClass = 'text-warning'; // Laranja/Amarelo para Externo
                 else tipoClass = 'text-primary';
+                
+                const kmAnteriorDisplay = reg.km_anterior !== null ? Number(reg.km_anterior).toLocaleString('pt-BR') : '-';
+                const kmRodadoDisplay = reg.km_rodado !== null ? (typeof reg.km_rodado === 'string' ? reg.km_rodado : Number(reg.km_rodado).toLocaleString('pt-BR')) : '-';
+                const mediaKmlDisplay = reg.media_kml !== null ? (typeof reg.media_kml === 'string' ? reg.media_kml : Number(reg.media_kml).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '-';
 
                 tr.innerHTML = `
                     <td>${dataFormatada}</td>
                     <td>${reg.usuario || '-'}</td>
                     <td>${reg.placa}</td>
                     <td>${reg.rota}</td>
-                    <td>${reg.km_atual}</td>
+                    <td>${Number(reg.km_atual).toLocaleString('pt-BR')}</td>
                     <td>${reg.numero_nota}</td>
                     <td>${reg.tanque}</td>
                     <td>${reg.bico}</td>
@@ -844,6 +895,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="font-bold ${tipoClass}" style="text-align: right;">${reg.tipo === 'EXTERNO' ? '' : (reg.tipo === 'SAIDA' ? '-' : '+')}${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
                     <td style="text-align: right;">${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                     <td style="text-align: right;">${Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                    <td style="text-align: right;">${kmAnteriorDisplay}</td>
+                    <td style="text-align: right;">${kmRodadoDisplay}</td>
+                    <td style="text-align: right;">${mediaKmlDisplay}</td>
                 `;
                 this.tableBody.appendChild(tr);
             });
@@ -868,7 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Combustível': reg.combustivel,
                 'Litros': Number(reg.litros),
                 'Vlr. Litro': Number(reg.valor_litro),
-                'Total': Number(reg.valor_total)
+                'Total': Number(reg.valor_total),
+                'KM Anterior': reg.km_anterior !== null ? (typeof reg.km_anterior === 'string' ? reg.km_anterior : Number(reg.km_anterior)) : '',
+                'KM Rodado': reg.km_rodado !== null ? (typeof reg.km_rodado === 'string' ? reg.km_rodado : Number(reg.km_rodado)) : '',
+                'Média KM/L': reg.media_kml !== null ? (typeof reg.media_kml === 'string' ? reg.media_kml : Number(reg.media_kml)) : ''
             }));
 
             // Calcular totais para adicionar ao final da planilha
@@ -888,7 +945,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Combustível': '',
                 'Litros': totalLitros,
                 'Vlr. Litro': '',
-                'Total': totalValor
+                'Total': totalValor,
+                'KM Anterior': '',
+                'KM Rodado': '',
+                'Média KM/L': ''
             });
 
             const ws = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -949,8 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nomeUsuario = usuarioLogado?.nome || 'Sistema';
                 doc.text(`Gerado por: ${nomeUsuario}`, 14, 39);
 
-                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Bico", "Combustível", "Litros", "Vlr. Unit", "Total"];
-                const tableRows = [];
+                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Bico", "Combustível", "Litros", "Vlr. Unit", "Total", "KM Ant.", "KM Rodado", "Média KM/L"];
+                let tableRows = [];
                 let totalLitros = 0;
                 let totalValor = 0;
 
@@ -970,18 +1030,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         reg.combustivel,
                         Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2}),
                         Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
-                        Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})
+                        Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
+                        reg.km_anterior !== null ? (typeof reg.km_anterior === 'string' ? reg.km_anterior : Number(reg.km_anterior).toLocaleString('pt-BR')) : '-',
+                        reg.km_rodado !== null ? (typeof reg.km_rodado === 'string' ? reg.km_rodado : Number(reg.km_rodado).toLocaleString('pt-BR')) : '-',
+                        reg.media_kml !== null ? (typeof reg.media_kml === 'string' ? reg.media_kml : Number(reg.media_kml).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '-'
                     ];
                     tableRows.push(row);
                 });
 
                 // Adiciona linha de total
                 tableRows.push([
-                    { content: 'TOTAL GERAL', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
-                    { content: totalLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold' } },
-                    '',
-                    { content: totalValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}), styles: { fontStyle: 'bold' } }
+                    { content: 'TOTAIS GERAIS', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), styles: { fontStyle: 'bold' } },
+                    { content: '', colSpan: 1, styles: { fontStyle: 'bold' } }, // Coluna Vlr. Unit vazia
+                    { content: totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold' } },
+                    { content: '', colSpan: 3, styles: { fontStyle: 'bold' } } // Colunas de KM vazias
                 ]);
+
 
                 doc.autoTable({
                     head: [tableColumn],
@@ -990,10 +1055,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
                     styles: { fontSize: 8 },
                     columnStyles: {
-                        0: { cellWidth: 25 }, // Data
-                        9: { halign: 'right' }, // Litros
-                        10: { halign: 'right' }, // Vlr Unit
-                        11: { halign: 'right' } // Total
+                        0: { cellWidth: 20 }, // Data/Hora
+                        9: { halign: 'right', cellWidth: 15 }, // Litros
+                        10: { halign: 'right', cellWidth: 15 }, // Vlr Unit
+                        11: { halign: 'right', cellWidth: 15 }, // Total
+                        12: { halign: 'right', cellWidth: 15 }, // KM Ant.
+                        13: { halign: 'right', cellWidth: 15 }, // KM Rodado
+                        14: { halign: 'right', cellWidth: 15 } // Média KM/L
                     }
                 });
 
