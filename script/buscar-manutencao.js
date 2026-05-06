@@ -320,7 +320,7 @@ function formatarData(data) {
 function formatarValor(valor) {
   const v = parseFloat(valor);
   if (isNaN(v)) return '0,00';
-  return v.toFixed(2).replace('.', ',');
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function handleSort(column) {
