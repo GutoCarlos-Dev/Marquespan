@@ -762,13 +762,8 @@ function baixarModeloImportacao() {
     let headers = [];
     let data = [];
 
-    if (tipo === 'ENGRAXE') {
-        headers = ['TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'DATA', 'PLACA', 'KM', 'OS', 'NFS-E', 'Valor_NFS-E', 'DESCRIÇÃO', 'TIPO', 'MOTORISTA'];
-        data = [['ENGRAXE', 'Oficina Exemplo', new Date().toLocaleDateString('pt-BR'), 'ABC1234', '10000', '123', '456', '150.00', 'Engraxe completo', 'PREVENTIVA', 'João da Silva']];
-    } else {
-        headers = ['DATA', 'PLACA', 'DESCRICAO', 'VALOR', 'KM', 'FORNECEDOR', 'NF', 'FILIAL', 'TIPO', 'MOTORISTA'];
-        data = [[new Date().toLocaleDateString('pt-BR'), 'ABC1234', `Exemplo de ${tipo}`, '150.00', '10000', 'Oficina Exemplo', '12345', 'SP', 'CORRETIVA', 'Maria Souza']];
-    }
+    headers = ['DATA', 'FORNECEDOR', 'TIPO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
+    data = [[new Date().toLocaleDateString('pt-BR'), 'MUNIQUE TATUÍ', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
@@ -871,22 +866,17 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
 
       // Mapeamento específico para Engraxe e genérico
       let titulo = r['TÍTULO_DA_MANUTENÇÃO'] || r['TITULO_DA_MANUTENCAO'] || r['TITULO'] || tipo;
-      let tipoManutencao = (r['TIPO'] || '').toUpperCase().trim(); // Novo campo TIPO
+      let tipoManutencao = (r['TIPO'] || '').toUpperCase().trim();
       if (!tipoManutencao && tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA'; // Fallback para ENGRAXE
       if (tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA';
       const fornecedor = r['FORNECEDOR'] || r['OFICINA'] || '';
       const km = r['KM'] ? String(r['KM']) : '';
-      const numeroOS = r['OS'] ? String(r['OS']) : '';
-      const notaServico = r['NFS-E'] || r['NFSE'] || '';
-      const valorNfse = parseCurrency(r['VALOR_NFS-E'] || r['VALOR_NFSE']);
-      const descricao = r['DESCRIÇÃO'] || r['DESCRICAO'] || r['SERVICO'] || r['OBS'] || `${tipo} Importado`;
-      
-      const motorista = (r['MOTORISTA'] || '').trim(); // Novo campo MOTORISTA
-
-      // Campos padrão/outros
-      const valorNfe = parseCurrency(r['VALOR'] || r['TOTAL'] || r['CUSTO']);
-      const notaFiscal = r['NF'] || r['NOTA'] || '';
-      // Usa a filial selecionada no modal, ignorando a da planilha se houver
+      const numeroOS = r['OS'] || r['Nº OS'] || '';
+      const notaFiscal = r['NF'] || r['NOTA'] || r['NF-E'] || '';
+      const valorNfe = parseCurrency(r['VALOR_NF'] || r['VALOR'] || r['TOTAL'] || r['CUSTO']);
+      const notaServico = r['NFS'] || r['NFS-E'] || r['NFSE'] || '';
+      const valorNfse = parseCurrency(r['VALOR_NFS'] || r['VALOR_NFS-E'] || r['VALOR_NFSE']);
+      const descricao = r['DESCRICAO'] || r['DESCRIÇÃO'] || r['SERVICO'] || r['OBS'] || `${tipo} Importado`;
       
       manutencoesParaInserir.push({
           data: dataISO,
@@ -897,8 +887,7 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
           valorNfe: valorNfe,
           valorNfse: valorNfse,
           km: km,
-          modelo: modelo, // Adicionado o modelo preenchido automaticamente
-          motorista: motorista, // Adicionado o motorista
+          modelo: modelo,
           fornecedor: fornecedor,
           notaFiscal: notaFiscal,
           notaServico: notaServico,
