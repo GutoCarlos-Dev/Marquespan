@@ -114,6 +114,19 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Listener para o link "Mais Detalhes" no modal de veículo
+    const btnMaisDetalhes = document.getElementById('btnMaisDetalhes');
+    const secaoDetalhes = document.getElementById('secaoDetalhesAdicionais');
+    if (btnMaisDetalhes && secaoDetalhes) {
+        btnMaisDetalhes.addEventListener('click', (e) => {
+            e.preventDefault();
+            secaoDetalhes.classList.toggle('hidden');
+            btnMaisDetalhes.innerHTML = secaoDetalhes.classList.contains('hidden') 
+                ? '<i class="fas fa-plus-circle"></i> Mais Detalhes' 
+                : '<i class="fas fa-minus-circle"></i> Menos Detalhes';
+        });
+    }
 }
 
 function handleTableClick(e) {
@@ -334,6 +347,11 @@ function abrirModalVeiculo(veiculo = null) {
 
     form.reset();
     
+    // Reseta a visibilidade da seção de detalhes adicionais ao abrir o modal
+    const secaoDetalhes = document.getElementById('secaoDetalhesAdicionais');
+    if (secaoDetalhes) secaoDetalhes.classList.add('hidden');
+    if (document.getElementById('btnMaisDetalhes')) document.getElementById('btnMaisDetalhes').innerHTML = '<i class="fas fa-plus-circle"></i> Mais Detalhes';
+
     if (veiculo) {
         title.textContent = 'Editar Veículo';
         document.getElementById('veiculoId').value = veiculo.id;
@@ -364,6 +382,23 @@ function abrirModalVeiculo(veiculo = null) {
 
         const mediaKm = document.getElementById('veiculoMediaKm');
         if(mediaKm) mediaKm.value = (veiculo.media_km !== null && veiculo.media_km !== undefined) ? veiculo.media_km : '';
+
+        // Preenchimento dos campos adicionais (Mais Detalhes)
+        if(document.getElementById('veiculoFabricante')) document.getElementById('veiculoFabricante').value = veiculo.fabricante || '';
+        if(document.getElementById('veiculoTransmissao')) document.getElementById('veiculoTransmissao').value = veiculo.transmissao || '';
+        if(document.getElementById('veiculoEixos')) document.getElementById('veiculoEixos').value = veiculo.eixos || '';
+        if(document.getElementById('veiculoPBT')) document.getElementById('veiculoPBT').value = veiculo.pbt || '';
+        if(document.getElementById('veiculoDimensoes')) document.getElementById('veiculoDimensoes').value = veiculo.dimensoes || '';
+        if(document.getElementById('veiculoVuc')) document.getElementById('veiculoVuc').value = veiculo.vuc ? 'true' : 'false';
+        if(document.getElementById('veiculoCor')) document.getElementById('veiculoCor').value = veiculo.cor || '';
+        if(document.getElementById('veiculoCidadeEmplac')) document.getElementById('veiculoCidadeEmplac').value = veiculo.cidade_emplacamento || '';
+        if(document.getElementById('veiculoModeloTK')) document.getElementById('veiculoModeloTK').value = veiculo.modelo_tk || '';
+        if(document.getElementById('veiculoSerieTK')) document.getElementById('veiculoSerieTK').value = veiculo.serie_tk || '';
+        if(document.getElementById('veiculoBau')) document.getElementById('veiculoBau').value = veiculo.bau_tipo || '';
+        if(document.getElementById('veiculoSerieBau')) document.getElementById('veiculoSerieBau').value = veiculo.serie_bau || '';
+        if(document.getElementById('veiculoMecanismo')) document.getElementById('veiculoMecanismo').value = veiculo.mecanismo_operacional || '';
+        if(document.getElementById('veiculoSerieMecanismo')) document.getElementById('veiculoSerieMecanismo').value = veiculo.serie_mecanismo || '';
+        if(document.getElementById('veiculoRastreador')) document.getElementById('veiculoRastreador').value = veiculo.rastreador || '';
     } else {
         title.textContent = 'Novo Veículo';
         document.getElementById('veiculoId').value = '';
@@ -418,7 +453,22 @@ async function salvarVeiculo(e) {
         anomod: getVal('veiculoAnoMod'),
         qtdtanque: getVal('veiculoQtdTanque'),
         volume_tanque: getVal('veiculoVolumeTanque'),
-        media_km: getVal('veiculoMediaKm') // Novo campo
+        media_km: getVal('veiculoMediaKm'),
+        fabricante: getVal('veiculoFabricante'),
+        transmissao: getVal('veiculoTransmissao'),
+        eixos: parseInt(getVal('veiculoEixos')) || null,
+        pbt: parseFloat(getVal('veiculoPBT')) || null,
+        dimensoes: getVal('veiculoDimensoes'),
+        vuc: getVal('veiculoVuc') === 'true',
+        cor: getVal('veiculoCor'),
+        cidade_emplacamento: getVal('veiculoCidadeEmplac'),
+        modelo_tk: getVal('veiculoModeloTK'),
+        serie_tk: getVal('veiculoSerieTK'),
+        bau_tipo: getVal('veiculoBau'),
+        serie_bau: getVal('veiculoSerieBau'),
+        mecanismo_operacional: getVal('veiculoMecanismo'),
+        serie_mecanismo: getVal('veiculoSerieMecanismo'),
+        rastreador: getVal('veiculoRastreador')
     };
 
    // Processa media_km para lidar com vírgula como separador decimal
