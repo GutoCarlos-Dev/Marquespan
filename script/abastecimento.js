@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.dataInput.value = now.toISOString().slice(0, 16);
+            if (this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
             if (this.filtroDataInicial) this.filtroDataInicial.value = new Date().toISOString().slice(0, 10);
             if (this.filtroDataFinal) this.filtroDataFinal.value = new Date().toISOString().slice(0, 10);
 
@@ -1330,11 +1331,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const datalist = document.getElementById('listaPostosExternos');
             if (!datalist) return;
 
-            // Inicializa data atual
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            if(this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
-
             const filialSelecionada = this.extFilial ? this.extFilial.value : this.getUserFilial();
             
             // Tenta encontrar o objeto da filial no cache para pegar Nome e Sigla e fazer um filtro mais flexível (Nome ou Sigla)
@@ -2254,6 +2250,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoEditingId = null;
             const btn = this.formPosto.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Posto';
+
+            // Reseta a data para o momento atual após limpar o formulário para o próximo lançamento
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            if (this.extDataHora) this.extDataHora.value = now.toISOString().slice(0, 16);
         },
 
         async deletePosto(id) {
