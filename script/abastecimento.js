@@ -1530,8 +1530,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const usuario = this.getUsuarioLogado();
                     const payloads = [];
+                    const importedRows = []; // Armazena dados dos itens importados para o resumo
                     const rejectedRows = []; // Array para armazenar linhas rejeitadas
-                    let erros = 0;
 
                     for (const row of json) {
                         // Normalizar chaves
@@ -1564,7 +1564,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (!veiculo || !kmAtual || !litros) {
                             console.warn('Linha ignorada por falta de dados essenciais:', r);
-                            erros++;
                             rejectedRows.push({ ...row, motivo_rejeicao: 'Faltam dados essenciais (Placa, KM ou Litros).' });
                             continue;
                         }
@@ -1618,21 +1617,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             valor_unitario: valorUnitario,
                             usuario: usuario
                         });
-                    }
-                    // Se houver linhas rejeitadas, gera o arquivo de texto
-                    if (rejectedRows.length > 0) {
-                        this.gerarTxtRejeitados(rejectedRows);
+
+                        importedRows.push({ placa: veiculo, data: dataHora, litros: litros });
                     }
 
                     if (payloads.length > 0) {
                         const { error } = await supabaseClient.from('abastecimento_externo').insert(payloads);
                         if (error) throw error;
-                        alert(`Importação concluída! ${payloads.length} registros inseridos.${rejectedRows.length > 0 ? `\n(${rejectedRows.length} registros foram rejeitados - verifique o arquivo .txt baixado).` : ''}`);
-                        alert(`Importação concluída! ${payloads.length} registros inseridos.${erros > 0 ? ` (${erros} ignorados)` : ''}`);
+
+                        alert(`Importação concluída com sucesso!\n✅ ${payloads.length} registros inseridos.\n❌ ${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
+                        this.gerarRelatorioImportacao(importedRows, rejectedRows);
                         this.renderExtTable();
                     } else {
-                        alert(`Nenhum dado válido encontrado para importação.${rejectedRows.length > 0 ? `\n(${rejectedRows.length} registros foram rejeitados - verifique o arquivo .txt baixado).` : ''}`);
-                        alert('Nenhum dado válido encontrado para importação.');
+                        alert(`Nenhum registro foi importado.\n❌ ${rejectedRows.length} registros foram rejeitados.\n\nVerifique o arquivo de erros que será baixado.`);
+                        if (rejectedRows.length > 0) {
+                            this.gerarRelatorioImportacao([], rejectedRows);
+                        }
                     }
 
                 } catch (err) {
@@ -1647,28 +1647,46 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsArrayBuffer(file);
         },
 
-        gerarTxtRejeitados(rejectedRows) {
-            let txtContent = "Linhas Rejeitadas na Importação de Abastecimento Externo\n";
+        gerarRelatorioImportacao(importedRows, rejectedRows) {
+            let txtContent = "RESUMO DE IMPORTAÇÃO - ABASTECIMENTO EXTERNO\n";
+            txtContent += "============================================================\n";
+            txtContent += `Data do Processamento: ${new Date().toLocaleString('pt-BR')}\n`;
+            txtContent += `Total de Registros no Arquivo: ${importedRows.length + rejectedRows.length}\n`;
+            txtContent += `Importados com Sucesso: ${importedRows.length}\n`;
+            txtContent += `Registros Rejeitados: ${rejectedRows.length}\n`;
             txtContent += "============================================================\n\n";
 
-            rejectedRows.forEach((row, index) => {
-                txtContent += `Registro ${index + 1}:\n`;
-                txtContent += `  Motivo da Rejeição: ${row.motivo_rejeicao}\n`;
-                txtContent += `  Dados da Linha:\n`;
-                for (const key in row) {
-                    if (key !== 'motivo_rejeicao') {
-                        txtContent += `    - ${key}: ${row[key]}\n`;
+            if (importedRows.length > 0) {
+                txtContent += "✅ REGISTROS IMPORTADOS COM SUCESSO:\n";
+                txtContent += "------------------------------------------------------------\n";
+                importedRows.forEach((row, index) => {
+                    txtContent += `${index + 1}. Veículo: ${row.placa} | Data: ${new Date(row.data).toLocaleString('pt-BR')} | Litros: ${row.litros}L\n`;
+                });
+                txtContent += "\n";
+            }
+
+            if (rejectedRows.length > 0) {
+                txtContent += "❌ REGISTROS REJEITADOS / ERROS:\n";
+                txtContent += "------------------------------------------------------------\n";
+                rejectedRows.forEach((row, index) => {
+                    txtContent += `Erro ${index + 1}:\n`;
+                    txtContent += `  Motivo: ${row.motivo_rejeicao}\n`;
+                    txtContent += `  Dados da Linha:\n`;
+                    for (const key in row) {
+                        if (key !== 'motivo_rejeicao') {
+                            txtContent += `    - ${key}: ${row[key]}\n`;
+                        }
                     }
-                }
-                txtContent += "\n------------------------------------------------------------\n\n";
-            });
+                    txtContent += "\n";
+                });
+            }
 
             const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            link.setAttribute('download', `rejeitados_abastecimento_${timestamp}.txt`);
+            link.setAttribute('download', `resumo_importacao_externa_${timestamp}.txt`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
