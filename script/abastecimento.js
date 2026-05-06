@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carregar Veículos
             try {
-                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').order('placa');
+                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo, tipo').order('placa');
                 if (veiculos) {
                     this.veiculosDisponiveis = veiculos; // Armazena no cache
                     this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
@@ -1602,6 +1602,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             kmAnterior = ultRegArray[0].km_atual;
                         }
 
+                        // Buscar Tipo do Veículo no cache
+                        const veiculoInfo = this.veiculosDisponiveis.find(v => v.placa === veiculo);
+                        let tipoVeiculo = null;
+                        if (veiculoInfo) {
+                            tipoVeiculo = veiculoInfo.tipo;
+                        }
+
                         payloads.push({
                             filial: filial,
                             data_hora: dataHora,
@@ -1609,6 +1616,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             posto_id: postoId || null,
                             veiculo_placa: veiculo,
                             rota: rota,
+                            tipo_veiculo: tipoVeiculo, // Adiciona o tipo do veículo
                             km_atual: kmAtual,
                             km_anterior: kmAnterior,
                             km_rodado: (kmAtual > kmAnterior) ? (kmAtual - kmAnterior) : 0,
