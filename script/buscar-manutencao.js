@@ -762,8 +762,8 @@ function baixarModeloImportacao() {
     let headers = [];
     let data = [];
 
-    headers = ['DATA', 'FORNECEDOR', 'TIPO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
-    data = [[new Date().toLocaleDateString('pt-BR'), 'MUNIQUE TATUÍ', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
+    headers = ['DATA', 'TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'TIPO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
+    data = [[new Date().toLocaleDateString('pt-BR'),'ALMOXARIFADO', 'MUNIQUE TATUÍ', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
@@ -832,16 +832,6 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       return parseFloat(str) || 0;
   };
 
-  // Cache de veículos para preencher o modelo automaticamente
-  const { data: veiculosData, error: veiculosError } = await supabaseClient
-    .from('veiculos')
-    .select('placa, modelo');
-  if (veiculosError) {
-    console.error('Erro ao carregar veículos para preenchimento automático de modelo:', veiculosError);
-    throw new Error('Erro ao carregar dados de veículos.');
-  }
-  const veiculosMap = new Map(veiculosData.map(v => [v.placa.toUpperCase(), v.modelo]));
-
   for (const row of dados) {
       const r = {};
       Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
@@ -860,9 +850,6 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
 
       const placa = (r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
       if (!placa) continue;
-
-      // Preencher MODELO automaticamente
-      const modelo = veiculosMap.get(placa) || '';
 
       // Mapeamento específico para Engraxe e genérico
       let titulo = r['TÍTULO_DA_MANUTENÇÃO'] || r['TITULO_DA_MANUTENCAO'] || r['TITULO'] || tipo;
@@ -887,7 +874,6 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
           valorNfe: valorNfe,
           valorNfse: valorNfse,
           km: km,
-          modelo: modelo,
           fornecedor: fornecedor,
           notaFiscal: notaFiscal,
           notaServico: notaServico,
