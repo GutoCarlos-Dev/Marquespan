@@ -398,6 +398,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        /**
+         * Helper para encontrar o último preço de um tanque antes de uma data.
+         * Otimizado para usar um cache agrupado por tanque.
+         */
+        getPriceLookup(priceHistory) {
+            const lookup = {};
+            priceHistory.forEach(p => {
+                if (!lookup[p.tanque_id]) lookup[p.tanque_id] = [];
+                lookup[p.tanque_id].push(p);
+            });
+            
+            return (tanqueId, consumptionDate) => {
+                const history = lookup[tanqueId];
+                if (!history) return 0;
+                
+                const targetDate = new Date(consumptionDate);
+                // Como o histórico já vem ordenado desc pelo banco, o primeiro que for <= é o correto
+                const record = history.find(p => new Date(p.data) <= targetDate);
+                return record ? record.valor_litro : 0;
+            };
+        },
+
         async handleSearch(e) {
             e.preventDefault();
             
@@ -455,13 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (priceError) throw priceError;
 
-                // 2. Função auxiliar para encontrar o último preço de um tanque antes de uma data específica
-                const findLastPrice = (tanqueId, consumptionDate) => {
-                    const priceRecord = priceHistory.find(p => 
-                        p.tanque_id === tanqueId && new Date(p.data) <= new Date(consumptionDate)
-                    );
-                    return priceRecord ? priceRecord.valor_litro : 0; // Retorna 0 se nenhum preço for encontrado
-                };
+                // 2. Lookup de preços otimizado
+                const findLastPrice = this.getPriceLookup(priceHistory);
 
                 let dadosEntradas = [];
                 let dadosSaidas = [];
@@ -669,7 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 4. Agrupar por Tipo de Movimentação
             const tiposMap = data.reduce((acc, item) => {
-                acc[item.tipo] = (acc[item.tipo] || 0) + Math.abs(item.litros);
+                const label = item.tipo === 'SAIDA' ? 'Saída Interna' : (item.tipo === 'ENTRADA' ? 'Entrada' : item.tipo);
+                acc[label] = (acc[label] || 0) + Math.abs(item.litros);
                 return acc;
             }, {});
 
