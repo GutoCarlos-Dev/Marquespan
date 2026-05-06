@@ -78,7 +78,6 @@ const EstoqueGeralUI = {
         this.formPrateleira = document.getElementById('formCadastrarPrateleira');
         this.prateleiraEditingId = document.getElementById('prateleiraEditingId');
         this.prateleiraNome = document.getElementById('prateleiraNome');
-        this.prateleiraLocalizacao = document.getElementById('prateleiraLocalizacao');
         this.btnSubmitPrateleira = document.getElementById('btnSubmitPrateleira');
         this.btnClearPrateleiraForm = document.getElementById('btnClearPrateleiraForm');
         this.searchPrateleiraTab = document.getElementById('searchPrateleiraTab');
@@ -421,12 +420,12 @@ const EstoqueGeralUI = {
 
     async renderPrateleirasGrid() {
         const term = this.searchPrateleiraTab.value.trim().toLowerCase();
-        this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center">Carregando...</td></tr>';
+        this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="2" class="text-center">Carregando...</td></tr>';
 
         try {
             let query = supabaseClient.from('prateleiras').select('*');
             if (term) {
-                query = query.or(`nome.ilike.%${term}%,localizacao.ilike.%${term}%`);
+                query = query.ilike('nome', `%${term}%`);
             }
 
             const { data, error } = await query; // Busca os dados sem ordenação no DB
@@ -449,7 +448,6 @@ const EstoqueGeralUI = {
             this.gridPrateleirasTabBody.innerHTML = sortedData.map(p => `
                 <tr>
                     <td>${p.nome}</td>
-                    <td>${p.localizacao || '-'}</td>
                     <td style="text-align: center;">
                         <button class="btn-icon edit btn-edit-prateleira" data-id="${p.id}" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon delete btn-delete-prateleira" data-id="${p.id}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -459,7 +457,7 @@ const EstoqueGeralUI = {
             this.updatePrateleirasSortIcons(); // Atualiza os ícones após renderizar
         } catch (err) {
             console.error('Erro ao listar prateleiras:', err);
-            this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
+            this.gridPrateleirasTabBody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Erro ao carregar lista.</td></tr>';
         }
     },
 
@@ -478,8 +476,7 @@ const EstoqueGeralUI = {
         e.preventDefault();
         const id = this.prateleiraEditingId.value;
         const payload = {
-            nome: this.prateleiraNome.value.trim().toUpperCase(),
-            localizacao: this.prateleiraLocalizacao.value.trim().toUpperCase()
+            nome: this.prateleiraNome.value.trim().toUpperCase()
         };
 
         try {
@@ -504,7 +501,6 @@ const EstoqueGeralUI = {
             if (p) {
                 this.prateleiraEditingId.value = p.id;
                 this.prateleiraNome.value = p.nome || '';
-                this.prateleiraLocalizacao.value = p.localizacao || '';
                 this.btnSubmitPrateleira.innerHTML = '<i class="fas fa-sync"></i> Atualizar';
             }
         }
