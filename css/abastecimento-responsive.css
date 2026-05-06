@@ -1,0 +1,115 @@
+/* Estilos para telas menores (Tablets e Celulares) */
+@media (max-width: 768px) {
+    /* Ajustes Gerais de Layout */
+    .main-content {
+        padding: 10px;
+    }
+
+    .glass-header {
+        padding: 15px;
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .glass-header h1 {
+        font-size: 1.4rem;
+    }
+
+    /* Menu de Abas */
+    .painel-navegacao {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .painel-btn {
+        padding: 10px 5px;
+        font-size: 0.85rem;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .painel-btn i {
+        font-size: 1.1rem;
+    }
+
+    /* Forçar o empilhamento das tabelas de layout (Cards das abas Externo e Postos) */
+    #sectionExterno form table,
+    #sectionPostos form table,
+    #sectionExterno form table tbody,
+    #sectionPostos form table tbody,
+    #sectionExterno form table tr,
+    #sectionPostos form table tr,
+    #sectionExterno form table td,
+    #sectionPostos form table td {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    #sectionExterno form table,
+    #sectionPostos form table {
+        border-spacing: 0 !important;
+    }
+
+    #sectionExterno form table td,
+    #sectionPostos form table td {
+        margin-bottom: 15px;
+        background: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    /* Ajuste da Distribuição de Tanques */
+    .distribuicao-row {
+        grid-template-columns: 1fr; /* Empilha select e input */
+        gap: 8px;
+        position: relative;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .btn-remove-tanque {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+
+    /* Ajustes das Tabelas de Dados */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .glass-table {
+        font-size: 0.85rem;
+    }
+
+    .glass-table th, 
+    .glass-table td {
+        padding: 8px 10px;
+        white-space: nowrap; /* Impede quebra de texto, forçando o scroll horizontal */
+    }
+
+    /* Inputs Mobile */
+    .glass-input {
+        font-size: 16px !important; /* Evita zoom automático no iOS */
+    }
+
+    .form-row-duplo, 
+    .form-row-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Filtros de Histórico */
+    .filtro-periodo-container {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+}
