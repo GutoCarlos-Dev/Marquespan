@@ -1285,6 +1285,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             this.extFilial.value = userFilial;
                         }
+                    } else {
+                        // Se o usuário não tem filial definida, preenche com 'SP' como padrão
+                        if (this.extFilial.querySelector('option[value="SP"]')) {
+                            this.extFilial.value = 'SP';
+                        }
                         this.extFilial.disabled = true;
                     }
                     this.loadPostosOptions(); // Carrega postos filtrados pela filial definida
