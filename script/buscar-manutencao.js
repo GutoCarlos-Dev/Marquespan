@@ -815,15 +815,18 @@ async function handleImportSubmit(e) {
   reader.readAsArrayBuffer(file);
 }
 
-async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivosAnexo) {
+async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivosAnexo) { // Adicionado arquivosAnexo como parâmetro
   const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
   const manutencoesParaInserir = [];
   const valoresParaInserir = [];
+  const importedRecords = []; // Para registros que foram inseridos com sucesso
+  const rejectedRecords = []; // Para registros que falharam na validação ou inserção
 
   // Helper para limpar valores monetários (R$ 1.200,50 -> 1200.50)
   const parseCurrency = (val) => {
       if (typeof val === 'number') return val;
       if (!val) return 0;
+      if (typeof val !== 'string') val = String(val); // Garante que é string para replace
       let str = val.toString().replace(/[R$\s]/g, ''); // Remove R$ e espaços
       // Se tiver vírgula, assume formato BR (ponto é milhar, vírgula é decimal)
       if (str.includes(',')) {
@@ -834,6 +837,7 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
 
   for (const row of dados) {
       const r = {};
+      let motivoRejeicao = '';
       Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
 
       let dataISO = new Date().toISOString();
@@ -847,9 +851,13 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
            }
       }
       if (dataISO.includes('T')) dataISO = dataISO.split('T')[0];
-
+      
       const placa = (r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
-      if (!placa) continue;
+      if (!placa) {
+          motivoRejeicao = 'Placa não informada.';
+          rejectedRecords.push({ originalRow: row, motivo_rejeicao: motivoRejeicao });
+          continue;
+      }
 
       // Mapeamento específico para Engraxe e genérico
       let titulo = r['TÍTULO_DA_MANUTENÇÃO'] || r['TITULO_DA_MANUTENCAO'] || r['TITULO'] || tipo;
@@ -865,7 +873,7 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       const valorNfse = parseCurrency(r['VALOR_NFS'] || r['VALOR_NFS-E'] || r['VALOR_NFSE']);
       const descricao = r['DESCRICAO'] || r['DESCRIÇÃO'] || r['SERVICO'] || r['OBS'] || `${tipo} Importado`;
       
-      manutencoesParaInserir.push({
+      const payloadManutencao = {
           data: dataISO,
           veiculo: placa,
           titulo: titulo,
@@ -881,21 +889,31 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
           usuario: usuarioLogado,
           status: 'finalizado',
           filial: filialSelecionada
-      });
-      
-      valoresParaInserir.push(valorNfe + valorNfse);
+      };
+
+      manutencoesParaInserir.push(payloadManutencao);
+      valoresParaInserir.push(valorNfe + valorNfse); // Guarda o valor para o item
   }
 
   if (manutencoesParaInserir.length > 0) {
       // 1. Insere as manutenções (cabeçalho)
       const { data: inserted, error } = await supabaseClient.from('manutencao').insert(manutencoesParaInserir).select();
-      if (error) throw error;
+      if (error) {
+          // Se a inserção em lote falhar, todos os itens do lote são considerados rejeitados
+          manutencoesParaInserir.forEach(m => rejectedRecords.push({ originalRow: m, motivo_rejeicao: `Erro ao inserir no banco de dados: ${error.message}` }));
+          throw error; // Re-lança o erro para o handleImportSubmit
+      }
+
+      // Adiciona os registros inseridos com sucesso à lista de importados
+      inserted.forEach(m => importedRecords.push(m));
       
       // 2. Prepara os itens com o valor total
       const itens = inserted.map((m, i) => ({
           id_manutencao: m.id,
           quantidade: 1,
-          valor: valoresParaInserir[i]
+          // O índice 'i' aqui corresponde ao índice do 'manutencoesParaInserir' original
+          // e, portanto, ao 'valoresParaInserir'.
+          valor: valoresParaInserir[manutencoesParaInserir.indexOf(manutencoesParaInserir.find(orig => orig.veiculo === m.veiculo && orig.data === m.data))]
       }));
       
       // 3. Insere os itens na tabela manutencao_itens
@@ -926,7 +944,57 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       }
 
       alert(`${inserted.length} registros de ${tipo} importados com sucesso!`);
+      // Gera o relatório final
+      gerarRelatorioImportacao(importedRecords, rejectedRecords);
   } else {
       throw new Error('Nenhum registro válido encontrado na planilha.');
   }
+}
+
+function gerarRelatorioImportacao(importedRecords, rejectedRecords) {
+    let reportContent = `
+RESUMO DA IMPORTAÇÃO DE MANUTENÇÕES
+===================================
+Data do Processamento: ${new Date().toLocaleString('pt-BR')}
+Total de Registros na Planilha: ${importedRecords.length + rejectedRecords.length}
+Registros Importados com Sucesso: ${importedRecords.length}
+Registros Rejeitados: ${rejectedRecords.length}
+===================================
+`;
+
+    if (importedRecords.length > 0) {
+        reportContent += `\n✅ REGISTROS IMPORTADOS COM SUCESSO:\n`;
+        reportContent += `-----------------------------------\n`;
+        importedRecords.forEach((record, index) => {
+            reportContent += `${index + 1}. ID: ${record.id} | Placa: ${record.veiculo} | Data: ${record.data} | Título: ${record.titulo}\n`;
+        });
+    }
+
+    if (rejectedRecords.length > 0) {
+        reportContent += `\n❌ REGISTROS REJEITADOS / ERROS:\n`;
+        reportContent += `-----------------------------------\n`;
+        rejectedRecords.forEach((record, index) => {
+            reportContent += `\nErro ${index + 1}:\n`;
+            reportContent += `  Motivo da Rejeição: ${record.motivo_rejeicao}\n`;
+            reportContent += `  Dados da Linha Original (ou tentativa de inserção):\n`;
+            // Tenta exibir os campos mais relevantes da linha original
+            const originalData = record.originalRow || record; // Pode ser a linha original ou o payload
+            for (const key in originalData) {
+                // Evita mostrar campos internos do Supabase ou objetos complexos
+                if (key.startsWith('_') || typeof originalData[key] === 'object') continue;
+                reportContent += `    - ${key}: ${originalData[key]}\n`;
+            }
+        });
+    }
+
+    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    a.download = `resumo_importacao_manutencao_${timestamp}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
