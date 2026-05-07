@@ -592,6 +592,164 @@ function exportarExcel() {
     XLSX.writeFile(wb, "Relatorio_Manutencao.xlsx");
 }
 
+async function getLogoBase64PDF() {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = 'logo.png';
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg'));
+        };
+        img.onerror = () => resolve(null);
+    });
+}
+
+function getFiltrosAtivosTexto() {
+    const filtros = [];
+    const getValue = (id) => document.getElementById(id)?.value?.trim() || '';
+
+    const dataInicial = getValue('dataInicial');
+    const dataFinal = getValue('dataFinal');
+    if (dataInicial || dataFinal) {
+        filtros.push(`Período: ${dataInicial ? formatarData(dataInicial) : 'Início'} a ${dataFinal ? formatarData(dataFinal) : 'Atual'}`);
+    }
+
+    const campos = [
+        ['filial', 'Filial'],
+        ['tipoManutencao', 'Tipo'],
+        ['veiculo', 'Veículo'],
+        ['titulo', 'Título'],
+        ['fornecedor', 'Fornecedor'],
+        ['nfse', 'NFS-e'],
+        ['nfe', 'NF-e'],
+        ['os', 'OS'],
+        ['status', 'Status']
+    ];
+
+    campos.forEach(([id, label]) => {
+        const value = getValue(id);
+        if (value) filtros.push(`${label}: ${value}`);
+    });
+
+    return filtros.length ? filtros.join(' | ') : 'Sem filtros aplicados';
+}
+
+async function exportarPDF() {
+    if (!dadosExportacao || dadosExportacao.length === 0) {
+        alert('Realize uma busca para exportar os dados.');
+        return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Biblioteca jsPDF não carregada. Verifique sua conexão.');
+        return;
+    }
+
+    const btn = document.getElementById('btnExportarPDF');
+    const originalText = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logoBase64 = await getLogoBase64PDF();
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+        const totalGeral = dadosExportacao.reduce((acc, m) => acc + (parseFloat(m.valor) || 0), 0);
+
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Relatório de Manutenção', 60, 18);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+        doc.text(`Registros: ${dadosExportacao.length}`, 14, 34);
+        doc.text(`Total: R$ ${formatarValor(totalGeral)}`, 55, 34);
+
+        const filtrosTexto = doc.splitTextToSize(getFiltrosAtivosTexto(), 260);
+        doc.text(filtrosTexto, 14, 40);
+
+        const startY = 40 + (filtrosTexto.length * 4) + 4;
+        const columns = ['Data', 'Usuário', 'Título', 'Placa', 'Fornecedor', 'Descrição', 'OS', 'NF', 'NFS-e', 'Valor'];
+        const rows = dadosExportacao.map(m => [
+            formatarData(m.data),
+            m.usuario || '-',
+            m.titulo || '-',
+            m.veiculo || '-',
+            m.fornecedor || '-',
+            m.descricao || '-',
+            m.numeroOS || '-',
+            m.notaFiscal || '-',
+            m.notaServico || '-',
+            `R$ ${formatarValor(m.valor || 0)}`
+        ]);
+
+        rows.push([
+            { content: 'TOTAL GERAL', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
+            { content: `R$ ${formatarValor(totalGeral)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 8 },
+            styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+            alternateRowStyles: { fillColor: [245, 247, 246] },
+            columnStyles: {
+                0: { cellWidth: 18 },
+                1: { cellWidth: 24 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 34 },
+                5: { cellWidth: 55 },
+                6: { cellWidth: 18 },
+                7: { cellWidth: 20 },
+                8: { cellWidth: 20 },
+                9: { cellWidth: 24, halign: 'right' }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+            const pageText = `Página ${i} de ${pageCount}`;
+            doc.text(pageText, pageWidth - 14 - doc.getTextWidth(pageText), pageHeight - 10);
+        }
+
+        doc.save(`Relatorio_Manutencao_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+        console.error('Erro ao exportar PDF:', err);
+        alert('Erro ao gerar PDF: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
 function setupColumnResizing() {
     const headers = document.querySelectorAll('.table-responsive th');
     
@@ -641,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
-    alert('📄 Exportar PDF ainda não implementado.');
+    exportarPDF();
   });
 
   document.getElementById('btnExportarXLS').addEventListener('click', () => {
