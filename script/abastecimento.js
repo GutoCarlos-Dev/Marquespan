@@ -3,7 +3,7 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
-        init() {
+        async init() {
             this.tanquesDisponiveis = [];
             this.bicosDisponiveis = [];
             this.veiculosDisponiveis = []; // Cache para validação de placa
@@ -35,14 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.filtroExtDataInicial) this.filtroExtDataInicial.value = new Date().toISOString().slice(0, 10);
             if (this.filtroExtDataFinal) this.filtroExtDataFinal.value = new Date().toISOString().slice(0, 10);
 
-            this.loadTanques();
+            await this.loadTanques();
             this.renderTable();
-            this.initSaida(); // Inicializa a aba de saída
+            await this.initSaida(); // Inicializa a aba de saída
             this.renderSaidasTable();
             this.setupAuditoriaEstoque();
             this.loadEstoqueAtual(); // Carrega a aba de estoque
             this.populateUFs(); // Preenche lista de UFs
-            
+            await this.handleInitialEditParams();
 
         },
 
@@ -499,6 +499,60 @@ document.addEventListener('DOMContentLoaded', () => {
             [4, 6].forEach(index => {
                 if (headerCells[index]) headerCells[index].style.display = canView ? '' : 'none';
             });
+        },
+
+        activateSection(sectionId) {
+            const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
+            const sections = document.querySelectorAll('.main-content .glass-panel');
+
+            buttons.forEach(btn => {
+                const isActive = btn.getAttribute('data-secao') === sectionId;
+                btn.classList.toggle('active', isActive);
+            });
+            sections.forEach(section => section.classList.add('hidden'));
+            document.getElementById(sectionId)?.classList.remove('hidden');
+        },
+
+        async handleInitialEditParams() {
+            const params = new URLSearchParams(window.location.search);
+            const tipo = (params.get('tipo') || '').toUpperCase();
+            const id = params.get('id');
+
+            if (!tipo || !id) return;
+
+            try {
+                if (tipo === 'ENTRADA' || tipo === 'AJUSTE') {
+                    if (tipo === 'AJUSTE') {
+                        this.activateSection('sectionEstoque');
+                        await this.loadAjusteForEditing(id);
+                    } else {
+                        this.activateSection('sectionEntrada');
+                        await this.loadEntradaForEditing(id);
+                    }
+                } else if (tipo === 'SAIDA') {
+                    this.activateSection('sectionSaida');
+                    await this.loadSaidaForEditing(id);
+                } else if (tipo === 'EXTERNO') {
+                    this.activateSection('sectionExterno');
+                    await this.editExt(id);
+                }
+            } catch (error) {
+                console.error('Erro ao abrir lançamento para edição:', error);
+                alert('Não foi possível carregar o lançamento para edição.');
+            }
+        },
+
+        getReturnUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const returnTo = params.get('returnTo');
+            return returnTo === 'relatorio-abastecimento.html' ? returnTo : null;
+        },
+
+        returnAfterSaveIfNeeded() {
+            const returnUrl = this.getReturnUrl();
+            if (!returnUrl) return false;
+            window.location.href = returnUrl;
+            return true;
         },
 
         async loadEstoqueAtual() {
@@ -961,6 +1015,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) throw error;
 
                 alert('Ajuste atualizado com sucesso!');
+                if (this.returnAfterSaveIfNeeded()) return;
                 await this.renderAuditoriaEstoque();
                 await this.loadEstoqueAtual();
             } catch (error) {
@@ -999,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.toggleSaidaForm(true); // Garante que o formulário esteja habilitado por padrão
             // Carregar Bicos
-            this.loadBicos();
+            await this.loadBicos();
 
             // Carregar Veículos
             try {
@@ -1253,6 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) throw error;
 
                 alert(`Abastecimento ${this.editingIdInput.value ? 'atualizado' : 'registrado'} com sucesso!`);
+                if (this.returnAfterSaveIfNeeded()) return;
                 this.clearForm();
                 this.renderTable();
             } catch (error) {
@@ -1321,38 +1377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = parseInt(button.dataset.id);
 
             if (button.classList.contains('btn-edit')) {
-                const { data: registroClicado } = await supabaseClient.from('abastecimentos').select('numero_nota').eq('id', id).single();
-                if (!registroClicado) return;
-
-                const { data: todosRegistrosDaNota, error } = await supabaseClient.from('abastecimentos').select('*').eq('numero_nota', registroClicado.numero_nota);
-                if (error || !todosRegistrosDaNota || todosRegistrosDaNota.length === 0) {
-                    alert('Erro ao carregar dados para edição.');
-                    return;
-                }
-
-                this.clearForm(false); // Limpa o formulário sem resetar a data
-                this.distribuicaoContainer.innerHTML = ''; // Limpa as linhas de tanque
-
-                const primeiroRegistro = todosRegistrosDaNota[0];
-                const qtdTotal = todosRegistrosDaNota.reduce((sum, reg) => sum + reg.qtd_litros, 0);
-
-                this.editingIdInput.value = primeiroRegistro.numero_nota; // Armazena a nota fiscal para a lógica de update
-                // Formata a data para o input datetime-local
-                const date = new Date(primeiroRegistro.data);
-                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-                this.dataInput.value = date.toISOString().slice(0, 16);
-                this.notaInput.value = primeiroRegistro.numero_nota;
-                this.vlrLitroInput.value = primeiroRegistro.valor_litro;
-                this.qtdTotalNotaInput.value = qtdTotal;
-
-                todosRegistrosDaNota.forEach(reg => {
-                    this.adicionarLinhaTanque(reg.tanque_id, reg.qtd_litros);
-                });
-
-                this.calculateTotal();
-                this.updateLitrosRestantes();
-                this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar';
-                this.form.scrollIntoView({ behavior: 'smooth' });
+                await this.loadEntradaForEditing(id);
 
             } else if (button.classList.contains('btn-delete')) {
                 if (confirm('Tem certeza que deseja excluir este lançamento?')) {
@@ -1366,6 +1391,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+        },
+
+        async loadEntradaForEditing(id) {
+            const { data: registroClicado } = await supabaseClient.from('abastecimentos').select('numero_nota').eq('id', id).single();
+            if (!registroClicado) return;
+
+            const { data: todosRegistrosDaNota, error } = await supabaseClient.from('abastecimentos').select('*').eq('numero_nota', registroClicado.numero_nota);
+            if (error || !todosRegistrosDaNota || todosRegistrosDaNota.length === 0) {
+                alert('Erro ao carregar dados para edição.');
+                return;
+            }
+
+            this.clearForm(false); // Limpa o formulário sem resetar a data
+            this.distribuicaoContainer.innerHTML = ''; // Limpa as linhas de tanque
+
+            const primeiroRegistro = todosRegistrosDaNota[0];
+            const qtdTotal = todosRegistrosDaNota.reduce((sum, reg) => sum + reg.qtd_litros, 0);
+
+            this.editingIdInput.value = primeiroRegistro.numero_nota; // Armazena a nota fiscal para a lógica de update
+            const date = new Date(primeiroRegistro.data);
+            date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+            this.dataInput.value = date.toISOString().slice(0, 16);
+            this.notaInput.value = primeiroRegistro.numero_nota;
+            this.vlrLitroInput.value = primeiroRegistro.valor_litro;
+            this.qtdTotalNotaInput.value = qtdTotal;
+
+            todosRegistrosDaNota.forEach(reg => {
+                this.adicionarLinhaTanque(reg.tanque_id, reg.qtd_litros);
+            });
+
+            this.calculateTotal();
+            this.updateLitrosRestantes();
+            this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar';
+            this.form.scrollIntoView({ behavior: 'smooth' });
+        },
+
+        async loadAjusteForEditing(id) {
+            const { data, error } = await supabaseClient
+                .from('abastecimentos')
+                .select('id, data, tanque_id, numero_nota')
+                .eq('id', id)
+                .eq('numero_nota', 'AJUSTE DE ESTOQUE')
+                .single();
+
+            if (error || !data) {
+                alert('Erro ao carregar ajuste para edição.');
+                return;
+            }
+
+            const estoqueAnterior = await this.calcularEstoqueAntes(data.tanque_id, data.data);
+            await this.editarAjusteEstoque(data.id, estoqueAnterior);
         },
 
         clearForm(resetDate = true) {
@@ -1476,6 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 alert(`Abastecimento(s) ${this.saidaEditingId.value ? 'atualizado' : 'registrado'} com sucesso!`);
+                if (this.returnAfterSaveIfNeeded()) return;
                 this.clearSaidaForm();
                 this.renderSaidasTable();
             } catch (error) {
@@ -2152,6 +2229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Erro ao salvar: ' + error.message);
                 } else {
                     alert(`Abastecimento externo ${this.extEditingId ? 'atualizado' : 'registrado'}!`);
+                    if (this.returnAfterSaveIfNeeded()) return;
                     this.resetExtForm();
                     this.renderExtTable();
                 }

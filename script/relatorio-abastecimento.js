@@ -1,6 +1,8 @@
 import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const RELATORIO_ABASTECIMENTO_STATE_KEY = 'relatorio_abastecimento_estado_edicao';
+
     const RelatorioUI = {
         dadosRelatorio: [],
         sortConfig: {
@@ -14,23 +16,28 @@ document.addEventListener('DOMContentLoaded', () => {
             tiposMovimentacao: null
         },
 
-        init() {
+        async init() {
             this.cache();
             this.bind();
             this.iniciarRolagemAutomatica();
             this.updateFilterOptions();
             this.updateTipoVeiculoFilterOptions();
-            this.loadTanques();
-            this.loadBicos(); // Carrega os bicos para o novo filtro
-            this.loadVeiculos();
-            this.loadRotas();
-            this.loadTiposVeiculo();
             
             // Define datas padrão (início do mês até hoje)
             const hoje = new Date();
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
             this.dataFinal.valueAsDate = hoje;
+
+            await Promise.all([
+                this.loadTanques(),
+                this.loadBicos(),
+                this.loadVeiculos(),
+                this.loadRotas(),
+                this.loadTiposVeiculo()
+            ]);
+
+            await this.restaurarEstadoAposEdicao();
         },
 
         cache() {
@@ -58,6 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
+            this.modalLancamento = document.getElementById('modalVisualizarLancamento');
+            this.detalhesLancamentoGrid = document.getElementById('detalhesLancamentoGrid');
+            this.btnFecharModalLancamento = document.getElementById('btnFecharModalLancamento');
+            this.btnCancelarModalLancamento = document.getElementById('btnCancelarModalLancamento');
+            this.btnEditarLancamentoModal = document.getElementById('btnEditarLancamentoModal');
+            this.lancamentoModalAtual = null;
 
             // Canvas do Dashboard
             this.chartMediaConsumoCanvas = document.getElementById('chartMediaConsumo');
@@ -71,6 +84,28 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar.addEventListener('click', this.clearFilters.bind(this));
             this.btnExportarXLS.addEventListener('click', this.exportXLS.bind(this));
             this.btnExportarPDF.addEventListener('click', this.exportPDF.bind(this));
+
+            this.tableBody.addEventListener('click', (e) => {
+                const btnVisualizar = e.target.closest('.btn-visualizar-lancamento');
+                if (btnVisualizar) {
+                    this.visualizarLancamento(btnVisualizar.dataset.id, btnVisualizar.dataset.tipo);
+                    return;
+                }
+
+                const btn = e.target.closest('.btn-editar-lancamento');
+                if (!btn) return;
+                this.editarLancamento(btn.dataset.tipo, btn.dataset.id);
+            });
+
+            this.btnFecharModalLancamento?.addEventListener('click', () => this.fecharModalLancamento());
+            this.btnCancelarModalLancamento?.addEventListener('click', () => this.fecharModalLancamento());
+            this.modalLancamento?.addEventListener('click', (e) => {
+                if (e.target === this.modalLancamento) this.fecharModalLancamento();
+            });
+            this.btnEditarLancamentoModal?.addEventListener('click', () => {
+                if (!this.lancamentoModalAtual) return;
+                this.editarLancamento(this.lancamentoModalAtual.tipo, this.lancamentoModalAtual.id);
+            });
             
             // Eventos de ordenação nos cabeçalhos
             document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -398,6 +433,68 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        getFiltrosAtuais() {
+            return {
+                dataInicial: this.dataInicial.value,
+                dataFinal: this.dataFinal.value,
+                tanque: this.filtroTanque.value,
+                veiculo: this.filtroVeiculo.value,
+                rota: this.filtroRota.value,
+                tiposMov: this.filtroTipoOptions ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value) : [],
+                bicos: this.filtroBicoOptions ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => cb.value) : [],
+                tiposVeiculo: this.filtroTipoVeiculoOptions ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value) : []
+            };
+        },
+
+        salvarEstadoParaEdicao() {
+            sessionStorage.setItem(RELATORIO_ABASTECIMENTO_STATE_KEY, JSON.stringify({
+                origem: 'editar-abastecimento',
+                filtros: this.getFiltrosAtuais(),
+                criadoEm: Date.now()
+            }));
+        },
+
+        marcarCheckboxes(container, selector, values) {
+            if (!container) return;
+            const selected = new Set(values || []);
+            container.querySelectorAll(selector).forEach(cb => {
+                cb.checked = selected.has(cb.value);
+            });
+        },
+
+        async restaurarEstadoAposEdicao() {
+            const estadoRaw = sessionStorage.getItem(RELATORIO_ABASTECIMENTO_STATE_KEY);
+            if (!estadoRaw) return;
+
+            try {
+                const estado = JSON.parse(estadoRaw);
+                const expirado = !estado?.criadoEm || Date.now() - estado.criadoEm > 6 * 60 * 60 * 1000;
+                if (estado?.origem !== 'editar-abastecimento' || expirado) {
+                    sessionStorage.removeItem(RELATORIO_ABASTECIMENTO_STATE_KEY);
+                    return;
+                }
+
+                const filtros = estado.filtros || {};
+                this.dataInicial.value = filtros.dataInicial || this.dataInicial.value;
+                this.dataFinal.value = filtros.dataFinal || this.dataFinal.value;
+                this.filtroTanque.value = filtros.tanque || '';
+                this.filtroVeiculo.value = filtros.veiculo || '';
+                this.filtroRota.value = filtros.rota || '';
+                this.marcarCheckboxes(this.filtroTipoOptions, '.tipo-checkbox', filtros.tiposMov);
+                this.marcarCheckboxes(this.filtroBicoOptions, '.bico-checkbox', filtros.bicos);
+                this.marcarCheckboxes(this.filtroTipoVeiculoOptions, '.tipo-veiculo-checkbox', filtros.tiposVeiculo);
+                this.updateMultiselectText();
+                this.updateBicoMultiselectText();
+                this.updateTipoVeiculoMultiselectText();
+
+                sessionStorage.removeItem(RELATORIO_ABASTECIMENTO_STATE_KEY);
+                await this.handleSearch(new Event('submit'));
+            } catch (error) {
+                console.error('Erro ao restaurar filtros do relatório:', error);
+                sessionStorage.removeItem(RELATORIO_ABASTECIMENTO_STATE_KEY);
+            }
+        },
+
         /**
          * Helper para encontrar o último preço de um tanque antes de uma data.
          * Otimizado para usar um cache agrupado por tanque.
@@ -443,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Buscando dados...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="16" style="text-align:center;">Buscando dados...</td></tr>';
             this.cardResultados.classList.remove('hidden');
 
             try {
@@ -510,6 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Normalizar dados de entrada
                     dadosEntradas = (resEntradas || []).map(e => ({
+                        id: e.id,
                         tipo: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'AJUSTE' : 'ENTRADA',
                         data_hora: e.data,
                         usuario: e.usuario,
@@ -522,7 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         combustivel: e.tanques ? e.tanques.tipo_combustivel : '-',
                         litros: Number(e.qtd_litros),
                         valor_litro: Number(e.valor_litro),
-                        valor_total: Number(e.valor_total)
+                        valor_total: Number(e.valor_total),
+                        origem_tabela: 'abastecimentos'
                     }));
                 }
 
@@ -567,6 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const valorTotalSaida = (s.qtd_litros || 0) * valorLitroSaida;
 
                         return {
+                            id: s.id,
                             tipo: 'SAIDA',
                             data_hora: s.data_hora,
                             usuario: s.usuario,
@@ -579,7 +679,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             combustivel: tanqueInfo ? tanqueInfo.tipo_combustivel : '-',
                             litros: Number(s.qtd_litros), // Saída é negativa no estoque, mas positiva no relatório de consumo
                             valor_litro: valorLitroSaida,
-                            valor_total: valorTotalSaida
+                            valor_total: valorTotalSaida,
+                            origem_tabela: 'saidas_combustivel'
                         };
                     });
                 }
@@ -589,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tiposMov.length === 0 || tiposMov.includes('EXTERNO')) {
                     let queryExterno = supabaseClient
                         .from('abastecimento_externo')
-                        .select('data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
+                        .select('id, data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -607,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (errExterno) throw errExterno;
 
                     dadosExternos = (resExterno || []).map(e => ({
+                        id: e.id,
                         tipo: 'EXTERNO',
                         data_hora: e.data_hora,
                         usuario: e.usuario,
@@ -619,7 +721,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         combustivel: '-', 
                         litros: Number(e.litros),
                         valor_litro: Number(e.valor_unitario),
-                        valor_total: Number(e.valor_total)
+                        valor_total: Number(e.valor_total),
+                        origem_tabela: 'abastecimento_externo'
                     }));
                 }
 
@@ -677,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error('Erro na busca:', error);
-                this.tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:red;">Erro ao buscar dados.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="16" style="text-align:center; color:red;">Erro ao buscar dados.</td></tr>';
             }
         },
 
@@ -855,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let somaValor = 0;
 
             if (this.dadosRelatorio.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="15" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="16" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
                 this.totalLitrosEl.textContent = '0,00 L';
                 this.totalValorEl.textContent = 'R$ 0,00';
                 return;
@@ -883,6 +986,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mediaKmlDisplay = reg.media_kml !== null ? (typeof reg.media_kml === 'string' ? reg.media_kml : Number(reg.media_kml).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '-';
 
                 tr.innerHTML = `
+                    <td class="acoes-cell">
+                        <button type="button" class="btn-action view btn-visualizar-lancamento" data-id="${reg.id}" data-tipo="${reg.tipo}" title="Visualizar lançamento">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn-action btn-editar-lancamento" data-id="${reg.id}" data-tipo="${reg.tipo}" title="Editar lançamento">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
                     <td>${dataFormatada}</td>
                     <td>${reg.usuario || '-'}</td>
                     <td>${reg.placa}</td>
@@ -904,6 +1015,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.totalLitrosEl.textContent = somaLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' L';
             this.totalValorEl.textContent = somaValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+        },
+
+        escapeHTML(value) {
+            const div = document.createElement('div');
+            div.textContent = value ?? '';
+            return div.innerHTML;
+        },
+
+        formatCurrency(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        },
+
+        visualizarLancamento(id, tipo) {
+            const reg = this.dadosRelatorio.find(item => String(item.id) === String(id) && item.tipo === tipo);
+            if (!reg) {
+                alert('Não foi possível localizar o lançamento para visualização.');
+                return;
+            }
+
+            this.lancamentoModalAtual = { id: reg.id, tipo: reg.tipo };
+            const tipoLabel = {
+                ENTRADA: 'Entrada',
+                SAIDA: 'Saída Interna',
+                EXTERNO: 'Abastecimento Externo',
+                AJUSTE: 'Ajuste de Estoque'
+            }[reg.tipo] || reg.tipo;
+
+            const campos = [
+                ['Tipo', tipoLabel],
+                ['Data/Hora', new Date(reg.data_hora).toLocaleString('pt-BR')],
+                ['Usuário', reg.usuario || '-'],
+                ['Placa', reg.placa || '-'],
+                ['Rota', reg.rota || '-'],
+                ['KM Atual', reg.km_atual || '-'],
+                ['Nº Nota', reg.numero_nota || '-'],
+                [reg.tipo === 'EXTERNO' ? 'Posto' : 'Tanque', reg.tanque || '-'],
+                ['Bico', reg.bico || '-'],
+                ['Combustível', reg.combustivel || '-'],
+                ['Litros', `${Number(reg.litros || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L`],
+                ['Valor Unitário', this.formatCurrency(reg.valor_litro)],
+                ['Valor Total', this.formatCurrency(reg.valor_total)],
+                ['KM Anterior', reg.km_anterior !== null && reg.km_anterior !== undefined ? reg.km_anterior : '-'],
+                ['KM Rodado', reg.km_rodado !== null && reg.km_rodado !== undefined ? reg.km_rodado : '-'],
+                ['Média KM/L', reg.media_kml !== null && reg.media_kml !== undefined ? reg.media_kml : '-']
+            ];
+
+            this.detalhesLancamentoGrid.innerHTML = campos.map(([label, value]) => `
+                <div class="detalhe-item">
+                    <span class="detalhe-label">${this.escapeHTML(label)}</span>
+                    <span class="detalhe-valor">${this.escapeHTML(value)}</span>
+                </div>
+            `).join('');
+
+            this.modalLancamento.classList.remove('hidden');
+        },
+
+        fecharModalLancamento() {
+            this.modalLancamento?.classList.add('hidden');
+            this.lancamentoModalAtual = null;
+        },
+
+        editarLancamento(tipo, id) {
+            if (!id || !tipo) {
+                alert('Não foi possível identificar o lançamento para edição.');
+                return;
+            }
+
+            const returnTo = 'relatorio-abastecimento.html';
+            this.salvarEstadoParaEdicao();
+            window.location.href = `abastecimento.html?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}&returnTo=${encodeURIComponent(returnTo)}`;
         },
 
         exportXLS() {
