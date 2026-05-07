@@ -138,28 +138,28 @@
   </main>
 
   <!-- Modal Anexar Arquivo (Estilo igual ao incluir-manutencao) -->
-  <div id="modalAnexo" class="modal-backdrop hidden" style="position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center;">
-       <div class="glass-modal" style="max-width: 600px;">
+  <div id="modalAnexo" class="modal-backdrop hidden">
+       <div class="glass-modal modal-anexo">
           <div class="modal-header"> 
               <h3><i class="fas fa-paperclip"></i> Anexar Arquivos</h3>
               <button class="close-button" id="btnCloseModalAnexo">&times;</button>
           </div>
           <div class="modal-body">
-              <div class="form-group" style="margin-bottom: 20px;">
-                  <label id="arquivoAnexoLabel" for="inputArquivoAnexo" style="display: block; padding: 40px; border: 2px dashed #ccc; border-radius: 12px; text-align: center; cursor: pointer; color: #666; background: rgba(0,0,0,0.02); transition: all 0.3s;">
-                      <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
-                      Clique ou arraste o arquivo aqui
+              <div class="form-group upload-group">
+                  <label id="arquivoAnexoLabel" for="inputArquivoAnexo" class="upload-dropzone">
+                      <i class="fas fa-cloud-upload-alt"></i>
+                      <span>Clique ou arraste o arquivo aqui</span>
                   </label>
                   <input type="file" id="inputArquivoAnexo" multiple style="display: none;">
               </div>
               
-              <div style="text-align: right; margin-bottom: 20px;">
+              <div class="modal-actions">
                   <button type="button" id="btnConfirmarAnexo" class="btn-glass btn-blue"><i class="fas fa-check"></i> Confirmar Seleção</button>
               </div>
 
               <div id="listaArquivosAnexados" class="lista-arquivos"></div>
           </div>
-          <div class="modal-footer" style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+          <div class="modal-footer">
               <button type="button" id="btnCancelarAnexo" class="btn-glass btn-muted">Fechar</button>
           </div>
       </div>

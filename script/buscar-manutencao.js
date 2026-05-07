@@ -747,7 +747,7 @@ function abrirModalAnexo() {
     }
     modalElement.classList.remove('hidden');
     document.getElementById('inputArquivoAnexo').value = '';
-    document.getElementById('arquivoAnexoLabel').textContent = 'Clique ou arraste o arquivo aqui';
+    atualizarLabelAnexo();
     renderizarListaArquivos();
 }
 
@@ -760,8 +760,18 @@ function handleFileSelect(e) {
     const files = e.target.files;
     if (files.length > 0) {
         const label = files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`;
-        document.getElementById('arquivoAnexoLabel').textContent = label;
+        atualizarLabelAnexo(label);
     }
+}
+
+function atualizarLabelAnexo(texto = 'Clique ou arraste o arquivo aqui') {
+    const label = document.getElementById('arquivoAnexoLabel');
+    if (!label) return;
+
+    label.innerHTML = `
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span>${escapeHTML(texto)}</span>
+    `;
 }
 
 async function confirmarAnexo() {
@@ -789,6 +799,8 @@ async function confirmarAnexo() {
         arquivosParaUpload.push({ file: files[0], name: files[0].name, isZipped: false });
     }
     renderizarListaArquivos();
+    input.value = '';
+    atualizarLabelAnexo();
 }
 
 function renderizarListaArquivos() {
@@ -797,23 +809,46 @@ function renderizarListaArquivos() {
     if (!container) return;
     container.innerHTML = '';
 
-    [...arquivosExistentes.map(a => ({...a, novo: false})), ...arquivosParaUpload.map(a => ({...a, novo: true}))].forEach((arq, index) => {
+    const arquivosRender = [
+        ...arquivosExistentes.map((arquivo, index) => ({ arquivo, index, novo: false })),
+        ...arquivosParaUpload.map((arquivo, index) => ({ arquivo, index, novo: true }))
+    ];
+
+    arquivosRender.forEach(({ arquivo, index, novo }) => {
         const div = document.createElement('div');
-        div.className = 'glass-panel-inner';
-        div.style.padding = '10px';
-        div.style.marginBottom = '8px';
-        div.style.display = 'flex';
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
-        if (arq.novo) div.style.borderLeft = '4px solid #28a745';
-        
-        div.innerHTML = `
-            <span>${arq.isZipped ? '<i class="fas fa-file-archive"></i>' : '<i class="fas fa-file-alt"></i>'} ${arq.nome || arq.name} ${arq.novo ? '<strong>(Novo)</strong>' : ''}</span>
-            <div>
-                ${!arq.novo ? `<button type="button" class="btn-icon" onclick="downloadArquivo('${arq.path}')" title="Baixar"><i class="fas fa-download"></i></button>` : ''}
-                <button type="button" class="btn-icon delete" onclick="${arq.novo ? `removerArquivoNovo(${arquivosParaUpload.indexOf(arq)})` : `removerArquivoExistente(${arquivosExistentes.indexOf(arq)})`}" title="Remover"><i class="fas fa-trash-alt"></i></button>
-            </div>
-        `;
+        div.className = novo ? 'arquivo-item novo' : 'arquivo-item';
+
+        const nome = arquivo.nome || arquivo.name || 'Arquivo';
+        const info = document.createElement('span');
+        info.className = 'arquivo-nome';
+        info.innerHTML = `${arquivo.isZipped ? '<i class="fas fa-file-archive"></i>' : '<i class="fas fa-file-alt"></i>'} <span>${escapeHTML(nome)}</span>${novo ? ' <strong>(Novo)</strong>' : ''}`;
+
+        const actions = document.createElement('div');
+        actions.className = 'arquivo-acoes';
+
+        if (!novo) {
+            const downloadBtn = document.createElement('button');
+            downloadBtn.type = 'button';
+            downloadBtn.className = 'btn-icon';
+            downloadBtn.title = 'Baixar';
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+            downloadBtn.addEventListener('click', () => window.downloadArquivo(arquivo.path));
+            actions.appendChild(downloadBtn);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-icon delete';
+        removeBtn.title = 'Remover';
+        removeBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        removeBtn.addEventListener('click', () => {
+            if (novo) window.removerArquivoNovo(index);
+            else window.removerArquivoExistente(index);
+        });
+        actions.appendChild(removeBtn);
+
+        div.appendChild(info);
+        div.appendChild(actions);
         container.appendChild(div);
     });
 
