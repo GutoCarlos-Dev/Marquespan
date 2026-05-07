@@ -780,27 +780,38 @@ async function confirmarAnexo() {
     const files = input.files;
     if (files.length === 0) return;
 
-    if (files.length > 1) {
-        if (typeof JSZip === 'undefined') {
-            alert('A biblioteca JSZip não foi encontrada. Certifique-se de que ela está carregada na página.');
-            return;
-        }
-        const zip = new JSZip();
-        const originalNames = [];
-        Array.from(files).forEach(file => {
-            zip.file(file.name, file);
-            originalNames.push(file.name);
-        });
+    const arquivosPreparados = await prepararArquivosParaAnexo(files);
+    if (!arquivosPreparados) return;
 
-        const content = await zip.generateAsync({ type: "blob" });
-        const zipFileName = `anexos_${Date.now()}.zip`;
-        arquivosParaUpload.push({ file: content, name: zipFileName, isZipped: true, originalNames });
-    } else {
-        arquivosParaUpload.push({ file: files[0], name: files[0].name, isZipped: false });
-    }
+    arquivosParaUpload.push(...arquivosPreparados);
     renderizarListaArquivos();
     input.value = '';
     atualizarLabelAnexo();
+}
+
+async function prepararArquivosParaAnexo(files) {
+    const listaArquivos = Array.from(files || []);
+    if (listaArquivos.length === 0) return [];
+
+    if (listaArquivos.length === 1) {
+        return [{ file: listaArquivos[0], name: listaArquivos[0].name, isZipped: false, originalNames: null }];
+    }
+
+    if (typeof JSZip === 'undefined') {
+        alert('A biblioteca JSZip não foi encontrada. Certifique-se de que ela está carregada na página.');
+        return null;
+    }
+
+    const zip = new JSZip();
+    const originalNames = [];
+    listaArquivos.forEach(file => {
+        zip.file(file.name, file);
+        originalNames.push(file.name);
+    });
+
+    const content = await zip.generateAsync({ type: "blob" });
+    const zipFileName = `anexos_${Date.now()}.zip`;
+    return [{ file: content, name: zipFileName, isZipped: true, originalNames }];
 }
 
 function renderizarListaArquivos() {
@@ -958,9 +969,14 @@ async function salvarArquivosManutencao(idManutencao) {
 async function setupImportModal() {
   if (document.getElementById('modalImportar')) return;
 
-  // Carregar filiais para o select
+  // Carregar filiais e fornecedores para os campos do modal
   let optionsFiliais = '<option value="">Selecione a Filial...</option>';
-  const { data: filiais } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
+  let optionsFornecedores = '';
+  const [{ data: filiais }, { data: fornecedores }] = await Promise.all([
+      supabaseClient.from('filiais').select('nome, sigla').order('nome'),
+      supabaseClient.from('fornecedor_manutencao').select('nome, cnpj').order('nome')
+  ]);
+
   if (filiais) {
       filiais.forEach(f => {
           const val = f.sigla || f.nome;
@@ -969,9 +985,17 @@ async function setupImportModal() {
       });
   }
 
+  if (fornecedores) {
+      fornecedores.forEach(f => {
+          if (!f.nome) return;
+          const displayValue = f.cnpj ? `${f.nome} (CNPJ: ${f.cnpj})` : f.nome;
+          optionsFornecedores += `<option value="${escapeHTML(displayValue)}"></option>`;
+      });
+  }
+
   const modalHtml = `
   <div id="modalImportar" class="hidden" style="position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
-      <div class="modal-content" style="background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 400px; max-width: 90%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); position: relative;">
+      <div class="modal-content" style="background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 460px; max-width: 90%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
               <h3 style="margin: 0; color: #333;">Importar Manutenção</h3>
               <span id="closeModalImportar" style="color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer;">&times;</span>
@@ -990,6 +1014,21 @@ async function setupImportModal() {
                   <label for="filialImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Filial (Obrigatório):</label>
                   <select id="filialImportacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                       ${optionsFiliais}
+                  </select>
+              </div>
+              <div style="margin-bottom: 15px;">
+                  <label for="fornecedorImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Fornecedor (Obrigatório):</label>
+                  <input type="text" id="fornecedorImportacao" list="listaFornecedoresImportacao" required placeholder="Nome do Fornecedor" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                  <datalist id="listaFornecedoresImportacao">
+                      ${optionsFornecedores}
+                  </datalist>
+              </div>
+              <div style="margin-bottom: 15px;">
+                  <label for="tipoManutencaoImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Tipo de Manutenção (Obrigatório):</label>
+                  <select id="tipoManutencaoImportacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                      <option value="">Selecione...</option>
+                      <option value="PREVENTIVA">PREVENTIVA</option>
+                      <option value="CORRETIVO">CORRETIVO</option>
                   </select>
               </div>
               <div style="margin-bottom: 15px;">
@@ -1037,8 +1076,8 @@ function baixarModeloImportacao() {
     let headers = [];
     let data = [];
 
-    headers = ['DATA', 'TÍTULO_DA_MANUTENÇÃO', 'FORNECEDOR', 'TIPO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
-    data = [[new Date().toLocaleDateString('pt-BR'),'ALMOXARIFADO', 'MUNIQUE TATUÍ (CNPJ: 03.800.017/0007-07)', 'PREVENTIVA', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
+    headers = ['DATA', 'TÍTULO_DA_MANUTENÇÃO', 'PLACA', 'KM', 'OS', 'NF', 'VALOR_NF', 'NFS', 'VALOR_NFS', 'DESCRICAO'];
+    data = [[new Date().toLocaleDateString('pt-BR'), 'ALMOXARIFADO', 'ABC1234', '10000', '123', '456', '500.00', '789', '150.00', 'Descrição da manutenção']];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
@@ -1051,6 +1090,8 @@ async function handleImportSubmit(e) {
   e.preventDefault();
   const tipo = document.getElementById('tipoImportacao').value;
   const filialSelecionada = document.getElementById('filialImportacao').value;
+  const fornecedorSelecionado = document.getElementById('fornecedorImportacao').value.trim();
+  const tipoManutencaoSelecionado = document.getElementById('tipoManutencaoImportacao').value;
   const fileInput = document.getElementById('arquivoImportacao');
   const anexoInput = document.getElementById('arquivoAnexoImportacao');
   const file = fileInput.files[0];
@@ -1073,7 +1114,7 @@ async function handleImportSubmit(e) {
 
           if (json.length === 0) throw new Error('Planilha vazia.');
 
-          await processarDadosImportacao(json, tipo, filialSelecionada, anexoInput.files);
+          await processarDadosImportacao(json, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, anexoInput.files);
           
           document.getElementById('modalImportar').classList.add('hidden');
           document.getElementById('formImportar').reset();
@@ -1090,24 +1131,33 @@ async function handleImportSubmit(e) {
   reader.readAsArrayBuffer(file);
 }
 
-async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivosAnexo) { // Adicionado arquivosAnexo como parâmetro
+async function processarDadosImportacao(dados, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, arquivosAnexo) {
   const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
   const manutencoesParaInserir = [];
   const valoresParaInserir = [];
   const importedRecords = []; // Para registros que foram inseridos com sucesso
   const rejectedRecords = []; // Para registros que falharam na validação ou inserção
 
+  const hasValue = (val) => val !== undefined && val !== null && String(val).trim() !== '';
+  const getCell = (row, keys) => {
+      for (const key of keys) {
+          if (hasValue(row[key])) return row[key];
+      }
+      return undefined;
+  };
+
   // Helper para limpar valores monetários (R$ 1.200,50 -> 1200.50)
   const parseCurrency = (val) => {
       if (typeof val === 'number') return val;
-      if (!val) return 0;
+      if (!hasValue(val)) return null;
       if (typeof val !== 'string') val = String(val); // Garante que é string para replace
       let str = val.toString().replace(/[R$\s]/g, ''); // Remove R$ e espaços
       // Se tiver vírgula, assume formato BR (ponto é milhar, vírgula é decimal)
       if (str.includes(',')) {
           str = str.replace(/\./g, '').replace(',', '.');
       }
-      return parseFloat(str) || 0;
+      const parsed = parseFloat(str);
+      return Number.isNaN(parsed) ? null : parsed;
   };
 
   for (const row of dados) {
@@ -1115,59 +1165,57 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       let motivoRejeicao = '';
       Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
 
-      let dataISO = new Date().toISOString();
-      const dataRaw = r['DATA'] || r['DT'];
-      if (dataRaw) {
+      let dataISO = null;
+      const dataRaw = getCell(r, ['DATA', 'DT']);
+      if (hasValue(dataRaw)) {
            if (typeof dataRaw === 'string' && dataRaw.includes('/')) {
                const parts = dataRaw.split('/');
                if(parts.length === 3) dataISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
            } else if (dataRaw instanceof Date) {
                dataISO = dataRaw.toISOString().split('T')[0];
+           } else {
+               dataISO = String(dataRaw).trim();
            }
       }
-      if (dataISO.includes('T')) dataISO = dataISO.split('T')[0];
+      if (dataISO && dataISO.includes('T')) dataISO = dataISO.split('T')[0];
       
-      const placa = (r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
+      const placa = String(getCell(r, ['PLACA', 'VEICULO']) || '').toUpperCase().trim();
       if (!placa) {
           motivoRejeicao = 'Placa não informada.';
           rejectedRecords.push({ originalRow: row, motivo_rejeicao: motivoRejeicao });
           continue;
       }
 
-      // Mapeamento específico para Engraxe e genérico
-      let titulo = r['TÍTULO_DA_MANUTENÇÃO'] || r['TITULO_DA_MANUTENCAO'] || r['TITULO'] || tipo;
-      let tipoManutencao = (r['TIPO'] || '').toUpperCase().trim();
-      if (!tipoManutencao && tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA'; // Fallback para ENGRAXE
-      if (tipo === 'ENGRAXE') tipoManutencao = 'PREVENTIVA';
-      const fornecedor = r['FORNECEDOR'] || r['OFICINA'] || '';
-      const km = r['KM'] ? String(r['KM']) : '';
-      const numeroOS = r['OS'] || r['Nº OS'] || '';
-      const notaFiscal = r['NF'] || r['NOTA'] || r['NF-E'] || '';
-      const valorNfe = parseCurrency(r['VALOR_NF'] || r['VALOR'] || r['TOTAL'] || r['CUSTO']);
-      const notaServico = r['NFS'] || r['NFS-E'] || r['NFSE'] || '';
-      const valorNfse = parseCurrency(r['VALOR_NFS'] || r['VALOR_NFS-E'] || r['VALOR_NFSE']);
-      const descricao = r['DESCRICAO'] || r['DESCRIÇÃO'] || r['SERVICO'] || r['OBS'] || `${tipo} Importado`;
+      const titulo = getCell(r, ['TÍTULO_DA_MANUTENÇÃO', 'TITULO_DA_MANUTENCAO', 'TITULO']);
+      const km = getCell(r, ['KM']);
+      const numeroOS = getCell(r, ['OS', 'Nº OS', 'N° OS']);
+      const notaFiscal = getCell(r, ['NF', 'NOTA', 'NF-E']);
+      const valorNfe = parseCurrency(getCell(r, ['VALOR_NF', 'VALOR', 'TOTAL', 'CUSTO']));
+      const notaServico = getCell(r, ['NFS', 'NFS-E', 'NFSE']);
+      const valorNfse = parseCurrency(getCell(r, ['VALOR_NFS', 'VALOR_NFS-E', 'VALOR_NFSE']));
+      const descricao = getCell(r, ['DESCRICAO', 'DESCRIÇÃO', 'SERVICO', 'OBS']);
       
       const payloadManutencao = {
-          data: dataISO,
           veiculo: placa,
-          titulo: titulo,
-          tipo: tipoManutencao,
-          descricao: descricao,
-          valorNfe: valorNfe,
-          valorNfse: valorNfse,
-          km: km,
-          fornecedor: fornecedor,
-          notaFiscal: notaFiscal,
-          notaServico: notaServico,
-          numeroOS: numeroOS,
+          fornecedor: fornecedorSelecionado,
+          tipo: tipoManutencaoSelecionado,
           usuario: usuarioLogado,
           status: 'finalizado',
           filial: filialSelecionada
       };
 
+      if (hasValue(dataISO)) payloadManutencao.data = dataISO;
+      if (hasValue(titulo)) payloadManutencao.titulo = titulo;
+      if (hasValue(descricao)) payloadManutencao.descricao = descricao;
+      if (valorNfe !== null) payloadManutencao.valorNfe = valorNfe;
+      if (valorNfse !== null) payloadManutencao.valorNfse = valorNfse;
+      if (hasValue(km)) payloadManutencao.km = String(km);
+      if (hasValue(notaFiscal)) payloadManutencao.notaFiscal = notaFiscal;
+      if (hasValue(notaServico)) payloadManutencao.notaServico = notaServico;
+      if (hasValue(numeroOS)) payloadManutencao.numeroOS = numeroOS;
+
       manutencoesParaInserir.push(payloadManutencao);
-      valoresParaInserir.push(valorNfe + valorNfse); // Guarda o valor para o item
+      valoresParaInserir.push((valorNfe || 0) + (valorNfse || 0)); // Guarda o valor para o item
   }
 
   if (manutencoesParaInserir.length > 0) {
@@ -1186,30 +1234,34 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, arquivos
       const itens = inserted.map((m, i) => ({
           id_manutencao: m.id,
           quantidade: 1,
-          // O índice 'i' aqui corresponde ao índice do 'manutencoesParaInserir' original
-          // e, portanto, ao 'valoresParaInserir'.
-          valor: valoresParaInserir[manutencoesParaInserir.indexOf(manutencoesParaInserir.find(orig => orig.veiculo === m.veiculo && orig.data === m.data))]
-      }));
+          valor: valoresParaInserir[i] || 0
+      })).filter(item => item.valor > 0);
       
       // 3. Insere os itens na tabela manutencao_itens
-      const { error: errItens } = await supabaseClient.from('manutencao_itens').insert(itens);
-      if (errItens) console.error("Erro ao inserir itens de valor:", errItens);
+      if (itens.length > 0) {
+          const { error: errItens } = await supabaseClient.from('manutencao_itens').insert(itens);
+          if (errItens) console.error("Erro ao inserir itens de valor:", errItens);
+      }
 
       // Processar anexo se houver
       if (arquivosAnexo && arquivosAnexo.length > 0) {
+          const arquivosPreparados = await prepararArquivosParaAnexo(arquivosAnexo);
+          if (!arquivosPreparados) throw new Error('Não foi possível preparar os anexos para importação.');
+
           for (const m of inserted) {
-              for (let i = 0; i < arquivosAnexo.length; i++) {
-                  const arquivo = arquivosAnexo[i];
+              for (const arquivo of arquivosPreparados) {
                   const fileName = `${m.id}/${Date.now()}_${arquivo.name}`;
                   const { data: uploadData, error: uploadError } = await supabaseClient.storage
                       .from('manutencao_arquivos')
-                      .upload(fileName, arquivo);
+                      .upload(fileName, arquivo.file);
                   
                   if (!uploadError) {
                       await supabaseClient.from('manutencao_arquivos').insert({
                           id_manutencao: m.id,
                           nome_arquivo: arquivo.name,
-                          caminho_arquivo: uploadData.path
+                          caminho_arquivo: uploadData.path,
+                          is_zipped: arquivo.isZipped,
+                          original_names: arquivo.originalNames || null
                       });
                   } else {
                       console.error(`Erro ao enviar anexo ${arquivo.name} para manutenção ${m.id}:`, uploadError);
