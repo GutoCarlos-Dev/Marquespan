@@ -25,11 +25,108 @@
 
 .filters-actions-container {
     display: grid;
-    grid-template-columns: 4fr 1fr;
+    grid-template-columns: minmax(0, 4fr) 220px;
     gap: 20px;
     margin-bottom: 20px;
 }
 
+.filters-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+}
+
+.filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+}
+
+.filter-row .form-group-filter {
+    flex: 1;
+}
+
 .form-group-filter {
-    margin-bottom: 15px;
+    margin-bottom: 0;
+}
+
+.form-group-filter label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+}
+
+.form-group-filter .glass-input {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+#grupoPeriodo {
+    min-width: 230px;
+    flex: 1;
+}
+
+#grupoPeriodo > div {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px !important;
+}
+
+#grupoSemanas {
+    min-width: 280px;
+    flex: 1;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.semanas-wrapper {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+}
+
+#filtroSemanas {
+    min-height: 86px;
+}
+
+.btn-mini {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #6c757d;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-mini:hover {
+    background: #5a6268;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+    .filters-actions-container {
+        grid-template-columns: 1fr;
+    }
+
+    .filters-container {
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    }
+
+    #grupoSemanas {
+        grid-column: span 1;
+    }
 }

@@ -23,28 +23,48 @@
             <div class="filter-card">
                 <h3><i class="fas fa-filter"></i> Filtros</h3>
                 <form id="formFiltroEstatistica" class="filters-container">
-                    <div class="form-group-filter">
-                        <label>Filial</label>
-                        <select id="filtroFilial" class="glass-input">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="form-group-filter">
-                        <label>Período</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="date" id="dataInicio" class="glass-input">
-                            <input type="date" id="dataFim" class="glass-input">
+                    <div class="filter-row">
+                        <div class="form-group-filter">
+                            <label>Filial</label>
+                            <select id="filtroFilial" class="glass-input">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="form-group-filter">
+                            <label>Tipo de Relatório</label>
+                            <select id="tipoRelatorio" class="glass-input">
+                                <option value="ANALITICO">Analítico</option>
+                                <option value="CONSOLIDADO">Consolidado</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="form-group-filter">
-                        <label>Rota</label>
-                        <input type="text" id="filtroRota" class="glass-input" list="listaRotasEstatistica" placeholder="Ex: 101">
-                        <datalist id="listaRotasEstatistica"></datalist>
+                    <div class="filter-row">
+                        <div class="form-group-filter" id="grupoPeriodo">
+                            <label>Período</label>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="date" id="dataInicio" class="glass-input">
+                                <input type="date" id="dataFim" class="glass-input">
+                            </div>
+                        </div>
+                        <div class="form-group-filter hidden" id="grupoSemanas">
+                            <label>Semanas do Ano</label>
+                            <div class="semanas-wrapper">
+                                <select id="filtroSemanas" class="glass-input" multiple></select>
+                                <button type="button" id="btnLimparSemanas" class="btn-mini">Limpar</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group-filter">
-                        <label>Placa</label>
-                        <input type="text" id="filtroPlaca" class="glass-input" list="listaVeiculosEstatistica" placeholder="ABC1234">
-                        <datalist id="listaVeiculosEstatistica"></datalist>
+                    <div class="filter-row">
+                        <div class="form-group-filter">
+                            <label>Rota</label>
+                            <input type="text" id="filtroRota" class="glass-input" list="listaRotasEstatistica" placeholder="Ex: 101">
+                            <datalist id="listaRotasEstatistica"></datalist>
+                        </div>
+                        <div class="form-group-filter">
+                            <label>Placa</label>
+                            <input type="text" id="filtroPlaca" class="glass-input" list="listaVeiculosEstatistica" placeholder="ABC1234">
+                            <datalist id="listaVeiculosEstatistica"></datalist>
+                        </div>
                     </div>
                     <button type="submit" class="btn-glass btn-blue" style="margin-top: 15px;"><i class="fas fa-search"></i> Buscar</button>
                 </form>
@@ -64,17 +84,11 @@
                 <table class="data-grid">
                     <thead>
                         <tr>
-                            <th>DATA</th>
-                            <th>ROTA</th>
-                            <th>PLACA</th>
-                            <th>KM RODADO</th>
-                            <th>LITROS DIESEL</th>
-                            <th>VALOR DIESEL</th>
-                            <th>HOSPEDAGEM</th>
+                            <th colspan="8">Selecione os filtros e clique em buscar.</th>
                         </tr>
                     </thead>
                     <tbody id="tableBodyEstatistica">
-                        <tr><td colspan="7" style="text-align: center;">Selecione os filtros e clique em buscar.</td></tr>
+                        <tr><td colspan="8" style="text-align: center;">Selecione os filtros e clique em buscar.</td></tr>
                     </tbody>
                 </table>
             </div>
