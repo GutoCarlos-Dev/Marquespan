@@ -9,6 +9,7 @@ const TacografoUI = {
         this.injectStyles();
         this.cacheDOM();
         this.bindEvents();
+        await this.carregarFiliaisMultiselect(); // Carrega as filiais para o multiselect
         await this.carregarDados();
     },
 
@@ -30,7 +31,9 @@ const TacografoUI = {
     cacheDOM() {
         this.tbody = document.getElementById('tbodyTacografo');
         this.searchInput = document.getElementById('searchTacografo');
-        this.filialFilter = document.getElementById('filterFilial');
+        this.filialFilterDisplay = document.getElementById('filterFilialDisplay');
+        this.filialFilterOptions = document.getElementById('filterFilialOptions');
+        this.filialFilterText = document.getElementById('filterFilialText');
         this.statusFilterDisplay = document.getElementById('filterStatusDisplay');
         this.statusFilterOptions = document.getElementById('filterStatusOptions');
         this.statusFilterText = document.getElementById('filterStatusText');
@@ -54,7 +57,21 @@ const TacografoUI = {
         this.btnImportar?.addEventListener('click', () => this.fileImportar.click());
         this.fileImportar?.addEventListener('change', (e) => this.importarXLSX(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
-        this.filialFilter?.addEventListener('change', () => this.renderGrid());
+        
+        // Eventos para o Multiselect de Filial
+        this.filialFilterDisplay?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.filialFilterOptions.classList.toggle('hidden');
+            this.statusFilterOptions?.classList.add('hidden'); // Fecha o de status se estiver aberto
+        });
+        document.addEventListener('click', (e) => {
+            if (!this.filialFilterDisplay?.contains(e.target) && !this.filialFilterOptions?.contains(e.target)) {
+                this.filialFilterOptions?.classList.add('hidden');
+            }
+        });
+        this.filialFilterOptions?.addEventListener('change', () => { // Usar 'change' para checkboxes
+            this.updateFilialFilterText();
+        });
         
         this.statusFilterDisplay?.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -62,6 +79,7 @@ const TacografoUI = {
         });
 
         document.addEventListener('click', (e) => {
+            if (!this.filialFilterDisplay?.contains(e.target) && !this.filialFilterOptions?.contains(e.target)) { /* Already handled above */ }
             if (!this.statusFilterDisplay?.contains(e.target) && !this.statusFilterOptions?.contains(e.target)) {
                 this.statusFilterOptions?.classList.add('hidden');
             }
@@ -77,10 +95,56 @@ const TacografoUI = {
         
         this.btnExportarXLSX?.addEventListener('click', () => this.exportarGridXLSX());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarGridPDF());
+    },
 
-        document.querySelectorAll('th[data-sort]').forEach(th => {
-            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
-        });
+    async carregarFiliaisMultiselect() {
+        if (!this.filialFilterOptions) return;
+
+        this.filialFilterOptions.innerHTML = '<div class="text-center">Carregando...</div>';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('veiculos')
+                .select('filial')
+                .not('tipo', 'in', '("EMPILHADEIRA","GERADOR")')
+                .order('filial');
+
+            if (error) throw error;
+
+            const filiais = [...new Set(
+                (data || [])
+                    .map(item => item.filial)
+                    .filter(Boolean)
+            )];
+
+            this.filialFilterOptions.innerHTML = '';
+
+            if (filiais.length === 0) {
+                this.filialFilterOptions.innerHTML = '<div class="text-center">Nenhuma filial encontrada</div>';
+                return;
+            }
+
+            filiais.forEach(filial => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+                label.style.padding = '5px';
+                label.style.cursor = 'pointer';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'filial-checkbox';
+                checkbox.value = filial;
+
+                label.appendChild(checkbox);
+                label.append(` ${filial}`);
+                this.filialFilterOptions.appendChild(label);
+            });
+
+            this.updateFilialFilterText();
+        } catch (err) {
+            console.error('Erro ao carregar filiais:', err);
+            this.filialFilterOptions.innerHTML = '<div class="text-center text-danger">Erro ao carregar filiais</div>';
+        }
     },
 
     updateStatusFilterText() {
@@ -92,6 +156,18 @@ const TacografoUI = {
         } else {
             this.statusFilterText.textContent = `${checked.length} selecionados`;
         }
+    },
+
+    updateFilialFilterText() {
+        const checked = Array.from(this.filialFilterOptions.querySelectorAll('.filial-checkbox:checked'));
+        if (checked.length === 0) {
+            this.filialFilterText.textContent = 'Todas';
+        } else if (checked.length <= 2) {
+            this.filialFilterText.textContent = checked.map(cb => cb.value).join(', ');
+        } else {
+            this.filialFilterText.textContent = `${checked.length} selecionadas`;
+        }
+        this.renderGrid(); // Dispara a renderização da grade após a seleção
     },
 
     async carregarDados() {
@@ -149,16 +225,6 @@ const TacografoUI = {
                     observacao: tData.observacao || ''
                 };
             });
-
-            // Popula o filtro de Filial dinamicamente
-            const filiais = [...new Set(this.data.map(v => v.filial).filter(f => f && f !== '-'))].sort();
-            if (this.filialFilter) {
-                const currentVal = this.filialFilter.value;
-                this.filialFilter.innerHTML = '<option value="">Todas</option>';
-                filiais.forEach(f => this.filialFilter.add(new Option(f, f)));
-                this.filialFilter.value = currentVal;
-            }
-
             this.renderGrid();
         } catch (err) {
             console.error('Erro:', err);
@@ -189,7 +255,7 @@ const TacografoUI = {
 
     renderGrid() {
         const term = this.searchInput.value.toUpperCase();
-        const filialFilter = this.filialFilter ? this.filialFilter.value : '';
+        const selectedFiliais = Array.from(this.filialFilterOptions.querySelectorAll('.filial-checkbox:checked')).map(cb => cb.value);
         const selectedStatuses = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked')).map(cb => cb.value);
 
         const vencIni = this.vencIniFilter.value;
@@ -199,7 +265,7 @@ const TacografoUI = {
             const matchSearch = item.placa.includes(term) || 
                                item.modelo.toUpperCase().includes(term) || 
                                (item.renavan || '').toUpperCase().includes(term);
-            const matchFilial = !filialFilter || item.filial === filialFilter;
+            const matchFilial = selectedFiliais.length === 0 || selectedFiliais.includes(item.filial);
             const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
 
             let matchVenc = true;

@@ -26,11 +26,16 @@
             <section class="glass-panel">
                 <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
                 <div class="filters-container">
-                    <div class="form-group-filter">
-                        <label for="filterFilial">Filial</label>
-                        <select id="filterFilial" class="glass-input">
-                            <option value="">Todas</option>
-                        </select>
+                    <div class="form-group-filter" style="min-width: 200px;">
+                        <label>Filial</label>
+                        <div class="custom-multiselect" style="position: relative;">
+                            <div id="filterFilialDisplay" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
+                                <span id="filterFilialText">Todas</span> <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="filterFilialOptions" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;">
+                                <!-- Opções serão carregadas via JS -->
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group-filter">
                         <label for="searchTacografo">Buscar Veículo</label>
