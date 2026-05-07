@@ -1439,7 +1439,7 @@ const UI = {
         queryOptions.ilike = { field: 'nome', value: `%${searchTerm}%` };
       }
 
-      const produtos = await SupabaseService.list('produtos', '*, prateleiras(nome, localizacao)', queryOptions);
+      const produtos = await SupabaseService.list('produtos', '*, prateleiras(nome)', queryOptions);
       this.produtosTableBody.innerHTML = produtos.map(p => {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
