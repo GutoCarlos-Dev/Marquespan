@@ -9,6 +9,7 @@ let arquivosExistentes = [];
 let arquivosParaDeletar = [];
 let idManutencaoAnexo = null;
 let arquivosAnexoSelecionados = [];
+const BUSCA_MANUTENCAO_STATE_KEY = 'buscar_manutencao_estado_edicao';
 
 // Função utilitária para escapar HTML e prevenir XSS
 function escapeHTML(str) {
@@ -96,12 +97,87 @@ function preencherSelect(id, data, campo) {
   });
 }
 
+function getFiltrosBuscaAtual() {
+  return {
+    dataInicial: document.getElementById('dataInicial')?.value || '',
+    dataFinal: document.getElementById('dataFinal')?.value || '',
+    filial: document.getElementById('filial')?.value || '',
+    tipoManutencao: document.getElementById('tipoManutencao')?.value || '',
+    veiculo: document.getElementById('veiculo')?.value || '',
+    titulo: document.getElementById('titulo')?.value || '',
+    fornecedor: document.getElementById('fornecedor')?.value || '',
+    nfse: document.getElementById('nfse')?.value || '',
+    nfe: document.getElementById('nfe')?.value || '',
+    os: document.getElementById('os')?.value || '',
+    status: document.getElementById('status')?.value || '',
+    searchResultadosLocal: document.getElementById('searchResultadosLocal')?.value || '',
+    sort: { ...currentSort }
+  };
+}
+
+function salvarEstadoBuscaParaEdicao(idManutencao) {
+  const estado = {
+    origem: 'editar-manutencao',
+    idManutencao,
+    filtros: getFiltrosBuscaAtual(),
+    criadoEm: Date.now()
+  };
+  sessionStorage.setItem(BUSCA_MANUTENCAO_STATE_KEY, JSON.stringify(estado));
+}
+
+function aplicarValorCampo(id, valor) {
+  const campo = document.getElementById(id);
+  if (!campo) return;
+  campo.value = valor || '';
+}
+
+async function restaurarBuscaAposEdicao() {
+  const estadoRaw = sessionStorage.getItem(BUSCA_MANUTENCAO_STATE_KEY);
+  if (!estadoRaw) return false;
+
+  try {
+    const estado = JSON.parse(estadoRaw);
+    const expirado = !estado?.criadoEm || Date.now() - estado.criadoEm > 6 * 60 * 60 * 1000;
+    if (estado?.origem !== 'editar-manutencao' || expirado) {
+      sessionStorage.removeItem(BUSCA_MANUTENCAO_STATE_KEY);
+      return false;
+    }
+
+    const filtros = estado.filtros || {};
+    aplicarValorCampo('dataInicial', filtros.dataInicial);
+    aplicarValorCampo('dataFinal', filtros.dataFinal);
+    aplicarValorCampo('filial', filtros.filial);
+    aplicarValorCampo('tipoManutencao', filtros.tipoManutencao);
+    aplicarValorCampo('veiculo', filtros.veiculo);
+    aplicarValorCampo('titulo', filtros.titulo);
+    aplicarValorCampo('fornecedor', filtros.fornecedor);
+    aplicarValorCampo('nfse', filtros.nfse);
+    aplicarValorCampo('nfe', filtros.nfe);
+    aplicarValorCampo('os', filtros.os);
+    aplicarValorCampo('status', filtros.status);
+    aplicarValorCampo('searchResultadosLocal', filtros.searchResultadosLocal);
+
+    if (filtros.sort?.column && filtros.sort?.direction) {
+      currentSort = { column: filtros.sort.column, direction: filtros.sort.direction };
+    }
+
+    sessionStorage.removeItem(BUSCA_MANUTENCAO_STATE_KEY);
+    await buscarManutencao();
+    return true;
+  } catch (error) {
+    console.error('Erro ao restaurar filtros de manutenção:', error);
+    sessionStorage.removeItem(BUSCA_MANUTENCAO_STATE_KEY);
+    return false;
+  }
+}
+
 async function buscarManutencao() {
   const filtros = {
     dataInicial: document.getElementById('dataInicial').value,
     dataFinal: document.getElementById('dataFinal').value,
     titulo: document.getElementById('titulo').value,
     nfse: document.getElementById('nfse').value,
+    nfe: document.getElementById('nfe').value,
     os: document.getElementById('os').value,
     veiculo: document.getElementById('veiculo').value,
     filial: document.getElementById('filial').value,
@@ -245,6 +321,7 @@ function aplicarFiltrosQuery(query, filtros) {
   if (filtros.dataFinal) query = query.lte('data', `${filtros.dataFinal}T23:59:59-03:00`);
   if (filtros.titulo) query = query.ilike('titulo', `%${filtros.titulo}%`);
   if (filtros.nfse) query = query.ilike('notaServico', `%${filtros.nfse}%`);
+  if (filtros.nfe) query = query.ilike('notaFiscal', `%${filtros.nfe}%`);
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
   if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
   
@@ -351,6 +428,7 @@ function updateSortIcons() {
 
 // 🔗 Abrir manutenção
 function abrirManutencao(id) {
+  salvarEstadoBuscaParaEdicao(id);
   window.location.href = `incluir-manutencao.html?id=${id}`;
 }
 
@@ -793,9 +871,9 @@ function createResizableColumn(col, resizer) {
 }
 
 // 🚀 Inicialização
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   preencherUsuarioLogado();
-  carregarFiltros();
+  await carregarFiltros();
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
@@ -865,6 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target.id === 'modalAnexo') fecharModalAnexo();
       if (e.target.id === 'modalVisualizar') fecharModalVisualizacao();
   });
+
+  await restaurarBuscaAposEdicao();
 });
 
 async function iniciarAnexoManutencao(id) {
