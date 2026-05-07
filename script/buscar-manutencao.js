@@ -8,6 +8,7 @@ let arquivosParaUpload = [];
 let arquivosExistentes = [];
 let arquivosParaDeletar = [];
 let idManutencaoAnexo = null;
+let arquivosAnexoSelecionados = [];
 
 // Função utilitária para escapar HTML e prevenir XSS
 function escapeHTML(str) {
@@ -853,6 +854,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputArquivoAnexo = document.getElementById('inputArquivoAnexo');
   if (inputArquivoAnexo) inputArquivoAnexo.addEventListener('change', handleFileSelect);
 
+  const arquivoAnexoLabel = document.getElementById('arquivoAnexoLabel');
+  if (arquivoAnexoLabel) setupDropzoneAnexo(arquivoAnexoLabel);
+
   const btnConfirmarAnexo = document.getElementById('btnConfirmarAnexo');
   if (btnConfirmarAnexo) btnConfirmarAnexo.addEventListener('click', confirmarAnexo);
 
@@ -905,6 +909,7 @@ function abrirModalAnexo() {
     }
     modalElement.classList.remove('hidden');
     document.getElementById('inputArquivoAnexo').value = '';
+    arquivosAnexoSelecionados = [];
     atualizarLabelAnexo();
     renderizarListaArquivos();
 }
@@ -915,11 +920,39 @@ function fecharModalAnexo() {
 }
 
 function handleFileSelect(e) {
-    const files = e.target.files;
-    if (files.length > 0) {
-        const label = files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`;
+    atualizarArquivosSelecionadosAnexo(e.target.files);
+}
+
+function atualizarArquivosSelecionadosAnexo(files) {
+    arquivosAnexoSelecionados = Array.from(files || []);
+    if (arquivosAnexoSelecionados.length > 0) {
+        const label = arquivosAnexoSelecionados.length === 1
+            ? arquivosAnexoSelecionados[0].name
+            : `${arquivosAnexoSelecionados.length} arquivos selecionados`;
         atualizarLabelAnexo(label);
     }
+}
+
+function setupDropzoneAnexo(dropzone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('drag-over');
+        });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        atualizarArquivosSelecionadosAnexo(e.dataTransfer.files);
+    });
 }
 
 function atualizarLabelAnexo(texto = 'Clique ou arraste o arquivo aqui') {
@@ -935,7 +968,7 @@ function atualizarLabelAnexo(texto = 'Clique ou arraste o arquivo aqui') {
 async function confirmarAnexo() {
     console.log('confirmarAnexo called');
     const input = document.getElementById('inputArquivoAnexo');
-    const files = input.files;
+    const files = arquivosAnexoSelecionados.length > 0 ? arquivosAnexoSelecionados : Array.from(input.files || []);
     if (files.length === 0) return;
 
     const arquivosPreparados = await prepararArquivosParaAnexo(files);
@@ -944,6 +977,7 @@ async function confirmarAnexo() {
     arquivosParaUpload.push(...arquivosPreparados);
     renderizarListaArquivos();
     input.value = '';
+    arquivosAnexoSelecionados = [];
     atualizarLabelAnexo();
 }
 
