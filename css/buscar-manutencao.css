@@ -247,3 +247,45 @@ td {
     font-size: 0.95rem;
     color: #333;
 }
+
+/* Estilos para Barra de Rolagem e Tabela Responsiva */
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid #eee;
+    }
+    
+    /* Estilos para Redimensionamento de Colunas */
+    th {
+        position: relative;
+        min-width: 100px; /* Largura mínima para evitar colapso */
+    }
+    .resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        cursor: col-resize;
+        user-select: none;
+        height: 100%;
+        z-index: 10;
+    }
+    .resizer:hover, .resizing {
+        background-color: #007bff;
+    }
+
+    /* Estilos para Paginação */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #f9f9f9;
+        border-top: 1px solid #eee;
+    }
+    .pagination-controls button {
+        margin: 0 2px;
+        padding: 5px 10px;
+        color: #333;
+    }

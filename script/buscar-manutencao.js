@@ -4,6 +4,10 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
 let currentSort = { column: 'data', direction: 'desc' };
+let arquivosParaUpload = [];
+let arquivosExistentes = [];
+let arquivosParaDeletar = [];
+let idManutencaoAnexo = null;
 
 // Função utilitária para escapar HTML e prevenir XSS
 function escapeHTML(str) {
@@ -288,6 +292,7 @@ function preencherTabela(registros) {
     linha.innerHTML = `
       <td style="display: flex; gap: 5px; white-space: nowrap;">
         <button class="btn-icon view btn-visualizar" data-id="${m.id}" title="Visualizar"><i class="fas fa-eye"></i></button>
+        <button class="btn-icon view btn-anexar" data-id="${m.id}" title="Anexar Arquivo"><i class="fas fa-paperclip"></i></button>
         <button class="btn-icon edit btn-editar" data-id="${m.id}" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
         ${btnExcluirHtml}
       </td>
@@ -676,9 +681,244 @@ document.addEventListener('DOMContentLoaded', () => {
           if (btn.classList.contains('btn-visualizar')) visualizarManutencao(id);
           else if (btn.classList.contains('btn-editar')) abrirManutencao(id);
           else if (btn.classList.contains('btn-excluir')) excluirManutencao(id);
+          else if (btn.classList.contains('btn-anexar')) iniciarAnexoManutencao(id);
       });
   }
+
+  // Listeners para o Modal de Anexo (MOVIDOS PARA DENTRO DO DOMContentLoaded)
+  const btnCloseModalAnexo = document.getElementById('btnCloseModalAnexo');
+  if (btnCloseModalAnexo) btnCloseModalAnexo.addEventListener('click', fecharModalAnexo);
+
+  const btnCancelarAnexo = document.getElementById('btnCancelarAnexo');
+  if (btnCancelarAnexo) btnCancelarAnexo.addEventListener('click', fecharModalAnexo);
+
+  const inputArquivoAnexo = document.getElementById('inputArquivoAnexo');
+  if (inputArquivoAnexo) inputArquivoAnexo.addEventListener('change', handleFileSelect);
+
+  const btnConfirmarAnexo = document.getElementById('btnConfirmarAnexo');
+  if (btnConfirmarAnexo) btnConfirmarAnexo.addEventListener('click', confirmarAnexo);
+
+  // Fechar modal ao clicar no backdrop
+  window.addEventListener('click', (e) => {
+      if (e.target.id === 'modalAnexo') fecharModalAnexo();
+      if (e.target.id === 'modalVisualizar') fecharModalVisualizacao();
+  });
 });
+
+async function iniciarAnexoManutencao(id) {
+    idManutencaoAnexo = id;
+    arquivosParaUpload = [];
+    arquivosParaDeletar = [];
+    arquivosExistentes = [];
+
+    try {
+        const { data: arquivos, error } = await supabaseClient
+            .from('manutencao_arquivos')
+            .select('*')
+            .eq('id_manutencao', id);
+
+        if (error) throw error;
+
+        if (arquivos && arquivos.length > 0) {
+            if (!confirm('Já existem arquivos anexados a este lançamento. Deseja incluir novos arquivos?')) {
+                return;
+            }
+            arquivosExistentes = arquivos.map(a => ({ 
+                nome: a.nome_arquivo, 
+                path: a.caminho_arquivo, 
+                isZipped: a.is_zipped || false, 
+                originalNames: a.original_names || [] 
+            }));
+        }
+
+        abrirModalAnexo();
+    } catch (e) {
+        console.error('Erro ao verificar anexos:', e);
+        alert('Erro ao carregar anexos existentes.');
+    }
+}
+
+function abrirModalAnexo() {
+    console.log('abrirModalAnexo called');
+    const modalElement = document.getElementById('modalAnexo');
+    if (!modalElement) {
+        console.error("Elemento 'modalAnexo' não encontrado no DOM! Verifique o HTML.");
+        return; // Impede o erro de 'classList' em null
+    }
+    modalElement.classList.remove('hidden');
+    document.getElementById('inputArquivoAnexo').value = '';
+    document.getElementById('arquivoAnexoLabel').textContent = 'Clique ou arraste o arquivo aqui';
+    renderizarListaArquivos();
+}
+
+function fecharModalAnexo() {
+    console.log('fecharModalAnexo called');
+    document.getElementById('modalAnexo').classList.add('hidden');
+}
+
+function handleFileSelect(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+        const label = files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`;
+        document.getElementById('arquivoAnexoLabel').textContent = label;
+    }
+}
+
+async function confirmarAnexo() {
+    console.log('confirmarAnexo called');
+    const input = document.getElementById('inputArquivoAnexo');
+    const files = input.files;
+    if (files.length === 0) return;
+
+    if (files.length > 1) {
+        if (typeof JSZip === 'undefined') {
+            alert('A biblioteca JSZip não foi encontrada. Certifique-se de que ela está carregada na página.');
+            return;
+        }
+        const zip = new JSZip();
+        const originalNames = [];
+        Array.from(files).forEach(file => {
+            zip.file(file.name, file);
+            originalNames.push(file.name);
+        });
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const zipFileName = `anexos_${Date.now()}.zip`;
+        arquivosParaUpload.push({ file: content, name: zipFileName, isZipped: true, originalNames });
+    } else {
+        arquivosParaUpload.push({ file: files[0], name: files[0].name, isZipped: false });
+    }
+    renderizarListaArquivos();
+}
+
+function renderizarListaArquivos() {
+    console.log('renderizarListaArquivos called');
+    const container = document.getElementById('listaArquivosAnexados');
+    if (!container) return;
+    container.innerHTML = '';
+
+    [...arquivosExistentes.map(a => ({...a, novo: false})), ...arquivosParaUpload.map(a => ({...a, novo: true}))].forEach((arq, index) => {
+        const div = document.createElement('div');
+        div.className = 'glass-panel-inner';
+        div.style.padding = '10px';
+        div.style.marginBottom = '8px';
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        if (arq.novo) div.style.borderLeft = '4px solid #28a745';
+        
+        div.innerHTML = `
+            <span>${arq.isZipped ? '<i class="fas fa-file-archive"></i>' : '<i class="fas fa-file-alt"></i>'} ${arq.nome || arq.name} ${arq.novo ? '<strong>(Novo)</strong>' : ''}</span>
+            <div>
+                ${!arq.novo ? `<button type="button" class="btn-icon" onclick="downloadArquivo('${arq.path}')" title="Baixar"><i class="fas fa-download"></i></button>` : ''}
+                <button type="button" class="btn-icon delete" onclick="${arq.novo ? `removerArquivoNovo(${arquivosParaUpload.indexOf(arq)})` : `removerArquivoExistente(${arquivosExistentes.indexOf(arq)})`}" title="Remover"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    if (arquivosParaUpload.length > 0 || arquivosParaDeletar.length > 0) {
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn-glass btn-green';
+        saveBtn.style.cssText = 'width: 100%; margin-top: 10px; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px;';
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações de Arquivos';
+        saveBtn.onclick = () => salvarArquivosManutencao(idManutencaoAnexo);
+        container.appendChild(saveBtn);
+    }
+}
+
+window.removerArquivoNovo = (index) => { arquivosParaUpload.splice(index, 1); renderizarListaArquivos(); };
+window.removerArquivoExistente = (index) => {
+    if (confirm('Remover este anexo? A exclusão será efetivada ao salvar.')) {
+        console.log('removerArquivoExistente called');
+        const removed = arquivosExistentes.splice(index, 1)[0];
+        if (removed?.path) arquivosParaDeletar.push(removed.path);
+        renderizarListaArquivos();
+    }
+};
+
+async function salvarArquivosManutencao(idManutencao) {
+    console.log('salvarArquivosManutencao called');
+    const btn = document.querySelector('#listaArquivosAnexados .btn-green');
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
+
+    try {
+        // 1. Excluir arquivos marcados para remoção no Storage
+        if (arquivosParaDeletar.length > 0) {
+            await supabaseClient.storage.from('manutencao_arquivos').remove(arquivosParaDeletar);
+            arquivosParaDeletar = [];
+        }
+
+        const novosRegistros = [];
+        
+        // 2. Upload de novos arquivos
+        for (const file of arquivosParaUpload) {
+            const fileName = `${idManutencao}/${Date.now()}_${file.name}`;
+            const { data, error } = await supabaseClient.storage
+                .from('manutencao_arquivos')
+                .upload(fileName, file.file);
+            
+            if (!error) {
+                novosRegistros.push({
+                    id_manutencao: idManutencao,
+                    nome_arquivo: file.name,
+                    is_zipped: file.isZipped,
+                    original_names: file.originalNames || null,
+                    caminho_arquivo: data.path
+                });
+            }
+        }
+
+        // 3. Sincronizar banco de dados (Remover referências antigas e inserir estado atual)
+        await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
+
+        const listaFinal = [
+            ...arquivosExistentes.map(a => ({ 
+                id_manutencao: idManutencao,
+                nome_arquivo: a.nome, 
+                caminho_arquivo: a.path, 
+                is_zipped: a.isZipped, 
+                original_names: a.originalNames 
+            })),
+            ...novosRegistros
+        ];
+
+        if (listaFinal.length > 0) {
+            const { data: insertedData, error: insertError } = await supabaseClient
+                .from('manutencao_arquivos')
+                .insert(listaFinal)
+                .select('*');
+
+            if (insertError) throw insertError;
+
+            // Atualiza o estado local com os dados do banco
+            arquivosExistentes = insertedData.map(a => ({ 
+                nome: a.nome_arquivo, 
+                path: a.caminho_arquivo, 
+                isZipped: a.is_zipped, 
+                originalNames: a.original_names 
+            }));
+        } else {
+            arquivosExistentes = [];
+        }
+
+        arquivosParaUpload = [];
+        renderizarListaArquivos();
+        alert('✅ Anexos atualizados com sucesso!');
+        fecharModalAnexo();
+
+    } catch (err) {
+        console.error('Erro ao salvar arquivos:', err);
+        alert('Erro ao salvar anexos: ' + err.message);
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações de Arquivos';
+        }
+    }
+}
 
 async function setupImportModal() {
   if (document.getElementById('modalImportar')) return;

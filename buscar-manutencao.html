@@ -5,52 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Buscar Manutenção</title>
   <link rel="stylesheet" href="css/index.css" />
-  <!-- ✅ Novo CSS específico -->
+    <!-- ✅ Novo CSS específico -->
   <link rel="stylesheet" href="css/buscar-manutencao.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>
-    /* Estilos para Barra de Rolagem e Tabela Responsiva */
-    .table-responsive {
-        max-height: 600px;
-        overflow-y: auto;
-        overflow-x: auto;
-        border: 1px solid #eee;
-    }
-    
-    /* Estilos para Redimensionamento de Colunas */
-    th {
-        position: relative;
-        min-width: 100px; /* Largura mínima para evitar colapso */
-    }
-    .resizer {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 5px;
-        cursor: col-resize;
-        user-select: none;
-        height: 100%;
-        z-index: 10;
-    }
-    .resizer:hover, .resizing {
-        background-color: #007bff;
-    }
-
-    /* Estilos para Paginação */
-    .pagination-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        background: #f9f9f9;
-        border-top: 1px solid #eee;
-    }
-    .pagination-controls button {
-        margin: 0 2px;
-        padding: 5px 10px;
-        color: #333;
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  
 </head>
 <body>
 
@@ -177,6 +136,34 @@
         </div>
     </section>
   </main>
+
+  <!-- Modal Anexar Arquivo (Estilo igual ao incluir-manutencao) -->
+  <div id="modalAnexo" class="modal-backdrop hidden" style="position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(255, 255, 255, 0.5); display: flex; align-items: center; justify-content: center;">
+       <div class="glass-modal" style="max-width: 600px;">
+          <div class="modal-header"> 
+              <h3><i class="fas fa-paperclip"></i> Anexar Arquivos</h3>
+              <button class="close-button" id="btnCloseModalAnexo">&times;</button>
+          </div>
+          <div class="modal-body">
+              <div class="form-group" style="margin-bottom: 20px;">
+                  <label id="arquivoAnexoLabel" for="inputArquivoAnexo" style="display: block; padding: 40px; border: 2px dashed #ccc; border-radius: 12px; text-align: center; cursor: pointer; color: #666; background: rgba(0,0,0,0.02); transition: all 0.3s;">
+                      <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                      Clique ou arraste o arquivo aqui
+                  </label>
+                  <input type="file" id="inputArquivoAnexo" multiple style="display: none;">
+              </div>
+              
+              <div style="text-align: right; margin-bottom: 20px;">
+                  <button type="button" id="btnConfirmarAnexo" class="btn-glass btn-blue"><i class="fas fa-check"></i> Confirmar Seleção</button>
+              </div>
+
+              <div id="listaArquivosAnexados" class="lista-arquivos"></div>
+          </div>
+          <div class="modal-footer" style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+              <button type="button" id="btnCancelarAnexo" class="btn-glass btn-muted">Fechar</button>
+          </div>
+      </div>
+  </div>
 
   <!-- Modal Visualizar Manutenção -->
   <div id="modalVisualizar" class="modal-backdrop hidden">
