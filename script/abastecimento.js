@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extSort = { key: 'data_hora', asc: false }; // Estado de ordenação externo
             this.saidasData = []; // Cache dos dados de saídas
             this.saidasSort = { key: 'data_hora', asc: false }; // Estado de ordenação das saídas
+            this.auditoriaEstoqueDados = [];
             this.initTabs();
             this.cache();
             this.bind();
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.renderTable();
             this.initSaida(); // Inicializa a aba de saída
             this.renderSaidasTable();
+            this.setupAuditoriaEstoque();
             this.loadEstoqueAtual(); // Carrega a aba de estoque
             this.populateUFs(); // Preenche lista de UFs
             
@@ -98,6 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Elementos da Aba Estoque
             this.tbodyEstoque = document.getElementById('tbodyEstoqueAtual');
             this.btnSalvarEstoque = document.getElementById('btnSalvarEstoque');
+            this.auditoriaEstoqueContainer = document.getElementById('auditoriaEstoqueContainer');
+            this.auditoriaEstoqueDataInicial = document.getElementById('auditoriaEstoqueDataInicial');
+            this.auditoriaEstoqueDataFinal = document.getElementById('auditoriaEstoqueDataFinal');
+            this.btnBuscarAuditoriaEstoque = document.getElementById('btnBuscarAuditoriaEstoque');
+            this.btnExportarAuditoriaXLSX = document.getElementById('btnExportarAuditoriaXLSX');
+            this.btnExportarAuditoriaPDF = document.getElementById('btnExportarAuditoriaPDF');
+            this.tbodyAuditoriaEstoque = document.getElementById('tbodyAuditoriaEstoque');
 
             // Novos Elementos - Abastecimento Externo
             this.formExt = document.getElementById('formAbastecimentoExterno');
@@ -189,6 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (this.btnSalvarEstoque) this.btnSalvarEstoque.addEventListener('click', this.handleSalvarEstoque.bind(this));
             if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('change', this.handleEstoqueChange.bind(this));
+            if (this.tbodyEstoque) this.tbodyEstoque.addEventListener('input', this.handleEstoqueChange.bind(this));
+            if (this.btnBuscarAuditoriaEstoque) this.btnBuscarAuditoriaEstoque.addEventListener('click', this.renderAuditoriaEstoque.bind(this));
+            if (this.btnExportarAuditoriaXLSX) this.btnExportarAuditoriaXLSX.addEventListener('click', this.exportarAuditoriaEstoqueXLSX.bind(this));
+            if (this.btnExportarAuditoriaPDF) this.btnExportarAuditoriaPDF.addEventListener('click', this.exportarAuditoriaEstoquePDF.bind(this));
+            if (this.tbodyAuditoriaEstoque) this.tbodyAuditoriaEstoque.addEventListener('click', this.handleAuditoriaEstoqueClick.bind(this));
 
             // Listeners para Busca e Ordenação de Saídas
             if (this.searchSaidaInput) {
@@ -390,6 +404,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return '';
         },
 
+        canViewEstoqueAuditoria() {
+            return ['administrador', 'gerencia', 'adm_logistica'].includes(this.getUserLevel());
+        },
+
+        setupAuditoriaEstoque() {
+            if (!this.auditoriaEstoqueContainer) return;
+
+            const canView = this.canViewEstoqueAuditoria();
+            this.auditoriaEstoqueContainer.classList.toggle('hidden', !canView);
+
+            if (canView && this.tbodyAuditoriaEstoque) {
+                this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center">Selecione uma data e clique em Buscar.</td></tr>';
+            }
+        },
+
         calculateTotal() {
             const qtd = parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0;
             const vlr = parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0;
@@ -420,9 +449,64 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        parseLitros(value) {
+            if (typeof value === 'number') return value;
+            if (!value) return 0;
+            return parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+        },
+
+        formatLitros(value) {
+            const numero = parseFloat(value);
+            if (isNaN(numero)) return '0,00';
+            return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        escapeHTML(value) {
+            const div = document.createElement('div');
+            div.textContent = value ?? '';
+            return div.innerHTML;
+        },
+
+        atualizarDiferencaEstoque(input) {
+            const tr = input.closest('tr');
+            if (!tr) return;
+
+            const estoqueAnterior = parseFloat(tr.dataset.calculatedStock);
+            const novoEstoque = this.parseLitros(input.value);
+            const diferencaCell = tr.querySelector('.estoque-diferenca');
+
+            if (!diferencaCell || isNaN(estoqueAnterior) || isNaN(novoEstoque)) {
+                if (diferencaCell) {
+                    diferencaCell.textContent = '-';
+                    diferencaCell.className = 'estoque-diferenca';
+                }
+                return;
+            }
+
+            const diferenca = novoEstoque - estoqueAnterior;
+            diferencaCell.textContent = `${diferenca > 0 ? '+' : ''}${this.formatLitros(diferenca)} L`;
+            diferencaCell.className = 'estoque-diferenca';
+            if (diferenca > 0.001) diferencaCell.classList.add('diferenca-positiva');
+            else if (diferenca < -0.001) diferencaCell.classList.add('diferenca-negativa');
+            else diferencaCell.classList.add('diferenca-zero');
+        },
+
+        toggleEstoqueAuditoriaColumns(canView) {
+            const tabela = this.tbodyEstoque?.closest('table');
+            if (!tabela) return;
+
+            const headerCells = tabela.querySelectorAll('thead th');
+            [4, 6].forEach(index => {
+                if (headerCells[index]) headerCells[index].style.display = canView ? '' : 'none';
+            });
+        },
+
         async loadEstoqueAtual() {
             if (!this.tbodyEstoque) return;
-            this.tbodyEstoque.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+            const canViewAuditoria = this.canViewEstoqueAuditoria();
+            const totalColunas = canViewAuditoria ? 7 : 5;
+            this.toggleEstoqueAuditoriaColumns(canViewAuditoria);
+            this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Carregando...</td></tr>`;
 
             try {
                 // 1. Buscar todos os tanques
@@ -469,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 5. Renderizar a tabela
                 this.tbodyEstoque.innerHTML = '';
                 if (estoqueCalculado.length === 0) {
-                    this.tbodyEstoque.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum tanque cadastrado.</td></tr>';
+                    this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Nenhum tanque cadastrado.</td></tr>`;
                     return;
                 }
 
@@ -498,19 +582,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span style="font-weight: bold; color: ${color}; font-size: 0.9rem; min-width: 40px; text-align: right;">${percentual}%</span>
                             </div>
                         </td>
+                        ${canViewAuditoria ? `<td class="estoque-anterior">${this.formatLitros(estoque)} L</td>` : ''}
                         <td>
                             <input type="text" class="input-estoque-atual glass-input" data-id="${tanque.id}" 
                                    data-capacidade="${tanque.capacidade || 0}"
-                                   value="${tanque.estoque_atual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}" 
+                                   value="${this.formatLitros(tanque.estoque_atual)}" 
                                    oninput="this.value = this.value.replace(/[^0-9,.]/g, '')">
                         </td>
+                        ${canViewAuditoria ? '<td class="estoque-diferenca diferenca-zero">0,00 L</td>' : ''}
                     `;
                     this.tbodyEstoque.appendChild(tr);
                 });
 
             } catch (error) {
                 console.error('Erro ao carregar estoque:', error);
-                this.tbodyEstoque.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+                this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center text-danger">Erro ao carregar dados.</td></tr>`;
             }
         },
 
@@ -518,13 +604,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!e.target.classList.contains('input-estoque-atual')) return;
             const input = e.target;
             const rawValue = input.value;
-            const normalizedValue = parseFloat(rawValue.replace(/\./g, '').replace(',', '.'));
+            const normalizedValue = this.parseLitros(rawValue);
             const capacidade = parseFloat(input.dataset.capacidade);
 
-            if (!isNaN(normalizedValue) && !isNaN(capacidade) && normalizedValue > capacidade) {
+            if (e.type === 'change' && !isNaN(normalizedValue) && !isNaN(capacidade) && normalizedValue > capacidade) {
                 alert(`O valor informado excede a capacidade máxima do tanque (${capacidade.toLocaleString('pt-BR')} L).`);
-                input.value = capacidade.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                input.value = this.formatLitros(capacidade);
             }
+            this.atualizarDiferencaEstoque(input);
         },
 
         async handleSalvarEstoque() {
@@ -543,8 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Converte o valor do input (formato PT-BR) para float
                 const rawValue = input.value;
-                const normalizedValue = rawValue.replace(/\./g, '').replace(',', '.');
-                const novoEstoque = parseFloat(normalizedValue);
+                const novoEstoque = this.parseLitros(rawValue);
                 const capacidade = parseFloat(input.dataset.capacidade);
 
                 if (isNaN(estoqueCalculado) || isNaN(novoEstoque)) return;
@@ -588,6 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 alert('Ajuste(s) de estoque salvo(s) com sucesso!');
                 await this.loadEstoqueAtual(); // Recarrega para mostrar os novos valores calculados
+                if (this.canViewEstoqueAuditoria() && this.auditoriaEstoqueDataInicial?.value && this.auditoriaEstoqueDataFinal?.value) {
+                    await this.renderAuditoriaEstoque();
+                }
 
             } catch (error) {
                 console.error('Erro ao salvar ajuste de estoque:', error);
@@ -595,6 +684,309 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 this.btnSalvarEstoque.disabled = false;
                 this.btnSalvarEstoque.innerHTML = '<i class="fas fa-save"></i> Atualizar Estoque';
+            }
+        },
+
+        async calcularEstoqueAntes(tanqueId, dataHora) {
+            const [entradasResult, saidasResult] = await Promise.all([
+                supabaseClient
+                    .from('abastecimentos')
+                    .select('qtd_litros')
+                    .eq('tanque_id', tanqueId)
+                    .lt('data', dataHora),
+                supabaseClient
+                    .from('saidas_combustivel')
+                    .select('qtd_litros, bicos(bombas(tanque_id))')
+                    .lt('data_hora', dataHora)
+            ]);
+
+            if (entradasResult.error) throw entradasResult.error;
+            if (saidasResult.error) throw saidasResult.error;
+
+            const totalEntradas = (entradasResult.data || [])
+                .reduce((total, item) => total + (parseFloat(item.qtd_litros) || 0), 0);
+
+            const totalSaidas = (saidasResult.data || [])
+                .filter(item => Number(item.bicos?.bombas?.tanque_id) === Number(tanqueId))
+                .reduce((total, item) => total + (parseFloat(item.qtd_litros) || 0), 0);
+
+            return totalEntradas - totalSaidas;
+        },
+
+        async renderAuditoriaEstoque() {
+            if (!this.canViewEstoqueAuditoria() || !this.tbodyAuditoriaEstoque) return;
+
+            const dataInicial = this.auditoriaEstoqueDataInicial?.value;
+            const dataFinal = this.auditoriaEstoqueDataFinal?.value;
+            if (!dataInicial || !dataFinal) {
+                alert('Selecione o período De e Até para buscar a auditoria.');
+                return;
+            }
+
+            if (dataInicial > dataFinal) {
+                alert('A data inicial não pode ser maior que a data final.');
+                return;
+            }
+
+            this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center">Buscando ajustes...</td></tr>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('abastecimentos')
+                    .select('id, data, usuario, tanque_id, qtd_litros, tanques(nome, tipo_combustivel)')
+                    .eq('numero_nota', 'AJUSTE DE ESTOQUE')
+                    .gte('data', `${dataInicial}T00:00:00-03:00`)
+                    .lte('data', `${dataFinal}T23:59:59-03:00`)
+                    .order('data', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    this.auditoriaEstoqueDados = [];
+                    this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum ajuste encontrado para a data selecionada.</td></tr>';
+                    return;
+                }
+
+                const rows = await Promise.all(data.map(async ajuste => {
+                    const diferenca = parseFloat(ajuste.qtd_litros) || 0;
+                    const estoqueAnterior = await this.calcularEstoqueAntes(ajuste.tanque_id, ajuste.data);
+                    const estoqueAtual = estoqueAnterior + diferenca;
+
+                    return {
+                        ...ajuste,
+                        diferenca,
+                        estoqueAnterior,
+                        estoqueAtual
+                    };
+                }));
+
+                this.auditoriaEstoqueDados = rows;
+                this.tbodyAuditoriaEstoque.innerHTML = '';
+                this.auditoriaEstoqueDados.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const diferencaClasse = item.diferenca > 0.001
+                        ? 'diferenca-positiva'
+                        : item.diferenca < -0.001
+                            ? 'diferenca-negativa'
+                            : 'diferenca-zero';
+
+                    tr.innerHTML = `
+                        <td>${new Date(item.data).toLocaleString('pt-BR')}</td>
+                        <td>${this.escapeHTML(item.usuario || '-')}</td>
+                        <td>${this.escapeHTML(item.tanques?.nome || '-')}</td>
+                        <td>${this.escapeHTML(item.tanques?.tipo_combustivel || '-')}</td>
+                        <td class="estoque-anterior">${this.formatLitros(item.estoqueAnterior)} L</td>
+                        <td class="estoque-anterior">${this.formatLitros(item.estoqueAtual)} L</td>
+                        <td class="estoque-diferenca ${diferencaClasse}">${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)} L</td>
+                        <td style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="btn-action btn-edit btn-edit-auditoria" data-id="${item.id}" data-estoque-anterior="${item.estoqueAnterior}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action btn-delete btn-delete-auditoria" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    this.tbodyAuditoriaEstoque.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Erro ao buscar auditoria de estoque:', error);
+                this.auditoriaEstoqueDados = [];
+                this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao buscar auditoria.</td></tr>';
+                alert('Erro ao buscar auditoria: ' + error.message);
+            }
+        },
+
+        getAuditoriaEstoqueExportRows() {
+            return (this.auditoriaEstoqueDados || []).map(item => ({
+                'Data/Hora': new Date(item.data).toLocaleString('pt-BR'),
+                'Usuário': item.usuario || '-',
+                'Tanque': item.tanques?.nome || '-',
+                'Combustível': item.tanques?.tipo_combustivel || '-',
+                'Estoque Anterior (Litros)': this.formatLitros(item.estoqueAnterior),
+                'Estoque Atual (Litros)': this.formatLitros(item.estoqueAtual),
+                'Diferença (Litros)': `${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)}`
+            }));
+        },
+
+        exportarAuditoriaEstoqueXLSX() {
+            if (!this.canViewEstoqueAuditoria()) return;
+
+            const rows = this.getAuditoriaEstoqueExportRows();
+            if (rows.length === 0) {
+                alert('Realize uma busca com resultados antes de exportar.');
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [
+                { wch: 20 }, { wch: 24 }, { wch: 22 }, { wch: 18 },
+                { wch: 24 }, { wch: 22 }, { wch: 18 }
+            ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Auditoria Estoque');
+
+            const dataInicial = this.auditoriaEstoqueDataInicial?.value || 'inicio';
+            const dataFinal = this.auditoriaEstoqueDataFinal?.value || 'fim';
+            XLSX.writeFile(wb, `Auditoria_Estoque_${dataInicial}_a_${dataFinal}.xlsx`);
+        },
+
+        async exportarAuditoriaEstoquePDF() {
+            if (!this.canViewEstoqueAuditoria()) return;
+
+            const rows = this.auditoriaEstoqueDados || [];
+            if (rows.length === 0) {
+                alert('Realize uma busca com resultados antes de exportar.');
+                return;
+            }
+
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('Biblioteca PDF não carregada.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const dataInicial = this.auditoriaEstoqueDataInicial?.value || '';
+            const dataFinal = this.auditoriaEstoqueDataFinal?.value || '';
+
+            const getLogoBase64 = async () => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = 'logo.png';
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg'));
+                    };
+                    img.onerror = () => resolve(null);
+                });
+            };
+
+            const logoBase64 = await getLogoBase64();
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'JPEG', 14, 8, 40, 12);
+            }
+
+            doc.setFontSize(16);
+            doc.setTextColor(0, 105, 55);
+            doc.text('Auditoria de Ajustes de Estoque', logoBase64 ? 60 : 14, 15);
+
+            doc.setFontSize(9);
+            doc.setTextColor(90);
+            doc.text(`Período: ${dataInicial} até ${dataFinal}`, logoBase64 ? 60 : 14, 22);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 22, { align: 'right' });
+
+            doc.autoTable({
+                startY: 28,
+                head: [[
+                    'Data/Hora',
+                    'Usuário',
+                    'Tanque',
+                    'Combustível',
+                    'Estoque Anterior',
+                    'Estoque Atual',
+                    'Diferença'
+                ]],
+                body: rows.map(item => [
+                    new Date(item.data).toLocaleString('pt-BR'),
+                    item.usuario || '-',
+                    item.tanques?.nome || '-',
+                    item.tanques?.tipo_combustivel || '-',
+                    `${this.formatLitros(item.estoqueAnterior)} L`,
+                    `${this.formatLitros(item.estoqueAtual)} L`,
+                    `${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)} L`
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
+                styles: { fontSize: 8, cellPadding: 2 },
+                alternateRowStyles: { fillColor: [245, 245, 245] },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 6) {
+                        const raw = String(data.cell.raw || '');
+                        if (raw.startsWith('+')) data.cell.styles.textColor = [25, 135, 84];
+                        else if (raw.startsWith('-')) data.cell.styles.textColor = [220, 53, 69];
+                    }
+                }
+            });
+
+            doc.save(`Auditoria_Estoque_${dataInicial}_a_${dataFinal}.pdf`);
+        },
+
+        async handleAuditoriaEstoqueClick(e) {
+            if (!this.canViewEstoqueAuditoria()) return;
+
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const id = parseInt(button.dataset.id);
+            if (!id) return;
+
+            if (button.classList.contains('btn-edit-auditoria')) {
+                await this.editarAjusteEstoque(id, parseFloat(button.dataset.estoqueAnterior));
+            } else if (button.classList.contains('btn-delete-auditoria')) {
+                await this.excluirAjusteEstoque(id);
+            }
+        },
+
+        async editarAjusteEstoque(id, estoqueAnterior) {
+            if (isNaN(estoqueAnterior)) {
+                alert('Não foi possível identificar o estoque anterior deste ajuste.');
+                return;
+            }
+
+            const novoValorTexto = prompt('Informe o novo Estoque Atual (Litros):');
+            if (novoValorTexto === null) return;
+
+            const novoEstoque = this.parseLitros(novoValorTexto);
+            if (isNaN(novoEstoque)) {
+                alert('Valor inválido.');
+                return;
+            }
+
+            const novaDiferenca = novoEstoque - estoqueAnterior;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('abastecimentos')
+                    .update({
+                        qtd_litros: novaDiferenca,
+                        usuario: this.getUsuarioLogado()
+                    })
+                    .eq('id', id)
+                    .eq('numero_nota', 'AJUSTE DE ESTOQUE');
+
+                if (error) throw error;
+
+                alert('Ajuste atualizado com sucesso!');
+                await this.renderAuditoriaEstoque();
+                await this.loadEstoqueAtual();
+            } catch (error) {
+                console.error('Erro ao editar ajuste:', error);
+                alert('Erro ao editar ajuste: ' + error.message);
+            }
+        },
+
+        async excluirAjusteEstoque(id) {
+            if (!confirm('Deseja excluir este ajuste de estoque?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('abastecimentos')
+                    .delete()
+                    .eq('id', id)
+                    .eq('numero_nota', 'AJUSTE DE ESTOQUE');
+
+                if (error) throw error;
+
+                alert('Ajuste excluído com sucesso!');
+                await this.renderAuditoriaEstoque();
+                await this.loadEstoqueAtual();
+            } catch (error) {
+                console.error('Erro ao excluir ajuste:', error);
+                alert('Erro ao excluir ajuste: ' + error.message);
             }
         },
 

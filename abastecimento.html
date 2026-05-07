@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/abastecimento-responsive.css" />
   <link rel="stylesheet" href="css/abastecimento.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* Barra de rolagem para tabelas extensas com cabeçalho fixo */
     .table-scroll-y { max-height: 450px; overflow-y: auto; }
@@ -61,7 +63,9 @@
                   <th>Combustível</th>
                   <th>Capacidade Máx.</th>
                   <th>Nível (%)</th>
+                  <th class="col-auditoria-estoque">Estoque Anterior (Litros)</th>
                   <th>Estoque Atual (Litros)</th>
+                  <th>Diferença (Litros)</th>
                 </tr>
               </thead>
               <tbody id="tbodyEstoqueAtual">
@@ -71,6 +75,41 @@
           </div>
           <div class="form-actions" style="margin-top: 20px; justify-content: flex-end; display: flex;">
             <button type="button" id="btnSalvarEstoque" class="btn-glass btn-green"><i class="fas fa-save"></i> Atualizar Estoque</button>
+          </div>
+
+          <div id="auditoriaEstoqueContainer" class="auditoria-estoque-container hidden">
+            <div class="panel-header-actions auditoria-header">
+              <h3><i class="fas fa-clipboard-check"></i> Auditoria de Ajustes de Estoque</h3>
+              <div class="auditoria-filtros">
+                <label for="auditoriaEstoqueDataInicial">De</label>
+                <input type="date" id="auditoriaEstoqueDataInicial" class="glass-input">
+                <label for="auditoriaEstoqueDataFinal">Até</label>
+                <input type="date" id="auditoriaEstoqueDataFinal" class="glass-input">
+                <button type="button" id="btnBuscarAuditoriaEstoque" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+                <button type="button" id="btnExportarAuditoriaXLSX" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> XLSX</button>
+                <button type="button" id="btnExportarAuditoriaPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="glass-table data-grid">
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Usuário</th>
+                    <th>Tanque</th>
+                    <th>Combustível</th>
+                    <th>Estoque Anterior (Litros)</th>
+                    <th>Estoque Atual (Litros)</th>
+                    <th>Diferença (Litros)</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAuditoriaEstoque">
+                  <tr><td colspan="8" class="text-center">Selecione uma data e clique em Buscar.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
       </section>
 
