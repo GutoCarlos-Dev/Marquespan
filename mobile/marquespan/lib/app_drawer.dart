@@ -7,7 +7,7 @@ import 'package:marquespan/main.dart'; // For LoginPage
 class AppDrawer extends StatelessWidget {
   final User? user;
 
-  const AppDrawer({Key? key, this.user}) : super(key: key);
+  const AppDrawer({super.key, this.user});
 
   @override
   Widget build(BuildContext context) {

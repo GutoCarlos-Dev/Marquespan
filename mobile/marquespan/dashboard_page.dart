@@ -7,7 +7,7 @@ import 'package:intl/intl.dart'; // For currency formatting
 class DashboardPage extends StatefulWidget {
   final User? user;
 
-  const DashboardPage({Key? key, this.user}) : super(key: key);
+  const DashboardPage({super.key, this.user});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
