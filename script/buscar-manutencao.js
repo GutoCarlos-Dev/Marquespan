@@ -1299,9 +1299,9 @@ async function setupImportModal() {
                   <label for="tipoManutencaoImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Tipo de Manutenção (Obrigatório):</label>
                   <select id="tipoManutencaoImportacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                       <option value="">Selecione...</option>
-                      <option value="PREVENTIVA">PREVENTIVA</option>
                       <option value="CORRETIVA">CORRETIVA</option>
-                  </select>
+                      <option value="PREVENTIVA">PREVENTIVA</option>
+                   </select>
               </div>
               <div style="margin-bottom: 15px;">
                   <label for="arquivoAnexoImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Anexar Arquivos (Opcional):</label>
