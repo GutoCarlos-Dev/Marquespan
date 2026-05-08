@@ -530,6 +530,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- ATUALIZAR TÍTULO DA ABA DINAMICAMENTE ---
+    function atualizarTituloDia(dia, semana) {
+        const tituloDia = document.getElementById('tituloDia');
+        if (!tituloDia) return;
+
+        const coresDia = { 'SEGUNDA': '#007bff', 'TERCA': '#fd7e14', 'QUARTA': '#28a745', 'QUINTA': '#6f42c1', 'SEXTA': '#dc3545', 'SABADO': '#17a2b8', 'DOMINGO': '#e83e8c' };
+        tituloDia.style.color = coresDia[dia] || '#006937';
+
+        const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
+        const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+        const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
+
+        tituloDia.innerHTML = `
+            <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
+            <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
+            <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
+                <i class="fa-solid fa-copy"></i>
+            </button>
+            <button id="btnModeloDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #6c757d; color: white;" title="Baixar Modelo">
+                <i class="fa-solid fa-download"></i>
+            </button>
+            <button id="btnImportarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #28a745; color: white;" title="Importar XLSX">
+                <i class="fa-solid fa-file-import"></i>
+            </button>
+            <button id="btnExcluirSelecionadosDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #dc3545; color: white;" title="Excluir Selecionados">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>`;
+    }
+
     async function carregarDadosDia(dia, semana) {
         const sections = Object.keys(SECAO_PARA_DB);
         sections.forEach(sec => {
@@ -538,22 +567,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
-        const coresDia = { 'SEGUNDA': '#007bff', 'TERCA': '#fd7e14', 'QUARTA': '#28a745', 'QUINTA': '#6f42c1', 'SEXTA': '#dc3545', 'SABADO': '#17a2b8', 'DOMINGO': '#e83e8c' };
-        tituloDia.style.color = coresDia[dia] || '#006937';
-
         const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
         const dataISO = dataObj.toISOString().split('T')[0];
-        const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-        const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
-
-        tituloDia.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
-                <button id="btnImportarDiaAction" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em;" title="Importar Excel para este dia"><i class="fa-solid fa-plus"></i></button>
-                <button id="btnCopiarDiaSeguinte" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8;" title="Copiar Escala"><i class="fa-solid fa-copy"></i></button>
-                <button id="btnExpedicao" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #ff9800;" title="Resumo de Expedição"><i class="fa-solid fa-truck-ramp-box"></i> Expedição</button>
-                <span id="status-indicator"></span>
-            </div>`;
 
         try {
             // Busca dados das duas tabelas em paralelo
@@ -1319,6 +1334,314 @@ document.addEventListener('DOMContentLoaded', () => {
         XLSX.writeFile(wb, "Modelo_Planejamento.xlsx");
     }
 
+    // --- FUNÇÕES ESPECÍFICAS PARA DIAS ---
+    function baixarModeloDia() {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX não carregada.');
+
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!dia) return alert('Selecione um dia primeiro.');
+
+        // Headers para cada seção
+        const headers = {
+            'PADRAO': ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'],
+            'TRANSFERENCIA': ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'],
+            'EQUIPAMENTO': ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'],
+            'RESERVAS': ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO'],
+            'FALTAS': ['MOTORISTA', 'MOTIVO_MOTORISTA', 'AUXILIAR', 'MOTIVO_AUXILIAR']
+        };
+
+        const wb = XLSX.utils.book_new();
+
+        // Cria uma aba para cada seção
+        Object.entries(headers).forEach(([section, cols]) => {
+            const data = [cols]; // Headers na primeira linha
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, section);
+        });
+
+        XLSX.writeFile(wb, `Modelo_${dia}.xlsx`);
+    }
+
+    async function importarExcelDia(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            // Mostrar modal de progresso
+            const importModal = document.getElementById('importProgressModal');
+            const progressBar = document.getElementById('importProgressBar');
+            const progressText = document.getElementById('importProgressText');
+            const progressDetails = document.getElementById('importProgressDetails');
+
+            importModal.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Processando: 0%';
+            progressDetails.textContent = '';
+
+            try {
+                // Simular atraso de leitura do arquivo
+                await new Promise(resolve => setTimeout(resolve, 300));
+                progressBar.style.width = '15%';
+                progressText.textContent = 'Processando: 15%';
+                progressDetails.textContent = 'Lendo arquivo Excel...';
+
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progressBar.style.width = '30%';
+                progressText.textContent = 'Processando: 30%';
+                progressDetails.textContent = 'Localizando abas...';
+
+                const semana = selectSemana.value;
+                const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+                if (!semana || !dia) {
+                    importModal.classList.add('hidden');
+                    return alert('Selecione uma semana e dia.');
+                }
+
+                const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+                const insertsEscala = [];
+                const insertsFaltas = [];
+
+                // Mapeamento de nomes de abas do Excel para IDs internos das seções
+                const mapaAbas = {
+                    'PADRAO': { tipo: 'PADRAO', tabela: 'escala' },
+                    'TRANSFERENCIA': { tipo: 'TRANSFERENCIA', tabela: 'escala' },
+                    'TRANSFERÊNCIA CD': { tipo: 'TRANSFERENCIA', tabela: 'escala' },
+                    'EQUIPAMENTO': { tipo: 'EQUIPAMENTO', tabela: 'escala' },
+                    'RESERVAS': { tipo: 'RESERVA', tabela: 'escala' },
+                    'FALTAS': { tipo: null, tabela: 'faltas_afastamentos' },
+                    'FALTAS / FÉRIAS / AFASTADOS': { tipo: null, tabela: 'faltas_afastamentos' }
+                };
+
+                // Itera sobre as abas do arquivo Excel
+                workbook.SheetNames.forEach(sheetName => {
+                    const nomeNormalizado = sheetName.toUpperCase().trim();
+                    // Tenta match exato ou parcial para cada seção
+                    let config = null;
+                    for (const [key, value] of Object.entries(mapaAbas)) {
+                        if (nomeNormalizado === key.toUpperCase() ||
+                            nomeNormalizado.includes(key.toUpperCase()) ||
+                            key.toUpperCase().includes(nomeNormalizado)) {
+                            config = value;
+                            break;
+                        }
+                    }
+
+                    if (config) {
+                        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        json.forEach(row => {
+                            if (config.tabela === 'escala') {
+                                insertsEscala.push({
+                                    semana_nome: semana,
+                                    data_escala: dataISO,
+                                    tipo_escala: config.tipo,
+                                    placa: row['PLACA'],
+                                    modelo: row['MODELO'],
+                                    rota: row['ROTA'],
+                                    status: row['STATUS'],
+                                    motorista: row['MOTORISTA'],
+                                    auxiliar: row['AUXILIAR'],
+                                    terceiro: row['TERCEIRO']
+                                });
+                            } else {
+                                insertsFaltas.push({
+                                    semana_nome: semana,
+                                    data_escala: dataISO,
+                                    motorista_ausente: row['MOTORISTA'],
+                                    motivo_motorista: row['MOTIVO_MOTORISTA'],
+                                    auxiliar_ausente: row['AUXILIAR'],
+                                    motivo_auxiliar: row['MOTIVO_AUXILIAR']
+                                });
+                            }
+                        });
+                    }
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progressBar.style.width = '80%';
+                progressText.textContent = 'Processando: 80%';
+                progressDetails.textContent = 'Confirmando importação...';
+
+                const totalRegistros = insertsEscala.length + insertsFaltas.length;
+                if (totalRegistros > 0 && confirm(`Importar ${totalRegistros} registros (${insertsEscala.length} escala + ${insertsFaltas.length} faltas) para o dia ${dia}?`)) {
+                    try {
+                        progressBar.style.width = '90%';
+                        progressText.textContent = 'Processando: 90%';
+                        progressDetails.textContent = 'Enviando para banco de dados...';
+
+                        if (insertsEscala.length > 0) {
+                            const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala);
+                            if (escalaError) throw escalaError;
+                        }
+                        if (insertsFaltas.length > 0) {
+                            const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                            if (faltasError) throw faltasError;
+                        }
+
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Processando: 100%';
+                        progressDetails.textContent = 'Importação concluída com sucesso!';
+
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        importModal.classList.add('hidden');
+                        alert('Importação concluída!');
+                        carregarDadosDia(dia, semana);
+                    } catch (err) {
+                        importModal.classList.add('hidden');
+                        console.error('Erro na importação:', err);
+                        alert('Erro: ' + err.message);
+                    }
+                } else if (totalRegistros === 0) {
+                    importModal.classList.add('hidden');
+                    alert('Nenhum registro válido encontrado para importar desta planilha.');
+                } else {
+                    importModal.classList.add('hidden');
+                }
+            } catch (err) {
+                importModal.classList.add('hidden');
+                console.error('Erro ao processar arquivo:', err);
+                alert('Erro ao processar o arquivo: ' + err.message);
+            }
+
+            e.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async function copiarDia() {
+        const semana = selectSemana.value;
+        const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semana || !diaAtual) return alert('Selecione uma semana e dia.');
+
+        // Modal para escolher dia de origem
+        const modalCopiarDia = document.createElement('div');
+        modalCopiarDia.id = 'modalCopiarDia';
+        modalCopiarDia.className = 'modal-expedicao';
+        modalCopiarDia.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:2000;';
+        modalCopiarDia.innerHTML = `
+            <div style="background:white;padding:20px;border-radius:8px;width:350px;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;text-align:center;">
+                <h3 style="margin-top:0;color:#333;">Copiar Dados do Dia</h3>
+                <p style="color:#666;font-size:0.9em;margin-bottom:15px;">Selecione o dia de origem para copiar os dados.</p>
+                <div style="margin-bottom:15px;text-align:left;">
+                    <label style="display:block;margin-bottom:5px;font-weight:bold;font-size:0.9em;">Dia de Origem:</label>
+                    <select id="selectDiaOrigem" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;">
+                        <option value="DOMINGO">DOMINGO</option>
+                        <option value="SEGUNDA">SEGUNDA</option>
+                        <option value="TERCA">TERÇA</option>
+                        <option value="QUARTA">QUARTA</option>
+                        <option value="QUINTA">QUINTA</option>
+                        <option value="SEXTA">SEXTA</option>
+                        <option value="SABADO">SÁBADO</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button id="btnConfirmarCopiarDia" style="background:#28a745;color:white;padding:8px 15px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Copiar</button>
+                    <button id="btnCancelarCopiarDia" style="background:transparent;border:1px solid #ccc;color:#666;padding:8px 15px;border-radius:4px;cursor:pointer;">Cancelar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalCopiarDia);
+
+        const selectDiaOrigem = document.getElementById('selectDiaOrigem');
+        const btnConfirmarCopiarDia = document.getElementById('btnConfirmarCopiarDia');
+        const btnCancelarCopiarDia = document.getElementById('btnCancelarCopiarDia');
+
+        selectDiaOrigem.value = diaAtual; // Define o dia atual como padrão
+
+        btnCancelarCopiarDia.addEventListener('click', () => modalCopiarDia.remove());
+        modalCopiarDia.addEventListener('click', (e) => { if (e.target === modalCopiarDia) modalCopiarDia.remove(); });
+
+        btnConfirmarCopiarDia.addEventListener('click', async () => {
+            const diaOrigem = selectDiaOrigem.value;
+            if (!diaOrigem) return;
+
+            if (!confirm(`Copiar dados do ${diaOrigem} para ${diaAtual}?`)) return;
+
+            try {
+                const dataOrigem = CACHE_DATAS[semana][diaOrigem].toISOString().split('T')[0];
+                const dataDestino = CACHE_DATAS[semana][diaAtual].toISOString().split('T')[0];
+
+                // Busca dados do dia de origem
+                const [resEscala, resFaltas] = await Promise.all([
+                    supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem),
+                    supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)
+                ]);
+
+                if (resEscala.error || resFaltas.error) {
+                    throw resEscala.error || resFaltas.error;
+                }
+
+                const insertsEscala = resEscala.data.map(item => ({
+                    ...item,
+                    data_escala: dataDestino,
+                    id: undefined // Remove ID para criar novo registro
+                }));
+
+                const insertsFaltas = resFaltas.data.map(item => ({
+                    ...item,
+                    data_escala: dataDestino,
+                    id: undefined
+                }));
+
+                // Insere dados no dia destino
+                if (insertsEscala.length > 0) {
+                    const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala);
+                    if (escalaError) throw escalaError;
+                }
+                if (insertsFaltas.length > 0) {
+                    const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                    if (faltasError) throw faltasError;
+                }
+
+                alert('Cópia realizada com sucesso!');
+                modalCopiarDia.remove();
+                carregarDadosDia(diaAtual, semana);
+
+            } catch (err) {
+                console.error('Erro ao copiar:', err);
+                alert('Erro ao copiar dados: ' + err.message);
+            }
+        });
+    }
+
+    async function excluirSelecionadosDia() {
+        const selectedCells = document.querySelectorAll('.selected-cell');
+        if (selectedCells.length === 0) {
+            return alert('Selecione pelo menos uma célula para excluir.');
+        }
+
+        if (!confirm('Tem certeza que deseja excluir as linhas selecionadas?')) return;
+
+        const toDelete = { escala: [], faltas_afastamentos: [] };
+
+        selectedCells.forEach(el => {
+            const tr = el.closest('tr');
+            if (tr && tr.dataset.id && tr.dataset.tabela) {
+                if (!toDelete[tr.dataset.tabela].includes(tr.dataset.id)) {
+                    toDelete[tr.dataset.tabela].push(tr.dataset.id);
+                }
+            }
+        });
+
+        try {
+            for (const table in toDelete) {
+                if (toDelete[table].length > 0) {
+                    const { error } = await supabaseClient.from(table).delete().in('id', toDelete[table]);
+                    if (error) throw error;
+                }
+            }
+            alert('Exclusão realizada com sucesso.');
+            const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            const semana = selectSemana.value;
+            if (dia && semana) carregarDadosDia(dia, semana);
+        } catch (err) {
+            alert('Erro ao excluir: ' + err.message);
+        }
+    }
+
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
     async function gerarPDF(orientation = 'portrait', selectedSections = null) {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
@@ -1772,7 +2095,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if(painelPlan) painelPlan.classList.add('hidden');
                 if(painelDias) painelDias.classList.remove('hidden');
-                if(dia) carregarDadosDia(dia, selectSemana.value);
+                if(dia) {
+                    // Atualizar título da aba dinamicamente
+                    atualizarTituloDia(dia, selectSemana.value);
+                    carregarDadosDia(dia, selectSemana.value);
+                }
             }
         });
     });
@@ -1803,6 +2130,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         if(btnSalvar.parentNode) btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar);
+    }
+
+    // --- CORREÇÃO: Delegação de eventos para botões dinâmicos no Título do Dia ---
+    if (tituloDia) {
+        tituloDia.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            if (target.id === 'btnModeloDia') baixarModeloDia();
+            if (target.id === 'btnImportarDia') tituloDia.querySelector('#fileImportarDia')?.click();
+            if (target.id === 'btnCopiarDia') copiarDia();
+            if (target.id === 'btnExcluirSelecionadosDia') excluirSelecionadosDia();
+        });
+
+        // Listener para o input file dinâmico
+        tituloDia.addEventListener('change', (e) => {
+            if (e.target.id === 'fileImportarDia') importarExcelDia(e);
+        });
     }
 
     if (btnImportar && fileImportar) {
@@ -2898,4 +3243,5 @@ document.addEventListener('DOMContentLoaded', () => {
     enableColumnResizing();
     updateColumnColorsStyle(); // Carrega cores salvas
     destacarVeiculosInternados();
+
 });
