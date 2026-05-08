@@ -741,7 +741,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     return new Date(a.data_hora) - new Date(b.data_hora);
                 });
 
-                const lastKmByPlaca = {}; // Armazena o último km_atual para cada placa
+                // NOVO: Busca o KM anterior no banco para o primeiro registro de cada placa no set filtrado.
+                // Isso garante que filtros de datas curtas (ex: apenas 1 dia) mostrem o KM anterior e rodado corretamente.
+                const placasUnicas = [...new Set(consumptionsForKML.map(c => c.placa))];
+                const inicialKmMap = {};
+
+                if (placasUnicas.length > 0) {
+                    await Promise.all(placasUnicas.map(async (placa) => {
+                        const primeiroRegNoSet = consumptionsForKML.find(c => c.placa === placa);
+                        if (!primeiroRegNoSet) return;
+
+                        const dataLimite = primeiroRegNoSet.data_hora;
+
+                        const [resInt, resExt] = await Promise.all([
+                            supabaseClient.from('saidas_combustivel').select('km_atual').eq('veiculo_placa', placa).lt('data_hora', dataLimite).order('data_hora', { ascending: false }).limit(1),
+                            supabaseClient.from('abastecimento_externo').select('km_atual').eq('veiculo_placa', placa).lt('data_hora', dataLimite).order('data_hora', { ascending: false }).limit(1)
+                        ]);
+
+                        const kmInt = resInt.data?.[0]?.km_atual || 0;
+                        const kmExt = resExt.data?.[0]?.km_atual || 0;
+                        const maiorKm = Math.max(kmInt, kmExt);
+                        
+                        if (maiorKm > 0) inicialKmMap[placa] = maiorKm;
+                    }));
+                }
+
+                const lastKmByPlaca = { ...inicialKmMap }; // Inicia com os KMs buscados no banco
 
                 consumptionsForKML.forEach(record => {
                     const placa = record.placa;
