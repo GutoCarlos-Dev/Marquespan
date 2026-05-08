@@ -249,7 +249,8 @@ const RelatorioEstatistica = {
                 ...reg,
                 semana: this.getSemanaLabel(reg.data),
                 valor_hospedagem: valorHospedagem,
-                gasto_total: (reg.valor_diesel || 0) + (valorHospedagem || 0)
+                gasto_total: (reg.valor_diesel || 0) + (valorHospedagem || 0),
+                media_km_lts: reg.litros > 0 ? reg.km_rodado / reg.litros : 0
             };
         });
     },
@@ -333,7 +334,11 @@ const RelatorioEstatistica = {
         });
 
         return Array.from(map.values())
-            .map(item => ({ ...item, placas: Array.from(item.placas).sort().join(', ') }))
+            .map(item => ({ 
+                ...item, 
+                placas: Array.from(item.placas).sort().join(', '),
+                media_km_lts: item.litros > 0 ? item.km_rodado / item.litros : 0
+            }))
             .sort((a, b) => a.semana_ordem.localeCompare(b.semana_ordem) || String(a.rota).localeCompare(String(b.rota), undefined, { numeric: true }));
     },
 
@@ -347,14 +352,14 @@ const RelatorioEstatistica = {
 
     renderHeader() {
         const headers = this.tipoAtual === 'CONSOLIDADO'
-            ? ['SEMANA', 'ROTA', 'QTD LANÇ.', 'PLACAS', 'KM RODADO', 'LITROS DIESEL', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO']
-            : ['DATA/HORA', 'TIPO', 'ROTA', 'PLACA', 'KM ANTERIOR', 'KM ATUAL', 'KM RODADO', 'LITROS DIESEL', 'VALOR UNIT.', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO', 'BICO/POSTO', 'TANQUE'];
+            ? ['SEMANA', 'ROTA', 'QTD LANÇ.', 'PLACAS', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO']
+            : ['DATA/HORA', 'PERÍODO', 'TIPO', 'ROTA', 'PLACA', 'KM ANTERIOR', 'KM ATUAL', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR UNIT.', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO', 'BICO/POSTO', 'TANQUE'];
 
         this.theadRow.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
     },
 
     getColspan() {
-        return this.tipoAtual === 'CONSOLIDADO' ? 9 : 14;
+        return this.tipoAtual === 'CONSOLIDADO' ? 10 : 16;
     },
 
     renderLoading() {
@@ -388,6 +393,7 @@ const RelatorioEstatistica = {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
+                <td>${item.semana}</td>
                 <td>${item.tipo}</td>
                 <td style="font-weight: bold; color: var(--primary-color);">${item.rota || '-'}</td>
                 <td>${item.placa || '-'}</td>
@@ -395,6 +401,7 @@ const RelatorioEstatistica = {
                 <td>${item.km_atual ? `${this.formatNumber(item.km_atual, 0)} km` : 'N/I'}</td>
                 <td>${item.km_rodado > 0 ? `${this.formatNumber(item.km_rodado, 0)} km` : '<span style="color:#999">N/I</span>'}</td>
                 <td>${this.formatNumber(item.litros)} L</td>
+                <td>${item.media_km_lts > 0 ? this.formatNumber(item.media_km_lts, 2) : 'N/I'}</td>
                 <td>${this.formatCurrency(item.valor_unitario)}</td>
                 <td>${this.formatCurrency(item.valor_diesel)}</td>
                 <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
@@ -416,6 +423,7 @@ const RelatorioEstatistica = {
                 <td>${item.placas || '-'}</td>
                 <td>${item.km_rodado > 0 ? `${this.formatNumber(item.km_rodado, 0)} km` : '<span style="color:#999">N/I</span>'}</td>
                 <td>${this.formatNumber(item.litros)} L</td>
+                <td>${item.media_km_lts > 0 ? this.formatNumber(item.media_km_lts, 2) : 'N/I'}</td>
                 <td>${this.formatCurrency(item.valor_diesel)}</td>
                 <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
                 <td style="font-weight: 700; color: var(--primary-color);">${this.formatCurrency(item.gasto_total)}</td>
@@ -433,6 +441,7 @@ const RelatorioEstatistica = {
                 'PLACAS': i.placas,
                 'KM RODADO': i.km_rodado,
                 'LITROS DIESEL': i.litros,
+                'MÉDIA-KM/LTS': i.media_km_lts,
                 'VALOR DIESEL': i.valor_diesel,
                 'HOSPEDAGEM': i.valor_hospedagem,
                 'TOTAL GASTO': i.gasto_total
@@ -441,6 +450,7 @@ const RelatorioEstatistica = {
 
         return this.data.map(i => ({
             'DATA/HORA': new Date(i.data_hora).toLocaleString('pt-BR'),
+            'PERÍODO': i.semana,
             'TIPO': i.tipo,
             'ROTA': i.rota,
             'PLACA': i.placa,
@@ -448,6 +458,7 @@ const RelatorioEstatistica = {
             'KM ATUAL': i.km_atual || '',
             'KM RODADO': i.km_rodado,
             'LITROS DIESEL': i.litros,
+            'MÉDIA-KM/LTS': i.media_km_lts,
             'VALOR UNIT.': i.valor_unitario,
             'VALOR DIESEL': i.valor_diesel,
             'HOSPEDAGEM': i.valor_hospedagem,
