@@ -1492,13 +1492,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const kmValue = parseFloat(this.saidaKm.value);
+            const usuario = this.getUsuarioLogado();
             const commonData = {
                 data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
                 veiculo_placa: placaInput,
                 rota: this.saidaRota.value,
-                km_atual: parseFloat(this.saidaKm.value),
-
-                usuario: this.getUsuarioLogado()
+                km_atual: kmValue,
+                usuario: usuario
             };
 
             const payloads = [];
@@ -1527,10 +1528,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.btnSalvarSaida.innerHTML = originalText;
                     return;
                 }
-                payloads.push({ ...commonData, bico_id: bico2, qtd_litros: litros2 });
+                
+                // Adiciona um offset de 1 segundo para o bico 2 para evitar conflito de cálculo no relatório de KM rodado
+                let dataBico2 = new Date(commonData.data_hora);
+                dataBico2.setSeconds(dataBico2.getSeconds() + 1);
+                
+                payloads.push({ ...commonData, data_hora: dataBico2.toISOString(), bico_id: bico2, qtd_litros: litros2 });
             }
 
             try {
+                // REGISTRA NA TABELA DE COLETA DE KM (Odometer History)
+                if (!isNaN(kmValue) && kmValue > 0) {
+                    const veiculoObj = this.veiculosDisponiveis.find(v => v.placa === placaInput);
+                    await supabaseClient.from('coleta_km').upsert([{
+                        data_coleta: commonData.data_hora,
+                        placa: placaInput,
+                        km_atual: kmValue,
+                        usuario: usuario,
+                        modelo: veiculoObj ? veiculoObj.modelo : '',
+                        observacao: `Abastecimento (${payloads.length} bicos)`
+                    }], { onConflict: 'data_coleta,placa' });
+                }
+
                 if (this.saidaEditingId.value) {
                     // Atualiza o registro principal que está sendo editado
                     const { error: updateError } = await supabaseClient
