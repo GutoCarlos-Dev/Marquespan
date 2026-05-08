@@ -1027,25 +1027,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function findSheetForSemana(workbook, semana) {
         const normalizedWeek = normalizeString(semana);
+        // Tenta extrair o número da semana (ex: de "SEMANA 19 - 2026" extrai "19")
         const weekNumberMatch = normalizedWeek.match(/SEMANA\s*([0-9]{1,2})/);
         const weekNumber = weekNumberMatch ? weekNumberMatch[1] : null;
+        
+        // Prioridade 1: Aba com o nome exato da semana (ex: "SEMANA 19")
+        // 1. Prioridade: Aba com o nome exato da semana (ex: "SEMANA 19 - 2026")
+        let sheet = workbook.SheetNames.find(n => normalizeString(n) === normalizedWeek);
+        if (sheet) return sheet;
 
-        const exactMatch = workbook.SheetNames.find(sheetName => normalizeString(sheetName) === normalizedWeek);
-        if (exactMatch) return exactMatch;
-
-        const partialMatch = workbook.SheetNames.find(sheetName => normalizeString(sheetName).includes(normalizedWeek));
-        if (partialMatch) return partialMatch;
-
+        // Prioridade 2: Aba que contém "PLAN"
+        // 2. Busca pelo número da semana (ex: "19" ou "SEMANA 19")
         if (weekNumber) {
-            const sheetWithWeek = workbook.SheetNames.find(sheetName => normalizeString(sheetName).includes(`SEMANA ${weekNumber}`));
-            if (sheetWithWeek) return sheetWithWeek;
-
-            const sheetWithNumber = workbook.SheetNames.find(sheetName => {
-                const normalizedSheet = normalizeString(sheetName);
-                return normalizedSheet.includes(weekNumber) && !normalizedSheet.includes('SEMANA');
+            sheet = workbook.SheetNames.find(n => {
+                const ns = normalizeString(n);
+                return ns === weekNumber || ns === `SEMANA ${weekNumber}`;
             });
-            if (sheetWithNumber) return sheetWithNumber;
+            if (sheet) return sheet;
         }
+
+        // 3. Busca por aba que contém "PLAN"
+        sheet = workbook.SheetNames.find(n => normalizeString(n).includes('PLAN'));
+        if (sheet) return sheet;
+
+        
+        // 4. Fallback: Se houver apenas uma aba no arquivo, assume que é ela
+        if (workbook.SheetNames.length === 1) return workbook.SheetNames[0];
+        
+        return null;
+    }
+
+    /**
+     * Função Inteligente para Importar a Semana Inteira (Ações Rápidas ou Aba Planejamento)
+     * Se o arquivo tiver abas por dia (SEGUNDA, TERCA, etc), ela consolida tudo.
+     */
+    async function importarExcelPlanejamentoGlobal(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana antes de importar.');
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const diasSemana = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+                
+                // Mapa para consolidar dados por PLACA: { 'ABC1234': { placa, motorista, segunda_rota, segunda_status... } }
+                const consolidado = new Map();
+
+                // Percorre todas as abas do Excel
+                workbook.SheetNames.forEach(sheetName => {
+                    const nomeAba = normalizeString(sheetName);
+                    // Identifica se a aba é um dia da semana (ex: "TERÇA" -> "TERCA")
+                    const diaEncontrado = diasSemana.find(d => nomeAba.includes(d) || (d === 'TERCA' && nomeAba.includes('TERCA')));
+                    
+                    if (diaEncontrado) {
+                        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        json.forEach(row => {
+                            const r = {};
+                            Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+                            
+                            const placa = String(r['PLACA'] || '').trim().toUpperCase();
+                            if (!placa) return;
+
+                            if (!consolidado.has(placa)) {
+                                consolidado.set(placa, {
+                                    semana_nome: semana,
+                                    placa: placa,
+                                    modelo: String(r['MODELO'] || '').trim(),
+                                    motorista: String(r['MOTORISTA'] || '').trim(),
+                                    auxiliar: String(r['AUXILIAR'] || '').trim(),
+                                    terceiro: String(r['TERCEIRO'] || '').trim()
+                                });
+                            }
+
+                            const entry = consolidado.get(placa);
+                            const prefix = diaEncontrado.toLowerCase();
+                            entry[`${prefix}_rota`] = String(r['ROTA'] || r[`${diaEncontrado} ROTA`] || '').trim();
+                            entry[`${prefix}_status`] = String(r['STATUS'] || r['STAT'] || r[`${diaEncontrado} STATUS`] || '').trim();
+                        });
+                    }
+                });
+
+                if (consolidado.size === 0) {
+                    throw new Error('Não foram encontrados dados válidos nas abas diárias (SEGUNDA, TERÇA, etc).');
+                }
+
+                const inserts = Array.from(consolidado.values());
+                if (confirm(`Deseja importar o planejamento consolidado de ${consolidado.size} veículos para a ${semana}?`)) {
+                    const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
+                    if (error) throw error;
+                    alert('✅ Planejamento semanal importado com sucesso!');
+                    carregarPlanejamento(semana);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Erro na importação: ' + err.message);
+            }
+        }
+
+        // 4. Caso o arquivo tenha abas por dia e o usuário esteja tentando importar na aba Planejamento
+        const dayMatch = workbook.SheetNames.find(sheetName => normalizeString(sheetName) === diaAtivo);
+        if (dayMatch) return dayMatch;
 
         return workbook.SheetNames.length === 1 ? workbook.SheetNames[0] : null;
     }
@@ -1719,8 +1806,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnImportar && fileImportar) {
-        btnImportar.addEventListener('click', () => fileImportar.click());
-        fileImportar.addEventListener('change', importarExcel);
+        btnImportar.addEventListener('click', () => {
+            // Se estiver na aba planejamento, usa a nova lógica global
+            fileImportar.click();
+        });
+        fileImportar.addEventListener('change', importarExcelPlanejamentoGlobal);
     }
     if (btnImportarSemana && fileImportarSemana) {
         btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
@@ -1750,6 +1840,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnImportarPlanejamento && fileImportarPlanejamento) {
         btnImportarPlanejamento.addEventListener('click', () => fileImportarPlanejamento.click());
         fileImportarPlanejamento.addEventListener('change', importarExcelPlanejamento);
+        btnImportarPlanejamento.addEventListener('click', () => {
+            // Abre o seletor de arquivos
+            fileImportarPlanejamento.click();
+        });
+        // Altera para usar a lógica global que é mais flexível com múltiplas abas ou nomes variados
+        fileImportarPlanejamento.addEventListener('change', importarExcelPlanejamentoGlobal);
     }
 
     const btnModeloPlanejamento = document.getElementById('btnModeloPlanejamento');
