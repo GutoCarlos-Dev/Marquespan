@@ -563,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sections = Object.keys(SECAO_PARA_DB);
         sections.forEach(sec => {
             const tbody = document.getElementById(`tbody${sec}`);
-            const colspan = sec === 'Faltas' ? 5 : 8;
+            const colspan = sec === 'Faltas' ? 6 : 9;
             if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
@@ -610,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (sec === 'Faltas') {
                             tr.innerHTML = `
+                                <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-dia"></td>
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista_ausente || ''}" data-key="motorista_ausente" placeholder="Motorista" style="${getCellStyle('faltas_afastamentos', item.id, 'motorista_ausente')}"></td>
                                 <td contenteditable="true" data-key="motivo_motorista" style="${getCellStyle('faltas_afastamentos', item.id, 'motivo_motorista')}">${item.motivo_motorista || ''}</td>
                                 <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar_ausente || ''}" data-key="auxiliar_ausente" placeholder="Auxiliar" style="${getCellStyle('faltas_afastamentos', item.id, 'auxiliar_ausente')}"></td>
@@ -618,6 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             `;
                         } else {
                             tr.innerHTML = `
+                                <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-dia"></td>
                                 <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('escala', item.id, 'placa')}"></td>
                                 <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" style="${getCellStyle('escala', item.id, 'modelo')}"></td>
                                 <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota" style="${getCellStyle('escala', item.id, 'rota')}"></td>
@@ -631,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         tbody.appendChild(tr);
                     });
                 } else {
-                    const colspan = sec === 'Faltas' ? 5 : 8;
+                    const colspan = sec === 'Faltas' ? 6 : 9;
                     tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Nenhum registro em ${sec.toUpperCase()}.</td></tr>`;
                 }
             });
@@ -3199,8 +3201,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnFabRemove.addEventListener('click', async () => {
             const selectedCells = document.querySelectorAll('.selected-cell');
             const selectedPlan = document.querySelectorAll('.row-selector-plan:checked');
+            const selectedDia = document.querySelectorAll('.row-selector-dia:checked');
             
-            if (selectedCells.length === 0 && selectedPlan.length === 0) {
+            if (selectedCells.length === 0 && selectedPlan.length === 0 && selectedDia.length === 0) {
                 return alert('Selecione pelo menos uma célula ou linha para excluir.');
             }
 
@@ -3221,6 +3224,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chk.dataset.id) toDelete.planejamento_semanal.push(chk.dataset.id);
             });
 
+            selectedDia.forEach(chk => {
+                const tr = chk.closest('tr');
+                if (tr && tr.dataset.id && tr.dataset.tabela) {
+                    if (!toDelete[tr.dataset.tabela].includes(tr.dataset.id)) {
+                        toDelete[tr.dataset.tabela].push(tr.dataset.id);
+                    }
+                }
+            });
+
             try {
                 for (const table in toDelete) {
                     if (toDelete[table].length > 0) {
@@ -3235,6 +3247,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) { alert('Erro ao excluir: ' + err.message); }
         });
     }
+
+    // Adiciona listener global para checkboxes "selecionar todos" nas tabelas diárias
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('select-all-dia')) {
+            const isChecked = e.target.checked;
+            const table = e.target.closest('table');
+            if (table) {
+                table.querySelectorAll('.row-selector-dia').forEach(chk => chk.checked = isChecked);
+            }
+        }
+    });
 
     // Inicialização
     carregarSemanas();
