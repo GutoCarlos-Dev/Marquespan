@@ -2529,6 +2529,7 @@ const ColetarManutencaoUI = {
                     coletasMap.set(coletaId, {
                         meta: row.coletas_manutencao,
                         items: {},
+                        itemDetails: {},
                         totalCalculado: 0
                     });
                 }
@@ -2566,6 +2567,7 @@ const ColetarManutencaoUI = {
                 }
 
                 entry.items[row.item] = cellValue;
+                entry.itemDetails[row.item] = row.detalhes || '';
             });
 
             // Lista de colunas de itens (incluindo os novos)
@@ -2581,6 +2583,12 @@ const ColetarManutencaoUI = {
             coletasArray.sort((a, b) => new Date(b.meta.data_hora) - new Date(a.meta.data_hora));
 
             coletasArray.forEach(entry => {
+                // Concatenar apenas os detalhes preenchidos do checklist
+                const detalhesConcatenados = Object.entries(entry.itemDetails)
+                    .filter(([, detalhe]) => detalhe && detalhe.trim() !== '')
+                    .map(([item, detalhe]) => `${item}: ${detalhe}`)
+                    .join('; ');
+
                 const row = {
                     'DATA': new Date(entry.meta.data_hora).toLocaleDateString('pt-BR'),
                     'SEMANA': entry.meta.semana,
@@ -2592,11 +2600,35 @@ const ColetarManutencaoUI = {
                 };
 
                 itemColumns.forEach(col => {
-                    row[col] = entry.items[col] || '';
+                    row[col] = entry.itemDetails[col] || '';
                 });
 
                 dadosPlanilha.push(row);
             });
+
+            // Calcular total geral
+            const totalGeral = coletasArray.reduce((sum, entry) => sum + (entry.totalCalculado || 0), 0);
+
+            // Adicionar linha de soma
+            const linhaSoma = {
+                'DATA': '',
+                'SEMANA': '',
+                'PLACA': '',
+                'MODELO': '',
+                'KM': '',
+                'USUARIO': 'TOTAL GERAL:',
+                'VALOR TOTAL': 'R$ ' + totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})
+            };
+
+            // Preencher colunas de itens com vazio
+            itemColumns.forEach(col => {
+                linhaSoma[col] = '';
+            });
+
+            // Adicionar DETALHES vazio
+            linhaSoma['DETALHES'] = '';
+
+            dadosPlanilha.push(linhaSoma);
 
             const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
             const wb = XLSX.utils.book_new();
