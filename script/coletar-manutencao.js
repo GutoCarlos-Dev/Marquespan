@@ -16,6 +16,7 @@ const ColetarManutencaoUI = {
         this.chartStatus = null; // Instância do gráfico de status
         this.chartItems = null; // Instância do gráfico de itens
         this.chartOficinas = null; // Instância do novo gráfico de oficinas
+        this.oficinasMap = {}; // Mapa de nome para ID das oficinas
         
         // Carrega filtros e depois aplica restrições
         this.carregarFiltrosDinamicos().then(() => {
@@ -436,7 +437,7 @@ const ColetarManutencaoUI = {
             }
 
             // Carregar Oficinas
-            const { data: oficinas, error: errOficinas } = await supabaseClient.from('oficinas').select('nome, filial').order('nome');
+            const { data: oficinas, error: errOficinas } = await supabaseClient.from('oficinas').select('id, nome, filial').order('nome');
             
             if (errOficinas) {
                 console.error('Erro ao carregar oficinas para filtro:', errOficinas);
@@ -448,6 +449,12 @@ const ColetarManutencaoUI = {
                 const oficinasFiltradas = filialUsuario && oficinas 
                     ? oficinas.filter(o => !o.filial || o.filial === filialUsuario)
                     : oficinas;
+
+                // Popular mapa de oficinas
+                this.oficinasMap = {};
+                oficinasFiltradas.forEach(o => {
+                    this.oficinasMap[o.nome] = o.id;
+                });
 
                 if (oficinasFiltradas && oficinasFiltradas.length > 0) {
                     // Filtro Lançamento (Select)
@@ -1796,7 +1803,10 @@ const ColetarManutencaoUI = {
 
                 if (searchItem) idQuery = idQuery.eq('item', searchItem);
                 if (searchStatus) idQuery = idQuery.eq('status', searchStatus);
-                if (searchOficina) idQuery = idQuery.ilike('detalhes', `%${searchOficina}%`);
+                if (searchOficina) {
+                    const oficinaId = this.oficinasMap[searchOficina];
+                    if (oficinaId) idQuery = idQuery.eq('oficina_id', oficinaId);
+                }
                 if (roleFilterItem) idQuery = idQuery.eq('item', roleFilterItem);
 
                 const { data: idData, error: idError } = await idQuery;
@@ -2180,11 +2190,13 @@ const ColetarManutencaoUI = {
                 query = query.in('item', selectedItems);
             }
 
-            // Filtros de Oficina (Multi-Select) - Busca no campo detalhes
+            // Filtros de Oficina (Multi-Select) - Busca no campo oficina_id
             const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
             if (selectedOficinas.length > 0) {
-                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
-                query = query.or(oficinaFilters);
+                const oficinaIds = selectedOficinas.map(nome => this.oficinasMap[nome]).filter(id => id);
+                if (oficinaIds.length > 0) {
+                    query = query.in('oficina_id', oficinaIds);
+                }
             }
 
             const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
@@ -2482,8 +2494,10 @@ const ColetarManutencaoUI = {
 
             const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
             if (selectedOficinas.length > 0) {
-                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
-                query = query.or(oficinaFilters);
+                const oficinaIds = selectedOficinas.map(nome => this.oficinasMap[nome]).filter(id => id);
+                if (oficinaIds.length > 0) {
+                    query = query.in('oficina_id', oficinaIds);
+                }
             }
 
             const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
@@ -2574,7 +2588,7 @@ const ColetarManutencaoUI = {
                     'MODELO': entry.meta.modelo,
                     'KM': entry.meta.km,
                     'USUARIO': entry.meta.usuario,
-                    'VALOR TOTAL': (entry.totalCalculado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})
+                    'VALOR TOTAL': 'R$ ' + (entry.totalCalculado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})
                 };
 
                 itemColumns.forEach(col => {
