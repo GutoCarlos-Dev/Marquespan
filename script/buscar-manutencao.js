@@ -1314,6 +1314,15 @@ async function setupImportModal() {
                   <label for="arquivoImportacao" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Arquivo (XLSX):</label>
                   <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
               </div>
+              <div id="importStatus" class="hidden" style="margin-bottom: 20px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fb;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; color: #333;">
+                      <span class="import-status-text">Carregando... Aguarde</span>
+                      <span class="import-progress-percent">0%</span>
+                  </div>
+                  <div style="position: relative; height: 10px; background: #e8ecef; border-radius: 10px; overflow: hidden;">
+                      <div id="importProgressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4caf50, #24a148); transition: width 0.2s ease;"></div>
+                  </div>
+              </div>
               <div style="text-align: right;">
                   <button type="button" id="btnCancelarImportacao" style="padding: 8px 16px; margin-right: 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
                   <button type="submit" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Importar</button>
@@ -1336,6 +1345,38 @@ async function setupImportModal() {
       e.preventDefault();
       baixarModeloImportacao();
   });
+}
+
+function setImportProgress(text, percent) {
+  const status = document.getElementById('importStatus');
+  const progressFill = document.getElementById('importProgressBarFill');
+  const percentText = status?.querySelector('.import-progress-percent');
+  const statusText = status?.querySelector('.import-status-text');
+  if (!status || !progressFill || !percentText || !statusText) return;
+  statusText.textContent = text || 'Carregando... Aguarde';
+  const clamped = Math.max(0, Math.min(100, percent || 0));
+  progressFill.style.width = `${clamped}%`;
+  percentText.textContent = `${clamped}%`;
+}
+
+function showImportProgress(show) {
+  const status = document.getElementById('importStatus');
+  const closeBtn = document.getElementById('closeModalImportar');
+  const form = document.getElementById('formImportar');
+  if (!status || !form) return;
+  status.classList.toggle('hidden', !show);
+  const elements = Array.from(form.querySelectorAll('input, select, button'));
+  elements.forEach(el => {
+      if (el.id === 'btnCancelarImportacao' || el.type === 'submit') {
+          el.disabled = show;
+      } else if (el.type !== 'submit') {
+          el.disabled = show;
+      }
+  });
+  if (closeBtn) {
+      closeBtn.style.pointerEvents = show ? 'none' : '';
+      closeBtn.style.opacity = show ? '0.5' : '1';
+  }
 }
 
 function baixarModeloImportacao() {
@@ -1374,6 +1415,8 @@ async function handleImportSubmit(e) {
   const originalText = btnSubmit.textContent;
   btnSubmit.disabled = true;
   btnSubmit.textContent = 'Processando...';
+  showImportProgress(true);
+  setImportProgress('Preparando importação... Aguarde', 0);
 
   const reader = new FileReader();
   reader.onload = async (ev) => {
@@ -1386,7 +1429,9 @@ async function handleImportSubmit(e) {
 
           if (json.length === 0) throw new Error('Planilha vazia.');
 
-          await processarDadosImportacao(json, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, anexoInput.files);
+          await processarDadosImportacao(json, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, anexoInput.files, (message, percent) => {
+              setImportProgress(message, percent);
+          });
           
           document.getElementById('modalImportar').classList.add('hidden');
           document.getElementById('formImportar').reset();
@@ -1398,13 +1443,15 @@ async function handleImportSubmit(e) {
           btnSubmit.disabled = false;
           btnSubmit.textContent = originalText;
           fileInput.value = '';
+          showImportProgress(false);
       }
   };
   reader.readAsArrayBuffer(file);
 }
 
-async function processarDadosImportacao(dados, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, arquivosAnexo) {
+async function processarDadosImportacao(dados, tipo, filialSelecionada, fornecedorSelecionado, tipoManutencaoSelecionado, arquivosAnexo, progressCallback = () => {}) {
   const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+  const totalRows = dados.length;
   const manutencoesParaInserir = [];
   const valoresParaInserir = [];
   const importedRecords = []; // Para registros que foram inseridos com sucesso
@@ -1432,7 +1479,36 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
       return Number.isNaN(parsed) ? null : parsed;
   };
 
-  for (const row of dados) {
+  const parseExcelDate = (value) => {
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value.toISOString().split('T')[0];
+      }
+      const rawValue = (typeof value === 'string') ? value.trim() : value;
+      if (typeof rawValue === 'number' && rawValue > 0) {
+          const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+          const date = new Date(excelEpoch.getTime() + rawValue * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+      }
+      if (typeof rawValue === 'string' && /^\d+$/.test(rawValue)) {
+          const numeric = Number(rawValue);
+          if (!Number.isNaN(numeric) && numeric > 0) {
+              const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+              const date = new Date(excelEpoch.getTime() + numeric * 24 * 60 * 60 * 1000);
+              return date.toISOString().split('T')[0];
+          }
+      }
+      if (typeof rawValue === 'string' && rawValue.includes('/')) {
+          const parts = rawValue.split('/');
+          if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      if (typeof rawValue === 'string' && rawValue.includes('-')) {
+          return rawValue.split('T')[0];
+      }
+      return null;
+  };
+
+  for (let rowIndex = 0; rowIndex < dados.length; rowIndex++) {
+      const row = dados[rowIndex];
       const r = {};
       let motivoRejeicao = '';
       Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
@@ -1440,16 +1516,8 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
       let dataISO = null;
       const dataRaw = getCell(r, ['DATA', 'DT']);
       if (hasValue(dataRaw)) {
-           if (typeof dataRaw === 'string' && dataRaw.includes('/')) {
-               const parts = dataRaw.split('/');
-               if(parts.length === 3) dataISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
-           } else if (dataRaw instanceof Date) {
-               dataISO = dataRaw.toISOString().split('T')[0];
-           } else {
-               dataISO = String(dataRaw).trim();
-           }
+          dataISO = parseExcelDate(dataRaw);
       }
-      if (dataISO && dataISO.includes('T')) dataISO = dataISO.split('T')[0];
       
       const placa = String(getCell(r, ['PLACA', 'VEICULO']) || '').toUpperCase().trim();
       if (!placa) {
@@ -1488,10 +1556,15 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
 
       manutencoesParaInserir.push(payloadManutencao);
       valoresParaInserir.push((valorNfe || 0) + (valorNfse || 0)); // Guarda o valor para o item
+
+      if ((rowIndex + 1) % 5 === 0 || rowIndex === totalRows - 1) {
+          progressCallback('Validando registros... Aguarde', Math.round(10 + ((rowIndex + 1) / totalRows) * 15));
+      }
   }
 
   if (manutencoesParaInserir.length > 0) {
       // 1. Insere as manutenções (cabeçalho)
+      progressCallback('Inserindo manutenções...', 30);
       const { data: inserted, error } = await supabaseClient.from('manutencao').insert(manutencoesParaInserir).select();
       if (error) {
           // Se a inserção em lote falhar, todos os itens do lote são considerados rejeitados
@@ -1501,15 +1574,18 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
 
       // Adiciona os registros inseridos com sucesso à lista de importados
       inserted.forEach(m => importedRecords.push(m));
+      progressCallback('Preparando itens de valor...', 55);
       
       // 2. Prepara os itens com o valor total
       const itens = inserted.map((m, i) => ({
           id_manutencao: m.id,
           quantidade: 1,
+          descricao: m.descricao || m.titulo || 'Valor importado',
           valor: valoresParaInserir[i] || 0
       })).filter(item => item.valor > 0);
       
       // 3. Insere os itens na tabela manutencao_itens
+      progressCallback('Inserindo itens de valor...', 70);
       if (itens.length > 0) {
           const { error: errItens } = await supabaseClient.from('manutencao_itens').insert(itens);
           if (errItens) console.error("Erro ao inserir itens de valor:", errItens);
@@ -1517,8 +1593,12 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
 
       // Processar anexo se houver
       if (arquivosAnexo && arquivosAnexo.length > 0) {
+          progressCallback('Preparando anexos...', 75);
           const arquivosPreparados = await prepararArquivosParaAnexo(arquivosAnexo);
           if (!arquivosPreparados) throw new Error('Não foi possível preparar os anexos para importação.');
+
+          const totalAnexos = arquivosPreparados.length * inserted.length;
+          let anexosProcessados = 0;
 
           for (const m of inserted) {
               for (const arquivo of arquivosPreparados) {
@@ -1538,11 +1618,16 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
                   } else {
                       console.error(`Erro ao enviar anexo ${arquivo.name} para manutenção ${m.id}:`, uploadError);
                   }
+
+                  anexosProcessados += 1;
+                  progressCallback(`Enviando anexos... (${anexosProcessados}/${totalAnexos})`, Math.round(75 + (anexosProcessados / totalAnexos) * 20));
               }
           }
       }
 
+      progressCallback('Finalizando importação...', 95);
       alert(`${inserted.length} registros de ${tipo} importados com sucesso!`);
+      progressCallback('Importação concluída!', 100);
       // Gera o relatório final
       gerarRelatorioImportacao(importedRecords, rejectedRecords);
   } else {
