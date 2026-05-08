@@ -1300,7 +1300,7 @@ async function setupImportModal() {
                   <select id="tipoManutencaoImportacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                       <option value="">Selecione...</option>
                       <option value="PREVENTIVA">PREVENTIVA</option>
-                      <option value="CORRETIVO">CORRETIVO</option>
+                      <option value="CORRETIVA">CORRETIVA</option>
                   </select>
               </div>
               <div style="margin-bottom: 15px;">
