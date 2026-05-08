@@ -720,10 +720,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 // Adiciona opção de Boleta se aplicável
-                if ((input.dataset.key === 'motorista' || input.dataset.key === 'auxiliar') && input.value.trim() !== '') {
+                const key = input.dataset.key;
+                if ((key === 'motorista' || key === 'auxiliar' || key === 'terceiro') && input.value.trim() !== '') {
                     const nome = input.value.trim();
+                    const placa = tr.querySelector('input[data-key="placa"]')?.value || '';
+                    const rota = tr.querySelector('input[data-key="rota"]')?.value || '';
+                    const modelo = tr.querySelector('input[data-key="modelo"]')?.value || '';
+
                     menuHTML += `<div class="context-menu-item-separator" style="border-bottom:1px solid #eee; margin: 4px 0;"></div>`;
-                    menuHTML += `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
+                    menuHTML += `<div class="context-menu-item" data-action="gerarBoleta" data-nome="${nome}" data-placa="${placa}" data-rota="${rota}" data-modelo="${modelo}"><i class="fas fa-file-invoice" style="margin-right: 8px;"></i>Gerar Boleta para ${nome}</div>`;
                 }
 
                 menuHTML += getSavedColorsHTML();
@@ -738,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const itemMenu = contextMenu.querySelector('[data-action="gerarBoleta"]');
                 if(itemMenu) {
                     itemMenu.addEventListener('click', () => {
-                        abrirModalBoletaComDados(itemMenu.dataset.nome);
+                        abrirModalBoletaComDados(itemMenu.dataset.nome, itemMenu.dataset.placa, itemMenu.dataset.rota, itemMenu.dataset.modelo);
                         contextMenu.style.display = 'none';
                     });
                 }
@@ -1895,8 +1900,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Constrói a query dinamicamente baseada no tipo de filtro
             if (tipo === 'MOTORISTA') {
-                // Busca por motorista OU auxiliar
-                query = query.or(`motorista.ilike.%${valor}%,auxiliar.ilike.%${valor}%`);
+                // Busca por motorista, auxiliar OU terceiro
+                query = query.or(`motorista.ilike.%${valor}%,auxiliar.ilike.%${valor}%,terceiro.ilike.%${valor}%`);
             } else if (tipo === 'ROTA') {
                 // Para rotas, uma correspondência exata é mais segura
                 query = query.eq('rota', valor);
@@ -1919,11 +1924,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function abrirModalBoletaComDados(nome) {
+    function abrirModalBoletaComDados(nome, placa = '', rota = '', modelo = '') {
         const modal = document.getElementById('modalBoleta');
         const tipoSelect = document.getElementById('filtroBoletaTipo');
         const valorInput = document.getElementById('filtroBoletaValor');
         const dataInput = document.getElementById('boletaData');
+        const bPlaca = document.getElementById('boletaPlaca');
+        const bModelo = document.getElementById('boletaModelo');
+        const bRota = document.getElementById('boletaRota');
 
         if (!modal || !tipoSelect || !valorInput || !dataInput) return;
 
@@ -1934,6 +1942,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preenche os campos
         tipoSelect.value = 'MOTORISTA';
         valorInput.value = nome;
+        if (bPlaca) bPlaca.value = placa;
+        if (bModelo) bModelo.value = modelo;
+        if (bRota) bRota.value = rota;
 
         // Define a data para o dia que está sendo visualizado na escala
         const diaAtivo = document.querySelector('.tab-btn.active')?.dataset.dia;
@@ -1942,8 +1953,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dataInput.value = CACHE_DATAS[semanaAtiva][diaAtivo].toISOString().split('T')[0];
         }
 
-        // Dispara a busca dos dados do veículo
-        buscarDadosBoleta();
+        // Se não tiver placa ou rota (caso clique em um campo vazio ou erro de extração), tenta buscar no banco
+        if (!placa || !rota) buscarDadosBoleta();
     }
 
     // --- INICIALIZAÇÃO ---
