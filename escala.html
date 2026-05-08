@@ -55,12 +55,14 @@
                             <input type="text" id="globalSearch" class="glass-input" placeholder="Buscar na escala..." style="padding-left: 35px;">
                             <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999;"></i>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             <button id="btnPDF" class="btn-glass btn-red"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                             <button id="btnXLSX" class="btn-glass btn-green"><i class="fa-solid fa-file-excel"></i> XLSX</button>
+                            <button id="btnImportarSemana" class="btn-glass btn-blue"><i class="fa-solid fa-file-import"></i> Importar Semana</button>
                         </div>
                         <input type="file" id="fileImportar" accept=".xlsx, .xls" style="display: none;">
                         <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
+                        <input type="file" id="fileImportarSemana" accept=".xlsx, .xls" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -301,6 +303,18 @@
                     <button id="btnGerarBoletaPDF" class="btn-custom btn-pdf"><i class="fa-solid fa-file-pdf"></i> Gerar PDF</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Progresso de Importação -->
+    <div id="importProgressModal" class="import-modal hidden">
+        <div class="import-modal-content">
+            <h2><i class="fa-solid fa-spinner"></i> Importando Planilha...</h2>
+            <p id="importProgressText">Processando: 0%</p>
+            <div class="progress-bar-container">
+                <div id="importProgressBar" class="progress-bar" style="width: 0%;"></div>
+            </div>
+            <p id="importProgressDetails" style="font-size: 12px; color: #666; margin-top: 10px;"></p>
         </div>
     </div>
 

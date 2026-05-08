@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnImportar = document.getElementById('btnImportar');
     const fileImportar = document.getElementById('fileImportar');
     const fileImportarDia = document.getElementById('fileImportarDia');
+    const btnImportarSemana = document.getElementById('btnImportarSemana');
+    const fileImportarSemana = document.getElementById('fileImportarSemana');
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const globalSearch = document.getElementById('globalSearch');
@@ -1014,62 +1016,193 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     }
 
+    function normalizeString(value) {
+        return String(value || '')
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .toUpperCase();
+    }
+
+    function findSheetForSemana(workbook, semana) {
+        const normalizedWeek = normalizeString(semana);
+        const weekNumberMatch = normalizedWeek.match(/SEMANA\s*([0-9]{1,2})/);
+        const weekNumber = weekNumberMatch ? weekNumberMatch[1] : null;
+
+        const exactMatch = workbook.SheetNames.find(sheetName => normalizeString(sheetName) === normalizedWeek);
+        if (exactMatch) return exactMatch;
+
+        const partialMatch = workbook.SheetNames.find(sheetName => normalizeString(sheetName).includes(normalizedWeek));
+        if (partialMatch) return partialMatch;
+
+        if (weekNumber) {
+            const sheetWithWeek = workbook.SheetNames.find(sheetName => normalizeString(sheetName).includes(`SEMANA ${weekNumber}`));
+            if (sheetWithWeek) return sheetWithWeek;
+
+            const sheetWithNumber = workbook.SheetNames.find(sheetName => {
+                const normalizedSheet = normalizeString(sheetName);
+                return normalizedSheet.includes(weekNumber) && !normalizedSheet.includes('SEMANA');
+            });
+            if (sheetWithNumber) return sheetWithNumber;
+        }
+
+        return workbook.SheetNames.length === 1 ? workbook.SheetNames[0] : null;
+    }
+
+    function findRowKey(row, terms) {
+        return Object.keys(row).find(key => terms.some(term => key.includes(term))) || null;
+    }
+
+    function findDayColumnKey(row, day, type) {
+        const normalizedDay = normalizeString(day);
+        const aliases = [normalizedDay, normalizedDay.slice(0, 3)];
+        return Object.keys(row).find(key => aliases.some(alias => key.includes(alias)) && key.includes(type)) || null;
+    }
+
     async function importarExcelPlanejamento(e) {
         const file = e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = async (evt) => {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            // Mostrar modal de progresso
+            const importModal = document.getElementById('importProgressModal');
+            const progressBar = document.getElementById('importProgressBar');
+            const progressText = document.getElementById('importProgressText');
+            const progressDetails = document.getElementById('importProgressDetails');
+            
+            importModal.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Processando: 0%';
+            progressDetails.textContent = '';
 
-            const semana = selectSemana.value;
-            if (!semana) return alert('Selecione uma semana.');
+            try {
+                // Simular atraso de leitura do arquivo
+                await new Promise(resolve => setTimeout(resolve, 300));
+                progressBar.style.width = '15%';
+                progressText.textContent = 'Processando: 15%';
+                progressDetails.textContent = 'Lendo arquivo Excel...';
 
-            const inserts = [];
-            const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
-            const diasExcel = {
-                'DOMINGO': 'DOMINGO', 'SEGUNDA': 'SEGUNDA', 'TERCA': 'TERÇA', 
-                'QUARTA': 'QUARTA', 'QUINTA': 'QUINTA', 'SEXTA': 'SEXTA', 'SABADO': 'SÁBADO'
-            };
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progressBar.style.width = '30%';
+                progressText.textContent = 'Processando: 30%';
+                progressDetails.textContent = 'Localizando planilha...';
 
-            json.forEach(row => {
-                const rowUpper = {};
-                Object.keys(row).forEach(k => rowUpper[k.toUpperCase().trim()] = row[k]);
+                const semana = selectSemana.value;
+                if (!semana) {
+                    importModal.classList.add('hidden');
+                    return alert('Selecione uma semana.');
+                }
 
-                const item = {
-                    semana_nome: semana,
-                    placa: rowUpper['PLACA'],
-                    modelo: rowUpper['MODELO'],
-                    motorista: rowUpper['MOTORISTA'],
-                    auxiliar: rowUpper['AUXILIAR'],
-                    terceiro: rowUpper['TERCEIRO']
-                };
+                const sheetName = findSheetForSemana(workbook, semana);
+                if (!sheetName) {
+                    importModal.classList.add('hidden');
+                    return alert('Não foi possível localizar a aba correspondente à semana selecionada. Verifique o nome da planilha no arquivo Excel.');
+                }
 
-                dias.forEach(dia => {
-                    const diaEx = diasExcel[dia.toUpperCase()] || dia.toUpperCase();
-                    const rotaKey = Object.keys(rowUpper).find(k => k.includes(diaEx) && k.includes('ROTA'));
-                    const statusKey = Object.keys(rowUpper).find(k => k.includes(diaEx) && k.includes('STATUS'));
-                    if (rotaKey) item[`${dia.toLowerCase()}_rota`] = rowUpper[rotaKey];
-                    if (statusKey) item[`${dia.toLowerCase()}_status`] = rowUpper[statusKey];
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progressBar.style.width = '45%';
+                progressText.textContent = 'Processando: 45%';
+                progressDetails.textContent = 'Convertendo dados...';
+
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+                if (!json || json.length === 0) {
+                    importModal.classList.add('hidden');
+                    return alert('A planilha selecionada está vazia ou não possui dados válidos.');
+                }
+
+                const inserts = [];
+                const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+                const totalRows = json.length;
+
+                json.forEach((rawRow, index) => {
+                    // Atualizar progresso de processamento de linhas (45% - 80%)
+                    const rowProgress = 45 + (index / totalRows) * 35;
+                    progressBar.style.width = rowProgress + '%';
+                    progressText.textContent = `Processando: ${Math.round(rowProgress)}%`;
+                    progressDetails.textContent = `Processando linhas: ${index + 1} de ${totalRows}`;
+
+                    const row = {};
+                    Object.keys(rawRow).forEach(key => {
+                        const normalized = normalizeString(key);
+                        if (normalized) row[normalized] = rawRow[key];
+                    });
+
+                    const placaKey = findRowKey(row, ['PLACA', 'VEICULO', 'CAMINHAO', 'CARRO']);
+                    const modeloKey = findRowKey(row, ['MODELO']);
+                    const motoristaKey = findRowKey(row, ['MOTORISTA', 'CONDUTOR', 'CHOFER']);
+                    const auxiliarKey = findRowKey(row, ['AUXILIAR', 'APOIO']);
+                    const terceiroKey = findRowKey(row, ['TERCEIRO', 'TERCEIRA', 'TERCEIR']);
+
+                    const item = {
+                        semana_nome: semana,
+                        placa: placaKey ? String(row[placaKey]).trim() : '',
+                        modelo: modeloKey ? String(row[modeloKey]).trim() : '',
+                        motorista: motoristaKey ? String(row[motoristaKey]).trim() : '',
+                        auxiliar: auxiliarKey ? String(row[auxiliarKey]).trim() : '',
+                        terceiro: terceiroKey ? String(row[terceiroKey]).trim() : ''
+                    };
+
+                    let hasAnyData = !!item.placa || !!item.motorista || !!item.auxiliar || !!item.terceiro;
+
+                    dias.forEach(dia => {
+                        const rotaKey = findDayColumnKey(row, dia, 'ROTA');
+                        const statusKey = findDayColumnKey(row, dia, 'STATUS');
+                        item[`${dia.toLowerCase()}_rota`] = rotaKey ? String(row[rotaKey]).trim() : '';
+                        item[`${dia.toLowerCase()}_status`] = statusKey ? String(row[statusKey]).trim() : '';
+                        if (item[`${dia.toLowerCase()}_rota`] || item[`${dia.toLowerCase()}_status`]) {
+                            hasAnyData = true;
+                        }
+                    });
+
+                    if (hasAnyData) {
+                        inserts.push(item);
+                    }
                 });
 
-                if (item.placa) inserts.push(item);
-            });
+                await new Promise(resolve => setTimeout(resolve, 200));
+                progressBar.style.width = '80%';
+                progressText.textContent = 'Processando: 80%';
+                progressDetails.textContent = 'Confirmando importação...';
 
-            if (inserts.length > 0 && confirm(`Importar ${inserts.length} registros para o Planejamento?`)) {
-                try {
-                    const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
-                    if (error) throw error;
-                    alert('Importação concluída!');
-                    carregarPlanejamento(semana);
-                } catch (err) {
-                    console.error('Erro na importação:', err);
-                    alert('Erro: ' + err.message);
+                if (inserts.length > 0 && confirm(`Importar ${inserts.length} registros para o Planejamento da ${semana}?`)) {
+                    try {
+                        progressBar.style.width = '90%';
+                        progressText.textContent = 'Processando: 90%';
+                        progressDetails.textContent = 'Enviando para banco de dados...';
+
+                        const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
+                        if (error) throw error;
+
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Processando: 100%';
+                        progressDetails.textContent = 'Importação concluída com sucesso!';
+
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        importModal.classList.add('hidden');
+                        alert('Importação concluída!');
+                        carregarPlanejamento(semana);
+                    } catch (err) {
+                        importModal.classList.add('hidden');
+                        console.error('Erro na importação:', err);
+                        alert('Erro: ' + err.message);
+                    }
+                } else if (inserts.length === 0) {
+                    importModal.classList.add('hidden');
+                    alert('Nenhum registro válido encontrado para importar desta planilha.');
+                } else {
+                    importModal.classList.add('hidden');
                 }
+            } catch (err) {
+                importModal.classList.add('hidden');
+                console.error('Erro ao processar arquivo:', err);
+                alert('Erro ao processar o arquivo: ' + err.message);
             }
+            
             e.target.value = '';
         };
         reader.readAsArrayBuffer(file);
@@ -1588,6 +1721,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnImportar && fileImportar) {
         btnImportar.addEventListener('click', () => fileImportar.click());
         fileImportar.addEventListener('change', importarExcel);
+    }
+    if (btnImportarSemana && fileImportarSemana) {
+        btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
+        fileImportarSemana.addEventListener('change', importarExcelPlanejamento);
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
     if (btnPDF) {
