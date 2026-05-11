@@ -1,0 +1,114 @@
+/* pedagio.css */
+
+/* Layout principal das seções */
+.lancamentos-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Filtros maiores, ações menores */
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Estilo para os cards internos (filtros e ações) */
+.glass-panel-inner {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.glass-panel-inner h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    border-bottom: 1px solid rgba(0, 105, 55, 0.2);
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filtros-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.form-group-filter {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group-filter label {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.acoes-grid-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Tabela de lançamentos */
+.pedagio-table-container {
+    max-height: 500px; /* Altura máxima para rolagem */
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.pedagio-table-container thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para o modal de lançamento */
+#modalLancamento .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+#modalLancamento .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+#modalLancamento .form-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+/* Estilo para o input com botão (Praça + Google Maps) */
+.input-group-append {
+    display: flex;
+    gap: 5px;
+}
+
+.input-group-append .glass-input {
+    flex-grow: 1;
+}
+
+.input-group-append .compact-btn {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    min-width: 40px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .lancamentos-layout {
+        grid-template-columns: 1fr; /* Coluna única em telas menores */
+    }
+
+    #modalLancamento .form-grid {
+        grid-template-columns: 1fr; /* Coluna única no modal em telas menores */
+    }
+}

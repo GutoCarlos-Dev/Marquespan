@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Pedágios - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/pedagio.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <!-- 🧱 Conteúdo principal -->
+  <main class="main-content">
+    <header class="header glass-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h1><i class="fas fa-road"></i> Gestão de Pedágios</h1>
+    </header>
+
+    <!-- Navegação por Abas -->
+    <div class="painel-navegacao" id="menu-pedagio">
+      <button class="painel-btn active" data-secao="sectionLancamento"><i class="fas fa-list"></i> Lançamentos</button>
+      <button class="painel-btn" data-secao="sectionImportacao"><i class="fas fa-file-import"></i> Importação</button>
+      <button class="painel-btn" data-secao="sectionEmpresas"><i class="fas fa-building"></i> Empresas de Pedágio</button>
+    </div>
+
+    <!-- SEÇÃO: LANÇAMENTOS -->
+    <section id="sectionLancamento" class="glass-panel">
+      <h3><i class="fas fa-money-bill-wave"></i> Pedágios Lançados</h3>
+      
+      <div class="lancamentos-layout">
+        <!-- Card de Filtros -->
+        <div class="glass-panel-inner">
+            <h4><i class="fas fa-filter"></i> Filtros</h4>
+            <div class="filtros-container">
+                <div class="form-group-filter">
+                    <label for="filtroDataInicialLancamento">Data Inicial</label>
+                    <input type="date" id="filtroDataInicialLancamento" class="glass-input">
+                </div>
+                <div class="form-group-filter">
+                    <label for="filtroDataFinalLancamento">Data Final</label>
+                    <input type="date" id="filtroDataFinalLancamento" class="glass-input">
+                </div>
+                <div class="form-group-filter">
+                    <label>Placa</label>
+                    <input type="text" id="searchPlaca" placeholder="Buscar Placa..." class="glass-input">
+                </div>
+                <div class="form-group-filter" style="align-self: flex-end;">
+                    <button id="btnFiltrarLancamentos" class="btn-glass btn-blue" style="width: 100%;"><i class="fas fa-search"></i> Filtrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Ações -->
+        <div class="glass-panel-inner actions-panel">
+            <h4><i class="fas fa-cogs"></i> Ações</h4>
+            <div class="acoes-grid-vertical">
+                <button id="btnAdicionarLancamento" class="btn-glass btn-green"><i class="fas fa-plus"></i> Novo Lançamento</button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="table-responsive pedagio-table-container">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th data-sort="data_hora_passagem">DATA/HORA <i class="fas fa-sort"></i></th>
+              <th data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
+              <th data-sort="rodovia">RODOVIA <i class="fas fa-sort"></i></th>
+              <th data-sort="praca">PRAÇA <i class="fas fa-sort"></i></th>
+              <th data-sort="valor">VALOR <i class="fas fa-sort"></i></th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyLancamentos">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: IMPORTAÇÃO -->
+    <section id="sectionImportacao" class="glass-panel hidden">
+        <h3><i class="fas fa-file-upload"></i> Importar Planilha de Pedágios</h3>
+        <form id="formImportacaoPedagio">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="empresaPedagioSelect">Empresa de Pedágio</label>
+                    <select id="empresaPedagioSelect" class="glass-input" required>
+                        <option value="">Selecione a Empresa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="arquivoImportacao">Arquivo Excel (.xlsx)</label>
+                    <input type="file" id="arquivoImportacao" accept=".xlsx" class="glass-input" required>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-glass btn-green"><i class="fas fa-upload"></i> Processar Importação</button>
+            </div>
+        </form>
+        <div id="importStatus" style="margin-top: 20px;"></div>
+    </section>
+
+    <!-- SEÇÃO: CADASTRO DE EMPRESAS DE PEDÁGIO -->
+    <section id="sectionEmpresas" class="glass-panel hidden">
+        <h3><i class="fas fa-building"></i> Cadastro de Empresas de Pedágio</h3>
+        <form id="formEmpresaPedagio">
+            <input type="hidden" id="empresaPedagioEditingId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="empresaPedagioNome">Nome da Empresa</label>
+                    <input type="text" id="empresaPedagioNome" class="glass-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="empresaPedagioLayout">Layout de Importação (JSON)</label>
+                    <textarea id="empresaPedagioLayout" class="glass-input" rows="5" placeholder='Ex: {"PLACA": "A1", "DATA": "B1", "VALOR": "C1"}'></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Empresa</button>
+                <button type="button" id="btnLimparEmpresaPedagio" class="btn-glass btn-blue"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+        </form>
+        <div class="table-responsive" style="margin-top: 20px;">
+            <table class="glass-table data-grid">
+                <thead>
+                    <tr><th>Nome</th><th>Layout</th><th>Ações</th></tr>
+                </thead>
+                <tbody id="tableBodyEmpresasPedagio"></tbody>
+            </table>
+        </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL INCLUIR LANÇAMENTO -->
+  <div id="modalLancamento" class="modal-backdrop hidden">
+    <div class="glass-modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus"></i> Incluir Lançamento de Pedágio</h3>
+            <button class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="formLancamentoPedagio">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="lancamentoPlaca">PLACA</label>
+                        <input type="text" id="lancamentoPlaca" list="veiculosList" class="glass-input" required placeholder="AAA0000">
+                        <datalist id="veiculosList"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoMarca">MARCA</label>
+                        <input type="text" id="lancamentoMarca" class="glass-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoCateg">CATEG (Eixos)</label>
+                        <input type="number" id="lancamentoCateg" class="glass-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoDataHora">DATA/HORA</label>
+                        <input type="datetime-local" id="lancamentoDataHora" class="glass-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoRodovia">RODOVIA</label>
+                        <input type="text" id="lancamentoRodovia" class="glass-input" placeholder="Ex: BR-116">
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoPraca">PRAÇA</label>
+                        <div class="input-group-append">
+                            <input type="text" id="lancamentoPraca" class="glass-input" placeholder="Ex: Campo Largo">
+                            <button type="button" id="btnGoogleMaps" class="btn-glass btn-blue compact-btn" title="Abrir no Google Maps"><i class="fas fa-map-marker-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lancamentoValor">VALOR</label>
+                        <input type="number" id="lancamentoValor" step="0.01" min="0" class="glass-input" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Lançamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- 🦶 Rodapé -->
+  <footer class="footer">
+    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <!-- 🚀 Scripts -->
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/pedagio.js"></script>
+</body>
+</html>
