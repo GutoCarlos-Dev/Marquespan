@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 const EstoqueGeralUI = {
     init() {
@@ -34,6 +35,9 @@ const EstoqueGeralUI = {
         this.modalEstoqueMinimo = document.getElementById('modalEstoqueMinimo');
         this.modalEstoqueMinimoBody = document.getElementById('modal-estoque-minimo-body');
         this.btnCloseModalEstoqueMinimo = document.getElementById('btnCloseModalEstoqueMinimo');
+        this.btnExportarEstoqueXLSX = document.getElementById('btnExportarEstoqueXLSX');
+        this.btnExportarEstoquePDF = document.getElementById('btnExportarEstoquePDF');
+        this.btnFecharModalEstoqueMinimo = document.getElementById('btnFecharModalEstoqueMinimo');
         this.estoqueAtualData = [];
 
         // Aba Retirada
@@ -112,6 +116,9 @@ const EstoqueGeralUI = {
         });
         this.btnEstoqueMinimo?.addEventListener('click', () => this.abrirModalEstoqueMinimo());
         this.btnCloseModalEstoqueMinimo?.addEventListener('click', () => this.fecharModalEstoqueMinimo());
+        this.btnExportarEstoqueXLSX?.addEventListener('click', () => this.exportarEstoqueXLSX());
+        this.btnExportarEstoquePDF?.addEventListener('click', () => this.exportarEstoquePDF());
+        this.btnFecharModalEstoqueMinimo?.addEventListener('click', () => this.fecharModalEstoqueMinimo());
         window.addEventListener('click', (e) => {
             if (e.target === this.modalEstoqueMinimo) {
                 this.fecharModalEstoqueMinimo();
@@ -469,6 +476,145 @@ const EstoqueGeralUI = {
 
     fecharModalEstoqueMinimo() {
         this.modalEstoqueMinimo?.classList.add('hidden');
+    },
+
+    async getLogoBase64PDF() {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = 'logo.png';
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg'));
+            };
+            img.onerror = () => resolve(null);
+        });
+    },
+
+    exportarEstoqueXLSX() {
+        const lowStockItems = (this.estoqueAtualData || []).filter(p => {
+            const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const minimo = parseFloat(p.quantidade_minima) || 0;
+            return qtd <= minimo;
+        });
+
+        if (!lowStockItems || lowStockItems.length === 0) {
+            alert('Nenhum item em estoque mínimo para exportar.');
+            return;
+        }
+
+        const ws = XLSX.utils.json_to_sheet(lowStockItems.map(p => ({
+            'Código': p.codigo_principal || '-',
+            'Produto': p.nome || '-',
+            'Unidade': p.unidade_medida || 'UN',
+            'Estoque Atual': parseFloat(p.quantidade_em_estoque) || 0,
+            'Quantidade Mínima': parseFloat(p.quantidade_minima) || 0
+        })));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Estoque Mínimo');
+        XLSX.writeFile(wb, `Estoque_Minimo_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    async exportarEstoquePDF() {
+        const lowStockItems = (this.estoqueAtualData || []).filter(p => {
+            const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const minimo = parseFloat(p.quantidade_minima) || 0;
+            return qtd <= minimo;
+        });
+
+        if (!lowStockItems || lowStockItems.length === 0) {
+            alert('Nenhum item em estoque mínimo para exportar.');
+            return;
+        }
+
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('Biblioteca jsPDF não carregada. Verifique sua conexão.');
+            return;
+        }
+
+        const btn = this.btnExportarEstoquePDF;
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+        }
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const logoBase64 = await this.getLogoBase64PDF();
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+
+            // Cabeçalho com logo
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+            }
+
+            doc.setFontSize(16);
+            doc.setTextColor(0, 105, 55);
+            doc.text('Itens com Estoque Mínimo', 60, 18);
+
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+            doc.text(`Registros: ${lowStockItems.length}`, 14, 34);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
+
+            // Tabela
+            const columns = ['Código', 'Produto', 'Unidade', 'Estoque Atual', 'Mínimo'];
+            const rows = lowStockItems.map(p => [
+                p.codigo_principal || '-',
+                p.nome || '-',
+                p.unidade_medida || 'UN',
+                parseFloat(p.quantidade_em_estoque) || 0,
+                parseFloat(p.quantidade_minima) || 0
+            ]);
+
+            doc.autoTable({
+                head: [columns],
+                body: rows,
+                startY: 45,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+                styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
+                alternateRowStyles: { fillColor: [245, 247, 246] },
+                columnStyles: {
+                    0: { cellWidth: 25 },
+                    1: { cellWidth: 80 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 25, halign: 'right' },
+                    4: { cellWidth: 25, halign: 'right' }
+                }
+            });
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const pageText = `Página ${i} de ${pageCount}`;
+                doc.text(pageText, 14, pageHeight - 8);
+            }
+
+            doc.save(`Estoque_Minimo_${new Date().toISOString().slice(0, 10)}.pdf`);
+        } catch (err) {
+            console.error('Erro ao exportar PDF:', err);
+            alert('Erro ao gerar PDF: ' + (err.message || err));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
     },
 
     // --- LÓGICA DE PRATELEIRAS ---
