@@ -135,14 +135,73 @@ textarea.glass-input {
     text-decoration: none;
 }
 
-.btn-glass:hover {
+..btn-glass:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     filter: brightness(1.1);
 }
 
-.btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
-.btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
+.btn-small {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+.modal-backdrop.hidden {
+    display: none;
+}
+
+.glass-modal {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 25px;
+    width: min(95%, 720px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+}
+
+.close-button:hover {
+    color: #000;
+}
+
+.modal-body {
+    color: #444;
+}
+
+.modal-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-info { background: linear-gradient(135deg, #17a2b8, #138496); }
 .btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
 .btn-orange { background: linear-gradient(135deg, #fd7e14, #d65b00); }
 .btn-info { background: linear-gradient(135deg, #17a2b8, #138496); }

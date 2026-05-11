@@ -69,6 +69,7 @@
                   <th>Nome do Produto</th>
                   <th>Unidade</th>
                   <th style="text-align: center;">Quantidade em Estoque</th>
+                  <th style="text-align: center;">Quantidade Mínima</th>
                 </tr>
               </thead>
               <tbody id="grid-estoque-body">
@@ -76,11 +77,45 @@
               </tbody>
             </table>
           </div>
-          <div class="grid-footer" style="margin-top: 10px; text-align: right; font-size: 0.9rem; color: #666;">
-            Total de Itens Listados: <span id="total-itens" style="font-weight: bold;">0</span>
+          <div class="grid-footer" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #666; gap: 10px; flex-wrap: wrap;">
+            <div>
+              Total de Itens Listados: <span id="total-itens" style="font-weight: bold;">0</span>
+            </div>
+            <button id="btn-estoque-minimo" class="btn-glass btn-info btn-small" type="button" style="display: inline-flex; align-items: center; gap: 8px;">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span id="estoque-minimo-count">0</span> itens com estoque mínimo
+            </button>
           </div>
         </div>
       </section>
+
+      <div id="modalEstoqueMinimo" class="modal-backdrop hidden">
+        <div class="glass-modal">
+          <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle"></i> Itens com Estoque Mínimo ou Abaixo</h3>
+            <button class="close-button" id="btnCloseModalEstoqueMinimo">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="color: #555; margin-bottom: 15px;">Revise os produtos cujo estoque atual está igual ou abaixo da quantidade mínima definida.</p>
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="glass-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Produto</th>
+                    <th style="text-align: center;">Estoque</th>
+                    <th style="text-align: center;">Quantidade Mínima</th>
+                  </tr>
+                </thead>
+                <tbody id="modal-estoque-minimo-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-acoes" style="margin-top: 20px; text-align: right;">
+            <button class="btn-glass btn-muted" id="btnFecharModalEstoqueMinimo" type="button">Fechar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ABA 2: RETIRADA DO ESTOQUE -->
       <section id="tab-retirada" class="tab-content hidden">

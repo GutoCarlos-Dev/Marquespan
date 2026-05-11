@@ -29,6 +29,12 @@ const EstoqueGeralUI = {
         this.btnBuscarEstoque = document.getElementById('btn-buscar-estoque');
         this.btnLimparFiltros = document.getElementById('btn-limpar-filtros');
         this.totalItens = document.getElementById('total-itens');
+        this.btnEstoqueMinimo = document.getElementById('btn-estoque-minimo');
+        this.estoqueMinimoCount = document.getElementById('estoque-minimo-count');
+        this.modalEstoqueMinimo = document.getElementById('modalEstoqueMinimo');
+        this.modalEstoqueMinimoBody = document.getElementById('modal-estoque-minimo-body');
+        this.btnCloseModalEstoqueMinimo = document.getElementById('btnCloseModalEstoqueMinimo');
+        this.estoqueAtualData = [];
 
         // Aba Retirada
         this.retiradaUsuario = document.getElementById('retirada-usuario-logado');
@@ -103,6 +109,13 @@ const EstoqueGeralUI = {
             this.filtroCodigo.value = '';
             this.filtroNome.value = '';
             this.carregarEstoque();
+        });
+        this.btnEstoqueMinimo?.addEventListener('click', () => this.abrirModalEstoqueMinimo());
+        this.btnCloseModalEstoqueMinimo?.addEventListener('click', () => this.fecharModalEstoqueMinimo());
+        window.addEventListener('click', (e) => {
+            if (e.target === this.modalEstoqueMinimo) {
+                this.fecharModalEstoqueMinimo();
+            }
         });
 
         // Retirada - Autocomplete e Seleção
@@ -216,11 +229,11 @@ const EstoqueGeralUI = {
     // --- LÓGICA DE ESTOQUE ATUAL ---
 
     async carregarEstoque() {
-        this.gridEstoqueBody.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+        this.gridEstoqueBody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando...</td></tr>';
         
         let query = supabaseClient
             .from('produtos')
-            .select('id, codigo_principal, nome, unidade_medida, quantidade_em_estoque')
+            .select('id, codigo_principal, nome, unidade_medida, quantidade_em_estoque, quantidade_minima')
             .order('nome');
 
         if (this.filtroCodigo.value.trim()) {
@@ -234,21 +247,33 @@ const EstoqueGeralUI = {
 
         if (error) {
             console.error(error);
-            this.gridEstoqueBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar estoque.</td></tr>';
+            this.gridEstoqueBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar estoque.</td></tr>';
             return;
         }
 
         this.gridEstoqueBody.innerHTML = '';
-        this.totalItens.textContent = data.length;
-
-        data.forEach(p => {
+        this.estoqueAtualData = data || [];
+        const lowStockItems = this.estoqueAtualData.filter(p => {
             const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const minimo = parseFloat(p.quantidade_minima) || 0;
+            return qtd <= minimo;
+        });
+        this.totalItens.textContent = this.estoqueAtualData.length;
+        this.estoqueMinimoCount.textContent = lowStockItems.length;
+        this.btnEstoqueMinimo.disabled = lowStockItems.length === 0;
+        this.btnEstoqueMinimo.style.opacity = lowStockItems.length === 0 ? '0.65' : '1';
+
+        this.estoqueAtualData.forEach(p => {
+            const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const minimo = parseFloat(p.quantidade_minima) || 0;
+            const isCritical = qtd <= minimo;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${p.codigo_principal || '-'}</td>
                 <td>${p.nome}</td>
                 <td>${p.unidade_medida || 'UN'}</td>
                 <td style="text-align: center; font-weight: bold; color: ${qtd <= 0 ? '#dc3545' : '#28a745'}">${qtd}</td>
+                <td style="text-align: center; font-weight: bold; color: ${isCritical ? '#dc3545' : '#444'}">${minimo}</td>
             `;
             this.gridEstoqueBody.appendChild(tr);
         });
@@ -414,6 +439,36 @@ const EstoqueGeralUI = {
         } catch (err) {
             console.error('Erro ao carregar select de prateleiras:', err);
         }
+    },
+
+    abrirModalEstoqueMinimo() {
+        const lowStockItems = (this.estoqueAtualData || []).filter(p => {
+            const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+            const minimo = parseFloat(p.quantidade_minima) || 0;
+            return qtd <= minimo;
+        });
+        if (!this.modalEstoqueMinimo || !this.modalEstoqueMinimoBody) return;
+
+        this.modalEstoqueMinimoBody.innerHTML = lowStockItems.length
+            ? lowStockItems.map(p => {
+                const qtd = parseFloat(p.quantidade_em_estoque) || 0;
+                const minimo = parseFloat(p.quantidade_minima) || 0;
+                return `
+                    <tr>
+                        <td>${p.codigo_principal || '-'}</td>
+                        <td>${p.nome}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${qtd <= 0 ? '#dc3545' : '#28a745'}">${qtd}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${minimo >= qtd ? '#dc3545' : '#444'}">${minimo}</td>
+                    </tr>
+                `;
+            }).join('')
+            : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum item em estoque mínimo ou abaixo.</td></tr>';
+
+        this.modalEstoqueMinimo.classList.remove('hidden');
+    },
+
+    fecharModalEstoqueMinimo() {
+        this.modalEstoqueMinimo?.classList.add('hidden');
     },
 
     // --- LÓGICA DE PRATELEIRAS ---
