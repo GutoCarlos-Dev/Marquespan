@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
@@ -162,6 +163,18 @@ const UI = {
     this.nfContainer = document.getElementById('nfContainer');
     this.btnAddNF = document.getElementById('btnAddNF');
 
+    // Cache para Produtos Mínimo
+    this.btnProdutosMinimo = document.getElementById('btn-produtos-minimo');
+    this.produtosMinimoCount = document.getElementById('produtos-minimo-count');
+    this.modalProdutosMinimo = document.getElementById('modalProdutosMinimo');
+    this.modalProdutosMinimoBody = document.getElementById('modal-produtos-minimo-body');
+    this.btnCloseProdutosMinimo = document.getElementById('btnCloseProdutosMinimo');
+    this.btnExportarProdutosXLSX = document.getElementById('btnExportarProdutosXLSX');
+    this.btnExportarProdutosPDF = document.getElementById('btnExportarProdutosPDF');
+    this.btnFecharModalProdutosMinimo = document.getElementById('btnFecharModalProdutosMinimo');
+    this.totalProdutos = document.getElementById('total-produtos');
+    this.produtosAtualData = [];
+
     // Cache para Relatórios
     this.searchRelatorioProduto = document.getElementById('searchRelatorioProduto');
     this.btnSearchRelatorio = document.getElementById('btnSearchRelatorio');
@@ -188,6 +201,16 @@ const UI = {
     this.filterStatusSelect?.addEventListener('change', ()=>this.renderSavedQuotations());
 
     this.produtosTableBody?.addEventListener('click', (e)=>this.handleProdutoTableClick(e));
+    this.btnProdutosMinimo?.addEventListener('click', () => this.abrirModalProdutosMinimo());
+    this.btnCloseProdutosMinimo?.addEventListener('click', () => this.fecharModalProdutosMinimo());
+    this.btnFecharModalProdutosMinimo?.addEventListener('click', () => this.fecharModalProdutosMinimo());
+    this.btnExportarProdutosXLSX?.addEventListener('click', () => this.exportarProdutosXLSX());
+    this.btnExportarProdutosPDF?.addEventListener('click', () => this.exportarProdutosPDF());
+    window.addEventListener('click', (e) => {
+        if (e.target === this.modalProdutosMinimo) {
+            this.fecharModalProdutosMinimo();
+        }
+    });
     this.fornecedoresTableBody?.addEventListener('click', (e)=>this.handleFornecedorTableClick(e));
 
     this.btnOpenImportExportModal?.addEventListener('click', ()=>this.openImportPanel('produtos'));
@@ -1440,7 +1463,20 @@ const UI = {
       }
 
       const produtos = await SupabaseService.list('produtos', '*, prateleiras(nome)', queryOptions);
-      this.produtosTableBody.innerHTML = produtos.map(p => {
+      this.produtosAtualData = produtos || [];
+      const minimoItems = this.produtosAtualData.filter(p => {
+        const minimo = parseFloat(p.quantidade_minima) || 0;
+        return minimo > 0;
+      });
+      
+      if (this.totalProdutos) this.totalProdutos.textContent = this.produtosAtualData.length;
+      if (this.produtosMinimoCount) this.produtosMinimoCount.textContent = minimoItems.length;
+      if (this.btnProdutosMinimo) {
+        this.btnProdutosMinimo.disabled = minimoItems.length === 0;
+        this.btnProdutosMinimo.style.opacity = minimoItems.length === 0 ? '0.65' : '1';
+      }
+
+      this.produtosTableBody.innerHTML = this.produtosAtualData.map(p => {
         const status = p.status || 'Ativo';
         const isInactive = status === 'Inativo';
         const btnLabel = isInactive ? 'Ativar' : 'Inativar';
@@ -1467,6 +1503,165 @@ const UI = {
       this.updateSortIcons('#sectionCadastrarProdutos', this._produtosSort);
     } catch(e) {
       console.error('Erro ao carregar produtos', e);
+    }
+  },
+
+  abrirModalProdutosMinimo() {
+    const minimoItems = (this.produtosAtualData || []).filter(p => {
+        const minimo = parseFloat(p.quantidade_minima) || 0;
+        return minimo > 0;
+    });
+    if (!this.modalProdutosMinimo || !this.modalProdutosMinimoBody) return;
+
+    this.modalProdutosMinimoBody.innerHTML = minimoItems.length
+        ? minimoItems.map(p => `
+            <tr>
+                <td>${p.codigo_principal || '-'}</td>
+                <td>${p.nome || '-'}</td>
+                <td style="text-align: center;">${p.unidade_medida || 'UN'}</td>
+                <td style="text-align: center; font-weight: bold; color: #dc3545;">${parseFloat(p.quantidade_minima) || 0}</td>
+            </tr>
+        `).join('')
+        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum produto com estoque mínimo configurado.</td></tr>';
+
+    this.modalProdutosMinimo.classList.remove('hidden');
+  },
+
+  fecharModalProdutosMinimo() {
+    this.modalProdutosMinimo?.classList.add('hidden');
+  },
+
+  async getLogoBase64PDF() {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = 'logo.png';
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg'));
+        };
+        img.onerror = () => resolve(null);
+    });
+  },
+
+  exportarProdutosXLSX() {
+    const minimoItems = (this.produtosAtualData || []).filter(p => {
+        const minimo = parseFloat(p.quantidade_minima) || 0;
+        return minimo > 0;
+    });
+
+    if (!minimoItems || minimoItems.length === 0) {
+        alert('Nenhum produto com estoque mínimo para exportar.');
+        return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(minimoItems.map(p => ({
+        'Código': p.codigo_principal || '-',
+        'Produto': p.nome || '-',
+        'Unidade': p.unidade_medida || 'UN',
+        'Quantidade Mínima': parseFloat(p.quantidade_minima) || 0
+    })));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtos Mínimo');
+    XLSX.writeFile(wb, `Produtos_Minimo_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  },
+
+  async exportarProdutosPDF() {
+    const minimoItems = (this.produtosAtualData || []).filter(p => {
+        const minimo = parseFloat(p.quantidade_minima) || 0;
+        return minimo > 0;
+    });
+
+    if (!minimoItems || minimoItems.length === 0) {
+        alert('Nenhum produto com estoque mínimo para exportar.');
+        return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Biblioteca jsPDF não carregada. Verifique sua conexão.');
+        return;
+    }
+
+    const btn = this.btnExportarProdutosPDF;
+    const originalText = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const logoBase64 = await this.getLogoBase64PDF();
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+
+        // Cabeçalho com logo
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+
+        doc.setFontSize(16);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Produtos com Estoque Mínimo', 60, 18);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+        doc.text(`Registros: ${minimoItems.length}`, 14, 34);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
+
+        // Tabela
+        const columns = ['Código', 'Produto', 'Unidade', 'Quantidade Mínima'];
+        const rows = minimoItems.map(p => [
+            p.codigo_principal || '-',
+            p.nome || '-',
+            p.unidade_medida || 'UN',
+            parseFloat(p.quantidade_minima) || 0
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 45,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
+            alternateRowStyles: { fillColor: [245, 247, 246] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 105 },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 30, halign: 'right' }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const pageText = `Página ${i} de ${pageCount}`;
+            doc.text(pageText, 14, pageHeight - 8);
+        }
+
+        doc.save(`Produtos_Minimo_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+        console.error('Erro ao exportar PDF:', err);
+        alert('Erro ao gerar PDF: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
   },
 

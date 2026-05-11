@@ -196,13 +196,22 @@
                     <th data-field="unidade_medida">UN</th>
                     <th data-field="prateleiras.nome">PRATELEIRA <i class="fas fa-sort"></i></th>
                     <th data-field="localizacao">LOCALIZAÇÃO <i class="fas fa-sort"></i></th>
-                    <th data-field="quantidade_minima">MÍNIMO <i class="fas fa-sort"></i></th>
+                    <th data-field="quantidade_minima" style="text-align: center;">MÍNIMO <i class="fas fa-sort"></i></th>
                     <th data-field="status">STATUS</th>
                     <th>AÇÕES</th>
                 </tr>
             </thead>
             <tbody id="produtosTableBody"></tbody>
         </table>
+      </div>
+      <div class="grid-footer" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #666; gap: 10px; flex-wrap: wrap;">
+        <div>
+          Total de Produtos: <span id="total-produtos" style="font-weight: bold;">0</span>
+        </div>
+        <button id="btn-produtos-minimo" class="btn-glass btn-info btn-small" type="button" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="produtos-minimo-count">0</span> produtos com estoque mínimo
+        </button>
       </div>
     </section>
 
@@ -263,6 +272,43 @@
         </table>
       </div>
     </section>
+
+  </main>
+
+  <!-- Modal Produtos com Estoque Mínimo -->
+  <div id="modalProdutosMinimo" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-exclamation-triangle"></i> Produtos com Estoque Mínimo ou Abaixo</h3>
+        <button class="close-button" id="btnCloseProdutosMinimo">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: #555; margin-bottom: 15px;">Revise os produtos cujo estoque mínimo foi configurado.</p>
+        <div class="table-responsive" style="max-height: 400px;">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Produto</th>
+                <th style="text-align: center;">Unidade</th>
+                <th style="text-align: center;">Quantidade Mínima</th>
+              </tr>
+            </thead>
+            <tbody id="modal-produtos-minimo-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-acoes" style="margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn-glass btn-green" id="btnExportarProdutosXLSX" type="button" title="Exportar para Excel">
+          <i class="fas fa-file-excel"></i> Exportar XLSX
+        </button>
+        <button class="btn-glass btn-blue" id="btnExportarProdutosPDF" type="button" title="Exportar para PDF">
+          <i class="fas fa-file-pdf"></i> Exportar PDF
+        </button>
+        <button class="btn-glass btn-muted" id="btnFecharModalProdutosMinimo" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
 
   </main>
 
