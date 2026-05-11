@@ -577,10 +577,10 @@ const PedagioUI = {
                         dataHoraPassagem = new Date().toISOString();
                     }
 
-                    // Buscar dados do veículo para preencher marca e categoria
-                    const veiculo = this.veiculosData.find(v => v.placa === placa);
+                    // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
                     const marcaVeiculo = veiculo?.marca || 'N/A';
-                    const categoriaEixos = veiculo?.categoria_eixos || 0;
+                    const idxCateg = headers.indexOf(layout.CATEG);
+                    const categoriaEixos = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.categoria_eixos || 2);
 
                     lancamentosParaInserir.push({
                         placa,
