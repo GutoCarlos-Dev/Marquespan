@@ -279,7 +279,7 @@ async function carregarUltimosLancamentos() {
   try {
     const { data, error } = await supabaseClient
       .from('manutencao')
-      .select('id, data, veiculo, titulo, valorNfe, valorNfse')
+      .select('id, usuario, data, veiculo, titulo, numeroOS, valorNfe, valorNfse')
       .order('id', { ascending: false })
       .limit(5);
 
@@ -290,14 +290,20 @@ async function carregarUltimosLancamentos() {
       const dataFmt = m.data ? new Date(m.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
       return `
         <tr>
-          <td><strong>#${m.id}</strong></td>
+          <td>${m.usuario || '-'}</td>
           <td>${dataFmt}</td>
-          <td>${m.veiculo}</td>
-          <td>${m.titulo}</td>
+          <td>${m.veiculo || '-'}</td>
+          <td>${m.titulo || '-'}</td>
+          <td>${m.numeroOS || '-'}</td>
           <td>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn-glass btn-blue btn-small" onclick="carregarManutencaoParaEdicao(${m.id})">
+              <i class="fas fa-edit"></i> Editar
+            </button>
+          </td>
         </tr>
       `;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;">Nenhum registro recente encontrado.</td></tr>';
+    }).join('') || '<tr><td colspan="7" style="text-align:center;">Nenhum registro recente encontrado.</td></tr>';
   } catch (error) {
     console.error('Erro ao carregar últimos lançamentos:', error);
   }
@@ -1129,3 +1135,4 @@ window.excluirFornecedorTab = excluirFornecedorTab;
 window.salvarTituloTab = salvarTituloTab;
 window.excluirTituloTab = excluirTituloTab;
 window.carregarUltimosLancamentos = carregarUltimosLancamentos;
+window.carregarManutencaoParaEdicao = carregarManutencaoParaEdicao;

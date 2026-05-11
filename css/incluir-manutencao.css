@@ -176,10 +176,15 @@ body {
     text-transform: uppercase;
 }
 
-.btn-glass:hover {
+..btn-glass:hover {
     transform: translateY(-2px);
     filter: brightness(1.1);
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.btn-small {
+    padding: 6px 10px;
+    font-size: 0.78rem;
 }
 
 .btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
@@ -224,6 +229,16 @@ th {
     text-align: left;
     padding: 12px 15px;
     border-bottom: 2px solid #ddd;
+}
+
+.ultimos-lancamentos-panel {
+    margin-top: 20px;
+}
+
+.ultimos-lancamentos-panel .info-text {
+    margin: 10px 0 15px;
+    color: #555;
+    font-size: 0.9rem;
 }
 
 /* --- Upload de Arquivo (Estilo Veículos) --- */
