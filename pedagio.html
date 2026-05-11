@@ -120,7 +120,7 @@
                 </div>
                 <div class="form-group">
                     <label for="empresaPedagioLayout">Layout de Importação (JSON)</label>
-                    <textarea id="empresaPedagioLayout" class="glass-input" rows="5" placeholder='Ex: {"PLACA": "A1", "DATA": "B1", "VALOR": "C1"}'></textarea>
+                    <textarea id="empresaPedagioLayout" class="glass-input" rows="5" placeholder='Ex: {"PLACA": "PLACA", "CATEG": "CATEG", "DATA": "DATA", "HORA": "HORA", "RODOVIA": "RODOVIA", "PRACA": "PRAÇA", "VALOR": "VALOR"}'></textarea>
                 </div>
             </div>
             <div class="form-actions">
@@ -161,7 +161,7 @@
                     </div>
                     <div class="form-group">
                         <label for="lancamentoCateg">CATEG (Eixos)</label>
-                        <input type="number" id="lancamentoCateg" class="glass-input" readonly>
+                        <input type="number" id="lancamentoCateg" class="glass-input" min="1" max="10" placeholder="Ex: 2" readonly>
                     </div>
                     <div class="form-group">
                         <label for="lancamentoDataHora">DATA/HORA</label>

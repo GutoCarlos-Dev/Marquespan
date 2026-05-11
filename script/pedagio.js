@@ -12,12 +12,12 @@ const PedagioUI = {
         this.currentSort = { column: 'data_hora_passagem', direction: 'desc' }; // Estado inicial da ordenação
 
         this.cacheDOM();
+        this.setupLancamentosTab(); // 2. Configura as datas antes de qualquer carregamento
         this.bindEvents();
-        this.initTabs(); // Isso já disparará o carregarLancamentos() via showSection
+        this.initTabs(); // 3. Ativa a aba padrão (isso chamará carregarLancamentos)
 
         this.carregarVeiculos();
         this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
-        this.setupLancamentosTab(); // Configura a aba de lançamentos
     },
 
     cacheDOM() {
@@ -69,7 +69,9 @@ const PedagioUI = {
         });
 
         // Lançamentos
-        this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModalLancamento());
+        if (this.btnAdicionarLancamento) {
+            this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModalLancamento());
+        }
         this.btnFiltrarLancamentos.addEventListener('click', () => this.carregarLancamentos());
         this.searchPlaca.addEventListener('input', () => this.carregarLancamentos());
         this.tableBodyLancamentos.addEventListener('click', (e) => this.handleLancamentoTableClick(e));
@@ -105,9 +107,13 @@ const PedagioUI = {
     },
 
     handleTabClick(event) {
+        // Correção: Usa closest para garantir que pegamos o botão, mesmo clicando no ícone
+        const btn = event.target.closest('.painel-btn');
+        if (!btn) return;
+
         this.painelNavegacao.querySelectorAll('.painel-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        this.showSection(event.target.dataset.secao);
+        btn.classList.add('active');
+        this.showSection(btn.dataset.secao);
     },
 
     showSection(sectionId) {
@@ -135,7 +141,7 @@ const PedagioUI = {
         try {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, marca, modelo, categoria_eixos')
+                .select('placa, marca, modelo, categoria_eixos') // Corrigido: 'eixos' para 'categoria_eixos'
                 .eq('situacao', 'ativo')
                 .order('placa');
             if (error) throw error;
@@ -151,7 +157,7 @@ const PedagioUI = {
         const veiculo = this.veiculosData.find(v => v.placa === placa);
         if (veiculo) {
             this.lancamentoMarca.value = veiculo.marca || '';
-            this.lancamentoCateg.value = veiculo.categoria_eixos || '';
+            this.lancamentoCateg.value = veiculo.categoria_eixos || ''; // Corrigido: 'eixos' para 'categoria_eixos'
         } else {
             this.lancamentoMarca.value = '';
             this.lancamentoCateg.value = '';
@@ -160,11 +166,16 @@ const PedagioUI = {
 
     abrirModalLancamento() {
         this.editingLancamentoId = null;
-        this.formLancamentoPedagio.reset();
-        this.lancamentoMarca.value = ''; // Limpa campos auto-preenchidos
-        this.lancamentoCateg.value = '';
-        this.lancamentoDataHora.value = new Date().toISOString().slice(0, 16);
-        this.modalLancamento.classList.remove('hidden');
+        if (this.formLancamentoPedagio) this.formLancamentoPedagio.reset();
+        if (this.lancamentoMarca) this.lancamentoMarca.value = ''; 
+        if (this.lancamentoCateg) this.lancamentoCateg.value = '';
+        
+        // Define a data atual no formato local para o input datetime-local
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        if (this.lancamentoDataHora) this.lancamentoDataHora.value = now.toISOString().slice(0, 16);
+        
+        if (this.modalLancamento) this.modalLancamento.classList.remove('hidden');
     },
 
     fecharModalLancamento() {
@@ -193,17 +204,41 @@ const PedagioUI = {
             return;
         }
 
+        // Validação dos campos obrigatórios
+        if (!this.lancamentoPlaca.value.trim()) {
+            alert('Por favor, selecione uma placa.');
+            return;
+        }
+        if (!this.lancamentoDataHora.value) {
+            alert('Por favor, informe a data/hora da passagem.');
+            return;
+        }
+        if (!this.lancamentoValor.value || isNaN(parseFloat(this.lancamentoValor.value))) {
+            alert('Por favor, informe um valor válido.');
+            return;
+        }
+
+        // Verificar se a placa existe na tabela veiculos
+        const placaExiste = this.veiculosData.some(v => v.placa === this.lancamentoPlaca.value.toUpperCase());
+        if (!placaExiste) {
+            alert('Placa não encontrada na base de dados. Verifique se o veículo está cadastrado.');
+            return;
+        }
+
         const payload = {
             placa: this.lancamentoPlaca.value.toUpperCase(),
-            marca_veiculo: this.lancamentoMarca.value.toUpperCase(),
-            categoria_eixos: parseInt(this.lancamentoCateg.value),
+            marca_veiculo: this.lancamentoMarca.value.toUpperCase() || null,
+            categoria_eixos: parseInt(this.lancamentoCateg.value) || null, // Corrigido: 'eixos' para 'categoria_eixos'
             data_hora_passagem: new Date(this.lancamentoDataHora.value).toISOString(),
-            rodovia: this.lancamentoRodovia.value.toUpperCase(),
-            praca: this.lancamentoPraca.value.toUpperCase(),
+            rodovia: this.lancamentoRodovia.value.toUpperCase() || null,
+            praca: this.lancamentoPraca.value.toUpperCase() || null,
             valor: parseFloat(this.lancamentoValor.value),
             usuario_id: usuarioId,
             usuario_nome: usuarioNome,
         };
+
+        console.log('Payload sendo enviado:', payload);
+        console.log('Tipo do usuario_id:', typeof usuarioId, 'Valor:', usuarioId);
 
         try {
             if (this.editingLancamentoId) {
@@ -217,16 +252,24 @@ const PedagioUI = {
             this.carregarLancamentos();
         } catch (error) {
             console.error('Erro ao salvar lançamento:', error);
-            alert('Erro ao salvar lançamento: ' + error.message);
+            console.error('Detalhes do erro:', error.details);
+            console.error('Código do erro:', error.code);
+            alert('Erro ao salvar lançamento: ' + (error.message || 'Erro desconhecido'));
         }
     },
 
     async carregarLancamentos() {
+        if (!this.tableBodyLancamentos) return;
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
         try {
             const dataInicial = this.filtroDataInicialLancamento.value;
             const dataFinal = this.filtroDataFinalLancamento.value;
-            const searchPlaca = this.searchPlaca.value.trim().toUpperCase();
+            const searchPlaca = (this.searchPlaca.value || '').trim().toUpperCase();
+
+            if (!dataInicial || !dataFinal) {
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Selecione o período de datas.</td></tr>';
+                return;
+            }
 
             let query = supabaseClient
                 .from('pedagios_lancamentos')
@@ -492,18 +535,35 @@ const PedagioUI = {
 
                 const layout = empresa.layout_config;
                 const lancamentosParaInserir = [];
-                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+                let pulosPorVeiculo = 0;
+                let pulosPorDados = 0;
 
                 for (const row of rows) {
-                    const placa = row[headers.indexOf(layout.PLACA)]?.toString().toUpperCase().trim();
+                    const idxPlaca = headers.indexOf(layout.PLACA);
+                    const placa = row[idxPlaca]?.toString().toUpperCase().trim();
                     const dataStr = row[headers.indexOf(layout.DATA)]?.toString().trim();
                     const horaStr = row[headers.indexOf(layout.HORA)]?.toString().trim();
                     const rodovia = row[headers.indexOf(layout.RODOVIA)]?.toString().toUpperCase().trim();
                     const praca = row[headers.indexOf(layout.PRACA)]?.toString().toUpperCase().trim();
-                    const valor = parseFloat(row[headers.indexOf(layout.VALOR)]?.toString().replace(',', '.'));
+
+                    // Limpeza do Valor (Trata R$, espaços, separador de milhar e decimal)
+                    const valRaw = row[headers.indexOf(layout.VALOR)];
+                    let valor = NaN;
+                    if (typeof valRaw === 'number') {
+                        valor = valRaw;
+                    } else if (valRaw) {
+                        valor = parseFloat(valRaw.toString().replace('R$', '').replace(/\s/g, '').replace('.', '').replace(',', '.'));
+                    }
 
                     if (!placa || !dataStr || isNaN(valor)) {
-                        console.warn('Linha ignorada devido a dados incompletos:', row);
+                        pulosPorDados++;
+                        continue;
+                    }
+
+                    // Validação de Placa: Verifica se existe no cadastro de veículos ativos
+                    const veiculo = this.veiculosData.find(v => v.placa === placa);
+                    if (!veiculo) {
+                        pulosPorVeiculo++;
                         continue;
                     }
 
@@ -538,7 +598,12 @@ const PedagioUI = {
                 if (lancamentosParaInserir.length > 0) {
                     const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosParaInserir);
                     if (error) throw error;
-                    this.importStatus.innerHTML = `<p style="color: green;"><i class="fas fa-check-circle"></i> ${lancamentosParaInserir.length} lançamentos importados com sucesso!</p>`;
+                    
+                    let msg = `<p style="color: green;"><i class="fas fa-check-circle"></i> ${lancamentosParaInserir.length} lançamentos importados!</p>`;
+                    if (pulosPorVeiculo > 0) msg += `<p style="color: #d35400;"><i class="fas fa-exclamation-triangle"></i> ${pulosPorVeiculo} linhas ignoradas (Placas não cadastradas).</p>`;
+                    if (pulosPorDados > 0) msg += `<p style="color: #666;"><i class="fas fa-info-circle"></i> ${pulosPorDados} linhas ignoradas (Dados incompletos).</p>`;
+                    
+                    this.importStatus.innerHTML = msg;
                     this.carregarLancamentos();
                 } else {
                     this.importStatus.innerHTML = '<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> Nenhum lançamento válido encontrado no arquivo.</p>';
