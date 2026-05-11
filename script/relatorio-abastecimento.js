@@ -619,6 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bico: '-',
                         combustivel: e.tanques ? e.tanques.tipo_combustivel : '-',
                         litros: Number(e.qtd_litros),
+                        valor_negociado: 0,
                         valor_litro: Number(e.valor_litro),
                         valor_total: Number(e.valor_total),
                         origem_tabela: 'abastecimentos'
@@ -678,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             bico: bicoNome,
                             combustivel: tanqueInfo ? tanqueInfo.tipo_combustivel : '-',
                             litros: Number(s.qtd_litros), // Saída é negativa no estoque, mas positiva no relatório de consumo
+                            valor_negociado: 0,
                             valor_litro: valorLitroSaida,
                             valor_total: valorTotalSaida,
                             origem_tabela: 'saidas_combustivel'
@@ -690,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tiposMov.length === 0 || tiposMov.includes('EXTERNO')) {
                     let queryExterno = supabaseClient
                         .from('abastecimento_externo')
-                        .select('id, data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, postos(razao_social)')
+                        .select('id, data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -720,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bico: '-',
                         combustivel: '-', 
                         litros: Number(e.litros),
+                        valor_negociado: Number(e.valor_negociado || 0), // Agora lê o valor que foi salvo no dia do abastecimento
                         valor_litro: Number(e.valor_unitario),
                         valor_total: Number(e.valor_total),
                         origem_tabela: 'abastecimento_externo'
@@ -1029,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${reg.bico}</td>
                     <td>${reg.combustivel}</td>
                     <td class="font-bold ${tipoClass}" style="text-align: right;">${reg.tipo === 'EXTERNO' ? '' : (reg.tipo === 'SAIDA' ? '-' : '+')}${Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2})} L</td>
+                    <td style="text-align: right;">${Number(reg.valor_negociado || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                     <td style="text-align: right;">${Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                     <td style="text-align: right;">${Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                     <td style="text-align: right;">${kmAnteriorDisplay}</td>
@@ -1127,6 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Bico': reg.bico,
                 'Combustível': reg.combustivel,
                 'Litros': Number(reg.litros),
+                'Vlr. Negociado': Number(reg.valor_negociado || 0),
                 'Vlr. Litro': Number(reg.valor_litro),
                 'Total': Number(reg.valor_total),
                 'KM Anterior': reg.km_anterior !== null ? (typeof reg.km_anterior === 'string' ? reg.km_anterior : Number(reg.km_anterior)) : '',
@@ -1150,6 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Bico': '',
                 'Combustível': '',
                 'Litros': totalLitros,
+                'Vlr. Negociado': '',
                 'Vlr. Litro': '',
                 'Total': totalValor,
                 'KM Anterior': '',
@@ -1215,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nomeUsuario = usuarioLogado?.nome || 'Sistema';
                 doc.text(`Gerado por: ${nomeUsuario}`, 14, 39);
 
-                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Bico", "Combustível", "Litros", "Vlr. Unit", "Total", "KM Ant.", "KM Rodado", "Média KM/L"];
+                const tableColumn = ["Data/Hora", "Usuário", "Placa", "Rota", "KM", "Nota", "Tanque", "Bico", "Combustível", "Litros", "Vlr. Negoc.", "Vlr. Unit", "Total", "KM Ant.", "KM Rodado", "Média KM/L"];
                 let tableRows = [];
                 let totalLitros = 0;
                 let totalValor = 0;
@@ -1235,6 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         reg.bico,
                         reg.combustivel,
                         Number(reg.litros).toLocaleString('pt-BR', {minimumFractionDigits: 2}),
+                        Number(reg.valor_negociado || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
                         Number(reg.valor_litro).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
                         Number(reg.valor_total).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
                         reg.km_anterior !== null ? (typeof reg.km_anterior === 'string' ? reg.km_anterior : Number(reg.km_anterior).toLocaleString('pt-BR')) : '-',
@@ -1246,9 +1253,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Adiciona linha de total
                 tableRows.push([
-                    { content: 'TOTAIS GERAIS', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'TOTAIS GERAIS', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } }, // Mantido colSpan 9 para parar antes de litros
                     { content: totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), styles: { fontStyle: 'bold' } },
-                    { content: '', colSpan: 1, styles: { fontStyle: 'bold' } }, // Coluna Vlr. Unit vazia
+                    { content: '', colSpan: 2, styles: { fontStyle: 'bold' } }, // Coluna Vlr. Negoc e Vlr. Unit vazia
                     { content: totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold' } },
                     { content: '', colSpan: 3, styles: { fontStyle: 'bold' } } // Colunas de KM vazias
                 ]);
@@ -1263,11 +1270,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     columnStyles: {
                         0: { cellWidth: 20 }, // Data/Hora
                         9: { halign: 'right', cellWidth: 15 }, // Litros
-                        10: { halign: 'right', cellWidth: 15 }, // Vlr Unit
-                        11: { halign: 'right', cellWidth: 15 }, // Total
-                        12: { halign: 'right', cellWidth: 15 }, // KM Ant.
-                        13: { halign: 'right', cellWidth: 15 }, // KM Rodado
-                        14: { halign: 'right', cellWidth: 15 } // Média KM/L
+                        10: { halign: 'right', cellWidth: 18 }, // Vlr Negoc
+                        11: { halign: 'right', cellWidth: 15 }, // Vlr Unit
+                        12: { halign: 'right', cellWidth: 15 }, // Total
+                        13: { halign: 'right', cellWidth: 15 }, // KM Ant.
+                        14: { halign: 'right', cellWidth: 15 }, // KM Rodado
+                        15: { halign: 'right', cellWidth: 15 } // Média KM/L
                     }
                 });
 

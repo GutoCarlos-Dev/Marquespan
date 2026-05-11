@@ -2194,10 +2194,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Resolver ID do Posto a partir do texto do input
             let postoId = null;
+            let valorNegociadoSnapshot = null;
             const postoVal = this.extPosto.value;
             if (this.postosCache) {
                 const found = this.postosCache.find(p => `${p.razao_social} (${p.cnpj || 'S/CNPJ'})` === postoVal);
-                if (found) postoId = found.id;
+                if (found) {
+                    postoId = found.id;
+                    valorNegociadoSnapshot = found.valor_negociado;
+                }
             }
 
             if (!postoId) return alert('Selecione um posto válido da lista.');
@@ -2212,6 +2216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
                     filial: this.extFilial.value,
                     posto_id: postoId,
+                    valor_negociado: valorNegociadoSnapshot, // Salva o valor da negociação ativa hoje
                     veiculo_placa: this.extVeiculo.value.toUpperCase(),
                     tipo_veiculo: this.extTipo.value,
                     km_atual: parseFloat(this.extKmAtual.value),
