@@ -19,6 +19,22 @@ function getDisplayStatus(status, isPdf = false) {
     return status;
 }
 
+function buildDateRangeFilter(dateStr, endOfDay = false) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    if (endOfDay) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+    return date.toISOString();
+}
+
+function normalizeIdForQuery(id) {
+    return id === null || id === undefined ? id : String(id);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
@@ -298,8 +314,10 @@ async function carregarListas() {
             .select('*, lavagem_itens(count)')
             .order('created_at', { ascending: false });
 
-        if (dataIni) query = query.gte('data_lista', dataIni);
-        if (dataFim) query = query.lte('data_lista', dataFim);
+        const dataIniFilter = buildDateRangeFilter(dataIni, false);
+        const dataFimFilter = buildDateRangeFilter(dataFim, true);
+        if (dataIniFilter) query = query.gte('data_lista', dataIniFilter);
+        if (dataFimFilter) query = query.lte('data_lista', dataFimFilter);
         if (status) query = query.eq('status', status);
 
         const { data, error } = await query;
@@ -312,29 +330,73 @@ async function carregarListas() {
         }
 
         // Fetch items status for progress
-        const listaIds = data.map(l => l.id);
-        const { data: itensStatus } = await supabaseClient
-            .from('lavagem_itens')
-            .select('lista_id, status')
-            .in('lista_id', listaIds);
+        const listaIds = data
+            .map(l => normalizeIdForQuery(l.id))
+            .filter(id => id !== null && id !== undefined);
+        const { data: itensStatus, error: itensStatusError } = listaIds.length > 0
+            ? await supabaseClient
+                .from('lavagem_itens')
+                .select('lista_id, status')
+                .in('lista_id', listaIds)
+            : { data: [], error: null };
+        if (itensStatusError) {
+            console.error('Erro ao buscar status de itens de lavagem:', itensStatusError);
+        }
+
+        const statusMap = new Map();
+        (itensStatus || []).forEach(item => {
+            const key = normalizeIdForQuery(item.lista_id);
+            if (!statusMap.has(key)) statusMap.set(key, []);
+            statusMap.get(key).push(item);
+        });
+
+        const fallbackListaIds = data
+            .filter(lista => {
+                const key = normalizeIdForQuery(lista.id);
+                const itensDestaLista = statusMap.get(key) || [];
+                return itensDestaLista.length === 0 && Number(lista.lavagem_itens?.[0]?.count || 0) > 0;
+            })
+            .map(lista => normalizeIdForQuery(lista.id));
+
+        if (fallbackListaIds.length > 0) {
+            const { data: fallbackItems, error: fallbackError } = await supabaseClient
+                .from('lavagem_itens')
+                .select('lista_id, status')
+                .in('lista_id', fallbackListaIds);
+            if (fallbackError) {
+                console.warn('Erro no fallback de status de itens de lavagem:', fallbackError);
+            } else {
+                (fallbackItems || []).forEach(item => {
+                    const key = normalizeIdForQuery(item.lista_id);
+                    if (!statusMap.has(key)) statusMap.set(key, []);
+                    statusMap.get(key).push(item);
+                });
+            }
+        }
 
         const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivelUsuario = usuario ? usuario.nivel.toLowerCase() : null;
 
         data.forEach(lista => {
-            const itensDestaLista = itensStatus.filter(i => i.lista_id === lista.id);
+            const itensDestaLista = statusMap.get(normalizeIdForQuery(lista.id)) || [];
 
             // Cálculo detalhado para o Tooltip
+            const doneStatuses = ['REALIZADO', 'OK'];
             const statusCounts = {
-                realizados: itensDestaLista.filter(i => i.status === 'REALIZADO').length,
-                pendentes: itensDestaLista.filter(i => i.status === 'PENDENTE').length,
-                internados: itensDestaLista.filter(i => i.status === 'INTERNADO').length,
-                agendados: itensDestaLista.filter(i => i.status === 'AGENDADO').length,
-                dispensados: itensDestaLista.filter(i => i.status === 'DISPENSADO').length
+                realizados: itensDestaLista.filter(i => doneStatuses.includes((i.status || '').toString().toUpperCase().trim())).length,
+                pendentes: itensDestaLista.filter(i => (i.status || '').toString().toUpperCase().trim() === 'PENDENTE').length,
+                internados: itensDestaLista.filter(i => (i.status || '').toString().toUpperCase().trim() === 'INTERNADO').length,
+                agendados: itensDestaLista.filter(i => (i.status || '').toString().toUpperCase().trim() === 'AGENDADO').length,
+                dispensados: itensDestaLista.filter(i => (i.status || '').toString().toUpperCase().trim() === 'DISPENSADO').length,
+                total: itensDestaLista.length
             };
 
-            // Total para a barra de progresso (Realizados + Pendentes + Agendados)
-            const totalProgress = statusCounts.realizados + statusCounts.pendentes + statusCounts.agendados;
+            const fallbackTotal = Number(lista.lavagem_itens?.[0]?.count || 0);
+            if (statusCounts.total === 0 && fallbackTotal > 0) {
+                statusCounts.total = fallbackTotal;
+            }
+
+            const totalProgress = statusCounts.total;
             const percent = totalProgress > 0 ? Math.round((statusCounts.realizados / totalProgress) * 100) : 0;
 
             const tr = document.createElement('tr');
@@ -758,10 +820,11 @@ function renderizarItensDetalhes(itens) {
     }, {});
 
     itens.forEach(item => {
-        if (item.status === 'REALIZADO') realizados++;
-        else if (item.status === 'AGENDADO') agendados++;
-        else if (item.status === 'DISPENSADO') pulados++;
-        else if (item.status === 'INTERNADO') internados++;
+        const status = (item.status || '').toString().toUpperCase().trim();
+        if (status === 'REALIZADO' || status === 'OK') realizados++;
+        else if (status === 'AGENDADO') agendados++;
+        else if (status === 'DISPENSADO') pulados++;
+        else if (status === 'INTERNADO') internados++;
         else pendentes++;
 
         const tr = document.createElement('tr');
@@ -1062,11 +1125,11 @@ function setupGlobalTooltip() {
             const counts = JSON.parse(progressCell.dataset.statusCounts);
             let tooltipContent = `
                 <strong>Total: ${counts.total}</strong><br>
-                Realizados: ${counts.realizado}<br>
-                Pendentes: ${counts.pendente}<br>
-                Agendados: ${counts.agendado}<br>
-                Internados: ${counts.internado}<br>
-                Dispensados: ${counts.dispensado}
+                Realizados: ${counts.realizados}<br>
+                Pendentes: ${counts.pendentes}<br>
+                Agendados: ${counts.agendados}<br>
+                Internados: ${counts.internados}<br>
+                Dispensados: ${counts.dispensados}
             `;
             globalTooltip.innerHTML = tooltipContent;
             globalTooltip.classList.remove('hidden');
@@ -1987,12 +2050,17 @@ async function gerarRelatorio() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Gerando relatório...</td></tr>';
 
     try {
-        const { data: listas, error: errListas } = await supabaseClient
+        const dataIniFilter = buildDateRangeFilter(dataIni, false);
+        const dataFimFilter = buildDateRangeFilter(dataFim, true);
+
+        let query = supabaseClient
             .from('lavagem_listas')
             .select('*')
-            .gte('data_lista', dataIni)
-            .lte('data_lista', dataFim)
             .order('data_lista', { ascending: false });
+        if (dataIniFilter) query = query.gte('data_lista', dataIniFilter);
+        if (dataFimFilter) query = query.lte('data_lista', dataFimFilter);
+
+        const { data: listas, error: errListas } = await query;
 
         if (errListas) throw errListas;
 
@@ -2002,7 +2070,9 @@ async function gerarRelatorio() {
             return;
         }
 
-        const listaIds = listas.map(l => l.id);
+        const listaIds = listas
+            .map(l => normalizeIdForQuery(l.id))
+            .filter(id => id !== null && id !== undefined);
 
         const { data: itens, error: errItens } = await supabaseClient
             .from('lavagem_itens')
@@ -2028,7 +2098,7 @@ async function gerarRelatorio() {
         if (precosCache.length === 0) await carregarPrecos();
 
         listas.forEach(lista => {
-            const itensLista = itens.filter(i => i.lista_id === lista.id);
+            const itensLista = itens.filter(i => String(i.lista_id) === String(lista.id));
             
             let qtdRealizada = 0;
             let qtdPendente = 0;
