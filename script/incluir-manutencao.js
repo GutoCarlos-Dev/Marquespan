@@ -251,6 +251,9 @@ async function salvarManutencao() {
   // Salvar Arquivos
   await salvarArquivosManutencao(novoIdManutencao);
 
+  // Atualiza o log de registros recentes abaixo do formulário
+  await carregarUltimosLancamentos();
+
   alert(`✅ Manutenção ${idManutencao ? 'atualizada' : 'salva'} com sucesso!`);
   // Recarrega a página ou limpa o form
   if (!idManutencao) {
@@ -263,6 +266,40 @@ async function salvarManutencao() {
       preencherUsuarioLogado();
   } else {
       window.location.href = 'buscar-manutencao.html';
+  }
+}
+
+/**
+ * Busca os últimos 5 lançamentos registrados no banco de dados e atualiza a tabela de resumo.
+ */
+async function carregarUltimosLancamentos() {
+  const tbody = document.getElementById('tbodyUltimosLancamentos');
+  if (!tbody) return;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('manutencao')
+      .select('id, data, veiculo, titulo, valorNfe, valorNfse')
+      .order('id', { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+
+    tbody.innerHTML = (data || []).map(m => {
+      const total = (parseFloat(m.valorNfe) || 0) + (parseFloat(m.valorNfse) || 0);
+      const dataFmt = m.data ? new Date(m.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+      return `
+        <tr>
+          <td><strong>#${m.id}</strong></td>
+          <td>${dataFmt}</td>
+          <td>${m.veiculo}</td>
+          <td>${m.titulo}</td>
+          <td>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>
+      `;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;">Nenhum registro recente encontrado.</td></tr>';
+  } catch (error) {
+    console.error('Erro ao carregar últimos lançamentos:', error);
   }
 }
 
@@ -966,6 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarFiliais();
   carregarTitulosManutencao();
   carregarFornecedores();
+  carregarUltimosLancamentos();
 
   // Listener Importação Fornecedores
   const btnImportarFornecedores = document.getElementById('btnImportarFornecedores');
@@ -1090,3 +1128,4 @@ window.salvarFornecedorTab = salvarFornecedorTab;
 window.excluirFornecedorTab = excluirFornecedorTab;
 window.salvarTituloTab = salvarTituloTab;
 window.excluirTituloTab = excluirTituloTab;
+window.carregarUltimosLancamentos = carregarUltimosLancamentos;
