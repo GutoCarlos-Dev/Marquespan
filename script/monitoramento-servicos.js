@@ -30,6 +30,14 @@ const engraxeConfig = {
     'ROTA': { color: '#17a2b8', label: 'Em Rota' }
 };
 
+function parseSupabaseDateValue(value) {
+    if (!value) return null;
+    const str = String(value).trim();
+    const dateMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) return null;
+    return new Date(`${dateMatch[1]}T00:00:00Z`);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
     carregarFiliais();
@@ -232,7 +240,7 @@ async function carregarGraficoGastoMensal() {
         const { data, error } = await supabaseClient
             .from('lavagem_itens')
             .select('valor, fornecedor, status, lavagem_listas!inner(status)')
-            .eq('status', 'REALIZADO')
+            .in('status', ['REALIZADO', 'OK'])
             .eq('lavagem_listas.status', 'FINALIZADA');
 
         if (error) throw error;
@@ -291,26 +299,36 @@ async function carregarGraficoGastoMensal() {
 async function carregarGraficoGastoAnualLavagem() {
     try {
         const anoAtual = new Date().getFullYear();
-        // Busca itens realizados de listas que já foram finalizadas dentro do ano atual
-        const { data, error } = await supabaseClient
-            .from('lavagem_itens')
-            .select('valor, status, lavagem_listas!inner(status, data_lista)')
-            .eq('status', 'REALIZADO')
-            .eq('lavagem_listas.status', 'FINALIZADA')
-            .gte('lavagem_listas.data_lista', `${anoAtual}-01-01`)
-            .lte('lavagem_listas.data_lista', `${anoAtual}-12-31`);
+        const dataMin = `${anoAtual}-01-01`;
+        const dataMax = `${anoAtual}-12-31`;
+
+        // Busca listas finalizadas dentro do ano atual e os itens relacionados
+        const { data: listas, error } = await supabaseClient
+            .from('lavagem_listas')
+            .select('id, data_lista, status, lavagem_itens(valor, status)')
+            .eq('status', 'FINALIZADA')
+            .gte('data_lista', dataMin)
+            .lte('data_lista', dataMax);
 
         if (error) throw error;
 
         const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         const valoresMensais = new Array(12).fill(0);
 
-        (data || []).forEach(item => {
-            const dataStr = item.lavagem_listas.data_lista;
-            if (dataStr) {
-                const mes = new Date(dataStr + 'T00:00:00').getMonth();
-                valoresMensais[mes] += parseFloat(item.valor || 0);
-            }
+        (listas || []).forEach(lista => {
+            const dataObj = parseSupabaseDateValue(lista.data_lista);
+            if (!dataObj || Number.isNaN(dataObj.getTime())) return;
+
+            const mes = dataObj.getUTCMonth();
+            const totalLista = (lista.lavagem_itens || []).reduce((sum, item) => {
+                const status = String(item.status || '').toUpperCase().trim();
+                if (['REALIZADO', 'OK'].includes(status)) {
+                    return sum + parseFloat(item.valor || 0);
+                }
+                return sum;
+            }, 0);
+
+            valoresMensais[mes] += totalLista;
         });
 
         const ctx = document.getElementById('chartGastoAnualLavagem').getContext('2d');
