@@ -52,6 +52,10 @@ const PedagioUI = {
         this.empresaPedagioSelect = document.getElementById('empresaPedagioSelect');
         this.arquivoImportacao = document.getElementById('arquivoImportacao');
         this.importStatus = document.getElementById('importStatus');
+        this.importProgressContainer = document.getElementById('importProgressContainer');
+        this.importProgressBar = document.getElementById('importProgressBar');
+        this.importProgressPercent = document.getElementById('importProgressPercent');
+        this.btnSubmitImport = this.formImportacaoPedagio?.querySelector('button[type="submit"]');
 
         // Seção Empresas de Pedágio
         this.formEmpresaPedagio = document.getElementById('formEmpresaPedagio');
@@ -512,7 +516,15 @@ const PedagioUI = {
             return;
         }
 
+        // Bloqueia interações
+        if (this.btnSubmitImport) this.btnSubmitImport.disabled = true;
+        this.arquivoImportacao.disabled = true;
+        this.empresaPedagioSelect.disabled = true;
         this.importStatus.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Processando arquivo...</p>';
+        if (this.importProgressContainer) {
+            this.importProgressContainer.classList.remove('hidden');
+            this.updateProgress(0);
+        }
 
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -535,71 +547,103 @@ const PedagioUI = {
 
                 const layout = empresa.layout_config;
                 const lancamentosParaInserir = [];
+                const rejeitados = [];
+                const importadosComSucesso = [];
                 let pulosPorVeiculo = 0;
                 let pulosPorDados = 0;
+                let index = 0;
 
-                for (const row of rows) {
-                    const idxPlaca = headers.indexOf(layout.PLACA);
-                    const placa = row[idxPlaca]?.toString().toUpperCase().trim();
-                    const dataStr = row[headers.indexOf(layout.DATA)]?.toString().trim();
-                    const horaStr = row[headers.indexOf(layout.HORA)]?.toString().trim();
-                    const rodovia = row[headers.indexOf(layout.RODOVIA)]?.toString().toUpperCase().trim();
-                    const praca = row[headers.indexOf(layout.PRACA)]?.toString().toUpperCase().trim();
+                const processBatch = async () => {
+                    const batchSize = 100; // Processa em blocos para não travar a UI
+                    const limit = Math.min(index + batchSize, rows.length);
 
-                    // Limpeza do Valor (Trata R$, espaços, separador de milhar e decimal)
-                    const valRaw = row[headers.indexOf(layout.VALOR)];
-                    let valor = NaN;
-                    if (typeof valRaw === 'number') {
-                        valor = valRaw;
-                    } else if (valRaw) {
-                        valor = parseFloat(valRaw.toString().replace('R$', '').replace(/\s/g, '').replace('.', '').replace(',', '.'));
-                    }
+                    for (; index < limit; index++) {
+                        const row = rows[index];
 
-                    if (!placa || !dataStr || isNaN(valor)) {
-                        pulosPorDados++;
-                        continue;
-                    }
+                        // Pular linhas completamente em branco (não contabiliza para o usuário)
+                        const isBlank = !row || row.length === 0 || row.every(cell => cell === null || cell === undefined || String(cell).trim() === '');
+                        if (isBlank) continue;
 
-                    // Validação de Placa: Verifica se existe no cadastro de veículos ativos
-                    const veiculo = this.veiculosData.find(v => v.placa === placa);
-                    if (!veiculo) {
-                        pulosPorVeiculo++;
-                        continue;
-                    }
+                        const idxPlaca = headers.indexOf(layout.PLACA || layout['PLACA']);
+                        const placa = row[idxPlaca]?.toString().toUpperCase().trim();
+                        const dataStr = row[headers.indexOf(layout.DATA || layout['DATA'])]?.toString().trim();
+                        const horaStr = row[headers.indexOf(layout.HORA|| layout['HORA'])]?.toString().trim();
+                        const rodovia = row[headers.indexOf(layout.RODOVIA || layout['RODOVIA'])]?.toString().toUpperCase().trim();
+                        // Suporte robusto para chaves PRACA ou PRAÇA no layout
+                        const pracaKey = layout.PRACA || layout['PRACA'] || layout['PRAÇA'];
+                        const praca = row[headers.indexOf(pracaKey)]?.toString().toUpperCase().trim();
 
-                    let dataHoraPassagem;
-                    try {
-                        // Tenta parsear a data e hora. Assume formato DD/MM/YYYY HH:MM ou YYYY-MM-DD HH:MM
+                        // Limpeza do Valor (Trata R$, espaços, separador de milhar e decimal)
+                        const valRaw = row[headers.indexOf(layout.VALOR || layout['VALOR'])];
+                        let valor = NaN;
+                        if (typeof valRaw === 'number') {
+                            valor = valRaw;
+                        } else if (valRaw) {
+                            valor = parseFloat(valRaw.toString().replace('R$', '').replace(/\s/g, '').replace('.', '').replace(',', '.'));
+                        }
+
+                        if (!placa || !dataStr || isNaN(valor)) {
+                            rejeitados.push({ motivo: 'Dados obrigatórios ausentes (Placa, Data ou Valor)', dados: row });
+                            pulosPorDados++;
+                            continue;
+                        }
+
+                        // Validação de Placa: Verifica se existe no cadastro de veículos ativos
+                        const veiculo = this.veiculosData.find(v => v.placa === placa);
+                        if (!veiculo) {
+                            rejeitados.push({ motivo: `Veículo [${placa}] não cadastrado no sistema`, dados: row });
+                            pulosPorVeiculo++;
+                            continue;
+                        }
+
+                        let dataHoraPassagem;
                         const fullDateTimeStr = `${dataStr} ${horaStr || '00:00'}`;
-                        dataHoraPassagem = new Date(fullDateTimeStr.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).toISOString();
-                    } catch (dateError) {
-                        console.warn('Erro ao parsear data/hora, usando data atual:', fullDateTimeStr, dateError);
-                        dataHoraPassagem = new Date().toISOString();
+                        try {
+                            // Tenta parsear a data e hora. Assume formato DD/MM/YYYY HH:MM ou YYYY-MM-DD HH:MM
+                            const convertedDateStr = fullDateTimeStr.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1');
+                            dataHoraPassagem = new Date(convertedDateStr).toISOString();
+                        } catch (dateError) {
+                            console.warn('Erro ao parsear data/hora, usando data atual:', fullDateTimeStr, dateError);
+                            dataHoraPassagem = new Date().toISOString();
+                        }
+
+                        // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
+                        const marcaVeiculo = veiculo?.marca || 'N/A';
+                        const idxCateg = headers.indexOf(layout.CATEG || layout['CATEG']);
+                        const categoriaEixos = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.categoria_eixos || 2);
+
+                        lancamentosParaInserir.push({
+                            placa,
+                            marca_veiculo: marcaVeiculo,
+                            categoria_eixos: categoriaEixos,
+                            data_hora_passagem: dataHoraPassagem,
+                            rodovia,
+                            praca,
+                            valor,
+                            usuario_id: usuarioId,
+                            usuario_nome: usuarioNome,
+                        });
+                        importadosComSucesso.push({ placa, data_hora_passagem: dataHoraPassagem, valor });
                     }
 
-                    // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
-                    const marcaVeiculo = veiculo?.marca || 'N/A';
-                    const idxCateg = headers.indexOf(layout.CATEG);
-                    const categoriaEixos = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.categoria_eixos || 2);
+                    // Atualiza Barra de Progresso
+                    const percent = Math.round((index / rows.length) * 100);
+                    this.updateProgress(percent);
 
-                    lancamentosParaInserir.push({
-                        placa,
-                        marca_veiculo: marcaVeiculo,
-                        categoria_eixos: categoriaEixos,
-                        data_hora_passagem: dataHoraPassagem,
-                        rodovia,
-                        praca,
-                        valor,
-                        usuario_id: usuarioId,
-                        usuario_nome: usuarioNome,
-                    });
-                }
+                    if (index < rows.length) {
+                        setTimeout(processBatch, 0);
+                    } else {
+                        await finalizarImportacao();
+                    }
+                };
 
-                if (lancamentosParaInserir.length > 0) {
+                const finalizarImportacao = async () => {
+                    if (lancamentosParaInserir.length > 0) {
                     const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosParaInserir);
                     if (error) throw error;
+                    this.gerarRelatorioImportacao(importadosComSucesso, rejeitados);
                     
-                    let msg = `<p style="color: green;"><i class="fas fa-check-circle"></i> ${lancamentosParaInserir.length} lançamentos importados!</p>`;
+                    let msg = `<p style="color: green; font-weight: bold;"><i class="fas fa-check-circle"></i> Importação finalizada: ${lancamentosParaInserir.length} lançamentos registrados.</p>`;
                     if (pulosPorVeiculo > 0) msg += `<p style="color: #d35400;"><i class="fas fa-exclamation-triangle"></i> ${pulosPorVeiculo} linhas ignoradas (Placas não cadastradas).</p>`;
                     if (pulosPorDados > 0) msg += `<p style="color: #666;"><i class="fas fa-info-circle"></i> ${pulosPorDados} linhas ignoradas (Dados incompletos).</p>`;
                     
@@ -608,6 +652,16 @@ const PedagioUI = {
                 } else {
                     this.importStatus.innerHTML = '<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> Nenhum lançamento válido encontrado no arquivo.</p>';
                 }
+
+                    // Libera interações
+                    if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
+                    this.arquivoImportacao.disabled = false;
+                    this.empresaPedagioSelect.disabled = false;
+                    if (this.importProgressContainer) this.importProgressContainer.classList.add('hidden');
+                };
+
+                // Inicia o processamento
+                processBatch();
             } catch (error) {
                 console.error('Erro na importação:', error);
                 this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message}</p>`;
@@ -620,6 +674,54 @@ const PedagioUI = {
             this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao ler arquivo: ${error.message}</p>`;
         };
         reader.readAsArrayBuffer(arquivo);
+    },
+
+    updateProgress(percent) {
+        if (this.importProgressBar) this.importProgressBar.style.width = `${percent}%`;
+        if (this.importProgressPercent) this.importProgressPercent.textContent = `${percent}%`;
+        if (this.importProgressText) {
+            this.importProgressText.textContent = percent < 100 ? 'Processando planilha...' : 'Concluído!';
+        }
+    },
+
+    /**
+     * Gera um arquivo .txt com o detalhamento da importação.
+     */
+    gerarRelatorioImportacao(importados, rejeitados) {
+        let content = "RELATÓRIO DE IMPORTAÇÃO DE PEDÁGIOS - MARQUESPAN\n";
+        content += "================================================\n";
+        content += `Processado em: ${new Date().toLocaleString('pt-BR')}\n`;
+        content += `Total processado: ${importados.length + rejeitados.length}\n`;
+        content += `Importados: ${importados.length}\n`;
+        content += `Rejeitados: ${rejeitados.length}\n`;
+        content += "================================================\n\n";
+
+        if (importados.length > 0) {
+            content += "✅ LANÇAMENTOS IMPORTADOS COM SUCESSO:\n";
+            content += "------------------------------------------------\n";
+            importados.forEach((r, i) => {
+                content += `${String(i + 1).padStart(3, '0')}. Placa: ${r.placa} | Data: ${new Date(r.data_hora_passagem).toLocaleString('pt-BR')} | Valor: R$ ${parseFloat(r.valor).toFixed(2)}\n`;
+            });
+            content += "\n";
+        }
+
+        if (rejeitados.length > 0) {
+            content += "❌ LANÇAMENTOS NÃO IMPORTADOS (FALHAS):\n";
+            content += "------------------------------------------------\n";
+            rejeitados.forEach((r, i) => {
+                content += `${String(i + 1).padStart(3, '0')}. MOTIVO: ${r.motivo}\n     CONTEÚDO DA LINHA: ${JSON.stringify(r.dados)}\n\n`;
+            });
+        }
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resumo_importacao_pedagio_${new Date().getTime()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     },
 };
 
