@@ -151,15 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroDataInicial = document.getElementById('filtroDataInicial');
 
             // Elementos do Modal de Importação de Saída
-            this.modalImportarSaida = document.getElementById('modalImportarSaida');
-            this.closeModalImportarSaida = document.getElementById('closeModalImportarSaida');
-            this.formImportarSaida = document.getElementById('formImportarSaida');
-            this.arquivoImportacaoSaida = document.getElementById('arquivoImportacaoSaida');
-            this.filialImportacaoSaida = document.getElementById('filialImportacaoSaida');
-            this.btnBaixarModeloSaida = document.getElementById('btnBaixarModeloSaida');
-            this.btnCancelarImportacaoSaida = document.getElementById('btnCancelarImportacaoSaida');
-            this.btnImportarSaida = document.getElementById('btnImportarSaida');
-
+            this.fileImportarSaida = document.getElementById('fileImportarSaida');
+            this.filialImportacaoSaida = document.getElementById('filialImportacaoSaida'); // Moved to sectionSaida
+            this.btnBaixarModeloSaida = document.getElementById('btnBaixarModeloSaida'); // Moved to sectionSaida
+            this.btnAbrirImportacaoSaida = document.getElementById('btnAbrirImportacaoSaida');
+            // Removed: this.modalImportarSaida, this.closeModalImportarSaida, this.btnCancelarImportacaoSaida, this.formImportarSaida, this.arquivoImportacaoSaida
+            
             this.filtroDataFinal = document.getElementById('filtroDataFinal');
             this.btnFiltrarHistorico = document.getElementById('btnFiltrarHistorico');
 
@@ -179,6 +176,23 @@ document.addEventListener('DOMContentLoaded', () => {
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
             this.tableBody.addEventListener('click', this.handleTableClick.bind(this));
             this.btnLimpar.addEventListener('click', this.clearForm.bind(this));
+            
+            
+            // Importação Saída
+            if (this.btnAbrirImportacaoSaida) {
+                this.btnAbrirImportacaoSaida.addEventListener('click', () => {
+                    this.fileImportarSaida.click();
+                });
+            }
+            if (this.fileImportarSaida) {
+                this.fileImportarSaida.addEventListener('change', (e) => this.handleImportarSaida(e));
+            }
+            if (this.btnBaixarModeloSaida) {
+                this.btnBaixarModeloSaida.addEventListener('click', this.baixarModeloImportacaoSaida.bind(this));
+            }
+            
+            
+            
             
             // Cálculo automático do total
             this.qtdTotalNotaInput.addEventListener('input', this.calculateTotal.bind(this));
@@ -1792,6 +1806,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).join('');
 
                 const userFilial = this.getUserFilial();
+
+                // Popula o select na aba de Saída de Combustível
+                if (this.filialImportacaoSaida) {
+                    this.filialImportacaoSaida.innerHTML = options;
+                    if (userFilial && this.filiaisCache.length > 0) {
+                        const matchingFilial = this.filiaisCache.find(f => f.nome === userFilial || f.sigla === userFilial || (f.sigla || f.nome) === userFilial);
+                        if (matchingFilial) {
+                            this.filialImportacaoSaida.value = matchingFilial.sigla || matchingFilial.nome;
+                        } else {
+                            this.filialImportacaoSaida.value = userFilial;
+                        }
+                    }
+                }
+
                 if (this.extFilial) {
                     this.extFilial.innerHTML = options;
                     if (userFilial && this.filiaisCache.length > 0) {
@@ -2822,33 +2850,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        abrirModalImportarSaida() {
-            if (this.modalImportarSaida) {
-                this.modalImportarSaida.classList.remove('hidden');
-                this.formImportarSaida.reset();
-
-                // Popular select de filial no modal
-                if (this.filialImportacaoSaida && this.filiaisCache) {
-                    this.filialImportacaoSaida.innerHTML = '<option value="">Selecione a Filial...</option>' + 
-                        this.filiaisCache.map(f => {
-                            const val = f.sigla || f.nome;
-                            const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
-                            return `<option value="${val}">${text}</option>`;
-                        }).join('');
-                    
-                    const userFilial = this.getUserFilial();
-                    if (userFilial) this.filialImportacaoSaida.value = userFilial;
-                }
-                this.setImportProgressSaida('Aguardando arquivo...', 0, true);
-            }
-        },
-
-        fecharModalImportarSaida() {
-            if (this.modalImportarSaida) {
-                this.modalImportarSaida.classList.add('hidden');
-            }
-        },
-
         baixarModeloImportacaoSaida() {
             const headers = [
                 'DATA E HORA', 'VEÍCULO (PLACA)', 'MOTORISTA (OPCIONAL)', 'ROTA', 'KM / HORÍMETRO ATUAL', 'BICO DE ORIGEM', 'LITROS ABASTECIDOS'
@@ -2863,33 +2864,14 @@ document.addEventListener('DOMContentLoaded', () => {
             XLSX.writeFile(wb, "Modelo_Importacao_Saida.xlsx");
         },
 
-        setImportProgressSaida(message, percent, hide = false) {
-            const statusDiv = document.getElementById('importStatusSaida');
-            const progressBarFill = document.getElementById('importProgressBarFillSaida');
-            const percentSpan = statusDiv?.querySelector('.import-progress-percent');
-            const textSpan = statusDiv?.querySelector('.import-status-text');
-
-            if (hide) {
-                statusDiv.classList.add('hidden');
-                return;
-            }
-
-            statusDiv.classList.remove('hidden');
-            if (textSpan) textSpan.textContent = message;
-            if (percentSpan) percentSpan.textContent = `${percent}%`;
-            if (progressBarFill) progressBarFill.style.width = `${percent}%`;
-        },
-
         async handleImportarSaida(e) {
-            e.preventDefault();
-            const file = this.arquivoImportacaoSaida.files[0];
+            const file = e.target.files[0];
             if (!file) return alert('Selecione um arquivo XLSX.');
 
-            const btnSubmit = e.target.querySelector('button[type="submit"]');
-            const originalText = btnSubmit.innerHTML;
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
-            this.setImportProgressSaida('Iniciando importação...', 0);
+            const btn = this.btnAbrirImportacaoSaida;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
 
             const reader = new FileReader();
             reader.onload = async (evt) => {
@@ -2904,7 +2886,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const payloads = [];
                     const usuario = this.getUsuarioLogado();
                     const totalRows = json.length;
-                    const filialSelecionada = this.filialImportacaoSaida?.value;
                     let processedCount = 0;
 
                     for (const row of json) {
@@ -2924,10 +2905,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         const bico = this.bicosDisponiveis.find(b => {
-                            const matchNome = b.nome.toUpperCase() === bicoNome;
-                            const matchFilial = !filialSelecionada || (b.bombas?.tanques?.filial === filialSelecionada);
-                            return matchNome && matchFilial;
+                            return b.nome.toUpperCase() === bicoNome;
                         });
+                        
+                        const filialSelecionada = this.filialImportacaoSaida?.value; // Get selected filial from the new select element
 
                         if (!bico) {
                             console.warn(`Bico "${bicoNome}" não encontrado para a placa ${placa}. Linha ignorada.`, r);
@@ -2953,19 +2934,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (payloads.length > 0) {
                         const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
                         if (error) throw error;
-                        alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);
-                        this.fecharModalImportarSaida();
+                        alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);                        
                         this.renderSaidasTable();
                     } else {
                         alert('Nenhum registro válido encontrado para importar.');
                     }
                 } catch (error) {
                     console.error('Erro na importação:', error);
-                    alert('Erro ao processar arquivo: ' + error.message);
+                    alert('Erro ao processar arquivo: ' + error.message);                    
                 } finally {
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = originalText;
-                    this.setImportProgressSaida('', 0, true); // Esconde o progresso
+                    e.target.value = ''; // Clear the file input
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;                    
                 }
             };
             reader.readAsArrayBuffer(file);
