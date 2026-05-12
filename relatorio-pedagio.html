@@ -79,7 +79,9 @@
             <div class="resumo-valores" style="display: flex; align-items: center; gap: 15px;">
                 <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa na grade..." class="glass-input" style="width: 250px; margin-bottom: 0;">
                 <strong>Passagens:</strong> <span id="totalRegistros">0</span> |
-                <strong>Custo Total:</strong> R$ <span id="valorTotal">0,00</span> |
+                <strong>Tarifas:</strong> R$ <span id="valorTotal">0,00</span> |
+                <strong>Mensalidades:</strong> R$ <span id="valorMensalidades">0,00</span> |
+                <strong style="color: #006937;">Total Geral:</strong> R$ <span id="valorGeral">0,00</span> |
                 <span style="color: #dc3545; font-size: 0.85em;"><i class="fas fa-exclamation-triangle"></i> Divergência de Eixos</span>
             </div>
         </div>
@@ -93,6 +95,7 @@
                         <th class="sortable" data-sort="marca_veiculo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Marca <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="categoria_eixos" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Eixos (Cob.) <i class="fas fa-sort"></i></th>
                         <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Eixos (Veíc.)</th>
+                        <th>Mensalidade (Ref.)</th>
                         <th class="sortable" data-sort="rodovia" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Rodovia <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="praca" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Praça <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="valor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Valor (R$) <i class="fas fa-sort"></i></th>

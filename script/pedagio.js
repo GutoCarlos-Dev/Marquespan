@@ -76,6 +76,7 @@ const PedagioUI = {
         this.formEmpresaPedagio = document.getElementById('formEmpresaPedagio');
         this.empresaPedagioEditingId = document.getElementById('empresaPedagioEditingId');
         this.empresaPedagioNome = document.getElementById('empresaPedagioNome');
+        this.empresaPedagioMensalidade = document.getElementById('empresaPedagioMensalidade');
         this.empresaPedagioLayout = document.getElementById('empresaPedagioLayout');
         this.btnLimparEmpresaPedagio = document.getElementById('btnLimparEmpresaPedagio');
         this.tableBodyEmpresasPedagio = document.getElementById('tableBodyEmpresasPedagio');
@@ -213,6 +214,15 @@ const PedagioUI = {
         if (this.lancamentoDataHora) this.lancamentoDataHora.value = now.toISOString().slice(0, 16);
         
         if (this.modalLancamento) this.modalLancamento.classList.remove('hidden');
+
+        // Preenche o select de empresas no modal de lançamento
+        const selectEmpresa = document.getElementById('lancamentoEmpresa');
+        if (selectEmpresa) {
+            selectEmpresa.innerHTML = '<option value="">Selecione a Empresa</option>';
+            this.empresasPedagio.forEach(empresa => {
+                selectEmpresa.add(new Option(empresa.nome, empresa.id));
+            });
+        }
     },
 
     fecharModalLancamento() {
@@ -264,6 +274,7 @@ const PedagioUI = {
             marca_veiculo: this.lancamentoMarca.value.toUpperCase() || null,
             categoria_eixos: parseInt(this.lancamentoCateg.value) || null, // Corrigido: 'eixos' para 'categoria_eixos'
             data_hora_passagem: new Date(this.lancamentoDataHora.value).toISOString(),
+            empresa_id: document.getElementById('lancamentoEmpresa')?.value || null,
             rodovia: this.lancamentoRodovia.value.toUpperCase() || null,
             praca: this.lancamentoPraca.value.toUpperCase() || null,
             valor: parseFloat(this.lancamentoValor.value),
@@ -309,7 +320,7 @@ const PedagioUI = {
 
             let query = supabaseClient
                 .from('pedagios_lancamentos')
-                .select('*, veiculos!inner(filial)');
+                .select('*, veiculos!inner(filial), pedagios_empresas!empresa_id(nome)');
 
             if (dataInicial) query = query.gte('data_hora_passagem', `${dataInicial}T00:00:00`);
             if (dataFinal) query = query.lte('data_hora_passagem', `${dataFinal}T23:59:59`);
@@ -332,6 +343,7 @@ const PedagioUI = {
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
+                    <td>${item.pedagios_empresas?.nome || '-'}</td>
                     <td>${item.rodovia || '-'}</td>
                     <td>${item.praca || '-'}</td>
                     <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -388,6 +400,7 @@ const PedagioUI = {
 
             this.editingLancamentoId = id;
             this.lancamentoPlaca.value = data.placa;
+            if(document.getElementById('lancamentoEmpresa')) document.getElementById('lancamentoEmpresa').value = data.empresa_id || '';
             this.preencherDadosVeiculo(); // Para preencher Marca e Categoria
             this.lancamentoDataHora.value = new Date(data.data_hora_passagem).toISOString().slice(0, 16);
             this.lancamentoRodovia.value = data.rodovia;
@@ -429,13 +442,14 @@ const PedagioUI = {
     renderEmpresasPedagioTable() {
         this.tableBodyEmpresasPedagio.innerHTML = '';
         if (this.empresasPedagio.length === 0) {
-            this.tableBodyEmpresasPedagio.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma empresa cadastrada.</td></tr>';
+            this.tableBodyEmpresasPedagio.innerHTML = '<tr><td colspan="4" class="text-center">Nenhuma empresa cadastrada.</td></tr>';
             return;
         }
         this.empresasPedagio.forEach(empresa => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${empresa.nome}</td>
+                <td>R$ ${parseFloat(empresa.mensalidade || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td><pre>${JSON.stringify(empresa.layout_config, null, 2)}</pre></td>
                 <td>
                     <button class="btn-action btn-edit" data-id="${empresa.id}" title="Editar"><i class="fas fa-pen"></i></button>
@@ -459,6 +473,7 @@ const PedagioUI = {
     async salvarEmpresaPedagio(event) {
         event.preventDefault();
         const nome = this.empresaPedagioNome.value.toUpperCase();
+        const mensalidade = parseFloat(this.empresaPedagioMensalidade.value) || 0;
         let layoutConfig = {};
         try {
             layoutConfig = JSON.parse(this.empresaPedagioLayout.value);
@@ -467,7 +482,7 @@ const PedagioUI = {
             return;
         }
 
-        const payload = { nome, layout_config: layoutConfig };
+        const payload = { nome, mensalidade, layout_config: layoutConfig };
 
         try {
             if (this.editingEmpresaId) {
@@ -508,8 +523,11 @@ const PedagioUI = {
             if (error) throw error;
 
             this.editingEmpresaId = id;
-            this.empresaPedagioNome.value = data.nome;
-            this.empresaPedagioLayout.value = JSON.stringify(data.layout_config, null, 2);
+            if (this.empresaPedagioNome) this.empresaPedagioNome.value = data.nome || '';
+            // Adicionada verificação de segurança para evitar o erro de 'null'
+            if (this.empresaPedagioMensalidade) this.empresaPedagioMensalidade.value = data.mensalidade || 0;
+            if (this.empresaPedagioLayout) this.empresaPedagioLayout.value = JSON.stringify(data.layout_config, null, 2);
+            
         } catch (error) {
             console.error('Erro ao carregar empresa para edição:', error);
             alert('Erro ao carregar empresa: ' + error.message);
@@ -672,6 +690,7 @@ const PedagioUI = {
                             marca_veiculo: marcaVeiculo,
                             categoria_eixos: categoriaEixos,
                             data_hora_passagem: dataHoraPassagem,
+                            empresa_id: empresaId,
                             rodovia,
                             praca,
                             valor,

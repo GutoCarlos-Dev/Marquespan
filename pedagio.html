@@ -110,6 +110,10 @@
                   <input type="text" id="empresaPedagioNome" class="glass-input" required placeholder="Ex: SEM PARAR">
               </div>
               <div class="form-group">
+                  <label>Valor Mensalidade (R$):</label>
+                  <input type="number" id="empresaPedagioMensalidade" step="0.01" class="glass-input" placeholder="0.00">
+              </div>
+              <div class="form-group">
                   <label>Layout Config (JSON):</label>
                   <textarea id="empresaPedagioLayout" class="glass-input" rows="4" placeholder='{"PLACA": "Placa", "DATA": "Data", "VALOR": "Valor"}'></textarea>
               </div>
@@ -122,6 +126,7 @@
               <thead>
                   <tr>
                       <th>Nome</th>
+                      <th>Mensalidade</th>
                       <th>Configuração</th>
                       <th>Ações</th>
                   </tr>
@@ -143,6 +148,10 @@
                   <label>Veículo (Placa):</label>
                   <input type="text" id="lancamentoPlaca" list="veiculosList" class="glass-input" required>
                   <datalist id="veiculosList"></datalist>
+              </div>
+              <div class="form-group">
+                  <label>Empresa Operadora:</label>
+                  <select id="lancamentoEmpresa" class="glass-input" required></select>
               </div>
               <div class="form-row-duplo">
                   <div class="form-group">

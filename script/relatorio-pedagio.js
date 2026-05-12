@@ -63,7 +63,7 @@ async function buscarDados() {
 
         let query = supabaseClient
             .from('pedagios_lancamentos')
-            .select('*, veiculos!inner(filial, eixos)');
+            .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)');
 
         if (dataIni) query = query.gte('data_hora_passagem', `${dataIni}T00:00:00`);
         if (dataFim) query = query.lte('data_hora_passagem', `${dataFim}T23:59:59`);
@@ -87,11 +87,10 @@ async function buscarDados() {
     }
 }
 
-function renderizarTabela() {
-    const tbody = document.getElementById('tabelaResultados');
+function getDadosGrid() {
     const search = document.getElementById('searchResultadosLocal').value.toUpperCase();
     const filtrarPorDivergencia = document.getElementById('filtroDivergencia').checked;
-    
+
     let filtrados = dadosCompletos.filter(d => 
         d.placa.includes(search) || (d.rodovia || '').toUpperCase().includes(search)
     );
@@ -116,6 +115,12 @@ function renderizarTabela() {
         if (valA > valB) return sortState.ascending ? 1 : -1;
         return 0;
     });
+    return filtrados;
+}
+
+function renderizarTabela() {
+    const tbody = document.getElementById('tabelaResultados');
+    const filtrados = getDadosGrid();
 
     tbody.innerHTML = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
@@ -132,6 +137,7 @@ function renderizarTabela() {
             <td>${d.marca_veiculo || '-'}</td>
             <td ${alertStyle}>${d.categoria_eixos || '-'} ${temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : ''}</td>
             <td style="text-align: center; color: #666;">${d.veiculos?.eixos || '-'}</td>
+            <td style="color: #666;">R$ ${parseFloat(d.pedagios_empresas?.mensalidade || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             <td>${d.rodovia || '-'}</td>
             <td>${d.praca || '-'}</td>
             <td>R$ ${parseFloat(d.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -145,8 +151,25 @@ function renderizarTabela() {
 
     // Totais
     const totalValor = filtrados.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+    
+    // Lógica para somar mensalidade fixa por veículo por mês
+    const veiculosMesProcessados = new Set();
+    let totalMensalidades = 0;
+    
+    filtrados.forEach(d => {
+        const mesReferencia = d.data_hora_passagem.substring(0, 7); // YYYY-MM
+        const chave = `${d.placa}-${mesReferencia}-${d.empresa_id}`;
+        
+        if (!veiculosMesProcessados.has(chave)) {
+            veiculosMesProcessados.add(chave);
+            totalMensalidades += parseFloat(d.pedagios_empresas?.mensalidade || 0);
+        }
+    });
+
     document.getElementById('totalRegistros').textContent = filtrados.length;
     document.getElementById('valorTotal').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    document.getElementById('valorMensalidades').textContent = totalMensalidades.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    document.getElementById('valorGeral').textContent = (totalValor + totalMensalidades).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     
     // Ícones de sort
     document.querySelectorAll('.sortable i').forEach(i => i.className = 'fas fa-sort');
@@ -159,14 +182,51 @@ function filtrarLocal() {
 }
 
 async function exportarPDF() {
+    if (!window.jspdf) return alert('Biblioteca jsPDF não carregada.');
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
+    const doc = new jsPDF('l', 'mm', 'a4'); // Orientação Paisagem para comportar todas as colunas
 
-    doc.setFontSize(16);
-    doc.text('Relatório de Passagens de Pedágio', 14, 15);
+    // Função para carregar o logo e garantir fundo branco (padrão do sistema)
+    const getLogoBase64 = async () => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = 'logo.png';
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF'; // Fundo branco solicitado
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg')); // Exporta como JPEG para melhor compatibilidade
+            };
+            img.onerror = () => resolve(null);
+        });
+    };
 
-    const colunas = ["Data/Hora", "Placa", "Marca", "Eixos (Cob.)", "Eixos (Veíc.)", "Rodovia", "Praça", "Valor (R$)", "Usuário"];
-    const rows = dadosCompletos.map(d => {
+    const logoBase64 = await getLogoBase64();
+    if (logoBase64) {
+        doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 12);
+    }
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 105, 55); // Verde Marquespan
+    doc.text('Relatório de Passagens de Pedágio', 60, 18);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
+
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+    doc.text(`Gerado por: ${nomeUsuario}`, 60, 24);
+
+    const filtrados = getDadosGrid();
+
+    const colunas = ["Data/Hora", "Placa", "Marca", "Eixos (Cob.)", "Eixos (Veíc.)", "Rodovia", "Praça", "Valor", "Usuário"];
+    const rows = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
         const temDivergencia = eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
@@ -179,7 +239,7 @@ async function exportarPDF() {
             d.veiculos?.eixos || '',
             d.rodovia || '',
             d.praca || '',
-            parseFloat(d.valor).toFixed(2),
+            parseFloat(d.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
             d.usuario_nome || ''
         ];
     });
@@ -187,16 +247,46 @@ async function exportarPDF() {
     doc.autoTable({
         head: [colunas],
         body: rows,
-        startY: 20,
+        startY: 30,
         theme: 'grid',
-        styles: { fontSize: 8 }
+        headStyles: { fillColor: [0, 105, 55], fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 2 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+        columnStyles: {
+            7: { halign: 'right' } // Alinha a coluna de Valor à direita
+        },
+        didParseCell: (data) => {
+            // Aplica cor vermelha no PDF para divergências marcadas com "!"
+            if (data.section === 'body' && data.column.index === 3) {
+                if (String(data.cell.raw).startsWith('!')) {
+                    data.cell.styles.textColor = [220, 53, 69]; 
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
+        }
     });
 
-    doc.save(`relatorio_pedagio_${new Date().getTime()}.pdf`);
+    const totalValor = filtrados.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 105, 55);
+    doc.text(`Total de Passagens: ${filtrados.length} | Custo Total: R$ ${totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY);
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.text(`Página ${i} de ${pageCount}`, 283, pageHeight - 10, { align: 'right' });
+    }
+
+    doc.save(`Relatorio_Pedagio_${new Date().getTime()}.pdf`);
 }
 
 function exportarExcel() {
-    const rows = dadosCompletos.map(d => {
+    const filtrados = getDadosGrid();
+    const rows = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
         const temDivergencia = eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
@@ -213,6 +303,21 @@ function exportarExcel() {
             "Valor (R$)": parseFloat(d.valor),
             "Usuário": d.usuario_nome || ''
         };
+    });
+
+    // Adiciona linha de rodapé com totais no Excel para seguir o padrão
+    const totalValor = filtrados.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+    rows.push({
+        "Data/Hora": "TOTAIS GERAIS",
+        "Placa": "",
+        "Marca": "",
+        "Eixos (Cobrado)": "",
+        "Eixos (Cadastro)": "",
+        "Divergência": "",
+        "Rodovia": "",
+        "Praça": `${filtrados.length} Passagens`,
+        "Valor (R$)": totalValor,
+        "Usuário": ""
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);
