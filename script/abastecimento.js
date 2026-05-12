@@ -1675,8 +1675,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
                         <td>${saida.veiculo_placa || ''}</td>
-                        <td>${saida.rota || ''}</td>
                         <td>${saida.motorista || '-'}</td>
+                        <td>${saida.rota || ''}</td>
                         <td>${parseFloat(saida.qtd_litros).toLocaleString('pt-BR')} L</td>
                         <td>${saida.km_atual || ''}</td>
                         <td>${saida.usuario || '-'}</td>
