@@ -2936,7 +2936,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             // 2. Fallback: Tenta correspondência direta com apenas o nome do bico
                             if (sistemaBicoNome === labelExcel) return true;
-                                return true;
                             
                             // 3. Fallback: Se o Excel começar com o nome do bico (ex: "1 (...")
                             if (labelExcel.startsWith(sistemaBicoNome + '(')) {
