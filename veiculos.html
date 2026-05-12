@@ -153,7 +153,12 @@
                 </div>
                 
                 <div class="form-group file-upload-container">
-                    <label>Arquivo Excel (.xlsx)</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <label style="margin-bottom: 0;">Arquivo Excel (.xlsx)</label>
+                        <a href="#" id="btnBaixarModeloVeiculos" style="color: #007bff; text-decoration: none; font-size: 0.85em; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-download"></i> Baixar Modelo
+                        </a>
+                    </div>
                     <div class="file-upload-wrapper glass-input" id="dropZoneImportacao" style="height: auto; min-height: 100px;">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
                         <span class="upload-text" id="arquivoImportacaoLabel">Clique ou arraste o arquivo aqui</span>
@@ -234,11 +239,15 @@
                         <input type="text" id="veiculoQrcode" class="glass-input" placeholder="Código do QR">
                     </div>
                 </div>
-                <!-- Novo campo para Média/KM -->
+                <!-- Campos para Média/KM e Chassi -->
                 <div class="form-row">
                     <div class="form-group">
                         <label for="veiculoMediaKm">Média KM / LITRO</label>
                         <input type="number" id="veiculoMediaKm" class="glass-input" step="0.01" min="0" placeholder="Ex: 3.5 KM/L">
+                    </div>
+                    <div class="form-group">
+                        <label for="veiculoChassi">Chassi</label>
+                        <input type="text" id="veiculoChassi" class="glass-input" placeholder="Número do Chassi">
                     </div>
                 </div>
 
