@@ -149,6 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
             this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
        // Elementos do filtro de histórico de entrada
             this.filtroDataInicial = document.getElementById('filtroDataInicial');
+
+            // Elementos do Modal de Importação de Saída
+            this.modalImportarSaida = document.getElementById('modalImportarSaida');
+            this.closeModalImportarSaida = document.getElementById('closeModalImportarSaida');
+            this.formImportarSaida = document.getElementById('formImportarSaida');
+            this.arquivoImportacaoSaida = document.getElementById('arquivoImportacaoSaida');
+            this.filialImportacaoSaida = document.getElementById('filialImportacaoSaida');
+            this.btnBaixarModeloSaida = document.getElementById('btnBaixarModeloSaida');
+            this.btnCancelarImportacaoSaida = document.getElementById('btnCancelarImportacaoSaida');
+            this.btnImportarSaida = document.getElementById('btnImportarSaida');
+
             this.filtroDataFinal = document.getElementById('filtroDataFinal');
             this.btnFiltrarHistorico = document.getElementById('btnFiltrarHistorico');
 
@@ -2809,6 +2820,155 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.loadPostosOptions();
                 }
             }
+        },
+
+        abrirModalImportarSaida() {
+            if (this.modalImportarSaida) {
+                this.modalImportarSaida.classList.remove('hidden');
+                this.formImportarSaida.reset();
+
+                // Popular select de filial no modal
+                if (this.filialImportacaoSaida && this.filiaisCache) {
+                    this.filialImportacaoSaida.innerHTML = '<option value="">Selecione a Filial...</option>' + 
+                        this.filiaisCache.map(f => {
+                            const val = f.sigla || f.nome;
+                            const text = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                            return `<option value="${val}">${text}</option>`;
+                        }).join('');
+                    
+                    const userFilial = this.getUserFilial();
+                    if (userFilial) this.filialImportacaoSaida.value = userFilial;
+                }
+                this.setImportProgressSaida('Aguardando arquivo...', 0, true);
+            }
+        },
+
+        fecharModalImportarSaida() {
+            if (this.modalImportarSaida) {
+                this.modalImportarSaida.classList.add('hidden');
+            }
+        },
+
+        baixarModeloImportacaoSaida() {
+            const headers = [
+                'DATA E HORA', 'VEÍCULO (PLACA)', 'MOTORISTA (OPCIONAL)', 'ROTA', 'KM / HORÍMETRO ATUAL', 'BICO DE ORIGEM', 'LITROS ABASTECIDOS'
+            ];
+            const data = [
+                ['2026-05-12 10:30', 'ABC1234', 'JOAO SILVA', '101', '150000', 'BICO 1', '50.00']
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Modelo Saída");
+            XLSX.writeFile(wb, "Modelo_Importacao_Saida.xlsx");
+        },
+
+        setImportProgressSaida(message, percent, hide = false) {
+            const statusDiv = document.getElementById('importStatusSaida');
+            const progressBarFill = document.getElementById('importProgressBarFillSaida');
+            const percentSpan = statusDiv?.querySelector('.import-progress-percent');
+            const textSpan = statusDiv?.querySelector('.import-status-text');
+
+            if (hide) {
+                statusDiv.classList.add('hidden');
+                return;
+            }
+
+            statusDiv.classList.remove('hidden');
+            if (textSpan) textSpan.textContent = message;
+            if (percentSpan) percentSpan.textContent = `${percent}%`;
+            if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+        },
+
+        async handleImportarSaida(e) {
+            e.preventDefault();
+            const file = this.arquivoImportacaoSaida.files[0];
+            if (!file) return alert('Selecione um arquivo XLSX.');
+
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            this.setImportProgressSaida('Iniciando importação...', 0);
+
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (json.length === 0) throw new Error('Planilha vazia ou formato inválido.');
+
+                    const payloads = [];
+                    const usuario = this.getUsuarioLogado();
+                    const totalRows = json.length;
+                    const filialSelecionada = this.filialImportacaoSaida?.value;
+                    let processedCount = 0;
+
+                    for (const row of json) {
+                        const r = {};
+                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+
+                        const placa = (r['VEÍCULO (PLACA)'] || r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
+                        const bicoNome = (r['BICO DE ORIGEM'] || r['BICO'] || '').toUpperCase().trim();
+                        const litros = parseFloat(r['LITROS ABASTECIDOS'] || r['LITROS'] || 0);
+                        const kmAtual = parseFloat(r['KM / HORÍMETRO ATUAL'] || r['KM ATUAL'] || r['KM'] || 0);
+
+                        if (!placa || !bicoNome || litros <= 0 || kmAtual <= 0) {
+                            console.warn('Linha ignorada por dados incompletos:', r);
+                            processedCount++;
+                            this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
+                            continue;
+                        }
+
+                        const bico = this.bicosDisponiveis.find(b => {
+                            const matchNome = b.nome.toUpperCase() === bicoNome;
+                            const matchFilial = !filialSelecionada || (b.bombas?.tanques?.filial === filialSelecionada);
+                            return matchNome && matchFilial;
+                        });
+
+                        if (!bico) {
+                            console.warn(`Bico "${bicoNome}" não encontrado para a placa ${placa}. Linha ignorada.`, r);
+                            processedCount++;
+                            this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
+                            continue;
+                        }
+
+                        payloads.push({
+                            data_hora: r['DATA E HORA'] || r['DATA'] ? new Date(r['DATA E HORA'] || r['DATA']).toISOString() : new Date().toISOString(),
+                            veiculo_placa: placa,
+                            motorista: (r['MOTORISTA (OPCIONAL)'] || r['MOTORISTA'] || '').trim(),
+                            rota: (r['ROTA'] || '').trim(),
+                            km_atual: kmAtual,
+                            bico_id: bico.id,
+                            qtd_litros: litros,
+                            usuario: usuario
+                        });
+                        processedCount++;
+                        this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
+                    }
+
+                    if (payloads.length > 0) {
+                        const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
+                        if (error) throw error;
+                        alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);
+                        this.fecharModalImportarSaida();
+                        this.renderSaidasTable();
+                    } else {
+                        alert('Nenhum registro válido encontrado para importar.');
+                    }
+                } catch (error) {
+                    console.error('Erro na importação:', error);
+                    alert('Erro ao processar arquivo: ' + error.message);
+                } finally {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = originalText;
+                    this.setImportProgressSaida('', 0, true); // Esconde o progresso
+                }
+            };
+            reader.readAsArrayBuffer(file);
         },
 
         async buscarUltimoKm(placaInput) {
