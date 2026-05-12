@@ -178,7 +178,7 @@ const PedagioUI = {
         try {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, marca, modelo, categoria_eixos, filial') 
+                .select('placa, marca, modelo, eixos, filial') 
                 .eq('situacao', 'ativo')
                 .order('placa');
             if (error) throw error;
@@ -194,7 +194,7 @@ const PedagioUI = {
         const veiculo = this.veiculosData.find(v => v.placa === placa);
         if (veiculo) {
             this.lancamentoMarca.value = veiculo.marca || '';
-            this.lancamentoCateg.value = veiculo.categoria_eixos || ''; // Corrigido: 'eixos' para 'categoria_eixos'
+            this.lancamentoCateg.value = veiculo.eixos || ''; 
         } else {
             this.lancamentoMarca.value = '';
             this.lancamentoCateg.value = '';
@@ -643,7 +643,29 @@ const PedagioUI = {
                         // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
                         const marcaVeiculo = veiculo?.marca || 'N/A';
                         const idxCateg = headers.indexOf(layout.CATEG || layout['CATEG']);
-                        const categoriaEixos = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.categoria_eixos || 2);
+                        
+                        let categoriaEixosRaw = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.eixos || 2);
+                        let categoriaEixos = categoriaEixosRaw;
+
+                        // Mapeamento de Categorias SEM PARAR para Número de Eixos
+                        const mapaCategorias = {
+                            1: 2,  // Carro (2 eixos)
+                            2: 2,  // Caminhão 2 eixos
+                            3: 3,  // Caminhão 3 eixos
+                            4: 4,  // Caminhão 4 eixos
+                            5: 5,  // Caminhão 5 eixos
+                            6: 6,  // Caminhão 6 eixos
+                            61: 7, // Caminhão 7 eixos
+                            62: 8, // Caminhão 8 eixos
+                            63: 9, // Caminhão 9 eixos
+                            64: 10, // Caminhão 10 eixos (Padrão ARTESP/ANTT)
+                            90: 2,  // Taxa ambiental carros (atribuindo 2 eixos padrão)
+                            94: 2   // Taxa ambiental caminhões (atribuindo valor base)
+                        };
+
+                        if (mapaCategorias[categoriaEixosRaw]) {
+                            categoriaEixos = mapaCategorias[categoriaEixosRaw];
+                        }
 
                         lancamentosParaInserir.push({
                             placa,

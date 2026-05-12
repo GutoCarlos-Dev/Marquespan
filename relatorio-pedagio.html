@@ -54,6 +54,10 @@
                 <label for="praca">Praça</label>
                 <input type="text" id="praca" placeholder="Ex: Itu">
             </div>
+            <div class="form-group-filter" style="grid-column: span 2;">
+                <input type="checkbox" id="filtroDivergencia" style="width: auto; margin-right: 8px;">
+                <label for="filtroDivergencia" style="display: inline-block; margin-bottom: 0;">Filtrar só as Divergência de Eixos</label>
+            </div>
         </div>
       </section>
 
@@ -75,7 +79,8 @@
             <div class="resumo-valores" style="display: flex; align-items: center; gap: 15px;">
                 <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa na grade..." class="glass-input" style="width: 250px; margin-bottom: 0;">
                 <strong>Passagens:</strong> <span id="totalRegistros">0</span> |
-                <strong>Custo Total:</strong> R$ <span id="valorTotal">0,00</span>
+                <strong>Custo Total:</strong> R$ <span id="valorTotal">0,00</span> |
+                <span style="color: #dc3545; font-size: 0.85em;"><i class="fas fa-exclamation-triangle"></i> Divergência de Eixos</span>
             </div>
         </div>
 
@@ -86,7 +91,8 @@
                         <th class="sortable" data-sort="data_hora_passagem" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Data/Hora <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="placa" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Placa <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="marca_veiculo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Marca <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="categoria_eixos" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Eixos <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="categoria_eixos" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Eixos (Cob.) <i class="fas fa-sort"></i></th>
+                        <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Eixos (Veíc.)</th>
                         <th class="sortable" data-sort="rodovia" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Rodovia <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="praca" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Praça <i class="fas fa-sort"></i></th>
                         <th class="sortable" data-sort="valor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Valor (R$) <i class="fas fa-sort"></i></th>
@@ -94,7 +100,7 @@
                     </tr>
                 </thead>
                 <tbody id="tabelaResultados">
-                    <tr><td colspan="8" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+                    <tr><td colspan="9" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
                 </tbody>
             </table>
         </div>
