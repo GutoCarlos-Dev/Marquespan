@@ -2852,10 +2852,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         baixarModeloImportacaoSaida() {
             const headers = [
-                'DATA E HORA', 'VEÍCULO (PLACA)', 'MOTORISTA (OPCIONAL)', 'ROTA', 'KM / HORÍMETRO ATUAL', 'BICO DE ORIGEM', 'LITROS ABASTECIDOS'
+                'DATA E HORA', 'VEÍCULO (PLACA)', 'MOTORISTA (OPCIONAL)', 'ROTA', 'KM / HORÍMETRO ATUAL', 'BICO DE ORIGEM (NOME COMPLETO)', 'LITROS ABASTECIDOS'
             ];
             const data = [
-                ['2026-05-12 10:30', 'ABC1234', 'JOAO SILVA', '101', '150000', 'BICO 1', '50.00']
+                 ['2025-05-12 10:30', 'ABC1234', 'JOAO SILVA', '101', '150000', '1 (BOMBA: A - TANQUE: FABRICA 2)', '50.00']
             ];
 
             const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -2887,48 +2887,94 @@ document.addEventListener('DOMContentLoaded', () => {
                     const usuario = this.getUsuarioLogado();
                     const totalRows = json.length;
                     let processedCount = 0;
-
-                    for (const row of json) {
+                    const filialSelecionada = this.filialImportacaoSaida?.value;
+                    
+                    for (const [index, row] of json.entries()) {
                         const r = {};
                         Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
+                        
+                        // Função auxiliar para buscar colunas de forma flexível (ignora acentos e espaços extras)
+                        const getFlexVal = (aliases) => {
+                            const keys = Object.keys(r);
+                            for (const alias of aliases) {
+                                const normAlias = alias.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
+                                const foundKey = keys.find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '').includes(normAlias));
+                                if (foundKey) return r[foundKey];
+                            }
+                            return undefined;
+                        };
 
-                        const placa = (r['VEÍCULO (PLACA)'] || r['PLACA'] || r['VEICULO'] || '').toUpperCase().trim();
-                        const bicoNome = (r['BICO DE ORIGEM'] || r['BICO'] || '').toUpperCase().trim();
-                        const litros = parseFloat(r['LITROS ABASTECIDOS'] || r['LITROS'] || 0);
-                        const kmAtual = parseFloat(r['KM / HORÍMETRO ATUAL'] || r['KM ATUAL'] || r['KM'] || 0);
+                        const placa = (getFlexVal(['VEICULO (PLACA)', 'PLACA', 'VEICULO']) || '').toString().replace(/\s+/g, '').toUpperCase().trim();
+                        const bicoNomeExcel = (getFlexVal(['BICO DE ORIGEM', 'BICO']) || '').toString().trim();
+                        const litros = parseFloat(String(getFlexVal(['LITROS ABASTECIDOS', 'LITROS']) || 0).replace(',', '.'));
+                        const kmAtual = parseFloat(String(getFlexVal(['KM / HORIMETRO ATUAL', 'KM ATUAL', 'KM']) || 0).replace(',', '.'));
+                        
+                        if (!placa || !bicoNomeExcel || litros <= 0 || kmAtual <= 0) {
+                            console.warn(`Linha ${index + 2} ignorada por dados incompletos ou zerados. Placa: ${placa}, Bico: ${bicoNomeExcel}, Litros: ${litros}, KM: ${kmAtual}`);
+                            continue;
+                        }
+                        
+                        const bico = this.bicosDisponiveis.find(b => {
+                            const sistemaFilial = (b.bombas?.tanques?.filial || '').toUpperCase().trim();
+                                                        
+                            // Verifica se o bico pertence à filial selecionada (se uma filial foi selecionada)
+                            const matchesFilial = !filialSelecionada || sistemaFilial === filialSelecionada.toUpperCase().trim();
+                            if (!matchesFilial) return false;
 
-                        if (!placa || !bicoNome || litros <= 0 || kmAtual <= 0) {
-                            console.warn('Linha ignorada por dados incompletos:', r);
-                            processedCount++;
-                            this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
+                            // Normalização extrema para comparação (remove espaços e padroniza caixa)
+                            const norm = (s) => (s || '').toString().toUpperCase().replace(/\s+/g, '');
+                            
+                            const sistemaBicoNome = norm(b.nome);
+                            const sistemaBombaNome = norm(b.bombas?.nome);
+                            const sistemaTanqueNome = norm(b.bombas?.tanques?.nome);
+
+                            const labelSistema = `${sistemaBicoNome}(BOMBA:${sistemaBombaNome}-TANQUE:${sistemaTanqueNome})`;
+                            const labelExcel = norm(bicoNomeExcel);
+
+                            // 1. Tenta correspondência exata com o rótulo completo (sem espaços)
+                            if (labelSistema === labelExcel) return true;
+                            
+                            // 2. Fallback: Tenta correspondência direta com apenas o nome do bico
+                            if (sistemaBicoNome === labelExcel) return true;
+                                return true;
+                            
+                            // 3. Fallback: Se o Excel começar com o nome do bico (ex: "1 (...")
+                            if (labelExcel.startsWith(sistemaBicoNome + '(')) {
+                                return true;
+                            }
+
+                            return false;
+                        });
+                        
+                        if (!bico) {
+                            console.warn(`Bico "${bicoNomeExcel}" não encontrado na filial "${filialSelecionada || 'Todas'}" para a placa ${placa}. Linha ignorada.`);
                             continue;
                         }
 
-                        const bico = this.bicosDisponiveis.find(b => {
-                            return b.nome.toUpperCase() === bicoNome;
-                        });
-                        
-                        const filialSelecionada = this.filialImportacaoSaida?.value; // Get selected filial from the new select element
-
-                        if (!bico) {
-                            console.warn(`Bico "${bicoNome}" não encontrado para a placa ${placa}. Linha ignorada.`, r);
-                            processedCount++;
-                            this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
-                            continue;
+                        // Tratamento de Data para aceitar formatos brasileiros DD/MM/YYYY
+                        let finalDataHora = new Date().toISOString();
+                        const rawDate = getFlexVal(['DATA E HORA', 'DATA']);
+                        if (rawDate) {
+                            if (rawDate instanceof Date) {
+                                finalDataHora = rawDate.toISOString();
+                            } else {
+                                const parts = String(rawDate).match(/(\d{2})\/\-\/\-\s+(\d{2}):/);
+                                if (parts) finalDataHora = new Date(parts[3], parts[2] - 1, parts[1], parts[4], parts[5]).toISOString();
+                                else finalDataHora = new Date(rawDate).toISOString();
+                            }
                         }
 
                         payloads.push({
-                            data_hora: r['DATA E HORA'] || r['DATA'] ? new Date(r['DATA E HORA'] || r['DATA']).toISOString() : new Date().toISOString(),
+                            
+                            data_hora: finalDataHora,
                             veiculo_placa: placa,
-                            motorista: (r['MOTORISTA (OPCIONAL)'] || r['MOTORISTA'] || '').trim(),
-                            rota: (r['ROTA'] || '').trim(),
+                            motorista: (getFlexVal(['MOTORISTA (OPCIONAL)', 'MOTORISTA']) || '').toString().trim(),
+                            rota: (getFlexVal(['ROTA']) || '').toString().trim(),
                             km_atual: kmAtual,
                             bico_id: bico.id,
                             qtd_litros: litros,
                             usuario: usuario
                         });
-                        processedCount++;
-                        this.setImportProgressSaida(`Processando linha ${processedCount}/${totalRows}...`, Math.round((processedCount / totalRows) * 100));
                     }
 
                     if (payloads.length > 0) {
@@ -2945,7 +2991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } finally {
                     e.target.value = ''; // Clear the file input
                     btn.disabled = false;
-                    btn.innerHTML = originalText;                    
+                    btn.innerHTML = originalText;
                 }
             };
             reader.readAsArrayBuffer(file);
