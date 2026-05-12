@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 const PedagioUI = {
     init() {
@@ -9,12 +10,13 @@ const PedagioUI = {
         this.empresasPedagio = []; // Cache para empresas de pedágio
         this.editingLancamentoId = null; // Para edição de lançamentos
         this.editingEmpresaId = null; // Para edição de empresas
-        this.currentSort = { column: 'data_hora_passagem', direction: 'desc' }; // Estado inicial da ordenação
+        this.sortState = { field: 'data_hora_passagem', ascending: false }; // Alinhado com outros módulos
 
         this.cacheDOM();
         this.setupLancamentosTab(); // 2. Configura as datas antes de qualquer carregamento
         this.bindEvents();
         this.initTabs(); // 3. Ativa a aba padrão (isso chamará carregarLancamentos)
+        this.exibirUsuario();
 
         this.carregarVeiculos();
         this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
@@ -25,6 +27,19 @@ const PedagioUI = {
         this.painelNavegacao = document.getElementById('menu-pedagio');
         this.sections = document.querySelectorAll('.main-content > section.glass-panel');
 
+        this.usuarioDisplay = document.getElementById('usuario-logado');
+
+        // Seção Lançamentos
+        this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
+        this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
+        this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
+        this.searchPlaca = document.getElementById('searchPlaca');
+        this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
+        this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
+
+        // Modal de Lançamento
+        this.modalLancamento = document.getElementById('modalLancamento');
+        this.btnCloseModalLancamento = this.modalLancamento?.querySelector('.close-button');
         // Seção Lançamentos
         this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
@@ -97,7 +112,7 @@ const PedagioUI = {
 
         // Ordenação da tabela de lançamentos
         document.querySelectorAll('#sectionLancamento th[data-sort]').forEach(th => {
-            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+            th.addEventListener('click', () => this.handleSort(th.dataset.sort || th.dataset.field));
         });
     },
 
@@ -141,11 +156,29 @@ const PedagioUI = {
         this.filtroDataFinalLancamento.valueAsDate = hoje;
     },
 
+    getUsuarioLogado() {
+        try {
+            const user = localStorage.getItem('usuarioLogado');
+            return user ? JSON.parse(user) : null;
+        } catch (e) { return null; }
+    },
+
+    getUserFilial() {
+        return this.getUsuarioLogado()?.filial || '';
+    },
+
+    exibirUsuario() {
+        const user = this.getUsuarioLogado();
+        if (user && this.usuarioDisplay) {
+            this.usuarioDisplay.textContent = `👤 Olá, ${user.nome}`;
+        }
+    },
+
     async carregarVeiculos() {
         try {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, marca, modelo, categoria_eixos') // Corrigido: 'eixos' para 'categoria_eixos'
+                .select('placa, marca, modelo, categoria_eixos, filial') 
                 .eq('situacao', 'ativo')
                 .order('placa');
             if (error) throw error;
@@ -199,14 +232,11 @@ const PedagioUI = {
 
     async salvarLancamento(event) {
         event.preventDefault();
-        const usuarioInfo = JSON.parse(localStorage.getItem('usuarioLogado')); // Assumindo que usuarioInfo.id é o BIGINT de public.usuarios.id
+        const usuarioInfo = this.getUsuarioLogado();
         const usuarioId = usuarioInfo?.id || null; // Get the user's UUID
-        const usuarioNome = usuarioInfo?.nomecompleto || 'Sistema'; // Get the full name
+        const usuarioNome = usuarioInfo?.nome || 'Sistema'; 
 
-        if (!usuarioId) {
-            alert('Erro: Não foi possível identificar o usuário logado. Por favor, faça login novamente.');
-            return;
-        }
+        if (!usuarioId) return alert('Sessão expirada. Faça login novamente.');
 
         // Validação dos campos obrigatórios
         if (!this.lancamentoPlaca.value.trim()) {
@@ -275,15 +305,18 @@ const PedagioUI = {
                 return;
             }
 
+            const userFilial = this.getUserFilial();
+
             let query = supabaseClient
                 .from('pedagios_lancamentos')
-                .select('*');
+                .select('*, veiculos!inner(filial)');
 
             if (dataInicial) query = query.gte('data_hora_passagem', `${dataInicial}T00:00:00`);
             if (dataFinal) query = query.lte('data_hora_passagem', `${dataFinal}T23:59:59`);
             if (searchPlaca) query = query.ilike('placa', `%${searchPlaca}%`);
+            if (userFilial) query = query.eq('veiculos.filial', userFilial);
 
-            query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
+            query = query.order(this.sortState.field, { ascending: this.sortState.ascending });
 
             const { data, error } = await query;
             if (error) throw error;
@@ -317,21 +350,21 @@ const PedagioUI = {
     },
 
     handleSort(column) {
-        if (this.currentSort.column === column) {
-            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        if (this.sortState.field === column) {
+            this.sortState.ascending = !this.sortState.ascending;
         } else {
-            this.currentSort.column = column;
-            this.currentSort.direction = 'asc';
+            this.sortState.field = column;
+            this.sortState.ascending = true;
         }
         this.carregarLancamentos();
     },
 
     updateSortIcons() {
-        document.querySelectorAll('#sectionLancamento th[data-sort] i').forEach(icon => {
+        document.querySelectorAll('.data-grid th[data-sort] i').forEach(icon => {
             icon.className = 'fas fa-sort';
             const th = icon.closest('th');
-            if (th.dataset.sort === this.currentSort.column) {
-                icon.className = this.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            if (th.dataset.sort === this.sortState.field) {
+                icon.className = this.sortState.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
             }
         });
     },
