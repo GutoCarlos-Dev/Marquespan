@@ -258,6 +258,10 @@ body {
     flex: 1;
 }
 
+#saidaMotorista {
+    text-transform: uppercase;
+}
+
 .btn-icon-scan {
     padding: 0 15px;
     background-color: #006937;

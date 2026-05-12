@@ -100,6 +100,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+async function carregarMotoristas() {
+    try {
+        const { data: motoristas } = await supabaseClient
+            .from('funcionario')
+            .select('nome')
+            .ilike('funcao', '%Motorista%')
+            .eq('status', 'Ativo');
+        
+        if (motoristas && document.getElementById('listaMotoristasMobile')) {
+            document.getElementById('listaMotoristasMobile').innerHTML = 
+                motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
+        }
+    } catch (e) { console.error('Erro ao carregar motoristas', e); }
+}
+
+
 async function carregarDadosIniciais() {
     // Carregar Bicos e Bombas
     try {

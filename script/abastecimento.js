@@ -85,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidaBico = document.getElementById('saidaBico');
             this.saidaVeiculo = document.getElementById('saidaVeiculo');
             this.listaVeiculos = document.getElementById('listaVeiculos'); // This is for veiculos, not motoristas
+            this.saidaMotorista = document.getElementById('saidaMotorista');
+            this.listaMotoristasSaida = document.getElementById('listaMotoristasSaida');
             this.saidaRota = document.getElementById('saidaRota');
             this.listaRotas = document.getElementById('listaRotas');
             this.saidaKm = document.getElementById('saidaKm');
@@ -1064,6 +1066,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar veículos', e); }
+
+            // Carregar Motoristas (Funcionários com "Motorista" no nível/função)
+            try {
+                const { data: motoristas } = await supabaseClient
+                    .from('funcionario')
+                    .select('nome')
+                    .ilike('funcao', '%Motorista%')
+                    .eq('status', 'Ativo');
+                if (motoristas && this.listaMotoristasSaida) {
+                    this.listaMotoristasSaida.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
+                }
+            } catch (e) { console.error('Erro ao carregar motoristas', e); }
             
             // Carregar Rotas (substituindo Motoristas)
             try {
@@ -1498,6 +1512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
                 veiculo_placa: placaInput,
                 rota: this.saidaRota.value,
+                motorista: this.saidaMotorista.value,
                 km_atual: kmValue,
                 usuario: usuario
             };
@@ -1628,6 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dataF = new Date(item.data_hora).toLocaleString('pt-BR').toLowerCase();
                 return (item.veiculo_placa || '').toLowerCase().includes(term) ||
                        (item.rota || '').toLowerCase().includes(term) ||
+                       (item.motorista || '').toLowerCase().includes(term) ||
                        dataF.includes(term);
             });
 
@@ -1651,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.tableBodySaidas.innerHTML = '';
             if (filtered.length === 0) {
-                this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Nenhuma saída registrada.</td></tr>';
+                this.tableBodySaidas.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma saída registrada.</td></tr>';
                 return;
             }
 
@@ -1660,6 +1676,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
                         <td>${saida.veiculo_placa || ''}</td>
                         <td>${saida.rota || ''}</td>
+                        <td>${saida.motorista || '-'}</td>
                         <td>${parseFloat(saida.qtd_litros).toLocaleString('pt-BR')} L</td>
                         <td>${saida.km_atual || ''}</td>
                         <td>${saida.usuario || '-'}</td>
@@ -1699,6 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.saidaBico.value = data.bico_id;
                 this.saidaVeiculo.value = data.veiculo_placa; // This is correct
                 this.saidaRota.value = data.rota;
+                if (this.saidaMotorista) this.saidaMotorista.value = data.motorista || '';
                 this.saidaKm.value = data.km_atual;
                 this.saidaLitros.value = data.qtd_litros;
 

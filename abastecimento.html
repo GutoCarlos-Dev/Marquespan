@@ -228,6 +228,12 @@
               <input type="text" id="saidaVeiculo" list="listaVeiculos" placeholder="Digite a placa..." required class="glass-input input-large" autocomplete="off" />
               <datalist id="listaVeiculos"></datalist>
             </div>
+            
+            <div class="form-group">
+                <label for="saidaMotorista">Motorista (Opcional)</label>
+                <input type="text" id="saidaMotorista" list="listaMotoristasSaida" class="glass-input">
+                <datalist id="listaMotoristasSaida"></datalist>
+            </div>
 
             <div class="form-group">
               <label for="saidaUltimoKm">Último KM</label>
@@ -308,6 +314,7 @@
                   <tr>
                     <th class="sortable-saida" data-sort="data_hora" style="cursor: pointer;">Data/Hora <i class="fas fa-sort"></i></th>
                     <th class="sortable-saida" data-sort="veiculo_placa" style="cursor: pointer;">Veículo <i class="fas fa-sort"></i></th>
+                    <th class="sortable-saida" data-sort="motorista" style="cursor: pointer;">Motorista <i class="fas fa-sort"></i></th>
                     <th class="sortable-saida" data-sort="rota" style="cursor: pointer;">Rota <i class="fas fa-sort"></i></th>
                     <th class="sortable-saida" data-sort="qtd_litros" style="cursor: pointer;">Litros <i class="fas fa-sort"></i></th>
                     <th class="sortable-saida" data-sort="km_atual" style="cursor: pointer;">KM <i class="fas fa-sort"></i></th>
