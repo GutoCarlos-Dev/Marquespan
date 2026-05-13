@@ -2626,7 +2626,7 @@ const ColetarManutencaoUI = {
             });
 
             // Adicionar DETALHES vazio
-            linhaSoma['DETALHES'] = '';
+            //linhaSoma['DETALHES'] = '';
 
             dadosPlanilha.push(linhaSoma);
 
