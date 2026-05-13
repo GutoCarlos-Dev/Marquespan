@@ -343,7 +343,6 @@ const PedagioUI = {
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
-                    <td>${item.pedagios_empresas?.nome || '-'}</td>
                     <td>${item.rodovia || '-'}</td>
                     <td>${item.praca || '-'}</td>
                     <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
