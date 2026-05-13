@@ -346,9 +346,9 @@ const PedagioUI = {
                     <td>${item.rodovia || '-'}</td>
                     <td>${item.praca || '-'}</td>
                     <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td>
-                        <button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <td style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="btn-icon edit btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 this.tableBodyLancamentos.appendChild(tr);
@@ -450,9 +450,9 @@ const PedagioUI = {
                 <td>${empresa.nome}</td>
                 <td>R$ ${parseFloat(empresa.mensalidade || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td><pre>${JSON.stringify(empresa.layout_config, null, 2)}</pre></td>
-                <td>
-                    <button class="btn-action btn-edit" data-id="${empresa.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button class="btn-action btn-delete" data-id="${empresa.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                <td style="display: flex; gap: 5px; justify-content: center; border: none;">
+                    <button class="btn-icon edit btn-edit" data-id="${empresa.id}" title="Editar" style="background: none !important; border: none !important; box-shadow: none !important;"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete btn-delete" data-id="${empresa.id}" title="Excluir" style="background: none !important; border: none !important; box-shadow: none !important;"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             this.tableBodyEmpresasPedagio.appendChild(tr);
