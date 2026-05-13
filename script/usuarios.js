@@ -1,4 +1,25 @@
-import { supabaseClient } from './supabase.js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { supabaseClient, supabaseUrl, supabaseKey } from './supabase.js';
+
+const DOMINIO_LOGIN = '@marquespan.local';
+
+const supabaseCadastro = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+});
+
+function gerarEmailInterno(nomeUsuario) {
+  return `${nomeUsuario
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '.')
+    .replace(/[^a-z0-9.]/g, '')}${DOMINIO_LOGIN}`;
+}
 
 let usuariosCache = [];
 let sortConfig = { column: 'nome', direction: 'asc' };
@@ -224,47 +245,89 @@ function updateSortIcons() {
 
 async function salvarUsuario(e) {
     e.preventDefault();
-    
+
     const id = document.getElementById('usuarioId').value;
-    const nome = document.getElementById('nome').value;
-    const nomecompleto = document.getElementById('nomecompleto').value;
-    const email = document.getElementById('email').value;
+    const nome = document.getElementById('nome').value.trim();
+    const nomecompleto = document.getElementById('nomecompleto').value.trim();
+    const email = document.getElementById('email').value.trim();
     const nivel = document.getElementById('nivel').value;
     const filial = document.getElementById('filial').value;
     const status = document.getElementById('status').value;
-    const senha = document.getElementById('senha').value;
+    const senha = document.getElementById('senha').value.trim();
+
+    if (!nome || !nivel || !status) {
+        alert('⚠️ Preencha nome, nível e status.');
+        return;
+    }
 
     const usuarioData = {
         nome,
-        nomecompleto, // ou nome_completo dependendo do banco, ajustando conforme necessidade
+        nomecompleto,
         email,
         nivel,
         status,
         filial: filial || null
     };
 
-    // Só envia a senha se ela foi preenchida (para update) ou se é novo cadastro
     if (senha) {
         usuarioData.senha = senha;
     }
 
     try {
         let error;
+
         if (id) {
-            // Update
-            const response = await supabaseClient.from('usuarios').update(usuarioData).eq('id', id);
+            const response = await supabaseClient
+                .from('usuarios')
+                .update(usuarioData)
+                .eq('id', id);
+
             error = response.error;
+
+            if (senha) {
+                alert('⚠️ Senha salva na tabela usuarios. Por enquanto, altere também no Supabase Auth manualmente.');
+            }
+
         } else {
-            // Insert
-            if (!senha) return alert('Senha é obrigatória para novos usuários.');
-            const response = await supabaseClient.from('usuarios').insert([usuarioData]);
+            if (!senha) {
+                alert('⚠️ Senha é obrigatória para novos usuários.');
+                return;
+            }
+
+            const emailInterno = gerarEmailInterno(nome);
+
+            const { data: authData, error: authError } = await supabaseCadastro.auth.signUp({
+                email: emailInterno,
+                password: senha,
+                options: {
+                    data: {
+                        nome,
+                        nomecompleto
+                    }
+                }
+            });
+
+            if (authError) {
+                throw new Error('Erro ao criar usuário no Auth: ' + authError.message);
+            }
+
+            if (!authData.user) {
+                throw new Error('Usuário Auth não foi criado. Verifique se a confirmação de email está desativada.');
+            }
+
+            usuarioData.auth_user_id = authData.user.id;
+
+            const response = await supabaseClient
+                .from('usuarios')
+                .insert([usuarioData]);
+
             error = response.error;
         }
 
         if (error) throw error;
 
-        alert('Usuário salvo com sucesso!');
-        document.getElementById('btnCancelar').click(); // Volta para a lista
+        alert('✅ Usuário salvo com sucesso!');
+        document.getElementById('btnCancelar').click();
         carregarUsuarios();
 
     } catch (err) {

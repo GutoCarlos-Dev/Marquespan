@@ -1,7 +1,7 @@
 // script/auth.js
 import { supabaseClient } from './supabase.js';
 
-const DOMINIO_LOGIN = '@marquespan.gtsystem.com';
+const DOMINIO_LOGIN = '@marquespan.local';
 
 function gerarEmailInterno(nomeUsuario) {
   return `${nomeUsuario
@@ -31,13 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const emailInterno = gerarEmailInterno(usuario);
 
+        console.log('Email interno usado no login:', emailInterno);
+
         const { data: authData, error: authError } =
           await supabaseClient.auth.signInWithPassword({
             email: emailInterno,
             password: senha
           });
-
+        
         if (authError || !authData.user) {
+          console.error('Erro Auth completo:', authError);
           alert('❌ Usuário ou senha inválidos.');
           return;
         }
