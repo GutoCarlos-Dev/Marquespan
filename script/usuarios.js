@@ -1,25 +1,27 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import { supabaseClient, supabaseUrl, supabaseKey } from './supabase.js';
+import { supabaseClient, supabaseKey } from './supabase.js';
 
-const DOMINIO_LOGIN = '@marquespan.local';
+//import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+//import { supabaseClient, supabaseUrl, supabaseKey } from './supabase.js';
 
-const supabaseCadastro = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  }
-});
+//const DOMINIO_LOGIN = '@marquespan.local';
 
-function gerarEmailInterno(nomeUsuario) {
-  return `${nomeUsuario
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '.')
-    .replace(/[^a-z0-9.]/g, '')}${DOMINIO_LOGIN}`;
-}
+//const supabaseCadastro = createClient(supabaseUrl, supabaseKey, {
+  //auth: {
+    //persistSession: false,
+    //autoRefreshToken: false,
+    //detectSessionInUrl: false
+  //}
+//});
+
+//function gerarEmailInterno(nomeUsuario) {
+  //return `${nomeUsuario
+    //.trim()
+    //.toLowerCase()
+   // .normalize('NFD')
+   // .replace(/[\u0300-\u036f]/g, '')
+   // .replace(/\s+/g, '.')
+   // .replace(/[^a-z0-9.]/g, '')}${DOMINIO_LOGIN}`;
+//}
 
 let usuariosCache = [];
 let sortConfig = { column: 'nome', direction: 'asc' };
@@ -260,71 +262,47 @@ async function salvarUsuario(e) {
         return;
     }
 
-    const usuarioData = {
-        nome,
-        nomecompleto,
-        email,
-        nivel,
-        status,
-        filial: filial || null
-    };
-
-    if (senha) {
-        usuarioData.senha = senha;
+    if (!id && !senha) {
+        alert('⚠️ Senha é obrigatória para novos usuários.');
+        return;
     }
 
+    const btnSalvar = document.querySelector('#formUsuario button[type="submit"]');
+
     try {
-        let error;
+        btnSalvar.disabled = true;
+        btnSalvar.innerText = 'Salvando...';
 
-        if (id) {
-            const response = await supabaseClient
-                .from('usuarios')
-                .update(usuarioData)
-                .eq('id', id);
+        const payload = {
+            acao: id ? 'editar' : 'criar',
+            id: id || null,
+            nome,
+            nomecompleto,
+            email,
+            nivel,
+            filial,
+            status,
+            senha
+        };
 
-            error = response.error;
-
-            if (senha) {
-                alert('⚠️ Senha salva na tabela usuarios. Por enquanto, altere também no Supabase Auth manualmente.');
+        const response = await fetch(
+            'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    apikey: supabaseKey,
+                    Authorization: `Bearer ${supabaseKey}`
+                },
+                body: JSON.stringify(payload)
             }
+        );
 
-        } else {
-            if (!senha) {
-                alert('⚠️ Senha é obrigatória para novos usuários.');
-                return;
-            }
+        const result = await response.json();
 
-            const emailInterno = gerarEmailInterno(nome);
-
-            const { data: authData, error: authError } = await supabaseCadastro.auth.signUp({
-                email: emailInterno,
-                password: senha,
-                options: {
-                    data: {
-                        nome,
-                        nomecompleto
-                    }
-                }
-            });
-
-            if (authError) {
-                throw new Error('Erro ao criar usuário no Auth: ' + authError.message);
-            }
-
-            if (!authData.user) {
-                throw new Error('Usuário Auth não foi criado. Verifique se a confirmação de email está desativada.');
-            }
-
-            usuarioData.auth_user_id = authData.user.id;
-
-            const response = await supabaseClient
-                .from('usuarios')
-                .insert([usuarioData]);
-
-            error = response.error;
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Erro ao salvar usuário.');
         }
-
-        if (error) throw error;
 
         alert('✅ Usuário salvo com sucesso!');
         document.getElementById('btnCancelar').click();
@@ -332,7 +310,10 @@ async function salvarUsuario(e) {
 
     } catch (err) {
         console.error('Erro ao salvar usuário:', err);
-        alert('Erro ao salvar: ' + err.message);
+        alert('❌ ' + err.message);
+    } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = 'Salvar';
     }
 }
 
