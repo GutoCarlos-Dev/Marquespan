@@ -294,6 +294,7 @@ async function exportarPDF() {
     doc.setFontSize(12);
     doc.setTextColor(0, 105, 55);
     doc.text(`Total de Passagens: ${filtrados.length} | Custo Total: R$ ${totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY);
+    doc.text(`Mensalidades: R$ ${fleetMonthlyTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${lastFleetCount} veíc.)`, 14, finalY + 7);
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -339,13 +340,14 @@ function exportarExcel() {
         "Divergência": "",
         "Rodovia": "",
         "Praça": `${filtrados.length} Passagens`,
-        "Valor (R$)": totalValor,
+        "Valor (R$)": totalValor, // Custo Total
+        "Mensalidades (R$)": fleetMonthlyTotal,
+        "Qtd. Veículos Mensalidade": lastFleetCount,
         "Usuário": ""
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Pedagios");
-
     XLSX.writeFile(wb, `relatorio_pedagio_${new Date().getTime()}.xlsx`);
 }
