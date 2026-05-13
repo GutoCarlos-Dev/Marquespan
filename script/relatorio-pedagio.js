@@ -2,6 +2,8 @@ import { supabaseClient } from './supabase.js';
 
 let dadosCompletos = [];
 let sortState = { field: 'data_hora_passagem', ascending: false };
+let fleetMonthlyTotal = 0; // Armazena o cálculo da mensalidade da frota
+let lastFleetCount = 0; // Armazena a contagem para conferência
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Configura datas iniciais
@@ -61,6 +63,15 @@ async function buscarDados() {
         const rodovia = document.getElementById('rodovia').value;
         const praca = document.getElementById('praca').value;
 
+        // 1. Cálculo da quantidade de meses no período para a mensalidade
+        const dIni = new Date(dataIni + 'T00:00:00');
+        const dFim = new Date(dataFim + 'T23:59:59');
+        const diffMeses = (dFim.getFullYear() - dIni.getFullYear()) * 12 + (dFim.getMonth() - dIni.getMonth()) + 1;
+
+        // 2. Tipos de veículos permitidos para mensalidade
+        const tiposPermitidos = ['TRUCK', 'CAMINHÃO 3/4', 'CAMINHÂO 3/4', 'BITRUCK', 'BITREM', 'HR/VAN', 'LS', 'MUNCK'];
+
+        // 3. Busca os lançamentos
         let query = supabaseClient
             .from('pedagios_lancamentos')
             .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)');
@@ -72,9 +83,36 @@ async function buscarDados() {
         if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
         if (praca) query = query.ilike('praca', `%${praca}%`);
 
-        const { data, error } = await query;
-        if (error) throw error;
+         // 4. Prepara consulta da frota (ativo + INTERNADO) respeitando filial e tipos
+        let fleetQuery = supabaseClient
+            .from('veiculos')
+            .select('*', { count: 'exact', head: true })
+            .in('situacao', ['ativo', 'INTERNADO'])
+            .in('tipo', tiposPermitidos);
+        
+        if (filial) fleetQuery = fleetQuery.eq('filial', filial);
 
+        const [resPassagens, resFrota, resEmpresa] = await Promise.all([
+            query,
+            fleetQuery,
+            // Busca a mensalidade padrão (considerando a primeira empresa cadastrada como referência)
+            supabaseClient
+                .from('pedagios_empresas')
+                .select('mensalidade')
+                .limit(1)
+                .single()
+        ]);
+
+        if (resPassagens.error) throw resPassagens.error;
+
+        lastFleetCount = resFrota.count || 0;
+        const valorMensalidadeUnitario = resEmpresa.data?.mensalidade || 0;
+        
+        // Cálculo final: Qtd Veículos da Filial/Tipo * Valor Mensalidade * Qtd Meses no Filtro
+        fleetMonthlyTotal = lastFleetCount * valorMensalidadeUnitario * diffMeses;
+
+        const { data, error } = resPassagens;
+        if (error) throw error;
         dadosCompletos = data || [];
         renderizarTabela();
 
@@ -137,7 +175,6 @@ function renderizarTabela() {
             <td>${d.marca_veiculo || '-'}</td>
             <td ${alertStyle}>${d.categoria_eixos || '-'} ${temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : ''}</td>
             <td style="text-align: center; color: #666;">${d.veiculos?.eixos || '-'}</td>
-            <td style="color: #666;">R$ ${parseFloat(d.pedagios_empresas?.mensalidade || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             <td>${d.rodovia || '-'}</td>
             <td>${d.praca || '-'}</td>
             <td>R$ ${parseFloat(d.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -151,25 +188,11 @@ function renderizarTabela() {
 
     // Totais
     const totalValor = filtrados.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
-    
-    // Lógica para somar mensalidade fixa por veículo por mês
-    const veiculosMesProcessados = new Set();
-    let totalMensalidades = 0;
-    
-    filtrados.forEach(d => {
-        const mesReferencia = d.data_hora_passagem.substring(0, 7); // YYYY-MM
-        const chave = `${d.placa}-${mesReferencia}-${d.empresa_id}`;
-        
-        if (!veiculosMesProcessados.has(chave)) {
-            veiculosMesProcessados.add(chave);
-            totalMensalidades += parseFloat(d.pedagios_empresas?.mensalidade || 0);
-        }
-    });
 
     document.getElementById('totalRegistros').textContent = filtrados.length;
     document.getElementById('valorTotal').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    document.getElementById('valorMensalidades').textContent = totalMensalidades.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    document.getElementById('valorGeral').textContent = (totalValor + totalMensalidades).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    document.getElementById('valorMensalidades').textContent = `${fleetMonthlyTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${lastFleetCount} veíc.)`;
+    document.getElementById('valorGeral').textContent = (totalValor + fleetMonthlyTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     
     // Ícones de sort
     document.querySelectorAll('.sortable i').forEach(i => i.className = 'fas fa-sort');
