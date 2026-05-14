@@ -1,4 +1,4 @@
-// script/auth.js
+
 import { supabaseClient } from './supabase.js';
 
 const DOMINIO_LOGIN = '@marquespan.local';
