@@ -1157,7 +1157,7 @@ function criarLinhaRetornoImportada({ placa, rota, stat, motorista, auxiliar, da
     novaLinha.placa = limparPlaca(placa);
     novaLinha.rota = rota || '';
     novaLinha.status_rota = stat || '';
-    novaLinha.operador_recebimento = '';
+    //novaLinha.operador_recebimento = '';
     novaLinha.nome_mot = motorista || '';
     novaLinha.nome_aux = auxiliar || '';
 
