@@ -248,8 +248,15 @@ async function salvarManutencao() {
   document.getElementById('idManutencao').value = novoIdManutencao;
   document.getElementById('idManutencaoDisplay').textContent = novoIdManutencao;
 
-  // Salvar Arquivos
-  await salvarArquivosManutencao(novoIdManutencao);
+  // Salvar arquivos. Se falhar, a manutencao principal pode ja ter sido gravada,
+  // mas nao devemos exibir sucesso nem limpar/redirecionar a tela.
+  try {
+    await salvarArquivosManutencao(novoIdManutencao);
+  } catch (arquivoError) {
+    console.error('Erro ao salvar anexos da manutencao:', arquivoError);
+    alert(`A manutencao foi ${idManutencao ? 'atualizada' : 'salva'}, mas houve erro ao anexar arquivo(s): ${arquivoError.message || arquivoError}. Tente salvar novamente apos verificar a conexao/permissao do Storage.`);
+    return;
+  }
 
   // Atualiza o log de registros recentes abaixo do formulário
   await carregarUltimosLancamentos();
@@ -264,8 +271,6 @@ async function salvarManutencao() {
       arquivosExistentes = [];
       renderizarListaArquivos();
       preencherUsuarioLogado();
-  } else {
-      window.location.href = 'buscar-manutencao.html';
   }
 }
 
@@ -515,7 +520,7 @@ async function salvarArquivosManutencao(idManutencao) {
         
         if (storageDeleteError) {
             console.error('Erro ao excluir arquivos do Storage:', storageDeleteError);
-            alert('Aviso: Erro ao excluir alguns arquivos do armazenamento. Eles podem precisar ser removidos manualmente.');
+            throw new Error('Erro ao excluir alguns arquivos do armazenamento: ' + (storageDeleteError.message || JSON.stringify(storageDeleteError)));
         }
         arquivosParaDeletar = []; // Limpa a lista após tentar a exclusão
     }
@@ -530,7 +535,7 @@ async function salvarArquivosManutencao(idManutencao) {
         
         if (error) {
             console.error('Erro no upload:', error);
-            alert(`Erro ao enviar arquivo ${file.name}: ${error.message}`);
+            throw new Error(`Erro ao enviar arquivo ${file.name}: ${error.message || JSON.stringify(error)}`);
         } else {
             novosRegistros.push({
                 id_manutencao: idManutencao,
@@ -550,8 +555,7 @@ async function salvarArquivosManutencao(idManutencao) {
     const { error: deleteError } = await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
     if (deleteError) {
         console.error('Erro ao limpar referências antigas:', deleteError);
-        alert('Erro ao sincronizar arquivos no banco de dados. Tente salvar novamente.');
-        return;
+        throw new Error('Erro ao sincronizar arquivos no banco de dados: ' + (deleteError.message || JSON.stringify(deleteError)));
     }
 
     // Prepara lista final (Existentes + Novos)
@@ -580,6 +584,7 @@ async function salvarArquivosManutencao(idManutencao) {
                 arquivosExistentes = []; // Fallback if re-fetch also fails
             }
             renderizarListaArquivos();
+            throw new Error('Erro ao salvar referencia do arquivo no banco: ' + (insertError.message || JSON.stringify(insertError)));
             return; // Aborta a operação
         }
         insertedFilesData = insertedData;
