@@ -411,3 +411,15 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
 
 .status-realizado { background-color: #28a745; }
 .status-pendente { background-color: #dc3545; }
+
+
+#importarRoteiroStatus {
+    font-size: 12px;
+    color: #006937;
+    font-weight: 600;
+    margin-top: 5px;
+}
+
+#btnImportarRoteiro {
+    background: linear-gradient(135deg, #007bff 0%, #004c99 100%);
+}

@@ -9,7 +9,7 @@ let sortConfig = { key: null, asc: true }; // Estado da ordenação
 // Mapeamento de colunas da planilha para os nomes dos campos no objeto de dados
 // A ordem aqui DEVE corresponder à ordem das colunas na planilha do usuário
 const COLUMN_MAP = [
-    'placa', 'rota', 'operador_recebimento', 'created_at', 'nome_mot', 'hora_mot', 'nome_aux', 'hora_aux', 'nome_terceiro', 'hora_terceiro',
+    'placa', 'rota','status_rota', 'operador_recebimento', 'created_at', 'nome_mot', 'hora_mot', 'nome_aux', 'hora_aux', 'nome_terceiro', 'hora_terceiro',
     'carrinhos', 'obs_carrinhos', 'paletes', 'madeira_qtd', 'plastico_qtd', 'caixa_branca_qtd', 'tipo_retorno', 'qtd_clientes',
     'cliente1', 'frances_diurno1', 'frances_noturno1', 'variedades1', 'motivo1', 'nf_dev1', 'obs_nf_dev1',
     'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'nf_dev2', 'obs_nf_dev2',
@@ -66,6 +66,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExportarPao').addEventListener('click', () => exportToPDF('pao'));
     document.getElementById('btnExportarPecas').addEventListener('click', () => exportToPDF('pecas'));
     document.getElementById('btnExcluirSelecionados').addEventListener('click', deleteSelectedRows);
+
+
+    //nova documentação
+    document.getElementById('btnImportarRoteiro').addEventListener('click', () => {
+    document.getElementById('inputImportarRoteiro').click();
+    });
+    document.getElementById('inputImportarRoteiro').addEventListener('change', importarRoteiroExcel);
+
 
     // Listener para o novo campo de busca
     const searchInput = document.getElementById('searchInput');
@@ -476,6 +484,7 @@ function renderGrid() {
             ${selectCell}
             <td><input type="text" value="${rowData.placa || ''}" data-field="placa"></td>
             <td><input type="text" value="${rowData.rota || ''}" data-field="rota"></td>
+            <td><input type="text"value="${rowData.status_rota || ''}"data-field="status_rota"></td>
             <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
             <td><input type="text" value="${rowData.nome_mot || ''}" data-field="nome_mot"></td>
             <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot"></td>
@@ -1038,3 +1047,227 @@ window.shareBreadReturnOnWhatsApp = function(index) {
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 };
+
+//nova função para importar roteiro de rota a partir de um arquivo Excel, seguindo o layout padrão utilizado pelos motoristas para registrar os dados de retorno diariamente. O código é robusto para lidar com variações comuns em arquivos Excel, como formatos de data diferentes, nomes de colunas inconsistentes e múltiplas abas. Ele também normaliza os dados importados para garantir que sejam compatíveis com o formato esperado pelo sistema, facilitando a integração e evitando erros de importação.
+const PLANILHAS_DIAS_SEMANA = [
+    'SEGUNDA',
+    'TERÇA',
+    'TERCA',
+    'QUARTA',
+    'QUINTA',
+    'SEXTA',
+    'SABADO',
+    'SÁBADO',
+    'DOMINGO'
+];
+
+function normalizarTexto(valor) {
+    return String(valor || '')
+        .trim()
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function limparPlaca(valor) {
+    const texto = String(valor || '').trim();
+
+    const primeiraParte = texto.split('- VM')[0]
+        .split(' - ')[0]
+        .split(' ')[0];
+
+    return primeiraParte
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase();
+}
+
+function excelDateToISO(valor) {
+    if (!valor) return '';
+
+    if (valor instanceof Date) {
+        return valor.toISOString().split('T')[0];
+    }
+
+    if (typeof valor === 'number') {
+        const data = XLSX.SSF.parse_date_code(valor);
+        if (!data) return '';
+
+        const ano = data.y;
+        const mes = String(data.m).padStart(2, '0');
+        const dia = String(data.d).padStart(2, '0');
+
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    const texto = String(valor).trim();
+
+    const matchBR = texto.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (matchBR) {
+        const dia = matchBR[1].padStart(2, '0');
+        const mes = matchBR[2].padStart(2, '0');
+        let ano = matchBR[3];
+
+        if (ano.length === 2) ano = `20${ano}`;
+
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    const data = new Date(texto);
+    if (!isNaN(data)) {
+        return data.toISOString().split('T')[0];
+    }
+
+    return '';
+}
+
+function encontrarLinhaCabecalho(linhas) {
+    for (let i = 0; i < linhas.length; i++) {
+        const linhaNormalizada = linhas[i].map(normalizarTexto);
+
+        const temPlaca = linhaNormalizada.includes('PLACA');
+        const temRota = linhaNormalizada.includes('ROTA');
+        const temMotorista = linhaNormalizada.includes('MOTORISTA');
+
+        if (temPlaca && temRota && temMotorista) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+function mapearColunas(cabecalho) {
+    const normalizado = cabecalho.map(normalizarTexto);
+
+    return {
+        placa: normalizado.indexOf('PLACA'),
+        rota: normalizado.indexOf('ROTA'),
+        stat: normalizado.indexOf('STAT'),
+        motorista: normalizado.indexOf('MOTORISTA'),
+        auxiliar: normalizado.indexOf('AUXILIAR')
+    };
+}
+
+function criarLinhaRetornoImportada({ placa, rota, stat, motorista, auxiliar, dataRetorno }) {
+    const novaLinha = {};
+
+    COLUMN_MAP.forEach(key => novaLinha[key] = null);
+
+    novaLinha.data_retorno = dataRetorno;
+    novaLinha.placa = limparPlaca(placa);
+    novaLinha.rota = rota || '';
+    novaLinha.status_rota = stat || '';
+    novaLinha.operador_recebimento = '';
+    novaLinha.nome_mot = motorista || '';
+    novaLinha.nome_aux = auxiliar || '';
+
+    return novaLinha;
+}
+
+async function importarRoteiroExcel(event) {
+    const arquivo = event.target.files[0];
+    event.target.value = '';
+
+    if (!arquivo) return;
+
+    const dataSelecionada = document.getElementById('dataRetorno').value;
+
+    if (!dataSelecionada) {
+        alert('⚠️ Informe a Data do Retorno antes de importar.');
+        return;
+    }
+
+    try {
+        const buffer = await arquivo.arrayBuffer();
+        const workbook = XLSX.read(buffer, {
+            type: 'array',
+            cellDates: true
+        });
+
+        let linhasImportadas = [];
+        let planilhaEncontrada = null;
+
+        for (const nomeAba of workbook.SheetNames) {
+            const nomeNormalizado = normalizarTexto(nomeAba);
+
+            if (!PLANILHAS_DIAS_SEMANA.map(normalizarTexto).includes(nomeNormalizado)) {
+                continue;
+            }
+
+            const sheet = workbook.Sheets[nomeAba];
+            const dataCelulaG4 = sheet['G4'] ? sheet['G4'].v : null;
+            const dataPlanilha = excelDateToISO(dataCelulaG4);
+
+            if (dataPlanilha !== dataSelecionada) {
+                continue;
+            }
+
+            const linhas = XLSX.utils.sheet_to_json(sheet, {
+                header: 1,
+                defval: ''
+            });
+
+            const linhaCabecalhoIndex = encontrarLinhaCabecalho(linhas);
+
+            if (linhaCabecalhoIndex === -1) {
+                throw new Error(`Não encontrei as colunas PLACA, ROTA, STAT, MOTORISTA e AUXILIAR na aba ${nomeAba}.`);
+            }
+
+            const cabecalho = linhas[linhaCabecalhoIndex];
+            const colunas = mapearColunas(cabecalho);
+
+            if (colunas.placa === -1 || colunas.rota === -1 || colunas.motorista === -1 || colunas.auxiliar === -1) {
+                throw new Error(`A aba ${nomeAba} não possui todas as colunas obrigatórias.`);
+            }
+
+            for (let i = linhaCabecalhoIndex + 1; i < linhas.length; i++) {
+                const linha = linhas[i];
+
+                const placa = linha[colunas.placa];
+                const rota = linha[colunas.rota];
+                const stat = colunas.stat >= 0 ? linha[colunas.stat] : '';
+                const motorista = linha[colunas.motorista];
+                const auxiliar = linha[colunas.auxiliar];
+
+                if (!placa && !rota && !motorista && !auxiliar) {
+                    continue;
+                }
+
+                linhasImportadas.push(criarLinhaRetornoImportada({
+                    placa,
+                    rota,
+                    stat,
+                    motorista,
+                    auxiliar,
+                    dataRetorno: dataSelecionada
+                }));
+            }
+
+            planilhaEncontrada = nomeAba;
+            break;
+        }
+
+        if (!planilhaEncontrada) {
+            alert('⚠️ Nenhuma aba de dia da semana possui a mesma data informada em Data do Retorno.');
+            return;
+        }
+
+        if (linhasImportadas.length === 0) {
+            alert(`⚠️ A aba ${planilhaEncontrada} foi encontrada, mas não possui linhas válidas para importar.`);
+            return;
+        }
+
+        if (!confirm(`Importar ${linhasImportadas.length} lançamento(s) da aba ${planilhaEncontrada}? Isso vai substituir a grade atual da tela.`)) {
+            return;
+        }
+
+        gridData = linhasImportadas;
+        renderGrid();
+
+        alert(`✅ Importação concluída! ${linhasImportadas.length} lançamento(s) carregado(s) da aba ${planilhaEncontrada}.`);
+
+    } catch (error) {
+        console.error('Erro ao importar roteiro:', error);
+        alert('❌ Erro ao importar roteiro: ' + error.message);
+    }
+}

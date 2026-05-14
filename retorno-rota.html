@@ -10,7 +10,8 @@
     <!-- Bibliotecas para Exportação PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    
     <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
@@ -48,6 +49,8 @@
                         <button id="btnExportarPao" class="btn-glass btn-red"><i class="fas fa-bread-slice"></i> Retorno Pão</button>
                         <button id="btnExportarPecas" class="btn-glass btn-red"><i class="fas fa-tools"></i> Retorno Peças</button>
                         <button id="btnExcluirSelecionados" class="btn-glass btn-red"><i class="fas fa-trash-alt"></i> Excluir Selecionados</button>
+                        <button id="btnImportarRoteiro" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Roteiro</button>
+                        <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
                     </div>
                 </div>
             </div>
@@ -71,6 +74,7 @@
                                 <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllRows"></th>
                                 <th data-sort="placa" style="cursor:pointer;">Placa <i class="fas fa-sort"></i></th>
                                 <th data-sort="rota" style="cursor:pointer;">Rota <i class="fas fa-sort"></i></th>
+                                <th data-sort="status_rota" style="cursor:pointer;">Status Rota<i class="fas fa-sort"></i></th>
                                 <th data-sort="operador_recebimento" style="cursor:pointer;">Operador Receb. <i class="fas fa-sort"></i></th>
                                 <th data-sort="nome_mot" style="cursor:pointer;">Motorista <i class="fas fa-sort"></i></th>
                                 <th data-sort="hora_mot" style="cursor:pointer;">Hora Motorista <i class="fas fa-sort"></i></th>
