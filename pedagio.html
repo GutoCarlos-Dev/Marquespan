@@ -33,7 +33,10 @@
       <section id="sectionLancamento" class="glass-panel">
           <div class="panel-header-actions">
             <h3><i class="fas fa-history"></i> Histórico de Passagens</h3>
-            <button id="btnAdicionarLancamento" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Novo Lançamento</button>
+            <div class="lancamento-actions-card">
+              <button id="btnAdicionarLancamento" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Novo Lançamento</button>
+              <button id="btnExcluirSelecionados" class="btn-glass btn-red" disabled><i class="fas fa-trash"></i> Excluir Selecionados</button>
+            </div>
           </div>
           
           <div class="filters-container glass-panel" style="margin-bottom: 20px; padding: 15px; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -56,6 +59,7 @@
             <table class="glass-table data-grid">
               <thead>
                 <tr>
+                  <th class="selection-col"><input type="checkbox" id="selectAllLancamentos" aria-label="Selecionar todos os lançamentos"></th>
                   <th data-sort="usuario_nome">Usuário <i class="fas fa-sort"></i></th>
                   <th data-sort="data_hora_passagem">Data/Hora <i class="fas fa-sort"></i></th>
                   <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>

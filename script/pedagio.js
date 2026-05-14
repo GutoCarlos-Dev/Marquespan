@@ -40,6 +40,8 @@ const PedagioUI = {
 
         // Seção Lançamentos
         this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
+        this.btnExcluirSelecionados = document.getElementById('btnExcluirSelecionados');
+        this.selectAllLancamentos = document.getElementById('selectAllLancamentos');
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
         this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
         this.searchPlaca = document.getElementById('searchPlaca');
@@ -51,6 +53,8 @@ const PedagioUI = {
         this.btnCloseModalLancamento = this.modalLancamento?.querySelector('.close-button');
         // Seção Lançamentos
         this.btnAdicionarLancamento = document.getElementById('btnAdicionarLancamento');
+        this.btnExcluirSelecionados = document.getElementById('btnExcluirSelecionados');
+        this.selectAllLancamentos = document.getElementById('selectAllLancamentos');
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
         this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
         this.searchPlaca = document.getElementById('searchPlaca');
@@ -107,8 +111,15 @@ const PedagioUI = {
         if (this.btnAdicionarLancamento) {
             this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModalLancamento());
         }
+        if (this.btnExcluirSelecionados) {
+            this.btnExcluirSelecionados.addEventListener('click', () => this.excluirLancamentosSelecionados());
+        }
+        if (this.selectAllLancamentos) {
+            this.selectAllLancamentos.addEventListener('change', () => this.toggleSelecionarTodosLancamentos());
+        }
         this.btnFiltrarLancamentos.addEventListener('click', () => this.carregarLancamentos());
         this.searchPlaca.addEventListener('input', () => this.carregarLancamentos());
+        this.tableBodyLancamentos.addEventListener('change', (e) => this.handleLancamentoSelectionChange(e));
         this.tableBodyLancamentos.addEventListener('click', (e) => this.handleLancamentoTableClick(e));
 
         // Modal de Lançamento
@@ -420,14 +431,15 @@ const PedagioUI = {
 
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Carregando...</td></tr>';
+        this.resetSelecaoLancamentos();
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="12" class="text-center">Carregando...</td></tr>';
         try {
             const dataInicial = this.filtroDataInicialLancamento.value;
             const dataFinal = this.filtroDataFinalLancamento.value;
             const searchPlaca = (this.searchPlaca.value || '').trim().toUpperCase();
 
             if (!dataInicial || !dataFinal) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Selecione o período de datas.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="12" class="text-center">Selecione o período de datas.</td></tr>';
                 return;
             }
 
@@ -456,7 +468,7 @@ const PedagioUI = {
 
             this.tableBodyLancamentos.innerHTML = '';
             if (lancamentos.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Nenhum lançamento encontrado.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="12" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
@@ -464,6 +476,7 @@ const PedagioUI = {
                 const veiculo = this.veiculosData.find(v => v.placa === item.placa);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td class="selection-col"><input type="checkbox" class="lancamento-checkbox" value="${item.id}" aria-label="Selecionar lançamento ${item.placa}"></td>
                     <td>${item.usuario_nome || '-'}</td>
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
@@ -490,8 +503,51 @@ const PedagioUI = {
                 code: error.code,
                 error
             });
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="12" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
+    },
+
+    getLancamentosSelecionados() {
+        return Array.from(this.tableBodyLancamentos.querySelectorAll('.lancamento-checkbox:checked'))
+            .map(input => input.value)
+            .filter(Boolean);
+    },
+
+    atualizarEstadoSelecaoLancamentos() {
+        const checkboxes = Array.from(this.tableBodyLancamentos.querySelectorAll('.lancamento-checkbox'));
+        const selecionados = checkboxes.filter(input => input.checked);
+
+        if (this.btnExcluirSelecionados) {
+            this.btnExcluirSelecionados.disabled = selecionados.length === 0;
+        }
+
+        if (this.selectAllLancamentos) {
+            this.selectAllLancamentos.checked = checkboxes.length > 0 && selecionados.length === checkboxes.length;
+            this.selectAllLancamentos.indeterminate = selecionados.length > 0 && selecionados.length < checkboxes.length;
+        }
+    },
+
+    resetSelecaoLancamentos() {
+        if (this.selectAllLancamentos) {
+            this.selectAllLancamentos.checked = false;
+            this.selectAllLancamentos.indeterminate = false;
+        }
+        if (this.btnExcluirSelecionados) {
+            this.btnExcluirSelecionados.disabled = true;
+        }
+    },
+
+    toggleSelecionarTodosLancamentos() {
+        const checked = this.selectAllLancamentos?.checked || false;
+        this.tableBodyLancamentos.querySelectorAll('.lancamento-checkbox').forEach(input => {
+            input.checked = checked;
+        });
+        this.atualizarEstadoSelecaoLancamentos();
+    },
+
+    handleLancamentoSelectionChange(event) {
+        if (!event.target.classList.contains('lancamento-checkbox')) return;
+        this.atualizarEstadoSelecaoLancamentos();
     },
 
     handleSort(column) {
@@ -561,6 +617,32 @@ const PedagioUI = {
         } catch (error) {
             console.error('Erro ao excluir lançamento:', error);
             alert('Erro ao excluir lançamento: ' + error.message);
+        }
+    },
+
+    async excluirLancamentosSelecionados() {
+        const ids = this.getLancamentosSelecionados();
+        if (ids.length === 0) {
+            alert('Selecione ao menos um lançamento para excluir.');
+            return;
+        }
+
+        if (!confirm(`Tem certeza que deseja excluir ${ids.length} lançamento(s) selecionado(s)?`)) return;
+
+        if (this.btnExcluirSelecionados) this.btnExcluirSelecionados.disabled = true;
+        try {
+            const { error } = await supabaseClient
+                .from('pedagios_lancamentos')
+                .delete()
+                .in('id', ids);
+            if (error) throw error;
+
+            alert(`${ids.length} lançamento(s) excluído(s) com sucesso!`);
+            this.carregarLancamentos();
+        } catch (error) {
+            console.error('Erro ao excluir lançamentos selecionados:', error);
+            alert('Erro ao excluir lançamentos selecionados: ' + error.message);
+            this.atualizarEstadoSelecaoLancamentos();
         }
     },
 
