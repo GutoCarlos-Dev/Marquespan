@@ -631,16 +631,26 @@ const PedagioUI = {
 
         if (this.btnExcluirSelecionados) this.btnExcluirSelecionados.disabled = true;
         try {
-            const { error } = await supabaseClient
-                .from('pedagios_lancamentos')
-                .delete()
-                .in('id', ids);
-            if (error) throw error;
+            const tamanhoLote = 100;
+            for (let i = 0; i < ids.length; i += tamanhoLote) {
+                const lote = ids.slice(i, i + tamanhoLote);
+                const { error } = await supabaseClient
+                    .from('pedagios_lancamentos')
+                    .delete()
+                    .in('id', lote);
+                if (error) throw error;
+            }
 
             alert(`${ids.length} lançamento(s) excluído(s) com sucesso!`);
             this.carregarLancamentos();
         } catch (error) {
-            console.error('Erro ao excluir lançamentos selecionados:', error);
+            console.error('Erro ao excluir lançamentos selecionados:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                error
+            });
             alert('Erro ao excluir lançamentos selecionados: ' + error.message);
             this.atualizarEstadoSelecaoLancamentos();
         }
