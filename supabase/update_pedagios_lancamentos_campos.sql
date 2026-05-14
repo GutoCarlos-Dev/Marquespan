@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.pedagios_lancamentos (
     categoria_eixos integer,
     data_hora_passagem timestamptz,
     empresa_id text,
+    filial text,
     motorista text,
     rota text,
     rodovia text,
@@ -29,6 +30,7 @@ ALTER TABLE public.pedagios_lancamentos
     ADD COLUMN IF NOT EXISTS categoria_eixos integer,
     ADD COLUMN IF NOT EXISTS data_hora_passagem timestamptz,
     ADD COLUMN IF NOT EXISTS empresa_id text,
+    ADD COLUMN IF NOT EXISTS filial text,
     ADD COLUMN IF NOT EXISTS motorista text,
     ADD COLUMN IF NOT EXISTS rota text,
     ADD COLUMN IF NOT EXISTS rodovia text,
@@ -145,6 +147,9 @@ CREATE INDEX IF NOT EXISTS idx_pedagios_lancamentos_placa
 
 CREATE INDEX IF NOT EXISTS idx_pedagios_lancamentos_empresa
     ON public.pedagios_lancamentos (empresa_id);
+
+CREATE INDEX IF NOT EXISTS idx_pedagios_lancamentos_filial
+    ON public.pedagios_lancamentos (filial);
 
 CREATE INDEX IF NOT EXISTS idx_pedagios_lancamentos_motorista
     ON public.pedagios_lancamentos (motorista);

@@ -10,16 +10,21 @@ const PedagioUI = {
         this.empresasPedagio = []; // Cache para empresas de pedágio
         this.motoristasData = [];
         this.rotasData = [];
+        this.filiaisData = [];
         this.editingLancamentoId = null; // Para edição de lançamentos
         this.editingEmpresaId = null; // Para edição de empresas
         this.sortState = { field: 'data_hora_passagem', ascending: false }; // Alinhado com outros módulos
 
         this.cacheDOM();
+        if (this.empresaPedagioLayout && !this.empresaPedagioLayout.value.trim()) {
+            this.empresaPedagioLayout.value = JSON.stringify(this.getLayoutPadraoPedagio(), null, 2);
+        }
         this.setupLancamentosTab(); // 2. Configura as datas antes de qualquer carregamento
         this.bindEvents();
         this.exibirUsuario();
 
         await this.carregarVeiculos();
+        await this.carregarFiliais();
         this.carregarMotoristas();
         this.carregarRotas();
         this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
@@ -58,6 +63,7 @@ const PedagioUI = {
         this.formLancamentoPedagio = document.getElementById('formLancamentoPedagio');
         this.lancamentoPlaca = document.getElementById('lancamentoPlaca');
         this.veiculosList = document.getElementById('veiculosList');
+        this.lancamentoFilial = document.getElementById('lancamentoFilial');
         this.lancamentoTipo = document.getElementById('lancamentoTipo');
         this.lancamentoCateg = document.getElementById('lancamentoCateg');
         this.lancamentoDataHora = document.getElementById('lancamentoDataHora');
@@ -73,6 +79,7 @@ const PedagioUI = {
         // Seção Importação
         this.formImportacaoPedagio = document.getElementById('formImportacaoPedagio');
         this.empresaPedagioSelect = document.getElementById('empresaPedagioSelect');
+        this.filialImportacaoPedagio = document.getElementById('filialImportacaoPedagio');
         this.arquivoImportacao = document.getElementById('arquivoImportacao');
         this.importStatus = document.getElementById('importStatus');
         this.importProgressContainer = document.getElementById('importProgressContainer');
@@ -176,6 +183,23 @@ const PedagioUI = {
         return this.getUsuarioLogado()?.filial || '';
     },
 
+    getValorFilial(filialValor) {
+        if (!filialValor) return '';
+        const filialNormalizada = String(filialValor).trim().toUpperCase();
+        const filial = this.filiaisData.find(f =>
+            String(f.nome || '').trim().toUpperCase() === filialNormalizada ||
+            String(f.sigla || '').trim().toUpperCase() === filialNormalizada
+        );
+        return filial ? (filial.sigla || filial.nome) : filialValor;
+    },
+
+    isMesmaFilial(a, b) {
+        if (!a || !b) return false;
+        const normalizar = valor => String(valor).trim().toUpperCase();
+        if (normalizar(a) === normalizar(b)) return true;
+        return normalizar(this.getValorFilial(a)) === normalizar(this.getValorFilial(b));
+    },
+
     exibirUsuario() {
         const user = this.getUsuarioLogado();
         if (user && this.usuarioDisplay) {
@@ -195,6 +219,37 @@ const PedagioUI = {
             this.veiculosList.innerHTML = data.map(v => `<option value="${v.placa}">${v.placa} - ${v.modelo}</option>`).join('');
         } catch (error) {
             console.error('Erro ao carregar veículos:', error);
+        }
+    },
+
+    async carregarFiliais() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('filiais')
+                .select('nome, sigla')
+                .order('nome');
+            if (error) throw error;
+
+            this.filiaisData = data || [];
+            const options = '<option value="">Selecione a Filial</option>' + this.filiaisData
+                .map(f => {
+                    const value = f.sigla || f.nome;
+                    const label = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                    return `<option value="${value}">${label}</option>`;
+                })
+                .join('');
+
+            if (this.lancamentoFilial) this.lancamentoFilial.innerHTML = options;
+            if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.innerHTML = options;
+
+            const userFilial = this.getUserFilial();
+            if (userFilial) {
+                const valor = this.getValorFilial(userFilial);
+                if (this.lancamentoFilial) this.lancamentoFilial.value = valor;
+                if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.value = valor;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar filiais:', error);
         }
     },
 
@@ -241,6 +296,9 @@ const PedagioUI = {
         const veiculo = this.veiculosData.find(v => v.placa === placa);
         if (veiculo) {
             this.lancamentoTipo.value = veiculo.tipo || '';
+            if (this.lancamentoFilial && veiculo.filial) {
+                this.lancamentoFilial.value = this.getValorFilial(veiculo.filial);
+            }
         } else {
             this.lancamentoTipo.value = '';
         }
@@ -251,6 +309,10 @@ const PedagioUI = {
         if (this.formLancamentoPedagio) this.formLancamentoPedagio.reset();
         if (this.lancamentoTipo) this.lancamentoTipo.value = ''; 
         if (this.lancamentoCateg) this.lancamentoCateg.value = '';
+        const userFilial = this.getUserFilial();
+        if (this.lancamentoFilial && userFilial) {
+            this.lancamentoFilial.value = this.getValorFilial(userFilial);
+        }
         
         // Define a data atual no formato local para o input datetime-local
         const now = new Date();
@@ -319,6 +381,7 @@ const PedagioUI = {
             categoria_eixos: parseInt(this.lancamentoCateg.value) || null, // Corrigido: 'eixos' para 'categoria_eixos'
             data_hora_passagem: new Date(this.lancamentoDataHora.value).toISOString(),
             empresa_id: document.getElementById('lancamentoEmpresa')?.value || null,
+            filial: this.getValorFilial(this.lancamentoFilial.value) || null,
             motorista: this.lancamentoMotorista.value.toUpperCase() || null,
             rota: this.lancamentoRota.value.toUpperCase() || null,
             rodovia: this.lancamentoRodovia.value.toUpperCase() || null,
@@ -357,14 +420,14 @@ const PedagioUI = {
 
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Carregando...</td></tr>';
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Carregando...</td></tr>';
         try {
             const dataInicial = this.filtroDataInicialLancamento.value;
             const dataFinal = this.filtroDataFinalLancamento.value;
             const searchPlaca = (this.searchPlaca.value || '').trim().toUpperCase();
 
             if (!dataInicial || !dataFinal) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Selecione o período de datas.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Selecione o período de datas.</td></tr>';
                 return;
             }
 
@@ -387,13 +450,13 @@ const PedagioUI = {
             if (userFilial) {
                 lancamentos = lancamentos.filter(item => {
                     const veiculo = this.veiculosData.find(v => v.placa === item.placa);
-                    return veiculo?.filial === userFilial;
+                    return this.isMesmaFilial(item.filial, userFilial) || this.isMesmaFilial(veiculo?.filial, userFilial);
                 });
             }
 
             this.tableBodyLancamentos.innerHTML = '';
             if (lancamentos.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Nenhum lançamento encontrado.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
@@ -401,6 +464,7 @@ const PedagioUI = {
                 const veiculo = this.veiculosData.find(v => v.placa === item.placa);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td>${item.usuario_nome || '-'}</td>
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
                     <td>${veiculo?.tipo || item.marca_veiculo || '-'}</td>
@@ -426,7 +490,7 @@ const PedagioUI = {
                 code: error.code,
                 error
             });
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="11" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
 
@@ -472,6 +536,7 @@ const PedagioUI = {
             if(document.getElementById('lancamentoEmpresa')) document.getElementById('lancamentoEmpresa').value = data.empresa_id || '';
             this.preencherDadosVeiculo();
             this.lancamentoCateg.value = data.categoria_eixos || '';
+            this.lancamentoFilial.value = this.getValorFilial(data.filial || this.lancamentoFilial.value || '');
             this.lancamentoDataHora.value = new Date(data.data_hora_passagem).toISOString().slice(0, 16);
             this.lancamentoMotorista.value = data.motorista || '';
             this.lancamentoRota.value = data.rota || '';
@@ -542,13 +607,30 @@ const PedagioUI = {
         });
     },
 
+    getLayoutPadraoPedagio() {
+        return {
+            DATA: 'DATA',
+            HORA: 'HORA',
+            PLACA: 'PLACA',
+            FILIAL: 'FILIAL',
+            ROTA: 'ROTA',
+            MOTORISTA: 'MOTORISTA',
+            CATEGORIA: 'CATEGORIA',
+            RODOVIA: 'RODOVIA',
+            PRACA: 'PRAÇA',
+            VALOR: 'VALOR'
+        };
+    },
+
     async salvarEmpresaPedagio(event) {
         event.preventDefault();
         const nome = this.empresaPedagioNome.value.toUpperCase();
         const mensalidade = parseFloat(this.empresaPedagioMensalidade.value) || 0;
         let layoutConfig = {};
         try {
-            layoutConfig = JSON.parse(this.empresaPedagioLayout.value);
+            layoutConfig = this.empresaPedagioLayout.value.trim()
+                ? JSON.parse(this.empresaPedagioLayout.value)
+                : this.getLayoutPadraoPedagio();
         } catch (e) {
             alert('Layout de Importação inválido. Certifique-se de que é um JSON válido.');
             return;
@@ -575,6 +657,9 @@ const PedagioUI = {
     limparFormEmpresaPedagio() {
         this.editingEmpresaId = null;
         this.formEmpresaPedagio.reset();
+        if (this.empresaPedagioLayout) {
+            this.empresaPedagioLayout.value = JSON.stringify(this.getLayoutPadraoPedagio(), null, 2);
+        }
     },
 
     async handleEmpresaPedagioTableClick(event) {
@@ -622,6 +707,7 @@ const PedagioUI = {
     async handleImportacao(event) {
         event.preventDefault();
         const empresaId = this.empresaPedagioSelect.value;
+        const filialPadrao = this.getValorFilial(this.filialImportacaoPedagio?.value || '');
         const arquivo = this.arquivoImportacao.files[0];
 
         if (!empresaId) {
@@ -630,6 +716,10 @@ const PedagioUI = {
         }
         if (!arquivo) {
             alert('Selecione um arquivo para importar.');
+            return;
+        }
+        if (!filialPadrao) {
+            alert('Selecione a filial da importação.');
             return;
         }
 
@@ -643,6 +733,7 @@ const PedagioUI = {
         if (this.btnSubmitImport) this.btnSubmitImport.disabled = true;
         this.arquivoImportacao.disabled = true;
         this.empresaPedagioSelect.disabled = true;
+        if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = true;
         this.importStatus.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Processando arquivo...</p>';
         if (this.importProgressContainer) {
             this.importProgressContainer.classList.remove('hidden');
@@ -691,6 +782,8 @@ const PedagioUI = {
                         const placa = row[idxPlaca]?.toString().toUpperCase().trim();
                         const dataStr = row[headers.indexOf(layout.DATA || layout['DATA'])]?.toString().trim();
                         const horaStr = row[headers.indexOf(layout.HORA|| layout['HORA'])]?.toString().trim();
+                        const filialPlanilha = row[headers.indexOf(layout.FILIAL || layout['FILIAL'])]?.toString().toUpperCase().trim();
+                        const filial = this.getValorFilial(filialPlanilha || filialPadrao);
                         const rodovia = row[headers.indexOf(layout.RODOVIA || layout['RODOVIA'])]?.toString().toUpperCase().trim();
                         const motorista = row[headers.indexOf(layout.MOTORISTA || layout['MOTORISTA'])]?.toString().toUpperCase().trim();
                         const rota = row[headers.indexOf(layout.ROTA || layout['ROTA'])]?.toString().toUpperCase().trim();
@@ -733,8 +826,17 @@ const PedagioUI = {
                         }
 
                         // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
-                        const marcaVeiculo = veiculo?.marca || 'N/A';
-                        const idxCateg = headers.indexOf(layout.CATEG || layout['CATEG']);
+                        const marcaVeiculo = veiculo?.tipo || veiculo?.marca || 'N/A';
+                        const idxCateg = headers.indexOf(
+                            layout.CATEGORIA ||
+                            layout['CATEGORIA'] ||
+                            layout.EIXOS_COBRADO ||
+                            layout['EIXOS_COBRADO'] ||
+                            layout.EIXOCOBRADO ||
+                            layout['EIXOCOBRADO'] ||
+                            layout.CATEG ||
+                            layout['CATEG']
+                        );
                         
                         let categoriaEixosRaw = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.eixos || 2);
                         let categoriaEixos = categoriaEixosRaw;
@@ -765,6 +867,7 @@ const PedagioUI = {
                             categoria_eixos: categoriaEixos,
                             data_hora_passagem: dataHoraPassagem,
                             empresa_id: empresaId,
+                            filial,
                             motorista,
                             rota,
                             rodovia,
@@ -807,6 +910,7 @@ const PedagioUI = {
                     if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
                     this.arquivoImportacao.disabled = false;
                     this.empresaPedagioSelect.disabled = false;
+                    if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = false;
                     if (this.importProgressContainer) this.importProgressContainer.classList.add('hidden');
                 };
 
@@ -815,6 +919,10 @@ const PedagioUI = {
             } catch (error) {
                 console.error('Erro na importação:', error);
                 this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message}</p>`;
+                if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
+                this.arquivoImportacao.disabled = false;
+                this.empresaPedagioSelect.disabled = false;
+                if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = false;
             } finally {
                 this.arquivoImportacao.value = ''; // Limpa o input do arquivo
             }
@@ -822,6 +930,10 @@ const PedagioUI = {
         reader.onerror = (error) => {
             console.error('Erro ao ler arquivo:', error);
             this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao ler arquivo: ${error.message}</p>`;
+            if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
+            this.arquivoImportacao.disabled = false;
+            this.empresaPedagioSelect.disabled = false;
+            if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = false;
         };
         reader.readAsArrayBuffer(arquivo);
     },

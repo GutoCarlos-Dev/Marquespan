@@ -56,6 +56,7 @@
             <table class="glass-table data-grid">
               <thead>
                 <tr>
+                  <th data-sort="usuario_nome">Usuário <i class="fas fa-sort"></i></th>
                   <th data-sort="data_hora_passagem">Data/Hora <i class="fas fa-sort"></i></th>
                   <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>
                   <th>Tipo</th>
@@ -82,6 +83,10 @@
               <div class="form-group">
                   <label>Empresa de Pedágio:</label>
                   <select id="empresaPedagioSelect" class="glass-input" required></select>
+              </div>
+              <div class="form-group">
+                  <label>Filial:</label>
+                  <select id="filialImportacaoPedagio" class="glass-input" required></select>
               </div>
               <div class="form-group">
                   <label>Arquivo (XLSX/CSV):</label>
@@ -117,7 +122,7 @@
               </div>
               <div class="form-group">
                   <label>Layout Config (JSON):</label>
-                  <textarea id="empresaPedagioLayout" class="glass-input" rows="4" placeholder='{"PLACA": "Placa", "DATA": "Data", "VALOR": "Valor"}'></textarea>
+                  <textarea id="empresaPedagioLayout" class="glass-input" rows="10" placeholder='{"DATA":"DATA","HORA":"HORA","PLACA":"PLACA","FILIAL":"FILIAL","ROTA":"ROTA","MOTORISTA":"MOTORISTA","CATEGORIA":"CATEGORIA","RODOVIA":"RODOVIA","PRACA":"PRAÇA","VALOR":"VALOR"}'></textarea>
               </div>
               <div class="form-actions">
                   <button type="submit" class="btn-glass btn-green">Salvar Empresa</button>
@@ -154,6 +159,10 @@
               <div class="form-group">
                   <label>Empresa Operadora:</label>
                   <select id="lancamentoEmpresa" class="glass-input" required></select>
+              </div>
+              <div class="form-group">
+                  <label>Filial:</label>
+                  <select id="lancamentoFilial" class="glass-input" required></select>
               </div>
               <div class="form-row-duplo">
                   <div class="form-group">
