@@ -2,7 +2,7 @@ import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 const PedagioUI = {
-    init() {
+    async init() {
         console.log('Página de Gestão de Pedágios iniciada.');
         
         // 1. Inicializa Variáveis de Estado Primeiro
@@ -17,13 +17,13 @@ const PedagioUI = {
         this.cacheDOM();
         this.setupLancamentosTab(); // 2. Configura as datas antes de qualquer carregamento
         this.bindEvents();
-        this.initTabs(); // 3. Ativa a aba padrão (isso chamará carregarLancamentos)
         this.exibirUsuario();
 
-        this.carregarVeiculos();
+        await this.carregarVeiculos();
         this.carregarMotoristas();
         this.carregarRotas();
         this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
+        this.initTabs(); // 3. Ativa a aba padrão (isso chamará carregarLancamentos)
     },
 
     cacheDOM() {
@@ -333,18 +333,24 @@ const PedagioUI = {
 
         try {
             if (this.editingLancamentoId) {
-                await supabaseClient.from('pedagios_lancamentos').update(payload).eq('id', this.editingLancamentoId);
+                const { error } = await supabaseClient.from('pedagios_lancamentos').update(payload).eq('id', this.editingLancamentoId);
+                if (error) throw error;
                 alert('Lançamento atualizado com sucesso!');
             } else {
-                await supabaseClient.from('pedagios_lancamentos').insert(payload);
+                const { error } = await supabaseClient.from('pedagios_lancamentos').insert(payload);
+                if (error) throw error;
                 alert('Lançamento salvo com sucesso!');
             }
             this.fecharModalLancamento();
             this.carregarLancamentos();
         } catch (error) {
-            console.error('Erro ao salvar lançamento:', error);
-            console.error('Detalhes do erro:', error.details);
-            console.error('Código do erro:', error.code);
+            console.error('Erro ao salvar lançamento:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                error
+            });
             alert('Erro ao salvar lançamento: ' + (error.message || 'Erro desconhecido'));
         }
     },
@@ -366,30 +372,38 @@ const PedagioUI = {
 
             let query = supabaseClient
                 .from('pedagios_lancamentos')
-                .select('*, veiculos!inner(filial, tipo), pedagios_empresas!empresa_id(nome)');
+                .select('*');
 
             if (dataInicial) query = query.gte('data_hora_passagem', `${dataInicial}T00:00:00`);
             if (dataFinal) query = query.lte('data_hora_passagem', `${dataFinal}T23:59:59`);
             if (searchPlaca) query = query.ilike('placa', `%${searchPlaca}%`);
-            if (userFilial) query = query.eq('veiculos.filial', userFilial);
 
             query = query.order(this.sortState.field, { ascending: this.sortState.ascending });
 
             const { data, error } = await query;
             if (error) throw error;
 
+            let lancamentos = data || [];
+            if (userFilial) {
+                lancamentos = lancamentos.filter(item => {
+                    const veiculo = this.veiculosData.find(v => v.placa === item.placa);
+                    return veiculo?.filial === userFilial;
+                });
+            }
+
             this.tableBodyLancamentos.innerHTML = '';
-            if (data.length === 0) {
+            if (lancamentos.length === 0) {
                 this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
-            data.forEach(item => {
+            lancamentos.forEach(item => {
+                const veiculo = this.veiculosData.find(v => v.placa === item.placa);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
-                    <td>${item.veiculos?.tipo || '-'}</td>
+                    <td>${veiculo?.tipo || item.marca_veiculo || '-'}</td>
                     <td>${item.motorista || '-'}</td>
                     <td>${item.rota || '-'}</td>
                     <td>${item.categoria_eixos || '-'}</td>
@@ -405,7 +419,13 @@ const PedagioUI = {
             });
             this.updateSortIcons();
         } catch (error) {
-            console.error('Erro ao carregar lançamentos:', error);
+            console.error('Erro ao carregar lançamentos:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                error
+            });
             this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
@@ -644,7 +664,7 @@ const PedagioUI = {
 
                 const usuarioInfo = JSON.parse(localStorage.getItem('usuarioLogado'));
                 const usuarioId = usuarioInfo?.id || null;
-                const usuarioNome = usuarioInfo?.nomecompleto || 'Sistema';
+                const usuarioNome = usuarioInfo?.nome || usuarioInfo?.nomecompleto || 'Sistema';
 
                 if (!usuarioId) throw new Error('Não foi possível identificar o usuário logado para a importação.');
 
