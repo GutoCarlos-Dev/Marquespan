@@ -48,6 +48,29 @@ async function carregarFiltros() {
         opt.value = v.placa;
         datalist.appendChild(opt);
     });
+
+    const { data: motoristas } = await supabaseClient
+        .from('funcionario')
+        .select('nome')
+        .ilike('funcao', '%Motorista%')
+        .order('nome');
+    const listaMotoristas = document.getElementById('listaMotoristas');
+    motoristas?.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.nome;
+        listaMotoristas.appendChild(opt);
+    });
+
+    const { data: rotas } = await supabaseClient
+        .from('rotas')
+        .select('numero')
+        .order('numero', { ascending: true });
+    const listaRotas = document.getElementById('listaRotas');
+    rotas?.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.numero;
+        listaRotas.appendChild(opt);
+    });
 }
 
 async function buscarDados() {
@@ -60,6 +83,8 @@ async function buscarDados() {
         const dataFim = document.getElementById('dataFinal').value;
         const filial = document.getElementById('filial').value;
         const placa = document.getElementById('veiculo').value.toUpperCase();
+        const motorista = document.getElementById('motorista').value.trim().toUpperCase();
+        const rota = document.getElementById('rota').value.trim().toUpperCase();
         const rodovia = document.getElementById('rodovia').value;
         const praca = document.getElementById('praca').value;
 
@@ -80,6 +105,8 @@ async function buscarDados() {
         if (dataFim) query = query.lte('data_hora_passagem', `${dataFim}T23:59:59`);
         if (filial) query = query.eq('veiculos.filial', filial);
         if (placa) query = query.eq('placa', placa);
+        if (motorista) query = query.ilike('motorista', `%${motorista}%`);
+        if (rota) query = query.ilike('rota', `%${rota}%`);
         if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
         if (praca) query = query.ilike('praca', `%${praca}%`);
 
@@ -130,7 +157,11 @@ function getDadosGrid() {
     const filtrarPorDivergencia = document.getElementById('filtroDivergencia').checked;
 
     let filtrados = dadosCompletos.filter(d => 
-        d.placa.includes(search) || (d.rodovia || '').toUpperCase().includes(search)
+        d.placa.includes(search) ||
+        (d.motorista || '').toUpperCase().includes(search) ||
+        (d.rota || '').toUpperCase().includes(search) ||
+        (d.rodovia || '').toUpperCase().includes(search) ||
+        (d.praca || '').toUpperCase().includes(search)
     );
 
     if (filtrarPorDivergencia) {
@@ -145,10 +176,10 @@ function getDadosGrid() {
     filtrados.sort((a, b) => {
         let valA = a[sortState.field];
         let valB = b[sortState.field];
-        if (typeof valA === 'string') {
-            valA = valA.toUpperCase();
-            valB = valB.toUpperCase();
-        }
+        if (typeof valA === 'string') valA = valA.toUpperCase();
+        if (typeof valB === 'string') valB = valB.toUpperCase();
+        valA = valA ?? '';
+        valB = valB ?? '';
         if (valA < valB) return sortState.ascending ? -1 : 1;
         if (valA > valB) return sortState.ascending ? 1 : -1;
         return 0;
@@ -172,6 +203,8 @@ function renderizarTabela() {
         <tr ${rowBg}>
             <td>${new Date(d.data_hora_passagem).toLocaleString('pt-BR')}</td>
             <td><strong>${d.placa}</strong></td>
+            <td>${d.motorista || '-'}</td>
+            <td>${d.rota || '-'}</td>
             <td>${d.marca_veiculo || '-'}</td>
             <td ${alertStyle}>${d.categoria_eixos || '-'} ${temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : ''}</td>
             <td style="text-align: center; color: #666;">${d.veiculos?.eixos || '-'}</td>
@@ -183,7 +216,7 @@ function renderizarTabela() {
     `}).join('');
 
     if (filtrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
     }
 
     // Totais
@@ -248,7 +281,7 @@ async function exportarPDF() {
 
     const filtrados = getDadosGrid();
 
-    const colunas = ["Data/Hora", "Placa", "Marca", "Eixos (Cob.)", "Eixos (Veíc.)", "Rodovia", "Praça", "Valor", "Usuário"];
+    const colunas = ["Data/Hora", "Placa", "Motorista", "Rota", "Marca", "Eixos (Cob.)", "Eixos (Veíc.)", "Rodovia", "Praça", "Valor", "Usuário"];
     const rows = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
@@ -257,6 +290,8 @@ async function exportarPDF() {
         return [
             new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
             d.placa,
+            d.motorista || '',
+            d.rota || '',
             d.marca_veiculo || '',
             temDivergencia ? `! ${d.categoria_eixos}` : d.categoria_eixos || '',
             d.veiculos?.eixos || '',
@@ -276,11 +311,11 @@ async function exportarPDF() {
         styles: { fontSize: 8, cellPadding: 2 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
-            7: { halign: 'right' } // Alinha a coluna de Valor à direita
+            9: { halign: 'right' } // Alinha a coluna de Valor à direita
         },
         didParseCell: (data) => {
             // Aplica cor vermelha no PDF para divergências marcadas com "!"
-            if (data.section === 'body' && data.column.index === 3) {
+            if (data.section === 'body' && data.column.index === 5) {
                 if (String(data.cell.raw).startsWith('!')) {
                     data.cell.styles.textColor = [220, 53, 69]; 
                     data.cell.styles.fontStyle = 'bold';
@@ -318,6 +353,8 @@ function exportarExcel() {
         return {
             "Data/Hora": new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
             "Placa": d.placa,
+            "Motorista": d.motorista || '',
+            "Rota": d.rota || '',
             "Marca": d.marca_veiculo || '',
             "Eixos (Cobrado)": d.categoria_eixos || '',
             "Eixos (Cadastro)": d.veiculos?.eixos || '',
@@ -334,6 +371,8 @@ function exportarExcel() {
     rows.push({
         "Data/Hora": "TOTAIS GERAIS",
         "Placa": "",
+        "Motorista": "",
+        "Rota": "",
         "Marca": "",
         "Eixos (Cobrado)": "",
         "Eixos (Cadastro)": "",

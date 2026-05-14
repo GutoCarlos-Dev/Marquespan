@@ -622,6 +622,91 @@ const PedagioUI = {
         };
     },
 
+    parseDataHoraPlanilha(dataValue, horaValue) {
+        const excelSerialToDate = (serial) => {
+            const utcDays = Math.floor(serial - 25569);
+            const utcValue = utcDays * 86400;
+            const dateInfo = new Date(utcValue * 1000);
+            const fractionalDay = serial - Math.floor(serial);
+            const totalSeconds = Math.round(fractionalDay * 86400);
+            dateInfo.setUTCHours(
+                Math.floor(totalSeconds / 3600),
+                Math.floor((totalSeconds % 3600) / 60),
+                totalSeconds % 60,
+                0
+            );
+            return dateInfo;
+        };
+
+        const aplicarHora = (date, hora) => {
+            if (hora === null || hora === undefined || String(hora).trim() === '') return date;
+
+            if (typeof hora === 'number') {
+                const totalSeconds = Math.round((hora % 1) * 86400);
+                date.setHours(
+                    Math.floor(totalSeconds / 3600),
+                    Math.floor((totalSeconds % 3600) / 60),
+                    totalSeconds % 60,
+                    0
+                );
+                return date;
+            }
+
+            const match = String(hora).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+            if (match) {
+                date.setHours(parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3] || '0', 10), 0);
+            }
+            return date;
+        };
+
+        let date;
+        if (typeof dataValue === 'number') {
+            date = excelSerialToDate(dataValue);
+        } else {
+            const dataStr = String(dataValue || '').trim();
+            const brMatch = dataStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (brMatch) {
+                date = new Date(parseInt(brMatch[3], 10), parseInt(brMatch[2], 10) - 1, parseInt(brMatch[1], 10));
+            } else {
+                const isoMatch = dataStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+                if (isoMatch) {
+                    date = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+                } else {
+                    date = new Date(dataStr);
+                }
+            }
+        }
+
+        if (!date || Number.isNaN(date.getTime())) {
+            throw new Error(`Data inválida na planilha: ${dataValue}`);
+        }
+
+        aplicarHora(date, horaValue);
+        return date.toISOString();
+    },
+
+    normalizarCabecalhoPlanilha(valor) {
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^A-Z0-9]/gi, '')
+            .toUpperCase();
+    },
+
+    getIndiceColunaPlanilha(headers, layout, chaves) {
+        const candidatos = chaves
+            .flatMap(chave => [layout[chave], layout[this.normalizarCabecalhoPlanilha(chave)], chave])
+            .filter(Boolean)
+            .map(valor => this.normalizarCabecalhoPlanilha(valor));
+
+        return headers.findIndex(header => candidatos.includes(this.normalizarCabecalhoPlanilha(header)));
+    },
+
+    getValorColunaPlanilha(row, headers, layout, chaves) {
+        const idx = this.getIndiceColunaPlanilha(headers, layout, chaves);
+        return idx === -1 ? undefined : row[idx];
+    },
+
     async salvarEmpresaPedagio(event) {
         event.preventDefault();
         const nome = this.empresaPedagioNome.value.toUpperCase();
@@ -794,21 +879,18 @@ const PedagioUI = {
                         const isBlank = !row || row.length === 0 || row.every(cell => cell === null || cell === undefined || String(cell).trim() === '');
                         if (isBlank) continue;
 
-                        const idxPlaca = headers.indexOf(layout.PLACA || layout['PLACA']);
-                        const placa = row[idxPlaca]?.toString().toUpperCase().trim();
-                        const dataStr = row[headers.indexOf(layout.DATA || layout['DATA'])]?.toString().trim();
-                        const horaStr = row[headers.indexOf(layout.HORA|| layout['HORA'])]?.toString().trim();
-                        const filialPlanilha = row[headers.indexOf(layout.FILIAL || layout['FILIAL'])]?.toString().toUpperCase().trim();
+                        const placa = this.getValorColunaPlanilha(row, headers, layout, ['PLACA'])?.toString().toUpperCase().trim();
+                        const dataCell = this.getValorColunaPlanilha(row, headers, layout, ['DATA']);
+                        const horaCell = this.getValorColunaPlanilha(row, headers, layout, ['HORA']);
+                        const filialPlanilha = this.getValorColunaPlanilha(row, headers, layout, ['FILIAL'])?.toString().toUpperCase().trim();
                         let filial = this.getValorFilial(filialPlanilha || filialPadrao);
-                        const rodovia = row[headers.indexOf(layout.RODOVIA || layout['RODOVIA'])]?.toString().toUpperCase().trim();
-                        const motorista = row[headers.indexOf(layout.MOTORISTA || layout['MOTORISTA'])]?.toString().toUpperCase().trim();
-                        const rota = row[headers.indexOf(layout.ROTA || layout['ROTA'])]?.toString().toUpperCase().trim();
-                        // Suporte robusto para chaves PRACA ou PRAÇA no layout
-                        const pracaKey = layout.PRACA || layout['PRACA'] || layout['PRAÇA'];
-                        const praca = row[headers.indexOf(pracaKey)]?.toString().toUpperCase().trim();
+                        const rodovia = this.getValorColunaPlanilha(row, headers, layout, ['RODOVIA'])?.toString().toUpperCase().trim();
+                        const motorista = this.getValorColunaPlanilha(row, headers, layout, ['MOTORISTA'])?.toString().toUpperCase().trim();
+                        const rota = this.getValorColunaPlanilha(row, headers, layout, ['ROTA'])?.toString().toUpperCase().trim();
+                        const praca = this.getValorColunaPlanilha(row, headers, layout, ['PRACA', 'PRAÇA'])?.toString().toUpperCase().trim();
 
                         // Limpeza do Valor (Trata R$, espaços, separador de milhar e decimal)
-                        const valRaw = row[headers.indexOf(layout.VALOR || layout['VALOR'])];
+                        const valRaw = this.getValorColunaPlanilha(row, headers, layout, ['VALOR']);
                         let valor = NaN;
                         if (typeof valRaw === 'number') {
                             valor = valRaw;
@@ -816,7 +898,7 @@ const PedagioUI = {
                             valor = parseFloat(valRaw.toString().replace('R$', '').replace(/\s/g, '').replace('.', '').replace(',', '.'));
                         }
 
-                        if (!placa || !dataStr || isNaN(valor)) {
+                        if (!placa || dataCell === null || dataCell === undefined || dataCell === '' || isNaN(valor)) {
                             rejeitados.push({ motivo: 'Dados obrigatórios ausentes (Placa, Data ou Valor)', dados: row });
                             pulosPorDados++;
                             continue;
@@ -832,28 +914,17 @@ const PedagioUI = {
                         if (!filial) filial = this.getValorFilial(veiculo.filial);
 
                         let dataHoraPassagem;
-                        const fullDateTimeStr = `${dataStr} ${horaStr || '00:00'}`;
                         try {
-                            // Tenta parsear a data e hora. Assume formato DD/MM/YYYY HH:MM ou YYYY-MM-DD HH:MM
-                            const convertedDateStr = fullDateTimeStr.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1');
-                            dataHoraPassagem = new Date(convertedDateStr).toISOString();
+                            dataHoraPassagem = this.parseDataHoraPlanilha(dataCell, horaCell);
                         } catch (dateError) {
-                            console.warn('Erro ao parsear data/hora, usando data atual:', fullDateTimeStr, dateError);
-                            dataHoraPassagem = new Date().toISOString();
+                            rejeitados.push({ motivo: dateError.message, dados: row });
+                            pulosPorDados++;
+                            continue;
                         }
 
                         // Removida a redeclaração de 'veiculo', pois ele já foi definido acima para validação.
                         const marcaVeiculo = veiculo?.tipo || veiculo?.marca || 'N/A';
-                        const idxCateg = headers.indexOf(
-                            layout.CATEGORIA ||
-                            layout['CATEGORIA'] ||
-                            layout.EIXOS_COBRADO ||
-                            layout['EIXOS_COBRADO'] ||
-                            layout.EIXOCOBRADO ||
-                            layout['EIXOCOBRADO'] ||
-                            layout.CATEG ||
-                            layout['CATEG']
-                        );
+                        const idxCateg = this.getIndiceColunaPlanilha(headers, layout, ['CATEGORIA', 'EIXOS_COBRADO', 'EIXOCOBRADO', 'CATEG']);
                         
                         let categoriaEixosRaw = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.eixos || 2);
                         let categoriaEixos = categoriaEixosRaw;
