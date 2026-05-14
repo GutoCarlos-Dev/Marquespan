@@ -728,6 +728,7 @@ function mapRowToPayload(rowData, dataRetorno) {
         data_retorno: dataRetorno,
         placa: rowData.placa ? rowData.placa.trim().toUpperCase() : null,
         rota: rowData.rota,
+        status_rota: rowData.status_rota || null,
         operador_recebimento: rowData.operador_recebimento || null,
         
         nome_mot: rowData.nome_mot,
