@@ -62,9 +62,9 @@ END $$;
 ALTER TABLE public.pedagios_lancamentos
     DROP CONSTRAINT IF EXISTS fk_pedagios_lancamentos_empresa;
 
-ALTER TABLE public.pedagios_lancamentos
-    ALTER COLUMN empresa_id TYPE text USING empresa_id::text,
-    ALTER COLUMN usuario_id TYPE text USING usuario_id::text;
+-- Nao alteramos o tipo de usuario_id aqui porque essa coluna pode estar
+-- vinculada a policies RLS existentes no Supabase.
+-- Se a coluna ja existe, mantenha o tipo atual dela.
 
 DO $$
 BEGIN
