@@ -8,6 +8,8 @@ const PedagioUI = {
         // 1. Inicializa Variáveis de Estado Primeiro
         this.veiculosData = []; // Cache para dados de veículos
         this.empresasPedagio = []; // Cache para empresas de pedágio
+        this.motoristasData = [];
+        this.rotasData = [];
         this.editingLancamentoId = null; // Para edição de lançamentos
         this.editingEmpresaId = null; // Para edição de empresas
         this.sortState = { field: 'data_hora_passagem', ascending: false }; // Alinhado com outros módulos
@@ -19,6 +21,8 @@ const PedagioUI = {
         this.exibirUsuario();
 
         this.carregarVeiculos();
+        this.carregarMotoristas();
+        this.carregarRotas();
         this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
     },
 
@@ -54,9 +58,13 @@ const PedagioUI = {
         this.formLancamentoPedagio = document.getElementById('formLancamentoPedagio');
         this.lancamentoPlaca = document.getElementById('lancamentoPlaca');
         this.veiculosList = document.getElementById('veiculosList');
-        this.lancamentoMarca = document.getElementById('lancamentoMarca');
+        this.lancamentoTipo = document.getElementById('lancamentoTipo');
         this.lancamentoCateg = document.getElementById('lancamentoCateg');
         this.lancamentoDataHora = document.getElementById('lancamentoDataHora');
+        this.lancamentoMotorista = document.getElementById('lancamentoMotorista');
+        this.motoristasList = document.getElementById('motoristasList');
+        this.lancamentoRota = document.getElementById('lancamentoRota');
+        this.rotasList = document.getElementById('rotasList');
         this.lancamentoRodovia = document.getElementById('lancamentoRodovia');
         this.lancamentoPraca = document.getElementById('lancamentoPraca');
         this.btnGoogleMaps = document.getElementById('btnGoogleMaps');
@@ -179,7 +187,7 @@ const PedagioUI = {
         try {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, marca, modelo, eixos, filial') 
+                .select('placa, marca, modelo, tipo, eixos, filial') 
                 .eq('situacao', 'ativo')
                 .order('placa');
             if (error) throw error;
@@ -190,22 +198,58 @@ const PedagioUI = {
         }
     },
 
+    async carregarMotoristas() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario')
+                .select('nome')
+                .ilike('funcao', '%Motorista%')
+                .order('nome');
+            if (error) throw error;
+
+            this.motoristasData = data || [];
+            if (this.motoristasList) {
+                const nomes = [...new Set(this.motoristasData.map(m => m.nome).filter(Boolean))];
+                this.motoristasList.innerHTML = nomes.map(nome => `<option value="${nome}"></option>`).join('');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar motoristas:', error);
+        }
+    },
+
+    async carregarRotas() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('rotas')
+                .select('numero')
+                .order('numero', { ascending: true });
+            if (error) throw error;
+
+            this.rotasData = data || [];
+            if (this.rotasList) {
+                const rotas = [...new Set(this.rotasData.map(r => r.numero).filter(Boolean))];
+                this.rotasList.innerHTML = rotas.map(numero => `<option value="${numero}"></option>`).join('');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar rotas:', error);
+        }
+    },
+
     preencherDadosVeiculo() {
-        const placa = this.lancamentoPlaca.value;
+        const placa = this.lancamentoPlaca.value.trim().toUpperCase();
+        this.lancamentoPlaca.value = placa;
         const veiculo = this.veiculosData.find(v => v.placa === placa);
         if (veiculo) {
-            this.lancamentoMarca.value = veiculo.marca || '';
-            this.lancamentoCateg.value = veiculo.eixos || ''; 
+            this.lancamentoTipo.value = veiculo.tipo || '';
         } else {
-            this.lancamentoMarca.value = '';
-            this.lancamentoCateg.value = '';
+            this.lancamentoTipo.value = '';
         }
     },
 
     abrirModalLancamento() {
         this.editingLancamentoId = null;
         if (this.formLancamentoPedagio) this.formLancamentoPedagio.reset();
-        if (this.lancamentoMarca) this.lancamentoMarca.value = ''; 
+        if (this.lancamentoTipo) this.lancamentoTipo.value = ''; 
         if (this.lancamentoCateg) this.lancamentoCateg.value = '';
         
         // Define a data atual no formato local para o input datetime-local
@@ -271,10 +315,12 @@ const PedagioUI = {
 
         const payload = {
             placa: this.lancamentoPlaca.value.toUpperCase(),
-            marca_veiculo: this.lancamentoMarca.value.toUpperCase() || null,
+            marca_veiculo: this.lancamentoTipo.value.toUpperCase() || null,
             categoria_eixos: parseInt(this.lancamentoCateg.value) || null, // Corrigido: 'eixos' para 'categoria_eixos'
             data_hora_passagem: new Date(this.lancamentoDataHora.value).toISOString(),
             empresa_id: document.getElementById('lancamentoEmpresa')?.value || null,
+            motorista: this.lancamentoMotorista.value.toUpperCase() || null,
+            rota: this.lancamentoRota.value.toUpperCase() || null,
             rodovia: this.lancamentoRodovia.value.toUpperCase() || null,
             praca: this.lancamentoPraca.value.toUpperCase() || null,
             valor: parseFloat(this.lancamentoValor.value),
@@ -305,14 +351,14 @@ const PedagioUI = {
 
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Carregando...</td></tr>';
         try {
             const dataInicial = this.filtroDataInicialLancamento.value;
             const dataFinal = this.filtroDataFinalLancamento.value;
             const searchPlaca = (this.searchPlaca.value || '').trim().toUpperCase();
 
             if (!dataInicial || !dataFinal) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Selecione o período de datas.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Selecione o período de datas.</td></tr>';
                 return;
             }
 
@@ -320,7 +366,7 @@ const PedagioUI = {
 
             let query = supabaseClient
                 .from('pedagios_lancamentos')
-                .select('*, veiculos!inner(filial), pedagios_empresas!empresa_id(nome)');
+                .select('*, veiculos!inner(filial, tipo), pedagios_empresas!empresa_id(nome)');
 
             if (dataInicial) query = query.gte('data_hora_passagem', `${dataInicial}T00:00:00`);
             if (dataFinal) query = query.lte('data_hora_passagem', `${dataFinal}T23:59:59`);
@@ -334,7 +380,7 @@ const PedagioUI = {
 
             this.tableBodyLancamentos.innerHTML = '';
             if (data.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lançamento encontrado.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center">Nenhum lançamento encontrado.</td></tr>';
                 return;
             }
 
@@ -343,6 +389,10 @@ const PedagioUI = {
                 tr.innerHTML = `
                     <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
                     <td>${item.placa}</td>
+                    <td>${item.veiculos?.tipo || '-'}</td>
+                    <td>${item.motorista || '-'}</td>
+                    <td>${item.rota || '-'}</td>
+                    <td>${item.categoria_eixos || '-'}</td>
                     <td>${item.rodovia || '-'}</td>
                     <td>${item.praca || '-'}</td>
                     <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -356,7 +406,7 @@ const PedagioUI = {
             this.updateSortIcons();
         } catch (error) {
             console.error('Erro ao carregar lançamentos:', error);
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
 
@@ -400,8 +450,11 @@ const PedagioUI = {
             this.editingLancamentoId = id;
             this.lancamentoPlaca.value = data.placa;
             if(document.getElementById('lancamentoEmpresa')) document.getElementById('lancamentoEmpresa').value = data.empresa_id || '';
-            this.preencherDadosVeiculo(); // Para preencher Marca e Categoria
+            this.preencherDadosVeiculo();
+            this.lancamentoCateg.value = data.categoria_eixos || '';
             this.lancamentoDataHora.value = new Date(data.data_hora_passagem).toISOString().slice(0, 16);
+            this.lancamentoMotorista.value = data.motorista || '';
+            this.lancamentoRota.value = data.rota || '';
             this.lancamentoRodovia.value = data.rodovia;
             this.lancamentoPraca.value = data.praca;
             this.lancamentoValor.value = data.valor;
@@ -619,6 +672,8 @@ const PedagioUI = {
                         const dataStr = row[headers.indexOf(layout.DATA || layout['DATA'])]?.toString().trim();
                         const horaStr = row[headers.indexOf(layout.HORA|| layout['HORA'])]?.toString().trim();
                         const rodovia = row[headers.indexOf(layout.RODOVIA || layout['RODOVIA'])]?.toString().toUpperCase().trim();
+                        const motorista = row[headers.indexOf(layout.MOTORISTA || layout['MOTORISTA'])]?.toString().toUpperCase().trim();
+                        const rota = row[headers.indexOf(layout.ROTA || layout['ROTA'])]?.toString().toUpperCase().trim();
                         // Suporte robusto para chaves PRACA ou PRAÇA no layout
                         const pracaKey = layout.PRACA || layout['PRACA'] || layout['PRAÇA'];
                         const praca = row[headers.indexOf(pracaKey)]?.toString().toUpperCase().trim();
@@ -690,6 +745,8 @@ const PedagioUI = {
                             categoria_eixos: categoriaEixos,
                             data_hora_passagem: dataHoraPassagem,
                             empresa_id: empresaId,
+                            motorista,
+                            rota,
                             rodovia,
                             praca,
                             valor,

@@ -193,6 +193,10 @@
     width: 100%;
 }
 
+#sectionLancamento .glass-table {
+    min-width: 1180px;
+}
+
 .glass-table th {
     background: #f8f9fa;
     color: var(--pedagio-primary-dark);

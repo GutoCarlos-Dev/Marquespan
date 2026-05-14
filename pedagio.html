@@ -58,6 +58,10 @@
                 <tr>
                   <th data-sort="data_hora_passagem">Data/Hora <i class="fas fa-sort"></i></th>
                   <th data-sort="placa">Placa <i class="fas fa-sort"></i></th>
+                  <th>Tipo</th>
+                  <th data-sort="motorista">Motorista <i class="fas fa-sort"></i></th>
+                  <th data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+                  <th data-sort="categoria_eixos">Eixos Cobrado <i class="fas fa-sort"></i></th>
                   <th data-sort="rodovia">Rodovia <i class="fas fa-sort"></i></th>
                   <th data-sort="praca">Praça <i class="fas fa-sort"></i></th>
                   <th data-sort="valor">Valor <i class="fas fa-sort"></i></th>
@@ -136,7 +140,7 @@
 
   <!-- Modal Lançamento -->
   <div id="modalLancamento" class="modal-backdrop hidden">
-      <div class="modal-content glass-panel" style="width: 500px;">
+      <div class="modal-content glass-panel" style="width: 640px; max-width: 95vw;">
           <div class="modal-header">
               <h3>Novo Lançamento</h3>
               <button class="close-button">&times;</button>
@@ -153,17 +157,29 @@
               </div>
               <div class="form-row-duplo">
                   <div class="form-group">
-                      <label>Marca:</label>
-                      <input type="text" id="lancamentoMarca" class="glass-input" readonly>
+                      <label>Tipo:</label>
+                      <input type="text" id="lancamentoTipo" class="glass-input" readonly>
                   </div>
                   <div class="form-group">
-                      <label>Eixos:</label>
-                      <input type="number" id="lancamentoCateg" class="glass-input" readonly>
+                      <label>Eixos Cobrado:</label>
+                      <input type="number" id="lancamentoCateg" class="glass-input" min="1">
                   </div>
               </div>
               <div class="form-group">
                   <label>Data/Hora Passagem:</label>
                   <input type="datetime-local" id="lancamentoDataHora" class="glass-input" required>
+              </div>
+              <div class="form-row-duplo">
+                  <div class="form-group">
+                      <label>Motorista:</label>
+                      <input type="text" id="lancamentoMotorista" list="motoristasList" class="glass-input">
+                      <datalist id="motoristasList"></datalist>
+                  </div>
+                  <div class="form-group">
+                      <label>Rota:</label>
+                      <input type="text" id="lancamentoRota" list="rotasList" class="glass-input">
+                      <datalist id="rotasList"></datalist>
+                  </div>
               </div>
               <div class="form-row-duplo">
                   <div class="form-group"><label>Rodovia:</label><input type="text" id="lancamentoRodovia" class="glass-input"></div>
