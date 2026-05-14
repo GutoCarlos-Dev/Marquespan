@@ -2888,6 +2888,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     const totalRows = json.length;
                     let processedCount = 0;
                     const filialSelecionada = this.filialImportacaoSaida?.value;
+
+                    const normalizeBicoImport = (value) => (value || '')
+                        .toString()
+                        .toUpperCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^A-Z0-9]/g, '');
+
+                    const parseBicoOrigem = (value) => {
+                        const raw = (value || '').toString().trim();
+                        const bicoMatch = raw.match(/^\s*([A-Za-z0-9]+)/);
+                        const bombaMatch = raw.match(/BOMBA\s*:\s*([^)]+?)(?:\s*-\s*TANQUE\s*:|\)|$)/i);
+                        const tanqueMatch = raw.match(/TANQUE\s*:\s*([^)]+)/i);
+
+                        return {
+                            raw,
+                            normalized: normalizeBicoImport(raw),
+                            bico: normalizeBicoImport(bicoMatch?.[1] || raw),
+                            bomba: normalizeBicoImport(bombaMatch?.[1] || ''),
+                            tanque: normalizeBicoImport(tanqueMatch?.[1] || ''),
+                            hasQualifiers: /BOMBA\s*:|TANQUE\s*:/i.test(raw)
+                        };
+                    };
                     
                     for (const [index, row] of json.entries()) {
                         const r = {};
@@ -2914,35 +2937,27 @@ document.addEventListener('DOMContentLoaded', () => {
                             continue;
                         }
                         
-                        const bico = this.bicosDisponiveis.find(b => {
+                        const bicoExcel = parseBicoOrigem(bicoNomeExcel);
+                        const bicosFiltrados = this.bicosDisponiveis.filter(b => {
                             const sistemaFilial = (b.bombas?.tanques?.filial || '').toUpperCase().trim();
-                                                        
-                            // Verifica se o bico pertence à filial selecionada (se uma filial foi selecionada)
-                            const matchesFilial = !filialSelecionada || sistemaFilial === filialSelecionada.toUpperCase().trim();
-                            if (!matchesFilial) return false;
+                            return !filialSelecionada || sistemaFilial === filialSelecionada.toUpperCase().trim();
+                        });
 
-                            // Normalização extrema para comparação (remove espaços e padroniza caixa)
-                            const norm = (s) => (s || '').toString().toUpperCase().replace(/\s+/g, '');
-                            
-                            const sistemaBicoNome = norm(b.nome);
-                            const sistemaBombaNome = norm(b.bombas?.nome);
-                            const sistemaTanqueNome = norm(b.bombas?.tanques?.nome);
+                        const bico = bicosFiltrados.find(b => {
+                            const sistemaBicoNome = normalizeBicoImport(b.nome);
+                            const sistemaBombaNome = normalizeBicoImport(b.bombas?.nome);
+                            const sistemaTanqueNome = normalizeBicoImport(b.bombas?.tanques?.nome);
+                            const labelSistema = normalizeBicoImport(`${b.nome} BOMBA ${b.bombas?.nome || ''} TANQUE ${b.bombas?.tanques?.nome || ''}`);
 
-                            const labelSistema = `${sistemaBicoNome}(BOMBA:${sistemaBombaNome}-TANQUE:${sistemaTanqueNome})`;
-                            const labelExcel = norm(bicoNomeExcel);
+                            if (bicoExcel.hasQualifiers) {
+                                const bicoConfere = !bicoExcel.bico || sistemaBicoNome === bicoExcel.bico;
+                                const bombaConfere = !bicoExcel.bomba || sistemaBombaNome === bicoExcel.bomba;
+                                const tanqueConfere = !bicoExcel.tanque || sistemaTanqueNome === bicoExcel.tanque;
 
-                            // 1. Tenta correspondência exata com o rótulo completo (sem espaços)
-                            if (labelSistema === labelExcel) return true;
-                            
-                            // 2. Fallback: Tenta correspondência direta com apenas o nome do bico
-                            if (sistemaBicoNome === labelExcel) return true;
-                            
-                            // 3. Fallback: Se o Excel começar com o nome do bico (ex: "1 (...")
-                            if (labelExcel.startsWith(sistemaBicoNome + '(')) {
-                                return true;
+                                return bicoConfere && bombaConfere && tanqueConfere;
                             }
 
-                            return false;
+                            return sistemaBicoNome === bicoExcel.normalized || labelSistema === bicoExcel.normalized;
                         });
                         
                         if (!bico) {
