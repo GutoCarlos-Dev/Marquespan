@@ -1,28 +1,5 @@
 import { supabaseClient, supabaseKey } from './supabase.js';
 
-//import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-//import { supabaseClient, supabaseUrl, supabaseKey } from './supabase.js';
-
-//const DOMINIO_LOGIN = '@marquespan.local';
-
-//const supabaseCadastro = createClient(supabaseUrl, supabaseKey, {
-  //auth: {
-    //persistSession: false,
-    //autoRefreshToken: false,
-    //detectSessionInUrl: false
-  //}
-//});
-
-//function gerarEmailInterno(nomeUsuario) {
-  //return `${nomeUsuario
-    //.trim()
-    //.toLowerCase()
-   // .normalize('NFD')
-   // .replace(/[\u0300-\u036f]/g, '')
-   // .replace(/\s+/g, '.')
-   // .replace(/[^a-z0-9.]/g, '')}${DOMINIO_LOGIN}`;
-//}
-
 let usuariosCache = [];
 let sortConfig = { column: 'nome', direction: 'asc' };
 
