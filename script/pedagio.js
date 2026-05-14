@@ -718,10 +718,6 @@ const PedagioUI = {
             alert('Selecione um arquivo para importar.');
             return;
         }
-        if (!filialPadrao) {
-            alert('Selecione a filial da importação.');
-            return;
-        }
 
         const empresa = this.empresasPedagio.find(e => e.id === empresaId);
         if (!empresa || !empresa.layout_config) {
@@ -767,6 +763,26 @@ const PedagioUI = {
                 let pulosPorDados = 0;
                 let index = 0;
 
+                const liberarImportacao = () => {
+                    if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
+                    this.arquivoImportacao.disabled = false;
+                    this.empresaPedagioSelect.disabled = false;
+                    if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = false;
+                    if (this.importProgressContainer) this.importProgressContainer.classList.add('hidden');
+                };
+
+                const handleErroImportacao = (error) => {
+                    console.error('Erro na importação:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code,
+                        error
+                    });
+                    this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message || 'Erro desconhecido'}</p>`;
+                    liberarImportacao();
+                };
+
                 const processBatch = async () => {
                     const batchSize = 100; // Processa em blocos para não travar a UI
                     const limit = Math.min(index + batchSize, rows.length);
@@ -783,7 +799,7 @@ const PedagioUI = {
                         const dataStr = row[headers.indexOf(layout.DATA || layout['DATA'])]?.toString().trim();
                         const horaStr = row[headers.indexOf(layout.HORA|| layout['HORA'])]?.toString().trim();
                         const filialPlanilha = row[headers.indexOf(layout.FILIAL || layout['FILIAL'])]?.toString().toUpperCase().trim();
-                        const filial = this.getValorFilial(filialPlanilha || filialPadrao);
+                        let filial = this.getValorFilial(filialPlanilha || filialPadrao);
                         const rodovia = row[headers.indexOf(layout.RODOVIA || layout['RODOVIA'])]?.toString().toUpperCase().trim();
                         const motorista = row[headers.indexOf(layout.MOTORISTA || layout['MOTORISTA'])]?.toString().toUpperCase().trim();
                         const rota = row[headers.indexOf(layout.ROTA || layout['ROTA'])]?.toString().toUpperCase().trim();
@@ -813,6 +829,7 @@ const PedagioUI = {
                             pulosPorVeiculo++;
                             continue;
                         }
+                        if (!filial) filial = this.getValorFilial(veiculo.filial);
 
                         let dataHoraPassagem;
                         const fullDateTimeStr = `${dataStr} ${horaStr || '00:00'}`;
@@ -884,7 +901,7 @@ const PedagioUI = {
                     this.updateProgress(percent);
 
                     if (index < rows.length) {
-                        setTimeout(processBatch, 0);
+                        setTimeout(() => processBatch().catch(handleErroImportacao), 0);
                     } else {
                         await finalizarImportacao();
                     }
@@ -892,33 +909,34 @@ const PedagioUI = {
 
                 const finalizarImportacao = async () => {
                     if (lancamentosParaInserir.length > 0) {
-                    const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosParaInserir);
-                    if (error) throw error;
-                    this.gerarRelatorioImportacao(importadosComSucesso, rejeitados);
+                        const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosParaInserir);
+                        if (error) throw error;
+                        this.gerarRelatorioImportacao(importadosComSucesso, rejeitados);
                     
-                    let msg = `<p style="color: green; font-weight: bold;"><i class="fas fa-check-circle"></i> Importação finalizada: ${lancamentosParaInserir.length} lançamentos registrados.</p>`;
-                    if (pulosPorVeiculo > 0) msg += `<p style="color: #d35400;"><i class="fas fa-exclamation-triangle"></i> ${pulosPorVeiculo} linhas ignoradas (Placas não cadastradas).</p>`;
-                    if (pulosPorDados > 0) msg += `<p style="color: #666;"><i class="fas fa-info-circle"></i> ${pulosPorDados} linhas ignoradas (Dados incompletos).</p>`;
+                        let msg = `<p style="color: green; font-weight: bold;"><i class="fas fa-check-circle"></i> Importação finalizada: ${lancamentosParaInserir.length} lançamentos registrados.</p>`;
+                        if (pulosPorVeiculo > 0) msg += `<p style="color: #d35400;"><i class="fas fa-exclamation-triangle"></i> ${pulosPorVeiculo} linhas ignoradas (Placas não cadastradas).</p>`;
+                        if (pulosPorDados > 0) msg += `<p style="color: #666;"><i class="fas fa-info-circle"></i> ${pulosPorDados} linhas ignoradas (Dados incompletos).</p>`;
                     
-                    this.importStatus.innerHTML = msg;
-                    this.carregarLancamentos();
-                } else {
-                    this.importStatus.innerHTML = '<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> Nenhum lançamento válido encontrado no arquivo.</p>';
-                }
+                        this.importStatus.innerHTML = msg;
+                        this.carregarLancamentos();
+                    } else {
+                        this.importStatus.innerHTML = '<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> Nenhum lançamento válido encontrado no arquivo.</p>';
+                    }
 
-                    // Libera interações
-                    if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
-                    this.arquivoImportacao.disabled = false;
-                    this.empresaPedagioSelect.disabled = false;
-                    if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.disabled = false;
-                    if (this.importProgressContainer) this.importProgressContainer.classList.add('hidden');
+                    liberarImportacao();
                 };
 
                 // Inicia o processamento
-                processBatch();
+                processBatch().catch(handleErroImportacao);
             } catch (error) {
-                console.error('Erro na importação:', error);
-                this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message}</p>`;
+                console.error('Erro na importação:', {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code,
+                    error
+                });
+                this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message || 'Erro desconhecido'}</p>`;
                 if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
                 this.arquivoImportacao.disabled = false;
                 this.empresaPedagioSelect.disabled = false;
