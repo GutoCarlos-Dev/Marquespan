@@ -5,6 +5,10 @@ let currentItem = null; // Item sendo editado no modal
 let supervisoresCache = []; // Cache para a lista de supervisores
 let motoristasCache = []; // Cache para a lista de motoristas
 
+function normalizeBooleanFlag(value) {
+    return value === true || value === 1 || value === '1' || value === 'true';
+}
+
 function getCurrentUserName() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     return usuario ? usuario.nome : null;
@@ -271,7 +275,7 @@ function openDevolucoesModal() {
     });
 
     // Set initial values from currentItem
-    supervisorCienteSelect.value = currentItem.supervisor_ciente === true ? 'true' : 'false';
+    supervisorCienteSelect.value = normalizeBooleanFlag(currentItem.supervisor_ciente) ? 'true' : 'false';
     nomeSupervisorSelect.value = currentItem.nome_supervisor || '';
     // --- END ---
 
@@ -340,7 +344,7 @@ function saveDevolucoesData() {
     const modal = document.getElementById('modalDevolucoes');
     
     // --- Save centralized supervisor data ---
-    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true';
+    const supervisorCiente = document.getElementById('supervisorCienteDevolucao').value === 'true' ? 1 : 0;
     const nomeSupervisor = document.getElementById('nomeSupervisorDevolucao').value;
     currentItem.supervisor_ciente = supervisorCiente;
     currentItem.nome_supervisor = nomeSupervisor || null;
@@ -401,8 +405,6 @@ async function saveRetorno() {
     const updateData = {
         nome_mot: motorista || null,
         hora_mot: horaMotorista || null,
-        hora_aux: horaMotorista || null, // Preenche hora do auxiliar
-        hora_terceiro: horaMotorista || null, // Preenche hora do terceiro
         obs: obs || null,
         carrinhos: parseNum(carrinhos), // Assumindo que 'carrinhos' é numérico
         paletes: temPaletes ? 1 : 0, // A coluna 'paletes' é do tipo INTEGER (0 ou 1)
@@ -414,7 +416,9 @@ async function saveRetorno() {
         obs_carrinhos: obsCarrinhos || null,
         operador_recebimento: getCurrentUserName(),
         // Removido o fallback '|| false' para permitir que o valor seja enviado como null se não preenchido
-        supervisor_ciente: currentItem.supervisor_ciente,
+        supervisor_ciente: currentItem.supervisor_ciente === undefined || currentItem.supervisor_ciente === null
+            ? null
+            : (normalizeBooleanFlag(currentItem.supervisor_ciente) ? 1 : 0),
         nome_supervisor: temPecas ? (supervisorPecas || null) : (currentItem.nome_supervisor || null),
     };
 
