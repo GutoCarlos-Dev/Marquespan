@@ -95,6 +95,11 @@ const TacografoUI = {
         
         this.btnExportarXLSX?.addEventListener('click', () => this.exportarGridXLSX());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarGridPDF());
+
+        // Listeners para ordenação nas colunas
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
     },
 
     async carregarFiliaisMultiselect() {
@@ -281,6 +286,8 @@ const TacografoUI = {
 
             return matchSearch && matchFilial && matchStatus && matchVenc;
         });
+
+        this.updateSortIcons();
 
         this.filteredData = filtered; // Salva para exportação
 
