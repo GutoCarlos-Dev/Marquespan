@@ -45,6 +45,7 @@ const PedagioUI = {
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
         this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
         this.searchPlaca = document.getElementById('searchPlaca');
+        this.filtroFilialLancamento = document.getElementById('filtroFilialLancamento');
         this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
 
@@ -58,6 +59,7 @@ const PedagioUI = {
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
         this.filtroDataFinalLancamento = document.getElementById('filtroDataFinalLancamento');
         this.searchPlaca = document.getElementById('searchPlaca');
+        this.filtroFilialLancamento = document.getElementById('filtroFilialLancamento');
         this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
         this.tableBodyLancamentos = document.getElementById('tableBodyLancamentos');
 
@@ -119,6 +121,7 @@ const PedagioUI = {
         }
         this.btnFiltrarLancamentos.addEventListener('click', () => this.carregarLancamentos());
         this.searchPlaca.addEventListener('input', () => this.carregarLancamentos());
+        this.filtroFilialLancamento?.addEventListener('change', () => this.carregarLancamentos());
         this.tableBodyLancamentos.addEventListener('change', (e) => this.handleLancamentoSelectionChange(e));
         this.tableBodyLancamentos.addEventListener('click', (e) => this.handleLancamentoTableClick(e));
 
@@ -258,12 +261,22 @@ const PedagioUI = {
 
             if (this.lancamentoFilial) this.lancamentoFilial.innerHTML = options;
             if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.innerHTML = options;
+            if (this.filtroFilialLancamento) {
+                this.filtroFilialLancamento.innerHTML = '<option value="">Todas</option>' + this.filiaisData
+                    .map(f => {
+                        const value = f.sigla || f.nome;
+                        const label = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                        return `<option value="${value}">${label}</option>`;
+                    })
+                    .join('');
+            }
 
             const userFilial = this.getUserFilial();
             if (userFilial) {
                 const valor = this.getValorFilial(userFilial);
                 if (this.lancamentoFilial) this.lancamentoFilial.value = valor;
                 if (this.filialImportacaoPedagio) this.filialImportacaoPedagio.value = valor;
+                if (this.filtroFilialLancamento) this.filtroFilialLancamento.value = valor;
             }
         } catch (error) {
             console.error('Erro ao carregar filiais:', error);
@@ -443,13 +456,14 @@ const PedagioUI = {
             const dataInicial = this.filtroDataInicialLancamento.value;
             const dataFinal = this.filtroDataFinalLancamento.value;
             const searchPlaca = (this.searchPlaca.value || '').trim().toUpperCase();
+            const filialFiltro = this.getValorFilial(this.filtroFilialLancamento?.value || '');
 
             if (!dataInicial || !dataFinal) {
                 this.tableBodyLancamentos.innerHTML = '<tr><td colspan="12" class="text-center">Selecione o período de datas.</td></tr>';
                 return;
             }
 
-            const userFilial = this.getUserFilial();
+            const userFilial = filialFiltro || this.getUserFilial();
 
             let query = supabaseClient
                 .from('pedagios_lancamentos')
