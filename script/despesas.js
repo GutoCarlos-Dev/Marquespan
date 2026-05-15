@@ -54,6 +54,7 @@ const DespesasUI = {
         this.novoTipoQuartoValorNegociadoInput = document.getElementById('novoTipoQuartoValorNegociado');
         this.listaQuartosEdicao = document.getElementById('listaQuartosEdicao');
         this.valorNegociadoDisplay = document.getElementById('valorNegociadoDisplay');
+        this.btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralDespesas');
     },
 
     bind() {
@@ -61,6 +62,7 @@ const DespesasUI = {
         this.btnClearForm.addEventListener('click', () => this.clearForm());
         this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
+        this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
 
         // ** Adiciona os listeners para o cálculo automático do valor total **
         this.qtdDiariasInput.addEventListener('input', () => {
@@ -128,6 +130,15 @@ const DespesasUI = {
                 this.btnSubmit.click();
             }
         });
+    },
+
+    toggleMenuLateral() {
+        document.body.classList.toggle('despesas-menu-oculto');
+        const oculto = document.body.classList.contains('despesas-menu-oculto');
+        if (this.btnToggleMenuLateral) {
+            this.btnToggleMenuLateral.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+            this.btnToggleMenuLateral.setAttribute('aria-label', this.btnToggleMenuLateral.title);
+        }
     },
 
     setupMultiselect(display, options, textSpan, checkboxClass) {
