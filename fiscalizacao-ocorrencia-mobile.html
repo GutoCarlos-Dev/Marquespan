@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>App Fiscalizacao - Ocorrencias</title>
+  <link rel="stylesheet" href="css/fiscalizacao-ocorrencia-mobile.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <header class="mobile-header">
+    <a href="fiscalizacao-ocorrencia.html" class="back-button" title="Voltar"><i class="fas fa-chevron-left"></i></a>
+    <div class="header-title">
+      <img src="logo.png" alt="Logo Marquespan" class="mobile-logo">
+      <div>
+        <h1>Fiscalizacao</h1>
+        <span id="usuarioAtual">Carregando usuario...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mobile-main">
+    <section class="mobile-panel">
+      <div class="panel-title">
+        <h2><i class="fas fa-plus-circle"></i> Nova Ocorrencia</h2>
+      </div>
+
+      <form id="formOcorrenciaMobile" class="mobile-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mobileData">Data</label>
+            <input type="date" id="mobileData" required>
+          </div>
+          <div class="form-group">
+            <label for="mobileRota">Rota</label>
+            <input type="text" id="mobileRota" list="listaRotasMobile" required autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mobilePlaca">Placa</label>
+            <input type="text" id="mobilePlaca" list="listaPlacasMobile" required autocomplete="off" style="text-transform: uppercase;">
+          </div>
+          <div class="form-group">
+            <label for="mobileMotorista">Motorista</label>
+            <input type="text" id="mobileMotorista" list="listaMotoristasMobile" required autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="mobileAuxiliar">Auxiliar</label>
+          <input type="text" id="mobileAuxiliar" list="listaAuxiliaresMobile" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="mobileRelatorio">Relatorio</label>
+          <textarea id="mobileRelatorio" rows="5" required placeholder="Descreva a ocorrencia com detalhes..."></textarea>
+        </div>
+
+        <button type="submit" id="btnSalvarMobile" class="btn-primary">
+          <i class="fas fa-check"></i> Registrar Ocorrencia
+        </button>
+      </form>
+    </section>
+
+    <section class="mobile-panel ocorrencias-panel">
+      <div class="panel-title list-title">
+        <h2><i class="fas fa-list"></i> Ocorrencias</h2>
+        <button type="button" id="btnAtualizarMobile" class="btn-icon" title="Atualizar"><i class="fas fa-sync-alt"></i></button>
+      </div>
+
+      <div class="mobile-filters">
+        <div class="form-group">
+          <label for="mobileFiltroData">Data</label>
+          <input type="date" id="mobileFiltroData">
+        </div>
+        <div class="form-group">
+          <label for="mobileBusca">Buscar</label>
+          <input type="search" id="mobileBusca" placeholder="Placa, rota, motorista...">
+        </div>
+      </div>
+
+      <div class="summary-line">
+        <span><strong id="totalMobile">0</strong> registros</span>
+      </div>
+
+      <div id="listaOcorrenciasMobile" class="card-list">
+        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+  </main>
+
+  <datalist id="listaPlacasMobile"></datalist>
+  <datalist id="listaMotoristasMobile"></datalist>
+  <datalist id="listaAuxiliaresMobile"></datalist>
+  <datalist id="listaRotasMobile"></datalist>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/fiscalizacao-ocorrencia-mobile.js"></script>
+</body>
+</html>

@@ -2,6 +2,13 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.fiscalizacao-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .resumo-header {
   display: flex;
   justify-content: space-between;
