@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('searchResultadosLocal').addEventListener('input', filtrarLocal);
     document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
     document.getElementById('btnExportarXLS').addEventListener('click', exportarExcel);
+    configurarFiltroCategoria();
 
     // Ordenação
     document.querySelectorAll('.sortable').forEach(th => {
@@ -30,6 +31,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         th.querySelector('i').style.marginLeft = '5px'; // Adiciona um pequeno espaçamento ao ícone
     });
 });
+
+function configurarFiltroCategoria() {
+    const display = document.getElementById('categoriaDisplay');
+    const options = document.getElementById('categoriaOptions');
+    const text = document.getElementById('categoriaText');
+    display?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        options.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (event) => {
+        if (!display?.contains(event.target) && !options?.contains(event.target)) options?.classList.add('hidden');
+    });
+    options?.addEventListener('change', () => {
+        const checked = Array.from(options.querySelectorAll('.categoria-checkbox:checked'));
+        text.textContent = checked.length === 0 ? 'Todas' : (checked.length <= 2 ? checked.map(cb => cb.value).join(', ') : `${checked.length} selecionadas`);
+    });
+}
 
 async function carregarFiltros() {
     // Filiais
@@ -97,7 +115,7 @@ async function buscarDados() {
         const rota = document.getElementById('rota').value.trim().toUpperCase();
         const rodovia = document.getElementById('rodovia').value;
         const praca = document.getElementById('praca').value;
-        const categoria = document.getElementById('categoria').value;
+        const categorias = Array.from(document.querySelectorAll('.categoria-checkbox:checked')).map(cb => Number(cb.value));
 
         // 1. Cálculo da quantidade de meses no período para a mensalidade
         const dIni = new Date(dataIni + 'T00:00:00');
@@ -121,7 +139,7 @@ async function buscarDados() {
             if (rota) query = query.ilike('rota', `%${rota}%`);
             if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
             if (praca) query = query.ilike('praca', `%${praca}%`);
-            if (categoria) query = query.eq('categoria_eixos', Number(categoria));
+            if (categorias.length) query = query.in('categoria_eixos', categorias);
             return query;
         };
 
