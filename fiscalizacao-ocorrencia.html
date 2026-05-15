@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fiscalização - Lançar Ocorrência</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/buscar-manutencao.css" />
+  <link rel="stylesheet" href="css/fiscalizacao-ocorrencia.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-clipboard-check"></i> Fiscalização - Lançar Ocorrência</h1>
+    </header>
+
+    <div class="manutencao-top-grid">
+      <section class="glass-panel">
+        <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
+        <div class="filtros-container fiscalizacao-filtros">
+          <div class="form-group-filter">
+            <label for="filtroDataDe">Data de</label>
+            <input type="date" id="filtroDataDe">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroDataAte">Data ate</label>
+            <input type="date" id="filtroDataAte">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroPlaca">Placa</label>
+            <input type="text" id="filtroPlaca" list="listaPlacas" placeholder="Buscar placa...">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroMotorista">Motorista</label>
+            <input type="text" id="filtroMotorista" list="listaMotoristas" placeholder="Buscar motorista...">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroRota">Rota</label>
+            <input type="text" id="filtroRota" list="listaRotas" placeholder="Buscar rota...">
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-panel acoes-panel">
+        <h3><i class="fas fa-cogs"></i> Acoes</h3>
+        <div class="acoes-grid">
+          <button type="button" id="btnIncluirOcorrencia" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Incluir</button>
+          <button type="button" id="btnBuscarOcorrencias" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          <button type="button" id="btnExportarXLS" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar XLS</button>
+          <button type="button" id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="glass-panel">
+      <div class="resumo-header">
+        <h3><i class="fas fa-list"></i> Lancamentos</h3>
+        <div class="resumo-valores">
+          <input type="text" id="filtroLocal" placeholder="Filtrar na grade..." class="glass-input">
+          <strong>Registros:</strong> <span id="totalRegistros">0</span>
+        </div>
+      </div>
+
+      <div class="table-responsive fiscalizacao-table-wrap">
+        <table class="data-grid" id="tabelaFiscalizacao">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="data_ocorrencia">Data <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="usuario_nome">Usuario <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="placa">Placa <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="motorista">Motorista <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="auxiliar">Auxiliar <i class="fas fa-sort"></i></th>
+              <th>Ocorrência</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyOcorrencias">
+            <tr><td colspan="7" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="modalOcorrencia" class="modal-overlay hidden">
+    <div class="modal-content fiscalizacao-modal">
+      <div class="modal-header">
+        <h3>Ocorrência</h3>
+        <button type="button" id="btnFecharModal" class="close-button">&times;</button>
+      </div>
+      <form id="formOcorrencia">
+        <div class="modal-body">
+          <div class="form-grid-2-cols">
+            <div class="form-group">
+              <label for="ocorrenciaData">Data</label>
+              <input type="date" id="ocorrenciaData" class="glass-input" required>
+            </div>
+            <div class="form-group">
+              <label for="ocorrenciaRota">Rota</label>
+              <input type="text" id="ocorrenciaRota" list="listaRotas" class="glass-input" required>
+            </div>
+            <div class="form-group">
+              <label for="ocorrenciaPlaca">Placa</label>
+              <input type="text" id="ocorrenciaPlaca" list="listaPlacas" class="glass-input" required>
+            </div>
+            <div class="form-group">
+              <label for="ocorrenciaMotorista">Motorista</label>
+              <input type="text" id="ocorrenciaMotorista" list="listaMotoristas" class="glass-input" required>
+            </div>
+            <div class="form-group">
+              <label for="ocorrenciaAuxiliar">Auxiliar</label>
+              <input type="text" id="ocorrenciaAuxiliar" list="listaAuxiliares" class="glass-input">
+            </div>
+          </div>
+          <div class="form-group ocorrencia-relatorio">
+            <label for="ocorrenciaRelatorio">Relatorio</label>
+            <textarea id="ocorrenciaRelatorio" class="glass-input" rows="6" required placeholder="Relate a ocorrencia..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelarOcorrencia" class="btn-custom btn-red">Cancelar</button>
+          <button type="submit" id="btnSalvarOcorrencia" class="btn-custom btn-green">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <datalist id="listaPlacas"></datalist>
+  <datalist id="listaMotoristas"></datalist>
+  <datalist id="listaAuxiliares"></datalist>
+  <datalist id="listaRotas"></datalist>
+
+  <footer class="footer">
+    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+  </footer>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/fiscalizacao-ocorrencia.js" defer></script>
+</body>
+</html>
