@@ -1033,8 +1033,8 @@ const PedagioUI = {
                             62: 8, // Caminhão 8 eixos
                             63: 9, // Caminhão 9 eixos
                             64: 10, // Caminhão 10 eixos (Padrão ARTESP/ANTT)
-                            90: 2,  // Taxa ambiental carros (atribuindo 2 eixos padrão)
-                            94: 2   // Taxa ambiental caminhões (atribuindo valor base)
+                            90: 90, // Taxa ambiental carros
+                            94: 94  // Taxa ambiental caminhões
                         };
 
                         if (mapaCategorias[categoriaEixosRaw]) {
