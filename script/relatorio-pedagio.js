@@ -87,6 +87,7 @@ async function buscarDados() {
         const rota = document.getElementById('rota').value.trim().toUpperCase();
         const rodovia = document.getElementById('rodovia').value;
         const praca = document.getElementById('praca').value;
+        const categoria = document.getElementById('categoria').value;
 
         // 1. Cálculo da quantidade de meses no período para a mensalidade
         const dIni = new Date(dataIni + 'T00:00:00');
@@ -109,6 +110,7 @@ async function buscarDados() {
         if (rota) query = query.ilike('rota', `%${rota}%`);
         if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
         if (praca) query = query.ilike('praca', `%${praca}%`);
+        if (categoria) query = query.eq('categoria_eixos', Number(categoria));
 
          // 4. Prepara consulta da frota (ativo + INTERNADO) respeitando filial e tipos
         let fleetQuery = supabaseClient
