@@ -369,7 +369,7 @@ const RelatorioDespesasUI = {
 
     async carregarDados() {
         try {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
             
             // Captura filtros selecionados antes do loop
             const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
@@ -648,6 +648,7 @@ const RelatorioDespesasUI = {
                 <th data-sort="numero_rota" style="cursor:pointer">ROTA <i class="fas fa-sort"></i></th>
                 <th data-sort="supervisor" style="cursor:pointer">SUPERVISOR <i class="fas fa-sort"></i></th>
                 <th data-sort="hotel" style="cursor:pointer">HOTEL <i class="fas fa-sort"></i></th>
+                <th data-sort="tipo_quarto" style="cursor:pointer">TIPO DE QUARTO <i class="fas fa-sort"></i></th>
                 <th data-sort="funcionarios" style="cursor:pointer">FUNCIONÁRIOS <i class="fas fa-sort"></i></th>
                 <th data-sort="qtd_diarias" style="text-align: center; cursor:pointer">DIÁRIAS <i class="fas fa-sort"></i></th>
                 <th data-sort="valor_total" style="cursor:pointer">VALOR <i class="fas fa-sort"></i></th>
@@ -671,7 +672,7 @@ const RelatorioDespesasUI = {
         this.tableBodyResultados.innerHTML = '';
         
         if (!data || data.length === 0) {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
             this.totalQtd.textContent = '0';
             this.totalValor.textContent = 'R$ 0,00';
             return;
@@ -725,6 +726,7 @@ const RelatorioDespesasUI = {
                 <td>${item.numero_rota || '-'}</td>
                 <td>${item.supervisor || '-'}</td>
                 <td>${item.hoteis?.nome || '-'}</td>
+                <td>${item.tipo_quarto || '-'}</td>
                 <td>${funcionariosHtml || '-'}</td>
                 <td style="text-align: center;">${item.qtd_diarias || 1}</td>
                 <td>${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -743,6 +745,7 @@ const RelatorioDespesasUI = {
             'Data Check-in': new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
             'Rota': item.numero_rota,
             'Hotel': item.hoteis?.nome,
+            'Tipo de Quarto': item.tipo_quarto || '',
             'Funcionários': [item.funcionario1?.nome_completo, item.funcionario2?.nome_completo].filter(Boolean).join(', '),
             'Valor Total': item.valor_total,
             'Qtd Diárias': item.qtd_diarias,
@@ -760,27 +763,26 @@ const RelatorioDespesasUI = {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape');
 
         doc.setFontSize(18);
         doc.text('Relatório de Despesas', 14, 22);
         doc.setFontSize(10);
         doc.text(`Período: ${new Date(this.dataInicio.value + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(this.dataFim.value + 'T00:00:00').toLocaleDateString('pt-BR')}`, 14, 30);
 
-        const tableColumn = ["Data", "Rota", "Hotel", "Funcionários", "Diárias", "Valor"];
+        const tableColumn = ["Data", "Rota", "Hotel", "Tipo de Quarto", "Funcionários", "Diárias", "Valor"];
         const tableRows = this.filteredData.map(item => [
             new Date(item.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR'),
             item.numero_rota,
             item.hoteis?.nome || '-',
+            item.tipo_quarto || '-',
             { func1: item.funcionario1?.nome_completo || '', func2: item.funcionario2?.nome_completo || '' },
+            item.qtd_diarias || 1,
             (item.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
         ]);
-        // Adiciona a coluna de diárias ao mapeamento
-        tableRows.forEach(row => row.splice(4, 0, row[3].func1 ? this.filteredData.find(item => item.funcionario1?.nome_completo === row[3].func1).qtd_diarias : '-'));
-
         // Adiciona linha de total
         const totalValor = this.filteredData.reduce((acc, item) => acc + (item.valor_total || 0), 0);
-        tableRows.push(['', '', '', 'TOTAL GERAL', '', totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+        tableRows.push(['', '', '', '', 'TOTAL GERAL', '', totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
 
         doc.autoTable({
             head: [tableColumn],
@@ -790,11 +792,11 @@ const RelatorioDespesasUI = {
             styles: { fontSize: 8 },
             headStyles: { fillColor: [0, 105, 55] },
             columnStyles: {
-                4: { halign: 'center' }, // Alinha a coluna Diárias ao centro
-                5: { halign: 'right', fontStyle: 'bold', cellWidth: 40 } // Alinha a coluna Valor à direita
+                5: { halign: 'center' },
+                6: { halign: 'right', fontStyle: 'bold', cellWidth: 35 }
             },
             didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 3) {
+                if (data.section === 'body' && data.column.index === 4) {
                     const raw = data.cell.raw;
                     if (raw && typeof raw === 'object') {
                         // Define o texto para cálculo de altura da linha, mas não para desenho
@@ -803,7 +805,7 @@ const RelatorioDespesasUI = {
                 }
             },
             willDrawCell: function(data) {
-                if (data.section === 'body' && data.column.index === 3) {
+                if (data.section === 'body' && data.column.index === 4) {
                     const raw = data.cell.raw;
                     if (raw && typeof raw === 'object') {
                         // Limpa o texto para que o autoTable desenhe apenas as bordas/fundo
@@ -812,7 +814,7 @@ const RelatorioDespesasUI = {
                 }
             },
             didDrawCell: function(data) {
-                if (data.section === 'body' && data.column.index === 3) {
+                if (data.section === 'body' && data.column.index === 4) {
                     const raw = data.cell.raw;
                     if (raw && typeof raw === 'object') {
                         const doc = data.doc;
