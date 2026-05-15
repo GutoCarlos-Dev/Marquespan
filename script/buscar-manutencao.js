@@ -875,6 +875,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   preencherUsuarioLogado();
   await carregarFiltros();
 
+  document.getElementById('btnIncluirManutencao')?.addEventListener('click', () => {
+    window.location.href = 'incluir-manutencao.html';
+  });
+
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
