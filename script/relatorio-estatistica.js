@@ -197,14 +197,22 @@ const RelatorioEstatistica = {
         dtIniDate.setDate(dtIniDate.getDate() - 15);
         const dtIniRetroativa = this.formatDateISO(dtIniDate);
 
-        const queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota, qtd_diarias')
+        const queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota, qtd_diarias, funcionario1:id_funcionario1(nome_completo)')
             .gte('data_checkin', dtIniRetroativa)
             .lte('data_checkin', dtFim);
 
-        const [resSaidas, resExt, resHosp] = await Promise.all([querySaidas, queryExt, queryHosp]);
+        let queryPedagio = supabaseClient.from('pedagios_lancamentos').select('valor, data_hora_passagem, placa, rota, motorista, filial')
+            .gte('data_hora_passagem', `${dtIni}T00:00:00`)
+            .lte('data_hora_passagem', `${dtFim}T23:59:59`);
+        if (placa) queryPedagio = queryPedagio.eq('placa', placa);
+        if (rota) queryPedagio = queryPedagio.eq('rota', rota);
+        if (filial) queryPedagio = queryPedagio.eq('filial', filial);
+
+        const [resSaidas, resExt, resHosp, resPedagio] = await Promise.all([querySaidas, queryExt, queryHosp, queryPedagio]);
         if (resSaidas.error) throw resSaidas.error;
         if (resExt.error) throw resExt.error;
         if (resHosp.error) throw resHosp.error;
+        if (resPedagio.error) throw resPedagio.error;
 
         const saidas = (resSaidas.data || [])
             .filter(s => !filial || s.bicos?.bombas?.tanques?.filial === filial)
@@ -217,6 +225,7 @@ const RelatorioEstatistica = {
                     data_hora: s.data_hora,
                     rota: s.rota,
                     placa: s.veiculo_placa,
+                    motorista: s.motorista || '',
                     km_atual: Number(s.km_atual) || 0,
                     litros: Number(s.qtd_litros) || 0,
                     valor_diesel: (Number(s.qtd_litros) || 0) * precoCusto,
@@ -232,6 +241,7 @@ const RelatorioEstatistica = {
             data_hora: e.data_hora,
             rota: e.rota,
             placa: e.veiculo_placa,
+            motorista: e.motorista || '',
             km_atual: Number(e.km_atual) || 0,
             litros: Number(e.litros) || 0,
             valor_diesel: Number(e.valor_total) || 0,
@@ -245,11 +255,15 @@ const RelatorioEstatistica = {
 
         return registros.map(reg => {
             const valorHospedagem = this.calcularHospedagem(reg, resHosp.data || []);
+            const valorPedagio = this.calcularPedagio(reg, resPedagio.data || []);
+            const motorista = this.obterMotorista(reg, resPedagio.data || [], resHosp.data || []);
             return {
                 ...reg,
+                motorista,
                 semana: this.getSemanaLabel(reg.data),
                 valor_hospedagem: valorHospedagem,
-                gasto_total: (reg.valor_diesel || 0) + (valorHospedagem || 0),
+                valor_pedagio: valorPedagio,
+                gasto_total: (reg.valor_diesel || 0) + (valorHospedagem || 0) + (valorPedagio || 0),
                 media_km_lts: reg.litros > 0 ? reg.km_rodado / reg.litros : 0
             };
         });
@@ -292,6 +306,54 @@ const RelatorioEstatistica = {
         }).reduce((acc, curr) => acc + (Number(curr.valor_total) || 0), 0);
     },
 
+    buscarHospedagensRegistro(registro, hospedagens) {
+        return hospedagens.filter(h => {
+            const rotasHosp = String(h.numero_rota || '').split(',').map(r => r.trim());
+            const rotaSup = String(registro.rota || '').trim();
+            if (rotaSup && !rotasHosp.includes(rotaSup)) return false;
+
+            const checkin = new Date(`${h.data_checkin}T00:00:00`);
+            const dataAbastecimento = new Date(`${registro.data}T00:00:00`);
+            const checkout = new Date(checkin);
+            checkout.setDate(checkout.getDate() + (parseInt(h.qtd_diarias, 10) || 1));
+            return dataAbastecimento >= checkin && dataAbastecimento <= checkout;
+        });
+    },
+
+    buscarPedagiosRegistro(registro, pedagios) {
+        const dataRegistro = String(registro.data || '');
+        const rotaRegistro = String(registro.rota || '').trim();
+        const placaRegistro = String(registro.placa || '').trim().toUpperCase();
+
+        return pedagios.filter(p => {
+            const dataPedagio = String(p.data_hora_passagem || '').split('T')[0];
+            const rotaPedagio = String(p.rota || '').trim();
+            const placaPedagio = String(p.placa || '').trim().toUpperCase();
+            return dataPedagio === dataRegistro
+                && (!rotaRegistro || rotaPedagio === rotaRegistro)
+                && (!placaRegistro || placaPedagio === placaRegistro);
+        });
+    },
+
+    calcularPedagio(registro, pedagios) {
+        return this.buscarPedagiosRegistro(registro, pedagios)
+            .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+    },
+
+    obterMotorista(registro, pedagios, hospedagens) {
+        if (registro.motorista) return registro.motorista;
+
+        const motoristaPedagio = this.buscarPedagiosRegistro(registro, pedagios)
+            .map(p => p.motorista)
+            .find(Boolean);
+        if (motoristaPedagio) return motoristaPedagio;
+
+        const motoristaHotel = this.buscarHospedagensRegistro(registro, hospedagens)
+            .map(h => h.funcionario1?.nome_completo)
+            .find(Boolean);
+        return motoristaHotel || '';
+    },
+
     getSemanaLabel(dateInput) {
         const info = this.getISOWeekInfo(`${dateInput}T00:00:00`);
         return `Semana ${String(info.week).padStart(2, '0')} - ${info.year}`;
@@ -315,10 +377,12 @@ const RelatorioEstatistica = {
                     rota,
                     qtd_lancamentos: 0,
                     placas: new Set(),
+                    motoristas: new Set(),
                     km_rodado: 0,
                     litros: 0,
                     valor_diesel: 0,
                     valor_hospedagem: 0,
+                    valor_pedagio: 0,
                     gasto_total: 0
                 });
             }
@@ -326,10 +390,12 @@ const RelatorioEstatistica = {
             const item = map.get(key);
             item.qtd_lancamentos += 1;
             if (reg.placa) item.placas.add(reg.placa);
+            if (reg.motorista) item.motoristas.add(reg.motorista);
             item.km_rodado += Number(reg.km_rodado) || 0;
             item.litros += Number(reg.litros) || 0;
             item.valor_diesel += Number(reg.valor_diesel) || 0;
             item.valor_hospedagem += Number(reg.valor_hospedagem) || 0;
+            item.valor_pedagio += Number(reg.valor_pedagio) || 0;
             item.gasto_total += Number(reg.gasto_total) || 0;
         });
 
@@ -337,6 +403,7 @@ const RelatorioEstatistica = {
             .map(item => ({ 
                 ...item, 
                 placas: Array.from(item.placas).sort().join(', '),
+                motoristas: Array.from(item.motoristas).sort().join(', '),
                 media_km_lts: item.litros > 0 ? item.km_rodado / item.litros : 0
             }))
             .sort((a, b) => a.semana_ordem.localeCompare(b.semana_ordem) || String(a.rota).localeCompare(String(b.rota), undefined, { numeric: true }));
@@ -352,14 +419,14 @@ const RelatorioEstatistica = {
 
     renderHeader() {
         const headers = this.tipoAtual === 'CONSOLIDADO'
-            ? ['SEMANA', 'ROTA', 'QTD LANÇ.', 'PLACAS', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO']
-            : ['DATA/HORA', 'PERÍODO', 'TIPO', 'ROTA', 'PLACA', 'KM ANTERIOR', 'KM ATUAL', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR UNIT.', 'VALOR DIESEL', 'HOSPEDAGEM', 'TOTAL GASTO', 'BICO/POSTO', 'TANQUE'];
+            ? ['SEMANA', 'ROTA', 'QTD LANÇ.', 'PLACAS', 'MOTORISTA', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR DIESEL', 'HOSPEDAGEM', 'PEDÁGIO', 'TOTAL GASTO']
+            : ['DATA/HORA', 'PERÍODO', 'TIPO', 'ROTA', 'PLACA', 'MOTORISTA', 'KM ANTERIOR', 'KM ATUAL', 'KM RODADO', 'LITROS DIESEL', 'MÉDIA-KM/LTS', 'VALOR UNIT.', 'VALOR DIESEL', 'HOSPEDAGEM', 'PEDÁGIO', 'TOTAL GASTO', 'BICO/POSTO', 'TANQUE'];
 
         this.theadRow.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
     },
 
     getColspan() {
-        return this.tipoAtual === 'CONSOLIDADO' ? 10 : 16;
+        return this.tipoAtual === 'CONSOLIDADO' ? 12 : 18;
     },
 
     renderLoading() {
@@ -397,6 +464,7 @@ const RelatorioEstatistica = {
                 <td>${item.tipo}</td>
                 <td style="font-weight: bold; color: var(--primary-color);">${item.rota || '-'}</td>
                 <td>${item.placa || '-'}</td>
+                <td>${item.motorista || '-'}</td>
                 <td>${item.km_anterior ? `${this.formatNumber(item.km_anterior, 0)} km` : 'N/I'}</td>
                 <td>${item.km_atual ? `${this.formatNumber(item.km_atual, 0)} km` : 'N/I'}</td>
                 <td>${item.km_rodado > 0 ? `${this.formatNumber(item.km_rodado, 0)} km` : '<span style="color:#999">N/I</span>'}</td>
@@ -405,6 +473,7 @@ const RelatorioEstatistica = {
                 <td>${this.formatCurrency(item.valor_unitario)}</td>
                 <td>${this.formatCurrency(item.valor_diesel)}</td>
                 <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
+                <td style="font-weight: 600;">${this.formatCurrency(item.valor_pedagio)}</td>
                 <td style="font-weight: 700; color: var(--primary-color);">${this.formatCurrency(item.gasto_total)}</td>
                 <td>${item.bico_posto || '-'}</td>
                 <td>${item.tanque_combustivel || '-'}</td>
@@ -421,11 +490,13 @@ const RelatorioEstatistica = {
                 <td style="font-weight: bold; color: var(--primary-color);">${item.rota || '-'}</td>
                 <td>${item.qtd_lancamentos}</td>
                 <td>${item.placas || '-'}</td>
+                <td>${item.motoristas || '-'}</td>
                 <td>${item.km_rodado > 0 ? `${this.formatNumber(item.km_rodado, 0)} km` : '<span style="color:#999">N/I</span>'}</td>
                 <td>${this.formatNumber(item.litros)} L</td>
                 <td>${item.media_km_lts > 0 ? this.formatNumber(item.media_km_lts, 2) : 'N/I'}</td>
                 <td>${this.formatCurrency(item.valor_diesel)}</td>
                 <td style="font-weight: 600;">${this.formatCurrency(item.valor_hospedagem)}</td>
+                <td style="font-weight: 600;">${this.formatCurrency(item.valor_pedagio)}</td>
                 <td style="font-weight: 700; color: var(--primary-color);">${this.formatCurrency(item.gasto_total)}</td>
             `;
             this.tbody.appendChild(tr);
@@ -439,11 +510,13 @@ const RelatorioEstatistica = {
                 'ROTA': i.rota,
                 'QTD LANÇ.': i.qtd_lancamentos,
                 'PLACAS': i.placas,
+                'MOTORISTA': i.motoristas,
                 'KM RODADO': i.km_rodado,
                 'LITROS DIESEL': i.litros,
                 'MÉDIA-KM/LTS': i.media_km_lts,
                 'VALOR DIESEL': i.valor_diesel,
                 'HOSPEDAGEM': i.valor_hospedagem,
+                'PEDÁGIO': i.valor_pedagio,
                 'TOTAL GASTO': i.gasto_total
             }));
         }
@@ -454,6 +527,7 @@ const RelatorioEstatistica = {
             'TIPO': i.tipo,
             'ROTA': i.rota,
             'PLACA': i.placa,
+            'MOTORISTA': i.motorista,
             'KM ANTERIOR': i.km_anterior || '',
             'KM ATUAL': i.km_atual || '',
             'KM RODADO': i.km_rodado,
@@ -462,6 +536,7 @@ const RelatorioEstatistica = {
             'VALOR UNIT.': i.valor_unitario,
             'VALOR DIESEL': i.valor_diesel,
             'HOSPEDAGEM': i.valor_hospedagem,
+            'PEDÁGIO': i.valor_pedagio,
             'TOTAL GASTO': i.gasto_total,
             'BICO/POSTO': i.bico_posto,
             'TANQUE': i.tanque_combustivel
@@ -522,7 +597,7 @@ const RelatorioEstatistica = {
         const columns = Object.keys(rowsObject[0]);
         const rows = rowsObject.map(row => columns.map(col => {
             const value = row[col];
-            if (col.includes('VALOR') || col.includes('HOSPEDAGEM') || col.includes('TOTAL')) return this.formatCurrency(value);
+            if (col.includes('VALOR') || col.includes('HOSPEDAGEM') || col.includes('PEDÁGIO') || col.includes('TOTAL')) return this.formatCurrency(value);
             if (col.includes('LITROS')) return `${this.formatNumber(value)} L`;
             if (col.includes('KM')) return value ? `${this.formatNumber(value, 0)} km` : '';
             return value ?? '';
@@ -534,7 +609,7 @@ const RelatorioEstatistica = {
             startY: 45,
             theme: 'grid',
             headStyles: { fillColor: [0, 105, 55] },
-            styles: { fontSize: this.tipoAtual === 'CONSOLIDADO' ? 8 : 7, cellPadding: 2 }
+            styles: { fontSize: this.tipoAtual === 'CONSOLIDADO' ? 8 : 6, cellPadding: this.tipoAtual === 'CONSOLIDADO' ? 2 : 1.5 }
         });
 
         const pageCount = doc.internal.getNumberOfPages();
