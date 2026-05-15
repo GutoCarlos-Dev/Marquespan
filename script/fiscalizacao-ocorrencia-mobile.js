@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('mobileData').value = hoje;
   document.getElementById('mobileFiltroDataDe').value = hoje;
   document.getElementById('mobileFiltroDataAte').value = hoje;
-  mostrarUsuario();
   bindEvents();
   await carregarListas();
   await carregarOcorrencias();
@@ -33,14 +32,8 @@ function bindEvents() {
   });
 }
 
-function mostrarUsuario() {
-  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
-  document.getElementById('usuarioAtual').textContent = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Usuario';
-}
-
 function abrirModal(item = null) {
   document.getElementById('formOcorrenciaMobile').reset();
-  mostrarUsuario();
 
   ocorrenciaEditandoId = item?.id || null;
   document.querySelector('#modalOcorrenciaMobile .panel-header h3').innerHTML = ocorrenciaEditandoId
