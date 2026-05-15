@@ -223,7 +223,6 @@ const PedagioUI = {
             const { data, error } = await supabaseClient
                 .from('veiculos')
                 .select('placa, marca, modelo, tipo, eixos, filial') 
-                .eq('situacao', 'ativo')
                 .order('placa');
             if (error) throw error;
             this.veiculosData = data;
@@ -231,6 +230,13 @@ const PedagioUI = {
         } catch (error) {
             console.error('Erro ao carregar veículos:', error);
         }
+    },
+
+    buscarVeiculoPorPlaca(placa) {
+        const p = String(placa || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
+        const mapa = { 0:'A', 1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J' };
+        const mercosul = /^[A-Z]{3}\d{4}$/.test(p) ? `${p.slice(0, 4)}${mapa[p[4]]}${p.slice(5)}` : p;
+        return this.veiculosData.find(v => v.placa === p || v.placa === mercosul);
     },
 
     async carregarFiliais() {
@@ -996,13 +1002,14 @@ const PedagioUI = {
                             continue;
                         }
 
-                        // Validação de Placa: Verifica se existe no cadastro de veículos ativos
-                        const veiculo = this.veiculosData.find(v => v.placa === placa);
+                        // Validação de Placa: verifica cadastro e tenta conversão Mercosul.
+                        const veiculo = this.buscarVeiculoPorPlaca(placa);
                         if (!veiculo) {
                             rejeitados.push({ motivo: `Veículo [${placa}] não cadastrado no sistema`, dados: row });
                             pulosPorVeiculo++;
                             continue;
                         }
+                        const placaFinal = veiculo.placa;
                         if (!filial) filial = this.getValorFilial(veiculo.filial);
 
                         let dataHoraPassagem;
@@ -1042,7 +1049,7 @@ const PedagioUI = {
                         }
 
                         lancamentosParaInserir.push({
-                            placa,
+                            placa: placaFinal,
                             marca_veiculo: marcaVeiculo,
                             categoria_eixos: categoriaEixos,
                             data_hora_passagem: dataHoraPassagem,
