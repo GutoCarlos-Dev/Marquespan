@@ -263,15 +263,7 @@ async function salvarManutencao() {
 
   alert(`✅ Manutenção ${idManutencao ? 'atualizada' : 'salva'} com sucesso!`);
   // Recarrega a página ou limpa o form
-  if (!idManutencao) {
-      // Se for novo, limpa respeitando os campos fixados
-      limparFormularioInteligente();
-      arquivosParaUpload = [];
-      arquivosParaDeletar = []; // Limpa a lista de arquivos para deletar
-      arquivosExistentes = [];
-      renderizarListaArquivos();
-      preencherUsuarioLogado();
-  }
+  prepararNovaManutencao();
 }
 
 /**
@@ -390,6 +382,28 @@ function limparFormularioInteligente() {
 }
 
 //  Lógica de Arquivos
+function prepararNovaManutencao() {
+    limparFormularioInteligente();
+    arquivosParaUpload = [];
+    arquivosParaDeletar = [];
+    arquivosExistentes = [];
+    renderizarListaArquivos();
+    preencherUsuarioLogado();
+
+    document.getElementById('idManutencao').value = '';
+    document.getElementById('idManutencaoDisplay').textContent = '--';
+
+    const btnSalvar = document.getElementById('btnSalvarManutencao');
+    if (btnSalvar) btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Manutencao';
+
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    mostrarPainelInterno('cadastroInterno');
+    document.getElementById('status')?.focus();
+}
+
 function abrirModalAnexo() {
     document.getElementById('modalAnexo').classList.remove('hidden');
     document.getElementById('inputArquivoAnexo').value = '';
