@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const RelatorioEstatistica = {
     data: [],
+    pedagiosPeriodo: [],
     tipoAtual: 'ANALITICO',
 
     init() {
@@ -213,6 +214,7 @@ const RelatorioEstatistica = {
         if (resExt.error) throw resExt.error;
         if (resHosp.error) throw resHosp.error;
         if (resPedagio.error) throw resPedagio.error;
+        this.pedagiosPeriodo = resPedagio.data || [];
 
         const saidas = (resSaidas.data || [])
             .filter(s => !filial || s.bicos?.bombas?.tanques?.filial === filial)
@@ -255,8 +257,8 @@ const RelatorioEstatistica = {
 
         return registros.map(reg => {
             const valorHospedagem = this.calcularHospedagem(reg, resHosp.data || []);
-            const valorPedagio = this.calcularPedagio(reg, resPedagio.data || []);
-            const motorista = this.obterMotorista(reg, resPedagio.data || [], resHosp.data || []);
+            const valorPedagio = this.calcularPedagio(reg, this.pedagiosPeriodo);
+            const motorista = this.obterMotorista(reg, this.pedagiosPeriodo, resHosp.data || []);
             return {
                 ...reg,
                 motorista,
@@ -362,6 +364,20 @@ const RelatorioEstatistica = {
     consolidarPorSemanaRota(registros, semanasSelecionadas) {
         const semanasPermitidas = new Set(semanasSelecionadas.map(w => w.value));
         const map = new Map();
+        const criarItem = (weekValue, week, year, rota) => ({
+            semana: `Semana ${String(week).padStart(2, '0')} - ${year}`,
+            semana_ordem: weekValue,
+            rota,
+            qtd_lancamentos: 0,
+            placas: new Set(),
+            motoristas: new Set(),
+            km_rodado: 0,
+            litros: 0,
+            valor_diesel: 0,
+            valor_hospedagem: 0,
+            valor_pedagio: 0,
+            gasto_total: 0
+        });
 
         registros.forEach(reg => {
             const info = this.getISOWeekInfo(`${reg.data}T00:00:00`);
@@ -371,20 +387,7 @@ const RelatorioEstatistica = {
             const rota = reg.rota || '-';
             const key = `${weekValue}_${rota}`;
             if (!map.has(key)) {
-                map.set(key, {
-                    semana: `Semana ${String(info.week).padStart(2, '0')} - ${info.year}`,
-                    semana_ordem: weekValue,
-                    rota,
-                    qtd_lancamentos: 0,
-                    placas: new Set(),
-                    motoristas: new Set(),
-                    km_rodado: 0,
-                    litros: 0,
-                    valor_diesel: 0,
-                    valor_hospedagem: 0,
-                    valor_pedagio: 0,
-                    gasto_total: 0
-                });
+                map.set(key, criarItem(weekValue, info.week, info.year, rota));
             }
 
             const item = map.get(key);
@@ -395,8 +398,27 @@ const RelatorioEstatistica = {
             item.litros += Number(reg.litros) || 0;
             item.valor_diesel += Number(reg.valor_diesel) || 0;
             item.valor_hospedagem += Number(reg.valor_hospedagem) || 0;
-            item.valor_pedagio += Number(reg.valor_pedagio) || 0;
-            item.gasto_total += Number(reg.gasto_total) || 0;
+            item.gasto_total += (Number(reg.valor_diesel) || 0) + (Number(reg.valor_hospedagem) || 0);
+        });
+
+        (this.pedagiosPeriodo || []).forEach(p => {
+            const dataPedagio = String(p.data_hora_passagem || '').split('T')[0];
+            if (!dataPedagio) return;
+
+            const info = this.getISOWeekInfo(`${dataPedagio}T00:00:00`);
+            const weekValue = `${info.year}-${String(info.week).padStart(2, '0')}`;
+            if (!semanasPermitidas.has(weekValue)) return;
+
+            const rota = p.rota || '-';
+            const key = `${weekValue}_${rota}`;
+            if (!map.has(key)) {
+                map.set(key, criarItem(weekValue, info.week, info.year, rota));
+            }
+
+            const item = map.get(key);
+            if (p.placa) item.placas.add(p.placa);
+            item.valor_pedagio += Number(p.valor) || 0;
+            item.gasto_total += Number(p.valor) || 0;
         });
 
         return Array.from(map.values())
