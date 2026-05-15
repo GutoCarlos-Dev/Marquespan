@@ -57,6 +57,16 @@ function canDelete() {
     return nivel === 'administrador' || nivel === 'gerencia';
 }
 
+function toggleMenuLateralManutencao() {
+    document.body.classList.toggle('manutencao-menu-oculto');
+    const oculto = document.body.classList.contains('manutencao-menu-oculto');
+    const btn = document.getElementById('btnToggleMenuLateral');
+    if (btn) {
+        btn.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+        btn.setAttribute('aria-label', btn.title);
+    }
+}
+
 // 👤 Preencher campo de usuário logado
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -1081,6 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listeners para cálculo fiscal
   document.getElementById('valorNfe')?.addEventListener('input', calcularTotalFiscal);
   document.getElementById('valorNfse')?.addEventListener('input', calcularTotalFiscal);
+  document.getElementById('btnToggleMenuLateral')?.addEventListener('click', toggleMenuLateralManutencao);
 
   // Listener Busca Fornecedor Modal
   document.getElementById('novoFornecedor').addEventListener('input', handleBuscaFornecedorModal);
