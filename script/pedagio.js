@@ -1176,5 +1176,5 @@ const PedagioUI = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    PedagioUI.init();
+    PedagioUI.init().finally(() => document.body.classList.remove('pedagio-loading'));
 });

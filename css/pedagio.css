@@ -13,6 +13,12 @@
     display: none !important;
 }
 
+/* Evita exibir o layout em estado intermediário antes da inicialização do JS. */
+body.pedagio-loading .main-content,
+body.pedagio-loading .footer {
+    opacity: 0;
+}
+
 .glass-header {
     background: linear-gradient(135deg, rgba(0, 105, 55, 0.92), rgba(0, 77, 41, 0.96));
     border: 1px solid rgba(255, 255, 255, 0.12);
