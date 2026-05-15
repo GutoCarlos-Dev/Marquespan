@@ -70,6 +70,37 @@
   white-space: pre-wrap;
 }
 
+.acoes-cell {
+  min-width: 96px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-grid-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  margin: 0 2px;
+}
+
+.btn-grid-action:hover {
+  filter: brightness(1.08);
+}
+
+.btn-edit {
+  background: #007bff;
+}
+
+.btn-delete {
+  background: #dc3545;
+}
+
 .fiscalizacao-modal {
   max-width: 760px;
 }

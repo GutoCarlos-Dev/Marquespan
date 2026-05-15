@@ -1,7 +1,9 @@
 import { supabaseClient } from './supabase.js';
 
 let ocorrencias = [];
+let ocorrenciaEditandoId = null;
 let sortState = { field: 'data_ocorrencia', ascending: false };
+const niveisComExclusao = ['administrador', 'gerencia'];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -27,6 +29,7 @@ function bindEvents() {
   document.getElementById('modalOcorrencia').addEventListener('click', (event) => {
     if (event.target.id === 'modalOcorrencia') fecharModal();
   });
+  document.getElementById('tbodyOcorrencias').addEventListener('click', handleTabelaClick);
 
   document.querySelectorAll('.sortable').forEach(th => {
     th.addEventListener('click', () => {
@@ -70,14 +73,44 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
-function abrirModal() {
+function abrirModal(item = null) {
   document.getElementById('formOcorrencia').reset();
-  document.getElementById('ocorrenciaData').valueAsDate = new Date();
+  ocorrenciaEditandoId = item?.id || null;
+  document.querySelector('#modalOcorrencia .modal-header h3').textContent = ocorrenciaEditandoId ? 'Editar Ocorrencia' : 'Ocorrencia';
+  document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alteracoes' : 'Salvar';
+  document.getElementById('ocorrenciaData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
+  document.getElementById('ocorrenciaRota').value = item?.rota || '';
+  document.getElementById('ocorrenciaPlaca').value = item?.placa || '';
+  document.getElementById('ocorrenciaMotorista').value = item?.motorista || '';
+  document.getElementById('ocorrenciaAuxiliar').value = item?.auxiliar || '';
+  document.getElementById('ocorrenciaRelatorio').value = item?.relatorio || '';
   document.getElementById('modalOcorrencia').classList.remove('hidden');
 }
 
 function fecharModal() {
+  ocorrenciaEditandoId = null;
   document.getElementById('modalOcorrencia').classList.add('hidden');
+}
+
+async function handleTabelaClick(event) {
+  const button = event.target.closest('[data-action]');
+  if (!button) return;
+
+  const item = ocorrencias.find(ocorrencia => ocorrencia.id === button.dataset.id);
+  if (!item) return;
+
+  if (button.dataset.action === 'editar') {
+    abrirModal(item);
+    return;
+  }
+
+  if (button.dataset.action === 'excluir') {
+    if (!usuarioPodeExcluir()) {
+      alert('Seu nivel de acesso permite apenas editar ocorrencias.');
+      return;
+    }
+    await excluirOcorrencia(item);
+  }
 }
 
 async function salvarOcorrencia(event) {
@@ -88,29 +121,56 @@ async function salvarOcorrencia(event) {
 
   try {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+    const estavaEditando = Boolean(ocorrenciaEditandoId);
     const payload = {
       data_ocorrencia: document.getElementById('ocorrenciaData').value,
       rota: document.getElementById('ocorrenciaRota').value.trim(),
       placa: document.getElementById('ocorrenciaPlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
       auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
-      relatorio: document.getElementById('ocorrenciaRelatorio').value.trim(),
-      usuario_id: usuario.id || null,
-      usuario_nome: usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema'
+      relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
     };
 
-    const { error } = await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]);
+    if (!estavaEditando) {
+      payload.usuario_id = usuario.id || null;
+      payload.usuario_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
+    }
+
+    const { error } = estavaEditando
+      ? await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId)
+      : await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]);
+
     if (error) throw error;
 
     fecharModal();
     await buscarOcorrencias();
-    alert('Ocorrencia registrada com sucesso!');
+    alert(estavaEditando ? 'Ocorrencia atualizada com sucesso!' : 'Ocorrencia registrada com sucesso!');
   } catch (error) {
     console.error('Erro ao salvar ocorrencia:', error);
     alert(`Erro ao salvar ocorrencia: ${error.message}`);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Salvar';
+  }
+}
+
+async function excluirOcorrencia(item) {
+  const confirmar = confirm(`Deseja excluir a ocorrencia da placa ${item.placa || '-'} em ${formatarData(item.data_ocorrencia)}?`);
+  if (!confirmar) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('fiscalizacao_ocorrencias')
+      .delete()
+      .eq('id', item.id);
+
+    if (error) throw error;
+
+    await buscarOcorrencias();
+    alert('Ocorrencia excluida com sucesso!');
+  } catch (error) {
+    console.error('Erro ao excluir ocorrencia:', error);
+    alert(`Erro ao excluir ocorrencia: ${error.message}`);
   }
 }
 
@@ -182,7 +242,7 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
@@ -196,6 +256,16 @@ function renderizarTabela() {
       <td>${escapeHtml(item.motorista || '-')}</td>
       <td>${escapeHtml(item.auxiliar || '-')}</td>
       <td class="ocorrencia-texto">${escapeHtml(item.relatorio || '-')}</td>
+      <td class="acoes-cell">
+        <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
+          <i class="fas fa-pen"></i>
+        </button>
+        ${usuarioPodeExcluir() ? `
+          <button type="button" class="btn-grid-action btn-delete" data-action="excluir" data-id="${escapeHtml(item.id)}" title="Excluir">
+            <i class="fas fa-trash"></i>
+          </button>
+        ` : ''}
+      </td>
     </tr>
   `).join('');
 
@@ -220,6 +290,11 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function usuarioPodeExcluir() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+  return niveisComExclusao.includes(String(usuario.nivel || '').toLowerCase());
 }
 
 function dadosParaExportacao() {

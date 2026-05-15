@@ -60,3 +60,9 @@ on public.fiscalizacao_ocorrencias
 for update
 using (true)
 with check (true);
+
+drop policy if exists "Permitir excluir fiscalizacao ocorrencias" on public.fiscalizacao_ocorrencias;
+create policy "Permitir excluir fiscalizacao ocorrencias"
+on public.fiscalizacao_ocorrencias
+for delete
+using (true);
