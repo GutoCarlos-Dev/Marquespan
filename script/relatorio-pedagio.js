@@ -170,6 +170,7 @@ function getDadosGrid() {
         filtrados = filtrados.filter(d => {
             const eixosCobrados = parseInt(d.categoria_eixos) || 0;
             const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
+            if ([90, 94].includes(eixosCobrados)) return false;
             return eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
         });
     }
@@ -196,10 +197,11 @@ function renderizarTabela() {
     tbody.innerHTML = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
-        const temDivergencia = eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
+        const taxaAmbiental = [90, 94].includes(eixosCobrados);
+        const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
         
-        const alertStyle = temDivergencia ? 'style="color: #dc3545; font-weight: bold;"' : '';
-        const rowBg = temDivergencia ? 'style="background-color: rgba(220, 53, 69, 0.05);"' : '';
+        const alertStyle = taxaAmbiental ? 'style="color: #856404; font-weight: bold; background-color: #fff3cd;"' : (temDivergencia ? 'style="color: #dc3545; font-weight: bold;"' : '');
+        const rowBg = taxaAmbiental ? 'style="background-color: rgba(255, 193, 7, 0.10);"' : (temDivergencia ? 'style="background-color: rgba(220, 53, 69, 0.05);"' : '');
 
         return `
         <tr ${rowBg}>
@@ -208,7 +210,7 @@ function renderizarTabela() {
             <td>${d.motorista || '-'}</td>
             <td>${d.rota || '-'}</td>
             <td>${d.marca_veiculo || '-'}</td>
-            <td ${alertStyle}>${d.categoria_eixos || '-'} ${temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : ''}</td>
+            <td ${alertStyle}>${d.categoria_eixos || '-'} ${taxaAmbiental ? '<i class="fas fa-exclamation-triangle" title="Taxa Ambiental"></i> Taxa Ambiental' : (temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : '')}</td>
             <td style="text-align: center; color: #666;">${d.veiculos?.eixos || '-'}</td>
             <td>${d.rodovia || '-'}</td>
             <td>${d.praca || '-'}</td>
@@ -287,7 +289,8 @@ async function exportarPDF() {
     const rows = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
-        const temDivergencia = eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
+        const taxaAmbiental = [90, 94].includes(eixosCobrados);
+        const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
 
         return [
             new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
@@ -295,7 +298,7 @@ async function exportarPDF() {
             d.motorista || '',
             d.rota || '',
             d.marca_veiculo || '',
-            temDivergencia ? `! ${d.categoria_eixos}` : d.categoria_eixos || '',
+            taxaAmbiental ? `${d.categoria_eixos} - Taxa Ambiental` : (temDivergencia ? `! ${d.categoria_eixos}` : d.categoria_eixos || ''),
             d.veiculos?.eixos || '',
             d.rodovia || '',
             d.praca || '',
@@ -318,7 +321,11 @@ async function exportarPDF() {
         didParseCell: (data) => {
             // Aplica cor vermelha no PDF para divergências marcadas com "!"
             if (data.section === 'body' && data.column.index === 5) {
-                if (String(data.cell.raw).startsWith('!')) {
+                if (String(data.cell.raw).includes('Taxa Ambiental')) {
+                    data.cell.styles.fillColor = [255, 243, 205];
+                    data.cell.styles.textColor = [133, 100, 4];
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (String(data.cell.raw).startsWith('!')) {
                     data.cell.styles.textColor = [220, 53, 69]; 
                     data.cell.styles.fontStyle = 'bold';
                 }
@@ -350,7 +357,8 @@ function exportarExcel() {
     const rows = filtrados.map(d => {
         const eixosCobrados = parseInt(d.categoria_eixos) || 0;
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
-        const temDivergencia = eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
+        const taxaAmbiental = [90, 94].includes(eixosCobrados);
+        const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
 
         return {
             "Data/Hora": new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
@@ -360,6 +368,7 @@ function exportarExcel() {
             "Marca": d.marca_veiculo || '',
             "Eixos (Cobrado)": d.categoria_eixos || '',
             "Eixos (Cadastro)": d.veiculos?.eixos || '',
+            "Alerta": taxaAmbiental ? "TAXA AMBIENTAL" : (temDivergencia ? "COBRANCA MAIOR" : ""),
             "Divergência": temDivergencia ? "COBRANÇA MAIOR" : "",
             "Rodovia": d.rodovia || '',
             "Praça": d.praca || '',
