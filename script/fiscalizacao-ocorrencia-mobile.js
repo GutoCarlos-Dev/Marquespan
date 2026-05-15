@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function bindEvents() {
+  document.getElementById('btnAdicionarOcorrencia').addEventListener('click', abrirModal);
+  document.getElementById('btnFecharModalMobile').addEventListener('click', fecharModal);
+  document.getElementById('modalOcorrenciaMobile').addEventListener('click', (event) => {
+    if (event.target.id === 'modalOcorrenciaMobile') fecharModal();
+  });
   document.getElementById('formOcorrenciaMobile').addEventListener('submit', salvarOcorrencia);
   document.getElementById('btnAtualizarMobile').addEventListener('click', carregarOcorrencias);
   document.getElementById('mobileFiltroData').addEventListener('change', carregarOcorrencias);
@@ -22,6 +27,17 @@ function bindEvents() {
 function mostrarUsuario() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
   document.getElementById('usuarioAtual').textContent = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Usuario';
+}
+
+function abrirModal() {
+  document.getElementById('formOcorrenciaMobile').reset();
+  document.getElementById('mobileData').value = new Date().toISOString().split('T')[0];
+  mostrarUsuario();
+  document.getElementById('modalOcorrenciaMobile').classList.remove('hidden');
+}
+
+function fecharModal() {
+  document.getElementById('modalOcorrenciaMobile').classList.add('hidden');
 }
 
 async function carregarListas() {
@@ -81,6 +97,7 @@ async function salvarOcorrencia(event) {
     document.getElementById('formOcorrenciaMobile').reset();
     document.getElementById('mobileData').value = payload.data_ocorrencia;
     document.getElementById('mobileFiltroData').value = payload.data_ocorrencia;
+    fecharModal();
     await carregarOcorrencias();
     alert('Ocorrencia registrada com sucesso!');
   } catch (error) {
@@ -88,7 +105,7 @@ async function salvarOcorrencia(event) {
     alert(`Erro ao salvar ocorrencia: ${error.message}`);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Registrar Ocorrencia';
+    btn.innerHTML = '<i class="fas fa-save"></i> SALVAR OCORRENCIA';
   }
 }
 
