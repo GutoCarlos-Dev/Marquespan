@@ -73,6 +73,16 @@ async function carregarFiltros() {
     });
 }
 
+async function buscarTodosLancamentos(montarQuery, tamanhoPagina = 1000) {
+    const data = [];
+    for (let inicio = 0; ; inicio += tamanhoPagina) {
+        const { data: lote, error } = await montarQuery().range(inicio, inicio + tamanhoPagina - 1);
+        if (error) return { data, error };
+        data.push(...(lote || []));
+        if (!lote || lote.length < tamanhoPagina) return { data, error: null };
+    }
+}
+
 async function buscarDados() {
     const btn = document.getElementById('btnBuscarRelatorio');
     btn.disabled = true;
@@ -98,19 +108,22 @@ async function buscarDados() {
         const tiposPermitidos = ['TRUCK', 'CAMINHÃO 3/4', 'CAMINHÂO 3/4', 'BITRUCK', 'BITREM', 'HR/VAN', 'LS', 'MUNCK'];
 
         // 3. Busca os lançamentos
-        let query = supabaseClient
-            .from('pedagios_lancamentos')
-            .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)');
-
-        if (dataIni) query = query.gte('data_hora_passagem', `${dataIni}T00:00:00`);
-        if (dataFim) query = query.lte('data_hora_passagem', `${dataFim}T23:59:59`);
-        if (filial) query = query.eq('veiculos.filial', filial);
-        if (placa) query = query.eq('placa', placa);
-        if (motorista) query = query.ilike('motorista', `%${motorista}%`);
-        if (rota) query = query.ilike('rota', `%${rota}%`);
-        if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
-        if (praca) query = query.ilike('praca', `%${praca}%`);
-        if (categoria) query = query.eq('categoria_eixos', Number(categoria));
+        const montarQueryPassagens = () => {
+            let query = supabaseClient
+                .from('pedagios_lancamentos')
+                .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)')
+                .order('data_hora_passagem', { ascending: false });
+            if (dataIni) query = query.gte('data_hora_passagem', `${dataIni}T00:00:00`);
+            if (dataFim) query = query.lte('data_hora_passagem', `${dataFim}T23:59:59`);
+            if (filial) query = query.eq('veiculos.filial', filial);
+            if (placa) query = query.eq('placa', placa);
+            if (motorista) query = query.ilike('motorista', `%${motorista}%`);
+            if (rota) query = query.ilike('rota', `%${rota}%`);
+            if (rodovia) query = query.ilike('rodovia', `%${rodovia}%`);
+            if (praca) query = query.ilike('praca', `%${praca}%`);
+            if (categoria) query = query.eq('categoria_eixos', Number(categoria));
+            return query;
+        };
 
          // 4. Prepara consulta da frota (ativo + INTERNADO) respeitando filial e tipos
         let fleetQuery = supabaseClient
@@ -122,7 +135,7 @@ async function buscarDados() {
         if (filial) fleetQuery = fleetQuery.eq('filial', filial);
 
         const [resPassagens, resFrota, resEmpresa] = await Promise.all([
-            query,
+            buscarTodosLancamentos(montarQueryPassagens),
             fleetQuery,
             // Busca a mensalidade padrão (considerando a primeira empresa cadastrada como referência)
             supabaseClient
