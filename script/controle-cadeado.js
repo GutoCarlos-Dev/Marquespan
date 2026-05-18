@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let dadosGrid = [];
 let currentSort = { field: 'data', ascending: false };
+let myCharts = [];
 let filtroExecutado = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -108,10 +109,82 @@ function mostrarMensagemFiltroObrigatorio() {
     }
 }
 
+function renderizarGraficos(dados) {
+    if (typeof Chart === 'undefined') return;
+
+    // Destruir gráficos anteriores para evitar bugs de hover
+    myCharts.forEach(chart => chart.destroy());
+    myCharts = [];
+
+    const agruparSoma = (arr, campo) => {
+        const map = {};
+        arr.forEach(d => {
+            const key = d[campo] || 'N/D';
+            map[key] = (map[key] || 0) + (d.quantidade || 0);
+        });
+        const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        return { labels: sorted.map(i => i[0]), values: sorted.map(i => i[1]) };
+    };
+
+    const agruparPorData = (arr) => {
+        const map = {};
+        arr.forEach(d => {
+            const key = d.data;
+            map[key] = (map[key] || 0) + (d.quantidade || 0);
+        });
+        const sorted = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+        return { labels: sorted.map(i => i[0].split('-').reverse().join('/')), values: sorted.map(i => i[1]) };
+    };
+
+    const configCharts = [
+        { id: 'chartMotoristas', label: 'Top 10 Motoristas (Qtd)', type: 'bar', data: agruparSoma(dados, 'motorista'), limit: 10 },
+        { id: 'chartPlacas', label: 'Top 10 Placas (Qtd)', type: 'bar', data: agruparSoma(dados, 'placa'), limit: 10 },
+        { id: 'chartEvolucao', label: 'Evolução Diária', type: 'line', data: agruparPorData(dados) },
+        { id: 'chartUsuarios', label: 'Lançamentos por Usuário', type: 'pie', data: agruparSoma(dados, 'usuario') }
+    ];
+
+    configCharts.forEach(conf => {
+        const el = document.getElementById(conf.id);
+        if (!el) return;
+        
+        const labels = conf.limit ? conf.data.labels.slice(0, conf.limit) : conf.data.labels;
+        const values = conf.limit ? conf.data.values.slice(0, conf.limit) : conf.data.values;
+
+        const chart = new Chart(el.getContext('2d'), {
+            type: conf.type,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: conf.label,
+                    data: values,
+                    backgroundColor: conf.type === 'pie' 
+                        ? ['#006937', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6c757d']
+                        : (conf.type === 'line' ? 'rgba(0, 105, 55, 0.1)' : 'rgba(0, 105, 55, 0.7)'),
+                    borderColor: '#006937',
+                    borderWidth: 1,
+                    fill: conf.type === 'line',
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: conf.type === 'pie' },
+                    title: { display: true, text: conf.label, color: '#006937', font: { size: 14, weight: 'bold' } }
+                },
+                scales: conf.type === 'pie' ? {} : { y: { beginAtZero: true } }
+            }
+        });
+        myCharts.push(chart);
+    });
+}
+
 function renderizarTabela() {
     const tbody = document.getElementById('tbodyControleCadeado');
     if (!filtroExecutado) {
         mostrarMensagemFiltroObrigatorio();
+        document.getElementById('sectionGraficos')?.classList.add('hidden');
         return;
     }
 
@@ -146,6 +219,10 @@ function renderizarTabela() {
                 <button class="btn-action btn-delete" onclick="window.excluirRegistro('${d.id}')"><i class="fas fa-trash"></i></button>
             </td>
         </tr>`).join('');
+
+    // Atualiza os gráficos com os dados filtrados/buscados
+    document.getElementById('sectionGraficos')?.classList.remove('hidden');
+    renderizarGraficos(filtrados);
 }
 
 function abrirModal(id = null) {
