@@ -2045,6 +2045,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        normalizarCnpj(value) {
+            return String(value || '').replace(/\D/g, '');
+        },
+
         async handleImportarExterno(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -2064,12 +2068,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (json.length === 0) throw new Error('Arquivo vazio.');
 
-                    // 1. Carregar Postos para mapear CNPJ -> ID
-                    const { data: postos } = await supabaseClient.from('postos').select('id, cnpj');
+                    // 1. Carregar todos os postos para mapear CNPJ -> ID.
+                    // O Supabase pagina resultados; sem range alguns CNPJs podem ficar fora do lote retornado.
+                    let postos = [];
+                    let from = 0;
+                    const pageSize = 1000;
+
+                    while (true) {
+                        const { data: page, error: postosError } = await supabaseClient
+                            .from('postos')
+                            .select('id, razao_social, cnpj')
+                            .range(from, from + pageSize - 1);
+
+                        if (postosError) throw postosError;
+
+                        postos = postos.concat(page || []);
+                        if (!page || page.length < pageSize) break;
+                        from += pageSize;
+                    }
+
                     const mapPostos = new Map();
                     if (postos) {
                         postos.forEach(p => {
-                            if (p.cnpj) mapPostos.set(p.cnpj.replace(/\D/g, ''), p.id);
+                            const cnpjNormalizado = this.normalizarCnpj(p.cnpj);
+                            if (cnpjNormalizado) mapPostos.set(cnpjNormalizado, p.id);
                         });
                     }
 
@@ -2114,7 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         // Tratamento de CNPJ para encontrar ID
-                        const cnpjLimpo = String(cnpjRaw || '').replace(/\D/g, '');
+                        const cnpjLimpo = this.normalizarCnpj(cnpjRaw);
                         const postoId = mapPostos.get(cnpjLimpo);
 
                         if (!postoId) {
