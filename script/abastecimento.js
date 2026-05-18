@@ -2346,7 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.tableBodyExt) return;
             
             if (fetchData) {
-                this.tableBodyExt.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+                this.tableBodyExt.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>';
                 // Aumentei o limite para 200 para permitir uma ordenação/busca local mais fluida
                 let query = supabaseClient
                     .from('abastecimento_externo')
@@ -2437,7 +2437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
             this.tableBodyExt.innerHTML = '';
-            const colCount = isAdmin ? 11 : 10; // Colunas originais + KM Anterior/Rodado
+            const colCount = isAdmin ? 12 : 11; // Colunas originais + Usuario + KM Anterior/Rodado
 
             if (filtered.length === 0) {
                 this.tableBodyExt.innerHTML = `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
@@ -2457,6 +2457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.innerHTML = `
                     ${checkboxHtml}
                     <td>${dataF}</td>
+                    <td>${item.usuario || '-'}</td>
                     <td>${item.postos?.razao_social || '-'}</td>
                     <td>${item.veiculo_placa}</td>
                     <td>${item.litros || '-'} L</td>
