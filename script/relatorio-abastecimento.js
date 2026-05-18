@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.loadBicos(),
                 this.loadVeiculos(),
                 this.loadRotas(),
+                this.loadPostos(),
                 this.loadTiposVeiculo()
             ]);
 
@@ -55,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroTipoVeiculo = document.getElementById('filtroTipoVeiculo');
             this.filtroVeiculo = document.getElementById('filtroVeiculo');
             this.filtroRota = document.getElementById('filtroRota');
+            this.filtroPosto = document.getElementById('filtroPosto');
+            this.postosFiltroCache = [];
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
             this.cardResultados = document.getElementById('cardResultados');
@@ -183,6 +186,50 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao carregar rotas para filtro:', error);
             }
+        },
+
+        async loadPostos() {
+            if (!this.filtroPosto) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('postos')
+                    .select('id, razao_social, cnpj')
+                    .order('razao_social');
+
+                if (error) throw error;
+
+                this.postosFiltroCache = data || [];
+                const datalist = document.getElementById('listaPostosFiltro');
+                if (!datalist) return;
+
+                datalist.innerHTML = '';
+                (data || []).forEach(posto => {
+                    const option = document.createElement('option');
+                    option.value = this.formatPostoFiltro(posto);
+                    datalist.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar postos para filtro:', error);
+            }
+        },
+
+        formatPostoFiltro(posto) {
+            return `${posto.razao_social}${posto.cnpj ? ` (${posto.cnpj})` : ''}`;
+        },
+
+        getPostoIdFiltro() {
+            const valor = this.filtroPosto ? this.filtroPosto.value.trim() : '';
+            if (!valor) return '';
+
+            const valorNormalizado = valor.toUpperCase();
+            const posto = this.postosFiltroCache.find(p =>
+                this.formatPostoFiltro(p).toUpperCase() === valorNormalizado ||
+                String(p.razao_social || '').toUpperCase() === valorNormalizado ||
+                String(p.cnpj || '').toUpperCase() === valorNormalizado
+            );
+
+            return posto ? posto.id : null;
         },
 
         async loadTiposVeiculo() {
@@ -441,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tanque: this.filtroTanque.value,
                 veiculo: this.filtroVeiculo.value,
                 rota: this.filtroRota.value,
+                posto: this.filtroPosto ? this.filtroPosto.value : '',
                 tiposMov: this.filtroTipoOptions ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value) : [],
                 bicos: this.filtroBicoOptions ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => cb.value) : [],
                 tiposVeiculo: this.filtroTipoVeiculoOptions ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value) : []
@@ -481,6 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.filtroTanque.value = filtros.tanque || '';
                 this.filtroVeiculo.value = filtros.veiculo || '';
                 this.filtroRota.value = filtros.rota || '';
+                if (this.filtroPosto) this.filtroPosto.value = filtros.posto || '';
                 this.marcarCheckboxes(this.filtroTipoOptions, '.tipo-checkbox', filtros.tiposMov);
                 this.marcarCheckboxes(this.filtroBicoOptions, '.bico-checkbox', filtros.bicos);
                 this.marcarCheckboxes(this.filtroTipoVeiculoOptions, '.tipo-veiculo-checkbox', filtros.tiposVeiculo);
@@ -524,6 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
             const tanqueId = this.filtroTanque.value;
+            const postoId = this.getPostoIdFiltro();
             const tiposVeiculo = this.filtroTipoVeiculoOptions
                 ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value)
                 : [];
@@ -538,6 +588,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!dtIni || !dtFim) {
                 alert('Por favor, selecione o período.');
+                return;
+            }
+
+            if (postoId === null) {
+                alert('Posto informado nao encontrado. Selecione uma opcao da lista ou deixe em branco.');
                 return;
             }
 
@@ -693,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tiposMov.length === 0 || tiposMov.includes('EXTERNO')) {
                     let queryExterno = supabaseClient
                         .from('abastecimento_externo')
-                        .select('id, data_hora, usuario, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
+                        .select('id, data_hora, usuario, posto_id, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -705,6 +760,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (tiposVeiculo.length > 0) {
                         queryExterno = queryExterno.in('veiculo_placa', placasPorTipo);
+                    }
+                    if (postoId) {
+                        queryExterno = queryExterno.eq('posto_id', postoId);
                     }
 
                     const { data: resExterno, error: errExterno } = await queryExterno;
@@ -719,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         rota: e.rota || '-',
                         km_atual: e.km_atual || '-',
                         numero_nota: '-', // Externo usa controle interno geralmente
-                        tanque: e.postos ? e.postos.razao_social : 'Posto Externo', // Exibe o Posto no lugar do Tanque
+                        tanque: e.postos ? `Posto: ${e.postos.razao_social}` : 'Posto: Externo',
                         bico: '-',
                         combustivel: '-', 
                         litros: Number(e.litros),
@@ -1324,6 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (this.filtroVeiculo) this.filtroVeiculo.value = '';
             if (this.filtroRota) this.filtroRota.value = '';
+            if (this.filtroPosto) this.filtroPosto.value = '';
             if (this.filtroTipoVeiculoOptions) {
                 this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox').forEach(cb => cb.checked = false);
                 this.updateTipoVeiculoMultiselectText();
