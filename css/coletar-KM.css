@@ -205,7 +205,30 @@
 
 /* Utilitários */
 .hidden { display: none !important; }
-.panel-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.panel-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.filtros-historico {
+    background: rgba(0, 105, 55, 0.08);
+    padding: 8px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 105, 55, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#btnFiltrarHistorico:hover {
+    background: #004d29;
+}
+
 .sortable { cursor: pointer; }
 .sortable:hover { background-color: rgba(0,0,0,0.02); }
 

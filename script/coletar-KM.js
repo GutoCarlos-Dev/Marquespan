@@ -54,14 +54,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExportarPDF')?.addEventListener('click', exportarPDF);
 
     // 5. Carregar Histórico
-    await carregarHistorico();
+    carregarHistorico();
     
     // Listeners do Histórico
+    document.getElementById('btnFiltrarHistorico')?.addEventListener('click', () => {
+        const dataIni = document.getElementById('filtroHistoricoDataIni').value;
+        const dataFim = document.getElementById('filtroHistoricoDataFim').value;
+        carregarHistorico(dataIni, dataFim);
+    });
+    
+    // Botões de Atualizar (limpam filtros e recarregam)
     const btnUpdateHist = document.getElementById('btnAtualizarHistorico');
-    if(btnUpdateHist) btnUpdateHist.addEventListener('click', carregarHistorico);
+    if(btnUpdateHist) btnUpdateHist.addEventListener('click', atualizarColeta);
     
     const btnUpdateHistDesk = document.getElementById('btnAtualizarHistoricoDesktop');
-    if(btnUpdateHistDesk) btnUpdateHistDesk.addEventListener('click', carregarHistorico);
+    if(btnUpdateHistDesk) btnUpdateHistDesk.addEventListener('click', atualizarColeta);
 
     // 6. Tenta recuperar rascunho salvo (caso tenha caído a internet ou fechado a aba)
     carregarRascunho();
@@ -373,7 +380,7 @@ function cancelarColeta() {
 // --- Funções para Gerenciamento no Banco de Dados (Editar/Excluir) ---
 // Estas funções estão prontas para serem usadas caso adicione uma listagem de histórico
 
-async function carregarHistorico() {
+async function carregarHistorico(dataIni = null, dataFim = null) {
     const tbody = document.getElementById('tableBodyHistorico');
     if (!tbody) return;
 
@@ -392,12 +399,21 @@ async function carregarHistorico() {
             .select('*')
             .order('data_coleta', { ascending: false });
 
+        // Aplica filtros de data se fornecidos
+        if (dataIni) {
+            query = query.gte('data_coleta', `${dataIni}T00:00:00`);
+        }
+        if (dataFim) {
+            // Garante que inclua o dia inteiro até o último segundo
+            query = query.lte('data_coleta', `${dataFim}T23:59:59`);
+        }
+
         // Verifica se é a versão Mobile pela existência da classe específica no HTML
         const isMobile = document.querySelector('.mobile-container');
         const dataSelecionada = document.getElementById('coletaData').value;
         
         // Aplica filtro de data APENAS se for Mobile (App)
-        if (isMobile && dataSelecionada) {
+        if (isMobile && dataSelecionada && !dataIni && !dataFim) {
             const dataIso = dataSelecionada.split('T')[0];
             query = query.gte('data_coleta', `${dataIso}T00:00:00`)
                          .lte('data_coleta', `${dataIso}T23:59:59`);
@@ -846,6 +862,26 @@ function carregarRascunho() {
 
 function limparRascunho() {
     localStorage.removeItem(STORAGE_KEY_RASCUNHO);
+}
+
+/**
+ * Limpa os campos de filtro e recarrega o histórico inicial
+ * Resolve o erro: atualizarColeta is not defined
+ */
+function atualizarColeta() {
+    const inputIni = document.getElementById('filtroHistoricoDataIni');
+    const inputFim = document.getElementById('filtroHistoricoDataFim');
+    if (inputIni) inputIni.value = '';
+    if (inputFim) inputFim.value = '';
+    carregarHistorico();
+}
+
+/**
+ * Atalho para exclusão de lote
+ * Resolve o erro: excluirColeta is not defined
+ */
+function excluirColeta(dataColeta) {
+    return excluirBatchColeta(dataColeta);
 }
 
 // Expor funções para uso global se necessário
