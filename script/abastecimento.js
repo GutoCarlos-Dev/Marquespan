@@ -129,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extMediaKm = document.getElementById('extMediaKm'); // Novo Span de Média/KM
             this.btnImportarExterno = document.getElementById('btnImportarExterno'); // Novo Botão Importar
             this.fileImportarExterno = document.getElementById('fileImportarExterno'); // Novo Input File
+            this.btnBaixarModeloExterno = document.getElementById('btnBaixarModeloExterno');
             this.tableBodyExt = document.getElementById('tableBodyAbastecimentoExterno');
             this.searchExtInput = document.getElementById('searchExtInput'); // Input de busca externo
 
@@ -324,6 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.btnImportarExterno && this.fileImportarExterno) {
                 this.btnImportarExterno.addEventListener('click', () => this.fileImportarExterno.click());
                 this.fileImportarExterno.addEventListener('change', (e) => this.handleImportarExterno(e));
+            }
+            if (this.btnBaixarModeloExterno) {
+                this.btnBaixarModeloExterno.addEventListener('click', this.baixarModeloImportacaoExterno.bind(this));
             }
 
             // Listeners Importação Postos
@@ -2058,6 +2062,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         normalizarCnpj(value) {
             return String(value || '').replace(/\D/g, '');
+        },
+
+        baixarModeloImportacaoExterno(e) {
+            if (e) e.preventDefault();
+
+            const headers = [
+                'FILIAL',
+                'DATA E HORA',
+                'CNPJ',
+                'PLACA',
+                'ROTA',
+                'KM ATUAL',
+                'LITROS',
+                'VALOR TOTAL',
+                'VALOR UNITARIO'
+            ];
+            const data = [
+                ['SP', '2026-05-11 16:21', '31.465.255/0001-53', 'FXL9D11', 'EQUIP', 972838, 140.06, 945.40, 6.75]
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Modelo Externo');
+            XLSX.writeFile(wb, 'Modelo_Importacao_Abastecimento_Externo.xlsx');
         },
 
         async handleImportarExterno(e) {
