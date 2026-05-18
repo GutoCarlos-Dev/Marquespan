@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Cadeado - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/controle-cadeado.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-lock"></i> Controle de Cadeado</h1>
+    </header>
+
+    <div class="top-cards-grid">
+        <!-- Card de Filtros -->
+        <section class="glass-panel">
+          <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
+          <div class="filtros-container">
+            <div class="form-group">
+                <label for="filtroDataIni">De:</label>
+                <input type="date" id="filtroDataIni" class="glass-input">
+            </div>
+            <div class="form-group">
+                <label for="filtroDataFim">Até:</label>
+                <input type="date" id="filtroDataFim" class="glass-input">
+            </div>
+            <div class="form-group">
+                <label for="filtroMotorista">Motorista</label>
+                <input type="text" id="filtroMotorista" list="listaMotoristasFiltro" placeholder="Nome..." class="glass-input">
+                <datalist id="listaMotoristasFiltro"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="filtroPlaca">Placa</label>
+                <input type="text" id="filtroPlaca" list="listaPlacasFiltro" placeholder="Placa..." class="glass-input">
+                <datalist id="listaPlacasFiltro"></datalist>
+            </div>
+            <div class="form-group" style="align-self: flex-end;">
+                <button id="btnFiltrar" class="btn-glass btn-blue" style="width: 100%;"><i class="fas fa-search"></i> Filtrar</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Card de Ações -->
+        <section class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Ações</h3>
+          <div class="acoes-grid-vertical">
+            <button id="btnAbrirModalIncluir" class="btn-glass btn-green"><i class="fas fa-plus"></i> Incluir</button>
+            <button id="btnAbrirModalImportar" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar</button>
+          </div>
+        </section>
+    </div>
+
+    <!-- Grid de Lançamentos -->
+    <section class="glass-panel">
+      <div class="panel-header-actions">
+        <h3><i class="fas fa-list"></i> Histórico de Entregas</h3>
+        <div class="form-group" style="margin-bottom: 0; width: 300px;">
+            <input type="text" id="searchGrid" placeholder="🔍 Buscar no grid..." class="glass-input">
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="data">DATA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="usuario">USUARIO <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="motorista">MOTORISTA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="quantidade">QTD <i class="fas fa-sort"></i></th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyControleCadeado">
+            <tr><td colspan="6" class="text-center">Carregando dados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Incluir -->
+  <div id="modalCadeado" class="modal-backdrop hidden">
+    <div class="glass-modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Lançar Entrega de Cadeado</h3>
+            <button class="close-button" id="btnFecharModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="formCadeado">
+                <input type="hidden" id="cadeadoId">
+                <div class="form-row">
+                    <div class="form-group"><label>Data *</label><input type="date" id="cadeadoData" required class="glass-input"></div>
+                    <div class="form-group"><label>Quantidade *</label><input type="number" id="cadeadoQuantidade" required class="glass-input" min="1" value="1"></div>
+                </div>
+                <div class="form-group"><label>Motorista *</label><input type="text" id="cadeadoMotorista" list="listaMotoristasModal" required class="glass-input" placeholder="Selecione o motorista"><datalist id="listaMotoristasModal"></datalist></div>
+                <div class="form-group"><label>Placa</label><input type="text" id="cadeadoPlaca" list="listaPlacasModal" class="glass-input" placeholder="Selecione a placa"><datalist id="listaPlacasModal"></datalist></div>
+                <div class="form-actions" style="margin-top: 20px; justify-content: flex-end; display: flex; gap: 10px;">
+                    <button type="button" class="btn-glass btn-red" id="btnCancelarModal">Cancelar</button>
+                    <button type="submit" class="btn-glass btn-green">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <!-- Modal Importar XLSX -->
+  <div id="modalImportarCadeado" class="modal-backdrop hidden">
+    <div class="glass-modal">
+        <div class="modal-header">
+            <h3>Importar Entregas de Cadeado</h3>
+            <button class="close-button" id="btnFecharModalImportar">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="formImportarCadeado">
+                <div class="form-group">
+                    <label for="arquivoImportarCadeado">Arquivo XLSX *</label>
+                    <input type="file" id="arquivoImportarCadeado" class="glass-input" accept=".xlsx,.xls" required>
+                    <small class="helper-text">Colunas obrigatorias: MOTORISTA, DATA, QUANTIDADE. A coluna PLACA pode vir vazia.</small>
+                </div>
+                <div id="importarCadeadoResumo" class="import-summary hidden"></div>
+                <div class="form-actions" style="margin-top: 20px; justify-content: flex-end; display: flex; gap: 10px;">
+                    <button type="button" class="btn-glass btn-red" id="btnCancelarImportar">Cancelar</button>
+                    <button type="submit" class="btn-glass btn-green">Importar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/controle-cadeado.js"></script>
+</body>
+</html>
