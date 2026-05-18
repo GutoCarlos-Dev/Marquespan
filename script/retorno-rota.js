@@ -6,6 +6,8 @@ let currentRowIndex = null; // Índice da linha sendo editada nos modais
 let supervisoresCache = []; // Cache para a lista de supervisores
 let sortConfig = { key: null, asc: true }; // Estado da ordenação
 
+let lastSelectedRowIndex = null; // Ultima linha selecionada para selecao com Shift
+
 // Mapeamento de colunas da planilha para os nomes dos campos no objeto de dados
 // A ordem aqui DEVE corresponder à ordem das colunas na planilha do usuário
 const COLUMN_MAP = [
@@ -62,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderGrid();
     });
     document.getElementById('tbodyRetornoRota').addEventListener('paste', handlePaste);
+    document.getElementById('tbodyRetornoRota').addEventListener('click', handleRowSelectionClick);
     document.getElementById('btnSalvarTudo').addEventListener('click', saveAllData);
     document.getElementById('btnExportarPao').addEventListener('click', () => exportToPDF('pao'));
     document.getElementById('btnExportarPecas').addEventListener('click', () => exportToPDF('pecas'));
@@ -78,6 +81,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listener para o novo campo de busca
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.addEventListener('input', renderGrid);
+
+    document.addEventListener('keydown', async (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            await saveAllData();
+        }
+    });
 
     // Listeners dos Modais
     setupModalListeners('modalDevolucoes', 'btnSalvarDevolucoes', saveDevolucoesData);
@@ -116,6 +126,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('selectAllRows').addEventListener('change', (e) => {
         const checkboxes = document.querySelectorAll('.row-selector');
         checkboxes.forEach(cb => cb.checked = e.target.checked);
+        lastSelectedRowIndex = null;
+        updateSelectAllState();
     });
 
     // Oculta funcionalidades de exclusão para usuários não autorizados
@@ -244,6 +256,42 @@ async function deleteSelectedRows() {
 
     indices.forEach(index => gridData.splice(index, 1));
     renderGrid();
+}
+
+function handleRowSelectionClick(event) {
+    const checkbox = event.target.closest('.row-selector');
+    if (!checkbox) return;
+
+    const currentRowIndex = checkbox.dataset.index;
+    const checkboxes = Array.from(document.querySelectorAll('#tbodyRetornoRota .row-selector'));
+
+    if (event.shiftKey && lastSelectedRowIndex !== null) {
+        const startIndex = checkboxes.findIndex(cb => cb.dataset.index === String(lastSelectedRowIndex));
+        const endIndex = checkboxes.indexOf(checkbox);
+
+        if (startIndex !== -1 && endIndex !== -1) {
+            const [from, to] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+            const shouldCheck = checkbox.checked;
+
+            checkboxes.slice(from, to + 1).forEach(cb => {
+                cb.checked = shouldCheck;
+            });
+        }
+    }
+
+    lastSelectedRowIndex = currentRowIndex;
+    updateSelectAllState();
+}
+
+function updateSelectAllState() {
+    const selectAll = document.getElementById('selectAllRows');
+    if (!selectAll) return;
+
+    const checkboxes = Array.from(document.querySelectorAll('#tbodyRetornoRota .row-selector'));
+    const selectedCount = checkboxes.filter(cb => cb.checked).length;
+
+    selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
 }
 
 /**
@@ -384,18 +432,20 @@ function renderGrid() {
 
     // Resetar o checkbox de selecionar tudo
     const selectAll = document.getElementById('selectAllRows');
-    if (selectAll) selectAll.checked = false;
+    if (selectAll) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    }
+    lastSelectedRowIndex = null;
 
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
 
     let dataToRender = searchTerm
         ? gridData.filter(row =>
-            (row.placa || '').toUpperCase().includes(searchTerm) ||
-            (row.rota || '').toUpperCase().includes(searchTerm) ||
-            (row.nome_mot || '').toUpperCase().includes(searchTerm) ||
-            (row.nome_aux || '').toUpperCase().includes(searchTerm) ||
-            (row.nome_terceiro || '').toUpperCase().includes(searchTerm)
+            Object.values(row).some(value =>
+                String(value || '').toUpperCase().includes(searchTerm)
+            )
           )
         : [...gridData];
 
@@ -424,7 +474,7 @@ function renderGrid() {
     }
 
     if (dataToRender.length === 0) {
-        const colCount = document.querySelector('#tableRetornoRota thead tr')?.children.length || 13;
+        const colCount = document.querySelector('#gridRetornoRota thead tr')?.children.length || 15;
         tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 20px;">Nenhum resultado encontrado.</td></tr>`;
         return;
     }

@@ -393,10 +393,44 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     gap: 10px;
 }
 
+.panel-header h3 {
+    margin: 0;
+}
+
+.panel-header-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.grid-search {
+    position: relative;
+    width: min(320px, 100%);
+}
+
+.grid-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.grid-search input {
+    width: 100%;
+    min-height: 38px;
+    padding-left: 36px;
+}
+
 .status-legend-container {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .badge {
@@ -422,4 +456,19 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
 
 #btnImportarRoteiro {
     background: linear-gradient(135deg, #007bff 0%, #004c99 100%);
+}
+
+@media (max-width: 768px) {
+    .panel-header {
+        align-items: stretch;
+    }
+
+    .panel-header-tools,
+    .grid-search {
+        width: 100%;
+    }
+
+    .status-legend-container {
+        justify-content: flex-start;
+    }
 }
