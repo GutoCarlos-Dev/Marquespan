@@ -212,14 +212,16 @@
               <button id="btnAbrirImportacaoSaida" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar XLSX</button>
               <input type="file" id="fileImportarSaida" accept=".xlsx, .xls" class="hidden" style="display: none;">
               <a href="#" id="btnBaixarModeloSaida" style="color: #007bff; text-decoration: none; font-size: 0.85em; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-download"></i> Baixar Modelo</a>
+                <div class="form-group" style="margin-top: 15px;">
+                  <label for="filialImportacaoSaida">Filial para Importação:</label>
+                  <select id="filialImportacaoSaida" class="glass-input" required>
+                    <option value="">Selecione a Filial...</option>
+                  </select>
+                </div>
+
             </div>
           </div>
-          <div class="form-group" style="margin-top: 15px;">
-              <label for="filialImportacaoSaida">Filial para Importação:</label>
-              <select id="filialImportacaoSaida" class="glass-input" required>
-                  <option value="">Selecione a Filial...</option>
-              </select>
-          </div>
+
           
           <form id="formSaidaCombustivel" class="form-mobile">
             <input type="hidden" id="saidaEditingId">
