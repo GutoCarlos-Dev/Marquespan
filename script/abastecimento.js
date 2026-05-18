@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         bind() {
+            document.getElementById('btnToggleMenuLateral')?.addEventListener('click', this.toggleMenuLateral.bind(this));
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
             this.tableBody.addEventListener('click', this.handleTableClick.bind(this));
             this.btnLimpar.addEventListener('click', this.clearForm.bind(this));
@@ -359,6 +360,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.onclick = () => this.handleBulkDeleteExt();
                 // Insert after the search input
                 this.searchExtInput.parentNode.insertBefore(btn, this.searchExtInput.nextSibling);
+            }
+        },
+
+        toggleMenuLateral() {
+            document.body.classList.toggle('abastecimento-menu-oculto');
+            const oculto = document.body.classList.contains('abastecimento-menu-oculto');
+            const btn = document.getElementById('btnToggleMenuLateral');
+            if (btn) {
+                btn.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+                btn.setAttribute('aria-label', btn.title);
             }
         },
 
