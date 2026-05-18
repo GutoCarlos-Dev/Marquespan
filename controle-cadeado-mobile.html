@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Controle de Cadeado - Modo App</title>
+  <link rel="stylesheet" href="css/controle-cadeado-mobile.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo" class="mobile-logo">
+      <h1>Controle de Cadeado</h1>
+    </div>
+    <a href="controle-cadeado.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
+  </header>
+
+  <main class="mobile-container">
+    <section class="mobile-panel">
+      <div class="panel-header">
+        <h2><i class="fas fa-lock"></i> Novo Lancamento</h2>
+      </div>
+
+      <form id="formCadeadoMobile" class="mobile-form">
+        <div class="form-group">
+          <label for="mobileData">Data</label>
+          <input type="date" id="mobileData" required>
+        </div>
+
+        <div class="form-group">
+          <label for="mobileMotorista">Motorista</label>
+          <input type="text" id="mobileMotorista" list="listaMotoristasMobile" required autocomplete="off" placeholder="Nome do motorista">
+          <datalist id="listaMotoristasMobile"></datalist>
+        </div>
+
+        <div class="form-group">
+          <label for="mobilePlaca">Placa</label>
+          <input type="text" id="mobilePlaca" list="listaPlacasMobile" autocomplete="off" placeholder="Opcional">
+          <datalist id="listaPlacasMobile"></datalist>
+        </div>
+
+        <div class="form-group">
+          <label for="mobileQuantidade">Quantidade</label>
+          <input type="number" id="mobileQuantidade" required min="1" value="1">
+        </div>
+
+        <button type="submit" id="btnSalvarCadeadoMobile" class="btn-primary btn-block btn-large">
+          <i class="fas fa-save"></i> Salvar Lancamento
+        </button>
+      </form>
+    </section>
+
+    <section class="mobile-panel">
+      <div class="panel-header">
+        <h2><i class="fas fa-clock"></i> Ultimos Lancamentos</h2>
+      </div>
+      <div id="listaUltimosCadeados" class="mobile-list">
+        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/controle-cadeado-mobile.js"></script>
+</body>
+</html>

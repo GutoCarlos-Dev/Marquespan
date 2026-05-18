@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let dadosGrid = [];
 let currentSort = { field: 'data', ascending: false };
+let filtroExecutado = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Configura os Listeners primeiro para garantir que a UI responda mesmo com erro no banco
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Carrega os dados de forma assíncrona
     try {
         await carregarDadosApoio();
-        await buscarDados();
+        mostrarMensagemFiltroObrigatorio();
     } catch (err) {
         console.error('Erro na carga inicial:', err);
     }
@@ -32,7 +33,7 @@ function setupEventListeners() {
     document.getElementById('btnCancelarImportar')?.addEventListener('click', fecharModalImportar);
     document.getElementById('formCadeado')?.addEventListener('submit', handleSalvar);
     document.getElementById('formImportarCadeado')?.addEventListener('submit', handleImportarXlsx);
-    document.getElementById('btnFiltrar')?.addEventListener('click', buscarDados);
+    document.getElementById('btnFiltrar')?.addEventListener('click', () => buscarDados(true));
     document.getElementById('searchGrid')?.addEventListener('input', renderizarTabela);
 
     document.querySelectorAll('th.sortable').forEach(th => {
@@ -74,6 +75,7 @@ async function carregarDadosApoio() {
 }
 
 async function buscarDados() {
+    filtroExecutado = true;
     const tbody = document.getElementById('tbodyControleCadeado');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Buscando...</td></tr>';
 
@@ -96,8 +98,23 @@ async function buscarDados() {
     } catch (err) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Erro ao carregar.</td></tr>'; }
 }
 
+function mostrarMensagemFiltroObrigatorio() {
+    dadosGrid = [];
+    filtroExecutado = false;
+
+    const tbody = document.getElementById('tbodyControleCadeado');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Use os Filtros de Busca e clique em Filtrar para visualizar o historico.</td></tr>';
+    }
+}
+
 function renderizarTabela() {
     const tbody = document.getElementById('tbodyControleCadeado');
+    if (!filtroExecutado) {
+        mostrarMensagemFiltroObrigatorio();
+        return;
+    }
+
     const search = document.getElementById('searchGrid').value.toUpperCase();
     
     let filtrados = dadosGrid.filter(d =>
@@ -111,6 +128,11 @@ function renderizarTabela() {
         if (valA > valB) return currentSort.ascending ? 1 : -1;
         return 0;
     });
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum registro encontrado para os filtros informados.</td></tr>';
+        return;
+    }
 
     tbody.innerHTML = filtrados.map(d => `
         <tr>
@@ -176,7 +198,11 @@ async function handleSalvar(e) {
     if (res.error) return alert('Erro ao salvar: ' + res.error.message);
     
     fecharModal();
-    buscarDados();
+    if (filtroExecutado) {
+        buscarDados();
+    } else {
+        mostrarMensagemFiltroObrigatorio();
+    }
 }
 
 function normalizarCabecalho(valor) {
@@ -318,7 +344,11 @@ async function handleImportarXlsx(event) {
 
         if (resumo) resumo.textContent = `${registros.length} registro(s) importado(s) com sucesso.`;
         fecharModalImportar();
-        await buscarDados();
+        if (filtroExecutado) {
+            await buscarDados();
+        } else {
+            mostrarMensagemFiltroObrigatorio();
+        }
         alert('Importacao concluida com sucesso!');
     } catch (error) {
         console.error('Erro ao importar XLSX:', error);
