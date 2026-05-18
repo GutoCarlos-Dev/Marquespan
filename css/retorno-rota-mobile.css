@@ -39,6 +39,35 @@ body {
 
 .mobile-main {
     padding: 15px;
+    padding-bottom: 6rem;
+}
+
+.fab-add-retorno {
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    z-index: 90;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fab-add-retorno:hover {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+.fab-add-retorno:active {
+    transform: scale(0.96);
 }
 
 .filters-bar {

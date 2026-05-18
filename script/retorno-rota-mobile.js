@@ -4,6 +4,8 @@ let allData = []; // Cache dos dados do dia
 let currentItem = null; // Item sendo editado no modal
 let supervisoresCache = []; // Cache para a lista de supervisores
 let motoristasCache = []; // Cache para a lista de motoristas
+let placasCache = []; // Cache para as placas cadastradas
+let rotasCache = []; // Cache para as rotas cadastradas
 
 function normalizeBooleanFlag(value) {
     return value === true || value === 1 || value === '1' || value === 'true';
@@ -12,6 +14,15 @@ function normalizeBooleanFlag(value) {
 function getCurrentUserName() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     return usuario ? usuario.nome : null;
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 async function carregarSupervisores() {
@@ -41,6 +52,70 @@ async function carregarMotoristas() {
     }
 }
 
+async function carregarPlacas() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('placa, modelo, situacao')
+            .order('placa', { ascending: true });
+
+        if (error) throw error;
+
+        placasCache = (data || [])
+            .filter(item => item.placa)
+            .filter(item => !item.situacao || String(item.situacao).toLowerCase() === 'ativo')
+            .map(item => ({
+                placa: String(item.placa).trim().toUpperCase(),
+                modelo: item.modelo || ''
+            }));
+
+        preencherDatalistPlacas();
+    } catch (err) {
+        console.error('Erro ao carregar placas:', err);
+    }
+}
+
+async function carregarRotas() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('rotas')
+            .select('numero, cidades, status')
+            .order('numero', { ascending: true });
+
+        if (error) throw error;
+
+        rotasCache = (data || [])
+            .filter(item => item.numero)
+            .filter(item => !item.status || String(item.status).toUpperCase() === 'ATIVA')
+            .map(item => ({
+                numero: String(item.numero).trim(),
+                cidades: item.cidades || ''
+            }));
+
+        preencherDatalistRotas();
+    } catch (err) {
+        console.error('Erro ao carregar rotas:', err);
+    }
+}
+
+function preencherDatalistPlacas() {
+    const datalist = document.getElementById('listaPlacasMobile');
+    if (!datalist) return;
+
+    datalist.innerHTML = placasCache
+        .map(item => `<option value="${escapeHtml(item.placa)}" label="${escapeHtml(item.modelo)}"></option>`)
+        .join('');
+}
+
+function preencherDatalistRotas() {
+    const datalist = document.getElementById('listaRotasMobile');
+    if (!datalist) return;
+
+    datalist.innerHTML = rotasCache
+        .map(item => `<option value="${escapeHtml(item.numero)}" label="${escapeHtml(item.cidades)}"></option>`)
+        .join('');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
@@ -50,6 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listeners
     dataInput.addEventListener('change', loadRetornos);
     document.getElementById('buscaMobile').addEventListener('input', renderCards);
+    document.getElementById('btnAdicionarRetornoMobile')?.addEventListener('click', openNewModal);
 
     // Modal Principal
     const modalRetorno = document.getElementById('modalRetorno');
@@ -74,6 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Carrega dados auxiliares (Supervisores e Motoristas)
     await carregarMotoristas();
     await carregarSupervisores();
+    await carregarPlacas();
+    await carregarRotas();
 
     // Listener para o modal de materiais (paletes) na versão mobile
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
@@ -200,6 +278,8 @@ function renderCards() {
 function openEditModal(item) {
     currentItem = item;
     document.getElementById('modalTitle').textContent = `Registrar Retorno - ${item.placa}`;
+    document.getElementById('modalPlaca').value = item.placa || '';
+    document.getElementById('modalRota').value = item.rota || '';
 
     // Popula o select de motoristas
     const selectMotorista = document.getElementById('modalMotorista');
@@ -253,6 +333,28 @@ function openEditModal(item) {
     temPecasSelect.dispatchEvent(new Event('change'));
 
     document.getElementById('modalRetorno').classList.remove('hidden');
+}
+
+function openNewModal() {
+    const dataRetorno = document.getElementById('dataRetornoMobile').value;
+    if (!dataRetorno) {
+        alert('Selecione uma data antes de adicionar um lançamento.');
+        return;
+    }
+
+    currentItem = {
+        id: null,
+        data_retorno: dataRetorno,
+        placa: '',
+        rota: '',
+        nome_mot: '',
+        hora_mot: '',
+        obs: ''
+    };
+
+    openEditModal(currentItem);
+    document.getElementById('modalTitle').textContent = 'Novo Retorno de Rota';
+    document.getElementById('modalPlaca').focus();
 }
 
 function openMateriaisModal() {
@@ -366,9 +468,18 @@ async function saveRetorno() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
     // Coleta dados do modal principal
+    const placa = document.getElementById('modalPlaca').value.trim().toUpperCase();
+    const rota = document.getElementById('modalRota').value.trim();
     const motorista = document.getElementById('modalMotorista').value;
     const horaMotorista = document.getElementById('modalHoraMotorista').value;
     const obs = document.getElementById('modalObs').value;
+
+    if (!placa) {
+        alert('Informe a placa para salvar o lançamento.');
+        btn.disabled = false;
+        btn.textContent = 'Salvar';
+        return;
+    }
 
     // Coleta dados do modal de materiais
     const temPaletes = document.getElementById('matTemPaletes').value === 'true';
@@ -403,6 +514,9 @@ async function saveRetorno() {
     };
 
     const updateData = {
+        data_retorno: currentItem.data_retorno || document.getElementById('dataRetornoMobile').value,
+        placa,
+        rota: rota || null,
         nome_mot: motorista || null,
         hora_mot: horaMotorista || null,
         obs: obs || null,
@@ -434,17 +548,38 @@ async function saveRetorno() {
     }
 
     try {
-        const { error } = await supabaseClient
-            .from('retorno_rota')
-            .update(updateData)
-            .eq('id', currentItem.id);
+        let savedData = null;
+        let saveError = null;
 
-        if (error) throw error;
+        if (currentItem.id) {
+            const result = await supabaseClient
+                .from('retorno_rota')
+                .update(updateData)
+                .eq('id', currentItem.id)
+                .select()
+                .single();
+
+            savedData = result.data;
+            saveError = result.error;
+        } else {
+            const result = await supabaseClient
+                .from('retorno_rota')
+                .insert([updateData])
+                .select()
+                .single();
+
+            savedData = result.data;
+            saveError = result.error;
+        }
+
+        if (saveError) throw saveError;
 
         // Atualiza o cache local para refletir a mudança imediatamente
         const index = allData.findIndex(d => d.id === currentItem.id);
         if (index > -1) {
-            allData[index] = { ...allData[index], ...updateData };
+            allData[index] = savedData || { ...allData[index], ...updateData };
+        } else if (savedData) {
+            allData.unshift(savedData);
         }
 
         alert('Retorno salvo com sucesso!');

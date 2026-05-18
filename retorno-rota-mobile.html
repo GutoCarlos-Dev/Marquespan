@@ -43,6 +43,10 @@
         </header>
 
         <main class="mobile-main">
+            <button type="button" id="btnAdicionarRetornoMobile" class="fab-add-retorno" title="Adicionar lançamento">
+                <i class="fas fa-plus"></i>
+            </button>
+
             <div class="filters-bar">
                 <div class="form-group">
                     <label for="dataRetornoMobile">Data</label>
@@ -75,6 +79,16 @@
                 <button class="close-button">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="form-group">
+                    <label for="modalPlaca">Placa</label>
+                    <input type="text" id="modalPlaca" class="glass-input" list="listaPlacasMobile" placeholder="Digite ou selecione a placa">
+                    <datalist id="listaPlacasMobile"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="modalRota">Rota</label>
+                    <input type="text" id="modalRota" class="glass-input" list="listaRotasMobile" placeholder="Digite ou selecione a rota">
+                    <datalist id="listaRotasMobile"></datalist>
+                </div>
                 <div class="form-group">
                     <label for="modalMotorista">Motorista</label>
                     <select id="modalMotorista" class="glass-input">
