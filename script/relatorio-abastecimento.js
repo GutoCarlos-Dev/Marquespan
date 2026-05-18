@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dashboardAbastecimento = document.getElementById('dashboardAbastecimento');
             this.tableBody = document.getElementById('tableBodyRelatorio');
             this.totalLitrosEl = document.getElementById('totalLitros');
+            this.totalLancamentosEl = document.getElementById('totalLancamentos');
             this.totalValorEl = document.getElementById('totalValor');
             
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
@@ -988,6 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.dadosRelatorio.length === 0) {
                 this.tableBody.innerHTML = '<tr><td colspan="16" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
                 this.totalLitrosEl.textContent = '0,00 L';
+                if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = '0';
                 this.totalValorEl.textContent = 'R$ 0,00';
                 return;
             }
@@ -1043,6 +1045,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             this.totalLitrosEl.textContent = somaLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' L';
+            if (this.totalLancamentosEl) {
+                this.totalLancamentosEl.textContent = this.dadosRelatorio.length.toLocaleString('pt-BR');
+            }
             this.totalValorEl.textContent = somaValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
         },
 
