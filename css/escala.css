@@ -48,6 +48,75 @@
     font-size: 12px;
     text-align: left;
     white-space: nowrap;
+    position: relative;
+    user-select: none;
+}
+
+.data-grid th.escala-column-header {
+    cursor: grab;
+}
+
+.data-grid th.escala-column-header:active {
+    cursor: grabbing;
+}
+
+.column-label {
+    display: inline-block;
+    padding-right: 44px;
+}
+
+.column-tools {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.column-sort-btn {
+    border: 0;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    padding: 2px;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.column-sort-btn:hover {
+    color: var(--primary-color);
+}
+
+.column-drag-handle {
+    color: #888;
+    font-size: 11px;
+    cursor: grab;
+}
+
+.dragging-column {
+    opacity: 0.55;
+}
+
+.drag-over-column {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: -3px;
+}
+
+.resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 3;
+}
+
+.resizer:hover,
+.resizer.resizing {
+    background-color: rgba(0, 105, 55, 0.28);
 }
 
 .data-grid th[colspan] {
@@ -179,6 +248,42 @@
     color: #fff;
     font-weight: bold;
     border-radius: 0 4px 4px 0;
+}
+
+.collapsible-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.collapsible-section-title.section-collapsed {
+    margin-bottom: 8px;
+    opacity: 0.92;
+}
+
+.section-toggle-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.section-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.section-toggle-btn:active {
+    transform: scale(0.96);
 }
 
 /* === MODAL DE PROGRESSO DE IMPORTAÇÃO === */

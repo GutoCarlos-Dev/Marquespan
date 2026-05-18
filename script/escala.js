@@ -7,6 +7,9 @@ let dadosPadraoDoDia = [];
 const COLUMN_COLORS_KEY = 'marquespan_column_colors';
 const CELL_COLORS_KEY = 'marquespan_cell_colors';
 const SAVED_COLORS_KEY = 'marquespan_saved_colors';
+const COLUMN_ORDER_KEY_PREFIX = 'marquespan_escala_column_order_';
+const COLUMN_WIDTH_KEY_PREFIX = 'marquespan_escala_column_width_';
+const SECTION_COLLAPSE_KEY = 'marquespan_escala_collapsed_sections';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
@@ -430,6 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const table = tbody.closest('table');
             if (table) {
                 const container = document.createElement('div');
+                container.className = 'section-add-row-container';
+                container.dataset.section = sec;
                 container.style.textAlign = 'right';
                 container.style.marginTop = '5px';
                 
@@ -639,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             verificarDuplicidades();
+            setupEscalaGridTools();
 
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
@@ -789,6 +795,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Botão Importar Dia
+            const btnToggleSection = e.target.closest('.section-toggle-btn');
+            if (btnToggleSection) {
+                toggleEscalaSection(btnToggleSection.dataset.section);
+                return;
+            }
+
             if (e.target.closest('#btnImportarDiaAction')) {
                 fileImportarDia.click();
             }
@@ -2846,12 +2858,331 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- REDIMENSIONAMENTO DE COLUNAS ---
+    // --- MOVIMENTAÇÃO, ORDENAÇÃO E REDIMENSIONAMENTO DE COLUNAS ---
+    const DEFAULT_COLUMNS_BY_SECTION = {
+        Padrao: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
+        Transferencia: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
+        Equipamento: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
+        Reservas: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
+        Faltas: ['select', 'motorista_ausente', 'motivo_motorista', 'auxiliar_ausente', 'motivo_auxiliar', 'acoes']
+    };
+
+    const COLUMN_LABELS = {
+        select: '',
+        placa: 'PLACA',
+        modelo: 'MODELO',
+        rota: 'ROTA',
+        status: 'STATUS',
+        motorista: 'MOTORISTA',
+        auxiliar: 'AUXILIAR',
+        terceiro: 'TERCEIRO',
+        motorista_ausente: 'MOTORISTA',
+        motivo_motorista: 'MOTIVO MOTORISTA',
+        auxiliar_ausente: 'AUXILIAR',
+        motivo_auxiliar: 'MOTIVO AUXILIAR',
+        acoes: 'AÇÕES'
+    };
+
+    const columnSortState = {};
+
+    function getTableSection(table) {
+        const tbody = table?.querySelector('tbody[id^="tbody"]');
+        return tbody ? tbody.id.replace('tbody', '') : null;
+    }
+
+    function getColumnOrderStorageKey(section) {
+        return `${COLUMN_ORDER_KEY_PREFIX}${section}`;
+    }
+
+    function getColumnWidthStorageKey(section) {
+        return `${COLUMN_WIDTH_KEY_PREFIX}${section}`;
+    }
+
+    function getDefaultColumns(section) {
+        return DEFAULT_COLUMNS_BY_SECTION[section] || [];
+    }
+
+    function setupEscalaGridTools() {
+        Object.keys(SECAO_PARA_DB).forEach(section => {
+            const table = document.getElementById(`tbody${section}`)?.closest('table');
+            if (!table) return;
+
+            assignColumnKeys(table, section);
+            applySavedColumnOrder(table, section);
+            setupColumnHeaderControls(table, section);
+            applySavedColumnWidths(table, section);
+        });
+    }
+
+    function assignColumnKeys(table, section) {
+        const defaultColumns = getDefaultColumns(section);
+        const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
+
+        headers.forEach((th, index) => {
+            const key = th.dataset.columnKey || defaultColumns[index];
+            if (!key) return;
+            th.dataset.columnKey = key;
+            th.dataset.defaultIndex = index;
+        });
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            const cells = Array.from(row.children);
+            if (cells.length !== defaultColumns.length) return;
+
+            cells.forEach((td, index) => {
+                if (!td.dataset.columnKey) td.dataset.columnKey = defaultColumns[index];
+            });
+        });
+    }
+
+    function getSavedColumnOrder(section) {
+        const defaultColumns = getDefaultColumns(section);
+        const saved = JSON.parse(localStorage.getItem(getColumnOrderStorageKey(section)) || '[]');
+        const validSaved = saved.filter(key => defaultColumns.includes(key));
+        const missing = defaultColumns.filter(key => !validSaved.includes(key));
+        return [...validSaved, ...missing];
+    }
+
+    function applySavedColumnOrder(table, section) {
+        applyColumnOrder(table, getSavedColumnOrder(section));
+    }
+
+    function applyColumnOrder(table, order) {
+        const headerRow = table.querySelector('thead tr:first-child');
+        if (!headerRow) return;
+
+        reorderChildrenByColumnKey(headerRow, order);
+        table.querySelectorAll('tbody tr').forEach(row => reorderChildrenByColumnKey(row, order));
+    }
+
+    function reorderChildrenByColumnKey(row, order) {
+        const children = Array.from(row.children);
+        if (children.length !== order.length) return;
+
+        const byKey = new Map(children.map(child => [child.dataset.columnKey, child]));
+        order.forEach(key => {
+            const child = byKey.get(key);
+            if (child) row.appendChild(child);
+        });
+    }
+
+    function setupColumnHeaderControls(table, section) {
+        const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
+        headers.forEach(th => {
+            const key = th.dataset.columnKey;
+            if (!key || key === 'select' || key === 'acoes') return;
+
+            th.classList.add('escala-column-header');
+            th.draggable = true;
+
+            if (!th.querySelector('.column-label')) {
+                const label = COLUMN_LABELS[key] || th.textContent.trim();
+                th.innerHTML = `
+                    <span class="column-label">${label}</span>
+                    <span class="column-tools">
+                        <button type="button" class="column-sort-btn" title="Ordenar coluna"><i class="fas fa-sort"></i></button>
+                        <span class="column-drag-handle" title="Arraste para mover coluna"><i class="fas fa-grip-vertical"></i></span>
+                    </span>
+                `;
+            }
+
+            if (!th.dataset.columnToolsReady) {
+                th.dataset.columnToolsReady = 'true';
+                th.addEventListener('dragstart', handleColumnDragStart);
+                th.addEventListener('dragover', handleColumnDragOver);
+                th.addEventListener('drop', handleColumnDrop);
+                th.addEventListener('dragleave', () => th.classList.remove('drag-over-column'));
+                th.addEventListener('dragend', handleColumnDragEnd);
+            }
+
+            const sortBtn = th.querySelector('.column-sort-btn');
+            if (sortBtn && !sortBtn.dataset.sortReady) {
+                sortBtn.dataset.sortReady = 'true';
+                sortBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sortTableByColumn(table, section, key);
+                });
+            }
+        });
+    }
+
+    function handleColumnDragStart(e) {
+        if (e.target.closest('.resizer') || e.target.closest('.column-sort-btn')) {
+            e.preventDefault();
+            return;
+        }
+
+        const th = e.currentTarget;
+        th.classList.add('dragging-column');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+            section: getTableSection(th.closest('table')),
+            key: th.dataset.columnKey
+        }));
+    }
+
+    function handleColumnDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over-column');
+    }
+
+    function handleColumnDrop(e) {
+        e.preventDefault();
+        const targetTh = e.currentTarget;
+        targetTh.classList.remove('drag-over-column');
+
+        let payload = null;
+        try {
+            payload = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+        } catch {
+            return;
+        }
+
+        const table = targetTh.closest('table');
+        const section = getTableSection(table);
+        const sourceKey = payload.key;
+        const targetKey = targetTh.dataset.columnKey;
+
+        if (!section || payload.section !== section || !sourceKey || !targetKey || sourceKey === targetKey) return;
+
+        const order = Array.from(table.querySelectorAll('thead tr:first-child th')).map(th => th.dataset.columnKey);
+        const sourceIndex = order.indexOf(sourceKey);
+        const targetIndex = order.indexOf(targetKey);
+        if (sourceIndex < 0 || targetIndex < 0) return;
+
+        order.splice(sourceIndex, 1);
+        order.splice(targetIndex, 0, sourceKey);
+
+        localStorage.setItem(getColumnOrderStorageKey(section), JSON.stringify(order));
+        applyColumnOrder(table, order);
+        setupColumnHeaderControls(table, section);
+        applySavedColumnWidths(table, section);
+    }
+
+    function handleColumnDragEnd() {
+        document.querySelectorAll('.dragging-column, .drag-over-column').forEach(el => {
+            el.classList.remove('dragging-column', 'drag-over-column');
+        });
+    }
+
+    function sortTableByColumn(table, section, key) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        const stateKey = `${section}_${key}`;
+        const nextDirection = columnSortState[stateKey] === 'asc' ? 'desc' : 'asc';
+        columnSortState[stateKey] = nextDirection;
+
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.children.length === getDefaultColumns(section).length);
+        rows.sort((rowA, rowB) => {
+            const valueA = getCellSortValue(rowA, key);
+            const valueB = getCellSortValue(rowB, key);
+            const numericA = parseFloat(valueA.replace(',', '.'));
+            const numericB = parseFloat(valueB.replace(',', '.'));
+
+            let result;
+            if (!Number.isNaN(numericA) && !Number.isNaN(numericB)) {
+                result = numericA - numericB;
+            } else {
+                result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
+            }
+
+            return nextDirection === 'asc' ? result : -result;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+        updateSortIcons(table, key, nextDirection);
+    }
+
+    function getCellSortValue(row, key) {
+        const cell = Array.from(row.children).find(td => td.dataset.columnKey === key);
+        if (!cell) return '';
+        const input = cell.querySelector('input, select, textarea');
+        return (input ? input.value : cell.textContent).trim();
+    }
+
+    function updateSortIcons(table, activeKey, direction) {
+        table.querySelectorAll('.column-sort-btn i').forEach(icon => {
+            const key = icon.closest('th')?.dataset.columnKey;
+            icon.className = key === activeKey
+                ? (direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
+    }
+
+    function applySavedColumnWidths(table, section) {
+        const savedWidths = JSON.parse(localStorage.getItem(getColumnWidthStorageKey(section)) || '{}');
+        table.querySelectorAll('thead tr:first-child th').forEach(th => {
+            const key = th.dataset.columnKey;
+            if (key && savedWidths[key]) {
+                th.style.width = savedWidths[key];
+                th.style.minWidth = savedWidths[key];
+            }
+        });
+    }
+
+    function getCollapsedSections() {
+        return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}');
+    }
+
+    function saveCollapsedSections(collapsedSections) {
+        localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(collapsedSections));
+    }
+
+    function setupSectionMinimizers() {
+        Object.keys(SECAO_PARA_DB).forEach(section => {
+            const title = document.querySelector(`.collapsible-section-title[data-section="${section}"]`);
+            const btn = title?.querySelector('.section-toggle-btn');
+            if (!title || !btn) return;
+
+            title.addEventListener('dblclick', () => toggleEscalaSection(section));
+        });
+
+        applyCollapsedSections();
+    }
+
+    function toggleEscalaSection(section) {
+        if (!section) return;
+
+        const collapsedSections = getCollapsedSections();
+        collapsedSections[section] = !collapsedSections[section];
+        saveCollapsedSections(collapsedSections);
+        applySectionCollapsedState(section, collapsedSections[section]);
+    }
+
+    function applyCollapsedSections() {
+        const collapsedSections = getCollapsedSections();
+        Object.keys(SECAO_PARA_DB).forEach(section => {
+            applySectionCollapsedState(section, !!collapsedSections[section]);
+        });
+    }
+
+    function applySectionCollapsedState(section, isCollapsed) {
+        const title = document.querySelector(`.collapsible-section-title[data-section="${section}"]`);
+        const btn = title?.querySelector('.section-toggle-btn');
+        const icon = btn?.querySelector('i');
+        const tableContainer = document.getElementById(`tbody${section}`)?.closest('.table-scroll-container');
+        const addRowContainer = document.querySelector(`.section-add-row-container[data-section="${section}"]`);
+
+        if (title) title.classList.toggle('section-collapsed', isCollapsed);
+        if (tableContainer) tableContainer.classList.toggle('hidden', isCollapsed);
+        if (addRowContainer) addRowContainer.classList.toggle('hidden', isCollapsed);
+        if (btn) {
+            btn.title = isCollapsed ? 'Expandir seção' : 'Minimizar seção';
+            btn.setAttribute('aria-label', btn.title);
+        }
+        if (icon) {
+            icon.className = isCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+        }
+    }
+
     function enableColumnResizing() {
         const tableConfigs = [
             ...Object.keys(SECAO_PARA_DB).map(sec => ({
                 element: document.getElementById(`tbody${sec}`)?.closest('table'),
-                id: `colWidths_${sec}`
+                id: getColumnWidthStorageKey(sec)
             })),
             {
                 element: document.getElementById('tabelaPlanejamento'),
@@ -2871,8 +3202,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (th.textContent.trim() === '' && !th.querySelector('i')) return;
 
                 // Usamos o índice como chave, pois é relativo a cada tabela
-                if (savedWidths[index]) {
-                    th.style.width = savedWidths[index];
+                const columnKey = th.dataset.columnKey || index;
+                if (savedWidths[columnKey] || savedWidths[index]) {
+                    th.style.width = savedWidths[columnKey] || savedWidths[index];
                 } else if (!th.style.width) {
                     // Define uma largura inicial padrão se não houver nada salvo
                     if (th.textContent.trim().toUpperCase() === 'AÇÕES' || th.textContent.trim() === '') {
@@ -2886,13 +3218,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const resizer = document.createElement('div');
                     resizer.className = 'resizer';
                     th.appendChild(resizer);
-                    setupResizer(resizer, th, tableId, index);
+                    setupResizer(resizer, th, tableId, columnKey);
                 }
             });
         });
     }
 
-    function setupResizer(resizer, th, tableId, index) {
+    function setupResizer(resizer, th, tableId, columnKey) {
         let x = 0, w = 0;
         const mouseDownHandler = (e) => {
             e.preventDefault(); // Previne seleção de texto ao arrastar
@@ -2903,14 +3235,16 @@ document.addEventListener('DOMContentLoaded', () => {
             resizer.classList.add('resizing');
         };
         const mouseMoveHandler = (e) => {
-            th.style.width = `${w + e.clientX - x}px`;
+            const width = `${Math.max(48, w + e.clientX - x)}px`;
+            th.style.width = width;
+            th.style.minWidth = width;
         };
         const mouseUpHandler = () => {
             document.removeEventListener('mousemove', mouseMoveHandler);
             document.removeEventListener('mouseup', mouseUpHandler);
             resizer.classList.remove('resizing');
             const saved = JSON.parse(localStorage.getItem(tableId)) || {};
-            saved[index] = th.style.width;
+            saved[columnKey] = th.style.width;
             localStorage.setItem(tableId, JSON.stringify(saved));
         };
         resizer.addEventListener('mousedown', mouseDownHandler);
@@ -3274,6 +3608,8 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarSemanas();
     preencherCacheDatas();
     carregarListasAuxiliares();
+    setupEscalaGridTools();
+    setupSectionMinimizers();
     enableColumnResizing();
     updateColumnColorsStyle(); // Carrega cores salvas
     destacarVeiculosInternados();
