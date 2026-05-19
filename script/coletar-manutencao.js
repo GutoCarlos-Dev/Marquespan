@@ -1,11 +1,24 @@
 import { supabaseClient } from './supabase.js';
+import { getStatusClass, normalizarStatus, STATUS_CLASSES } from './coletar-manutencao/status.js';
+import { processarImportacaoColetaManutencao } from './coletar-manutencao/importacao.js';
+import { exportarRelatorioExcel } from './coletar-manutencao/export-excel.js';
+import { exportarRelatorioPDF } from './coletar-manutencao/export-pdf.js';
+import { renderizarGraficosManutencao } from './coletar-manutencao/graficos.js';
+import { renderizarTabelaRelatorio } from './coletar-manutencao/relatorio-tabela.js';
+import { buscarDadosRelatorio } from './coletar-manutencao/relatorio-service.js';
+import {
+    calcularValorTotalChecklist,
+    formatarMoedaInput,
+    resetarChecklistModal,
+    statusExigeOficina,
+    statusExigeValor
+} from './coletar-manutencao/checklist.js';
 
 const ColetarManutencaoUI = {
     init() {
         console.log('Página de Coleta de Manutenção iniciada.');
         this.cacheDOM();
         this.fixStatusOptions();
-        this.injectStyles();
         this.bindEvents();
         this.initTabs();
         this.veiculosData = [];
@@ -95,81 +108,13 @@ const ColetarManutencaoUI = {
         const selects = document.querySelectorAll('.checklist-status');
         selects.forEach(select => {
             Array.from(select.options).forEach(option => {
-                if (option.value === 'NAO REALIZADO' || option.value === 'NÃO REALIZADO') {
-                    option.value = 'PENDENTE';
-                    option.text = 'PENDENTE';
-                }
-                if (option.value === 'OK') {
-                    option.value = 'FINALIZADO';
-                    option.text = 'FINALIZADO';
+                const statusNormalizado = normalizarStatus(option.value);
+                if (statusNormalizado !== option.value) {
+                    option.value = statusNormalizado;
+                    option.text = statusNormalizado;
                 }
             });
         });
-    },
-
-    // Injeta estilos CSS dinamicamente para os badges de status
-    injectStyles() {
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .status-pendente {
-                background-color: #f8d7da !important;
-                color: #721c24 !important;
-                border: 1px solid #f5c6cb !important;
-            }
-            .status-finalizado-rota {
-                background-color: #d4edda !important;
-                color: #0b3314 !important;
-                border: 1px solid #c3e6cb !important;
-            }
-            .status-finalizado {
-                background-color: #d4edda !important;
-                color: #155724 !important;
-                border: 1px solid #c3e6cb !important;
-            }
-            .status-internado {
-                background-color: #cce5ff !important;
-                color: #004085 !important;
-                border: 1px solid #b8daff !important;
-            }
-            .status-checkin-oficina {
-                background-color: #fff3cd !important;
-                color: #856404 !important;
-                border: 1px solid #ffeeba !important;
-            }
-            .status-checkin-rota {
-                background-color: #ffe0b2 !important;
-                color: #d35400 !important;
-                border: 1px solid #ffcc80 !important;
-            }
-            
-            /* Estilos para as opções dentro do dropdown */
-            option[value="PENDENTE"] {
-                background-color: #f8d7da;
-                color: #721c24;
-            }
-            option[value="FINALIZADO"] {
-                background-color: #d4edda;
-                color: #155724;
-            }
-            option[value="INTERNADO"] {
-                background-color: #cce5ff;
-                color: #004085;
-            }
-            option[value="CHECK-IN OFICINA"] {
-                background-color: #fff3cd;
-                color: #856404;
-            }
-            option[value="CHECK-IN ROTA"] {
-                background-color: #ffe0b2;
-                color: #d35400;
-            }
-            option[value="FINALIZADO ROTA"] {
-                background-color: #d4edda;
-                color: #0b3314;
-                font-weight: bold;
-            }
-        `;
-        document.head.appendChild(style);
     },
 
     // Aplica restrições visuais e de filtro baseadas no nível do usuário
@@ -321,7 +266,7 @@ const ColetarManutencaoUI = {
 
                     const val = e.target.value;
 
-                    if (['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(val)) {
+                    if (statusExigeOficina(val)) {
                         oficinaWrapper.style.display = 'block';
                         // Só exige seleção se houver oficinas cadastradas para este item
                         if (oficinasDoItem.length > 0) {
@@ -332,7 +277,7 @@ const ColetarManutencaoUI = {
                     }
 
                     // Lógica para Valor (FINALIZADO ou FINALIZADO ROTA)
-                    if (['FINALIZADO', 'FINALIZADO ROTA'].includes(val)) {
+                    if (statusExigeValor(val)) {
                         valorWrapper.style.display = 'block';
                     } else {
                         valorWrapper.style.display = 'none';
@@ -346,11 +291,7 @@ const ColetarManutencaoUI = {
 
                 // Formatação de Moeda e Cálculo
                 valorInput.addEventListener('input', (e) => {
-                    let value = e.target.value.replace(/\D/g, '');
-                    value = (parseInt(value) / 100).toFixed(2) + '';
-                    value = value.replace('.', ',');
-                    value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-                    e.target.value = 'R$ ' + value;
+                    e.target.value = formatarMoedaInput(e.target.value);
                     this.calcularValorTotal();
                 });
 
@@ -389,14 +330,7 @@ const ColetarManutencaoUI = {
 
     // Calcula o valor total dos itens do checklist
     calcularValorTotal() {
-        let total = 0;
-        const valorInputs = document.querySelectorAll('.checklist-valor');
-        valorInputs.forEach(input => {
-            if (input.closest('.valor-wrapper').style.display !== 'none') {
-                let valStr = input.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
-                total += parseFloat(valStr) || 0;
-            }
-        });
+        const total = calcularValorTotalChecklist(document);
         if (this.coletaValorTotalInput) {
             this.coletaValorTotalInput.value = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
@@ -754,43 +688,7 @@ const ColetarManutencaoUI = {
         this.carregarVeiculos();
         this.fixStatusOptions();
         
-        // Limpa completamente o checklist (valores e visibilidade)
-        const checklistItems = this.modal.querySelectorAll('.checklist-item');
-        checklistItems.forEach(div => {
-            // Limpa inputs de texto
-            const detailsInput = div.querySelector('.checklist-details');
-            if (detailsInput) detailsInput.value = '';
-            
-            // Reseta status
-            const statusSelect = div.querySelector('.checklist-status');
-            if (statusSelect) {
-                statusSelect.value = '';
-                this.updateStatusColor(statusSelect);
-            }
-
-            // Reseta e esconde oficina
-            const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
-            const oficinaSelect = div.querySelector('.oficina-selector');
-            if (oficinaWrapper) oficinaWrapper.style.display = 'none';
-            if (oficinaSelect) {
-                oficinaSelect.value = '';
-                oficinaSelect.required = false;
-            }
-
-            // Reseta e esconde valor
-            const valorWrapper = div.querySelector('.valor-wrapper');
-            const valorInput = div.querySelector('.checklist-valor');
-            if (valorWrapper) valorWrapper.style.display = 'none';
-            if (valorInput) valorInput.value = 'R$ 0,00';
-        });
-
-        // Limpa campo extra de elétrica
-        const extraField = document.getElementById('extra-eletrica-interna');
-        if (extraField) {
-            extraField.classList.add('hidden');
-            const extraInput = extraField.querySelector('input');
-            if (extraInput) extraInput.value = '';
-        }
+        resetarChecklistModal(this.modal, this.updateStatusColor.bind(this));
 
         this.aplicarRestricoesDeNivelNoModal();
         this.modal.classList.remove('hidden');
@@ -800,23 +698,10 @@ const ColetarManutencaoUI = {
     // Atualiza a cor de fundo de um select de status com base no valor selecionado
     updateStatusColor(selectElement) {
         if (!selectElement) return;
-        // Remove todas as classes de status antes de adicionar a nova
-        selectElement.classList.remove('status-ok', 'status-finalizado','status-finalizado-rota', 'status-nao-realizado', 'status-pendente', 'status-internado', 'status-checkin-oficina', 'status-checkin-rota');
-        const status = selectElement.value.toUpperCase();
+        selectElement.classList.remove(...STATUS_CLASSES);
 
-        if (status === 'FINALIZADO' || status === 'OK') {
-            selectElement.classList.add('status-finalizado');
-        } else if (status === 'FINALIZADO ROTA') {
-            selectElement.classList.add('status-finalizado-rota');
-        } else if (status === 'PENDENTE' || status === 'NAO REALIZADO' || status === 'NÃO REALIZADO') {
-            selectElement.classList.add('status-pendente');
-        } else if (status === 'INTERNADO') {
-            selectElement.classList.add('status-internado');
-        } else if (status === 'CHECK-IN OFICINA') {
-            selectElement.classList.add('status-checkin-oficina');
-        } else if (status === 'CHECK-IN ROTA') {
-            selectElement.classList.add('status-checkin-rota');
-        }
+        const statusClass = getStatusClass(selectElement.value);
+        if (statusClass) selectElement.classList.add(statusClass);
     },
 
     // Aplica restrições de visibilidade no modal com base no nível do usuário
@@ -911,15 +796,11 @@ const ColetarManutencaoUI = {
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
-            if (tipo === 'MOLEIRO') {
-                await this.processarArquivoMoleiro(arquivo);
-            } else if (tipo === 'MECANICA_EXTERNA') {
-                await this.processarArquivoMecanicaExterna(arquivo);
-            } else if (tipo === 'GERAL') {
-                await this.processarArquivoGeral(arquivo);
-            } else {
-                throw new Error(`A importação para o tipo ${tipo} ainda não está implementada.`);
-            }
+            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+            await processarImportacaoColetaManutencao(tipo, arquivo, {
+                usuario,
+                calcularSemana: this.calculateCurrentWeek.bind(this)
+            });
             
             alert('Importação concluída com sucesso!');
             this.fecharModalImportacao();
@@ -931,324 +812,6 @@ const ColetarManutencaoUI = {
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = '<i class="fas fa-check"></i> Processar Arquivo';
         }
-    },
-
-    // Processa o arquivo XLSX para importação de dados de Moleiro
-    async processarArquivoMoleiro(arquivo) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
-
-                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-                    const coletasParaInserir = [];
-
-                    // 1. Prepara os dados do cabeçalho
-                    jsonData.forEach(row => {
-                        const rowNormalized = {};
-                        Object.keys(row).forEach(key => {
-                            rowNormalized[key.toUpperCase().trim()] = row[key];
-                        });
-
-                        const dataRaw = rowNormalized['DATA'];
-                        let dataHora;
-                        if (dataRaw instanceof Date) {
-                            dataHora = dataRaw;
-                        } else if (typeof dataRaw === 'string') {
-                            const parts = dataRaw.split('/');
-                            if (parts.length === 3) {
-                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
-                            } else {
-                                dataHora = new Date();
-                            }
-                        } else {
-                            dataHora = new Date();
-                        }
-
-                        coletasParaInserir.push({
-                            semana: this.calculateCurrentWeek(dataHora),
-                            data_hora: dataHora.toISOString(),
-                            usuario: usuarioLogado,
-                            placa: (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase(),
-                            modelo: rowNormalized['MODELO'] || '',
-                            km: 0,
-                            // Adiciona a descrição original para uso posterior
-                            _descricaoOriginal: (rowNormalized['DESCRICAO'] || '').toUpperCase()
-                        });
-                    });
-
-                    // 2. Insere todos os cabeçalhos de uma vez
-                    const { data: coletasInseridas, error: errColetas } = await supabaseClient
-                        .from('coletas_manutencao')
-                        .insert(coletasParaInserir.map(({ _descricaoOriginal, ...rest }) => rest)) // Remove o campo temporário
-                        .select('id');
-
-                    if (errColetas) throw errColetas;
-                    if (coletasInseridas.length !== coletasParaInserir.length) {
-                        throw new Error('Falha ao inserir todos os cabeçalhos de manutenção.');
-                    }
-
-                    // 3. Prepara e insere todos os itens do checklist
-                    const checklistItens = coletasInseridas.map((coleta, index) => ({
-                        coleta_id: coleta.id,
-                        item: 'MOLEIRO',
-                        status: 'PENDENTE',
-                        detalhes: coletasParaInserir[index]._descricaoOriginal
-                    }));
-
-                    if (checklistItens.length > 0) {
-                        const { error: errItem } = await supabaseClient
-                            .from('coletas_manutencao_checklist')
-                            .insert(checklistItens);
-                        if (errItem) throw errItem;
-                    }
-                    resolve();
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = (error) => reject(error);
-            reader.readAsArrayBuffer(arquivo);
-        });
-    },
-
-    // Processa o arquivo XLSX para importação de dados de Mecânica Externa
-    async processarArquivoMecanicaExterna(arquivo) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
-
-                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-                    const coletasParaInserir = [];
-
-                    // 1. Prepara os dados do cabeçalho
-                    jsonData.forEach(row => {
-                        const rowNormalized = {};
-                        Object.keys(row).forEach(key => {
-                            rowNormalized[key.toUpperCase().trim()] = row[key];
-                        });
-
-                        const dataRaw = rowNormalized['DATA'];
-                        let dataHora;
-                        if (dataRaw instanceof Date) {
-                            dataHora = dataRaw;
-                        } else if (typeof dataRaw === 'string') {
-                            const parts = dataRaw.split('/');
-                            if (parts.length === 3) {
-                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
-                            } else {
-                                dataHora = new Date();
-                            }
-                        } else {
-                            dataHora = new Date();
-                        }
-
-                        const descricao = (rowNormalized['DESCRICAO'] || '').toUpperCase();
-                        const observacao = (rowNormalized['OBSERVACAO'] || '').toUpperCase();
-                        let detalhes = descricao;
-                        if (observacao) detalhes += `, ${observacao}`;
-
-                        coletasParaInserir.push({
-                            semana: this.calculateCurrentWeek(dataHora),
-                            data_hora: dataHora.toISOString(),
-                            usuario: usuarioLogado,
-                            placa: (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase(),
-                            modelo: rowNormalized['MODELO'] || '',
-                            km: 0,
-                            _detalhesOriginais: detalhes
-                        });
-                    });
-
-                    // 2. Insere todos os cabeçalhos de uma vez
-                    const { data: coletasInseridas, error: errColetas } = await supabaseClient
-                        .from('coletas_manutencao')
-                        .insert(coletasParaInserir.map(({ _detalhesOriginais, ...rest }) => rest))
-                        .select('id');
-
-                    if (errColetas) throw errColetas;
-                    if (coletasInseridas.length !== coletasParaInserir.length) {
-                        throw new Error('Falha ao inserir todos os cabeçalhos de manutenção.');
-                    }
-
-                    // 3. Prepara e insere todos os itens do checklist
-                    const checklistItens = coletasInseridas.map((coleta, index) => ({
-                        coleta_id: coleta.id,
-                        item: 'MECANICA - EXTERNA',
-                        status: 'PENDENTE',
-                        detalhes: coletasParaInserir[index]._detalhesOriginais
-                    }));
-
-                    if (checklistItens.length > 0) {
-                        const { error: errItem } = await supabaseClient
-                            .from('coletas_manutencao_checklist')
-                            .insert(checklistItens);
-                        if (errItem) throw errItem;
-                    }
-                    resolve();
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = (error) => reject(error);
-            reader.readAsArrayBuffer(arquivo);
-        });
-    },
-
-    // Processa o arquivo XLSX para importação de dados gerais
-    async processarArquivoGeral(arquivo) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    if (jsonData.length === 0) throw new Error('Arquivo vazio ou formato inválido.');
-
-                    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
-
-                    // Mapeamento de colunas do Excel para Itens do Banco de Dados
-                    // Chave: Nome da coluna no Excel (normalizado upper/trim), Valor: Nome do item no Banco
-                    const mapItens = {
-                        'ACESSORIOS': 'ACESSORIOS',
-                        'ALINHAMENTO / BALANCEAMENTO': 'ALINHAMENTO / BALANCEAMENTO',
-                        'AR-CONDICIONADO': 'AR-CONDICIONADO',
-                        'BORRACHARIA': 'BORRACHARIA',
-                        'MECANICA EXTERNA': 'MECANICA EXTERNA',
-                        'MOLEIRO': 'MOLEIRO',
-                        'TACOGRAFO': 'TACOGRAFO',
-                        'TAPEÇARIA': 'TAPEÇARIA',
-                        'THERMO KING': 'THERMO KING',
-                        'VIDROS / FECHADURAS': 'VIDROS / FECHADURAS',
-                        'SERVIÇOS_GERAIS': 'SERVIÇOS_GERAIS',
-                        'CONCESSIONARIA': 'CONCESSIONARIA',
-                        'ANKA': 'ANKA',
-                        'TARRAXA': 'TARRAXA',
-                        'USIMAC': 'USIMAC',
-                        'LUCAS BAU': 'LUCAS BAU',
-                        'IBIFURGO': 'IBIFURGO',
-                        'IBIPORAN': 'IBIPORAN'
-                    };
-
-                    for (const row of jsonData) {
-                        const rowNormalized = {};
-                        Object.keys(row).forEach(key => {
-                            rowNormalized[key.toUpperCase().trim()] = row[key];
-                        });
-
-                        // 1. Dados do Cabeçalho
-                        const dataRaw = rowNormalized['DATA'];
-                        let dataHora;
-                        if (dataRaw instanceof Date) {
-                            dataHora = dataRaw;
-                        } else if (typeof dataRaw === 'string') {
-                            const parts = dataRaw.split('/');
-                            if (parts.length === 3) {
-                                dataHora = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
-                            } else {
-                                dataHora = new Date();
-                            }
-                        } else {
-                            dataHora = new Date();
-                        }
-
-                        let semana;
-                        const semanaRaw = rowNormalized['SEMANA'];
-                        if (semanaRaw && !isNaN(semanaRaw) && !String(semanaRaw).includes('-')) {
-                            // Se for um número sem o ano, adiciona o ano da dataHora
-                            semana = `${String(semanaRaw).padStart(2, '0')}-${dataHora.getFullYear()}`;
-                        } else if (semanaRaw) {
-                            semana = String(semanaRaw); // Usa como está se já for uma string (ex: "19-2026")
-                        } else {
-                            semana = this.calculateCurrentWeek(dataHora); // Calcula se não for fornecido
-                        }
-                        const placa = (rowNormalized['PLACA'] || 'SEM PLACA').toUpperCase();
-                        const modelo = rowNormalized['MODELO'] || '';
-                        const km = parseInt(rowNormalized['KM']) || 0;
-
-                        // Inserir Cabeçalho (Coleta)
-                        const { data: coleta, error: errColeta } = await supabaseClient
-                            .from('coletas_manutencao')
-                            .insert([{
-                                semana: semana,
-                                data_hora: dataHora.toISOString(),
-                                usuario: usuarioLogado,
-                                placa: placa,
-                                modelo: modelo,
-                                km: km
-                            }])
-                            .select()
-                            .single();
-
-                        if (errColeta) throw errColeta;
-
-                        const checklistItems = [];
-
-                        // 2. Processar Item Especial: ELETRICA INTERNA
-                        // Colunas: ELETRICA INTERNA (desc), STATUS (bool/string), PECA
-                        const descEletrica = rowNormalized['ELETRICA INTERNA'];
-                        const statusEletricaRaw = rowNormalized['STATUS'];
-                        const pecaEletrica = rowNormalized['PECA'];
-
-                        if (descEletrica || statusEletricaRaw !== undefined || pecaEletrica) {
-                            let statusEletrica = 'PENDENTE';
-                            // Verifica se é TRUE (Excel bool) ou string "TRUE"/"OK"
-                            if (statusEletricaRaw === true || String(statusEletricaRaw).toUpperCase() === 'TRUE' || String(statusEletricaRaw).toUpperCase() === 'OK') {
-                                statusEletrica = 'FINALIZADO';
-                            }
-
-                            checklistItems.push({
-                                coleta_id: coleta.id,
-                                item: 'ELETRICA INTERNA',
-                                status: statusEletrica,
-                                detalhes: String(descEletrica || '').toUpperCase(),
-                                pecas_usadas: pecaEletrica ? String(pecaEletrica).toUpperCase() : null
-                            });
-                        }
-
-                        // 3. Processar Outros Itens (Padrão: Se tem texto, é NAO REALIZADO com detalhes)
-                        for (const [colExcel, itemDb] of Object.entries(mapItens)) {
-                            const valorCelula = rowNormalized[colExcel];
-                            if (valorCelula) {
-                                checklistItems.push({
-                                    coleta_id: coleta.id,
-                                    item: itemDb,
-                                    status: 'PENDENTE',
-                                    detalhes: String(valorCelula).toUpperCase()
-                                });
-                            }
-                        }
-
-                        if (checklistItems.length > 0) {
-                            const { error: errItems } = await supabaseClient
-                                .from('coletas_manutencao_checklist')
-                                .insert(checklistItems);
-                            if (errItems) throw errItems;
-                        }
-                    }
-                    resolve();
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = (error) => reject(error);
-            reader.readAsArrayBuffer(arquivo);
-        });
     },
 
     // Preenche os campos de data, hora e usuário no modal de lançamento
@@ -1416,7 +979,7 @@ const ColetarManutencaoUI = {
         for (const item of checklistElements) {
             const status = item.querySelector('.checklist-status').value;
             const oficinaSelect = item.querySelector('.oficina-selector');
-            const statusRequiresOffice = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(status);
+            const statusRequiresOffice = statusExigeOficina(status);
 
             if (statusRequiresOffice && oficinaSelect) {
                 if (!oficinaSelect.value) { // Verifica se um valor foi selecionado
@@ -1453,7 +1016,7 @@ const ColetarManutencaoUI = {
 
             // Captura oficina selecionada para CHECK-IN (OFICINA ou ROTA)
             const oficinaSelect = item.querySelector('.oficina-selector');
-            if (oficinaSelect && oficinaSelect.value && (status === 'CHECK-IN OFICINA' || status === 'CHECK-IN ROTA' || status === 'FINALIZADO' || status === 'FINALIZADO ROTA' || status === 'INTERNADO')) {
+            if (oficinaSelect && oficinaSelect.value && statusExigeOficina(status)) {
                 oficinaId = parseInt(oficinaSelect.value);
             }
 
@@ -2080,7 +1643,7 @@ const ColetarManutencaoUI = {
                     }
 
                     // Lógica para extrair oficina do texto de detalhes se o status exigir
-                    const statusRequiresOffice = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'FINALIZADO', 'FINALIZADO ROTA', 'INTERNADO'].includes(statusValue);
+                    const statusRequiresOffice = statusExigeOficina(statusValue);
 
                     if (!oficinaEncontrada && statusRequiresOffice && oficinaSelect && oficinaSelect.options.length > 1) {
                         for (let i = 0; i < oficinaSelect.options.length; i++) {
@@ -2153,66 +1716,30 @@ const ColetarManutencaoUI = {
     },
 
     // Busca e renderiza o relatório de manutenções com base nos filtros
+    obterFiltrosRelatorio() {
+        return {
+            items: Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value),
+            oficinas: Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value),
+            status: Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value),
+            semana: this.filtroSemana.value,
+            placa: this.filtroPlaca?.value?.trim().toUpperCase() || '',
+            dataIni: this.filtroDataIni.value,
+            dataFim: this.filtroDataFim.value
+        };
+    },
+
     async buscarRelatorio() {
         if (!this.tableBodyRelatorio) return;
         this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
         
         try {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
-
-            // Busca na tabela de checklist fazendo join com a tabela pai (coletas_manutencao)
-            // O !inner força que o registro pai exista e obedeça aos filtros aplicados nele
-            let selectQuery = '*, coletas_manutencao!inner(*), oficinas(nome)';
-            
-            // Se houver filial definida, precisamos fazer o join com veiculos para filtrar
-            if (filialUsuario) {
-                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial)), oficinas(nome)';
-            }
-
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select(selectQuery);
-
-            if (filialUsuario) {
-                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
-            }
-
-            // Filtro automático por nível
-            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
-
-            // Filtros do Checklist (Multi-Select)
-            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
-            if (selectedItems.length > 0) {
-                query = query.in('item', selectedItems);
-            }
-
-            // Filtros de Oficina (Multi-Select) - Busca no campo oficina_id
-            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
-            if (selectedOficinas.length > 0) {
-                const oficinaIds = selectedOficinas.map(nome => this.oficinasMap[nome]).filter(id => id);
-                if (oficinaIds.length > 0) {
-                    query = query.in('oficina_id', oficinaIds);
-                }
-            }
-
-            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
-            if (selectedStatus.length > 0) {
-                query = query.in('status', selectedStatus);
-            }
-            
-            // Filtros da Coleta (Pai)
-            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
-            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
-            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
-            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
-
-            const { data, error } = await query;
-            if (error) throw error;
-
+            const data = await buscarDadosRelatorio({
+                usuarioLogado,
+                filtros: this.obterFiltrosRelatorio(),
+                oficinasMap: this.oficinasMap,
+                incluirOficinas: true
+            });
             // Atualiza contador
             if (this.contadorResultados) this.contadorResultados.textContent = `(${data ? data.length : 0})`;
 
@@ -2235,206 +1762,30 @@ const ColetarManutencaoUI = {
 
     // Renderiza a tabela de resultados do relatório
     renderRelatorio() {
-        if (!this.tableBodyRelatorio) return;
-        this.tableBodyRelatorio.innerHTML = '';
-        
-        // Ordenação
-        const col = this.currentReportSort.column;
-        const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
-
-        this.reportData.sort((a, b) => {
-            let valA, valB;
-
-            // Mapeamento de campos (alguns estão no objeto pai 'coletas_manutencao')
-            if (col === 'data_hora') {
-                valA = new Date(a.coletas_manutencao.data_hora);
-                valB = new Date(b.coletas_manutencao.data_hora);
-            } else if (['semana', 'placa', 'modelo'].includes(col)) {
-                valA = a.coletas_manutencao[col];
-                valB = b.coletas_manutencao[col];
-            } else {
-                valA = a[col] || '';
-                valB = b[col] || '';
-            }
-
-            if (valA < valB) return -1 * dir;
-            if (valA > valB) return 1 * dir;
-            return 0;
-        });
-
-        // Verifica permissão para excluir
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-        const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivelUsuario);
 
-        this.reportData.forEach(item => {
-                const coleta = item.coletas_manutencao;
-                const tr = document.createElement('tr');
-                // Lógica de cores para a linha inteira baseada no Status
-                const statusUpper = item.status ? item.status.toUpperCase() : '';
-                
-                if (statusUpper === 'FINALIZADO' || statusUpper === 'OK') {
-                    tr.style.backgroundColor = '#d4edda'; // Verde claro
-                    tr.style.color = '#155724';
-                } else if (statusUpper === 'PENDENTE' || statusUpper === 'NAO REALIZADO' || statusUpper === 'NÃO REALIZADO') {
-                    tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
-                    tr.style.color = '#721c24';
-                } else if (statusUpper === 'INTERNADO') {
-                    tr.style.backgroundColor = '#cce5ff'; // Azul claro
-                    tr.style.color = '#004085';
-                } else if (statusUpper === 'CHECK-IN OFICINA') {
-                    tr.style.backgroundColor = '#fff3cd'; // Amarelo claro
-                    tr.style.color = '#856404';
-                } else if (statusUpper === 'CHECK-IN ROTA') {
-                    tr.style.backgroundColor = '#ffe0b2'; // Laranja claro
-                    tr.style.color = '#d35400';
-                } else if (statusUpper === 'FINALIZADO ROTA') {
-                    tr.style.backgroundColor = '#d4edda'; // Verde claro
-                    tr.style.color = '#006400'; // Verde Escuro
-                    tr.style.fontWeight = 'bold';
-                }
+        renderizarTabelaRelatorio({
+            tbody: this.tableBodyRelatorio,
+            reportData: this.reportData,
+            sortConfig: this.currentReportSort,
+            nivelUsuario
+        });
 
-                const nomeOficina = item.oficinas ? item.oficinas.nome : '-';
-                let botoesAcao = `<button class="btn-action btn-edit" data-id="${coleta.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
-                if (podeExcluir) {
-                    botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${coleta.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
-                }
-
-                tr.innerHTML = `
-                    <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
-                    <td>${coleta.semana}</td>
-                    <td>${coleta.placa}</td>
-                    <td>${coleta.modelo || '-'}</td>
-                    <td>${item.item}</td>
-                    <td>${item.status}</td>
-                    <td>${nomeOficina}</td>
-                    <td>${item.detalhes || '-'}</td>
-                    <td>${item.pecas_usadas || '-'}</td>
-                    <td><strong>${(item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
-                    <td>
-                        ${botoesAcao}
-                    </td>
-                `;
-                this.tableBodyRelatorio.appendChild(tr);
-            });
-        
         this.updateReportSortIcons();
     },
-
     // Renderiza os gráficos de análise
     renderizarGraficos() {
-        if (!this.reportData || this.reportData.length === 0) {
-            if (this.graficosContainer) this.graficosContainer.style.display = 'none';
-            return;
-        }
-        // Mostra o container de gráficos
-
-        if (this.graficosContainer) this.graficosContainer.style.display = 'block';
-
-        // 1. Preparar dados para Gráfico de Status
-        const statusCounts = {};
-        this.reportData.forEach(row => {
-            const status = row.status || 'N/A';
-            statusCounts[status] = (statusCounts[status] || 0) + 1;
+        const graficos = renderizarGraficosManutencao(this.reportData, this.graficosContainer, {
+            chartStatus: this.chartStatus,
+            chartItems: this.chartItems,
+            chartOficinas: this.chartOficinas
         });
 
-        // Cores para os status
-        const statusColors = {
-            'FINALIZADO': '#28a745',
-            'OK': '#28a745', // Mantido para compatibilidade
-            'PENDENTE': '#dc3545',
-            'NAO REALIZADO': '#dc3545', // Mantido para compatibilidade
-            'INTERNADO': '#007bff', // Azul (Corrigido para combinar com a tabela)
-            'CHECK-IN OFICINA': '#ffc107', // Amarelo
-            'CHECK-IN ROTA': '#fd7e14', // Laranja
-            'FINALIZADO ROTA': '#006400', // Verde Escuro
-            'N/A': '#6c757d'
-        };
-        const bgColorsStatus = Object.keys(statusCounts).map(s => statusColors[s] || '#17a2b8');
-
-        // 2. Preparar dados para Gráfico de Itens
-        const itemCounts = {};
-        this.reportData.forEach(row => {
-            const item = row.item || 'Outros';
-            itemCounts[item] = (itemCounts[item] || 0) + 1;
-        });
-
-        // 3. Preparar dados para Gráfico de Oficinas
-        const oficinaCounts = {};
-        this.reportData.forEach(row => {
-            const oficina = row.oficinas ? row.oficinas.nome : 'N/A';
-            oficinaCounts[oficina] = (oficinaCounts[oficina] || 0) + 1;
-        });
-
-        // Destruir gráficos existentes se houver
-        if (this.chartStatus) this.chartStatus.destroy();
-        if (this.chartItems) this.chartItems.destroy();
-        if (this.chartOficinas) this.chartOficinas.destroy(); // Destruir o novo gráfico
-
-        // Renderizar Gráfico de Status (Pizza)
-        // ... (código existente para o gráfico de status)
-
-        // Renderizar Gráfico de Status (Pizza)
-        // ... (código existente para o gráfico de status)
-        // Renderizar Gráfico de Status (Pizza)
-        const ctxStatus = document.getElementById('grafico-status').getContext('2d');
-        this.chartStatus = new Chart(ctxStatus, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(statusCounts),
-                datasets: [{
-                    data: Object.values(statusCounts),
-                    backgroundColor: bgColorsStatus,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } }
-            }
-        });
-
-        // Renderizar Gráfico de Itens (Barras)
-        const ctxItems = document.getElementById('grafico-itens').getContext('2d');
-        this.chartItems = new Chart(ctxItems, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(itemCounts),
-                datasets: [{
-                    label: 'Quantidade',
-                    data: Object.values(itemCounts),
-                    backgroundColor: '#007bff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // Renderizar Gráfico de Oficinas (Barras)
-        const ctxOficinas = document.getElementById('grafico-oficinas').getContext('2d');
-        this.chartOficinas = new Chart(ctxOficinas, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(oficinaCounts),
-                datasets: [{
-                    label: 'Quantidade de Manutenções',
-                    data: Object.values(oficinaCounts),
-                    backgroundColor: '#17a2b8' // Cor diferente para este gráfico
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
-            }
-        });
+        this.chartStatus = graficos.chartStatus;
+        this.chartItems = graficos.chartItems;
+        this.chartOficinas = graficos.chartOficinas;
     },
-
     handleReportSort(column) {
         if (this.currentReportSort.column === column) {
             this.currentReportSort.direction = this.currentReportSort.direction === 'asc' ? 'desc' : 'asc';
@@ -2464,177 +1815,15 @@ const ColetarManutencaoUI = {
 
         try {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+            const exportado = await exportarRelatorioExcel({
+                usuarioLogado,
+                filtros: this.obterFiltrosRelatorio(),
+                oficinasMap: this.oficinasMap
+            });
 
-            // Mesma lógica de query do buscarRelatorio para consistência
-            let selectQuery = '*, coletas_manutencao!inner(*)';
-            if (filialUsuario) {
-                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial))';
-            }
-
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select(selectQuery);
-
-            if (filialUsuario) {
-                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
-            }
-
-            // Filtro automático por nível
-            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
-
-            // Filtros do Checklist (Multi-Select)
-            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
-            if (selectedItems.length > 0) {
-                query = query.in('item', selectedItems);
-            }
-
-            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
-            if (selectedOficinas.length > 0) {
-                const oficinaIds = selectedOficinas.map(nome => this.oficinasMap[nome]).filter(id => id);
-                if (oficinaIds.length > 0) {
-                    query = query.in('oficina_id', oficinaIds);
-                }
-            }
-
-            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
-            if (selectedStatus.length > 0) {
-                query = query.in('status', selectedStatus);
-            }
-            
-            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
-            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
-            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
-            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
+            if (!exportado) {
                 alert('Nenhum dado encontrado para os filtros selecionados.');
-                return;
             }
-
-            // Ordenação
-            data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
-            // Agrupar dados por Coleta (Pivot) para criar colunas
-            const coletasMap = new Map();
-
-            data.forEach(row => {
-                const coletaId = row.coletas_manutencao.id;
-                if (!coletasMap.has(coletaId)) {
-                    coletasMap.set(coletaId, {
-                        meta: row.coletas_manutencao,
-                        items: {},
-                        itemDetails: {},
-                        totalCalculado: 0
-                    });
-                }
-                const entry = coletasMap.get(coletaId);
-                
-                // Soma o valor do item ao total calculado
-                entry.totalCalculado += (Number(row.valor) || 0);
-
-                let cellValue = '';
-                if (row.item === 'ELETRICA INTERNA' || row.item === 'ELETRICA / MECANICA - INTERNA') {
-                    cellValue = `SOLICITAÇÃO: ${row.detalhes || ''}`;
-                    if (row.status === 'FINALIZADO' || row.status === 'OK') {
-                        cellValue += `, SOLICITAÇÃO REALIZADA`;
-                    }
-                    if (row.pecas_usadas) {
-                        cellValue += ` ${row.pecas_usadas}`;
-                    }
-                } else {
-                    if (row.status === 'FINALIZADO' || row.status === 'OK') {
-                        cellValue = 'FINALIZADO';
-                    } else if (row.status === 'INTERNADO') {
-                        cellValue = 'INTERNADO';
-                    } else if (row.status === 'CHECK-IN OFICINA') {
-                        cellValue = 'CHECK-IN OFICINA';
-                    } else if (row.status === 'CHECK-IN ROTA') {
-                        cellValue = 'CHECK-IN ROTA';
-                    } else {
-                        cellValue = row.detalhes || '';
-                    }
-                }
-                
-                // Adiciona o valor individual do item se houver
-                if (row.valor && Number(row.valor) > 0) {
-                    cellValue += ` (R$ ${Number(row.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})})`;
-                }
-
-                entry.items[row.item] = cellValue;
-                entry.itemDetails[row.item] = row.detalhes || '';
-            });
-
-            // Lista de colunas de itens (incluindo os novos)
-            const itemColumns = [
-                'ACESSORIOS', 'ALINHAMENTO/BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA', 
-                'ELETRICA INTERNA', 'ELETRICA / MECANICA - INTERNA', 'MECANICA EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA', 
-                'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 
-                'CONCESSIONARIA', 'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
-            ];
-
-            const dadosPlanilha = [];
-            const coletasArray = Array.from(coletasMap.values());
-            coletasArray.sort((a, b) => new Date(b.meta.data_hora) - new Date(a.meta.data_hora));
-
-            coletasArray.forEach(entry => {
-                // Concatenar apenas os detalhes preenchidos do checklist
-                const detalhesConcatenados = Object.entries(entry.itemDetails)
-                    .filter(([, detalhe]) => detalhe && detalhe.trim() !== '')
-                    .map(([item, detalhe]) => `${item}: ${detalhe}`)
-                    .join('; ');
-
-                const row = {
-                    'DATA': new Date(entry.meta.data_hora).toLocaleDateString('pt-BR'),
-                    'SEMANA': entry.meta.semana,
-                    'PLACA': entry.meta.placa,
-                    'MODELO': entry.meta.modelo,
-                    'KM': entry.meta.km,
-                    'USUARIO': entry.meta.usuario,
-                    'VALOR TOTAL': 'R$ ' + (entry.totalCalculado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})
-                };
-
-                itemColumns.forEach(col => {
-                    row[col] = entry.itemDetails[col] || '';
-                });
-
-                dadosPlanilha.push(row);
-            });
-
-            // Calcular total geral
-            const totalGeral = coletasArray.reduce((sum, entry) => sum + (entry.totalCalculado || 0), 0);
-
-            // Adicionar linha de soma
-            const linhaSoma = {
-                'DATA': '',
-                'SEMANA': '',
-                'PLACA': '',
-                'MODELO': '',
-                'KM': '',
-                'USUARIO': 'TOTAL GERAL:',
-                'VALOR TOTAL': 'R$ ' + totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})
-            };
-
-            // Preencher colunas de itens com vazio
-            itemColumns.forEach(col => {
-                linhaSoma[col] = '';
-            });
-
-            // Adicionar DETALHES vazio
-            //linhaSoma['DETALHES'] = '';
-
-            dadosPlanilha.push(linhaSoma);
-
-            const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Manutencao");
-            XLSX.writeFile(wb, `Coleta_Manutencao_${new Date().toISOString().slice(0,10)}.xlsx`);
-
         } catch (err) {
             console.error('Erro ao exportar:', err);
             alert('Erro ao gerar arquivo: ' + err.message);
@@ -2643,7 +1832,6 @@ const ColetarManutencaoUI = {
             btn.innerHTML = originalText;
         }
     },
-
     async gerarRelatorioPDF(e, tipoAgrupamento = 'ITEM') {
         e.preventDefault();
         const btn = tipoAgrupamento === 'OFICINA' ? this.btnExportarPDFOficina : this.btnExportarPDFServicos;
@@ -2653,341 +1841,17 @@ const ColetarManutencaoUI = {
 
         try {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+            const exportado = await exportarRelatorioPDF({
+                tipoAgrupamento,
+                usuarioLogado,
+                filtros: this.obterFiltrosRelatorio(),
+                sortConfig: this.currentReportSort,
+                oficinasMap: this.oficinasMap
+            });
 
-            // Mesma lógica de query para consistência
-            let selectQuery = '*, coletas_manutencao!inner(*), oficinas(nome)';
-            if (filialUsuario) {
-                selectQuery = '*, coletas_manutencao!inner(*, veiculos!inner(filial)), oficinas(nome)';
-            }
-
-            let query = supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select(selectQuery);
-
-            if (filialUsuario) {
-                query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
-            }
-
-            // Filtro automático por nível
-            if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
-            if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
-
-            // Filtros do Checklist (Multi-Select)
-            const selectedItems = Array.from(this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox:checked')).map(cb => cb.value);
-            if (selectedItems.length > 0) {
-                query = query.in('item', selectedItems);
-            }
-
-            const selectedOficinas = Array.from(this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox:checked')).map(cb => cb.value);
-            if (selectedOficinas.length > 0) {
-                const oficinaFilters = selectedOficinas.map(of => `detalhes.ilike.%${of}%`).join(',');
-                query = query.or(oficinaFilters);
-            }
-
-            const selectedStatus = Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value);
-            if (selectedStatus.length > 0) {
-                query = query.in('status', selectedStatus);
-            }
-            
-            if (this.filtroSemana.value) query = query.eq('coletas_manutencao.semana', this.filtroSemana.value);
-            if (this.filtroPlaca && this.filtroPlaca.value) query = query.ilike('coletas_manutencao.placa', `%${this.filtroPlaca.value.trim().toUpperCase()}%`);
-            if (this.filtroDataIni.value) query = query.gte('coletas_manutencao.data_hora', this.filtroDataIni.value + 'T00:00:00');
-            if (this.filtroDataFim.value) query = query.lte('coletas_manutencao.data_hora', this.filtroDataFim.value + 'T23:59:59');
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
+            if (!exportado) {
                 alert('Nenhum dado encontrado para os filtros selecionados.');
-                return;
             }
-
-            // Ordenação
-            const col = this.currentReportSort.column;
-            const dir = this.currentReportSort.direction === 'asc' ? 1 : -1;
-
-            data.sort((a, b) => {
-                // 1. Agrupamento (Prioritário para manter o layout do PDF)
-                if (tipoAgrupamento === 'OFICINA') {
-                    const oficinaA = a.oficinas ? a.oficinas.nome : 'ZZZ'; // ZZZ para ir para o final
-                    const oficinaB = b.oficinas ? b.oficinas.nome : 'ZZZ';
-                    if (oficinaA < oficinaB) return -1;
-                    if (oficinaA > oficinaB) return 1;
-                } else {
-                    // Agrupamento por ITEM
-                    if (a.item < b.item) return -1;
-                    if (a.item > b.item) return 1;
-                }
-                
-                // 2. Ordenação do Grid (Secundária)
-                let valA, valB;
-
-                if (col === 'data_hora') {
-                    valA = new Date(a.coletas_manutencao.data_hora);
-                    valB = new Date(b.coletas_manutencao.data_hora);
-                } else if (['semana', 'placa', 'modelo'].includes(col)) {
-                    valA = a.coletas_manutencao[col];
-                    valB = b.coletas_manutencao[col];
-                } else if (col === 'oficina') {
-                    valA = a.oficinas ? a.oficinas.nome : '';
-                    valB = b.oficinas ? b.oficinas.nome : '';
-                } else {
-                    valA = a[col] || '';
-                    valB = b[col] || '';
-                }
-
-                if (valA < valB) return -1 * dir;
-                if (valA > valB) return 1 * dir;
-
-                return 0;
-            });
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape' });
-
-            // 1. Carregar a imagem do logo e converter para JPEG com fundo branco
-            const getLogoBase64 = async () => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.src = 'logo.png';
-                    img.crossOrigin = 'Anonymous';
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#FFFFFF'; // Fundo branco
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0);
-                        resolve(canvas.toDataURL('image/jpeg'));
-                    };
-                    img.onerror = () => {
-                        console.warn('Logo não encontrado');
-                        resolve(null);
-                    };
-                });
-            };
-
-            const logoBase64 = await getLogoBase64();
-
-            // 2. Cabeçalho com Logo
-            if (logoBase64) {
-                doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
-            }
-
-            doc.setFontSize(18);
-            const tituloRelatorio = tipoAgrupamento === 'OFICINA' ? "Relatório de Manutenção por Oficina" : "Relatório de Coleta de Manutenção";
-            doc.text(tituloRelatorio, 14, 28);
-            doc.setFontSize(10);
-            
-            const nomeUsuario = usuarioLogado?.nome || 'Sistema';
-            doc.text(`Exportado por: ${nomeUsuario}`, 14, 34);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
-
-            // Helper para cores dos itens
-            const getItemColor = (item) => {
-                const colors = {
-                    'ACESSORIOS': [255, 205, 210], // Red
-                    'ALINHAMENTO / BALANCEAMENTO': [200, 230, 201], // Green
-                    'AR-CONDICIONADO': [187, 222, 251], // Blue
-                    'BORRACHARIA': [255, 249, 196], // Amber
-                    'ELETRICA INTERNA': [225, 190, 231], // Purple
-                    'ELETRICA / MECANICA - INTERNA': [225, 190, 231], // Purple
-                    'MECANICA EXTERNA': [178, 235, 242], // Cyan
-                    'MECANICA - EXTERNA': [178, 235, 242], // Cyan
-                    'MOLEIRO': [255, 224, 178], // Deep Orange
-                    'TACOGRAFO': [209, 196, 233], // Deep Purple
-                    'TAPEÇARIA': [197, 202, 233], // Indigo
-                    'THERMO KING': [248, 187, 208], // Pink
-                    'VIDROS / FECHADURAS': [220, 220, 220], // Grey
-                    'SERVIÇOS_GERAIS': [207, 216, 220], // Blue Grey
-                    'CONCESSIONARIA': [255, 224, 130], // Light Amber
-                    'ANKA': [197, 225, 165], // Light Green
-                    'TARRAXA': [179, 229, 252], // Light Blue
-                    'USIMAC': [225, 190, 231], // Light Purple
-                    'LUCAS BAU': [255, 204, 188], // Light Red
-                    'IBIFURGO': [207, 216, 220], // Blue Grey
-                    'IBIPORAN': [207, 216, 220] // Blue Grey
-                };
-                return colors[item] || [238, 238, 238];
-            };
-
-            // Helper para cores das oficinas (Gera cor baseada no nome)
-            const getOfficeColor = (name) => {
-                const colors = [
-                    [187, 222, 251], // Blue
-                    [255, 224, 178], // Orange
-                    [200, 230, 201], // Green
-                    [255, 205, 210], // Red
-                    [225, 190, 231], // Purple
-                    [178, 235, 242], // Cyan
-                    [255, 249, 196], // Yellow
-                    [248, 187, 208], // Pink
-                    [209, 196, 233], // Deep Purple
-                    [215, 204, 200]  // Brown
-                ];
-                if (!name || name === 'SEM OFICINA') return [220, 220, 220];
-                
-                let hash = 0;
-                for (let i = 0; i < name.length; i++) {
-                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                return colors[Math.abs(hash) % colors.length];
-            };
-
-            const tableBody = [];
-            let currentGroup = null;
-
-            data.forEach(row => {
-                let groupValue;
-                let groupColor;
-
-                if (tipoAgrupamento === 'OFICINA') {
-                    groupValue = row.oficinas ? row.oficinas.nome : 'SEM OFICINA';
-                    groupColor = getOfficeColor(groupValue);
-                } else {
-                    groupValue = row.item;
-                    groupColor = getItemColor(groupValue);
-                }
-
-                if (groupValue !== currentGroup) {
-                    currentGroup = groupValue;
-                    // Adiciona linha de título destacada
-                    tableBody.push([{
-                        content: currentGroup,
-                        colSpan: 9,
-                        styles: { 
-                            fillColor: groupColor, 
-                            textColor: [0, 0, 0], 
-                            fontStyle: 'bold', 
-                            halign: 'center',
-                            fontSize: 10
-                        }
-                    }]);
-                }
-
-                const coleta = row.coletas_manutencao;
-                
-                if (tipoAgrupamento === 'OFICINA') {
-                    // Layout para Oficina (Inclui o Item na linha)
-                    tableBody.push([
-                        new Date(coleta.data_hora).toLocaleString('pt-BR'),
-                        coleta.placa,
-                        coleta.modelo || '-',
-                        row.item, // Mostra o Item
-                        row.status,
-                        row.detalhes || '',
-                        row.pecas_usadas || ''
-                    ]);
-                } else {
-                    // Layout Padrão (Item é o título)
-                    tableBody.push([
-                        new Date(coleta.data_hora).toLocaleString('pt-BR'),
-                        coleta.semana,
-                        coleta.placa,
-                        coleta.modelo || '-',
-                        coleta.km,
-                        coleta.usuario,
-                        row.status,
-                        row.detalhes || '',
-                        row.pecas_usadas || ''
-                    ]);
-                }
-            });
-
-            // Adiciona linha de totalizador
-            tableBody.push([{
-                content: `Total de Registros: ${data.length}`,
-                colSpan: 9,
-                styles: { 
-                    fillColor: [220, 220, 220], 
-                    textColor: [0, 0, 0], 
-                    fontStyle: 'bold', 
-                    halign: 'right'
-                }
-            }]);
-
-            const tableHead = tipoAgrupamento === 'OFICINA' 
-                ? [['Data/Hora', 'Placa', 'Modelo', 'Item', 'Status', 'Detalhes', 'Peças']]
-                : [['Data/Hora', 'Semana', 'Placa', 'Modelo', 'KM', 'Usuário', 'Status', 'Detalhes', 'Peças']];
-
-            doc.autoTable({
-                head: tableHead,
-                body: tableBody,
-                startY: 45,
-                headStyles: { fillColor: [0, 105, 55] }, // Verde Marquespan
-                styles: { fontSize: 8 },
-                columnStyles: {
-                    // Ajuste automático das colunas
-                },
-                willDrawCell: function(data) {
-                    // Verifica se é o corpo da tabela e a coluna de Detalhes
-                    // Se agrupado por OFICINA, Detalhes é índice 5. Se padrão, é índice 7.
-                    const indexDetalhes = tipoAgrupamento === 'OFICINA' ? 5 : 7;
-                    
-                    if (data.section === 'body' && data.column.index === indexDetalhes) {
-                        const text = String(data.cell.raw || '');
-                        const regex = /(\( <-- FINALIZADO(?: ROTA)? \))/g;
-
-                        // Se contiver o marcador, desenha manualmente
-                        if (regex.test(text)) {
-                            const parts = text.split(regex);
-                            const cellWidth = data.cell.width - data.cell.padding('left') - data.cell.padding('right');
-                            const startX = data.cell.x + data.cell.padding('left');
-                            let cursorX = startX;
-                            // Ajuste fino da posição Y para alinhar com o texto padrão (aproximado)
-                            let cursorY = data.cell.y + data.cell.padding('top') + 3; 
-                            const lineHeight = 3.5; // Espaçamento para fonte tamanho 8
-
-                            doc.setFontSize(8);
-
-                            parts.forEach(part => {
-                                const isMarker = regex.test(part);
-                                doc.setTextColor(isMarker ? '#ff0000' : '#000000'); // Vermelho para o marcador, Preto para o resto
-                                
-                                // Divide por palavras para fazer a quebra de linha manual
-                                const words = part.split(/(\s+)/); 
-                                words.forEach(word => {
-                                    const wordWidth = doc.getTextWidth(word);
-                                    if (cursorX + wordWidth > startX + cellWidth) {
-                                        cursorX = startX;
-                                        cursorY += lineHeight;
-                                    }
-                                    doc.text(word, cursorX, cursorY);
-                                    cursorX += wordWidth;
-                                });
-                            });
-                            return false; // Impede a renderização padrão da célula
-                        }
-                    }
-                }
-            });
-
-            // Adicionar rodapé com numeração de páginas
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(100); // Cinza escuro
-
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-
-                // Texto da esquerda (Data de geração)
-                const dateText = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
-                doc.text(dateText, 14, pageHeight - 10);
-
-                // Texto da direita (Paginação)
-                const pageText = `Página ${i} de ${pageCount}`;
-                const textWidth = doc.getTextWidth(pageText);
-                doc.text(pageText, pageWidth - 14 - textWidth, pageHeight - 10);
-            }
-
-            doc.save(`Relatorio_Manutencao_${new Date().toISOString().slice(0,10)}.pdf`);
-
         } catch (err) {
             console.error('Erro ao exportar PDF:', err);
             alert('Erro ao gerar PDF: ' + err.message);
@@ -2996,7 +1860,6 @@ const ColetarManutencaoUI = {
             btn.innerHTML = originalText;
         }
     },
-
     // --- FUNÇÕES DE RASCUNHO (PERSISTÊNCIA) ---
 
     salvarRascunho() {

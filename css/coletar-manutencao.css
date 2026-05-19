@@ -385,6 +385,73 @@
     width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; border: 1px solid #ddd;
 }
 
+.status-pendente {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c6cb !important;
+}
+
+.status-finalizado-rota {
+    background-color: #d4edda !important;
+    color: #0b3314 !important;
+    border: 1px solid #c3e6cb !important;
+}
+
+.status-finalizado {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+    border: 1px solid #c3e6cb !important;
+}
+
+.status-internado {
+    background-color: #cce5ff !important;
+    color: #004085 !important;
+    border: 1px solid #b8daff !important;
+}
+
+.status-checkin-oficina {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+    border: 1px solid #ffeeba !important;
+}
+
+.status-checkin-rota {
+    background-color: #ffe0b2 !important;
+    color: #d35400 !important;
+    border: 1px solid #ffcc80 !important;
+}
+
+option[value="PENDENTE"] {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+option[value="FINALIZADO"] {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+option[value="INTERNADO"] {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+option[value="CHECK-IN OFICINA"] {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+option[value="CHECK-IN ROTA"] {
+    background-color: #ffe0b2;
+    color: #d35400;
+}
+
+option[value="FINALIZADO ROTA"] {
+    background-color: #d4edda;
+    color: #0b3314;
+    font-weight: bold;
+}
+
 /* Legenda de Status */
 .status-legend-container {
     display: flex;
