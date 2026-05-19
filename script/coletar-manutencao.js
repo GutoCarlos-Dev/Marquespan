@@ -8,11 +8,10 @@ import { renderizarTabelaRelatorio } from './coletar-manutencao/relatorio-tabela
 import { buscarDadosRelatorio } from './coletar-manutencao/relatorio-service.js';
 import {
     calcularValorTotalChecklist,
-    formatarMoedaInput,
     resetarChecklistModal,
-    statusExigeOficina,
-    statusExigeValor
+    statusExigeOficina
 } from './coletar-manutencao/checklist.js';
+import { carregarChecklistDinamico as carregarChecklistDinamicoRender } from './coletar-manutencao/checklist-render.js';
 
 const ColetarManutencaoUI = {
     init() {
@@ -161,173 +160,14 @@ const ColetarManutencaoUI = {
 
     // Carrega dinamicamente os itens do checklist e as oficinas relacionadas
     async carregarChecklistDinamico() {
-        const container = document.getElementById('checklistContainer') || document.querySelector('.checklist-container');
-        if (!container) return;
-
-        // Lista de segurança (Fallback) caso o banco de dados falhe ou a tabela não exista
-        const STATIC_ITEMS = [
-            'ACESSORIOS', 'ALINHAMENTO / BALANCEAMENTO', 'AR-CONDICIONADO', 'BORRACHARIA',
-            'ELETRICA / MECANICA - INTERNA', 'MECANICA - EXTERNA', 'MOLEIRO', 'TACOGRAFO', 'TAPEÇARIA',
-            'THERMO KING', 'VIDROS / FECHADURAS', 'SERVIÇOS_GERAIS', 'CONCESSIONARIA',
-            'ANKA', 'TARRAXA', 'USIMAC', 'LUCAS BAU', 'IBIFURGO', 'IBIPORAN'
-        ];
-
-        try {
-            // 1. Tentar Buscar Itens Verificadores do Banco
-            let { data: itens, error: errorItens } = await supabaseClient
-                .from('itens_verificacao')
-                .select('*')
-                .order('descricao');
-
-            // Se der erro (ex: tabela não existe 404), usa a lista estática
-            if (errorItens || !itens || itens.length === 0) {
-                console.warn('Usando lista estática de checklist (Tabela não encontrada ou vazia).', errorItens);
-                itens = STATIC_ITEMS.map((desc, index) => ({ id: `static-${index}`, descricao: desc }));
+        return carregarChecklistDinamicoRender({
+            callbacks: {
+                onCalcularValorTotal: () => this.calcularValorTotal(),
+                onUpdateStatusColor: (select) => this.updateStatusColor(select),
+                onAplicarRestricoes: () => this.aplicarRestricoesDeNivelNoModal()
             }
-
-            // 2. Tentar Buscar Oficinas (pode falhar silenciosamente se não existir)
-            const { data: oficinas, error: errorOficinas } = await supabaseClient
-                .from('oficinas')
-                .select('id, nome, filial, item_verificador_id');
-
-            // Pega a filial do usuário logado para filtrar as oficinas
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
-
-            // Agrupar oficinas por item_verificador para acesso rápido
-            const oficinasPorItem = {};
-            if (oficinas) {
-                // Filtra as oficinas pela filial do usuário. Se o usuário não tiver filial, mostra todas.
-                // Oficinas sem filial definida são consideradas "globais" e aparecem para todos.
-                const oficinasFiltradas = filialUsuario
-                    ? oficinas.filter(of => !of.filial || of.filial === filialUsuario)
-                    : oficinas;
-
-                oficinasFiltradas.forEach(oficina => {
-                    const key = oficina.item_verificador_id; 
-                    if (!oficinasPorItem[key]) oficinasPorItem[key] = [];
-                    oficinasPorItem[key].push(oficina);
-                });
-            }
-
-            container.innerHTML = '';
-
-            itens.forEach(item => {
-                // Wrapper para garantir zebragem correta
-                const wrapper = document.createElement('div');
-                wrapper.className = 'checklist-row-wrapper';
-
-                const div = document.createElement('div');
-                div.className = 'checklist-item';
-                div.dataset.item = item.descricao; // Mantém compatibilidade com scripts existentes
-                div.dataset.itemId = item.id;
-
-                // Constrói as opções de oficina para este item
-                const oficinasDoItem = oficinasPorItem[item.id] || oficinasPorItem[item.descricao] || [];
-                let oficinaOptions = '<option value="">Selecione a Oficina</option>';
-                oficinasDoItem.forEach(of => {
-                    oficinaOptions += `<option value="${of.id}">${of.nome}</option>`;
-                });
-
-                div.innerHTML = `
-                    <label class="checklist-label">${item.descricao}</label>
-                    <input type="text" class="checklist-details" placeholder="Detalhes...">
-                    <select class="checklist-status">
-                        <option value="" selected>-</option>
-                        <option value="PENDENTE">PENDENTE</option>
-                        <option value="FINALIZADO">FINALIZADO</option>
-                        <option value="INTERNADO">INTERNADO</option>
-                        <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
-                        <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
-                        <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
-                    </select>
-                    <div class="oficina-selector-wrapper" style="display: none; margin-top: 5px;">
-                        <select class="oficina-selector" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f8ff;">
-                            ${oficinaOptions}
-                        </select>
-                    </div>
-                    <div class="valor-wrapper" style="display: none; margin-top: 5px;">
-                        <input type="text" class="checklist-valor" placeholder="R$ 0,00" value="R$ 0,00" style="width: 100%; padding: 5px; border: 1px solid #28a745; border-radius: 4px; color: #155724; font-weight: bold;">
-                    </div>
-                `;
-                wrapper.appendChild(div);
-
-                // Lógica para mostrar/ocultar o seletor de oficina
-                const statusSelect = div.querySelector('.checklist-status');
-                const oficinaWrapper = div.querySelector('.oficina-selector-wrapper');
-                const oficinaSelect = div.querySelector('.oficina-selector');
-                const valorWrapper = div.querySelector('.valor-wrapper');
-                const valorInput = div.querySelector('.checklist-valor');
-
-                statusSelect.addEventListener('change', (e) => {
-                    // Resetar visualização
-                    oficinaWrapper.style.display = 'none';
-                    oficinaSelect.required = false;
-
-                    const val = e.target.value;
-
-                    if (statusExigeOficina(val)) {
-                        oficinaWrapper.style.display = 'block';
-                        // Só exige seleção se houver oficinas cadastradas para este item
-                        if (oficinasDoItem.length > 0) {
-                            oficinaSelect.required = true;
-                        }
-                    } else {
-                        oficinaSelect.value = '';
-                    }
-
-                    // Lógica para Valor (FINALIZADO ou FINALIZADO ROTA)
-                    if (statusExigeValor(val)) {
-                        valorWrapper.style.display = 'block';
-                    } else {
-                        valorWrapper.style.display = 'none';
-                        valorInput.value = 'R$ 0,00';
-                    }
-                    this.calcularValorTotal();
-
-                    // Atualiza cor
-                    this.updateStatusColor(e.target);
-                });
-
-                // Formatação de Moeda e Cálculo
-                valorInput.addEventListener('input', (e) => {
-                    e.target.value = formatarMoedaInput(e.target.value);
-                    this.calcularValorTotal();
-                });
-
-                // Recria o campo especial para ELETRICA INTERNA se necessário
-                if (item.descricao === 'ELETRICA INTERNA' || item.descricao === 'ELETRICA / MECANICA - INTERNA') {
-                    const extraDiv = document.createElement('div');
-                    extraDiv.id = 'extra-eletrica-interna';
-                    extraDiv.className = 'checklist-extra hidden'; // Inicialmente oculto
-                    extraDiv.style.cssText = "margin-top: -10px; padding: 15px; background-color: #e8f4fd; border: 1px solid #b8daff; border-radius: 0 0 8px 8px; border-top: none;";
-                    extraDiv.innerHTML = `
-                        <label style="font-weight: bold; color: #0056b3; display: block; margin-bottom: 5px;"><i class="fas fa-cogs"></i> Peças Usadas (Mecanica/Elétrica):</label>
-                        <input type="text" class="checklist-pecas" placeholder="Informe as peças utilizadas..." style="width: 100%; padding: 8px; border: 1px solid #99caff; border-radius: 4px;" oninput="this.value = this.value.toUpperCase()">
-                    `;
-                    wrapper.appendChild(extraDiv);
-                    
-                    statusSelect.addEventListener('change', (e) => {
-                         if (e.target.value === 'FINALIZADO') {
-                             extraDiv.classList.remove('hidden');
-                         } else {
-                             extraDiv.classList.add('hidden');
-                             extraDiv.querySelector('input').value = '';
-                         }
-                    });
-                }
-
-                container.appendChild(wrapper);
-            });
-
-            // Aplica restrições de nível após carregar os itens
-            this.aplicarRestricoesDeNivelNoModal();
-
-        } catch (err) {
-            console.error('Erro crítico no script do checklist:', err);
-        }
+        });
     },
-
     // Calcula o valor total dos itens do checklist
     calcularValorTotal() {
         const total = calcularValorTotalChecklist(document);
