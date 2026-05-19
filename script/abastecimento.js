@@ -9,6 +9,12 @@ import {
     calcularEstoqueAtual
 } from './abastecimento/estoque-service.js';
 import {
+    montarPayloadExterno,
+    montarPayloadPosto,
+    montarPayloadsEntrada,
+    montarPayloadsSaida
+} from './abastecimento/formularios-service.js';
+import {
     baixarModeloImportacaoExterno as gerarModeloImportacaoExterno,
     baixarModeloImportacaoSaida as gerarModeloImportacaoSaida
 } from './abastecimento/modelos-importacao.js';
@@ -26,7 +32,9 @@ import { importarPostos } from './abastecimento/importacao-postos.js';
 import { montarPayloadsImportacaoSaida } from './abastecimento/importacao-saida.js';
 import {
     buscarBicos,
+    buscarFiliais,
     buscarMotoristasAtivos,
+    buscarPostosParaDatalist,
     buscarRotas,
     buscarTanques,
     buscarVeiculos
@@ -1052,67 +1060,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = this.btnSalvar.innerHTML;
             this.btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTRANDO...';
 
-            const totalNota = parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0;
-            const vlr = parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0;
-            const notaFiscal = this.notaInput.value;
-
-            if (totalNota <= 0 || vlr <= 0) {
-                alert('Quantidade Total e Valor por Litro devem ser maiores que zero.');
-                this.btnSalvar.disabled = false;
-                this.btnSalvar.innerHTML = originalText;
-                return;
-            }
-
-            const linhas = this.distribuicaoContainer.querySelectorAll('.distribuicao-row');
-            if (linhas.length === 0) {
-                alert('Adicione pelo menos um tanque para a distribuição.');
-                this.btnSalvar.disabled = false;
-                this.btnSalvar.innerHTML = originalText;
-                return;
-            }
-
-            const payloads = [];
-            const tanquesUsados = new Set();
-            let totalDistribuido = 0;
-
-            for (const linha of linhas) {
-                const tanqueId = linha.querySelector('.tanque-select').value;
-                const qtd = parseFloat(linha.querySelector('.tanque-qtd').value.replace(',', '.')) || 0;
-
-                if (!tanqueId || isNaN(qtd) || qtd <= 0) {
-                    alert('Todas as linhas de distribuição devem ter um tanque e uma quantidade válida.');
-                    this.btnSalvar.disabled = false;
-                    this.btnSalvar.innerHTML = originalText;
-                    return;
-                }
-                if (tanquesUsados.has(tanqueId)) {
-                    alert('Não é permitido selecionar o mesmo tanque mais de uma vez.');
-                    this.btnSalvar.disabled = false;
-                    this.btnSalvar.innerHTML = originalText;
-                    return;
-                }
-
-                tanquesUsados.add(tanqueId);
-                totalDistribuido += qtd;
-
-                payloads.push({
-                    data: this.dataInput.value ? new Date(this.dataInput.value).toISOString() : new Date().toISOString(),
-                    numero_nota: notaFiscal,
-                    tanque_id: parseInt(tanqueId),
-                    qtd_litros: qtd,
-                    valor_litro: vlr,
-                    valor_total: qtd * vlr,
+            let payloads;
+            try {
+                payloads = montarPayloadsEntrada({
+                    totalNota: parseFloat(this.qtdTotalNotaInput.value.replace(',', '.')) || 0,
+                    valorLitro: parseFloat(this.vlrLitroInput.value.replace(',', '.')) || 0,
+                    notaFiscal: this.notaInput.value,
+                    data: this.dataInput.value,
+                    linhas: Array.from(this.distribuicaoContainer.querySelectorAll('.distribuicao-row')),
                     usuario: this.getUsuarioLogado()
                 });
-            }
-
-            if (Math.abs(totalDistribuido - totalNota) > 0.001) {
-                alert(`A soma dos litros distribuídos (${totalDistribuido.toFixed(2)} L) não corresponde à Quantidade Total da Nota (${totalNota.toFixed(2)} L).`);
+            } catch (error) {
+                alert(error.message);
                 this.btnSalvar.disabled = false;
                 this.btnSalvar.innerHTML = originalText;
                 return;
             }
-
             try {
                 // Se estiver editando, primeiro apaga os registros antigos da mesma nota
                 if (this.editingIdInput.value) {
@@ -1260,66 +1223,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = this.btnSalvarSaida.innerHTML;
             this.btnSalvarSaida.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
 
-            // Validação da Placa
-            const placaInput = this.saidaVeiculo.value.toUpperCase();
-            const veiculoValido = this.veiculosDisponiveis.some(v => v.placa === placaInput);
-            if (!veiculoValido) {
-                alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
-                this.saidaVeiculo.focus();
+            let payloads;
+            let commonData;
+            let kmValue;
+            let placaInput;
+            let veiculoObj;
+            let usuario;
+
+            try {
+                ({ payloads, commonData, kmValue, placaInput, veiculoObj, usuario } = montarPayloadsSaida({
+                    veiculosDisponiveis: this.veiculosDisponiveis,
+                    dataHora: this.saidaDataHora.value,
+                    placa: this.saidaVeiculo.value,
+                    rota: this.saidaRota.value,
+                    motorista: this.saidaMotorista.value,
+                    km: this.saidaKm.value,
+                    usuario: this.getUsuarioLogado(),
+                    bico1: this.saidaBico.value,
+                    litros1: this.saidaLitros.value,
+                    bico2: this.saidaBico2.value,
+                    litros2: this.saidaLitros2.value,
+                    bico2Visivel: !this.camposBico2.classList.contains('hidden')
+                }));
+            } catch (error) {
+                alert(error.message);
+                if (error.message.startsWith('Placa')) this.saidaVeiculo.focus();
                 this.btnSalvarSaida.disabled = false;
                 this.btnSalvarSaida.innerHTML = originalText;
                 return;
             }
-
-            const kmValue = parseFloat(this.saidaKm.value);
-            const usuario = this.getUsuarioLogado();
-            const commonData = {
-                data_hora: this.saidaDataHora.value ? new Date(this.saidaDataHora.value).toISOString() : new Date().toISOString(),
-                veiculo_placa: placaInput,
-                rota: this.saidaRota.value,
-                motorista: this.saidaMotorista.value,
-                km_atual: kmValue,
-                usuario: usuario
-            };
-
-            const payloads = [];
-
-            // Bico 1 (Obrigatório)
-            const bico1 = parseInt(this.saidaBico.value);
-            const litros1 = parseFloat(this.saidaLitros.value);
-            if (bico1 && litros1 > 0) {
-                payloads.push({ ...commonData, bico_id: bico1, qtd_litros: litros1 });
-            } else {
-                alert('Informe o Bico e a Quantidade de Litros para o primeiro abastecimento.');
-                this.btnSalvarSaida.disabled = false;
-                this.btnSalvarSaida.innerHTML = originalText;
-                return;
-            }
-
-            // Bico 2 (Opcional - se visível e preenchido)
-            const isBico2Visible = !this.camposBico2.classList.contains('hidden');
-            const bico2 = parseInt(this.saidaBico2.value);
-            const litros2 = parseFloat(this.saidaLitros2.value);
-
-            if (isBico2Visible && bico2 && litros2 > 0) {
-                if (bico1 === bico2) {
-                    alert('Não é possível utilizar o mesmo bico duas vezes no mesmo registro.');
-                    this.btnSalvarSaida.disabled = false;
-                    this.btnSalvarSaida.innerHTML = originalText;
-                    return;
-                }
-                
-                // Adiciona um offset de 1 segundo para o bico 2 para evitar conflito de cálculo no relatório de KM rodado
-                let dataBico2 = new Date(commonData.data_hora);
-                dataBico2.setSeconds(dataBico2.getSeconds() + 1);
-                
-                payloads.push({ ...commonData, data_hora: dataBico2.toISOString(), bico_id: bico2, qtd_litros: litros2 });
-            }
-
             try {
                 // REGISTRA NA TABELA DE COLETA DE KM (Odometer History)
                 if (!isNaN(kmValue) && kmValue > 0) {
-                    const veiculoObj = this.veiculosDisponiveis.find(v => v.placa === placaInput);
                     await supabaseClient.from('coleta_km').upsert([{
                         data_coleta: commonData.data_hora,
                         placa: placaInput,
@@ -1472,9 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadFiliaisOptions() {
             try {
-                const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
-                if (error) throw error;
-                
+                const data = await buscarFiliais(supabaseClient);
                 this.filiaisCache = data || []; // Armazena para uso no filtro inteligente de postos
 
                 const options = '<option value="">Selecione a Filial</option>' + 
@@ -1530,42 +1463,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async loadMotoristasOptions() {
-            if (!this.listaMotoristasExt) return;
-            try {
-                const { data, error } = await supabaseClient
-                    .from('funcionario')
-                    .select('nome')
-                    .ilike('funcao', '%Motorista%')
-                    .eq('status', 'Ativo')
-                    .order('nome');
-
-                if (error) throw error;
-
-                this.listaMotoristasExt.innerHTML = (data || []).map(m => `<option value="${m.nome}"></option>`).join('');
-            } catch (error) {
-                console.error('Erro ao carregar motoristas para datalist externo:', error);
-            }
-        },
-
-
         async loadRotasOptions() {
             const datalist = document.getElementById('listaRotasExternas');
             if (!datalist) return;
             
             try {
-                const { data, error } = await supabaseClient
-                    .from('rotas')
-                    .select('numero')
-                    .order('numero');
-
-                if (error) throw error;
-
+                const rotas = await buscarRotas(supabaseClient);
                 datalist.innerHTML = '';
-                // Ordena numericamente se possível
-                const sortedData = (data || []).sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' }));
-                
-                sortedData.forEach(r => {
+                rotas.forEach(r => {
                     const option = document.createElement('option');
                     option.value = r.numero;
                     datalist.appendChild(option);
@@ -1574,26 +1479,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro ao carregar rotas:', error);
             }
         },
-
         async loadMotoristasOptions() {
             if (!this.listaMotoristasExt) return;
             try {
-                const { data, error } = await supabaseClient
-                    .from('funcionario')
-                    .select('nome')
-                    .ilike('funcao', '%Motorista%')
-                    .eq('status', 'Ativo')
-                    .order('nome');
-
-                if (error) throw error;
-
-                this.listaMotoristasExt.innerHTML = (data || []).map(m => `<option value="${m.nome}"></option>`).join('');
+                const motoristas = await buscarMotoristasAtivos(supabaseClient);
+                this.listaMotoristasExt.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
             } catch (error) {
                 console.error('Erro ao carregar motoristas para datalist externo:', error);
             }
         },
-
-
         async loadPostosOptions() {
             const datalist = document.getElementById('listaPostosExternos');
             if (!datalist) return;
@@ -1618,39 +1512,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // --- CORREÇÃO: Busca todos os postos, contornando o limite padrão de 1000 registros ---
-                let allPostos = [];
-                let from = 0;
-                const step = 1000;
-                let keepFetching = true;
-
-                while(keepFetching) {
-                    let query = supabaseClient // Adiciona valor_negociado à busca
-                        .from('postos')
-                        .select('id, razao_social, cnpj, valor_negociado')
-                        .order('razao_social');
-
-                    if (filiaisParaFiltrar.length > 0) {
-                        query = query.in('filial', filiaisParaFiltrar);
-                    }
-
-                    const { data, error } = await query.range(from, from + step - 1);
-                    
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                        allPostos.push(...data);
-                        if (data.length < step) {
-                            keepFetching = false; // Última página
-                        } else {
-                            from += step; // Prepara para a próxima página
-                        }
-                    } else {
-                        keepFetching = false; // Não há mais dados
-                    }
-                }
-                this.postosCache = allPostos || []; // Cache para lookup de ID ao salvar
-
+                this.postosCache = await buscarPostosParaDatalist(supabaseClient, filiaisParaFiltrar);
                 datalist.innerHTML = '';
                 this.postosCache.forEach(p => {
                     const option = document.createElement('option');
@@ -1812,50 +1674,29 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleExtSubmit(e) {
             e.preventDefault();
             
-            // Resolver ID do Posto a partir do texto do input
-            let postoId = null;
-            let valorNegociadoSnapshot = null;
-            const postoVal = this.extPosto.value;
-            if (this.postosCache) {
-                const found = this.postosCache.find(p => `${p.razao_social} (${p.cnpj || 'S/CNPJ'})` === postoVal);
-                if (found) {
-                    postoId = found.id;
-                    valorNegociadoSnapshot = found.valor_negociado;
-                }
-            }
-
-            if (!postoId) return alert('Selecione um posto válido da lista.');
-
             const btnSubmit = this.formExt.querySelector('button[type="submit"]');
             btnSubmit.disabled = true;
             const originalText = btnSubmit.innerHTML;
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
 
             try {
-                const payload = {
-                    data_hora: this.extDataHora.value ? new Date(this.extDataHora.value).toISOString() : new Date().toISOString(),
+                const payload = montarPayloadExterno({
+                    postosCache: this.postosCache,
+                    postoTexto: this.extPosto.value,
+                    dataHora: this.extDataHora.value,
                     filial: this.extFilial.value,
-                    posto_id: postoId,
-                    valor_negociado: valorNegociadoSnapshot, // Salva o valor da negociação ativa hoje
-                    veiculo_placa: this.extVeiculo.value.toUpperCase(),
-                    tipo_veiculo: this.extTipo.value,
-                    km_atual: parseFloat(this.extKmAtual.value),
-                    km_anterior: parseFloat(this.extKmAnterior.value),
-                    km_rodado: parseFloat(this.extKmRodado.value),
-                    litros: parseFloat(this.extLitros.value),
-                    valor_total: parseFloat(this.extValorTotal.value),
-                    valor_unitario: parseFloat(this.extValorUnitario.value),
-                    motorista: this.extMotorista.value.trim() ? this.extMotorista.value.trim().toUpperCase() : null,
+                    veiculo: this.extVeiculo.value,
+                    tipo: this.extTipo.value,
+                    kmAtual: this.extKmAtual.value,
+                    kmAnterior: this.extKmAnterior.value,
+                    kmRodado: this.extKmRodado.value,
+                    litros: this.extLitros.value,
+                    valorTotal: this.extValorTotal.value,
+                    valorUnitario: this.extValorUnitario.value,
+                    motorista: this.extMotorista.value,
                     rota: this.extRota.value,
                     usuario: this.getUsuarioLogado()
-                };
-
-                if (!payload.posto_id || !payload.veiculo_placa || !payload.km_atual) {
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = originalText;
-                    return alert('Preencha os campos obrigatórios.');
-                }
-
+                });
                 let error;
                 if (this.extEditingId) {
                     // Atualizar
@@ -1878,6 +1719,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.resetExtForm();
                     this.renderExtTable();
                 }
+            } catch (error) {
+                alert(error.message);
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = originalText;
@@ -2095,16 +1938,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const payload = {
+            const payload = montarPayloadPosto({
                 filial: this.postoFilial.value,
-                razao_social: this.postoRazao.value,
+                razaoSocial: this.postoRazao.value,
                 cnpj: cnpjValue,
                 cidade: this.postoCidade.value,
                 uf: this.postoUf.value,
-                faturado: this.postoFaturado.value === 'Sim',
-                valor_negociado: parseFloat(this.postoValorNegociadoInput.value) || null
-            };
-
+                faturado: this.postoFaturado.value,
+                valorNegociado: this.postoValorNegociadoInput.value
+            });
             let error;
             if (this.postoEditingId) {
                 // Atualizar
