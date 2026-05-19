@@ -70,11 +70,19 @@ async function carregarNiveis() {
         // Limpa opções exceto a primeira
         selectNivel.innerHTML = '<option value="" disabled selected>Selecione o nível</option>';
         
-        // Adiciona "Administrador" manualmente se não vier do banco, pois é padrão
-        const niveis = new Set(data.map(n => n.nivel));
-        niveis.add('Administrador');
+        const niveis = new Map();
+        (data || []).forEach(({ nivel }) => {
+            const valor = String(nivel || '').trim();
+            if (!valor) return;
 
-        Array.from(niveis).sort().forEach(nivel => {
+            const chave = valor.toLowerCase();
+            const atual = niveis.get(chave);
+            if (!atual || valor === chave) {
+                niveis.set(chave, valor);
+            }
+        });
+
+        Array.from(niveis.values()).sort((a, b) => a.localeCompare(b)).forEach(nivel => {
             const option = document.createElement('option');
             option.value = nivel;
             option.textContent = nivel;
@@ -84,7 +92,7 @@ async function carregarNiveis() {
     } catch (err) {
         console.error('Erro ao carregar níveis:', err);
         // Fallback básico
-        selectNivel.innerHTML += '<option value="Administrador">Administrador</option><option value="Usuario">Usuário</option>';
+        selectNivel.innerHTML += '<option value="administrador">administrador</option><option value="Usuario">Usuário</option>';
     }
 }
 
