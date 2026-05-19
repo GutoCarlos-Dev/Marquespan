@@ -15,6 +15,52 @@ let titulosGridData = []; // Dados originais para o grid da aba títulos
 let titulosSort = { field: 'titulo', asc: true };
 let tituloTabEditingId = null;
 
+function limparNomeArquivoStorage(nome) {
+    return String(nome || 'arquivo')
+        .replace(/[\\/:*?"<>|#%{}^~[\]`]/g, '_')
+        .trim() || 'arquivo';
+}
+
+function gerarTokenArquivo() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function criarCaminhoArquivo(idManutencao, nomeArquivo, indice = 0) {
+    return `${idManutencao}/${Date.now()}_${indice}_${gerarTokenArquivo()}_${limparNomeArquivoStorage(nomeArquivo)}`;
+}
+
+function criarNomeArquivoUnico(nomeArquivo, nomesUsados) {
+    const nomeBase = String(nomeArquivo || 'arquivo');
+    if (!nomesUsados.has(nomeBase)) {
+        nomesUsados.add(nomeBase);
+        return nomeBase;
+    }
+
+    const ponto = nomeBase.lastIndexOf('.');
+    const base = ponto > 0 ? nomeBase.slice(0, ponto) : nomeBase;
+    const extensao = ponto > 0 ? nomeBase.slice(ponto) : '';
+    let contador = 2;
+    let candidato = `${base} (${contador})${extensao}`;
+
+    while (nomesUsados.has(candidato)) {
+        contador += 1;
+        candidato = `${base} (${contador})${extensao}`;
+    }
+
+    nomesUsados.add(candidato);
+    return candidato;
+}
+
+function mapearArquivoBanco(arquivo) {
+    return {
+        nome: arquivo.nome_arquivo,
+        path: arquivo.caminho_arquivo,
+        isZipped: arquivo.is_zipped,
+        originalNames: arquivo.original_names
+    };
+}
+
 // 🔀 Alternância de painéis internos
 function mostrarPainelInterno(id) {
   document.querySelectorAll('.painel-conteudo').forEach(div => {
@@ -535,6 +581,8 @@ window.removerArquivoExistente = (index) => {
 };
 
 async function salvarArquivosManutencao(idManutencao) {
+    const caminhosParaDeletar = [...arquivosParaDeletar];
+
     // 1. Upload de novos arquivos
     // 2. Excluir arquivos do Supabase Storage que foram marcados para remoção
     if (arquivosParaDeletar.length > 0) {
@@ -546,13 +594,27 @@ async function salvarArquivosManutencao(idManutencao) {
             console.error('Erro ao excluir arquivos do Storage:', storageDeleteError);
             throw new Error('Erro ao excluir alguns arquivos do armazenamento: ' + (storageDeleteError.message || JSON.stringify(storageDeleteError)));
         }
-        arquivosParaDeletar = []; // Limpa a lista após tentar a exclusão
+        const { error: dbDeleteError } = await supabaseClient
+            .from('manutencao_arquivos')
+            .delete()
+            .eq('id_manutencao', idManutencao)
+            .in('caminho_arquivo', caminhosParaDeletar);
+
+        if (dbDeleteError) {
+            console.error('Erro ao excluir referencias dos arquivos:', dbDeleteError);
+            throw new Error('Erro ao excluir referencia dos arquivos no banco: ' + (dbDeleteError.message || JSON.stringify(dbDeleteError)));
+        }
+
+        arquivosParaDeletar = [];
     }
 
     const novosRegistros = [];
+    const nomesUsados = new Set(arquivosExistentes.map(a => a.nome).filter(Boolean));
+    let indiceUpload = 0;
     
     for (const file of arquivosParaUpload) {
-        const fileName = `${idManutencao}/${Date.now()}_${file.name}`; // Use file.name from the object
+        const nomeArquivo = criarNomeArquivoUnico(file.name, nomesUsados);
+        const fileName = criarCaminhoArquivo(idManutencao, nomeArquivo, indiceUpload++);
         const { data, error } = await supabaseClient.storage
             .from('manutencao_arquivos')
             .upload(fileName, file.file); // Use file.file from the object
@@ -563,7 +625,7 @@ async function salvarArquivosManutencao(idManutencao) {
         } else {
             novosRegistros.push({
                 id_manutencao: idManutencao,
-                nome_arquivo: file.name, // Store the name used for upload (e.g., zip name)
+                nome_arquivo: nomeArquivo,
                 is_zipped: file.isZipped, // Store if it's a zipped file
                 original_names: file.originalNames || null, // Store original names if zipped
                 caminho_arquivo: data.path
@@ -571,32 +633,9 @@ async function salvarArquivosManutencao(idManutencao) {
         }
     }
 
-    // 2. Atualizar tabela de arquivos (Remove tudo e insere o estado atual)
-    // Nota: Isso mantém os arquivos físicos no Storage mesmo se removidos da lista, 
-    // para limpeza real seria necessário deletar do storage também.
-    
-    // Remove referências antigas
-    const { error: deleteError } = await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
-    if (deleteError) {
-        console.error('Erro ao limpar referências antigas:', deleteError);
-        throw new Error('Erro ao sincronizar arquivos no banco de dados: ' + (deleteError.message || JSON.stringify(deleteError)));
-    }
-
-    // Prepara lista final (Existentes + Novos)
-    const listaFinal = [
-        ...arquivosExistentes.map(a => ({ 
-            id_manutencao: idManutencao,
-            nome_arquivo: a.nome, 
-            caminho_arquivo: a.path, 
-            is_zipped: a.isZipped, 
-            original_names: a.originalNames 
-        })),
-        ...novosRegistros
-    ];
-
     let insertedFilesData = [];
-    if (listaFinal.length > 0) {
-        const { data: insertedData, error: insertError } = await supabaseClient.from('manutencao_arquivos').insert(listaFinal).select('*');
+    if (novosRegistros.length > 0) {
+        const { data: insertedData, error: insertError } = await supabaseClient.from('manutencao_arquivos').insert(novosRegistros).select('*');
         if (insertError) {
             console.error('Erro ao salvar metadados dos arquivos:', insertError);
             alert('Erro ao salvar referência do arquivo no banco: ' + (insertError.message || JSON.stringify(insertError)));
@@ -617,7 +656,10 @@ async function salvarArquivosManutencao(idManutencao) {
     // Limpa lista de upload após salvar
     arquivosParaUpload = [];
     // Recarrega lista de existentes com o que acabou de ser salvo
-    arquivosExistentes = insertedFilesData.map(a => ({ nome: a.nome_arquivo, path: a.caminho_arquivo, isZipped: a.is_zipped, originalNames: a.original_names }));
+    arquivosExistentes = [
+        ...arquivosExistentes,
+        ...insertedFilesData.map(mapearArquivoBanco)
+    ];
     renderizarListaArquivos();
 }
 

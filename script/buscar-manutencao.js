@@ -18,6 +18,52 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
+function limparNomeArquivoStorage(nome) {
+    return String(nome || 'arquivo')
+        .replace(/[\\/:*?"<>|#%{}^~[\]`]/g, '_')
+        .trim() || 'arquivo';
+}
+
+function gerarTokenArquivo() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function criarCaminhoArquivo(idManutencao, nomeArquivo, indice = 0) {
+    return `${idManutencao}/${Date.now()}_${indice}_${gerarTokenArquivo()}_${limparNomeArquivoStorage(nomeArquivo)}`;
+}
+
+function criarNomeArquivoUnico(nomeArquivo, nomesUsados) {
+    const nomeBase = String(nomeArquivo || 'arquivo');
+    if (!nomesUsados.has(nomeBase)) {
+        nomesUsados.add(nomeBase);
+        return nomeBase;
+    }
+
+    const ponto = nomeBase.lastIndexOf('.');
+    const base = ponto > 0 ? nomeBase.slice(0, ponto) : nomeBase;
+    const extensao = ponto > 0 ? nomeBase.slice(ponto) : '';
+    let contador = 2;
+    let candidato = `${base} (${contador})${extensao}`;
+
+    while (nomesUsados.has(candidato)) {
+        contador += 1;
+        candidato = `${base} (${contador})${extensao}`;
+    }
+
+    nomesUsados.add(candidato);
+    return candidato;
+}
+
+function mapearArquivoBanco(arquivo) {
+    return {
+        nome: arquivo.nome_arquivo,
+        path: arquivo.caminho_arquivo,
+        isZipped: arquivo.is_zipped,
+        originalNames: arquivo.original_names
+    };
+}
+
 // Paginação removida para exibir todos os resultados
 function preencherUsuarioLogado() {
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -1169,16 +1215,29 @@ async function salvarArquivosManutencao(idManutencao) {
 
     try {
         // 1. Excluir arquivos marcados para remoção no Storage
+        const caminhosParaDeletar = [...arquivosParaDeletar];
         if (arquivosParaDeletar.length > 0) {
             await supabaseClient.storage.from('manutencao_arquivos').remove(arquivosParaDeletar);
+
+            const { error: dbDeleteError } = await supabaseClient
+                .from('manutencao_arquivos')
+                .delete()
+                .eq('id_manutencao', idManutencao)
+                .in('caminho_arquivo', caminhosParaDeletar);
+
+            if (dbDeleteError) throw dbDeleteError;
+
             arquivosParaDeletar = [];
         }
 
         const novosRegistros = [];
+        const nomesUsados = new Set(arquivosExistentes.map(a => a.nome).filter(Boolean));
+        let indiceUpload = 0;
         
         // 2. Upload de novos arquivos
         for (const file of arquivosParaUpload) {
-            const fileName = `${idManutencao}/${Date.now()}_${file.name}`;
+            const nomeArquivo = criarNomeArquivoUnico(file.name, nomesUsados);
+            const fileName = criarCaminhoArquivo(idManutencao, nomeArquivo, indiceUpload++);
             const { data, error } = await supabaseClient.storage
                 .from('manutencao_arquivos')
                 .upload(fileName, file.file);
@@ -1186,7 +1245,7 @@ async function salvarArquivosManutencao(idManutencao) {
             if (!error) {
                 novosRegistros.push({
                     id_manutencao: idManutencao,
-                    nome_arquivo: file.name,
+                    nome_arquivo: nomeArquivo,
                     is_zipped: file.isZipped,
                     original_names: file.originalNames || null,
                     caminho_arquivo: data.path
@@ -1194,37 +1253,19 @@ async function salvarArquivosManutencao(idManutencao) {
             }
         }
 
-        // 3. Sincronizar banco de dados (Remover referências antigas e inserir estado atual)
-        await supabaseClient.from('manutencao_arquivos').delete().eq('id_manutencao', idManutencao);
-
-        const listaFinal = [
-            ...arquivosExistentes.map(a => ({ 
-                id_manutencao: idManutencao,
-                nome_arquivo: a.nome, 
-                caminho_arquivo: a.path, 
-                is_zipped: a.isZipped, 
-                original_names: a.originalNames 
-            })),
-            ...novosRegistros
-        ];
-
-        if (listaFinal.length > 0) {
+        if (novosRegistros.length > 0) {
             const { data: insertedData, error: insertError } = await supabaseClient
                 .from('manutencao_arquivos')
-                .insert(listaFinal)
+                .insert(novosRegistros)
                 .select('*');
 
             if (insertError) throw insertError;
 
             // Atualiza o estado local com os dados do banco
-            arquivosExistentes = insertedData.map(a => ({ 
-                nome: a.nome_arquivo, 
-                path: a.caminho_arquivo, 
-                isZipped: a.is_zipped, 
-                originalNames: a.original_names 
-            }));
-        } else {
-            arquivosExistentes = [];
+            arquivosExistentes = [
+                ...arquivosExistentes,
+                ...insertedData.map(mapearArquivoBanco)
+            ];
         }
 
         arquivosParaUpload = [];
@@ -1605,20 +1646,26 @@ async function processarDadosImportacao(dados, tipo, filialSelecionada, forneced
           let anexosProcessados = 0;
 
           for (const m of inserted) {
+              const nomesUsadosAnexo = new Set();
+              let indiceUpload = 0;
               for (const arquivo of arquivosPreparados) {
-                  const fileName = `${m.id}/${Date.now()}_${arquivo.name}`;
+                  const nomeArquivo = criarNomeArquivoUnico(arquivo.name, nomesUsadosAnexo);
+                  const fileName = criarCaminhoArquivo(m.id, nomeArquivo, indiceUpload++);
                   const { data: uploadData, error: uploadError } = await supabaseClient.storage
                       .from('manutencao_arquivos')
                       .upload(fileName, arquivo.file);
                   
                   if (!uploadError) {
-                      await supabaseClient.from('manutencao_arquivos').insert({
+                      const { error: insertArquivoError } = await supabaseClient.from('manutencao_arquivos').insert({
                           id_manutencao: m.id,
-                          nome_arquivo: arquivo.name,
+                          nome_arquivo: nomeArquivo,
                           caminho_arquivo: uploadData.path,
                           is_zipped: arquivo.isZipped,
                           original_names: arquivo.originalNames || null
                       });
+                      if (insertArquivoError) {
+                          console.error(`Erro ao salvar referência do anexo ${nomeArquivo} para manutenção ${m.id}:`, insertArquivoError);
+                      }
                   } else {
                       console.error(`Erro ao enviar anexo ${arquivo.name} para manutenção ${m.id}:`, uploadError);
                   }
