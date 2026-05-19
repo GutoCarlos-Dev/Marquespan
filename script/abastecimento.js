@@ -30,7 +30,10 @@ import {
     buscarSaidasCombustivel
 } from './abastecimento/historico-service.js';
 import { importarPostos } from './abastecimento/importacao-postos.js';
-import { montarPayloadsImportacaoSaida } from './abastecimento/importacao-saida.js';
+import { 
+    baixarRelatorioImportacaoSaida,
+    montarPayloadsImportacaoSaida 
+} from './abastecimento/importacao-saida.js';
 import {
     buscarBicos,
     buscarFiliais,
@@ -1577,6 +1580,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.extKmAnterior.value = maiorKm;
                     this.calculateKmRodado();
                 }
+
+                // 3. Buscar Rota e Motorista do Retorno de Rota para sugerir no formulário externo
+                await this.buscarDadosRetornoRota(placa, this.extRota, this.extMotorista, this.extDataHora.value);
             } catch (error) {
                 console.error("Erro ao buscar KM anterior:", error);
             }
@@ -2041,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
 
             try {
-                const payloads = await montarPayloadsImportacaoSaida({
+                const { payloads, importedRows, rejectedRows } = await montarPayloadsImportacaoSaida({
                     file,
                     XLSX,
                     bicosDisponiveis: this.bicosDisponiveis,
@@ -2052,10 +2058,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (payloads.length > 0) {
                     const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
                     if (error) throw error;
-                    alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);
+                    
+                    alert(`Importação concluída com sucesso!\n${importedRows.length} registros de saída inseridos.\n${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
+                    baixarRelatorioImportacaoSaida(importedRows, rejectedRows);
                     this.renderSaidasTable();
                 } else {
-                    alert('Nenhum registro válido encontrado para importar.');
+                    alert(`Nenhum registro foi importado.\n${rejectedRows.length} registros foram rejeitados.\n\nVerifique o arquivo de erros que será baixado.`);
+                    if (rejectedRows.length > 0) {
+                        baixarRelatorioImportacaoSaida([], rejectedRows);
+                    }
                 }
             } catch (error) {
                 console.error('Erro na importação:', error);
@@ -2105,14 +2116,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async buscarDadosRetornoRota(placaInput) {
-            if (!this.saidaRota || !this.saidaMotorista) return;
+        async buscarDadosRetornoRota(placaInput, targetRota = null, targetMotorista = null, dataReferencia = null) {
+            const rotaField = targetRota || this.saidaRota;
+            const motoristaField = targetMotorista || this.saidaMotorista;
+            
+            if (!rotaField || !motoristaField) return;
             
             const placa = placaInput ? placaInput.trim().toUpperCase() : '';
             if (!placa) return;
 
             // Obtém a data do formulário de saída (formato YYYY-MM-DD)
-            const dataBase = this.saidaDataHora.value ? this.saidaDataHora.value.split('T')[0] : new Date().toISOString().split('T')[0];
+            const dataBase = dataReferencia ? dataReferencia.split('T')[0] : (this.saidaDataHora.value ? this.saidaDataHora.value.split('T')[0] : new Date().toISOString().split('T')[0]);
 
             try {
                 // Busca o retorno de rota mais próximo (mesmo dia ou anterior)
@@ -2129,8 +2143,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data) {
                     // Preenche os campos como sugestão, permitindo que o usuário edite se necessário
-                    this.saidaRota.value = data.rota || '';
-                    this.saidaMotorista.value = data.nome_mot || '';
+                    rotaField.value = data.rota || '';
+                    motoristaField.value = data.nome_mot || '';
                 }
             } catch (e) {
                 console.error('Erro ao buscar rota/motorista do retorno:', e);

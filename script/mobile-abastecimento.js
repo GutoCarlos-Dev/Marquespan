@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     carregarDadosIniciais();
+    carregarMotoristas();
     carregarHistoricoRecente();
     carregarEstoque(); // Carrega dados para a aba de estoque e select de entrada
 
@@ -97,6 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputVeiculo = document.getElementById('saidaVeiculo');
     if (inputVeiculo) {
         inputVeiculo.addEventListener('change', (e) => buscarUltimoKm(e.target.value));
+        inputVeiculo.addEventListener('change', (e) => {
+            const placa = e.target.value;
+            buscarUltimoKm(placa);
+            buscarDadosRetornoRota(placa);
+        });
     }
 });
 
@@ -219,11 +225,12 @@ async function salvarAbastecimento(e) {
         const dataHora = dataHoraInput ? new Date(dataHoraInput).toISOString() : new Date().toISOString();
         const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
         const rota = document.getElementById('saidaRota').value;
+        const motorista = document.getElementById('saidaMotorista').value;
         const km = document.getElementById('saidaKm').value;
 
         // Validação da Placa
-        const veiculoValido = veiculosDisponiveisCache.some(v => v.placa === placa);
-        if (!veiculoValido) {
+        const veiculoObj = veiculosDisponiveisCache.find(v => v.placa === placa);
+        if (!veiculoObj) {
             alert('Placa inválida. Por favor, selecione um veículo cadastrado na lista.');
             document.getElementById('saidaVeiculo').focus();
             return;
@@ -253,6 +260,7 @@ async function salvarAbastecimento(e) {
                 bico_id: bicoId1,
                 veiculo_placa: placa,
                 rota: rota, 
+                motorista: motorista,
                 km_atual: km,
                 qtd_litros: litros1,
                 usuario: usuario
@@ -273,10 +281,24 @@ async function salvarAbastecimento(e) {
                 bico_id: bicoId2,
                 veiculo_placa: placa,
                 rota: rota,
+                motorista: motorista,
                 km_atual: km,
                 qtd_litros: litros2,
                 usuario: usuario
             });
+        }
+
+        // REGISTRA NA TABELA DE COLETA DE KM (Odometer History) - Seguindo padrão Desktop
+        const kmValue = parseFloat(km);
+        if (!isNaN(kmValue) && kmValue > 0) {
+            await supabaseClient.from('coleta_km').upsert([{
+                data_coleta: dataHora,
+                placa: placa,
+                km_atual: kmValue,
+                usuario: usuario,
+                modelo: veiculoObj ? veiculoObj.modelo : '',
+                observacao: `Abastecimento App (${payloads.length} bicos)`
+            }], { onConflict: 'data_coleta,placa' });
         }
 
         // Salva um ou dois registros de uma vez
@@ -290,6 +312,7 @@ async function salvarAbastecimento(e) {
         
         // Limpa campos específicos, mantendo data e bico para agilizar o próximo
         document.getElementById('saidaVeiculo').value = '';
+        document.getElementById('saidaMotorista').value = '';
         document.getElementById('saidaRota').value = '';
         document.getElementById('saidaKm').value = '';
         document.getElementById('saidaLitros').value = '';
@@ -916,5 +939,40 @@ async function buscarUltimoKm(placaInput) {
     } catch (e) {
         console.error('Erro ao buscar último KM:', e);
         inputUltimoKm.value = '';
+    }
+}
+
+async function buscarDadosRetornoRota(placaInput) {
+    const rotaInput = document.getElementById('saidaRota');
+    const motoristaInput = document.getElementById('saidaMotorista');
+    const dataInput = document.getElementById('saidaDataHora');
+    
+    if (!rotaInput || !motoristaInput) return;
+    
+    const placa = placaInput ? placaInput.trim().toUpperCase() : '';
+    if (!placa) return;
+
+    // Obtém a data do formulário (formato YYYY-MM-DD)
+    const dataBase = dataInput.value ? dataInput.value.split('T')[0] : new Date().toISOString().split('T')[0];
+
+    try {
+        // Busca o retorno de rota mais próximo (mesmo dia ou anterior)
+        const { data, error } = await supabaseClient
+            .from('retorno_rota')
+            .select('rota, nome_mot')
+            .eq('placa', placa)
+            .lte('data_retorno', dataBase)
+            .order('data_retorno', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+            rotaInput.value = data.rota || '';
+            motoristaInput.value = data.nome_mot || '';
+        }
+    } catch (e) {
+        console.error('Erro ao buscar rota/motorista do retorno:', e);
     }
 }

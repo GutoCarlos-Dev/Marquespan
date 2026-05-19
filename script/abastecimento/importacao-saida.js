@@ -124,26 +124,31 @@ export async function montarPayloadsImportacaoSaida({
 }) {
     const rows = await lerXlsx(file, XLSX);
     const payloads = [];
+    const importedRows = [];
+    const rejectedRows = [];
 
     for (const [index, row] of rows.entries()) {
         const placa = String(getFlexVal(row, ['VEICULO (PLACA)', 'PLACA', 'VEICULO']) || '').replace(/\s+/g, '').toUpperCase().trim();
         const bicoNomeExcel = String(getFlexVal(row, ['BICO DE ORIGEM', 'BICO']) || '').trim();
         const litros = parseFloat(String(getFlexVal(row, ['LITROS ABASTECIDOS', 'LITROS']) || 0).replace(',', '.'));
         const kmAtual = parseFloat(String(getFlexVal(row, ['KM / HORIMETRO ATUAL', 'KM ATUAL', 'KM']) || 0).replace(',', '.'));
+        const dataHoraRaw = getFlexVal(row, ['DATA E HORA', 'DATA']);
 
         if (!placa || !bicoNomeExcel || litros <= 0 || kmAtual <= 0) {
-            console.warn(`Linha ${index + 2} ignorada por dados incompletos ou zerados. Placa: ${placa}, Bico: ${bicoNomeExcel}, Litros: ${litros}, KM: ${kmAtual}`);
+            rejectedRows.push({ ...row, motivo_rejeicao: 'Dados essenciais incompletos ou zerados (Placa, Bico, Litros ou KM).' });
             continue;
         }
 
         const bico = encontrarBico({ bicosDisponiveis, bicoNomeExcel, filialSelecionada });
         if (!bico) {
-            console.warn(`Bico "${bicoNomeExcel}" nao encontrado na filial "${filialSelecionada || 'Todas'}" para a placa ${placa}. Linha ignorada.`);
+            rejectedRows.push({ ...row, motivo_rejeicao: `Bico "${bicoNomeExcel}" não encontrado na filial "${filialSelecionada || 'Todas'}" para a placa ${placa}.` });
             continue;
         }
 
+        const dataHora = parseDataHora(dataHoraRaw);
+
         payloads.push({
-            data_hora: parseDataHora(getFlexVal(row, ['DATA E HORA', 'DATA'])),
+            data_hora: dataHora,
             veiculo_placa: placa,
             motorista: String(getFlexVal(row, ['MOTORISTA (OPCIONAL)', 'MOTORISTA']) || '').trim(),
             rota: String(getFlexVal(row, ['ROTA']) || '').trim(),
@@ -152,7 +157,55 @@ export async function montarPayloadsImportacaoSaida({
             qtd_litros: litros,
             usuario
         });
+
+        importedRows.push({ placa, data: dataHora, litros });
     }
 
-    return payloads;
+    return { payloads, importedRows, rejectedRows };
+}
+
+export function baixarRelatorioImportacaoSaida(importedRows, rejectedRows) {
+    let txtContent = 'RESUMO DE IMPORTACAO - SAIDA DE COMBUSTIVEL\n';
+    txtContent += '============================================================\n';
+    txtContent += `Data do Processamento: ${new Date().toLocaleString('pt-BR')}\n`;
+    txtContent += `Total de Registros no Arquivo: ${importedRows.length + rejectedRows.length}\n`;
+    txtContent += `Importados com Sucesso: ${importedRows.length}\n`;
+    txtContent += `Registros Rejeitados: ${rejectedRows.length}\n`;
+    txtContent += '============================================================\n\n';
+
+    if (importedRows.length > 0) {
+        txtContent += 'REGISTROS IMPORTADOS COM SUCESSO:\n';
+        txtContent += '------------------------------------------------------------\n';
+        importedRows.forEach((row, index) => {
+            txtContent += `${index + 1}. Veiculo: ${row.placa} | Data: ${new Date(row.data).toLocaleString('pt-BR')} | Litros: ${row.litros}L\n`;
+        });
+        txtContent += '\n';
+    }
+
+    if (rejectedRows.length > 0) {
+        txtContent += 'REGISTROS REJEITADOS / ERROS:\n';
+        txtContent += '------------------------------------------------------------\n';
+        rejectedRows.forEach((row, index) => {
+            txtContent += `Erro ${index + 1}:\n`;
+            txtContent += `  Motivo: ${row.motivo_rejeicao}\n`;
+            txtContent += '  Dados da Linha:\n';
+            Object.keys(row).forEach(key => {
+                if (key !== 'motivo_rejeicao') {
+                    txtContent += `    - ${key}: ${row[key]}\n`;
+                }
+            });
+            txtContent += '\n';
+        });
+    }
+
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    link.setAttribute('download', `resumo_importacao_saida_${timestamp}.txt`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
