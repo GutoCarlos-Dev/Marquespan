@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.populateUFs(); // Preenche lista de UFs
             await this.handleInitialEditParams();
 
+            await this.loadMotoristasOptions(); // Carrega motoristas para datalist externo
         },
 
         initTabs() {
@@ -147,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.fileImportarPostos = document.getElementById('fileImportarPostos'); // Novo Input File Postos
             this.extEditingId = null; // Variável para controlar edição
             this.postoEditingId = null; // Variável para controlar edição de posto
+            this.extMotorista = document.getElementById('extMotorista'); // Novo campo Motorista
+            this.listaMotoristasExt = document.getElementById('listaMotoristasExt'); // Datalist para Motorista
             this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
        // Elementos do filtro de histórico de entrada
             this.filtroDataInicial = document.getElementById('filtroDataInicial');
@@ -348,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.extFilial) {
                 this.extFilial.addEventListener('change', () => this.loadPostosOptions());
             }
+            if (this.extMotorista) this.extMotorista.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
 
             // Inicialização das novas abas
             this.loadFiliaisOptions();
@@ -1866,6 +1870,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        async loadMotoristasOptions() {
+            if (!this.listaMotoristasExt) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('funcionario')
+                    .select('nome')
+                    .ilike('funcao', '%Motorista%')
+                    .eq('status', 'Ativo')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.listaMotoristasExt.innerHTML = (data || []).map(m => `<option value="${m.nome}"></option>`).join('');
+            } catch (error) {
+                console.error('Erro ao carregar motoristas para datalist externo:', error);
+            }
+        },
+
+
         async loadRotasOptions() {
             const datalist = document.getElementById('listaRotasExternas');
             if (!datalist) return;
@@ -1891,6 +1914,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro ao carregar rotas:', error);
             }
         },
+
+        async loadMotoristasOptions() {
+            if (!this.listaMotoristasExt) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('funcionario')
+                    .select('nome')
+                    .ilike('funcao', '%Motorista%')
+                    .eq('status', 'Ativo')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.listaMotoristasExt.innerHTML = (data || []).map(m => `<option value="${m.nome}"></option>`).join('');
+            } catch (error) {
+                console.error('Erro ao carregar motoristas para datalist externo:', error);
+            }
+        },
+
 
         async loadPostosOptions() {
             const datalist = document.getElementById('listaPostosExternos');
@@ -2076,7 +2118,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'KM ATUAL',
                 'LITROS',
                 'VALOR TOTAL',
-                'VALOR UNITARIO'
+                'VALOR UNITARIO',
+                'MOTORISTA'
             ];
             const data = [
                 ['SP', '2026-05-11 16:21', '31.465.255/0001-53', 'FXL9D11', 'EQUIP', 972838, 140.06, 945.40, 6.75]
@@ -2145,7 +2188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
 
                         // Mapeamento de Colunas conforme solicitação:
-                        // FILIAL, DATA E HORA, CNPJ, PLACA, ROTA, KM ATUAL, LITROS, VALOR TOTAL, VALOR UNITÁRIO
+                        // FILIAL, DATA E HORA, CNPJ, PLACA, ROTA, KM ATUAL, LITROS, VALOR TOTAL, VALOR UNITÁRIO, MOTORISTA
                         const filial = r['FILIAL'] || '';
                         const veiculo = r['PLACA'] || r['VEICULO'] || r['VEICULO(PLACA)'];
                         const cnpjRaw = r['CNPJ'] || r['POSTO'] || r['POSTO(CNPJ)'];
@@ -2154,6 +2197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const litros = parseFloat(r['LITROS'] || r['LITROS_ABASTECIDOS']) || 0;
                         const valorTotal = parseFloat(r['VALOR TOTAL'] || r['TOTAL']) || 0;
                         const valorUnitario = parseFloat(r['VALOR UNITÁRIO'] || r['VALOR UNITARIO'] || r['VALOR_UNITARIO'] || r['UNITARIO']) || 0;
+                        const motorista = r['MOTORISTA'] || '';
                         
                         let dataHora = r['DATA E HORA'] || r['DATAEHORA'] || r['DATA'];
                         if (dataHora instanceof Date) {
@@ -2228,7 +2272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             km_rodado: (kmAtual > kmAnterior) ? (kmAtual - kmAnterior) : 0,
                             litros: litros,
                             valor_total: valorTotal,
-                            valor_unitario: valorUnitario,
+                            valor_unitario: valorUnitario, 
+                            motorista: motorista, // Adiciona o motorista
                             usuario: usuario
                         });
 
@@ -2343,6 +2388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     litros: parseFloat(this.extLitros.value),
                     valor_total: parseFloat(this.extValorTotal.value),
                     valor_unitario: parseFloat(this.extValorUnitario.value),
+                    motorista: this.extMotorista.value.toUpperCase(), // Adiciona o motorista
                     rota: this.extRota.value,
                     usuario: this.getUsuarioLogado()
                 };
@@ -2417,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isAdmin = this.getUserLevel() === 'administrador';
             
             // Inject Header Checkbox if needed
-            const table = this.tableBodyExt.closest('table');
+            const table = this.tableBodyExt?.closest('table');
             if (table && isAdmin) {
                 const theadRow = table.querySelector('thead tr');
                 if (theadRow && !theadRow.querySelector('.th-chk-ext')) {
@@ -2438,7 +2484,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // -------------------------------
 
-            // Filtragem
+            // Filtragem (agora inclui motorista)
             const term = this.searchExtInput ? this.searchExtInput.value.toLowerCase() : '';
             const filtered = this.extData.filter(item => {
                 const postoNome = item.postos?.razao_social || '';
@@ -2446,7 +2492,8 @@ document.addEventListener('DOMContentLoaded', () => {
                        (postoNome).toLowerCase().includes(term) ||
                        (item.data_hora || '').toLowerCase().includes(term);
             });
-
+            // Filtragem (agora inclui motorista)
+            
             // Ordenação
             filtered.sort((a, b) => {
                 let valA = a[this.extSort.key];
@@ -2476,7 +2523,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
             this.tableBodyExt.innerHTML = '';
-            const colCount = isAdmin ? 12 : 11; // Colunas originais + Usuario + KM Anterior/Rodado
+            const colCount = isAdmin ? 13 : 12; // Colunas originais + Usuario + KM Anterior/Rodado + Motorista
 
             if (filtered.length === 0) {
                 this.tableBodyExt.innerHTML = `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
@@ -2499,6 +2546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${item.usuario || '-'}</td>
                     <td>${item.postos?.razao_social || '-'}</td>
                     <td>${item.veiculo_placa}</td>
+                    <td>${item.motorista || '-'}</td>
                     <td>${item.litros || '-'} L</td>
                     <td>${valTotal}</td>
                     <td>${item.valor_unitario || '-'}</td>
@@ -2550,6 +2598,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extFilial.value = data.filial || '';
             
             if (data.postos) {
+                // Garante que o datalist seja populado antes de tentar setar o valor
                 this.extPosto.value = `${data.postos.razao_social} (${data.postos.cnpj || 'S/CNPJ'})`;
             } else {
                 this.extPosto.value = '';
@@ -2564,6 +2613,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extLitros.value = data.litros || '';
             this.extValorTotal.value = data.valor_total || '';
             this.extValorUnitario.value = data.valor_unitario || '';
+            this.extMotorista.value = data.motorista || ''; // Preenche o motorista
 
             // Atualiza botão
             const btn = this.formExt.querySelector('button[type="submit"]');
@@ -2584,6 +2634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extEditingId = null;
             const btn = this.formExt.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Registro';
+            this.extMotorista.value = ''; // Limpa o motorista
         },
 
         async handleBulkDeleteExt() {
