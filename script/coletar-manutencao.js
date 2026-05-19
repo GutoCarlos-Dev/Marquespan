@@ -12,6 +12,11 @@ import {
     statusExigeOficina
 } from './coletar-manutencao/checklist.js';
 import { carregarChecklistDinamico as carregarChecklistDinamicoRender } from './coletar-manutencao/checklist-render.js';
+import {
+    carregarFiltrosDinamicosRelatorio,
+    limparSelecaoMultiselect,
+    setupMultiselect
+} from './coletar-manutencao/filtros-relatorio.js';
 
 const ColetarManutencaoUI = {
     init() {
@@ -178,88 +183,13 @@ const ColetarManutencaoUI = {
 
     // Carrega os dados para os filtros dinâmicos (Itens e Oficinas)
     async carregarFiltrosDinamicos() {
-        try {
-            // Carregar Itens Verificadores
-            const { data: itens, error: errItens } = await supabaseClient.from('itens_verificacao').select('descricao').order('descricao');
-            
-            if (errItens) {
-                console.error('Erro ao carregar itens para filtro:', errItens);
-            } else if (itens && itens.length > 0) {
-                // Filtro Lançamento (Select)
-                if (this.searchItemInput) {
-                    this.searchItemInput.innerHTML = '<option value="">Todos</option>';
-                    itens.forEach(i => {
-                        if(i.descricao) this.searchItemInput.add(new Option(i.descricao, i.descricao));
-                    });
-                }
-                
-                // Filtro Relatório (Checkbox)
-                if (this.filtroItemOptions) {
-                    // Limpa apenas os labels, mantendo o botão de limpar
-                    const labels = this.filtroItemOptions.querySelectorAll('label');
-                    labels.forEach(l => l.remove());
-                    
-                    itens.forEach(i => {
-                        if(i.descricao) {
-                            const label = document.createElement('label');
-                            label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
-                            label.innerHTML = `<input type="checkbox" class="filtro-item-checkbox" value="${i.descricao}" style="margin-right: 8px;"> ${i.descricao}`;
-                            this.filtroItemOptions.appendChild(label);
-                        }
-                    });
-                }
-            }
-
-            // Carregar Oficinas
-            const { data: oficinas, error: errOficinas } = await supabaseClient.from('oficinas').select('id, nome, filial').order('nome');
-            
-            if (errOficinas) {
-                console.error('Erro ao carregar oficinas para filtro:', errOficinas);
-            } else {
-                // Filtra oficinas pela filial do usuário logado
-                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-                const filialUsuario = usuarioLogado ? usuarioLogado.filial : null;
-                
-                const oficinasFiltradas = filialUsuario && oficinas 
-                    ? oficinas.filter(o => !o.filial || o.filial === filialUsuario)
-                    : oficinas;
-
-                // Popular mapa de oficinas
-                this.oficinasMap = {};
-                oficinasFiltradas.forEach(o => {
-                    this.oficinasMap[o.nome] = o.id;
-                });
-
-                if (oficinasFiltradas && oficinasFiltradas.length > 0) {
-                    // Filtro Lançamento (Select)
-                    if (this.searchOficinaInput) {
-                        this.searchOficinaInput.innerHTML = '<option value="">Todas</option>';
-                        oficinasFiltradas.forEach(o => {
-                            if(o.nome) this.searchOficinaInput.add(new Option(o.nome, o.nome));
-                        });
-                    }
-                    
-                    // Filtro Relatório (Checkbox)
-                    if (this.filtroOficinaOptions) {
-                        const labels = this.filtroOficinaOptions.querySelectorAll('label');
-                        labels.forEach(l => l.remove());
-
-                        oficinasFiltradas.forEach(o => {
-                            if(o.nome) {
-                                const label = document.createElement('label');
-                                label.style.cssText = "display: block; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;";
-                                label.innerHTML = `<input type="checkbox" class="filtro-oficina-checkbox" value="${o.nome}" style="margin-right: 8px;"> ${o.nome}`;
-                                this.filtroOficinaOptions.appendChild(label);
-                            }
-                        });
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Erro crítico ao carregar filtros dinâmicos:', e);
-        }
+        this.oficinasMap = await carregarFiltrosDinamicosRelatorio({
+            searchItemInput: this.searchItemInput,
+            filtroItemOptions: this.filtroItemOptions,
+            searchOficinaInput: this.searchOficinaInput,
+            filtroOficinaOptions: this.filtroOficinaOptions
+        });
     },
-
     // Associa os eventos aos elementos DOM
     bindEvents() {
         if (this.btnAdicionarLancamento) this.btnAdicionarLancamento.addEventListener('click', () => this.abrirModal());
@@ -366,125 +296,52 @@ const ColetarManutencaoUI = {
             }
         });
 
-        // Eventos do Multi-Select de Itens
-        if (this.filtroItemDisplay) {
-            this.filtroItemDisplay.addEventListener('click', (e) => {
-                e.stopPropagation(); // Impede que o clique feche imediatamente
-                const isVisible = this.filtroItemOptions.classList.contains('hidden');
-                if (isVisible) this.filtroItemOptions.classList.remove('hidden');
-                else this.filtroItemOptions.classList.add('hidden');
-            });
+        setupMultiselect({
+            display: this.filtroItemDisplay,
+            options: this.filtroItemOptions,
+            text: this.filtroItemText,
+            checkboxClass: 'filtro-item-checkbox',
+            emptyText: 'Todos',
+            selectedText: (count) => `${count} item(ns) selecionado(s)`
+        });
 
-            // Fechar ao clicar fora
-            document.addEventListener('click', (e) => {
-                if (this.filtroItemOptions && !this.filtroItemOptions.classList.contains('hidden')) {
-                    if (!this.filtroItemDisplay.contains(e.target) && !this.filtroItemOptions.contains(e.target)) {
-                        this.filtroItemOptions.classList.add('hidden');
-                    }
-                }
-            });
+        setupMultiselect({
+            display: this.filtroOficinaDisplay,
+            options: this.filtroOficinaOptions,
+            text: this.filtroOficinaText,
+            checkboxClass: 'filtro-oficina-checkbox',
+            emptyText: 'Todas',
+            selectedText: (count) => `${count} oficina(s) selecionada(s)`
+        });
 
-            // Delegação de evento para checkboxes dinâmicos
-            this.filtroItemOptions.addEventListener('change', (e) => {
-                if (e.target.classList.contains('filtro-item-checkbox')) {
-                    const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
-                    const selected = Array.from(checkboxes).filter(c => c.checked);
-                    this.filtroItemText.textContent = selected.length > 0 ? `${selected.length} item(ns) selecionado(s)` : 'Todos';
-                }
-            });
-        }
-
-        // Eventos do Multi-Select de Oficinas
-        if (this.filtroOficinaDisplay) {
-            this.filtroOficinaDisplay.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isVisible = this.filtroOficinaOptions.classList.contains('hidden');
-                if (isVisible) this.filtroOficinaOptions.classList.remove('hidden');
-                else this.filtroOficinaOptions.classList.add('hidden');
-            });
-
-            document.addEventListener('click', (e) => {
-                if (this.filtroOficinaOptions && !this.filtroOficinaOptions.classList.contains('hidden')) {
-                    if (!this.filtroOficinaDisplay.contains(e.target) && !this.filtroOficinaOptions.contains(e.target)) {
-                        this.filtroOficinaOptions.classList.add('hidden');
-                    }
-                }
-            });
-
-            this.filtroOficinaOptions.addEventListener('change', (e) => {
-                if (e.target.classList.contains('filtro-oficina-checkbox')) {
-                    const checkboxes = this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox');
-                    const selected = Array.from(checkboxes).filter(c => c.checked);
-                    this.filtroOficinaText.textContent = selected.length > 0 ? `${selected.length} oficina(s) selecionada(s)` : 'Todas';
-                }
-            });
-        }
-
-        // Eventos do Multi-Select de Status
-        if (this.filtroStatusDisplay) {
-            this.filtroStatusDisplay.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isVisible = this.filtroStatusOptions.classList.contains('hidden');
-                if (isVisible) this.filtroStatusOptions.classList.remove('hidden');
-                else this.filtroStatusOptions.classList.add('hidden');
-            });
-
-            // Fechar ao clicar fora
-            document.addEventListener('click', (e) => {
-                if (this.filtroStatusOptions && !this.filtroStatusOptions.classList.contains('hidden')) {
-                    if (!this.filtroStatusDisplay.contains(e.target) && !this.filtroStatusOptions.contains(e.target)) {
-                        this.filtroStatusOptions.classList.add('hidden');
-                    }
-                }
-            });
-
-            // Atualizar texto ao selecionar
-            const statusCheckboxes = this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox');
-            statusCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const selected = Array.from(statusCheckboxes).filter(c => c.checked).map(c => c.value);
-                    this.filtroStatusText.textContent = selected.length > 0 ? `${selected.length} selecionado(s)` : 'Todos';
-                });
-            });
-        }
+        setupMultiselect({
+            display: this.filtroStatusDisplay,
+            options: this.filtroStatusOptions,
+            text: this.filtroStatusText,
+            checkboxClass: 'filtro-status-checkbox',
+            emptyText: 'Todos',
+            selectedText: (count) => `${count} selecionado(s)`
+        });
     },
 
     // Limpa a seleção de itens no filtro de relatório
     limparSelecaoItem() {
-        const checkboxes = this.filtroItemOptions.querySelectorAll('.filtro-item-checkbox');
-        checkboxes.forEach(cb => cb.checked = false);
-        this.filtroItemText.textContent = 'Todos';
+        limparSelecaoMultiselect(this.filtroItemOptions, this.filtroItemText, 'filtro-item-checkbox', 'Todos');
     },
 
     limparSelecaoOficina() {
-        // Limpa a seleção de oficinas no filtro de relatório
-        const checkboxes = this.filtroOficinaOptions.querySelectorAll('.filtro-oficina-checkbox');
-        checkboxes.forEach(cb => cb.checked = false);
-        this.filtroOficinaText.textContent = 'Todas';
+        limparSelecaoMultiselect(this.filtroOficinaOptions, this.filtroOficinaText, 'filtro-oficina-checkbox', 'Todas');
     },
 
     limparFiltros() {
-        // Limpa todos os filtros da seção "Gerar Arquivo"
-        // Limpa inputs de texto e data
         this.filtroSemana.value = '';
         this.filtroPlaca.value = '';
         this.filtroDataIni.value = '';
         this.filtroDataFim.value = '';
-
-        // Limpa Multiselect de Itens
         this.limparSelecaoItem();
-
-        // Limpa Multiselect de Oficinas
         this.limparSelecaoOficina();
-
-        // Limpa Multiselect de Status
-        if (this.filtroStatusOptions) {
-            const statusCheckboxes = this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox');
-            statusCheckboxes.forEach(cb => cb.checked = false);
-        }
-        if (this.filtroStatusText) this.filtroStatusText.textContent = 'Todos';
+        limparSelecaoMultiselect(this.filtroStatusOptions, this.filtroStatusText, 'filtro-status-checkbox', 'Todos');
     },
-
     // Inicializa a navegação por abas
     initTabs() {
         const buttons = document.querySelectorAll('#menu-coletar-manutencao .painel-btn');
