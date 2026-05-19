@@ -1,5 +1,19 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import {
+    exportarAuditoriaEstoquePDF as gerarAuditoriaEstoquePDF,
+    exportarAuditoriaEstoqueXLSX as gerarAuditoriaEstoqueXLSX
+} from './abastecimento/auditoria-estoque-export.js';
+import {
+    baixarModeloImportacaoExterno as gerarModeloImportacaoExterno,
+    baixarModeloImportacaoSaida as gerarModeloImportacaoSaida
+} from './abastecimento/modelos-importacao.js';
+import {
+    baixarRelatorioImportacaoExterna,
+    importarAbastecimentoExterno
+} from './abastecimento/importacao-externo.js';
+import { importarPostos } from './abastecimento/importacao-postos.js';
+import { montarPayloadsImportacaoSaida } from './abastecimento/importacao-saida.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
@@ -893,38 +907,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        getAuditoriaEstoqueExportRows() {
-            return (this.auditoriaEstoqueDados || []).map(item => ({
-                'Data/Hora': new Date(item.data).toLocaleString('pt-BR'),
-                'Usuário': item.usuario || '-',
-                'Tanque': item.tanques?.nome || '-',
-                'Combustível': item.tanques?.tipo_combustivel || '-',
-                'Estoque Anterior (Litros)': this.formatLitros(item.estoqueAnterior),
-                'Estoque Atual (Litros)': this.formatLitros(item.estoqueAtual),
-                'Diferença (Litros)': `${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)}`
-            }));
-        },
 
         exportarAuditoriaEstoqueXLSX() {
             if (!this.canViewEstoqueAuditoria()) return;
 
-            const rows = this.getAuditoriaEstoqueExportRows();
+            const rows = this.auditoriaEstoqueDados || [];
             if (rows.length === 0) {
                 alert('Realize uma busca com resultados antes de exportar.');
                 return;
             }
 
-            const ws = XLSX.utils.json_to_sheet(rows);
-            ws['!cols'] = [
-                { wch: 20 }, { wch: 24 }, { wch: 22 }, { wch: 18 },
-                { wch: 24 }, { wch: 22 }, { wch: 18 }
-            ];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Auditoria Estoque');
-
-            const dataInicial = this.auditoriaEstoqueDataInicial?.value || 'inicio';
-            const dataFinal = this.auditoriaEstoqueDataFinal?.value || 'fim';
-            XLSX.writeFile(wb, `Auditoria_Estoque_${dataInicial}_a_${dataFinal}.xlsx`);
+            gerarAuditoriaEstoqueXLSX({
+                rows,
+                dataInicial: this.auditoriaEstoqueDataInicial?.value,
+                dataFinal: this.auditoriaEstoqueDataFinal?.value,
+                formatLitros: this.formatLitros.bind(this),
+                XLSX
+            });
         },
 
         async exportarAuditoriaEstoquePDF() {
@@ -936,83 +935,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                alert('Biblioteca PDF não carregada.');
-                return;
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            const dataInicial = this.auditoriaEstoqueDataInicial?.value || '';
-            const dataFinal = this.auditoriaEstoqueDataFinal?.value || '';
-
-            const getLogoBase64 = async () => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.src = 'logo.png';
-                    img.crossOrigin = 'Anonymous';
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0);
-                        resolve(canvas.toDataURL('image/jpeg'));
-                    };
-                    img.onerror = () => resolve(null);
-                });
-            };
-
-            const logoBase64 = await getLogoBase64();
-            if (logoBase64) {
-                doc.addImage(logoBase64, 'JPEG', 14, 8, 40, 12);
-            }
-
-            doc.setFontSize(16);
-            doc.setTextColor(0, 105, 55);
-            doc.text('Auditoria de Ajustes de Estoque', logoBase64 ? 60 : 14, 15);
-
-            doc.setFontSize(9);
-            doc.setTextColor(90);
-            doc.text(`Período: ${dataInicial} até ${dataFinal}`, logoBase64 ? 60 : 14, 22);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 22, { align: 'right' });
-
-            doc.autoTable({
-                startY: 28,
-                head: [[
-                    'Data/Hora',
-                    'Usuário',
-                    'Tanque',
-                    'Combustível',
-                    'Estoque Anterior',
-                    'Estoque Atual',
-                    'Diferença'
-                ]],
-                body: rows.map(item => [
-                    new Date(item.data).toLocaleString('pt-BR'),
-                    item.usuario || '-',
-                    item.tanques?.nome || '-',
-                    item.tanques?.tipo_combustivel || '-',
-                    `${this.formatLitros(item.estoqueAnterior)} L`,
-                    `${this.formatLitros(item.estoqueAtual)} L`,
-                    `${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)} L`
-                ]),
-                theme: 'grid',
-                headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
-                styles: { fontSize: 8, cellPadding: 2 },
-                alternateRowStyles: { fillColor: [245, 245, 245] },
-                didParseCell: (data) => {
-                    if (data.section === 'body' && data.column.index === 6) {
-                        const raw = String(data.cell.raw || '');
-                        if (raw.startsWith('+')) data.cell.styles.textColor = [25, 135, 84];
-                        else if (raw.startsWith('-')) data.cell.styles.textColor = [220, 53, 69];
-                    }
-                }
+            await gerarAuditoriaEstoquePDF({
+                rows,
+                dataInicial: this.auditoriaEstoqueDataInicial?.value,
+                dataFinal: this.auditoriaEstoqueDataFinal?.value,
+                formatLitros: this.formatLitros.bind(this)
             });
-
-            doc.save(`Auditoria_Estoque_${dataInicial}_a_${dataFinal}.pdf`);
         },
 
         async handleAuditoriaEstoqueClick(e) {
@@ -2108,27 +2036,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         baixarModeloImportacaoExterno(e) {
             if (e) e.preventDefault();
-
-            const headers = [
-                'FILIAL',
-                'DATA E HORA',
-                'CNPJ',
-                'PLACA',
-                'ROTA',
-                'KM ATUAL',
-                'LITROS',
-                'VALOR TOTAL',
-                'VALOR UNITARIO',
-                'MOTORISTA'
-            ];
-            const data = [
-                ['SP', '2026-05-11 16:21', '31.465.255/0001-53', 'FXL9D11', 'EQUIP', 972838, 140.06, 945.40, 6.75]
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Modelo Externo');
-            XLSX.writeFile(wb, 'Modelo_Importacao_Abastecimento_Externo.xlsx');
+            gerarModeloImportacaoExterno(XLSX);
         },
 
         async handleImportarExterno(e) {
@@ -2140,216 +2048,33 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(firstSheet);
+            try {
+                const { importedRows, rejectedRows } = await importarAbastecimentoExterno({
+                    file,
+                    XLSX,
+                    supabaseClient,
+                    veiculosDisponiveis: this.veiculosDisponiveis,
+                    usuario: this.getUsuarioLogado()
+                });
 
-                    if (json.length === 0) throw new Error('Arquivo vazio.');
-
-                    // 1. Carregar todos os postos para mapear CNPJ -> ID.
-                    // O Supabase pagina resultados; sem range alguns CNPJs podem ficar fora do lote retornado.
-                    let postos = [];
-                    let from = 0;
-                    const pageSize = 1000;
-
-                    while (true) {
-                        const { data: page, error: postosError } = await supabaseClient
-                            .from('postos')
-                            .select('id, razao_social, cnpj')
-                            .range(from, from + pageSize - 1);
-
-                        if (postosError) throw postosError;
-
-                        postos = postos.concat(page || []);
-                        if (!page || page.length < pageSize) break;
-                        from += pageSize;
+                if (importedRows.length > 0) {
+                    alert(`Importação concluída com sucesso!\n${importedRows.length} registros inseridos.\n${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
+                    baixarRelatorioImportacaoExterna(importedRows, rejectedRows);
+                    this.renderExtTable();
+                } else {
+                    alert(`Nenhum registro foi importado.\n${rejectedRows.length} registros foram rejeitados.\n\nVerifique o arquivo de erros que será baixado.`);
+                    if (rejectedRows.length > 0) {
+                        baixarRelatorioImportacaoExterna([], rejectedRows);
                     }
-
-                    const mapPostos = new Map();
-                    if (postos) {
-                        postos.forEach(p => {
-                            const cnpjNormalizado = this.normalizarCnpj(p.cnpj);
-                            if (cnpjNormalizado) mapPostos.set(cnpjNormalizado, p.id);
-                        });
-                    }
-
-                    const usuario = this.getUsuarioLogado();
-                    const payloads = [];
-                    const importedRows = []; // Armazena dados dos itens importados para o resumo
-                    const rejectedRows = []; // Array para armazenar linhas rejeitadas
-
-                    for (const row of json) {
-                        // Normalizar chaves
-                        const r = {};
-                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
-
-                        // Mapeamento de Colunas conforme solicitação:
-                        // FILIAL, DATA E HORA, CNPJ, PLACA, ROTA, KM ATUAL, LITROS, VALOR TOTAL, VALOR UNITÁRIO, MOTORISTA
-                        const filial = r['FILIAL'] || '';
-                        const veiculo = r['PLACA'] || r['VEICULO'] || r['VEICULO(PLACA)'];
-                        const cnpjRaw = r['CNPJ'] || r['POSTO'] || r['POSTO(CNPJ)'];
-                        const rota = r['ROTA'] || '';
-                        const kmAtual = parseFloat(r['KM ATUAL'] || r['KM_ATUAL'] || r['KM']) || 0;
-                        const litros = parseFloat(r['LITROS'] || r['LITROS_ABASTECIDOS']) || 0;
-                        const valorTotal = parseFloat(r['VALOR TOTAL'] || r['TOTAL']) || 0;
-                        const valorUnitario = parseFloat(r['VALOR UNITÁRIO'] || r['VALOR UNITARIO'] || r['VALOR_UNITARIO'] || r['UNITARIO']) || 0;
-                        const motorista = r['MOTORISTA'] || '';
-                        
-                        let dataHora = r['DATA E HORA'] || r['DATAEHORA'] || r['DATA'];
-                        if (dataHora instanceof Date) {
-                            dataHora = dataHora.toISOString();
-                        } else if (typeof dataHora === 'string') {
-                            // Tenta converter string PT-BR ou ISO
-                            // Se for data excel serial number, o cellDates: true já tratou
-                            const d = new Date(dataHora);
-                            if(!isNaN(d)) dataHora = d.toISOString();
-                            else dataHora = new Date().toISOString(); // Fallback
-                        } else {
-                            dataHora = new Date().toISOString();
-                        }
-
-                        if (!veiculo || !kmAtual || !litros) {
-                            console.warn('Linha ignorada por falta de dados essenciais:', r);
-                            rejectedRows.push({ ...row, motivo_rejeicao: 'Faltam dados essenciais (Placa, KM ou Litros).' });
-                            continue;
-                        }
-
-                        // Tratamento de CNPJ para encontrar ID
-                        const cnpjLimpo = this.normalizarCnpj(cnpjRaw);
-                        const postoId = mapPostos.get(cnpjLimpo);
-
-                        if (!postoId) {
-                            console.warn(`Posto não encontrado para CNPJ: ${cnpjRaw} na linha do veículo ${veiculo}`);
-                            // Opcional: Criar posto ou pular? Vamos pular por segurança ou deixar nulo se o banco permitir
-                            // O banco exige foreign key se informado? Se posto_id for null, ok se a coluna permitir.
-                            // Mas para relatório é ruim. Vamos contar como erro ou tentar prosseguir sem posto?
-                            // Assumindo que posto é importante:
-                            // erros++; continue; 
-                            // Se quiser permitir sem posto, comente a linha abaixo.
-                            rejectedRows.push({ ...row, motivo_rejeicao: `Posto com CNPJ '${cnpjRaw || 'vazio'}' não encontrado.` });
-                            continue;
-                        }
-
-                        // Buscar KM Anterior
-                        let kmAnterior = 0;
-                        const { data: ultRegArray, error: kmError } = await supabaseClient
-                            .from('abastecimento_externo')
-                            .select('km_atual')
-                            .eq('veiculo_placa', veiculo)
-                            .lt('data_hora', dataHora)
-                            .order('data_hora', { ascending: false })
-                            .limit(1);
-                        
-                        if (kmError && kmError.code !== 'PGRST116') { // PGRST116 = no rows found, o que é ok
-                            console.error(`Erro ao buscar KM anterior para ${veiculo}:`, kmError);
-                        }
-
-                        if (ultRegArray && ultRegArray.length > 0) {
-                            kmAnterior = ultRegArray[0].km_atual;
-                        }
-
-                        // Buscar Tipo do Veículo no cache
-                        const veiculoInfo = this.veiculosDisponiveis.find(v => v.placa === veiculo);
-                        let tipoVeiculo = null;
-                        if (veiculoInfo) {
-                            tipoVeiculo = veiculoInfo.tipo;
-                        }
-
-                        payloads.push({
-                            filial: filial,
-                            data_hora: dataHora,
-                            posto_id: postoId,
-                            posto_id: postoId || null,
-                            veiculo_placa: veiculo,
-                            rota: rota,
-                            tipo_veiculo: tipoVeiculo, // Adiciona o tipo do veículo
-                            km_atual: kmAtual,
-                            km_anterior: kmAnterior,
-                            km_rodado: (kmAtual > kmAnterior) ? (kmAtual - kmAnterior) : 0,
-                            litros: litros,
-                            valor_total: valorTotal,
-                            valor_unitario: valorUnitario, 
-                            motorista: motorista, // Adiciona o motorista
-                            usuario: usuario
-                        });
-
-                        importedRows.push({ placa: veiculo, data: dataHora, litros: litros });
-                    }
-
-                    if (payloads.length > 0) {
-                        const { error } = await supabaseClient.from('abastecimento_externo').insert(payloads);
-                        if (error) throw error;
-
-                        alert(`Importação concluída com sucesso!\n✅ ${payloads.length} registros inseridos.\n❌ ${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
-                        this.gerarRelatorioImportacao(importedRows, rejectedRows);
-                        this.renderExtTable();
-                    } else {
-                        alert(`Nenhum registro foi importado.\n❌ ${rejectedRows.length} registros foram rejeitados.\n\nVerifique o arquivo de erros que será baixado.`);
-                        if (rejectedRows.length > 0) {
-                            this.gerarRelatorioImportacao([], rejectedRows);
-                        }
-                    }
-
-                } catch (err) {
-                    console.error('Erro na importação:', err);
-                    alert('Erro ao processar arquivo: ' + err.message);
-                } finally {
-                    e.target.value = '';
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
-            };
-            reader.readAsArrayBuffer(file);
-        },
-
-        gerarRelatorioImportacao(importedRows, rejectedRows) {
-            let txtContent = "RESUMO DE IMPORTAÇÃO - ABASTECIMENTO EXTERNO\n";
-            txtContent += "============================================================\n";
-            txtContent += `Data do Processamento: ${new Date().toLocaleString('pt-BR')}\n`;
-            txtContent += `Total de Registros no Arquivo: ${importedRows.length + rejectedRows.length}\n`;
-            txtContent += `Importados com Sucesso: ${importedRows.length}\n`;
-            txtContent += `Registros Rejeitados: ${rejectedRows.length}\n`;
-            txtContent += "============================================================\n\n";
-
-            if (importedRows.length > 0) {
-                txtContent += "✅ REGISTROS IMPORTADOS COM SUCESSO:\n";
-                txtContent += "------------------------------------------------------------\n";
-                importedRows.forEach((row, index) => {
-                    txtContent += `${index + 1}. Veículo: ${row.placa} | Data: ${new Date(row.data).toLocaleString('pt-BR')} | Litros: ${row.litros}L\n`;
-                });
-                txtContent += "\n";
+            } catch (err) {
+                console.error('Erro na importação:', err);
+                alert('Erro ao processar arquivo: ' + err.message);
+            } finally {
+                e.target.value = '';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
-
-            if (rejectedRows.length > 0) {
-                txtContent += "❌ REGISTROS REJEITADOS / ERROS:\n";
-                txtContent += "------------------------------------------------------------\n";
-                rejectedRows.forEach((row, index) => {
-                    txtContent += `Erro ${index + 1}:\n`;
-                    txtContent += `  Motivo: ${row.motivo_rejeicao}\n`;
-                    txtContent += `  Dados da Linha:\n`;
-                    for (const key in row) {
-                        if (key !== 'motivo_rejeicao') {
-                            txtContent += `    - ${key}: ${row[key]}\n`;
-                        }
-                    }
-                    txtContent += "\n";
-                });
-            }
-
-            const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            link.setAttribute('download', `resumo_importacao_externa_${timestamp}.txt`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         },
 
         async handleExtSubmit(e) {
@@ -2388,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     litros: parseFloat(this.extLitros.value),
                     valor_total: parseFloat(this.extValorTotal.value),
                     valor_unitario: parseFloat(this.extValorUnitario.value),
-                    motorista: this.extMotorista.value.toUpperCase(), // Adiciona o motorista
+                    motorista: this.extMotorista.value.trim() ? this.extMotorista.value.trim().toUpperCase() : null,
                     rota: this.extRota.value,
                     usuario: this.getUsuarioLogado()
                 };
@@ -2680,88 +2405,29 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(firstSheet);
+            try {
+                const { importados, duplicados } = await importarPostos({ file, XLSX, supabaseClient });
 
-                    if (json.length === 0) throw new Error('Arquivo vazio.');
-                    
-                    // Carrega CNPJs existentes para verificação de duplicidade
-                    const { data: existingData } = await supabaseClient.from('postos').select('cnpj');
-                    const existingCnpjs = new Set();
-                    if (existingData) {
-                        existingData.forEach(p => {
-                            if (p.cnpj) existingCnpjs.add(p.cnpj.replace(/\D/g, ''));
-                        });
-                    }
-
-                    const payloads = [];
-                    let erros = 0;
-                    let duplicados = 0;
-                    const cnpjsNoArquivo = new Set(); // Para evitar duplicados no próprio arquivo
-
-                    for (const row of json) {
-                        const r = {};
-                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
-
-                        // Campos: Razão Social, Cidade, UF, Filial, CNPJ
-                        const razao = r['RAZÃO SOCIAL'] || r['RAZAO SOCIAL'] || r['RAZAO'] || r['NOME'];
-                        if (!razao) { erros++; continue; }
-
-                        const cnpjRaw = r['CNPJ'] ? String(r['CNPJ']) : '';
-                        
-                        // Verificação de duplicidade
-                        if (cnpjRaw) {
-                            const cnpjClean = cnpjRaw.replace(/\D/g, '');
-                            if (cnpjClean) {
-                                if (existingCnpjs.has(cnpjClean) || cnpjsNoArquivo.has(cnpjClean)) {
-                                    duplicados++;
-                                    continue; // Pula este registro
-                                }
-                                cnpjsNoArquivo.add(cnpjClean);
-                            }
-                        }
-
-                        payloads.push({
-                            razao_social: razao,
-                            cidade: r['CIDADE'] || '',
-                            uf: r['UF'] || '',
-                            filial: r['FILIAL'] || '',
-                            cnpj: cnpjRaw,
-                            faturado: false // Padrão
-                        });
-                    }
-
-                    if (payloads.length > 0) {
-                        const { error } = await supabaseClient.from('postos').insert(payloads);
-                        if (error) throw error;
-                        
-                        let msg = `Importação concluída! ${payloads.length} postos cadastrados.`;
-                        if (duplicados > 0) msg += `\n(${duplicados} ignorados por CNPJ duplicado)`;
-                        
-                        alert(msg);
-                        this.renderPostosTable();
-                        this.loadPostosOptions();
-                    } else {
-                        if (duplicados > 0) alert(`Nenhum posto importado. ${duplicados} registros eram duplicados.`);
-                        else alert('Nenhum dado válido encontrado.');
-                    }
-                } catch (err) {
-                    console.error('Erro na importação de postos:', err);
-                    alert('Erro ao processar arquivo: ' + err.message);
-                } finally {
-                    e.target.value = '';
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                if (importados > 0) {
+                    let msg = `Importação concluída! ${importados} postos cadastrados.`;
+                    if (duplicados > 0) msg += `\n(${duplicados} ignorados por CNPJ duplicado)`;
+                    alert(msg);
+                    this.renderPostosTable();
+                    this.loadPostosOptions();
+                } else if (duplicados > 0) {
+                    alert(`Nenhum posto importado. ${duplicados} registros eram duplicados.`);
+                } else {
+                    alert('Nenhum dado válido encontrado.');
                 }
-            };
-            reader.readAsArrayBuffer(file);
+            } catch (err) {
+                console.error('Erro na importação de postos:', err);
+                alert('Erro ao processar arquivo: ' + err.message);
+            } finally {
+                e.target.value = '';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         },
-
         async handlePostoSubmit(e) {
             e.preventDefault();
 
@@ -2964,19 +2630,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         baixarModeloImportacaoSaida() {
-            const headers = [
-                'DATA E HORA', 'VEÍCULO (PLACA)', 'MOTORISTA (OPCIONAL)', 'ROTA', 'KM / HORÍMETRO ATUAL', 'BICO DE ORIGEM (NOME COMPLETO)', 'LITROS ABASTECIDOS'
-            ];
-            const data = [
-                 ['2025-05-12 10:30', 'ABC1234', 'JOAO SILVA', '101', '150000', '1 (BOMBA: A - TANQUE: FABRICA 2)', '50.00']
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Modelo Saída");
-            XLSX.writeFile(wb, "Modelo_Importacao_Saida.xlsx");
+            gerarModeloImportacaoSaida(XLSX);
         },
-
         async handleImportarSaida(e) {
             const file = e.target.files[0];
             if (!file) return alert('Selecione um arquivo XLSX.');
@@ -2986,144 +2641,32 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
 
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(firstSheet);
+            try {
+                const payloads = await montarPayloadsImportacaoSaida({
+                    file,
+                    XLSX,
+                    bicosDisponiveis: this.bicosDisponiveis,
+                    filialSelecionada: this.filialImportacaoSaida?.value,
+                    usuario: this.getUsuarioLogado()
+                });
 
-                    if (json.length === 0) throw new Error('Planilha vazia ou formato inválido.');
-
-                    const payloads = [];
-                    const usuario = this.getUsuarioLogado();
-                    const totalRows = json.length;
-                    let processedCount = 0;
-                    const filialSelecionada = this.filialImportacaoSaida?.value;
-
-                    const normalizeBicoImport = (value) => (value || '')
-                        .toString()
-                        .toUpperCase()
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, '')
-                        .replace(/[^A-Z0-9]/g, '');
-
-                    const parseBicoOrigem = (value) => {
-                        const raw = (value || '').toString().trim();
-                        const bicoMatch = raw.match(/^\s*([A-Za-z0-9]+)/);
-                        const bombaMatch = raw.match(/BOMBA\s*:\s*([^)]+?)(?:\s*-\s*TANQUE\s*:|\)|$)/i);
-                        const tanqueMatch = raw.match(/TANQUE\s*:\s*([^)]+)/i);
-
-                        return {
-                            raw,
-                            normalized: normalizeBicoImport(raw),
-                            bico: normalizeBicoImport(bicoMatch?.[1] || raw),
-                            bomba: normalizeBicoImport(bombaMatch?.[1] || ''),
-                            tanque: normalizeBicoImport(tanqueMatch?.[1] || ''),
-                            hasQualifiers: /BOMBA\s*:|TANQUE\s*:/i.test(raw)
-                        };
-                    };
-                    
-                    for (const [index, row] of json.entries()) {
-                        const r = {};
-                        Object.keys(row).forEach(k => r[k.toUpperCase().trim()] = row[k]);
-                        
-                        // Função auxiliar para buscar colunas de forma flexível (ignora acentos e espaços extras)
-                        const getFlexVal = (aliases) => {
-                            const keys = Object.keys(r);
-                            for (const alias of aliases) {
-                                const normAlias = alias.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
-                                const foundKey = keys.find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '').includes(normAlias));
-                                if (foundKey) return r[foundKey];
-                            }
-                            return undefined;
-                        };
-
-                        const placa = (getFlexVal(['VEICULO (PLACA)', 'PLACA', 'VEICULO']) || '').toString().replace(/\s+/g, '').toUpperCase().trim();
-                        const bicoNomeExcel = (getFlexVal(['BICO DE ORIGEM', 'BICO']) || '').toString().trim();
-                        const litros = parseFloat(String(getFlexVal(['LITROS ABASTECIDOS', 'LITROS']) || 0).replace(',', '.'));
-                        const kmAtual = parseFloat(String(getFlexVal(['KM / HORIMETRO ATUAL', 'KM ATUAL', 'KM']) || 0).replace(',', '.'));
-                        
-                        if (!placa || !bicoNomeExcel || litros <= 0 || kmAtual <= 0) {
-                            console.warn(`Linha ${index + 2} ignorada por dados incompletos ou zerados. Placa: ${placa}, Bico: ${bicoNomeExcel}, Litros: ${litros}, KM: ${kmAtual}`);
-                            continue;
-                        }
-                        
-                        const bicoExcel = parseBicoOrigem(bicoNomeExcel);
-                        const bicosFiltrados = this.bicosDisponiveis.filter(b => {
-                            const sistemaFilial = (b.bombas?.tanques?.filial || '').toUpperCase().trim();
-                            return !filialSelecionada || sistemaFilial === filialSelecionada.toUpperCase().trim();
-                        });
-
-                        const bico = bicosFiltrados.find(b => {
-                            const sistemaBicoNome = normalizeBicoImport(b.nome);
-                            const sistemaBombaNome = normalizeBicoImport(b.bombas?.nome);
-                            const sistemaTanqueNome = normalizeBicoImport(b.bombas?.tanques?.nome);
-                            const labelSistema = normalizeBicoImport(`${b.nome} BOMBA ${b.bombas?.nome || ''} TANQUE ${b.bombas?.tanques?.nome || ''}`);
-
-                            if (bicoExcel.hasQualifiers) {
-                                const bicoConfere = !bicoExcel.bico || sistemaBicoNome === bicoExcel.bico;
-                                const bombaConfere = !bicoExcel.bomba || sistemaBombaNome === bicoExcel.bomba;
-                                const tanqueConfere = !bicoExcel.tanque || sistemaTanqueNome === bicoExcel.tanque;
-
-                                return bicoConfere && bombaConfere && tanqueConfere;
-                            }
-
-                            return sistemaBicoNome === bicoExcel.normalized || labelSistema === bicoExcel.normalized;
-                        });
-                        
-                        if (!bico) {
-                            console.warn(`Bico "${bicoNomeExcel}" não encontrado na filial "${filialSelecionada || 'Todas'}" para a placa ${placa}. Linha ignorada.`);
-                            continue;
-                        }
-
-                        // Tratamento de Data para aceitar formatos brasileiros DD/MM/YYYY
-                        let finalDataHora = new Date().toISOString();
-                        const rawDate = getFlexVal(['DATA E HORA', 'DATA']);
-                        if (rawDate) {
-                            if (rawDate instanceof Date) {
-                                finalDataHora = rawDate.toISOString();
-                            } else {
-                                const parts = String(rawDate).match(/(\d{2})\/\-\/\-\s+(\d{2}):/);
-                                if (parts) finalDataHora = new Date(parts[3], parts[2] - 1, parts[1], parts[4], parts[5]).toISOString();
-                                else finalDataHora = new Date(rawDate).toISOString();
-                            }
-                        }
-
-                        payloads.push({
-                            
-                            data_hora: finalDataHora,
-                            veiculo_placa: placa,
-                            motorista: (getFlexVal(['MOTORISTA (OPCIONAL)', 'MOTORISTA']) || '').toString().trim(),
-                            rota: (getFlexVal(['ROTA']) || '').toString().trim(),
-                            km_atual: kmAtual,
-                            bico_id: bico.id,
-                            qtd_litros: litros,
-                            usuario: usuario
-                        });
-                    }
-
-                    if (payloads.length > 0) {
-                        const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
-                        if (error) throw error;
-                        alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);                        
-                        this.renderSaidasTable();
-                    } else {
-                        alert('Nenhum registro válido encontrado para importar.');
-                    }
-                } catch (error) {
-                    console.error('Erro na importação:', error);
-                    alert('Erro ao processar arquivo: ' + error.message);                    
-                } finally {
-                    e.target.value = ''; // Clear the file input
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                if (payloads.length > 0) {
+                    const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
+                    if (error) throw error;
+                    alert(`Importação concluída! ${payloads.length} registros de saída inseridos.`);
+                    this.renderSaidasTable();
+                } else {
+                    alert('Nenhum registro válido encontrado para importar.');
                 }
-            };
-            reader.readAsArrayBuffer(file);
+            } catch (error) {
+                console.error('Erro na importação:', error);
+                alert('Erro ao processar arquivo: ' + error.message);
+            } finally {
+                e.target.value = '';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         },
-
         async buscarUltimoKm(placaInput) {
             const inputUltimoKm = document.getElementById('saidaUltimoKm');
             if (!inputUltimoKm) return;
