@@ -8,6 +8,7 @@ import {
     calcularEstoqueAntes as obterEstoqueAntes,
     calcularEstoqueAtual
 } from './abastecimento/estoque-service.js';
+import { criarLinhaDistribuicaoTanque } from './abastecimento/distribuicao-tanques.js';
 import {
     montarPayloadExterno,
     montarPayloadPosto,
@@ -39,6 +40,10 @@ import {
     buscarTanques,
     buscarVeiculos
 } from './abastecimento/opcoes-service.js';
+import {
+    atualizarIconesOrdenacao,
+    atualizarIconesOrdenacaoEntrada
+} from './abastecimento/ordenacao-ui.js';
 import { montarHtmlAuditoriaEstoque } from './abastecimento/tabela-auditoria-estoque.js';
 import { montarHtmlEntradas } from './abastecimento/tabela-entradas.js';
 import { montarHtmlEstoque } from './abastecimento/tabela-estoque.js';
@@ -991,36 +996,11 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         adicionarLinhaTanque(tanqueId = '', qtd = '') {
-            const row = document.createElement('div');
-            row.className = 'distribuicao-row';
-
-            const select = document.createElement('select');
-            select.className = 'tanque-select glass-input';
-            select.innerHTML = '<option value="">-- Selecione um Tanque --</option>';
-            this.tanquesDisponiveis.forEach(t => {
-                const option = new Option(`${t.nome} (${t.tipo_combustivel})`, t.id);
-                select.add(option);
+            const row = criarLinhaDistribuicaoTanque({
+                tanquesDisponiveis: this.tanquesDisponiveis,
+                tanqueId,
+                qtd
             });
-            select.value = tanqueId;
-
-            const inputQtd = document.createElement('input');
-            inputQtd.type = 'number';
-            inputQtd.className = 'tanque-qtd glass-input';
-            inputQtd.placeholder = 'Litros';
-            inputQtd.step = '0.01';
-            inputQtd.min = '0.01';
-            inputQtd.value = qtd;
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'btn-remove-tanque';
-            removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            removeBtn.title = 'Remover linha';
-
-            row.appendChild(select);
-            row.appendChild(inputQtd);
-            row.appendChild(removeBtn);
-
             this.distribuicaoContainer.appendChild(row);
             this.updateLitrosRestantes();
         },
@@ -1320,9 +1300,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const term = this.searchSaidaInput ? this.searchSaidaInput.value : '';
             const filtered = filtrarOrdenarSaidas(this.saidasData, term, this.saidasSort);
 
-            document.querySelectorAll('.sortable-saida i').forEach(i => i.className = 'fas fa-sort');
-            const activeTh = document.querySelector(`.sortable-saida[data-sort="${this.saidasSort.key}"] i`);
-            if (activeTh) activeTh.className = this.saidasSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            atualizarIconesOrdenacao({
+                selector: '.sortable-saida',
+                activeKey: this.saidasSort.key,
+                asc: this.saidasSort.asc
+            });
 
             this.tableBodySaidas.innerHTML = montarHtmlSaidas(filtered);
         },
@@ -1379,17 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         updateSortIcons() {
-            const ths = document.querySelectorAll('#containerHistoricoEntrada th[data-field]');
-            ths.forEach(th => {
-                const icon = th.querySelector('i');
-                if (icon) {
-                    icon.className = 'fas fa-sort'; // Reset para ícone neutro
-                    if (th.dataset.field === this.sortState.field) {
-                        icon.className = this.sortState.ascending ? 'fas fa-sort-up' : 'fas fa-sort-down';
-                    }
-                }
-            });
-        },
+            atualizarIconesOrdenacaoEntrada(this.sortState);        },
 
         async deleteSaida(id) {
             try {
@@ -1624,10 +1596,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        normalizarCnpj(value) {
-            return String(value || '').replace(/\D/g, '');
-        },
-
         baixarModeloImportacaoExterno(e) {
             if (e) e.preventDefault();
             gerarModeloImportacaoExterno(XLSX);
@@ -1768,9 +1736,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const term = this.searchExtInput ? this.searchExtInput.value : '';
             const filtered = filtrarOrdenarExternos(this.extData, term, this.extSort);
 
-            document.querySelectorAll('.sortable-ext i').forEach(i => i.className = 'fas fa-sort');
-            const activeTh = document.querySelector(`.sortable-ext[data-sort="${this.extSort.key}"] i`);
-            if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            atualizarIconesOrdenacao({
+                selector: '.sortable-ext',
+                activeKey: this.extSort.key,
+                asc: this.extSort.asc
+            });
 
             this.tableBodyExt.innerHTML = montarHtmlExternos(filtered, isAdmin);
 
@@ -1991,9 +1961,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const term = this.searchPostoInput ? this.searchPostoInput.value : '';
             const filtered = filtrarOrdenarPostos(this.postosData, term, this.postosSort);
 
-            document.querySelectorAll('.sortable-posto i').forEach(i => i.className = 'fas fa-sort');
-            const activeTh = document.querySelector(`.sortable-posto[data-sort="${this.postosSort.key}"] i`);
-            if (activeTh) activeTh.className = this.postosSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            atualizarIconesOrdenacao({
+                selector: '.sortable-posto',
+                activeKey: this.postosSort.key,
+                asc: this.postosSort.asc
+            });
 
             this.tableBodyPostos.innerHTML = montarHtmlPostos(filtered);
         },
