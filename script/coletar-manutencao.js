@@ -17,6 +17,8 @@ import {
     limparSelecaoMultiselect,
     setupMultiselect
 } from './coletar-manutencao/filtros-relatorio.js';
+import { buscarLancamentosManutencao } from './coletar-manutencao/lancamentos-service.js';
+import { renderizarTabelaLancamentos } from './coletar-manutencao/lancamentos-tabela.js';
 
 const ColetarManutencaoUI = {
     init() {
@@ -1007,218 +1009,48 @@ const ColetarManutencaoUI = {
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
         this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+
         try {
-            // Captura dos filtros
-            const dataInicial = this.filtroDataInicialLancamento?.value;
-            const dataFinal = this.filtroDataFinalLancamento?.value;
-            const searchPlaca = this.searchPlacaInput?.value.trim().toUpperCase();
-            const searchItem = this.searchItemInput?.value;
-            const searchOficina = this.searchOficinaInput?.value;
-            const searchStatus = this.searchStatusInput?.value;
-            
-            // Validação da Data
-            if (!dataInicial || !dataFinal) {
+            const filtros = {
+                dataInicial: this.filtroDataInicialLancamento?.value,
+                dataFinal: this.filtroDataFinalLancamento?.value,
+                searchPlaca: this.searchPlacaInput?.value.trim().toUpperCase(),
+                searchItem: this.searchItemInput?.value,
+                searchOficina: this.searchOficinaInput?.value,
+                searchStatus: this.searchStatusInput?.value
+            };
+
+            if (!filtros.dataInicial || !filtros.dataFinal) {
                 this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Por favor, selecione o período de data.</td></tr>';
                 return;
             }
 
-            // Verifica nível do usuário para filtro automático
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-            const nomeUsuario = usuarioLogado ? usuarioLogado.nome : '';
-            const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
-            const isRestricted = ['mecanica_externa', 'moleiro'].includes(nivel);
-            let roleFilterItem = null;
-            if (nivel === 'moleiro') roleFilterItem = 'MOLEIRO';
-            if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA EXTERNA';
-            if (nivel === 'mecanica_externa') roleFilterItem = 'MECANICA - EXTERNA';
+            const resultado = await buscarLancamentosManutencao({
+                filtros,
+                sortConfig: this.currentSort,
+                oficinasMap: this.oficinasMap
+            });
 
-            let data = [];
-
-            // 1. Query principal na tabela pai (coletas_manutencao)
-            // Utilizamos !inner no join com veiculos para filtrar pela filial do veículo
-            let query = supabaseClient
-                .from('coletas_manutencao')
-                .select('*, veiculos!inner(filial)');
-
-            // Adiciona filtro de data obrigatório
-            query = query.gte('data_hora', `${dataInicial}T00:00:00`);
-            query = query.lte('data_hora', `${dataFinal}T23:59:59`);
-
-            // Filtra pela filial do usuário, se houver. Se não tiver, mostra tudo.
-            if (filialUsuario) {
-                query = query.eq('veiculos.filial', filialUsuario);
-            }
-
-            // Filtro para usuários específicos (ROMO e MOLEIRO) verem apenas seus lançamentos
-            if (nomeUsuario && (nomeUsuario.toUpperCase() === 'ROMO' || nomeUsuario.toUpperCase() === 'ROMO DIESEL' || nivel === 'mecanica_externa' ||nomeUsuario.toUpperCase() === 'MOLEIRO' || nomeUsuario.toUpperCase() === 'TREVO DE MOLAS' || nivel === 'moleiro')) {
-                query = query.eq('usuario', nomeUsuario);
-            }
-
-            // Se houver filtros de item/status (filhos), precisamos filtrar os IDs primeiro
-            if (searchItem || searchStatus || roleFilterItem || searchOficina) {
-                let idQuery = supabaseClient
-                    .from('coletas_manutencao_checklist')
-                    .select('coleta_id');
-
-                if (searchItem) idQuery = idQuery.eq('item', searchItem);
-                if (searchStatus) idQuery = idQuery.eq('status', searchStatus);
-                if (searchOficina) {
-                    const oficinaId = this.oficinasMap[searchOficina];
-                    if (oficinaId) idQuery = idQuery.eq('oficina_id', oficinaId);
-                }
-                if (roleFilterItem) idQuery = idQuery.eq('item', roleFilterItem);
-
-                const { data: idData, error: idError } = await idQuery;
-                if (idError) throw idError;
-
-                const matchingIds = [...new Set(idData.map(item => item.coleta_id))];
-
-                if (matchingIds.length === 0) {
-                    this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lançamento encontrado para os filtros.</td></tr>';
-                    return;
-                }
-                
-                query = query.in('id', matchingIds);
-            }
-
-            if (searchPlaca) {
-                query = query.ilike('placa', `%${searchPlaca}%`);
-            }
-
-            // Ordenação e Limite na tabela pai (evita timeout)
-            query = query.order(this.currentSort.column, { ascending: this.currentSort.direction === 'asc' });
-            query = query.limit(200);
-
-            const { data: coletas, error: errorColetas } = await query;
-            if (errorColetas) throw errorColetas;
-
-            if (!coletas || coletas.length === 0) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lançamento encontrado.</td></tr>';
+            if (!resultado.data || resultado.data.length === 0) {
+                const mensagem = resultado.emptyReason === 'filters'
+                    ? 'Nenhum lançamento encontrado para os filtros.'
+                    : 'Nenhum lançamento encontrado.';
+                this.tableBodyLancamentos.innerHTML = `<tr><td colspan="6" class="text-center">${mensagem}</td></tr>`;
                 return;
             }
 
-            // 2. Buscar checklists relacionados apenas para as coletas carregadas
-            const coletaIds = coletas.map(c => c.id);
-            const { data: checklists, error: errorChecklist } = await supabaseClient
-                .from('coletas_manutencao_checklist')
-                .select('coleta_id, status, item, valor')
-                .in('coleta_id', coletaIds);
-
-            if (errorChecklist) throw errorChecklist;
-
-            // 3. Combinar dados (Associa checklists às coletas)
-            data = coletas.map(coleta => {
-                coleta.coletas_manutencao_checklist = checklists.filter(ch => ch.coleta_id === coleta.id);
-
-                // Recalcula o valor total somando os valores dos itens do checklist para exibir na grid
-                const totalItens = coleta.coletas_manutencao_checklist.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
-                coleta.valor_total = totalItens;
-
-                return coleta;
-            });
-
-            this.tableBodyLancamentos.innerHTML = '';
-            // Verifica permissão para excluir
-            const podeExcluir = !['mecanica_externa', 'mecanica_interna', 'moleiro'].includes(nivel);
-
-            // Ocultar cabeçalho de Valor Total se restrito (Desktop)
-            const headerValor = document.querySelector('#sectionLancamento .data-grid thead th:nth-child(5)');
-            // if (headerValor) {
-            //     headerValor.style.display = isRestricted ? 'none' : '';
-            // }
-
-            // A ordenação agora é feita diretamente na query do Supabase.
-            // A lógica de exibir apenas o último lançamento por placa foi removida
-            // para mostrar todos os registros que correspondem ao filtro.
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-
-                // Lógica de status geral para colorir a linha
-                let checklist = item.coletas_manutencao_checklist || [];
-                
-                if (roleFilterItem) {
-                    checklist = checklist.filter(i => i.item === roleFilterItem);
-                }
-
-                let generalStatus = 'NONE';
-
-                if (checklist.length > 0) {
-                    const hasNaoRealizado = checklist.some(i => i.status === 'PENDENTE' || i.status === 'NAO REALIZADO' || i.status === 'NÃO REALIZADO');
-                    const hasInternado = checklist.some(i => i.status === 'INTERNADO');
-                    const hasCheckinOficina = checklist.some(i => i.status === 'CHECK-IN OFICINA');
-                    const hasCheckinRota = checklist.some(i => i.status === 'CHECK-IN ROTA');
-                    const hasFinalizadoRota = checklist.some(i => i.status === 'FINALIZADO ROTA');
-                    // Para ser 'OK', todos os itens devem ser 'OK'.
-                    const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK' || i.status === 'FINALIZADO ROTA');
-
-                    if (hasNaoRealizado) {
-                        generalStatus = 'PENDENTE';
-                    } else if (hasInternado) {
-                        generalStatus = 'INTERNADO';
-                    } else if (hasCheckinOficina) {
-                        generalStatus = 'CHECK-IN OFICINA';
-                    } else if (hasCheckinRota) {
-                        generalStatus = 'CHECK-IN ROTA';
-                    } else if (allOk) {
-                        if (hasFinalizadoRota) {
-                            generalStatus = 'FINALIZADO ROTA';
-                        } else {
-                            generalStatus = 'FINALIZADO';
-                        }
-                    }
-                }
-
-                if (generalStatus === 'FINALIZADO' || generalStatus === 'OK') {
-                    tr.style.backgroundColor = '#d4edda'; // Verde claro
-                    tr.style.color = '#155724';
-                } else if (generalStatus === 'FINALIZADO ROTA') {
-                    tr.style.backgroundColor = '#d4edda'; // Verde claro
-                    tr.style.color = '#006400'; // Verde Escuro
-                    tr.style.fontWeight = 'bold';
-                } else if (generalStatus === 'PENDENTE') {
-                    tr.style.backgroundColor = '#f8d7da'; // Vermelho claro
-                    tr.style.color = '#721c24';
-                } else if (generalStatus === 'INTERNADO') {
-                    tr.style.backgroundColor = '#cce5ff'; // Azul claro
-                    tr.style.color = '#004085';
-                } else if (generalStatus === 'CHECK-IN OFICINA') {
-                    tr.style.backgroundColor = '#fff3cd'; // Amarelo claro
-                    tr.style.color = '#856404';
-                } else if (generalStatus === 'CHECK-IN ROTA') {
-                    tr.style.backgroundColor = '#ffe0b2'; // Laranja claro
-                    tr.style.color = '#d35400';
-                }
-
-                let botoesAcao = `<button class="btn-action btn-edit" data-id="${item.id}" title="Editar"><i class="fas fa-pen"></i></button>`;
-                if (podeExcluir) {
-                    botoesAcao += `\n                        <button class="btn-action btn-delete" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
-                }
-
-                const valorDisplay = item.valor_total > 0
-                    ? `<strong>${(item.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>`
-                    : '-';
-
-                const valorStyle = isRestricted ? 'display: none;' : '';
-
-                tr.innerHTML = `
-                    <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
-                    <td>${item.semana}</td>
-                    <td>${item.placa}</td>
-                    <td>${item.usuario}</td>
-                    <td style="${valorStyle}">${valorDisplay}</td>
-                    <td>
-                        ${botoesAcao}
-                    </td>
-                `;
-                this.tableBodyLancamentos.appendChild(tr);
+            renderizarTabelaLancamentos({
+                tbody: this.tableBodyLancamentos,
+                data: resultado.data,
+                roleFilterItem: resultado.roleFilterItem,
+                podeExcluir: resultado.podeExcluir,
+                isRestricted: resultado.isRestricted
             });
         } catch (err) {
             console.error('Erro ao carregar lançamentos:', err);
             this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
-
     // Lida com a ordenação da tabela de lançamentos
     handleSort(column) {
         if (this.currentSort.column === column) {
