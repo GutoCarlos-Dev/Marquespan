@@ -293,7 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Busca o Último KM ao selecionar um veículo (Aba Saída)
             if (this.saidaVeiculo) {
-                this.saidaVeiculo.addEventListener('change', (e) => this.buscarUltimoKm(e.target.value));
+                this.saidaVeiculo.addEventListener('change', (e) => {
+                    const placa = e.target.value;
+                    this.buscarUltimoKm(placa);
+                    this.buscarDadosRetornoRota(placa);
+                });
             }
             document.querySelectorAll('.sortable-saida').forEach(th => {
                 th.addEventListener('click', () => {
@@ -2098,6 +2102,38 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 console.error('Erro ao buscar último KM:', e);
                 inputUltimoKm.value = 'Erro';
+            }
+        },
+
+        async buscarDadosRetornoRota(placaInput) {
+            if (!this.saidaRota || !this.saidaMotorista) return;
+            
+            const placa = placaInput ? placaInput.trim().toUpperCase() : '';
+            if (!placa) return;
+
+            // Obtém a data do formulário de saída (formato YYYY-MM-DD)
+            const dataBase = this.saidaDataHora.value ? this.saidaDataHora.value.split('T')[0] : new Date().toISOString().split('T')[0];
+
+            try {
+                // Busca o retorno de rota mais próximo (mesmo dia ou anterior)
+                const { data, error } = await supabaseClient
+                    .from('retorno_rota')
+                    .select('rota, nome_mot')
+                    .eq('placa', placa)
+                    .lte('data_retorno', dataBase)
+                    .order('data_retorno', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') throw error; // Ignora se não encontrar (PGRST116)
+
+                if (data) {
+                    // Preenche os campos como sugestão, permitindo que o usuário edite se necessário
+                    this.saidaRota.value = data.rota || '';
+                    this.saidaMotorista.value = data.nome_mot || '';
+                }
+            } catch (e) {
+                console.error('Erro ao buscar rota/motorista do retorno:', e);
             }
         },
     };
