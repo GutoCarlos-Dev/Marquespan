@@ -14,6 +14,12 @@ import {
 } from './abastecimento/importacao-externo.js';
 import { importarPostos } from './abastecimento/importacao-postos.js';
 import { montarPayloadsImportacaoSaida } from './abastecimento/importacao-saida.js';
+import { montarHtmlAuditoriaEstoque } from './abastecimento/tabela-auditoria-estoque.js';
+import { montarHtmlEntradas } from './abastecimento/tabela-entradas.js';
+import { montarHtmlEstoque } from './abastecimento/tabela-estoque.js';
+import { filtrarOrdenarExternos, montarHtmlExternos } from './abastecimento/tabela-externo.js';
+import { filtrarOrdenarPostos, montarHtmlPostos } from './abastecimento/tabela-postos.js';
+import { filtrarOrdenarSaidas, montarHtmlSaidas } from './abastecimento/tabela-saidas.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
@@ -665,49 +671,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const estoqueCalculado = Array.from(estoqueMap.values());
 
                 // 5. Renderizar a tabela
-                this.tbodyEstoque.innerHTML = '';
-                if (estoqueCalculado.length === 0) {
-                    this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Nenhum tanque cadastrado.</td></tr>`;
-                    return;
-                }
-
-                estoqueCalculado.forEach(tanque => {
-                    const tr = document.createElement('tr');
-                    // Armazena o estoque calculado em um atributo de dados para comparação posterior
-                    tr.dataset.calculatedStock = tanque.estoque_atual;
-                    
-                    const capacidade = parseFloat(tanque.capacidade) || 0;
-                    const estoque = parseFloat(tanque.estoque_atual) || 0;
-                    const percentual = capacidade > 0 ? ((estoque / capacidade) * 100).toFixed(0) : 0;
-                    
-                    let color = '#006937'; // Verde
-                    if(percentual < 20) color = '#dc3545'; // Vermelho
-                    else if(percentual < 50) color = '#ffc107'; // Amarelo
-
-                    tr.innerHTML = `
-                        <td>${tanque.nome}</td>
-                        <td>${tanque.tipo_combustivel}</td>
-                        <td>${tanque.capacidade ? tanque.capacidade.toLocaleString('pt-BR') + ' L' : '-'}</td>
-                        <td style="width: 250px; vertical-align: middle;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="flex-grow: 1; background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
-                                    <div style="width: ${Math.min(percentual, 100)}%; background: ${color}; height: 100%; border-radius: 5px; transition: width 0.5s ease;"></div>
-                                </div>
-                                <span style="font-weight: bold; color: ${color}; font-size: 0.9rem; min-width: 40px; text-align: right;">${percentual}%</span>
-                            </div>
-                        </td>
-                        ${canViewAuditoria ? `<td class="estoque-anterior">${this.formatLitros(estoque)} L</td>` : ''}
-                        <td>
-                            <input type="text" class="input-estoque-atual glass-input" data-id="${tanque.id}" 
-                                   data-capacidade="${tanque.capacidade || 0}"
-                                   value="${this.formatLitros(tanque.estoque_atual)}" 
-                                   oninput="this.value = this.value.replace(/[^0-9,.]/g, '')">
-                        </td>
-                        ${canViewAuditoria ? '<td class="estoque-diferenca diferenca-zero">0,00 L</td>' : ''}
-                    `;
-                    this.tbodyEstoque.appendChild(tr);
+                this.tbodyEstoque.innerHTML = montarHtmlEstoque(estoqueCalculado, {
+                    canViewAuditoria,
+                    formatLitros: this.formatLitros.bind(this),
+                    totalColunas
                 });
-
             } catch (error) {
                 console.error('Erro ao carregar estoque:', error);
                 this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center text-danger">Erro ao carregar dados.</td></tr>`;
@@ -875,30 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
 
                 this.auditoriaEstoqueDados = rows;
-                this.tbodyAuditoriaEstoque.innerHTML = '';
-                this.auditoriaEstoqueDados.forEach(item => {
-                    const tr = document.createElement('tr');
-                    const diferencaClasse = item.diferenca > 0.001
-                        ? 'diferenca-positiva'
-                        : item.diferenca < -0.001
-                            ? 'diferenca-negativa'
-                            : 'diferenca-zero';
-
-                    tr.innerHTML = `
-                        <td>${new Date(item.data).toLocaleString('pt-BR')}</td>
-                        <td>${this.escapeHTML(item.usuario || '-')}</td>
-                        <td>${this.escapeHTML(item.tanques?.nome || '-')}</td>
-                        <td>${this.escapeHTML(item.tanques?.tipo_combustivel || '-')}</td>
-                        <td class="estoque-anterior">${this.formatLitros(item.estoqueAnterior)} L</td>
-                        <td class="estoque-anterior">${this.formatLitros(item.estoqueAtual)} L</td>
-                        <td class="estoque-diferenca ${diferencaClasse}">${item.diferenca > 0 ? '+' : ''}${this.formatLitros(item.diferenca)} L</td>
-                        <td style="display: flex; gap: 5px; justify-content: center;">
-                            <button class="btn-action btn-edit btn-edit-auditoria" data-id="${item.id}" data-estoque-anterior="${item.estoqueAnterior}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn-action btn-delete btn-delete-auditoria" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                        </td>
-                    `;
-                    this.tbodyAuditoriaEstoque.appendChild(tr);
-                });
+                this.tbodyAuditoriaEstoque.innerHTML = montarHtmlAuditoriaEstoque(rows, this.formatLitros.bind(this));
             } catch (error) {
                 console.error('Erro ao buscar auditoria de estoque:', error);
                 this.auditoriaEstoqueDados = [];
@@ -1309,44 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async renderTable() {
             this.tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
             const registros = await this.getAbastecimentos();
-            this.tableBody.innerHTML = '';
-
-            if (registros.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="7">Nenhum registro encontrado.</td></tr>';
-                return;
-            }
-
-            registros.forEach(reg => {
-                const tr = document.createElement('tr');
-                const dataFormatada = new Date(reg.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-                // Formata o valor por litro para exibir mais casas decimais
-                const vlrLitroFormatado = (reg.valor_litro || 0).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 6 // Aumenta o número de casas decimais exibidas
-                });
-                // O valor total também precisa de mais precisão
-                const totalFormatado = (reg.valor_total || 0).toLocaleString('pt-BR', {
-                    style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 6
-                });
-                const tanqueNome = reg.tanques ? reg.tanques.nome : 'Tanque excluído';
-
-                tr.innerHTML = `
-                    <td>${dataFormatada}</td>
-                    <td>${reg.numero_nota}</td>
-                    <td>${tanqueNome}</td>
-                    <td>${reg.qtd_litros.toLocaleString('pt-BR')} L</td>
-                    <td>${vlrLitroFormatado}</td>
-                    <td>${totalFormatado}</td>
-                    <td>${reg.usuario || '-'}</td>
-                    <td style="display: flex; gap: 5px; justify-content: center;">
-                        <button class="btn-action btn-edit" data-id="${reg.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn-action btn-delete" data-id="${reg.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                this.tableBody.appendChild(tr);
-            });
+            this.tableBody.innerHTML = montarHtmlEntradas(registros);
         },
 
         handleDistribuicaoClick(e) {
@@ -1609,55 +1517,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Filtragem
-            const term = this.searchSaidaInput ? this.searchSaidaInput.value.toLowerCase() : '';
-            const filtered = this.saidasData.filter(item => {
-                const dataF = new Date(item.data_hora).toLocaleString('pt-BR').toLowerCase();
-                return (item.veiculo_placa || '').toLowerCase().includes(term) ||
-                       (item.rota || '').toLowerCase().includes(term) ||
-                       (item.motorista || '').toLowerCase().includes(term) ||
-                       dataF.includes(term);
-            });
+            const term = this.searchSaidaInput ? this.searchSaidaInput.value : '';
+            const filtered = filtrarOrdenarSaidas(this.saidasData, term, this.saidasSort);
 
-            // Ordenação
-            filtered.sort((a, b) => {
-                let valA = a[this.saidasSort.key];
-                let valB = b[this.saidasSort.key];
-                if (valA === null) valA = '';
-                if (valB === null) valB = '';
-                if (typeof valA === 'string') valA = valA.toLowerCase();
-                if (typeof valB === 'string') valB = valB.toLowerCase();
-                if (valA < valB) return this.saidasSort.asc ? -1 : 1;
-                if (valA > valB) return this.saidasSort.asc ? 1 : -1;
-                return 0;
-            });
-
-            // Atualiza Ícones
             document.querySelectorAll('.sortable-saida i').forEach(i => i.className = 'fas fa-sort');
             const activeTh = document.querySelector(`.sortable-saida[data-sort="${this.saidasSort.key}"] i`);
             if (activeTh) activeTh.className = this.saidasSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
-            this.tableBodySaidas.innerHTML = '';
-            if (filtered.length === 0) {
-                this.tableBodySaidas.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma saída registrada.</td></tr>';
-                return;
-            }
-
-            this.tableBodySaidas.innerHTML = filtered.map(saida => `
-                    <tr>
-                        <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
-                        <td>${saida.veiculo_placa || ''}</td>
-                        <td>${saida.motorista || '-'}</td>
-                        <td>${saida.rota || ''}</td>
-                        <td>${parseFloat(saida.qtd_litros).toLocaleString('pt-BR')} L</td>
-                        <td>${saida.km_atual || ''}</td>
-                        <td>${saida.usuario || '-'}</td>
-                        <td style="display: flex; gap: 5px; justify-content: center;">
-                            <button class="btn-action btn-edit" data-id="${saida.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn-action btn-delete" data-id="${saida.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
+            this.tableBodySaidas.innerHTML = montarHtmlSaidas(filtered);
         },
 
         async handleSaidaTableClick(e) {
@@ -2209,82 +2076,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // -------------------------------
 
-            // Filtragem (agora inclui motorista)
-            const term = this.searchExtInput ? this.searchExtInput.value.toLowerCase() : '';
-            const filtered = this.extData.filter(item => {
-                const postoNome = item.postos?.razao_social || '';
-                return (item.veiculo_placa || '').toLowerCase().includes(term) ||
-                       (postoNome).toLowerCase().includes(term) ||
-                       (item.data_hora || '').toLowerCase().includes(term);
-            });
-            // Filtragem (agora inclui motorista)
-            
-            // Ordenação
-            filtered.sort((a, b) => {
-                let valA = a[this.extSort.key];
-                let valB = b[this.extSort.key];
+            const term = this.searchExtInput ? this.searchExtInput.value : '';
+            const filtered = filtrarOrdenarExternos(this.extData, term, this.extSort);
 
-                // Tratamento especial para coluna de relacionamento 'posto'
-                if (this.extSort.key === 'posto') {
-                    valA = a.postos?.razao_social || '';
-                    valB = b.postos?.razao_social || '';
-                }
-
-                if (valA === null) valA = '';
-                if (valB === null) valB = '';
-
-                // Se for data, string ou número
-                if (typeof valA === 'string') valA = valA.toLowerCase();
-                if (typeof valB === 'string') valB = valB.toLowerCase();
-                
-                if (valA < valB) return this.extSort.asc ? -1 : 1;
-                if (valA > valB) return this.extSort.asc ? 1 : -1;
-                return 0;
-            });
-
-            // Atualiza Ícones
             document.querySelectorAll('.sortable-ext i').forEach(i => i.className = 'fas fa-sort');
             const activeTh = document.querySelector(`.sortable-ext[data-sort="${this.extSort.key}"] i`);
             if (activeTh) activeTh.className = this.extSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
-            this.tableBodyExt.innerHTML = '';
-            const colCount = isAdmin ? 13 : 12; // Colunas originais + Usuario + KM Anterior/Rodado + Motorista
-
-            if (filtered.length === 0) {
-                this.tableBodyExt.innerHTML = `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
-                return;
-            }
-
-            filtered.forEach(item => {
-                const tr = document.createElement('tr');
-                const dataF = new Date(item.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-                const valTotal = item.valor_total ? item.valor_total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
-                
-                let checkboxHtml = '';
-                if (isAdmin) {
-                    checkboxHtml = `<td style="text-align:center;"><input type="checkbox" class="chk-ext-delete" value="${item.id}"></td>`;
-                }
-
-                tr.innerHTML = `
-                    ${checkboxHtml}
-                    <td>${dataF}</td>
-                    <td>${item.usuario || '-'}</td>
-                    <td>${item.postos?.razao_social || '-'}</td>
-                    <td>${item.veiculo_placa}</td>
-                    <td>${item.motorista || '-'}</td>
-                    <td>${item.litros || '-'} L</td>
-                    <td>${valTotal}</td>
-                    <td>${item.valor_unitario || '-'}</td>
-                    <td>${item.km_anterior || '0'}</td>
-                    <td>${item.km_atual || '-'}</td>
-                    <td>${item.km_rodado || '0'}</td>
-                    <td style="display: flex; gap: 5px; justify-content: center;">
-                        <button class="btn-action btn-edit-ext" data-id="${item.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn-action btn-delete-ext" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                this.tableBodyExt.appendChild(tr);
-            });
+            this.tableBodyExt.innerHTML = montarHtmlExternos(filtered, isAdmin);
 
             if (isAdmin) {
                 this.tableBodyExt.querySelectorAll('.chk-ext-delete').forEach(cb => {
@@ -2523,56 +2322,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.postosData = allPostos;
             }
 
-            // Filtragem
-            const term = this.searchPostoInput ? this.searchPostoInput.value.toLowerCase() : '';
-            const filtered = this.postosData.filter(p => {
-                return (p.razao_social || '').toLowerCase().includes(term) ||
-                       (p.cnpj || '').toLowerCase().includes(term) ||
-                       (p.cidade || '').toLowerCase().includes(term);
-            });
+            const term = this.searchPostoInput ? this.searchPostoInput.value : '';
+            const filtered = filtrarOrdenarPostos(this.postosData, term, this.postosSort);
 
-            // Ordenação
-            filtered.sort((a, b) => {
-                let valA = a[this.postosSort.key];
-                let valB = b[this.postosSort.key];
-                if (valA === null) valA = '';
-                if (valB === null) valB = '';
-                if (typeof valA === 'string') valA = valA.toLowerCase();
-                if (typeof valB === 'string') valB = valB.toLowerCase();
-                
-                if (valA < valB) return this.postosSort.asc ? -1 : 1;
-                if (valA > valB) return this.postosSort.asc ? 1 : -1;
-                return 0;
-            });
-
-            // Atualiza Ícones
             document.querySelectorAll('.sortable-posto i').forEach(i => i.className = 'fas fa-sort');
             const activeTh = document.querySelector(`.sortable-posto[data-sort="${this.postosSort.key}"] i`);
             if (activeTh) activeTh.className = this.postosSort.asc ? 'fas fa-sort-up' : 'fas fa-sort-down';
 
-            this.tableBodyPostos.innerHTML = '';
-            if (filtered.length === 0) {
-                this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum posto encontrado.</td></tr>';
-                return;
-            }
-
-            filtered.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${p.filial || '-'}</td>
-                    <td>${p.razao_social}</td>
-                    <td>${p.cnpj || '-'}</td>
-                    <td>${p.cidade || '-'}</td>
-                    <td>${p.uf || '-'}</td>
-                    <td>${p.faturado ? 'Sim' : 'Não'}</td>
-                    <td>${(p.valor_negociado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
-                    <td style="display: flex; gap: 5px; justify-content: center;">
-                        <button class="btn-action btn-edit-posto" data-id="${p.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn-action btn-delete-posto" data-id="${p.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                this.tableBodyPostos.appendChild(tr);
-            });
+            this.tableBodyPostos.innerHTML = montarHtmlPostos(filtered);
         },
 
         handlePostoTableClick(e) {
