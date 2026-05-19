@@ -5,6 +5,10 @@ import {
     exportarAuditoriaEstoqueXLSX as gerarAuditoriaEstoqueXLSX
 } from './abastecimento/auditoria-estoque-export.js';
 import {
+    calcularEstoqueAntes as obterEstoqueAntes,
+    calcularEstoqueAtual
+} from './abastecimento/estoque-service.js';
+import {
     baixarModeloImportacaoExterno as gerarModeloImportacaoExterno,
     baixarModeloImportacaoSaida as gerarModeloImportacaoSaida
 } from './abastecimento/modelos-importacao.js';
@@ -12,8 +16,21 @@ import {
     baixarRelatorioImportacaoExterna,
     importarAbastecimentoExterno
 } from './abastecimento/importacao-externo.js';
+import {
+    buscarAbastecimentosEntrada,
+    buscarAbastecimentosExternos,
+    buscarPostosPaginados,
+    buscarSaidasCombustivel
+} from './abastecimento/historico-service.js';
 import { importarPostos } from './abastecimento/importacao-postos.js';
 import { montarPayloadsImportacaoSaida } from './abastecimento/importacao-saida.js';
+import {
+    buscarBicos,
+    buscarMotoristasAtivos,
+    buscarRotas,
+    buscarTanques,
+    buscarVeiculos
+} from './abastecimento/opcoes-service.js';
 import { montarHtmlAuditoriaEstoque } from './abastecimento/tabela-auditoria-estoque.js';
 import { montarHtmlEntradas } from './abastecimento/tabela-entradas.js';
 import { montarHtmlEstoque } from './abastecimento/tabela-estoque.js';
@@ -495,20 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadTanques() {
             try {
-                let query = supabaseClient
-                    .from('tanques')
-                    .select('id, nome, tipo_combustivel');
-
-                const userFilial = this.getUserFilial();
-                if (userFilial) {
-                    query = query.eq('filial', userFilial);
-                }
-
-                const { data, error } = await query.order('nome');
-                if (error) throw error;
-
-                this.tanquesDisponiveis = data || [];                
-
+                this.tanquesDisponiveis = await buscarTanques(supabaseClient, this.getUserFilial());
                 this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
                 console.error('Erro ao carregar tanques:', error);
@@ -629,47 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Carregando...</td></tr>`;
 
             try {
-                // 1. Buscar todos os tanques
-                let queryTanques = supabaseClient
-                    .from('tanques')
-                    .select('id, nome, capacidade, tipo_combustivel');
-                
-                const userFilial = this.getUserFilial();
-                if (userFilial) queryTanques = queryTanques.eq('filial', userFilial);
-
-                const { data: tanques, error: tanquesError } = await queryTanques;
-                if (tanquesError) throw tanquesError;
-
-                // 2. Buscar todas as entradas (abastecimentos)
-                const { data: entradas, error: entradasError } = await supabaseClient
-                    .from('abastecimentos')
-                    .select('tanque_id, qtd_litros');
-                if (entradasError) throw entradasError;
-
-                // 3. Buscar todas as saídas
-                const { data: saidas, error: saidasError } = await supabaseClient
-                    .from('saidas_combustivel')
-                    .select('qtd_litros, bicos(bombas(tanque_id))');
-                if (saidasError) throw saidasError;
-
-                // 4. Calcular o estoque atual
-                const estoqueMap = new Map();
-                tanques.forEach(t => {
-                    estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
-                });
-                entradas.forEach(e => {
-                    if (estoqueMap.has(e.tanque_id)) {
-                        estoqueMap.get(e.tanque_id).estoque_atual += e.qtd_litros;
-                    }
-                });
-                saidas.forEach(s => {
-                    const tanqueId = s.bicos?.bombas?.tanque_id;
-                    if (tanqueId && estoqueMap.has(tanqueId)) {
-                        estoqueMap.get(tanqueId).estoque_atual -= s.qtd_litros;
-                    }
-                });
-                const estoqueCalculado = Array.from(estoqueMap.values());
-
+                const estoqueCalculado = await calcularEstoqueAtual(supabaseClient, this.getUserFilial());
                 // 5. Renderizar a tabela
                 this.tbodyEstoque.innerHTML = montarHtmlEstoque(estoqueCalculado, {
                     canViewAuditoria,
@@ -770,29 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async calcularEstoqueAntes(tanqueId, dataHora) {
-            const [entradasResult, saidasResult] = await Promise.all([
-                supabaseClient
-                    .from('abastecimentos')
-                    .select('qtd_litros')
-                    .eq('tanque_id', tanqueId)
-                    .lt('data', dataHora),
-                supabaseClient
-                    .from('saidas_combustivel')
-                    .select('qtd_litros, bicos(bombas(tanque_id))')
-                    .lt('data_hora', dataHora)
-            ]);
-
-            if (entradasResult.error) throw entradasResult.error;
-            if (saidasResult.error) throw saidasResult.error;
-
-            const totalEntradas = (entradasResult.data || [])
-                .reduce((total, item) => total + (parseFloat(item.qtd_litros) || 0), 0);
-
-            const totalSaidas = (saidasResult.data || [])
-                .filter(item => Number(item.bicos?.bombas?.tanque_id) === Number(tanqueId))
-                .reduce((total, item) => total + (parseFloat(item.qtd_litros) || 0), 0);
-
-            return totalEntradas - totalSaidas;
+            return obterEstoqueAntes(supabaseClient, tanqueId, dataHora);
         },
 
         async renderAuditoriaEstoque() {
@@ -975,41 +917,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Carregar Bicos
             await this.loadBicos();
 
-            // Carregar Veículos
+            // Carregar Veiculos
             try {
-                const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo, tipo').order('placa');
-                if (veiculos) {
-                    this.veiculosDisponiveis = veiculos; // Armazena no cache
-                    this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
-                }
-            } catch (e) { console.error('Erro ao carregar veículos', e); }
+                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient);
+                this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
+            } catch (e) { console.error('Erro ao carregar veiculos', e); }
 
-            // Carregar Motoristas (Funcionários com "Motorista" no nível/função)
+            // Carregar Motoristas
             try {
-                const { data: motoristas } = await supabaseClient
-                    .from('funcionario')
-                    .select('nome')
-                    .ilike('funcao', '%Motorista%')
-                    .eq('status', 'Ativo');
-                if (motoristas && this.listaMotoristasSaida) {
+                const motoristas = await buscarMotoristasAtivos(supabaseClient);
+                if (this.listaMotoristasSaida) {
                     this.listaMotoristasSaida.innerHTML = motoristas.map(m => `<option value="${m.nome}"></option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar motoristas', e); }
-            
-            // Carregar Rotas (substituindo Motoristas)
+
+            // Carregar Rotas
             try {
-                const { data: rotas, error: errRotas } = await supabaseClient
-                    .from('rotas')
-                    .select('numero');
-                
-                if (errRotas) throw errRotas;
-
-                if (rotas) {
-                    // Ordenação numérica correta
-                    rotas.sort((a, b) => {
-                        return String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' });
-                    });
-
+                const rotas = await buscarRotas(supabaseClient);
+                if (this.listaRotas) {
                     this.listaRotas.innerHTML = rotas.map(r => `<option value="${r.numero}"></option>`).join('');
                 }
             } catch (e) { console.error('Erro ao carregar rotas', e); }
@@ -1018,20 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async loadBicos() {
             if (!this.saidaBico) return;
             try {
-                let query = supabaseClient
-                    .from('bicos')
-                    .select('id, nome, bombas!inner(nome, tanques!inner(nome, filial))');
-
-                const userFilial = this.getUserFilial();
-                if (userFilial) {
-                    query = query.eq('bombas.tanques.filial', userFilial);
-                }
-
-                const { data, error } = await query.order('nome');
-                if (error) throw error;
-
-                this.bicosDisponiveis = data || [];
-                this.bicosDisponiveis.sort((a, b) => a.nome.localeCompare(b.nome, undefined, { numeric: true, sensitivity: 'base' }));
+                this.bicosDisponiveis = await buscarBicos(supabaseClient, this.getUserFilial());
                 this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 if (this.saidaBico2) this.saidaBico2.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 this.bicosDisponiveis.forEach(bico => {
@@ -1119,40 +1031,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async getAbastecimentos() {
             try {
-                // Faz join com a tabela de tanques para pegar o nome
-                let query = supabaseClient
-                    .from('abastecimentos')
-                    .select('*, tanques!inner(nome, tipo_combustivel, filial)');
-                
-                const userFilial = this.getUserFilial();
-                if (userFilial) {
-                    query = query.eq('tanques.filial', userFilial);
-                }
-                
-                // Adiciona filtro de data
-                if (this.filtroDataInicial && this.filtroDataFinal) {
-                    const dataInicial = this.filtroDataInicial.value;
-                    const dataFinal = this.filtroDataFinal.value;
-
-                    if (dataInicial && dataFinal) {
-                        // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
-                        query = query.gte('data', `${dataInicial}T00:00:00-03:00`);
-                        query = query.lte('data', `${dataFinal}T23:59:59-03:00`);
-                    }
-                }    
-
-                // Aplica a ordenação baseada no estado atual
-                const { field, ascending } = this.sortState;
-                if (field.includes('.')) {
-                    const [table, col] = field.split('.');
-                    query = query.order(col, { foreignTable: table, ascending: ascending });
-                } else {
-                    query = query.order(field, { ascending: ascending });
-                }
-
-                const { data, error } = await query;
-                if (error) throw error;
-                return data || [];
+                return await buscarAbastecimentosEntrada({
+                    supabaseClient,
+                    filial: this.getUserFilial(),
+                    dataInicial: this.filtroDataInicial?.value,
+                    dataFinal: this.filtroDataFinal?.value,
+                    sortState: this.sortState
+                });
             } catch (error) {
                 console.error('Erro ao buscar abastecimentos:', error);
                 return [];
@@ -1484,32 +1369,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fetchData) {
                 this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
                 try {
-                    let query = supabaseClient
-                        .from('saidas_combustivel')
-                        .select('*, bicos!inner(bombas!inner(tanques!inner(filial)))');
-
-                    const userFilial = this.getUserFilial();
-                    if (userFilial) {
-                        query = query.eq('bicos.bombas.tanques.filial', userFilial);
-                    }
-
-                    // Adiciona filtro de data
-                    if (this.filtroSaidaDataInicial && this.filtroSaidaDataFinal) {
-                        const dataInicial = this.filtroSaidaDataInicial.value;
-                        const dataFinal = this.filtroSaidaDataFinal.value;
-
-                        if (dataInicial && dataFinal) {
-                            // Adiciona T00:00:00 e T23:59:59 para incluir o dia inteiro
-                            query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
-                            query = query.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
-                        }
-                    }
-
-                    query = query.order('data_hora', { ascending: false });
-
-                    const { data, error } = await query;
-                    if (error) throw error;
-                    this.saidasData = data || [];
+                    this.saidasData = await buscarSaidasCombustivel({
+                        supabaseClient,
+                        filial: this.getUserFilial(),
+                        dataInicial: this.filtroSaidaDataInicial?.value,
+                        dataFinal: this.filtroSaidaDataFinal?.value
+                    });
                 } catch (error) {
                     console.error('Erro ao carregar histórico de saídas:', error);
                     this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center" style="color:red;">Erro ao carregar histórico.</td></tr>';
@@ -2024,31 +1889,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (fetchData) {
                 this.tableBodyExt.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>';
-                // Aumentei o limite para 200 para permitir uma ordenação/busca local mais fluida
-                let query = supabaseClient
-                    .from('abastecimento_externo')
-                    .select('*, postos(razao_social)');
-
-                const userFilial = this.getUserFilial();
-                if (userFilial) {
-                    query = query.eq('filial', userFilial);
-                }
-
-                // Adiciona filtro de data
-                if (this.filtroExtDataInicial && this.filtroExtDataFinal) {
-                    const dataInicial = this.filtroExtDataInicial.value;
-                    const dataFinal = this.filtroExtDataFinal.value;
-
-                    if (dataInicial && dataFinal) {
-                        query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
-                        query = query.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
-                    }
-                }
-                
-                query = query.order('data_hora', { ascending: false });
-
-                const { data } = await query;
-                this.extData = data || [];
+                this.extData = await buscarAbastecimentosExternos({
+                    supabaseClient,
+                    filial: this.getUserFilial(),
+                    dataInicial: this.filtroExtDataInicial?.value,
+                    dataFinal: this.filtroExtDataFinal?.value
+                });
             }
 
             // --- ADMIN BULK DELETE SETUP ---
@@ -2289,37 +2135,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fetchData) {
                 this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
                 
-                // --- CORREÇÃO: Busca todos os postos para a tabela, contornando o limite padrão de 1000 ---
-                let allPostos = [];
-                let from = 0;
-                const step = 1000;
-                let keepFetching = true;
-
-                const userFilial = this.getUserFilial();
-
-                while(keepFetching) {
-                    let query = supabaseClient
-                        .from('postos')
-                        .select('*');
-
-                    if (userFilial) query = query.eq('filial', userFilial);
-
-                    const { data, error } = await query.range(from, from + step - 1);
-
-                    if (error) {
-                        console.error("Erro ao buscar postos para a tabela:", error);
-                        this.postosData = [];
-                        keepFetching = false;
-                        break;
-                    }
-
-                    if (data && data.length > 0) {
-                        allPostos.push(...data);
-                        if (data.length < step) keepFetching = false;
-                        else from += step;
-                    } else keepFetching = false;
+                try {
+                    this.postosData = await buscarPostosPaginados({
+                        supabaseClient,
+                        filial: this.getUserFilial()
+                    });
+                } catch (error) {
+                    console.error("Erro ao buscar postos para a tabela:", error);
+                    this.postosData = [];
                 }
-                this.postosData = allPostos;
             }
 
             const term = this.searchPostoInput ? this.searchPostoInput.value : '';
