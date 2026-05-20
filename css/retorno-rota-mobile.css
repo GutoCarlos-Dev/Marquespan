@@ -1,7 +1,19 @@
 /* Estilos para a versão mobile de Retorno de Rota */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+}
+
 body {
     background-color: #f4f7f6;
     font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    min-height: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
 }
 
 .mobile-container {
@@ -14,7 +26,7 @@ body {
 .mobile-header {
     background-color: var(--primary-color);
     color: white;
-    padding: 15px;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
     text-align: center;
     position: sticky;
     top: 0;
@@ -25,21 +37,27 @@ body {
 .mobile-header h1 {
     margin: 0;
     font-size: 1.2rem;
+    line-height: 1.2;
+    padding: 0 64px;
 }
 
 .back-button {
     position: absolute;
-    left: 15px;
+    left: max(10px, env(safe-area-inset-left));
     top: 50%;
     transform: translateY(-50%);
     color: white;
-    font-size: 1rem;
+    font-size: 0.9rem;
     text-decoration: none;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .mobile-main {
-    padding: 15px;
-    padding-bottom: 6rem;
+    padding: 12px;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
 .fab-add-retorno {
@@ -72,10 +90,10 @@ body {
 
 .filters-bar {
     display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 12px;
     background: white;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
@@ -89,6 +107,19 @@ body {
     font-size: 0.8rem;
     font-weight: 600;
     color: #555;
+}
+
+.glass-input,
+input,
+select,
+textarea {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 16px;
+}
+
+.glass-input {
+    min-height: 44px;
 }
 
 .card-list {
@@ -377,4 +408,209 @@ body {
 .retorno-card .card-body p.late-return {
     color: red;
     font-weight: bold;
+}
+
+/* Ajustes responsivos para celulares pequenos */
+.card-list {
+    max-height: none;
+    overflow: visible;
+    padding: 6px 2px 10px;
+}
+
+.retorno-card {
+    padding: 14px 12px;
+}
+
+.card-header h4 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.retorno-card.status-ok .card-status-icon {
+    color: #28a745;
+}
+
+#modalRetorno, #modalMateriais, #modalDevolucoes {
+    padding: 12px;
+}
+
+#modalRetorno .modal-content, 
+#modalMateriais .modal-content,
+#modalDevolucoes .modal-content {
+    padding: 16px;
+    max-height: calc(100dvh - 24px);
+}
+
+.modal-header {
+    gap: 10px;
+    flex-shrink: 0;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.modal-header h3 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.close-button {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+}
+
+.modal-body {
+    overscroll-behavior: contain;
+    padding-right: 2px;
+}
+
+.modal-footer {
+    flex-shrink: 0;
+    padding-top: 12px;
+    margin-top: 14px;
+}
+
+.modal-footer .btn-custom {
+    padding: 12px 18px;
+}
+
+.tab-container {
+    scrollbar-width: thin;
+}
+
+.tab-link {
+    padding: 10px 12px;
+}
+
+.form-grid-2-cols {
+    gap: 12px;
+}
+
+.form-group {
+    min-width: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #555;
+    line-height: 1.2;
+}
+
+@media (max-width: 480px) {
+    .mobile-header h1 {
+        font-size: 1.05rem;
+        padding: 0 58px;
+    }
+
+    .back-button {
+        font-size: 0.82rem;
+    }
+
+    .filters-bar {
+        flex-direction: column;
+    }
+
+    .status-summary-mobile {
+        padding: 8px 0 !important;
+    }
+
+    .status-badge-wrapper {
+        gap: 8px !important;
+    }
+
+    .status-summary-mobile .badge {
+        padding: 8px 6px !important;
+        font-size: 0.72rem !important;
+        min-width: 0;
+    }
+
+    .retorno-card {
+        padding: 12px 10px;
+    }
+
+    .card-header {
+        gap: 10px;
+    }
+
+    .card-header h4 {
+        font-size: 1rem;
+    }
+
+    .card-body p {
+        font-size: 0.86rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    #modalRetorno, #modalMateriais, #modalDevolucoes {
+        align-items: stretch;
+        padding: 8px;
+        padding-top: max(8px, env(safe-area-inset-top));
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    #modalRetorno .modal-content, 
+    #modalMateriais .modal-content,
+    #modalDevolucoes .modal-content {
+        max-width: none;
+        max-height: none;
+        height: calc(100dvh - 16px);
+        padding: 14px;
+    }
+
+    .botoes-acao-modal {
+        flex-direction: column;
+    }
+
+    .botoes-acao-modal .btn-glass,
+    .modal-footer .btn-custom {
+        width: 100%;
+        min-height: 44px;
+        justify-content: center;
+    }
+
+    .modal-footer {
+        text-align: left;
+    }
+
+    .form-grid-2-cols,
+    #paletes-details-mobile > div {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .mobile-main {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .mobile-header h1 {
+        font-size: 0.95rem;
+        padding: 0 50px;
+    }
+
+    .back-button {
+        font-size: 0;
+        width: 40px;
+        justify-content: center;
+    }
+
+    .back-button i {
+        font-size: 1rem;
+    }
+
+    .status-badge-wrapper {
+        flex-direction: column;
+    }
+
+    .tab-link {
+        padding: 9px 10px;
+        font-size: 0.82rem;
+    }
 }
