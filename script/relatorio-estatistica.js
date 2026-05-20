@@ -433,6 +433,7 @@ const RelatorioEstatistica = {
             qtd_lancamentos: 0,
             placas: new Set(),
             motoristas: new Set(),
+            kmsConsiderados: new Set(),
             km_rodado: 0,
             litros: 0,
             valor_diesel: 0,
@@ -456,7 +457,16 @@ const RelatorioEstatistica = {
             item.qtd_lancamentos += 1;
             if (reg.placa) item.placas.add(reg.placa);
             if (reg.motorista) item.motoristas.add(reg.motorista);
-            item.km_rodado += Number(reg.km_rodado) || 0;
+            const kmKey = [
+                reg.placa || '',
+                reg.data_hora || reg.data || '',
+                reg.km_anterior || '',
+                reg.km_atual || ''
+            ].join('|');
+            if (!item.kmsConsiderados.has(kmKey)) {
+                item.km_rodado += Number(reg.km_rodado) || 0;
+                item.kmsConsiderados.add(kmKey);
+            }
             item.litros += Number(reg.litros) || 0;
             item.valor_diesel += Number(reg.valor_diesel) || 0;
             item.gasto_total += Number(reg.valor_diesel) || 0;
@@ -509,12 +519,15 @@ const RelatorioEstatistica = {
         });
 
         return Array.from(map.values())
-            .map(item => ({ 
-                ...item, 
-                placas: Array.from(item.placas).sort().join(', '),
-                motoristas: Array.from(item.motoristas).sort().join(', '),
-                media_km_lts: item.litros > 0 ? item.km_rodado / item.litros : 0
-            }))
+            .map(item => {
+                const { kmsConsiderados, ...dados } = item;
+                return {
+                    ...dados,
+                    placas: Array.from(item.placas).sort().join(', '),
+                    motoristas: Array.from(item.motoristas).sort().join(', '),
+                    media_km_lts: item.litros > 0 ? item.km_rodado / item.litros : 0
+                };
+            })
             .sort((a, b) => a.semana_ordem.localeCompare(b.semana_ordem) || String(a.rota).localeCompare(String(b.rota), undefined, { numeric: true }));
     },
 
