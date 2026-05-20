@@ -33,7 +33,7 @@ function getUserLevel() {
 
 function canDelete() {
     const nivel = getUserLevel();
-    return nivel === 'administrador' || nivel === 'gerencia';
+    return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
 }
 
 async function carregarSupervisores() {
