@@ -3,6 +3,7 @@ import { supabaseClient } from './supabase.js';
 const RelatorioEstatistica = {
     data: [],
     pedagiosPeriodo: [],
+    hospedagensPeriodo: [],
     tipoAtual: 'ANALITICO',
 
     init() {
@@ -83,22 +84,48 @@ const RelatorioEstatistica = {
         return { start: isoWeekStart, end: isoWeekEnd };
     },
 
+    normalizarRota(rota) {
+        const texto = String(rota || '').trim();
+        const numero = texto.replace(/\D/g, '');
+        return numero ? String(Number(numero)) : texto.toUpperCase();
+    },
+
+    separarRotas(rotas) {
+        return String(rotas || '')
+            .split(',')
+            .map(r => r.trim())
+            .filter(Boolean);
+    },
+
+    rotasIncluem(rotas, rotaBusca) {
+        if (!rotaBusca) return true;
+        const rotaNormalizada = this.normalizarRota(rotaBusca);
+        return this.separarRotas(rotas).some(r => this.normalizarRota(r) === rotaNormalizada);
+    },
+
+    somenteData(data) {
+        return String(data || '').split('T')[0];
+    },
+
     formatDateISO(date) {
         return date.toISOString().split('T')[0];
     },
 
     popularSemanas() {
-        const year = new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear + 1];
         this.filtroSemanas.innerHTML = '';
 
-        for (let week = 1; week <= 53; week++) {
-            const range = this.getWeekRange(year, week);
-            if (range.start.getFullYear() > year && range.end.getFullYear() > year) continue;
+        years.forEach(year => {
+            for (let week = 1; week <= 53; week++) {
+                const range = this.getWeekRange(year, week);
+                if (range.start.getFullYear() > year && range.end.getFullYear() > year) continue;
 
-            const value = `${year}-${String(week).padStart(2, '0')}`;
-            const label = `Semana ${String(week).padStart(2, '0')} - ${year} (${range.start.toLocaleDateString('pt-BR')} a ${range.end.toLocaleDateString('pt-BR')})`;
-            this.filtroSemanas.add(new Option(label, value));
-        }
+                const value = `${year}-${String(week).padStart(2, '0')}`;
+                const label = `Semana ${String(week).padStart(2, '0')} - ${year} (${range.start.toLocaleDateString('pt-BR')} a ${range.end.toLocaleDateString('pt-BR')})`;
+                this.filtroSemanas.add(new Option(label, value));
+            }
+        });
     },
 
     async loadFilters() {
@@ -141,6 +168,32 @@ const RelatorioEstatistica = {
         return { dtIni, dtFim, weeks: [] };
     },
 
+    async buscarHospedagens(dtIni, dtFim) {
+        const todasHospedagens = [];
+        const pageSize = 1000;
+        let from = 0;
+
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('despesas')
+                .select('valor_total, data_checkin, numero_rota, qtd_diarias, funcionario1:id_funcionario1(nome_completo)')
+                .gte('data_checkin', dtIni)
+                .lte('data_checkin', dtFim)
+                .order('data_checkin', { ascending: true })
+                .range(from, from + pageSize - 1);
+
+            if (error) return { data: todasHospedagens, error };
+
+            const pagina = data || [];
+            todasHospedagens.push(...pagina);
+
+            if (pagina.length < pageSize) break;
+            from += pageSize;
+        }
+
+        return { data: todasHospedagens, error: null };
+    },
+
     async fetchData() {
         this.tipoAtual = this.tipoRelatorio.value;
         this.renderHeader();
@@ -151,7 +204,7 @@ const RelatorioEstatistica = {
             const registros = await this.buscarRegistrosAnaliticos(periodo.dtIni, periodo.dtFim);
 
             if (this.tipoAtual === 'CONSOLIDADO') {
-                this.data = this.consolidarPorSemanaRota(registros, periodo.weeks);
+                this.data = this.consolidarPorSemanaRota(registros, periodo.weeks, this.hospedagensPeriodo);
             } else {
                 this.data = registros;
             }
@@ -198,10 +251,6 @@ const RelatorioEstatistica = {
         dtIniDate.setDate(dtIniDate.getDate() - 15);
         const dtIniRetroativa = this.formatDateISO(dtIniDate);
 
-        const queryHosp = supabaseClient.from('despesas').select('valor_total, data_checkin, numero_rota, qtd_diarias, funcionario1:id_funcionario1(nome_completo)')
-            .gte('data_checkin', dtIniRetroativa)
-            .lte('data_checkin', dtFim);
-
         let queryPedagio = supabaseClient.from('pedagios_lancamentos').select('valor, data_hora_passagem, placa, rota, motorista, filial')
             .gte('data_hora_passagem', `${dtIni}T00:00:00`)
             .lte('data_hora_passagem', `${dtFim}T23:59:59`);
@@ -209,12 +258,27 @@ const RelatorioEstatistica = {
         if (rota) queryPedagio = queryPedagio.eq('rota', rota);
         if (filial) queryPedagio = queryPedagio.eq('filial', filial);
 
-        const [resSaidas, resExt, resHosp, resPedagio] = await Promise.all([querySaidas, queryExt, queryHosp, queryPedagio]);
+        const [resSaidas, resExt, resHosp, resPedagio] = await Promise.all([
+            querySaidas,
+            queryExt,
+            this.buscarHospedagens(dtIniRetroativa, dtFim),
+            queryPedagio
+        ]);
         if (resSaidas.error) throw resSaidas.error;
         if (resExt.error) throw resExt.error;
         if (resHosp.error) throw resHosp.error;
         if (resPedagio.error) throw resPedagio.error;
         this.pedagiosPeriodo = resPedagio.data || [];
+        this.hospedagensPeriodo = (resHosp.data || []).filter(h => {
+            const dataCheckin = this.somenteData(h.data_checkin);
+            if (dataCheckin < dtIni || dataCheckin > dtFim) return false;
+
+            if (rota) {
+                if (!this.rotasIncluem(h.numero_rota, rota)) return false;
+            }
+
+            return true;
+        });
 
         const saidas = (resSaidas.data || [])
             .filter(s => !filial || s.bicos?.bombas?.tanques?.filial === filial)
@@ -296,9 +360,8 @@ const RelatorioEstatistica = {
 
     calcularHospedagem(registro, hospedagens) {
         return hospedagens.filter(h => {
-            const rotasHosp = String(h.numero_rota || '').split(',').map(r => r.trim());
             const rotaSup = String(registro.rota || '').trim();
-            if (rotaSup && !rotasHosp.includes(rotaSup)) return false;
+            if (rotaSup && !this.rotasIncluem(h.numero_rota, rotaSup)) return false;
 
             const checkin = new Date(`${h.data_checkin}T00:00:00`);
             const dataAbastecimento = new Date(`${registro.data}T00:00:00`);
@@ -310,9 +373,8 @@ const RelatorioEstatistica = {
 
     buscarHospedagensRegistro(registro, hospedagens) {
         return hospedagens.filter(h => {
-            const rotasHosp = String(h.numero_rota || '').split(',').map(r => r.trim());
             const rotaSup = String(registro.rota || '').trim();
-            if (rotaSup && !rotasHosp.includes(rotaSup)) return false;
+            if (rotaSup && !this.rotasIncluem(h.numero_rota, rotaSup)) return false;
 
             const checkin = new Date(`${h.data_checkin}T00:00:00`);
             const dataAbastecimento = new Date(`${registro.data}T00:00:00`);
@@ -361,7 +423,7 @@ const RelatorioEstatistica = {
         return `Semana ${String(info.week).padStart(2, '0')} - ${info.year}`;
     },
 
-    consolidarPorSemanaRota(registros, semanasSelecionadas) {
+    consolidarPorSemanaRota(registros, semanasSelecionadas, hospedagens = []) {
         const semanasPermitidas = new Set(semanasSelecionadas.map(w => w.value));
         const map = new Map();
         const criarItem = (weekValue, week, year, rota) => ({
@@ -397,8 +459,33 @@ const RelatorioEstatistica = {
             item.km_rodado += Number(reg.km_rodado) || 0;
             item.litros += Number(reg.litros) || 0;
             item.valor_diesel += Number(reg.valor_diesel) || 0;
-            item.valor_hospedagem += Number(reg.valor_hospedagem) || 0;
-            item.gasto_total += (Number(reg.valor_diesel) || 0) + (Number(reg.valor_hospedagem) || 0);
+            item.gasto_total += Number(reg.valor_diesel) || 0;
+        });
+
+        hospedagens.forEach(h => {
+            const dataCheckin = this.somenteData(h.data_checkin);
+            if (!dataCheckin) return;
+
+            const info = this.getISOWeekInfo(`${dataCheckin}T00:00:00`);
+            const weekValue = `${info.year}-${String(info.week).padStart(2, '0')}`;
+            if (!semanasPermitidas.has(weekValue)) return;
+
+            const rotasHosp = this.separarRotas(h.numero_rota || '-').map(r => this.normalizarRota(r) || '-');
+            const rotas = rotasHosp.length > 0 ? rotasHosp : ['-'];
+            const valorPorRota = (Number(h.valor_total) || 0) / rotas.length;
+
+            rotas.forEach(rota => {
+                const key = `${weekValue}_${rota}`;
+                if (!map.has(key)) {
+                    map.set(key, criarItem(weekValue, info.week, info.year, rota));
+                }
+
+                const item = map.get(key);
+                const motorista = h.funcionario1?.nome_completo;
+                if (motorista) item.motoristas.add(motorista);
+                item.valor_hospedagem += valorPorRota;
+                item.gasto_total += valorPorRota;
+            });
         });
 
         (this.pedagiosPeriodo || []).forEach(p => {
