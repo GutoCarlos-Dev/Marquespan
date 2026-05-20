@@ -50,6 +50,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnAdicionarItem.addEventListener('click', adicionarItemManual);
     }
 
+    const btnExportarXLSX = document.getElementById('btnExportarXLSXModal');
+    if (btnExportarXLSX) {
+        btnExportarXLSX.addEventListener('click', exportarXLSXListaAtual);
+    }
+
     // Listener para mudança de status no modal de itens
     const tbodyModal = document.getElementById('tbodyModalItens');
     if (tbodyModal) {
@@ -1034,6 +1039,78 @@ function filtrarItensModal() {
         return matchTermo && matchStatus;
     });
     renderizarItensModal(itensFiltrados);
+}
+
+function formatarDataExportacao(data) {
+    if (!data) return '';
+    const somenteData = String(data).split('T')[0];
+    const partes = somenteData.split('-');
+    if (partes.length !== 3) return somenteData;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function obterNomeListaAtual() {
+    return document.getElementById('modalTitle')?.textContent.replace(/^Lista:\s*/i, '').trim() || 'Lista';
+}
+
+function sanitizarNomeArquivo(nome) {
+    return String(nome || 'Lista')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_-]+/gi, '_')
+        .replace(/^_+|_+$/g, '') || 'Lista';
+}
+
+function obterLinhasVisiveisModalParaExportacao() {
+    return Array.from(document.querySelectorAll('#tbodyModalItens tr'))
+        .filter(tr => tr.dataset.id)
+        .map(tr => ({
+            'PLACA': tr.querySelector('.input-placa')?.value?.trim().toUpperCase() || '',
+            'MODELO': tr.querySelector('.input-modelo')?.value?.trim() || '',
+            'MARCA': tr.querySelector('.input-marca')?.value?.trim() || '',
+            'REALIZADO': formatarDataExportacao(tr.querySelector('.input-realizado')?.value || ''),
+            'PROXIMO': formatarDataExportacao(tr.querySelector('.input-proximo')?.value || ''),
+            'PLAQUETA (S/N)': tr.querySelector('.input-plaquinha')?.value || '',
+            'FEITO': tr.querySelector('.input-status')?.value || '',
+            'SEG': tr.querySelector('.input-seg')?.value || '',
+            'KM': tr.querySelector('.input-km')?.value || ''
+        }));
+}
+
+function exportarXLSXListaAtual() {
+    if (!window.XLSX) {
+        alert('Biblioteca XLSX não carregada.');
+        return;
+    }
+
+    if (!currentListId) {
+        alert('Nenhuma lista aberta.');
+        return;
+    }
+
+    const linhas = obterLinhasVisiveisModalParaExportacao();
+    if (linhas.length === 0) {
+        alert('Nenhum item visível para exportar.');
+        return;
+    }
+
+    const nomeLista = obterNomeListaAtual();
+    const ws = XLSX.utils.json_to_sheet(linhas);
+    ws['!cols'] = [
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 12 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Itens');
+    XLSX.writeFile(wb, `Engraxe_${sanitizarNomeArquivo(nomeLista)}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 async function handleImportarListaModal(e) {
