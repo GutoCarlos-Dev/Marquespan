@@ -535,6 +535,50 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
     }
 }
 
+async function confirmarDuplicidadesUltimasListasFinalizadas(veiculos) {
+    const placasSelecionadas = [...new Set(veiculos.map(v => (v.placa || '').trim().toUpperCase()).filter(Boolean))];
+    if (placasSelecionadas.length === 0) return true;
+
+    const { data: listas, error: listasError } = await supabaseClient
+        .from('engraxe_listas')
+        .select('id, nome, data_lista, created_at')
+        .eq('status', 'FINALIZADA')
+        .order('data_lista', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+    if (listasError) throw listasError;
+    if (!listas || listas.length === 0) return true;
+
+    const listasPorId = new Map(listas.map(lista => [String(lista.id), lista]));
+    const { data: itens, error: itensError } = await supabaseClient
+        .from('engraxe_itens')
+        .select('placa, lista_id, status')
+        .in('lista_id', listas.map(lista => lista.id))
+        .in('placa', placasSelecionadas)
+        .in('status', ['OK', 'REALIZADO']);
+
+    if (itensError) throw itensError;
+    if (!itens || itens.length === 0) return true;
+
+    const linhasAviso = itens
+        .map(item => {
+            const lista = listasPorId.get(String(item.lista_id));
+            if (!lista) return null;
+            return `Placa ${item.placa} - Lista: ${lista.nome || '-'} - Data: ${formatDateBR(lista.data_lista)}`;
+        })
+        .filter(Boolean)
+        .sort();
+
+    if (linhasAviso.length === 0) return true;
+
+    return confirm(
+        'As placas abaixo ja foram feitas nas 2 ultimas listas FINALIZADAS:\n\n' +
+        linhasAviso.join('\n') +
+        '\n\nDeseja gerar a lista mesmo assim?'
+    );
+}
+
 async function confirmarCriacaoNovaLista() {
     const nomeInput = document.getElementById('nomeNovaLista');
     const nomeLista = nomeInput.value.trim() || `Lista de Engraxe - ${new Date().toLocaleDateString('pt-BR')}`;
@@ -1527,7 +1571,7 @@ function toggleAllVencimentos(e) {
     document.querySelectorAll('.chk-veiculo-vencimento').forEach(chk => chk.checked = checked);
 }
 
-function gerarListaComSelecionados() {
+async function gerarListaComSelecionados() {
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-vencimento:checked')).map(chk => ({
         placa: chk.value,
         modelo: chk.dataset.modelo,
@@ -1542,6 +1586,14 @@ function gerarListaComSelecionados() {
     const dataLista = dataInput ? dataInput.value : getTodayISO();
 
     if (!dataLista) return alert('Selecione a Data da Lista.');
+
+    try {
+        const podeContinuar = await confirmarDuplicidadesUltimasListasFinalizadas(selecionados);
+        if (!podeContinuar) return;
+    } catch (error) {
+        console.error('Erro ao verificar duplicidades:', error);
+        return alert('Erro ao verificar duplicidades nas listas finalizadas: ' + error.message);
+    }
 
     document.getElementById('modalVencimentos').classList.add('hidden');
     
