@@ -4,6 +4,35 @@ let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
 let veiculosDisponiveisCache = []; // Cache para validação de placa
 let saidaVeiculoLookupTimer = null;
 
+function formatarLitrosMobile(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '');
+    if (!digitos) return '';
+
+    const numero = parseInt(digitos, 10) / 100;
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function parseLitrosMobile(valor) {
+    const normalizado = String(valor || '').replace(/\./g, '').replace(',', '.');
+    const numero = parseFloat(normalizado);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function aplicarMascaraLitrosMobile(input) {
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        input.value = formatarLitrosMobile(input.value);
+    });
+
+    input.addEventListener('blur', () => {
+        input.value = formatarLitrosMobile(input.value);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data/hora atual no input
     const now = new Date();
@@ -83,6 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('entradaQtdTotal').addEventListener('input', calcTotalEntrada);
     document.getElementById('entradaVlrLitro').addEventListener('input', calcTotalEntrada);
+
+    aplicarMascaraLitrosMobile(document.getElementById('saidaLitros'));
+    aplicarMascaraLitrosMobile(document.getElementById('saidaLitros2'));
 
     // Listener para ajuste de estoque (delegação de evento para botões dinâmicos)
     document.getElementById('listaEstoque').addEventListener('click', (e) => {
@@ -254,11 +286,11 @@ async function salvarAbastecimento(e) {
 
         // Dados do Bico 1
         const bicoId1 = document.getElementById('saidaBico').value;
-        const litros1 = document.getElementById('saidaLitros').value;
+        const litros1 = parseLitrosMobile(document.getElementById('saidaLitros').value);
 
         // Dados do Bico 2 (opcional)
         const bicoId2 = document.getElementById('saidaBico2').value;
-        const litros2 = document.getElementById('saidaLitros2').value;
+        const litros2 = parseLitrosMobile(document.getElementById('saidaLitros2').value);
 
         if (!placa || !km) {
             alert('Preencha a Placa e o KM.');

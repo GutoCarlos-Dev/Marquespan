@@ -159,7 +159,10 @@ function onScanFailure(error) {
 function preencherVeiculo(placa) {
     const inputPlaca = document.getElementById('saidaVeiculo');
     if (inputPlaca) {
-        inputPlaca.value = placa;
+        const placaNormalizada = placa ? placa.toUpperCase().trim() : '';
+        inputPlaca.value = placaNormalizada;
+        inputPlaca.dispatchEvent(new Event('input', { bubbles: true }));
+        inputPlaca.dispatchEvent(new Event('change', { bubbles: true }));
         alert(`Veículo identificado: ${placa}`);
     }
 }
