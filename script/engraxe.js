@@ -11,6 +11,68 @@ let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
 let sortStateItensModal = { key: 'placa', asc: true };
 
+const MS_POR_DIA = 1000 * 60 * 60 * 24;
+
+function getDatePart(value) {
+    if (!value) return '';
+    return String(value).split('T')[0];
+}
+
+function getTodayISO() {
+    const hoje = new Date();
+    hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
+    return hoje.toISOString().split('T')[0];
+}
+
+function formatDateBR(value) {
+    const data = getDatePart(value);
+    const match = data.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '-';
+    return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function dateISOToUTC(value) {
+    const data = getDatePart(value);
+    const [ano, mes, dia] = data.split('-').map(Number);
+    if (!ano || !mes || !dia) return null;
+    return new Date(Date.UTC(ano, mes - 1, dia));
+}
+
+function addDaysISO(value, dias) {
+    const dataUTC = dateISOToUTC(value);
+    if (!dataUTC) return null;
+    dataUTC.setUTCDate(dataUTC.getUTCDate() + dias);
+    return dataUTC.toISOString().split('T')[0];
+}
+
+function diffDaysISO(dataFinal, dataReferencia) {
+    const finalUTC = dateISOToUTC(dataFinal);
+    const referenciaUTC = dateISOToUTC(dataReferencia);
+    if (!finalUTC || !referenciaUTC) return null;
+    return Math.round((finalUTC.getTime() - referenciaUTC.getTime()) / MS_POR_DIA);
+}
+
+function atualizarStatusVencimento(item, dataReferencia) {
+    if (!item) return item;
+
+    if (item.situacao === 'NAO_ENGRAXAR') {
+        item.status = 'NAO_ENGRAXAR';
+        item.diasRestantes = 999;
+        return item;
+    }
+
+    if (!item.proximaData) {
+        item.status = 'PENDENTE';
+        item.diasRestantes = -999;
+        return item;
+    }
+
+    const diasRestantes = diffDaysISO(item.proximaData, dataReferencia);
+    item.diasRestantes = diasRestantes;
+    item.status = diasRestantes < 0 ? 'VENCIDO' : 'EM_DIA';
+    return item;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
@@ -19,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hoje = new Date();
     const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     document.getElementById('filtroDataIni').value = primeiroDia.toISOString().split('T')[0];
-    document.getElementById('filtroDataFim').value = hoje.toISOString().split('T')[0];
+    document.getElementById('filtroDataFim').value = getTodayISO();
 
     await carregarListas();
 
@@ -124,6 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnAplicarStatusVencimentos').addEventListener('click', aplicarStatusEmMassa);
     document.addEventListener('vencimentoFilterChange', filtrarTabelaVencimentos);
     document.getElementById('dataListaVencimentos')?.addEventListener('change', recalcularStatusVencimentos);
+    document.getElementById('dataListaVencimentos')?.addEventListener('input', recalcularStatusVencimentos);
     document.getElementById('btnRecalcularVencimentos')?.addEventListener('click', recalcularStatusVencimentos);
 
     // Fecha os dropdowns se o usuário clicar fora deles
@@ -246,7 +309,7 @@ async function abrirModalNovaLista() {
 
     modal.classList.remove('hidden');
     nomeInput.value = `Engraxe Semana ${getSemanaAtual()}`;
-    dataListaInput.value = new Date().toISOString().split('T')[0];
+    dataListaInput.value = getTodayISO();
     
     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando veículos e histórico...</td></tr>';
 
@@ -279,11 +342,7 @@ async function abrirModalNovaLista() {
             let proximaData = null;
              if (ultimaData) {
                 // Lógica de data mais robusta para evitar problemas de fuso horário
-                const [uy, um, ud] = ultimaData.split('T')[0].split('-').map(Number);
-                const ultUTC = new Date(Date.UTC(uy, um - 1, ud));
-                const proxUTC = new Date(ultUTC);
-                proxUTC.setUTCDate(proxUTC.getUTCDate() + 21);
-                proximaData = proxUTC.toISOString().split('T')[0];
+                proximaData = addDaysISO(ultimaData, 21);
              }
 
             return { ...v, ultimaData, proximaData };
@@ -340,8 +399,8 @@ function renderizarTabelaNovaLista(veiculos) {
             }
         }
 
-        const ultimaDataFmt = v.ultimaData ? new Date(v.ultimaData + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-        const proximaDataFmt = v.proximaData ? new Date(v.proximaData + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+        const ultimaDataFmt = formatDateBR(v.ultimaData);
+        const proximaDataFmt = formatDateBR(v.proximaData);
 
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-novalista" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
@@ -432,7 +491,7 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
             usuario: usuario,
             status: 'ABERTA',
             created_at: new Date().toISOString(),
-            data_lista: dataLista || new Date().toISOString().split('T')[0],
+            data_lista: dataLista || getTodayISO(),
             marcas_presentes: [...new Set(veiculos.map(v => v.marca).filter(Boolean))] // Coleta marcas únicas
         };
 
@@ -907,9 +966,7 @@ window.calcularProximaData = function(inputRealizado) {
     const inputProximo = row.querySelector('.input-proximo');
     
     if (inputRealizado.value) {
-        const data = new Date(inputRealizado.value);
-        data.setDate(data.getDate() + 21); // +21 dias
-        inputProximo.value = data.toISOString().split('T')[0];
+        inputProximo.value = addDaysISO(inputRealizado.value, 21);
     } else {
         inputProximo.value = '';
     }
@@ -1299,7 +1356,7 @@ async function abrirControleVencimentos() {
 
     const dataListaInput = document.getElementById('dataListaVencimentos');
     if (dataListaInput) {
-        dataListaInput.value = new Date().toISOString().split('T')[0];
+        dataListaInput.value = getTodayISO();
     }
 
     modal.classList.remove('hidden');
@@ -1325,8 +1382,6 @@ async function abrirControleVencimentos() {
 
         // 3. Processar Dados (Cruzar Veículos com Histórico)
         const dataReferencia = dataListaInput.value;
-        const [y, m, d] = dataReferencia.split('-').map(Number);
-        const hojeUTC = new Date(Date.UTC(y, m - 1, d));
 
         currentVencimentosData = veiculos.map(v => {
             // Filtra itens deste veículo que tenham data realizada válida
@@ -1344,35 +1399,22 @@ async function abrirControleVencimentos() {
             let status = 'PENDENTE'; // Default se nunca fez
             let diasRestantes = -999;
 
-            if (v.situacao === 'NAO_ENGRAXAR') {
-                status = 'NAO_ENGRAXAR';
-            } else if (ultimaData) {
-                const [uy, um, ud] = ultimaData.split('T')[0].split('-').map(Number);
-                const ultUTC = new Date(Date.UTC(uy, um - 1, ud));
-
-                const proxUTC = new Date(ultUTC);
-                proxUTC.setUTCDate(proxUTC.getUTCDate() + 21); // Use setUTCDate for UTC dates
-                proximaData = proxUTC.toISOString().split('T')[0];
-
-                const diffTime = proxUTC.getTime() - hojeUTC.getTime();
-                diasRestantes = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                if (diasRestantes < 0) status = 'VENCIDO';
-                else status = 'EM_DIA';
+            if (ultimaData) {
+                proximaData = addDaysISO(ultimaData, 21);
             }
 
-            return {
+            return atualizarStatusVencimento({
                 ...v,
-                ultimaData: ultimaData ? ultimaData.split('T')[0] : null,
+                ultimaData: getDatePart(ultimaData) || null,
                 proximaData,
                 status,
                 diasRestantes
-            };
+            }, dataReferencia);
         });
 
         // Ordenar: Vencidos primeiro, depois Pendentes, depois Em Dia
         currentVencimentosData.sort((a, b) => {
-            const score = (s) => s === 'VENCIDO' ? 0 : (s === 'PENDENTE' ? 1 : 2);
+            const score = (s) => s === 'VENCIDO' ? 0 : (s === 'PENDENTE' ? 1 : (s === 'EM_DIA' ? 2 : 3));
             return score(a.status) - score(b.status) || a.diasRestantes - b.diasRestantes;
         });
 
@@ -1418,6 +1460,7 @@ async function popularFiltrosVencimentos() {
 
 function renderizarTabelaVencimentos(dados) {
     const tbody = document.getElementById('tbodyVencimentos');
+    const dataReferencia = document.getElementById('dataListaVencimentos')?.value;
     tbody.innerHTML = '';
 
     if (dados.length === 0) {
@@ -1426,14 +1469,16 @@ function renderizarTabelaVencimentos(dados) {
     }
 
     dados.forEach(item => {
+        if (dataReferencia) atualizarStatusVencimento(item, dataReferencia);
+
         const tr = document.createElement('tr');
         let statusColor = '#6c757d'; // Cinza (Pendente)
         if (item.status === 'VENCIDO') statusColor = '#dc3545'; // Vermelho
         if (item.status === 'EM_DIA') statusColor = '#28a745'; // Verde
         if (item.status === 'NAO_ENGRAXAR') statusColor = '#17a2b8'; // Ciano
 
-        const dataRealizacaoFmt = item.ultimaData ? new Date(item.ultimaData).toLocaleDateString('pt-BR') : '-';
-        const proximoFmt = item.proximaData ? new Date(item.proximaData).toLocaleDateString('pt-BR') : '-';
+        const dataRealizacaoFmt = formatDateBR(item.ultimaData);
+        const proximoFmt = formatDateBR(item.proximaData);
 
         tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-vencimento" value="${item.placa}" data-modelo="${item.modelo}" data-marca="${item.marca}"></td>
@@ -1494,7 +1539,7 @@ function gerarListaComSelecionados() {
     }
 
     const dataInput = document.getElementById('dataListaVencimentos');
-    const dataLista = dataInput ? dataInput.value : new Date().toISOString().split('T')[0];
+    const dataLista = dataInput ? dataInput.value : getTodayISO();
 
     if (!dataLista) return alert('Selecione a Data da Lista.');
 
@@ -1524,7 +1569,7 @@ async function aplicarStatusEmMassa() {
 
     try {
         if (status === 'REALIZADO') {
-            const hoje = new Date().toISOString().split('T')[0];
+            const hoje = getTodayISO();
             const nomeLista = `Engraxe Rápido - ${new Date().toLocaleDateString('pt-BR')}`;
             
             let { data: lista } = await supabaseClient
@@ -1707,29 +1752,14 @@ function recalcularStatusVencimentos() {
     const dataReferencia = document.getElementById('dataListaVencimentos').value;
     if (!dataReferencia || currentVencimentosData.length === 0) return;
 
-    const [y, m, d] = dataReferencia.split('-').map(Number);
-    const hojeUTC = new Date(Date.UTC(y, m - 1, d));
-
     currentVencimentosData.forEach(item => {
-        if (item.proximaData) {
-            const [py, pm, pd] = item.proximaData.split('-').map(Number);
-            const proxDateUTC = new Date(Date.UTC(py, pm - 1, pd));
-            
-            const diffTime = proxDateUTC.getTime() - hojeUTC.getTime();
-            const diasRestantes = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            item.diasRestantes = diasRestantes;
-            if (diasRestantes < 0) {
-                item.status = 'VENCIDO';
-            } else {
-                item.status = 'EM_DIA';
-            }
-        } else {
-            item.status = 'PENDENTE';
-            item.diasRestantes = -999; // Mantém consistência
-        }
+        atualizarStatusVencimento(item, dataReferencia);
     });
 
+    currentVencimentosData.sort((a, b) => {
+        const score = (s) => s === 'VENCIDO' ? 0 : (s === 'PENDENTE' ? 1 : (s === 'EM_DIA' ? 2 : 3));
+        return score(a.status) - score(b.status) || a.diasRestantes - b.diasRestantes;
+    });
     filtrarTabelaVencimentos();
 }
 
@@ -1881,8 +1911,8 @@ async function gerarPDFLista(id, itemsOverride = null, nomeOverride = null) {
             item.placa || '',
             item.modelo || '',
             item.marca || '',
-            item.data_realizado ? new Date(item.data_realizado).toLocaleDateString('pt-BR') : '',
-            item.data_proximo ? new Date(item.data_proximo).toLocaleDateString('pt-BR') : '',
+            item.data_realizado ? formatDateBR(item.data_realizado) : '',
+            item.data_proximo ? formatDateBR(item.data_proximo) : '',
             item.plaquinha || '',
             (item.status === 'PENDENTE' ? '' : (item.status || '')),
             item.seg || '',
