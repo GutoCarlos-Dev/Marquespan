@@ -302,6 +302,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.buscarDadosRetornoRota(placa);
                 });
             }
+            if (this.saidaDataHora) {
+                this.saidaDataHora.addEventListener('change', () => {
+                    if (this.saidaVeiculo?.value) {
+                        this.buscarDadosRetornoRota(this.saidaVeiculo.value);
+                    }
+                });
+            }
             document.querySelectorAll('.sortable-saida').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.sort;
@@ -336,6 +343,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listeners Abastecimento Externo
             if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
             if (this.extVeiculo) this.extVeiculo.addEventListener('change', this.handleExtVeiculoChange.bind(this));
+            if (this.extDataHora) {
+                this.extDataHora.addEventListener('change', () => {
+                    if (this.extVeiculo?.value) {
+                        this.buscarDadosRetornoRota(this.extVeiculo.value, this.extRota, this.extMotorista, this.extDataHora.value);
+                    }
+                });
+            }
             if (this.extKmAtual) this.extKmAtual.addEventListener('input', this.calculateKmRodado.bind(this));
             if (this.extLitros) this.extLitros.addEventListener('input', this.calculateExtValorUnitario.bind(this));
             if (this.extValorTotal) this.extValorTotal.addEventListener('input', this.calculateExtValorUnitario.bind(this));
@@ -2129,13 +2143,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataBase = dataReferencia ? dataReferencia.split('T')[0] : (this.saidaDataHora.value ? this.saidaDataHora.value.split('T')[0] : new Date().toISOString().split('T')[0]);
 
             try {
-                // Busca o retorno de rota mais próximo (mesmo dia ou anterior)
+                // Busca o retorno de rota cadastrado exatamente no dia informado.
                 const { data, error } = await supabaseClient
                     .from('retorno_rota')
                     .select('rota, nome_mot')
                     .eq('placa', placa)
-                    .lte('data_retorno', dataBase)
-                    .order('data_retorno', { ascending: false })
+                    .eq('data_retorno', dataBase)
                     .limit(1)
                     .single();
 
