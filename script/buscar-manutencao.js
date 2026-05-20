@@ -88,6 +88,16 @@ function canDelete() {
   return ['administrador', 'gerencia', 'adm_logistica'].includes(nivel);
 }
 
+function toggleMenuLateralManutencao() {
+  document.body.classList.toggle('manutencao-menu-oculto');
+  const oculto = document.body.classList.contains('manutencao-menu-oculto');
+  const btn = document.getElementById('btnToggleMenuLateral');
+  if (btn) {
+    btn.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+    btn.setAttribute('aria-label', btn.title);
+  }
+}
+
 async function carregarFiltros() {
   const [titulos, filiais, fornecedores] = await Promise.all([
     supabaseClient.from('titulo_manutencao').select('titulo').order('titulo'),
@@ -926,6 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
+  document.getElementById('btnToggleMenuLateral')?.addEventListener('click', toggleMenuLateralManutencao);
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
     exportarPDF();
