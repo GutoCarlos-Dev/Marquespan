@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
 let veiculosDisponiveisCache = []; // Cache para validação de placa
+let saidaVeiculoLookupTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data/hora atual no input
@@ -97,11 +98,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Busca o Último KM ao selecionar um veículo (Aba Saída)
     const inputVeiculo = document.getElementById('saidaVeiculo');
     if (inputVeiculo) {
-        inputVeiculo.addEventListener('change', (e) => {
+        const atualizarDadosSaidaPorPlaca = (e, delay = 300) => {
+            clearTimeout(saidaVeiculoLookupTimer);
             const placa = e.target.value;
-            buscarUltimoKm(placa);
-            buscarDadosRetornoRota(placa);
-        });
+            saidaVeiculoLookupTimer = setTimeout(() => {
+                buscarUltimoKm(placa);
+                buscarDadosRetornoRota(placa);
+            }, delay);
+        };
+        inputVeiculo.addEventListener('input', (e) => atualizarDadosSaidaPorPlaca(e));
+        inputVeiculo.addEventListener('change', (e) => atualizarDadosSaidaPorPlaca(e, 0));
     }
 
     const inputDataSaida = document.getElementById('saidaDataHora');
@@ -958,12 +964,19 @@ async function buscarDadosRetornoRota(placaInput) {
     if (!rotaInput || !motoristaInput) return;
     
     const placa = placaInput ? placaInput.trim().toUpperCase() : '';
-    if (!placa) return;
+    if (!placa) {
+        rotaInput.value = '';
+        motoristaInput.value = '';
+        return;
+    }
 
     // Obtém a data do formulário (formato YYYY-MM-DD)
     const dataBase = dataInput.value ? dataInput.value.split('T')[0] : new Date().toISOString().split('T')[0];
 
     try {
+        rotaInput.value = '';
+        motoristaInput.value = '';
+
         // Busca o retorno de rota cadastrado exatamente no dia informado.
         const { data, error } = await supabaseClient
             .from('retorno_rota')
@@ -976,6 +989,8 @@ async function buscarDadosRetornoRota(placaInput) {
         if (error && error.code !== 'PGRST116') throw error;
 
         if (data) {
+            const inputVeiculo = document.getElementById('saidaVeiculo');
+            if (inputVeiculo && inputVeiculo.value.trim().toUpperCase() !== placa) return;
             rotaInput.value = data.rota || '';
             motoristaInput.value = data.nome_mot || '';
         }

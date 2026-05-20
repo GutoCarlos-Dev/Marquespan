@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extSort = { key: 'data_hora', asc: false }; // Estado de ordenação externo
             this.saidasData = []; // Cache dos dados de saídas
             this.saidasSort = { key: 'data_hora', asc: false }; // Estado de ordenação das saídas
+            this.saidaVeiculoLookupTimer = null;
             this.auditoriaEstoqueDados = [];
             this.initTabs();
             this.cache();
@@ -296,11 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Busca o Último KM ao selecionar um veículo (Aba Saída)
             if (this.saidaVeiculo) {
-                this.saidaVeiculo.addEventListener('change', (e) => {
+                const atualizarDadosSaidaPorPlaca = (e, delay = 300) => {
+                    clearTimeout(this.saidaVeiculoLookupTimer);
                     const placa = e.target.value;
-                    this.buscarUltimoKm(placa);
-                    this.buscarDadosRetornoRota(placa);
-                });
+                    this.saidaVeiculoLookupTimer = setTimeout(() => {
+                        this.buscarUltimoKm(placa);
+                        this.buscarDadosRetornoRota(placa);
+                    }, delay);
+                };
+                this.saidaVeiculo.addEventListener('input', (e) => atualizarDadosSaidaPorPlaca(e));
+                this.saidaVeiculo.addEventListener('change', (e) => atualizarDadosSaidaPorPlaca(e, 0));
             }
             if (this.saidaDataHora) {
                 this.saidaDataHora.addEventListener('change', () => {
@@ -2137,12 +2143,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!rotaField || !motoristaField) return;
             
             const placa = placaInput ? placaInput.trim().toUpperCase() : '';
-            if (!placa) return;
+            if (!placa) {
+                rotaField.value = '';
+                motoristaField.value = '';
+                return;
+            }
 
             // Obtém a data do formulário de saída (formato YYYY-MM-DD)
             const dataBase = dataReferencia ? dataReferencia.split('T')[0] : (this.saidaDataHora.value ? this.saidaDataHora.value.split('T')[0] : new Date().toISOString().split('T')[0]);
 
             try {
+                rotaField.value = '';
+                motoristaField.value = '';
+
                 // Busca o retorno de rota cadastrado exatamente no dia informado.
                 const { data, error } = await supabaseClient
                     .from('retorno_rota')
@@ -2155,6 +2168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error && error.code !== 'PGRST116') throw error; // Ignora se não encontrar (PGRST116)
 
                 if (data) {
+                    if (!targetRota && this.saidaVeiculo && this.saidaVeiculo.value.trim().toUpperCase() !== placa) return;
                     // Preenche os campos como sugestão, permitindo que o usuário edite se necessário
                     rotaField.value = data.rota || '';
                     motoristaField.value = data.nome_mot || '';
