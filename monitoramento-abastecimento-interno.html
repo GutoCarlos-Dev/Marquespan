@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abastecimento Interno Real-Time - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
+  <link rel="stylesheet" href="css/monitoramento-abastecimento-interno.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script type="module" src="./script/auth-guard.js"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header header-flex">
+        <span><i class="fas fa-gas-pump"></i> Abastecimento Interno REAL-Time</span>
+        <div class="header-controls">
+          <span id="realtime-status" class="realtime-pill offline"><i class="fas fa-circle"></i> Conectando</span>
+          <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
+          <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+          <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
+          <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+        </div>
+      </header>
+
+      <section class="section">
+        <div class="filter-bar glass-panel">
+          <div class="form-group">
+            <label for="dataAbastecimento">Data:</label>
+            <input type="date" id="dataAbastecimento" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="filtroFilial">Filial:</label>
+            <select id="filtroFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group abastecimento-search">
+            <label for="searchInput">Buscar:</label>
+            <input type="text" id="searchInput" class="glass-input" placeholder="Placa, rota, motorista...">
+          </div>
+          <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
+        </div>
+
+        <div class="kpi-grid abastecimento-kpis">
+          <div class="kpi-card glass-card blue">
+            <div class="kpi-icon"><i class="fas fa-truck"></i></div>
+            <div class="kpi-info">
+              <h3>Veículos Abastecidos</h3>
+              <p id="kpi-veiculos">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card green">
+            <div class="kpi-icon"><i class="fas fa-droplet"></i></div>
+            <div class="kpi-info">
+              <h3>Litros Abastecidos</h3>
+              <p id="kpi-litros">0 L</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card orange">
+            <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div class="kpi-info">
+              <h3>Lançamentos</h3>
+              <p id="kpi-lancamentos">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card red">
+            <div class="kpi-icon"><i class="fas fa-route"></i></div>
+            <div class="kpi-info">
+              <h3>Rotas Atendidas</h3>
+              <p id="kpi-rotas">0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="abastecimento-live-grid">
+          <div class="glass-panel abastecimento-column">
+            <div class="column-header abastecidos">
+              <h3><i class="fas fa-list-check"></i> Veículos Abastecidos Hoje</h3>
+              <span id="count-veiculos-lista">0</span>
+            </div>
+            <div id="lista-veiculos" class="fuel-list"></div>
+          </div>
+
+          <div class="glass-panel abastecimento-column resumo-column">
+            <div class="column-header resumo">
+              <h3><i class="fas fa-chart-simple"></i> Resumo por Tanque/Bico</h3>
+              <span id="count-origens-lista">0</span>
+            </div>
+            <div id="lista-origens" class="fuel-list compact"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/monitoramento-abastecimento-interno.js"></script>
+</body>
+</html>
