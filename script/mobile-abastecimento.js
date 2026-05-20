@@ -97,11 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Busca o Último KM ao selecionar um veículo (Aba Saída)
     const inputVeiculo = document.getElementById('saidaVeiculo');
     if (inputVeiculo) {
-        inputVeiculo.addEventListener('change', (e) => buscarUltimoKm(e.target.value));
         inputVeiculo.addEventListener('change', (e) => {
             const placa = e.target.value;
             buscarUltimoKm(placa);
             buscarDadosRetornoRota(placa);
+        });
+    }
+
+    const inputDataSaida = document.getElementById('saidaDataHora');
+    if (inputDataSaida) {
+        inputDataSaida.addEventListener('change', () => {
+            if (inputVeiculo?.value) {
+                buscarDadosRetornoRota(inputVeiculo.value);
+            }
         });
     }
 });
@@ -956,13 +964,12 @@ async function buscarDadosRetornoRota(placaInput) {
     const dataBase = dataInput.value ? dataInput.value.split('T')[0] : new Date().toISOString().split('T')[0];
 
     try {
-        // Busca o retorno de rota mais próximo (mesmo dia ou anterior)
+        // Busca o retorno de rota cadastrado exatamente no dia informado.
         const { data, error } = await supabaseClient
             .from('retorno_rota')
             .select('rota, nome_mot')
             .eq('placa', placa)
-            .lte('data_retorno', dataBase)
-            .order('data_retorno', { ascending: false })
+            .eq('data_retorno', dataBase)
             .limit(1)
             .single();
 
