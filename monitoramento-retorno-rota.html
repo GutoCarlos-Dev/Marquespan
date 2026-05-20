@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retorno de Rota Real-Time - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
+  <link rel="stylesheet" href="css/monitoramento-retorno-rota.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script type="module" src="./script/auth-guard.js"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header header-flex">
+        <span><i class="fas fa-truck-ramp-box"></i> Retorno de Rota Real-Time</span>
+        <div class="header-controls">
+          <span id="realtime-status" class="realtime-pill offline"><i class="fas fa-circle"></i> Conectando</span>
+          <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
+          <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+          <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
+          <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+        </div>
+      </header>
+
+      <section class="section">
+        <div class="filter-bar glass-panel">
+          <div class="form-group">
+            <label for="dataRetorno">Data do Retorno:</label>
+            <input type="date" id="dataRetorno" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="filtroFilial">Filial:</label>
+            <select id="filtroFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group retorno-search">
+            <label for="searchInput">Buscar:</label>
+            <input type="text" id="searchInput" class="glass-input" placeholder="Placa, rota, motorista...">
+          </div>
+          <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
+        </div>
+
+        <div class="kpi-grid retorno-kpis">
+          <div class="kpi-card glass-card blue">
+            <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="kpi-info">
+              <h3>Total Programado</h3>
+              <p id="kpi-total">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card green">
+            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-info">
+              <h3>Chegaram</h3>
+              <p id="kpi-chegaram">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card orange">
+            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+            <div class="kpi-info">
+              <h3>Aguardando</h3>
+              <p id="kpi-aguardando">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card red">
+            <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="kpi-info">
+              <h3>Após 20h</h3>
+              <p id="kpi-atrasados">0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="retorno-progress glass-panel">
+          <div class="progress-info">
+            <strong>Progresso de chegada</strong>
+            <span id="progress-label">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="progress-bar" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="retorno-live-grid">
+          <div class="glass-panel retorno-column">
+            <div class="column-header aguardando">
+              <h3><i class="fas fa-hourglass-half"></i> Aguardando Chegada</h3>
+              <span id="count-aguardando-lista">0</span>
+            </div>
+            <div id="lista-aguardando" class="truck-list"></div>
+          </div>
+
+          <div class="glass-panel retorno-column">
+            <div class="column-header chegaram">
+              <h3><i class="fas fa-flag-checkered"></i> Chegaram</h3>
+              <span id="count-chegaram-lista">0</span>
+            </div>
+            <div id="lista-chegaram" class="truck-list"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/monitoramento-retorno-rota.js"></script>
+</body>
+</html>
