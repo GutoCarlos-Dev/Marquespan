@@ -12,10 +12,27 @@ function compararValores(a, b, sortState) {
     return 0;
 }
 
+function formatarDataHoraSaoPaulo(valor) {
+    if (!valor) return '';
+
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return '';
+
+    return data.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
 export function filtrarOrdenarSaidas(saidasData, term, sortState) {
     const busca = String(term || '').toLowerCase();
     const filtradas = (saidasData || []).filter(item => {
-        const data = new Date(item.data_hora).toLocaleString('pt-BR').toLowerCase();
+        const data = formatarDataHoraSaoPaulo(item.data_hora).toLowerCase();
         return String(item.veiculo_placa || '').toLowerCase().includes(busca) ||
             String(item.rota || '').toLowerCase().includes(busca) ||
             String(item.motorista || '').toLowerCase().includes(busca) ||
@@ -32,7 +49,7 @@ export function montarHtmlSaidas(saidas) {
 
     return saidas.map(saida => `
         <tr>
-            <td>${new Date(saida.data_hora).toLocaleString('pt-BR')}</td>
+            <td>${formatarDataHoraSaoPaulo(saida.data_hora)}</td>
             <td>${saida.veiculo_placa || ''}</td>
             <td>${saida.motorista || '-'}</td>
             <td>${saida.rota || ''}</td>

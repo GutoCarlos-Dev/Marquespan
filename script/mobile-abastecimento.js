@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+const OFFSET_SAO_PAULO = '-03:00';
 
 function getDataHoraSaoPaulo(date = new Date(), incluirSegundos = false) {
     const partes = new Intl.DateTimeFormat('sv-SE', {
@@ -22,8 +23,9 @@ function getDataHoraSaoPaulo(date = new Date(), incluirSegundos = false) {
 }
 
 function getDataHoraLocalParaBanco(valor) {
-    if (!valor) return `${getDataHoraSaoPaulo(new Date(), true)}`;
-    return valor.length === 16 ? `${valor}:00` : valor;
+    const dataHora = valor || getDataHoraSaoPaulo(new Date(), true);
+    const dataHoraComSegundos = dataHora.length === 16 ? `${dataHora}:00` : dataHora;
+    return new Date(`${dataHoraComSegundos}${OFFSET_SAO_PAULO}`).toISOString();
 }
 
 function formatarDataHoraLancamento(valor) {
