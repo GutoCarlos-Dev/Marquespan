@@ -68,6 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.saidasData = []; // Cache dos dados de saídas
             this.saidasSort = { key: 'data_hora', asc: false }; // Estado de ordenação das saídas
             this.saidaVeiculoLookupTimer = null;
+            this.estoqueRealtimeChannel = null;
+            this.estoqueRealtimeTimer = null;
+            this.estoqueFallbackTimer = null;
+            this.estoqueRefreshPendente = false;
             this.auditoriaEstoqueDados = [];
             this.initTabs();
             this.cache();
@@ -94,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await this.initSaida(); // Inicializa a aba de saída
             this.renderSaidasTable();
             this.setupAuditoriaEstoque();
-            this.loadEstoqueAtual(); // Carrega a aba de estoque
+            await this.loadEstoqueAtual(); // Carrega a aba de estoque
+            this.setupEstoqueRealtime();
             this.populateUFs(); // Preenche lista de UFs
             await this.handleInitialEditParams();
 
@@ -665,12 +670,63 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         },
 
-        async loadEstoqueAtual() {
+        setupEstoqueRealtime() {
+            if (!this.tbodyEstoque) return;
+
+            if (this.estoqueRealtimeChannel) {
+                supabaseClient.removeChannel(this.estoqueRealtimeChannel);
+            }
+            if (this.estoqueFallbackTimer) {
+                clearInterval(this.estoqueFallbackTimer);
+            }
+
+            const agendarRefresh = () => this.scheduleEstoqueRefresh();
+
+            this.estoqueRealtimeChannel = supabaseClient
+                .channel('abastecimento-estoque-atual')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'abastecimentos' }, agendarRefresh)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'saidas_combustivel' }, agendarRefresh)
+                .subscribe((status) => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Realtime do estoque indisponivel. Mantendo atualizacao periodica.');
+                    }
+                });
+
+            this.estoqueFallbackTimer = setInterval(() => this.scheduleEstoqueRefresh(), 30000);
+
+            window.addEventListener('beforeunload', () => {
+                if (this.estoqueRealtimeChannel) supabaseClient.removeChannel(this.estoqueRealtimeChannel);
+                if (this.estoqueFallbackTimer) clearInterval(this.estoqueFallbackTimer);
+            }, { once: true });
+        },
+
+        scheduleEstoqueRefresh() {
+            clearTimeout(this.estoqueRealtimeTimer);
+
+            this.estoqueRealtimeTimer = setTimeout(() => {
+                const inputEmEdicao = document.activeElement?.classList?.contains('input-estoque-atual');
+                if (inputEmEdicao) {
+                    this.estoqueRefreshPendente = true;
+                    document.activeElement.addEventListener('blur', () => {
+                        if (!this.estoqueRefreshPendente) return;
+                        this.estoqueRefreshPendente = false;
+                        this.loadEstoqueAtual(false);
+                    }, { once: true });
+                    return;
+                }
+
+                this.loadEstoqueAtual(false);
+            }, 600);
+        },
+
+        async loadEstoqueAtual(showLoading = true) {
             if (!this.tbodyEstoque) return;
             const canViewAuditoria = this.canViewEstoqueAuditoria();
             const totalColunas = canViewAuditoria ? 7 : 5;
             this.toggleEstoqueAuditoriaColumns(canViewAuditoria);
-            this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Carregando...</td></tr>`;
+            if (showLoading) {
+                this.tbodyEstoque.innerHTML = `<tr><td colspan="${totalColunas}" class="text-center">Carregando...</td></tr>`;
+            }
 
             try {
                 const estoqueCalculado = await calcularEstoqueAtual(supabaseClient, this.getUserFilial());
@@ -1129,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.returnAfterSaveIfNeeded()) return;
                 this.clearForm();
                 this.renderTable();
+                await this.loadEstoqueAtual(false);
             } catch (error) {
                 console.error('Erro ao salvar:', error);
                 alert('Erro ao salvar abastecimento: ' + error.message + '. Se estiver atualizando, os dados antigos podem ter sido removidos.');
@@ -1166,6 +1223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const { error } = await supabaseClient.from('abastecimentos').delete().eq('id', id);
                         if (error) throw error;
                         this.renderTable();
+                        await this.loadEstoqueAtual(false);
                     } catch (error) {
                         console.error('Erro ao excluir:', error);
                         alert('Erro ao excluir lançamento: ' + error.message);
@@ -1328,6 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.returnAfterSaveIfNeeded()) return;
                 this.clearSaidaForm();
                 this.renderSaidasTable();
+                await this.loadEstoqueAtual(false);
             } catch (error) {
                 console.error('Erro ao salvar saída:', error);
                 alert('Erro ao registrar saída: ' + error.message);
@@ -1428,6 +1487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) throw error;
                 alert('Registro de saída excluído com sucesso!');
                 this.renderSaidasTable();
+                await this.loadEstoqueAtual(false);
             } catch (error) {
                 console.error('Erro ao excluir saída:', error);
                 alert('Erro ao excluir o registro.');
@@ -2114,6 +2174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(`Importação concluída com sucesso!\n${importedRows.length} registros de saída inseridos.\n${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
                     baixarRelatorioImportacaoSaida(importedRows, rejectedRows);
                     this.renderSaidasTable();
+                    await this.loadEstoqueAtual(false);
                 } else {
                     alert(`Nenhum registro foi importado.\n${rejectedRows.length} registros foram rejeitados.\n\nVerifique o arquivo de erros que será baixado.`);
                     if (rejectedRows.length > 0) {
