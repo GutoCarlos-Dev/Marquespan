@@ -33,7 +33,10 @@ function getIntervaloDiaSaoPaulo(data) {
 }
 
 let saidasCombustivel = [];
+let retornosRecebimento = [];
+let veiculosRecebimentoPorPlaca = new Map();
 let abastecimentoChannel = null;
+let retornoChannel = null;
 let refreshTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -94,16 +97,25 @@ async function carregarDados() {
 
     try {
         const intervalo = getIntervaloDiaSaoPaulo(dataAbastecimento);
-        const { data, error } = await supabaseClient
-            .from('saidas_combustivel')
-            .select('*, bicos(bombas(tanques(nome, tipo_combustivel, filial)))')
-            .gte('data_hora', intervalo.inicio)
-            .lte('data_hora', intervalo.fim)
-            .order('data_hora', { ascending: false });
+        const [resSaidas, resRetornos] = await Promise.all([
+            supabaseClient
+                .from('saidas_combustivel')
+                .select('*, bicos(bombas(tanques(nome, tipo_combustivel, filial)))')
+                .gte('data_hora', intervalo.inicio)
+                .lte('data_hora', intervalo.fim)
+                .order('data_hora', { ascending: false }),
+            supabaseClient
+                .from('retorno_rota')
+                .select('id, data_retorno, placa, rota, nome_mot, hora_mot, operador_recebimento')
+                .eq('data_retorno', dataAbastecimento)
+        ]);
 
-        if (error) throw error;
+        if (resSaidas.error) throw resSaidas.error;
+        if (resRetornos.error) throw resRetornos.error;
 
-        saidasCombustivel = data || [];
+        saidasCombustivel = resSaidas.data || [];
+        retornosRecebimento = resRetornos.data || [];
+        await carregarVeiculosRecebimento(retornosRecebimento);
         renderDashboard();
         atualizarTimestamp();
     } catch (error) {
@@ -118,6 +130,9 @@ function configurarRealtime() {
     if (abastecimentoChannel) {
         supabaseClient.removeChannel(abastecimentoChannel);
     }
+    if (retornoChannel) {
+        supabaseClient.removeChannel(retornoChannel);
+    }
 
     abastecimentoChannel = supabaseClient
         .channel('monitoramento-abastecimento-interno')
@@ -128,12 +143,20 @@ function configurarRealtime() {
             const online = status === 'SUBSCRIBED';
             atualizarStatusRealtime(online ? 'online' : 'offline', online ? 'Online' : 'Conectando');
         });
+
+    retornoChannel = supabaseClient
+        .channel('monitoramento-abastecimento-interno-retorno')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'retorno_rota' }, () => {
+            carregarDados();
+        })
+        .subscribe();
 }
 
 function renderDashboard() {
     const dados = filtrarRegistros(saidasCombustivel);
     const veiculos = agruparPorVeiculo(dados);
     const origens = agruparPorOrigem(dados);
+    const faltamAbastecer = calcularFaltamAbastecer(retornosRecebimento, veiculos);
     const totalLitros = dados.reduce((sum, item) => sum + parseNumero(item.qtd_litros), 0);
     const rotas = new Set(dados.map(item => String(item.rota || '').trim()).filter(Boolean));
 
@@ -141,11 +164,36 @@ function renderDashboard() {
     setText('kpi-litros', `${formatarLitros(totalLitros)} L`);
     setText('kpi-lancamentos', dados.length);
     setText('kpi-rotas', rotas.size);
+    setText('kpi-faltam-abastecer', faltamAbastecer.length);
     setText('count-veiculos-lista', veiculos.length);
+    setText('count-faltam-lista', faltamAbastecer.length);
     setText('count-origens-lista', origens.length);
 
     renderListaVeiculos(veiculos);
+    renderListaFaltamAbastecer(faltamAbastecer);
     renderListaOrigens(origens);
+}
+
+async function carregarVeiculosRecebimento(registros) {
+    const placas = [...new Set((registros || []).map(item => normalizarPlaca(item.placa)).filter(Boolean))];
+    veiculosRecebimentoPorPlaca = new Map();
+
+    if (placas.length === 0) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('placa, filial, modelo')
+            .in('placa', placas);
+
+        if (error) throw error;
+
+        (data || []).forEach(veiculo => {
+            veiculosRecebimentoPorPlaca.set(normalizarPlaca(veiculo.placa), veiculo);
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel carregar dados dos veiculos recebidos:', error);
+    }
 }
 
 function filtrarRegistros(registros) {
@@ -235,6 +283,53 @@ function agruparPorOrigem(registros) {
     return Array.from(mapa.values()).sort((a, b) => b.litros - a.litros);
 }
 
+function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
+    const placasAbastecidas = new Set((veiculosAbastecidos || []).map(item => normalizarPlaca(item.placa)));
+    const filial = document.getElementById('filtroFilial')?.value || '';
+    const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
+    const mapa = new Map();
+
+    (retornos || []).forEach(item => {
+        const placa = normalizarPlaca(item.placa);
+        if (!placa || placasAbastecidas.has(placa)) return;
+
+        const veiculo = veiculosRecebimentoPorPlaca.get(placa);
+        if (filial && veiculo?.filial !== filial) return;
+
+        const recebido = Boolean((item.operador_recebimento && item.operador_recebimento.trim()) || item.hora_mot);
+        if (!recebido) return;
+
+        if (termo) {
+            const texto = [
+                item.placa,
+                item.rota,
+                item.nome_mot,
+                item.operador_recebimento,
+                veiculo?.modelo,
+                veiculo?.filial
+            ].join(' ').toUpperCase();
+            if (!texto.includes(termo)) return;
+        }
+
+        if (!mapa.has(placa)) {
+            mapa.set(placa, {
+                placa,
+                rota: item.rota || '',
+                motorista: item.nome_mot || '',
+                horaRetorno: item.hora_mot || '',
+                operador: item.operador_recebimento || '',
+                filial: veiculo?.filial || '',
+                modelo: veiculo?.modelo || ''
+            });
+        }
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => {
+        const rotaCompare = String(a.rota || '').localeCompare(String(b.rota || ''), undefined, { numeric: true });
+        return rotaCompare || a.placa.localeCompare(b.placa);
+    });
+}
+
 function renderListaVeiculos(veiculos) {
     const container = document.getElementById('lista-veiculos');
     if (!container) return;
@@ -298,6 +393,38 @@ function renderListaOrigens(origens) {
     `).join('');
 }
 
+function renderListaFaltamAbastecer(itens) {
+    const container = document.getElementById('lista-faltam-abastecer');
+    if (!container) return;
+
+    if (itens.length === 0) {
+        container.innerHTML = '<div class="empty-state">Nenhum veiculo recebido pendente de abastecimento.</div>';
+        return;
+    }
+
+    container.innerHTML = itens.map(item => `
+        <article class="fuel-card pendente">
+            <div class="fuel-icon"><i class="fas fa-truck-clock"></i></div>
+            <div class="fuel-main">
+                <div class="fuel-title">
+                    <span class="fuel-placa">${escapeHtml(item.placa)}</span>
+                    <span class="fuel-rota">Rota ${escapeHtml(item.rota || '-')}</span>
+                </div>
+                <div class="fuel-details">
+                    <span><i class="fas fa-user"></i> ${escapeHtml(item.motorista || 'Motorista N/I')}</span>
+                    <span><i class="fas fa-clock"></i> Recebido ${escapeHtml(item.horaRetorno || '--:--')}</span>
+                    <span><i class="fas fa-building"></i> ${escapeHtml(item.filial || 'Filial N/I')}</span>
+                    <span><i class="fas fa-clipboard-check"></i> ${escapeHtml(item.operador || 'Recebimento')}</span>
+                </div>
+            </div>
+            <div class="fuel-total pendente-status">
+                Status
+                <strong>Pendente</strong>
+            </div>
+        </article>
+    `).join('');
+}
+
 function obterTanque(item) {
     return item?.bicos?.bombas?.tanques || null;
 }
@@ -351,8 +478,10 @@ function atualizarStatusRealtime(status, texto) {
 function renderErro() {
     const mensagem = '<div class="empty-state">Erro ao carregar dados de abastecimento interno.</div>';
     const veiculos = document.getElementById('lista-veiculos');
+    const faltam = document.getElementById('lista-faltam-abastecer');
     const origens = document.getElementById('lista-origens');
     if (veiculos) veiculos.innerHTML = mensagem;
+    if (faltam) faltam.innerHTML = mensagem;
     if (origens) origens.innerHTML = mensagem;
 }
 
@@ -400,5 +529,6 @@ function escapeHtml(value) {
 
 window.addEventListener('beforeunload', () => {
     if (abastecimentoChannel) supabaseClient.removeChannel(abastecimentoChannel);
+    if (retornoChannel) supabaseClient.removeChannel(retornoChannel);
     if (refreshTimer) clearInterval(refreshTimer);
 });
