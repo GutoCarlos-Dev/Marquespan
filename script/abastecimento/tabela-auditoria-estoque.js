@@ -12,7 +12,7 @@ function getDiferencaClasse(diferenca) {
 
 export function montarHtmlAuditoriaEstoque(rows, formatLitros) {
     if (!rows.length) {
-        return '<tr><td colspan="8" class="text-center">Nenhum ajuste encontrado para a data selecionada.</td></tr>';
+        return '<tr><td colspan="9" class="text-center">Nenhum ajuste encontrado para a data selecionada.</td></tr>';
     }
 
     return rows.map(item => {
@@ -27,6 +27,7 @@ export function montarHtmlAuditoriaEstoque(rows, formatLitros) {
                 <td class="estoque-anterior">${formatLitros(item.estoqueAnterior)} L</td>
                 <td class="estoque-anterior">${formatLitros(item.estoqueAtual)} L</td>
                 <td class="estoque-diferenca ${diferencaClasse}">${item.diferenca > 0 ? '+' : ''}${formatLitros(item.diferenca)} L</td>
+                <td>${formatLitros(item.totalSaidasDia || 0)} L</td>
                 <td style="display: flex; gap: 5px; justify-content: center;">
                     <button class="btn-action btn-edit btn-edit-auditoria" data-id="${item.id}" data-estoque-anterior="${item.estoqueAnterior}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
                     <button class="btn-action btn-delete btn-delete-auditoria" data-id="${item.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>

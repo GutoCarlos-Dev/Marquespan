@@ -6,7 +6,8 @@ function formatAuditoriaRows(rows, formatLitros) {
         combustivel: item.tanques?.tipo_combustivel || '-',
         estoqueAnterior: formatLitros(item.estoqueAnterior),
         estoqueAtual: formatLitros(item.estoqueAtual),
-        diferenca: `${item.diferenca > 0 ? '+' : ''}${formatLitros(item.diferenca)}`
+        diferenca: `${item.diferenca > 0 ? '+' : ''}${formatLitros(item.diferenca)}`,
+        totalSaidasDia: formatLitros(item.totalSaidasDia || 0)
     }));
 }
 
@@ -37,13 +38,14 @@ export function exportarAuditoriaEstoqueXLSX({ rows, dataInicial, dataFinal, for
         'Combustivel': item.combustivel,
         'Estoque Anterior (Litros)': item.estoqueAnterior,
         'Estoque Atual (Litros)': item.estoqueAtual,
-        'Diferenca (Litros)': item.diferenca
+        'Diferenca (Litros)': item.diferenca,
+        'Total de Saidas do Dia': item.totalSaidasDia
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
     ws['!cols'] = [
         { wch: 20 }, { wch: 24 }, { wch: 22 }, { wch: 18 },
-        { wch: 24 }, { wch: 22 }, { wch: 18 }
+        { wch: 24 }, { wch: 22 }, { wch: 18 }, { wch: 22 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -84,7 +86,8 @@ export async function exportarAuditoriaEstoquePDF({ rows, dataInicial, dataFinal
             'Combustivel',
             'Estoque Anterior',
             'Estoque Atual',
-            'Diferenca'
+            'Diferenca',
+            'Saidas do Dia'
         ]],
         body: tableRows.map(item => [
             item.dataHora,
@@ -93,7 +96,8 @@ export async function exportarAuditoriaEstoquePDF({ rows, dataInicial, dataFinal
             item.combustivel,
             `${item.estoqueAnterior} L`,
             `${item.estoqueAtual} L`,
-            `${item.diferenca} L`
+            `${item.diferenca} L`,
+            `${item.totalSaidasDia} L`
         ]),
         theme: 'grid',
         headStyles: { fillColor: [0, 105, 55], fontSize: 8 },

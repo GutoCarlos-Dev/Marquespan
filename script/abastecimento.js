@@ -777,6 +777,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return obterEstoqueAntes(supabaseClient, tanqueId, dataHora);
         },
 
+        getDataSaoPaulo(valor) {
+            return new Date(valor).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+        },
+
+        agruparSaidasPorTanqueDia(saidas) {
+            const mapa = new Map();
+
+            (saidas || []).forEach(saida => {
+                const tanqueId = saida.bicos?.bombas?.tanque_id;
+                if (!tanqueId || !saida.data_hora) return;
+
+                const data = this.getDataSaoPaulo(saida.data_hora);
+                const chave = `${tanqueId}|${data}`;
+                mapa.set(chave, (mapa.get(chave) || 0) + (parseFloat(saida.qtd_litros) || 0));
+            });
+
+            return mapa;
+        },
+
         async renderAuditoriaEstoque() {
             if (!this.canViewEstoqueAuditoria() || !this.tbodyAuditoriaEstoque) return;
 
@@ -792,35 +811,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center">Buscando ajustes...</td></tr>';
+            this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="9" class="text-center">Buscando ajustes...</td></tr>';
 
             try {
-                const { data, error } = await supabaseClient
-                    .from('abastecimentos')
-                    .select('id, data, usuario, tanque_id, qtd_litros, tanques(nome, tipo_combustivel)')
-                    .eq('numero_nota', 'AJUSTE DE ESTOQUE')
-                    .gte('data', `${dataInicial}T00:00:00-03:00`)
-                    .lte('data', `${dataFinal}T23:59:59-03:00`)
-                    .order('data', { ascending: false });
+                const [ajustesResult, saidasResult] = await Promise.all([
+                    supabaseClient
+                        .from('abastecimentos')
+                        .select('id, data, usuario, tanque_id, qtd_litros, tanques(nome, tipo_combustivel)')
+                        .eq('numero_nota', 'AJUSTE DE ESTOQUE')
+                        .gte('data', `${dataInicial}T00:00:00-03:00`)
+                        .lte('data', `${dataFinal}T23:59:59-03:00`)
+                        .order('data', { ascending: false }),
+                    supabaseClient
+                        .from('saidas_combustivel')
+                        .select('data_hora, qtd_litros, bicos(bombas(tanque_id))')
+                        .gte('data_hora', `${dataInicial}T00:00:00-03:00`)
+                        .lte('data_hora', `${dataFinal}T23:59:59-03:00`)
+                ]);
 
-                if (error) throw error;
+                if (ajustesResult.error) throw ajustesResult.error;
+                if (saidasResult.error) throw saidasResult.error;
 
+                const data = ajustesResult.data;
                 if (!data || data.length === 0) {
                     this.auditoriaEstoqueDados = [];
-                    this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum ajuste encontrado para a data selecionada.</td></tr>';
+                    this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum ajuste encontrado para a data selecionada.</td></tr>';
                     return;
                 }
 
+                const saidasPorTanqueDia = this.agruparSaidasPorTanqueDia(saidasResult.data);
                 const rows = await Promise.all(data.map(async ajuste => {
                     const diferenca = parseFloat(ajuste.qtd_litros) || 0;
                     const estoqueAnterior = await this.calcularEstoqueAntes(ajuste.tanque_id, ajuste.data);
                     const estoqueAtual = estoqueAnterior + diferenca;
+                    const dataAjuste = this.getDataSaoPaulo(ajuste.data);
+                    const totalSaidasDia = saidasPorTanqueDia.get(`${ajuste.tanque_id}|${dataAjuste}`) || 0;
 
                     return {
                         ...ajuste,
                         diferenca,
                         estoqueAnterior,
-                        estoqueAtual
+                        estoqueAtual,
+                        totalSaidasDia
                     };
                 }));
 
@@ -829,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao buscar auditoria de estoque:', error);
                 this.auditoriaEstoqueDados = [];
-                this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao buscar auditoria.</td></tr>';
+                this.tbodyAuditoriaEstoque.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao buscar auditoria.</td></tr>';
                 alert('Erro ao buscar auditoria: ' + error.message);
             }
         },
