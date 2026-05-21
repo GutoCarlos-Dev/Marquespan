@@ -362,6 +362,47 @@ textarea {
     font-weight: 600;
 }
 
+.tab-add-client {
+    width: 40px;
+    min-width: 40px;
+    height: 38px;
+    padding: 0;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(135deg, #28a745, #16823a);
+    color: #fff;
+    border-bottom-color: #16823a;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.24);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.tab-add-client:hover {
+    color: #fff;
+    background: linear-gradient(135deg, #31bd52, #116f31);
+    transform: translateY(-1px);
+}
+
+.btn-remover-cliente-extra {
+    width: 100%;
+    margin-top: 1rem;
+    border: 1px solid #f3b9bf;
+    border-radius: 8px;
+    background: #fff5f6;
+    color: #b4232e;
+    padding: 11px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remover-cliente-extra:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(220, 53, 69, 0.22);
+    transform: translateY(-1px);
+}
+
 .tab-content {
     display: none;
     animation: fadeIn 0.5s;

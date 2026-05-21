@@ -44,7 +44,7 @@ const COLUMN_MAP = [
     'cliente2', 'frances_diurno2', 'frances_noturno2', 'variedades2', 'motivo2', 'nf_dev2', 'obs_nf_dev2',
     'cliente3', 'frances_diurno3', 'frances_noturno3', 'variedades3', 'motivo3', 'nf_dev3', 'obs_nf_dev3',
     'cliente4', 'frances_diurno4', 'frances_noturno4', 'variedades4', 'motivo4', 'nf_dev4', 'obs_nf_dev4',
-    'supervisor_ciente', 'nome_supervisor', 'obs',
+    'supervisor_ciente', 'nome_supervisor', 'obs', 'devolucoes_extras',
     'retorno_pecas', 'pecas_desc'
 ];
 
@@ -77,6 +77,205 @@ function applyDriverTimeToTeam(rowData) {
     if (hasTeamMemberName(rowData.nome_terceiro)) {
         rowData.hora_terceiro = rowData.hora_mot;
     }
+}
+
+function splitObsLegadoDevolucoes(value) {
+    const DEVOLUCOES_EXTRAS_START = '[DEVOLUCOES_EXTRAS]';
+    const DEVOLUCOES_EXTRAS_END = '[/DEVOLUCOES_EXTRAS]';
+    const text = String(value || '');
+    const startIndex = text.indexOf(DEVOLUCOES_EXTRAS_START);
+
+    if (startIndex === -1) {
+        return { obsGeral: text.trim(), extras: '' };
+    }
+
+    const extrasStart = startIndex + DEVOLUCOES_EXTRAS_START.length;
+    const endIndex = text.indexOf(DEVOLUCOES_EXTRAS_END, extrasStart);
+
+    return {
+        obsGeral: text.slice(0, startIndex).trim(),
+        extras: (endIndex === -1 ? text.slice(extrasStart) : text.slice(extrasStart, endIndex)).trim()
+    };
+}
+
+function getObsGeral(rowData) {
+    return splitObsLegadoDevolucoes(typeof rowData === 'object' ? rowData?.obs : rowData).obsGeral;
+}
+
+function getDevolucoesExtras(rowData) {
+    const extras = parseDevolucoesExtras(rowData);
+    return extras.map((item, index) => formatClienteExtra(item, index)).join('\n\n');
+}
+
+function parseDevolucoesExtras(rowData) {
+    if (rowData && typeof rowData === 'object' && rowData.devolucoes_extras) {
+        try {
+            const parsed = JSON.parse(rowData.devolucoes_extras);
+            if (Array.isArray(parsed)) return parsed;
+        } catch {
+            return [{ obs_nf_dev: String(rowData.devolucoes_extras).trim() }];
+        }
+    }
+
+    const legado = splitObsLegadoDevolucoes(typeof rowData === 'object' ? rowData?.obs : rowData).extras;
+    return legado ? [{ obs_nf_dev: legado }] : [];
+}
+
+function formatClienteExtra(item, index) {
+    return [
+        `Cliente ${index + 5}: ${item.cliente || 'N/A'}`,
+        `NF: ${item.nf_dev || 'N/A'}`,
+        `Frances Diurno: ${item.frances_diurno || '0'}`,
+        `Frances Noturno: ${item.frances_noturno || '0'}`,
+        `Variedades: ${item.variedades || 'N/A'}`,
+        `Motivo: ${item.motivo || 'N/A'}`,
+        `Obs: ${item.obs_nf_dev || 'N/A'}`
+    ].join('\n');
+}
+
+function criarHtmlClienteExtra(index, data = {}) {
+    return `
+        <h4>Detalhes do Cliente ${index + 5}</h4>
+        <div class="form-grid-2-cols">
+            <div class="form-group">
+                <label>Cliente</label>
+                <input type="text" class="glass-input" data-extra-field="cliente" value="${data.cliente || ''}">
+            </div>
+            <div class="form-group">
+                <label>NF Devolvida</label>
+                <input type="text" class="glass-input" data-extra-field="nf_dev" value="${data.nf_dev || ''}">
+            </div>
+            <div class="form-group">
+                <label>Frances Diurno</label>
+                <input type="number" class="glass-input" data-extra-field="frances_diurno" value="${data.frances_diurno || ''}">
+            </div>
+            <div class="form-group">
+                <label>Frances Noturno</label>
+                <input type="number" class="glass-input" data-extra-field="frances_noturno" value="${data.frances_noturno || ''}">
+            </div>
+            <div class="form-group">
+                <label>Variedades</label>
+                <input type="text" class="glass-input" data-extra-field="variedades" value="${data.variedades || ''}" placeholder="Texto livre...">
+            </div>
+            <div class="form-group">
+                <label>Motivo</label>
+                <select class="glass-input" data-extra-field="motivo">
+                    <option value="" ${!data.motivo ? 'selected' : ''}>Selecione</option>
+                    <option value="AVARIA" ${data.motivo === 'AVARIA' ? 'selected' : ''}>AVARIA</option>
+                    <option value="DEVOLUCAO" ${data.motivo === 'DEVOLUCAO' ? 'selected' : ''}>DEVOLUCAO</option>
+                    <option value="FALTOU TEMPO HABIL" ${data.motivo === 'FALTOU TEMPO HABIL' ? 'selected' : ''}>FALTOU TEMPO HABIL</option>
+                    <option value="PRODUTO INVERTIDO" ${data.motivo === 'PRODUTO INVERTIDO' ? 'selected' : ''}>PRODUTO INVERTIDO</option>
+                    <option value="SOBROU CARGA" ${data.motivo === 'SOBROU CARGA' ? 'selected' : ''}>SOBROU CARGA</option>
+                    <option value="TROCA" ${data.motivo === 'TROCA' ? 'selected' : ''}>TROCA</option>
+                </select>
+            </div>
+            <div class="form-group form-group-full">
+                <label>Obs. NF Devolvida</label>
+                <input type="text" class="glass-input" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
+            </div>
+        </div>
+        <button type="button" class="btn-remover-cliente-extra">Remover cliente</button>
+    `;
+}
+
+function setupDevolucoesTabHandlers(modal) {
+    modal.querySelectorAll('.tab-link[data-tab]').forEach(button => {
+        button.onclick = (e) => {
+            modal.querySelectorAll('.tab-link[data-tab], .tab-content').forEach(el => el.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            document.getElementById(e.currentTarget.dataset.tab).classList.add('active');
+        };
+    });
+}
+
+function renumerarClientesExtrasModal(modal) {
+    const extraTabs = Array.from(modal.querySelectorAll('.tab-link[data-tab^="tab-cliente-extra-"]'));
+    const extraContents = Array.from(modal.querySelectorAll('#clientesExtrasTabs .tab-content[data-extra-index]'));
+
+    extraTabs.forEach((button, index) => {
+        const numeroCliente = index + 5;
+        const tabId = `tab-cliente-extra-${numeroCliente}`;
+        const content = extraContents[index];
+
+        button.dataset.tab = tabId;
+        button.textContent = `Cliente ${numeroCliente}`;
+
+        if (content) {
+            content.id = tabId;
+            content.dataset.extraIndex = String(index);
+            const title = content.querySelector('h4');
+            if (title) title.textContent = `Detalhes do Cliente ${numeroCliente}`;
+        }
+    });
+
+    modal.dataset.nextExtraClient = String(extraTabs.length + 5);
+    setupDevolucoesTabHandlers(modal);
+}
+
+function adicionarClienteExtraModal(modal, data = {}) {
+    const container = document.getElementById('clientesExtrasTabs');
+    const addButton = document.getElementById('btnAdicionarClienteExtra');
+    const numeroCliente = parseInt(modal.dataset.nextExtraClient || '5', 10);
+    modal.dataset.nextExtraClient = String(numeroCliente + 1);
+    const index = numeroCliente - 5;
+    const tabId = `tab-cliente-extra-${numeroCliente}`;
+
+    const tabButton = document.createElement('button');
+    tabButton.type = 'button';
+    tabButton.className = 'tab-link';
+    tabButton.dataset.tab = tabId;
+    tabButton.textContent = `Cliente ${numeroCliente}`;
+    addButton.before(tabButton);
+
+    const tabContent = document.createElement('div');
+    tabContent.id = tabId;
+    tabContent.className = 'tab-content';
+    tabContent.dataset.extraIndex = String(index);
+    tabContent.innerHTML = criarHtmlClienteExtra(index, data);
+    container.appendChild(tabContent);
+
+    tabContent.querySelector('.btn-remover-cliente-extra').addEventListener('click', () => {
+        const removedIndex = Array.from(container.querySelectorAll('.tab-content[data-extra-index]')).indexOf(tabContent);
+        tabButton.remove();
+        tabContent.remove();
+        renumerarClientesExtrasModal(modal);
+
+        const remainingExtraTabs = Array.from(modal.querySelectorAll('.tab-link[data-tab^="tab-cliente-extra-"]'));
+        const nextTab = remainingExtraTabs[Math.min(removedIndex, remainingExtraTabs.length - 1)];
+        (nextTab || modal.querySelector('.tab-link[data-tab="tab-cliente-4"]'))?.click();
+    });
+
+    setupDevolucoesTabHandlers(modal);
+    tabButton.click();
+}
+
+function renderClientesExtrasModal(modal, rowData) {
+    document.querySelectorAll('.tab-link[data-tab^="tab-cliente-extra-"]').forEach(button => button.remove());
+    document.getElementById('clientesExtrasTabs').innerHTML = '';
+    modal.dataset.nextExtraClient = '5';
+    parseDevolucoesExtras(rowData).forEach(item => adicionarClienteExtraModal(modal, item));
+
+    const addButton = document.getElementById('btnAdicionarClienteExtra');
+    if (addButton) {
+        addButton.onclick = () => adicionarClienteExtraModal(modal);
+    }
+}
+
+function serializeClientesExtrasModal(modal) {
+    const extras = Array.from(modal.querySelectorAll('#clientesExtrasTabs .tab-content[data-extra-index]')).map(tab => {
+        const item = {};
+        tab.querySelectorAll('[data-extra-field]').forEach(input => {
+            item[input.dataset.extraField] = input.value.trim();
+        });
+        return item;
+    }).filter(item => Object.values(item).some(Boolean));
+
+    return extras.length ? JSON.stringify(extras) : null;
+}
+
+function getDevolucoesExtrasPayload(rowData) {
+    const extras = parseDevolucoesExtras(rowData);
+    return extras.length ? JSON.stringify(extras) : null;
 }
 
 async function carregarSupervisores() {
@@ -532,7 +731,7 @@ function renderGrid() {
         const index = gridData.indexOf(rowData);
         
         // Verifica se há retorno de pão para mostrar o ícone verde
-        const hasBreadReturn = !!(rowData.cliente1 || rowData.nf_dev1 || rowData.frances_diurno1 || rowData.frances_noturno1 || rowData.variedades1 || rowData.motivo1 || rowData.obs_nf_dev1);
+        const hasBreadReturn = !!(rowData.cliente1 || rowData.nf_dev1 || rowData.frances_diurno1 || rowData.frances_noturno1 || rowData.variedades1 || rowData.motivo1 || rowData.obs_nf_dev1 || getDevolucoesExtras(rowData));
         const whatsappBreadIcon = hasBreadReturn ? 
             `<i class="fab fa-whatsapp whatsapp-btn green" onclick="event.stopPropagation(); shareBreadReturnOnWhatsApp(${index})" title="Compartilhar Devolução de Pão"></i>` : '';
         
@@ -600,7 +799,7 @@ function renderGrid() {
                     ${whatsappBreadIcon}
                 </div>
             </td>
-            <td><input type="text" value="${rowData.obs || ''}" data-field="obs"></td>
+            <td><input type="text" value="${getObsGeral(rowData)}" data-field="obs"></td>
             ${deleteCell}
         `;
         
@@ -714,13 +913,8 @@ function openDevolucoesModal(index) {
     }
 
     // Lógica das abas
-    modal.querySelectorAll('.tab-link').forEach(button => {
-        button.onclick = (e) => {
-            modal.querySelectorAll('.tab-link, .tab-content').forEach(el => el.classList.remove('active'));
-            e.target.classList.add('active');
-            document.getElementById(e.target.dataset.tab).classList.add('active');
-        };
-    });
+    renderClientesExtrasModal(modal, rowData);
+    setupDevolucoesTabHandlers(modal);
     // Ativa a primeira aba por padrão
     modal.querySelector('.tab-link').click();
 
@@ -747,6 +941,8 @@ async function saveDevolucoesData() {
         }
     });
     // Salva a linha inteira após modificar os dados do modal
+    gridData[currentRowIndex].devolucoes_extras = serializeClientesExtrasModal(modal);
+
     await saveRow(currentRowIndex);
 }
 
@@ -863,7 +1059,8 @@ function mapRowToPayload(rowData, dataRetorno) {
 
         supervisor_ciente: rowData.supervisor_ciente === undefined ? null : parseNum(rowData.supervisor_ciente),
         nome_supervisor: rowData.nome_supervisor,
-        obs: rowData.obs
+        obs: getObsGeral(rowData) || null,
+        devolucoes_extras: getDevolucoesExtrasPayload(rowData)
     };
     
     // Removido o envio do ID no payload para evitar erros de restrição nula em salvamentos em massa (batch upsert).
@@ -1035,7 +1232,7 @@ async function exportToPDF(type) {
     // Filtrar apenas registros que possuem algum tipo de retorno/devolução
     const rowsWithReturns = gridData.filter(row => {
         if (type === 'pao') {
-            return !!(row.cliente1 || row.nf_dev1 || row.frances_diurno1 || row.frances_noturno1 || row.variedades1 || row.motivo1 || row.obs_nf_dev1);
+            return !!(row.cliente1 || row.nf_dev1 || row.frances_diurno1 || row.frances_noturno1 || row.variedades1 || row.motivo1 || row.obs_nf_dev1 || getDevolucoesExtras(row));
         } else if (type === 'pecas') {
             return row.retorno_pecas === 1;
         }
@@ -1116,6 +1313,20 @@ async function exportToPDF(type) {
                     ]);
                 }
             }
+
+            const extras = getDevolucoesExtras(row);
+            if (extras) {
+                tableRows.push([
+                    row.created_at ? formatarDataHoraSaoPaulo(row.created_at) : '-',
+                    row.operador_recebimento || '-',
+                    row.rota || '-',
+                    row.placa || '-',
+                    row.nome_mot || '-',
+                    'DEVOLUCAO PAO',
+                    `Clientes adicionais: ${extras}`,
+                    row.nome_supervisor || '-'
+                ]);
+            }
         } else if (type === 'pecas') {
             // Retorno de Peças
             tableRows.push([
@@ -1170,7 +1381,12 @@ window.shareBreadReturnOnWhatsApp = function(index) {
             message += `  *Obs NFE-DEV:* ${item[`obs_nf_dev${i}`] || 'N/A'}\n`;
         }
     }
-    message += `\n*Observação Geral:* ${item.obs || 'N/A'}\n`;
+    const obsGeral = getObsGeral(item);
+    const extras = getDevolucoesExtras(item);
+    if (extras) {
+        message += `\n*Clientes adicionais:*\n${extras}\n`;
+    }
+    message += `\n*Observacao Geral:* ${obsGeral || 'N/A'}\n`;
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 };
