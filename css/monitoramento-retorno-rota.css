@@ -179,6 +179,7 @@
 .truck-title {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 4px;
 }
@@ -240,19 +241,79 @@
 }
 
 @media (max-width: 640px) {
+    .retorno-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .retorno-progress {
+        padding: 14px;
+    }
+
+    .progress-info {
+        gap: 10px;
+    }
+
     .header-flex,
     .header-controls,
     .filter-bar {
         align-items: stretch;
     }
 
+    .retorno-column,
+    .retorno-progress {
+        border-radius: 8px;
+    }
+
+    .column-header {
+        padding: 14px;
+    }
+
+    .column-header h3 {
+        font-size: 0.92rem;
+        line-height: 1.2;
+    }
+
+    .truck-list {
+        padding: 10px;
+        min-height: 0;
+    }
+
     .truck-card {
         grid-template-columns: auto 1fr;
+        align-items: start;
+        gap: 10px;
+        padding: 10px;
     }
 
     .truck-status {
         grid-column: 1 / -1;
         text-align: left;
         padding-left: 54px;
+    }
+}
+
+@media (max-width: 430px) {
+    .retorno-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .truck-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+
+    .truck-placa {
+        font-size: 1rem;
+    }
+
+    .truck-rota,
+    .truck-details,
+    .truck-status {
+        font-size: 0.78rem;
+    }
+
+    .truck-status {
+        padding-left: 46px;
     }
 }

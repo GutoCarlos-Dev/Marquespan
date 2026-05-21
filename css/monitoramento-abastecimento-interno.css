@@ -267,19 +267,77 @@
 }
 
 @media (max-width: 640px) {
+    .abastecimento-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .header-flex,
     .header-controls,
     .filter-bar {
         align-items: stretch;
     }
 
+    .abastecimento-column {
+        border-radius: 8px;
+    }
+
+    .column-header {
+        padding: 14px;
+    }
+
+    .column-header h3 {
+        font-size: 0.92rem;
+        line-height: 1.2;
+    }
+
+    .fuel-list {
+        padding: 10px;
+        min-height: 0;
+    }
+
     .fuel-card {
         grid-template-columns: auto 1fr;
+        align-items: start;
+        gap: 10px;
+        padding: 10px;
     }
 
     .fuel-total {
         grid-column: 1 / -1;
         text-align: left;
         padding-left: 54px;
+    }
+
+    .tank-level-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+    }
+}
+
+@media (max-width: 430px) {
+    .abastecimento-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .fuel-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+
+    .fuel-placa {
+        font-size: 1rem;
+    }
+
+    .fuel-rota,
+    .fuel-details,
+    .fuel-total,
+    .tank-level-meta {
+        font-size: 0.78rem;
+    }
+
+    .fuel-total {
+        padding-left: 46px;
     }
 }
