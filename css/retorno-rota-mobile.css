@@ -403,6 +403,10 @@ textarea {
     transform: translateY(-1px);
 }
 
+.input-uppercase {
+    text-transform: uppercase;
+}
+
 .tab-content {
     display: none;
     animation: fadeIn 0.5s;

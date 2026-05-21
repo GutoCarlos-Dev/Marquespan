@@ -55,16 +55,43 @@ function getCurrentUserName() {
 
 function getUserLevel() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-    return usuario ? (usuario.nivel || '').toLowerCase() : null;
+    return usuario ? (usuario.nivel || '').toLowerCase().trim() : null;
 }
 
-function canDelete() {
+function canManageGrid() {
     const nivel = getUserLevel();
     return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
 }
 
+function canDelete() {
+    return canManageGrid();
+}
+
+function applyGridPermissionUI() {
+    if (canManageGrid()) return;
+
+    ['btnAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnImportarRoteiro'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+
+    const pasteInfo = document.querySelector('.info-paste');
+    if (pasteInfo) pasteInfo.style.display = 'none';
+
+    const table = document.getElementById('gridRetornoRota') || document.getElementById('tableRetornoRota');
+    const headers = table?.querySelectorAll('thead th');
+    if (headers && headers.length > 0) {
+        headers[0].style.display = 'none';
+        headers[headers.length - 1].style.display = 'none';
+    }
+}
+
 function hasTeamMemberName(value) {
     return String(value || '').trim() !== '';
+}
+
+function toUpperText(value) {
+    return String(value || '').trim().toUpperCase();
 }
 
 function applyDriverTimeToTeam(rowData) {
@@ -139,7 +166,7 @@ function criarHtmlClienteExtra(index, data = {}) {
         <div class="form-grid-2-cols">
             <div class="form-group">
                 <label>Cliente</label>
-                <input type="text" class="glass-input" data-extra-field="cliente" value="${data.cliente || ''}">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="cliente" value="${data.cliente || ''}">
             </div>
             <div class="form-group">
                 <label>NF Devolvida</label>
@@ -155,7 +182,7 @@ function criarHtmlClienteExtra(index, data = {}) {
             </div>
             <div class="form-group">
                 <label>Variedades</label>
-                <input type="text" class="glass-input" data-extra-field="variedades" value="${data.variedades || ''}" placeholder="Texto livre...">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="variedades" value="${data.variedades || ''}" placeholder="Texto livre...">
             </div>
             <div class="form-group">
                 <label>Motivo</label>
@@ -171,7 +198,7 @@ function criarHtmlClienteExtra(index, data = {}) {
             </div>
             <div class="form-group form-group-full">
                 <label>Obs. NF Devolvida</label>
-                <input type="text" class="glass-input" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
             </div>
         </div>
         <button type="button" class="btn-remover-cliente-extra">Remover cliente</button>
@@ -184,6 +211,14 @@ function setupDevolucoesTabHandlers(modal) {
             modal.querySelectorAll('.tab-link[data-tab], .tab-content').forEach(el => el.classList.remove('active'));
             e.currentTarget.classList.add('active');
             document.getElementById(e.currentTarget.dataset.tab).classList.add('active');
+        };
+    });
+}
+
+function setupUppercaseInputs(modal) {
+    modal.querySelectorAll('.input-uppercase').forEach(input => {
+        input.oninput = () => {
+            input.value = input.value.toUpperCase();
         };
     });
 }
@@ -246,6 +281,7 @@ function adicionarClienteExtraModal(modal, data = {}) {
     });
 
     setupDevolucoesTabHandlers(modal);
+    setupUppercaseInputs(modal);
     tabButton.click();
 }
 
@@ -265,7 +301,10 @@ function serializeClientesExtrasModal(modal) {
     const extras = Array.from(modal.querySelectorAll('#clientesExtrasTabs .tab-content[data-extra-index]')).map(tab => {
         const item = {};
         tab.querySelectorAll('[data-extra-field]').forEach(input => {
-            item[input.dataset.extraField] = input.value.trim();
+            const field = input.dataset.extraField;
+            item[field] = ['cliente', 'variedades', 'obs_nf_dev'].includes(field)
+                ? toUpperText(input.value)
+                : input.value.trim();
         });
         return item;
     }).filter(item => Object.values(item).some(Boolean));
@@ -384,6 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             headers[headers.length - 1].style.display = 'none'; // Coluna da Lixeira
         }
     }
+    applyGridPermissionUI();
 });
 
 /**
@@ -443,6 +483,10 @@ function updateSortIcons() {
 async function handleTableClick(e) {
     const target = e.target.closest('button');
     if (!target) return;
+
+    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais') || target.classList.contains('btn-delete-row'))) {
+        return;
+    }
 
     const rowIndex = target.closest('tr').dataset.rowIndex;
 
@@ -564,6 +608,11 @@ async function loadDataFromSupabase() {
  * @param {ClipboardEvent} event - O evento de colar.
  */
 function handlePaste(event) {
+    if (!canManageGrid()) {
+        event.preventDefault();
+        return;
+    }
+
     const target = event.target;
 
     // A nova lógica de colar só funciona se o alvo for um input dentro da tabela.
@@ -663,6 +712,8 @@ function applyRowStyle(trElement, rowData) {
  * Adiciona uma nova linha vazia à grid.
  */
 function addEmptyRow() {
+    if (!canManageGrid()) return;
+
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
     gridData.push(newRow);
@@ -724,7 +775,7 @@ function renderGrid() {
         return;
     }
 
-    const userCanDelete = canDelete();
+    const userCanEdit = canManageGrid();
 
     dataToRender.forEach((rowData) => {
         // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
@@ -771,35 +822,37 @@ function renderGrid() {
         const tr = document.createElement('tr');
         tr.dataset.rowIndex = index;
 
-        const selectCell = userCanDelete ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
-        const deleteCell = userCanDelete ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
+        const selectCell = userCanEdit ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
+        const deleteCell = userCanEdit ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
+        const readOnlyAttr = userCanEdit ? '' : ' readonly';
+        const disabledAttr = userCanEdit ? '' : ' disabled';
 
         // Cria as células principais
         tr.innerHTML = `
             ${selectCell}
-            <td><input type="text" value="${rowData.placa || ''}" data-field="placa"></td>
-            <td><input type="text" value="${rowData.rota || ''}" data-field="rota"></td>
-            <td><input type="text"value="${rowData.status_rota || ''}"data-field="status_rota"></td>
-            <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
-            <td><input type="text" value="${rowData.nome_mot || ''}" data-field="nome_mot"></td>
-            <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot" step="1"></td>
-            <td><input type="text" value="${rowData.nome_aux || ''}" data-field="nome_aux"></td>
-            <td><input type="time" value="${rowData.hora_aux || ''}" data-field="hora_aux" step="1"></td>
-            <td><input type="text" value="${rowData.nome_terceiro || ''}" data-field="nome_terceiro"></td>
-            <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro" step="1"></td>
+            <td><input type="text" value="${rowData.placa || ''}" data-field="placa"${readOnlyAttr}></td>
+            <td><input type="text" value="${rowData.rota || ''}" data-field="rota"${readOnlyAttr}></td>
+            <td><input type="text"value="${rowData.status_rota || ''}"data-field="status_rota"${readOnlyAttr}></td>
+            <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"${readOnlyAttr}></td>
+            <td><input type="text" value="${rowData.nome_mot || ''}" data-field="nome_mot"${readOnlyAttr}></td>
+            <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot" step="1"${readOnlyAttr}></td>
+            <td><input type="text" value="${rowData.nome_aux || ''}" data-field="nome_aux"${readOnlyAttr}></td>
+            <td><input type="time" value="${rowData.hora_aux || ''}" data-field="hora_aux" step="1"${readOnlyAttr}></td>
+            <td><input type="text" value="${rowData.nome_terceiro || ''}" data-field="nome_terceiro"${readOnlyAttr}></td>
+            <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro" step="1"${readOnlyAttr}></td>
             <td>
                 <div class="cell-action-container">
-                    <button class="btn-modal-action btn-materiais" title="${materiaisTooltip.trim()}">Materiais</button>
+                    <button class="btn-modal-action btn-materiais" title="${materiaisTooltip.trim()}"${disabledAttr}>Materiais</button>
                     ${whatsappPartsIcon}
                 </div>
             </td>
             <td>
                 <div class="cell-action-container">
-                    <button class="btn-modal-action btn-devolucoes" title="${devolucoesTooltip.trim()}">Devoluções</button>
+                    <button class="btn-modal-action btn-devolucoes" title="${devolucoesTooltip.trim()}"${disabledAttr}>Devoluções</button>
                     ${whatsappBreadIcon}
                 </div>
             </td>
-            <td><input type="text" value="${getObsGeral(rowData)}" data-field="obs"></td>
+            <td><input type="text" value="${getObsGeral(rowData)}" data-field="obs"${readOnlyAttr}></td>
             ${deleteCell}
         `;
         
@@ -809,6 +862,8 @@ function renderGrid() {
         // Adiciona listener para salvar alterações nos inputs diretamente no objeto de dados
         tr.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', async (e) => {
+                if (!canManageGrid()) return;
+
                 const field = e.target.dataset.field;
                 if (!field) return; // Ignora inputs que não possuem mapeamento de campo (ex: checkbox de seleção)
                 gridData[index][field] = e.target.value;
@@ -873,7 +928,7 @@ function openDevolucoesModal(index) {
             <div class="form-grid-2-cols">
                 <div class="form-group">
                     <label>Cliente</label>
-                    <input type="text" class="glass-input" data-field="cliente${i}" value="${rowData[`cliente${i}`] || ''}">
+                    <input type="text" class="glass-input input-uppercase" data-field="cliente${i}" value="${rowData[`cliente${i}`] || ''}">
                 </div>
                 <div class="form-group">
                     <label>NF Devolvida</label>
@@ -889,7 +944,7 @@ function openDevolucoesModal(index) {
                 </div>
                  <div class="form-group">
                     <label>Variedades</label>
-                    <input type="text" class="glass-input" data-field="variedades${i}" value="${rowData[`variedades${i}`] || ''}" placeholder="Texto livre...">
+                    <input type="text" class="glass-input input-uppercase" data-field="variedades${i}" value="${rowData[`variedades${i}`] || ''}" placeholder="Texto livre...">
                 </div>
                 <div class="form-group">
                     <label>Motivo</label>
@@ -906,7 +961,7 @@ function openDevolucoesModal(index) {
 
                  <div class="form-group form-group-full">
                     <label>Obs. NF Devolvida</label>
-                    <input type="text" class="glass-input" data-field="obs_nf_dev${i}" value="${rowData[`obs_nf_dev${i}`] || ''}">
+                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" value="${rowData[`obs_nf_dev${i}`] || ''}">
                 </div>
             </div>
         `;
@@ -915,6 +970,7 @@ function openDevolucoesModal(index) {
     // Lógica das abas
     renderClientesExtrasModal(modal, rowData);
     setupDevolucoesTabHandlers(modal);
+    setupUppercaseInputs(modal);
     // Ativa a primeira aba por padrão
     modal.querySelector('.tab-link').click();
 
@@ -925,6 +981,7 @@ function openDevolucoesModal(index) {
  * Salva os dados do modal de devoluções de volta para o `gridData`.
  */
 async function saveDevolucoesData() {
+    if (!canManageGrid()) return;
     if (currentRowIndex === null) return;
     const modal = document.getElementById('modalDevolucoes');
 
@@ -937,7 +994,9 @@ async function saveDevolucoesData() {
     modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
         const field = input.dataset.field;
         if (field) {
-            gridData[currentRowIndex][field] = input.value;
+            gridData[currentRowIndex][field] = /^(cliente|variedades|obs_nf_dev)\d+$/.test(field)
+                ? toUpperText(input.value)
+                : input.value;
         }
     });
     // Salva a linha inteira após modificar os dados do modal
@@ -986,6 +1045,7 @@ function openMateriaisModal(index) {
  * Salva os dados do modal de materiais de volta para o `gridData`.
  */
 async function saveMateriaisData() {
+    if (!canManageGrid()) return;
     if (currentRowIndex === null) return;
     const modal = document.getElementById('modalMateriais');
     const rowData = gridData[currentRowIndex];
@@ -1085,6 +1145,8 @@ function mapRowToPayload(rowData, dataRetorno) {
  * @param {number} index - O índice da linha a ser salva.
  */
 async function saveRow(index) {
+    if (!canManageGrid()) return;
+
     const rowData = gridData[index];
     const tr = document.querySelector(`tr[data-row-index='${index}']`);
 
@@ -1167,6 +1229,11 @@ async function deleteRow(index) {
  * Salva todos os dados da grid no Supabase.
  */
 async function saveAllData() {
+    if (!canManageGrid()) {
+        alert('Você não tem permissão para alterar os lançamentos do grid.');
+        return;
+    }
+
     const dataRetorno = document.getElementById('dataRetorno').value;
     if (!dataRetorno) {
         alert('Por favor, selecione uma data.');
@@ -1508,6 +1575,12 @@ function criarLinhaRetornoImportada({ placa, rota, stat, motorista, auxiliar, da
 }
 
 async function importarRoteiroExcel(event) {
+    if (!canManageGrid()) {
+        event.target.value = '';
+        alert('Você não tem permissão para importar lançamentos no grid.');
+        return;
+    }
+
     const arquivo = event.target.files[0];
     event.target.value = '';
 

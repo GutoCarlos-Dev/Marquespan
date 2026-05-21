@@ -44,6 +44,10 @@ function hasTeamMemberName(value) {
     return String(value || '').trim() !== '';
 }
 
+function toUpperText(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
 function splitObsLegadoDevolucoes(value) {
     const DEVOLUCOES_EXTRAS_START = '[DEVOLUCOES_EXTRAS]';
     const DEVOLUCOES_EXTRAS_END = '[/DEVOLUCOES_EXTRAS]';
@@ -104,7 +108,7 @@ function criarHtmlClienteExtra(index, data = {}) {
         <div class="form-grid-2-cols">
             <div class="form-group">
                 <label>Cliente</label>
-                <input type="text" class="glass-input" data-extra-field="cliente" value="${data.cliente || ''}">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="cliente" value="${data.cliente || ''}">
             </div>
             <div class="form-group">
                 <label>NF Devolvida</label>
@@ -120,7 +124,7 @@ function criarHtmlClienteExtra(index, data = {}) {
             </div>
             <div class="form-group">
                 <label>Variedades</label>
-                <input type="text" class="glass-input" data-extra-field="variedades" value="${data.variedades || ''}" placeholder="Texto livre...">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="variedades" value="${data.variedades || ''}" placeholder="Texto livre...">
             </div>
             <div class="form-group">
                 <label>Motivo</label>
@@ -136,7 +140,7 @@ function criarHtmlClienteExtra(index, data = {}) {
             </div>
             <div class="form-group form-group-full">
                 <label>Obs. NF Devolvida</label>
-                <input type="text" class="glass-input" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
+                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
             </div>
         </div>
         <button type="button" class="btn-remover-cliente-extra">Remover cliente</button>
@@ -149,6 +153,14 @@ function setupDevolucoesTabHandlers(modal) {
             modal.querySelectorAll('.tab-link[data-tab], .tab-content').forEach(el => el.classList.remove('active'));
             e.currentTarget.classList.add('active');
             document.getElementById(e.currentTarget.dataset.tab).classList.add('active');
+        };
+    });
+}
+
+function setupUppercaseInputs(modal) {
+    modal.querySelectorAll('.input-uppercase').forEach(input => {
+        input.oninput = () => {
+            input.value = input.value.toUpperCase();
         };
     });
 }
@@ -211,6 +223,7 @@ function adicionarClienteExtraModal(modal, data = {}) {
     });
 
     setupDevolucoesTabHandlers(modal);
+    setupUppercaseInputs(modal);
     tabButton.click();
 }
 
@@ -230,7 +243,10 @@ function serializeClientesExtrasModal(modal) {
     const extras = Array.from(modal.querySelectorAll('#clientesExtrasTabs .tab-content[data-extra-index]')).map(tab => {
         const item = {};
         tab.querySelectorAll('[data-extra-field]').forEach(input => {
-            item[input.dataset.extraField] = input.value.trim();
+            const field = input.dataset.extraField;
+            item[field] = ['cliente', 'variedades', 'obs_nf_dev'].includes(field)
+                ? toUpperText(input.value)
+                : input.value.trim();
         });
         return item;
     }).filter(item => Object.values(item).some(Boolean));
@@ -767,7 +783,7 @@ function openDevolucoesModal() {
             <div class="form-grid-2-cols">
                 <div class="form-group">
                     <label>Cliente</label>
-                    <input type="text" class="glass-input" data-field="cliente${i}" value="${currentItem[`cliente${i}`] || ''}">
+                    <input type="text" class="glass-input input-uppercase" data-field="cliente${i}" value="${currentItem[`cliente${i}`] || ''}">
                 </div>
                 <div class="form-group">
                     <label>NF Devolvida</label>
@@ -783,7 +799,7 @@ function openDevolucoesModal() {
                 </div>
                 <div class="form-group">
                     <label>Variedades</label>
-                    <input type="text" class="glass-input" data-field="variedades${i}" value="${currentItem[`variedades${i}`] || ''}" placeholder="Texto livre...">
+                    <input type="text" class="glass-input input-uppercase" data-field="variedades${i}" value="${currentItem[`variedades${i}`] || ''}" placeholder="Texto livre...">
                 </div>
                 <div class="form-group">
                     <label>Motivo</label>
@@ -799,7 +815,7 @@ function openDevolucoesModal() {
                 </div>
                 <div class="form-group form-group-full">
                     <label>Obs. NF Devolvida</label>
-                    <input type="text" class="glass-input" data-field="obs_nf_dev${i}" value="${currentItem[`obs_nf_dev${i}`] || ''}">
+                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" value="${currentItem[`obs_nf_dev${i}`] || ''}">
                 </div>
             </div>
         `;
@@ -808,6 +824,7 @@ function openDevolucoesModal() {
     // Lógica das abas
     renderClientesExtrasModal(modal, currentItem);
     setupDevolucoesTabHandlers(modal);
+    setupUppercaseInputs(modal);
     // Ativa a primeira aba por padrão
     modal.querySelector('.tab-link').click();
 
@@ -827,7 +844,11 @@ function saveDevolucoesData() {
     // Save data from client tabs
     modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
         const field = input.dataset.field;
-        if (field) currentItem[field] = input.value;
+        if (field) {
+            currentItem[field] = /^(cliente|variedades|obs_nf_dev)\d+$/.test(field)
+                ? toUpperText(input.value)
+                : input.value;
+        }
     });
 
     currentItem.devolucoes_extras = serializeClientesExtrasModal(modal);
