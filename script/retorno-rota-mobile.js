@@ -1,5 +1,33 @@
 import { supabaseClient } from './supabase.js';
 
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function getDataHoraPartesSaoPaulo(date = new Date()) {
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+}
+
+function getDataSaoPaulo(date = new Date()) {
+    const partes = getDataHoraPartesSaoPaulo(date);
+    return `${partes.year}-${partes.month}-${partes.day}`;
+}
+
+function getHoraSaoPaulo(date = new Date()) {
+    const partes = getDataHoraPartesSaoPaulo(date);
+    return `${partes.hour}:${partes.minute}:${partes.second}`;
+}
+
 let allData = []; // Cache dos dados do dia
 let currentItem = null; // Item sendo editado no modal
 let supervisoresCache = []; // Cache para a lista de supervisores
@@ -119,7 +147,7 @@ function preencherDatalistRotas() {
 document.addEventListener('DOMContentLoaded', async () => {
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
-    dataInput.value = new Date().toISOString().split('T')[0];
+    dataInput.value = getDataSaoPaulo();
     loadRetornos();
 
     // Listeners
@@ -297,9 +325,8 @@ function openEditModal(item) {
     }
 
     // Preenche automaticamente com o horário atual se estiver vazio
-    const agora = new Date();
     // Formato HH:mm:ss para ser compatível com o step="1" do input
-    const horaAtual = agora.toTimeString().split(' ')[0];
+    const horaAtual = getHoraSaoPaulo();
     
     document.getElementById('modalHoraMotorista').value = item.hora_mot || horaAtual;
     document.getElementById('modalObs').value = item.obs || '';

@@ -322,10 +322,9 @@
       const userField = document.getElementById('saidaUsuario') || document.getElementById('entradaUsuario');
       
       if (dataField && dataField.value) {
-        const date = new Date(dataField.value);
-        document.getElementById('displayDataHora').textContent = date.toLocaleString('pt-BR', { 
-          day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
-        });
+        const [data, hora] = dataField.value.split('T');
+        const [ano, mes, dia] = data.split('-');
+        document.getElementById('displayDataHora').textContent = `${dia}/${mes}/${ano.slice(-2)} ${hora}`;
       }
       if (userField && userField.value) {
         document.getElementById('displayUsuario').textContent = userField.value;

@@ -1,5 +1,32 @@
 import { supabaseClient } from './supabase.js';
 
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function getDataSaoPaulo(date = new Date()) {
+    const partes = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${partes.year}-${partes.month}-${partes.day}`;
+}
+
+function getDataLocalDate(date) {
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, '0');
+    const dia = String(date.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+}
+
+function formatarDataHoraSaoPaulo(valor) {
+    return new Date(valor).toLocaleString('pt-BR', { timeZone: TIMEZONE_SAO_PAULO });
+}
+
 // Estado global para armazenar os dados da grid
 let gridData = [];
 let currentRowIndex = null; // Índice da linha sendo editada nos modais
@@ -52,7 +79,7 @@ async function carregarSupervisores() {
 document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa a data com o dia de hoje
     const dataInput = document.getElementById('dataRetorno');
-    dataInput.value = new Date().toISOString().split('T')[0];
+    dataInput.value = getDataSaoPaulo();
 
     // Carrega dados do dia atual
     loadDataFromSupabase();
@@ -1011,7 +1038,7 @@ async function exportToPDF(type) {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Data de Referência: ${dataFormatada}`, 60, 27);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 27, { align: 'right' });
+    doc.text(`Gerado em: ${formatarDataHoraSaoPaulo(new Date())}`, 283, 27, { align: 'right' });
 
     // --- PREPARAÇÃO DOS DADOS ---
     const tableRows = [];
@@ -1031,7 +1058,7 @@ async function exportToPDF(type) {
                     ].join(' | ');
 
                     tableRows.push([
-                        row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-',
+                        row.created_at ? formatarDataHoraSaoPaulo(row.created_at) : '-',
                         row.operador_recebimento || '-',
                         row.rota || '-',
                         row.placa || '-',
@@ -1045,7 +1072,7 @@ async function exportToPDF(type) {
         } else if (type === 'pecas') {
             // Retorno de Peças
             tableRows.push([
-                row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-',
+                row.created_at ? formatarDataHoraSaoPaulo(row.created_at) : '-',
                 row.operador_recebimento || '-',
                 row.rota || '-',
                 row.placa || '-',
@@ -1136,7 +1163,7 @@ function excelDateToISO(valor) {
     if (!valor) return '';
 
     if (valor instanceof Date) {
-        return valor.toISOString().split('T')[0];
+        return getDataLocalDate(valor);
     }
 
     if (typeof valor === 'number') {
@@ -1165,7 +1192,7 @@ function excelDateToISO(valor) {
 
     const data = new Date(texto);
     if (!isNaN(data)) {
-        return data.toISOString().split('T')[0];
+        return getDataLocalDate(data);
     }
 
     return '';

@@ -1,5 +1,28 @@
 import { supabaseClient } from './supabase.js';
 
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function getDataHoraSaoPaulo(date = new Date()) {
+    const partes = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+}
+
+function getDataHoraLocalParaBanco(valor) {
+    return valor ? `${valor}:00` : `${getDataHoraSaoPaulo()}:00`;
+}
+
 let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
 let veiculosDisponiveisCache = []; // Cache para validação de placa
 let saidaVeiculoLookupTimer = null;
@@ -34,12 +57,11 @@ function aplicarMascaraLitrosMobile(input) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Define a data/hora atual no input
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('saidaDataHora').value = now.toISOString().slice(0, 16);
-    document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
-    document.getElementById('transfData').value = now.toISOString().slice(0, 16);
+    // Define a data/hora atual de Sao Paulo no input.
+    const agoraSaoPaulo = getDataHoraSaoPaulo();
+    document.getElementById('saidaDataHora').value = agoraSaoPaulo;
+    document.getElementById('entradaData').value = agoraSaoPaulo;
+    document.getElementById('transfData').value = agoraSaoPaulo;
 
     // Preenche o usuário logado na aba de Entrada
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -268,7 +290,7 @@ async function salvarAbastecimento(e) {
     try {
         // Dados comuns
         const dataHoraInput = document.getElementById('saidaDataHora').value;
-        const dataHora = dataHoraInput ? new Date(dataHoraInput).toISOString() : new Date().toISOString();
+        const dataHora = getDataHoraLocalParaBanco(dataHoraInput);
         const placa = document.getElementById('saidaVeiculo').value.toUpperCase();
         const rota = document.getElementById('saidaRota').value;
         const motorista = document.getElementById('saidaMotorista').value;
@@ -567,7 +589,7 @@ async function salvarEntrada(e) {
     
     try {
         const dataInput = document.getElementById('entradaData').value;
-        const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
+        const data = getDataHoraLocalParaBanco(dataInput);
         const nota = document.getElementById('entradaNota').value;
         const litrosTotal = parseFloat(document.getElementById('entradaQtdTotal').value.replace(',', '.')) || 0;
         const vlrLitro = parseFloat(document.getElementById('entradaVlrLitro').value.replace(',', '.')) || 0;
@@ -631,10 +653,8 @@ async function salvarEntrada(e) {
         adicionarLinhaTanqueMobile();
         updateLitrosRestantesMobile();
         
-        // Reseta a data para hoje
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('entradaData').value = now.toISOString().slice(0, 16);
+        // Reseta a data para hoje em Sao Paulo.
+        document.getElementById('entradaData').value = getDataHoraSaoPaulo();
 
         carregarEstoque(); // Atualiza a visualização
 
@@ -661,7 +681,7 @@ async function salvarTransferencia(e) {
 
     try {
         const dataInput = document.getElementById('transfData').value;
-        const data = dataInput ? new Date(dataInput).toISOString() : new Date().toISOString();
+        const data = getDataHoraLocalParaBanco(dataInput);
         const origemId = document.getElementById('transfOrigem').value;
         const destinoId = document.getElementById('transfDestino').value;
         const qtd = parseFloat(document.getElementById('transfQtd').value);
@@ -692,10 +712,8 @@ async function salvarTransferencia(e) {
         alert('Transferência realizada com sucesso!');
         document.getElementById('formMobileTransferencia').reset();
         
-        // Reset date
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('transfData').value = now.toISOString().slice(0, 16);
+        // Reseta a data para hoje em Sao Paulo.
+        document.getElementById('transfData').value = getDataHoraSaoPaulo();
 
         carregarEstoque();
 
@@ -740,7 +758,7 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado, btn) {
 
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const usuario = usuarioLogado ? usuarioLogado.nome : 'App Mobile';
-    const dataAjuste = new Date().toISOString();
+    const dataAjuste = getDataHoraLocalParaBanco();
 
     try {
         const { error } = await supabaseClient.from('abastecimentos').insert([{
@@ -1003,7 +1021,7 @@ async function buscarDadosRetornoRota(placaInput) {
     }
 
     // Obtém a data do formulário (formato YYYY-MM-DD)
-    const dataBase = dataInput.value ? dataInput.value.split('T')[0] : new Date().toISOString().split('T')[0];
+    const dataBase = dataInput.value ? dataInput.value.split('T')[0] : getDataHoraSaoPaulo().split('T')[0];
 
     try {
         rotaInput.value = '';
