@@ -1,6 +1,36 @@
 import { supabaseClient } from './supabase.js';
 
 const REFRESH_INTERVAL = 60000;
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function getDataSaoPaulo(date = new Date()) {
+    const partes = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${partes.year}-${partes.month}-${partes.day}`;
+}
+
+function formatarHoraSaoPaulo(value = new Date()) {
+    return new Date(value).toLocaleTimeString('pt-BR', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getIntervaloDiaSaoPaulo(data) {
+    return {
+        inicio: `${data}T00:00:00-03:00`,
+        fim: `${data}T23:59:59-03:00`
+    };
+}
 
 let saidasCombustivel = [];
 let abastecimentoChannel = null;
@@ -11,9 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAbastecimentoRealTime() {
-    const hoje = new Date();
     const dataInput = document.getElementById('dataAbastecimento');
-    if (dataInput) dataInput.value = hoje.toISOString().split('T')[0];
+    if (dataInput) dataInput.value = getDataSaoPaulo();
 
     document.getElementById('btn-aplicar-filtro')?.addEventListener('click', carregarDados);
     document.getElementById('btn-refresh')?.addEventListener('click', carregarDados);
@@ -64,11 +93,12 @@ async function carregarDados() {
     }
 
     try {
+        const intervalo = getIntervaloDiaSaoPaulo(dataAbastecimento);
         const { data, error } = await supabaseClient
             .from('saidas_combustivel')
             .select('*, bicos(bombas(tanques(nome, tipo_combustivel, filial)))')
-            .gte('data_hora', `${dataAbastecimento}T00:00:00-03:00`)
-            .lte('data_hora', `${dataAbastecimento}T23:59:59-03:00`)
+            .gte('data_hora', intervalo.inicio)
+            .lte('data_hora', intervalo.fim)
             .order('data_hora', { ascending: false });
 
         if (error) throw error;
@@ -292,7 +322,7 @@ function formatarHora(value) {
     if (!value) return '--:--';
     const data = new Date(value);
     if (Number.isNaN(data.getTime())) return '--:--';
-    return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return formatarHoraSaoPaulo(data);
 }
 
 function joinSet(set) {
@@ -306,7 +336,7 @@ function setText(id, value) {
 
 function atualizarTimestamp() {
     const el = document.getElementById('last-update');
-    if (el) el.textContent = `Atualizado às: ${new Date().toLocaleTimeString('pt-BR')}`;
+    if (el) el.textContent = `Atualizado às: ${formatarHoraSaoPaulo()}`;
 }
 
 function atualizarStatusRealtime(status, texto) {

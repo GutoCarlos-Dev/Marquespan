@@ -1,6 +1,29 @@
 import { supabaseClient } from './supabase.js';
 
 const REFRESH_INTERVAL = 60000;
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function getDataSaoPaulo(date = new Date()) {
+    const partes = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${partes.year}-${partes.month}-${partes.day}`;
+}
+
+function formatarHoraSaoPaulo(value = new Date()) {
+    return new Date(value).toLocaleTimeString('pt-BR', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
 
 let registrosRetorno = [];
 let veiculosPorPlaca = new Map();
@@ -12,9 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initRetornoRealTime() {
-    const hoje = new Date();
     const dataInput = document.getElementById('dataRetorno');
-    if (dataInput) dataInput.value = hoje.toISOString().split('T')[0];
+    if (dataInput) dataInput.value = getDataSaoPaulo();
 
     document.getElementById('btn-aplicar-filtro')?.addEventListener('click', carregarDados);
     document.getElementById('btn-refresh')?.addEventListener('click', carregarDados);
@@ -239,7 +261,7 @@ function setText(id, value) {
 
 function atualizarTimestamp() {
     const el = document.getElementById('last-update');
-    if (el) el.textContent = `Atualizado às: ${new Date().toLocaleTimeString('pt-BR')}`;
+    if (el) el.textContent = `Atualizado às: ${formatarHoraSaoPaulo()}`;
 }
 
 function atualizarStatusRealtime(status, texto) {
