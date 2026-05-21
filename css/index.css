@@ -6,6 +6,7 @@
 
 /* 🟩 Layout geral */
 @import url("layout.css");
+@import url("menu.css");
 
 /* 📊 Dashboard */
 @import url("dashboard.css");
