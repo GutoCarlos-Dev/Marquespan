@@ -1028,7 +1028,15 @@ async function exportToPDF(type) {
     };
     const logoBase64 = await getLogoBase64();
 
-    if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 10, 40, 15);
+    const desenharLogoComFundoBranco = () => {
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(10, 7, 48, 21, 2, 2, 'F');
+        doc.setDrawColor(230, 230, 230);
+        doc.roundedRect(10, 7, 48, 21, 2, 2, 'S');
+        if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 10, 40, 15);
+    };
+
+    desenharLogoComFundoBranco();
 
     doc.setFontSize(18);
     doc.setTextColor(0, 105, 55); // Verde Marquespan
@@ -1089,6 +1097,8 @@ async function exportToPDF(type) {
         head: [['Lançamento', 'Operador', 'Rota', 'Placa', 'Motorista', 'Tipo Evento', 'Descrição Detalhada para Auditoria', 'Supervisor']],
         body: tableRows,
         theme: 'grid',
+        margin: { top: 35 },
+        didDrawPage: desenharLogoComFundoBranco,
         headStyles: { fillColor: [0, 105, 55], fontSize: 8 },
         styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
         columnStyles: {
