@@ -57,7 +57,7 @@ function getUserLevel() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     return usuario ? (usuario.nivel || '').toLowerCase().trim() : null;
 }
-
+//**Liberação para editar o Grid da Pagina */
 function canManageGrid() {
     const nivel = getUserLevel();
     return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
