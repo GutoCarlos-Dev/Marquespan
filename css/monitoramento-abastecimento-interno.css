@@ -195,6 +195,40 @@
     color: #555;
 }
 
+.tank-level {
+    margin-top: 10px;
+}
+
+.tank-level-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 5px;
+    font-size: 0.78rem;
+    color: #555;
+}
+
+.tank-level-meta strong {
+    color: #006937;
+    font-size: 0.86rem;
+}
+
+.tank-level-bar {
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e9ecef;
+}
+
+.tank-level-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #28a745, #8bc34a);
+}
+
 .fuel-total {
     text-align: right;
     color: #555;
