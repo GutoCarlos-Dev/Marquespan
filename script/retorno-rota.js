@@ -63,6 +63,22 @@ function canDelete() {
     return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
 }
 
+function hasTeamMemberName(value) {
+    return String(value || '').trim() !== '';
+}
+
+function applyDriverTimeToTeam(rowData) {
+    if (!rowData || !rowData.hora_mot) return;
+
+    if (hasTeamMemberName(rowData.nome_aux)) {
+        rowData.hora_aux = rowData.hora_mot;
+    }
+
+    if (hasTeamMemberName(rowData.nome_terceiro)) {
+        rowData.hora_terceiro = rowData.hora_mot;
+    }
+}
+
 async function carregarSupervisores() {
     try {
         const { data, error } = await supabaseClient
@@ -411,6 +427,9 @@ function handlePaste(event) {
                         }
                     }
                     gridData[currentRowIndex][fieldToUpdate] = processedValue;
+                    if (fieldToUpdate === 'hora_mot') {
+                        applyDriverTimeToTeam(gridData[currentRowIndex]);
+                    }
                 }
             }
         });
@@ -564,11 +583,11 @@ function renderGrid() {
             <td><input type="text"value="${rowData.status_rota || ''}"data-field="status_rota"></td>
             <td><input type="text" value="${rowData.operador_recebimento || ''}" data-field="operador_recebimento"></td>
             <td><input type="text" value="${rowData.nome_mot || ''}" data-field="nome_mot"></td>
-            <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot"></td>
+            <td><input type="time" value="${rowData.hora_mot || ''}" data-field="hora_mot" step="1"></td>
             <td><input type="text" value="${rowData.nome_aux || ''}" data-field="nome_aux"></td>
-            <td><input type="time" value="${rowData.hora_aux || ''}" data-field="hora_aux"></td>
+            <td><input type="time" value="${rowData.hora_aux || ''}" data-field="hora_aux" step="1"></td>
             <td><input type="text" value="${rowData.nome_terceiro || ''}" data-field="nome_terceiro"></td>
-            <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro"></td>
+            <td><input type="time" value="${rowData.hora_terceiro || ''}" data-field="hora_terceiro" step="1"></td>
             <td>
                 <div class="cell-action-container">
                     <button class="btn-modal-action btn-materiais" title="${materiaisTooltip.trim()}">Materiais</button>
@@ -594,6 +613,21 @@ function renderGrid() {
                 const field = e.target.dataset.field;
                 if (!field) return; // Ignora inputs que não possuem mapeamento de campo (ex: checkbox de seleção)
                 gridData[index][field] = e.target.value;
+                if (field === 'hora_mot') {
+                    applyDriverTimeToTeam(gridData[index]);
+
+                    const tr = e.target.closest('tr');
+                    const horaAuxInput = tr?.querySelector('input[data-field="hora_aux"]');
+                    const horaTerceiroInput = tr?.querySelector('input[data-field="hora_terceiro"]');
+
+                    if (horaAuxInput && hasTeamMemberName(gridData[index].nome_aux)) {
+                        horaAuxInput.value = gridData[index].hora_aux || '';
+                    }
+
+                    if (horaTerceiroInput && hasTeamMemberName(gridData[index].nome_terceiro)) {
+                        horaTerceiroInput.value = gridData[index].hora_terceiro || '';
+                    }
+                }
                 if (field.startsWith('hora_')) {
                     applyRowStyle(e.target.closest('tr'), gridData[index]);
                 }

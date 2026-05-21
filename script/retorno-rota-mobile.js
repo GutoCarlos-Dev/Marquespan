@@ -40,6 +40,10 @@ function normalizeBooleanFlag(value) {
     return value === true || value === 1 || value === '1' || value === 'true';
 }
 
+function hasTeamMemberName(value) {
+    return String(value || '').trim() !== '';
+}
+
 function getCurrentUserName() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     return usuario ? usuario.nome : null;
@@ -689,6 +693,10 @@ async function saveRetorno() {
         rota: rota || null,
         nome_mot: motorista || null,
         hora_mot: horaMotorista || null,
+        nome_aux: currentItem.nome_aux || null,
+        hora_aux: horaMotorista && hasTeamMemberName(currentItem.nome_aux) ? horaMotorista : (currentItem.hora_aux || null),
+        nome_terceiro: currentItem.nome_terceiro || null,
+        hora_terceiro: horaMotorista && hasTeamMemberName(currentItem.nome_terceiro) ? horaMotorista : (currentItem.hora_terceiro || null),
         obs: obs || null,
         carrinhos: parseNum(carrinhos), // Assumindo que 'carrinhos' é numérico
         paletes: temPaletes ? 1 : 0, // A coluna 'paletes' é do tipo INTEGER (0 ou 1)
