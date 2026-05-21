@@ -47,7 +47,6 @@
       <h1>
         Abastecimento 
         <span class="header-meta-info">
-            <span id="displayDataHora">--/--/-- --:--</span> | 
             <span id="displayUsuario">Carregando...</span>
         </span>
       </h1>
@@ -73,8 +72,16 @@
         <div class="panel-body">
             <form id="formMobileAbastecimento">
                 <!-- Campos discretos agora exibidos no cabeçalho -->
-                <input type="datetime-local" id="saidaDataHora" class="hidden" required>
+                <input type="datetime-local" id="saidaDataHora" class="hidden" step="1" required>
                 <input type="text" id="saidaUsuario" class="hidden" readonly>
+
+                <div class="live-datetime-card" aria-live="polite">
+                    <div class="live-datetime-label">
+                        <i class="far fa-clock"></i>
+                        Data e Hora do Lançamento
+                    </div>
+                    <div id="saidaDataHoraDisplay" class="live-datetime-value">--/--/---- --:--:--</div>
+                </div>
 
                 <div class="form-group">
                     <label for="saidaVeiculo">Veículo (Placa)</label>
@@ -321,11 +328,6 @@
       const dataField = document.getElementById('saidaDataHora') || document.getElementById('entradaData');
       const userField = document.getElementById('saidaUsuario') || document.getElementById('entradaUsuario');
       
-      if (dataField && dataField.value) {
-        const [data, hora] = dataField.value.split('T');
-        const [ano, mes, dia] = data.split('-');
-        document.getElementById('displayDataHora').textContent = `${dia}/${mes}/${ano.slice(-2)} ${hora}`;
-      }
       if (userField && userField.value) {
         document.getElementById('displayUsuario').textContent = userField.value;
       }

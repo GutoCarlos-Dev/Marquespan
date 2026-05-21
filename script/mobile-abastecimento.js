@@ -2,7 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 
-function getDataHoraSaoPaulo(date = new Date()) {
+function getDataHoraSaoPaulo(date = new Date(), incluirSegundos = false) {
     const partes = new Intl.DateTimeFormat('sv-SE', {
         timeZone: TIMEZONE_SAO_PAULO,
         year: 'numeric',
@@ -10,17 +10,42 @@ function getDataHoraSaoPaulo(date = new Date()) {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false
     }).formatToParts(date).reduce((acc, part) => {
         acc[part.type] = part.value;
         return acc;
     }, {});
 
-    return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+    const dataHora = `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+    return incluirSegundos ? `${dataHora}:${partes.second}` : dataHora;
 }
 
 function getDataHoraLocalParaBanco(valor) {
-    return valor ? `${valor}:00` : `${getDataHoraSaoPaulo()}:00`;
+    if (!valor) return `${getDataHoraSaoPaulo(new Date(), true)}`;
+    return valor.length === 16 ? `${valor}:00` : valor;
+}
+
+function formatarDataHoraLancamento(valor) {
+    if (!valor) return '--/--/---- --:--:--';
+    const [data, hora = ''] = valor.split('T');
+    const [ano, mes, dia] = data.split('-');
+    const horaCompleta = hora.length === 5 ? `${hora}:00` : hora;
+    return `${dia}/${mes}/${ano} ${horaCompleta}`;
+}
+
+function atualizarRelogioLancamentoSaida() {
+    const dataHoraAtual = getDataHoraSaoPaulo(new Date(), true);
+    const inputDataSaida = document.getElementById('saidaDataHora');
+    const displayDataSaida = document.getElementById('saidaDataHoraDisplay');
+
+    if (inputDataSaida) inputDataSaida.value = dataHoraAtual;
+    if (displayDataSaida) displayDataSaida.textContent = formatarDataHoraLancamento(dataHoraAtual);
+}
+
+function iniciarRelogioLancamentoSaida() {
+    atualizarRelogioLancamentoSaida();
+    window.setInterval(atualizarRelogioLancamentoSaida, 1000);
 }
 
 let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
@@ -59,7 +84,7 @@ function aplicarMascaraLitrosMobile(input) {
 document.addEventListener('DOMContentLoaded', () => {
     // Define a data/hora atual de Sao Paulo no input.
     const agoraSaoPaulo = getDataHoraSaoPaulo();
-    document.getElementById('saidaDataHora').value = agoraSaoPaulo;
+    iniciarRelogioLancamentoSaida();
     document.getElementById('entradaData').value = agoraSaoPaulo;
     document.getElementById('transfData').value = agoraSaoPaulo;
 

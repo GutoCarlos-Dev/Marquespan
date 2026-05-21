@@ -79,6 +79,33 @@ body {
     margin-bottom: 15px;
 }
 
+.live-datetime-card {
+    border: 1px solid rgba(0, 105, 55, 0.16);
+    border-left: 4px solid #006937;
+    border-radius: 6px;
+    background: #f7fbf8;
+    padding: 10px 12px;
+    margin-bottom: 15px;
+}
+
+.live-datetime-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #4f5f56;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.live-datetime-value {
+    margin-top: 3px;
+    color: #006937;
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 .form-group label {
     display: block;
     margin-bottom: 5px;
