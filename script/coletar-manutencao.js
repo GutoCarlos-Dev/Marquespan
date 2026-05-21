@@ -1225,6 +1225,15 @@ const ColetarManutencaoUI = {
 
     // Exclui uma coleta de manutenção
     async excluirColeta(id) {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivelUsuario = usuarioLogado ? String(usuarioLogado.nivel || '').toLowerCase() : '';
+        const niveisBloqueadosParaExclusao = ['mecanica_externa', 'mecanica_interna', 'moleiro'];
+
+        if (niveisBloqueadosParaExclusao.includes(nivelUsuario)) {
+            alert('Seu nível de acesso não permite excluir lançamentos.');
+            return;
+        }
+
         if (!confirm('Deseja realmente excluir este lançamento?')) return;
         try {
             // Supabase deve estar configurado com ON DELETE CASCADE, mas por segurança deletamos os itens primeiro se necessário
