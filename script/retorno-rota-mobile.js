@@ -34,6 +34,7 @@ let supervisoresCache = []; // Cache para a lista de supervisores
 let motoristasCache = []; // Cache para a lista de motoristas
 let placasCache = []; // Cache para as placas cadastradas
 let rotasCache = []; // Cache para as rotas cadastradas
+let retornoSnapshotInicial = null;
 
 function normalizeBooleanFlag(value) {
     return value === true || value === 1 || value === '1' || value === 'true';
@@ -51,6 +52,101 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function normalizarValorSnapshot(value) {
+    return value === undefined || value === null ? '' : String(value);
+}
+
+function getValorCampo(id) {
+    return normalizarValorSnapshot(document.getElementById(id)?.value);
+}
+
+function coletarSnapshotRetorno() {
+    if (!currentItem) return null;
+
+    const snapshot = {
+        placa: getValorCampo('modalPlaca').trim().toUpperCase(),
+        rota: getValorCampo('modalRota').trim(),
+        nome_mot: getValorCampo('modalMotorista'),
+        hora_mot: getValorCampo('modalHoraMotorista'),
+        obs: getValorCampo('modalObs'),
+        carrinhos: getValorCampo('matCarrinhos'),
+        obs_carrinhos: getValorCampo('matObsCarrinhos'),
+        matTemPaletes: getValorCampo('matTemPaletes'),
+        madeira_qtd: getValorCampo('matMadeira'),
+        plastico_qtd: getValorCampo('matPlastico'),
+        caixa_branca_qtd: getValorCampo('matCaixaBranca'),
+        retorno_pecas: getValorCampo('matRetornoPecas'),
+        nome_supervisor: getValorCampo('matSupervisorPecas'),
+        pecas_desc: getValorCampo('matDescPecas'),
+        supervisor_ciente: normalizeBooleanFlag(currentItem.supervisor_ciente) ? '1' : '0',
+        supervisor_devolucao: normalizarValorSnapshot(currentItem.nome_supervisor)
+    };
+
+    for (let i = 1; i <= 4; i++) {
+        ['cliente', 'nf_dev', 'frances_diurno', 'frances_noturno', 'variedades', 'motivo', 'obs_nf_dev'].forEach(prefixo => {
+            const campo = `${prefixo}${i}`;
+            snapshot[campo] = normalizarValorSnapshot(currentItem[campo]);
+        });
+    }
+
+    return JSON.stringify(snapshot);
+}
+
+function atualizarSnapshotRetorno() {
+    retornoSnapshotInicial = coletarSnapshotRetorno();
+}
+
+function retornoTemAlteracoesPendentes() {
+    return Boolean(retornoSnapshotInicial && coletarSnapshotRetorno() !== retornoSnapshotInicial);
+}
+
+function tentarFecharModalRetorno() {
+    if (retornoTemAlteracoesPendentes()) {
+        alert('Existem alterações não salvas. Clique em "Salvar" antes de fechar o retorno.');
+        return false;
+    }
+
+    document.getElementById('modalRetorno')?.classList.add('hidden');
+    currentItem = null;
+    retornoSnapshotInicial = null;
+    return true;
+}
+
+function devolucoesModalTemAlteracoesLocais() {
+    const modal = document.getElementById('modalDevolucoes');
+    if (!currentItem || !modal || modal.classList.contains('hidden')) return false;
+
+    const supervisorCienteAtual = normalizeBooleanFlag(currentItem.supervisor_ciente) ? '1' : '0';
+    const supervisorCienteModal = document.getElementById('supervisorCienteDevolucao')?.value === 'true' ? '1' : '0';
+    if (supervisorCienteAtual !== supervisorCienteModal) {
+        return true;
+    }
+
+    if (normalizarValorSnapshot(currentItem.nome_supervisor) !== getValorCampo('nomeSupervisorDevolucao')) {
+        return true;
+    }
+
+    let alterado = false;
+    modal.querySelectorAll('.tab-content input, .tab-content select').forEach(input => {
+        const field = input.dataset.field;
+        if (field && normalizarValorSnapshot(currentItem[field]) !== normalizarValorSnapshot(input.value)) {
+            alterado = true;
+        }
+    });
+
+    return alterado;
+}
+
+function tentarFecharModalDevolucoes() {
+    if (devolucoesModalTemAlteracoesLocais()) {
+        alert('Existem devoluções alteradas. Clique em "Salvar e Fechar" antes de sair desta tela.');
+        return false;
+    }
+
+    document.getElementById('modalDevolucoes')?.classList.add('hidden');
+    return true;
 }
 
 async function carregarSupervisores() {
@@ -148,16 +244,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
     dataInput.value = getDataSaoPaulo();
+    let dataRetornoSelecionada = dataInput.value;
     loadRetornos();
 
     // Listeners
-    dataInput.addEventListener('change', loadRetornos);
+    dataInput.addEventListener('change', () => {
+        if (retornoTemAlteracoesPendentes()) {
+            alert('Existem alterações não salvas. Clique em "Salvar" antes de trocar a data.');
+            dataInput.value = dataRetornoSelecionada;
+            return;
+        }
+
+        dataRetornoSelecionada = dataInput.value;
+        loadRetornos();
+    });
     document.getElementById('buscaMobile').addEventListener('input', renderCards);
     document.getElementById('btnAdicionarRetornoMobile')?.addEventListener('click', openNewModal);
 
     // Modal Principal
     const modalRetorno = document.getElementById('modalRetorno');
-    modalRetorno.querySelector('.close-button').addEventListener('click', () => modalRetorno.classList.add('hidden'));
+    modalRetorno.querySelector('.close-button').addEventListener('click', tentarFecharModalRetorno);
+    modalRetorno.addEventListener('click', (e) => {
+        if (e.target === modalRetorno) tentarFecharModalRetorno();
+    });
     document.getElementById('btnSalvarRetorno').addEventListener('click', saveRetorno);
     document.getElementById('btnAbrirModalMateriais').addEventListener('click', openMateriaisModal);
 
@@ -171,9 +280,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Modal de Devoluções
     const modalDevolucoes = document.getElementById('modalDevolucoes');
-    modalDevolucoes.querySelector('.close-button').addEventListener('click', () => modalDevolucoes.classList.add('hidden'));
+    modalDevolucoes.querySelector('.close-button').addEventListener('click', tentarFecharModalDevolucoes);
+    modalDevolucoes.addEventListener('click', (e) => {
+        if (e.target === modalDevolucoes) tentarFecharModalDevolucoes();
+    });
     document.getElementById('btnSalvarDevolucoes').addEventListener('click', saveDevolucoesData);
     document.getElementById('btnAbrirModalDevolucoes').addEventListener('click', openDevolucoesModal);
+
+    window.addEventListener('beforeunload', (e) => {
+        if (!retornoTemAlteracoesPendentes()) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+
+        if (!modalDevolucoes.classList.contains('hidden')) {
+            tentarFecharModalDevolucoes();
+            return;
+        }
+
+        if (!modalRetorno.classList.contains('hidden')) {
+            tentarFecharModalRetorno();
+        }
+    });
 
     // Carrega dados auxiliares (Supervisores e Motoristas)
     await carregarMotoristas();
@@ -207,6 +338,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('listaRetornoMobile').addEventListener('click', (e) => {
         const card = e.target.closest('.retorno-card');
         if (card) {
+            if (retornoTemAlteracoesPendentes()) {
+                alert('Existem alterações não salvas. Clique em "Salvar" antes de abrir outro retorno.');
+                return;
+            }
+
             const itemId = card.dataset.id;
             const item = allData.find(d => d.id == itemId);
             if (item) {
@@ -360,9 +496,15 @@ function openEditModal(item) {
     temPecasSelect.dispatchEvent(new Event('change'));
 
     document.getElementById('modalRetorno').classList.remove('hidden');
+    atualizarSnapshotRetorno();
 }
 
 function openNewModal() {
+    if (retornoTemAlteracoesPendentes()) {
+        alert('Existem alterações não salvas. Clique em "Salvar" antes de adicionar outro retorno.');
+        return;
+    }
+
     const dataRetorno = document.getElementById('dataRetornoMobile').value;
     if (!dataRetorno) {
         alert('Selecione uma data antes de adicionar um lançamento.');
@@ -493,6 +635,7 @@ async function saveRetorno() {
     const btn = document.getElementById('btnSalvarRetorno');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    let salvou = false;
 
     // Coleta dados do modal principal
     const placa = document.getElementById('modalPlaca').value.trim().toUpperCase();
@@ -610,6 +753,9 @@ async function saveRetorno() {
         }
 
         alert('Retorno salvo com sucesso!');
+        retornoSnapshotInicial = null;
+        currentItem = null;
+        salvou = true;
         document.getElementById('modalRetorno').classList.add('hidden');
         renderCards(); // Re-renderiza os cards com o novo status
 
@@ -619,7 +765,7 @@ async function saveRetorno() {
     } finally {
         btn.disabled = false;
         btn.textContent = 'Salvar';
-        currentItem = null;
+        if (salvou) currentItem = null;
     }
 }
 
