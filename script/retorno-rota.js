@@ -1014,26 +1014,31 @@ async function exportToPDF(type) {
     }
 
     // --- CABEÇALHO ---
-    const getLogoBase64 = async () => {
-        try {
-            const response = await fetch('logo.png');
-            if (!response.ok) return null;
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) { return null; }
+    const getLogoBase64 = () => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = 'logo.png';
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg'));
+            };
+            img.onerror = () => {
+                console.warn('Logo nao encontrado');
+                resolve(null);
+            };
+        });
     };
     const logoBase64 = await getLogoBase64();
 
     const desenharLogoComFundoBranco = () => {
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(10, 7, 48, 21, 2, 2, 'F');
-        doc.setDrawColor(230, 230, 230);
-        doc.roundedRect(10, 7, 48, 21, 2, 2, 'S');
-        if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 10, 40, 15);
+        if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
     };
 
     desenharLogoComFundoBranco();
