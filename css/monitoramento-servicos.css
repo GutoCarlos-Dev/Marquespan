@@ -328,20 +328,10 @@
     color: #333;
 }
 
-.marquee-wrapper {
-    width: 100%;
-    overflow-x: hidden;
-    padding: 4px 0 8px;
-}
-
-.marquee-track {
-    display: flex;
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
-    width: max-content;
-}
-
-.marquee-item {
-    flex: 0 0 380px;
 }
 
 .chart-container {
@@ -369,6 +359,12 @@
     width: 100%;
 }
 
+@media (max-width: 1400px) {
+    .charts-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 992px) {
     .servicos-kpi-groups {
         grid-template-columns: 1fr;
@@ -382,8 +378,8 @@
         max-height: none;
     }
 
-    .marquee-wrapper {
-        overflow-x: auto;
+    .charts-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -445,10 +441,6 @@
 
     .servicos-chart-carousel {
         padding: 12px;
-    }
-
-    .marquee-item {
-        flex-basis: min(330px, calc(100vw - 54px));
     }
 
     .chart-wrapper {

@@ -10,7 +10,6 @@ let listasEngraxe = [];
 let veiculosPorPlaca = new Map();
 let servicosChannel = null;
 let refreshTimer = null;
-let chartStatus = null;
 let chartGastoMensalLavagem = null;
 let chartGastoAnualLavagem = null;
 let chartGastoMensalEngraxe = null;
@@ -39,7 +38,6 @@ function initServicosRealTime() {
     carregarFiliais();
     carregarDados();
     configurarRealtime();
-    iniciarRolagemAutomatica();
     ativarWakeLock();
 
     refreshTimer = setInterval(carregarDados, REFRESH_INTERVAL);
@@ -195,7 +193,6 @@ function renderDashboard() {
 
     renderLista('lista-lavagem', ordenarListas(lavagem), 'lavagem');
     renderLista('lista-engraxe', ordenarListas(engraxe), 'engraxe');
-    renderChartStatus(lavagem, engraxe);
 }
 
 function filtrarListas(listas) {
@@ -432,60 +429,6 @@ function carregarGraficosFinanceiros() {
     carregarGraficoGastoAnualEngraxe();
 }
 
-function renderChartStatus(lavagem, engraxe) {
-    if (typeof Chart === 'undefined') return;
-
-    const canvas = document.getElementById('chartStatusServicos');
-    if (!canvas) return;
-
-    const summary = {
-        Realizado: { count: 0, color: '#28a745' },
-        Pendente: { count: 0, color: '#fd7e14' },
-        Internado: { count: 0, color: '#007bff' },
-        Agendado: { count: 0, color: '#ffc107' },
-        Dispensado: { count: 0, color: '#6c757d' },
-        Outros: { count: 0, color: '#17a2b8' }
-    };
-
-    [...lavagem, ...engraxe].forEach(lista => {
-        (lista.itensFiltrados || lista.itens || []).forEach(item => {
-            const status = normalizarStatus(item.status);
-            if (DONE_STATUSES.includes(status)) summary.Realizado.count++;
-            else if (PENDING_STATUSES.includes(status)) summary.Pendente.count++;
-            else if (status === 'INTERNADO') summary.Internado.count++;
-            else if (status === 'AGENDADO') summary.Agendado.count++;
-            else if (status === 'DISPENSADO' || status === 'PULAR_LAVAGEM') summary.Dispensado.count++;
-            else summary.Outros.count++;
-        });
-    });
-
-    const activeLabels = Object.keys(summary).filter(key => summary[key].count > 0);
-    const labels = activeLabels.length ? activeLabels : ['Sem dados'];
-    const valores = activeLabels.length ? activeLabels.map(key => summary[key].count) : [1];
-    const cores = activeLabels.length ? activeLabels.map(key => summary[key].color) : ['#e9ecef'];
-
-    if (chartStatus) chartStatus.destroy();
-
-    chartStatus = new Chart(canvas.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels,
-            datasets: [{
-                data: valores,
-                backgroundColor: cores,
-                borderWidth: 1
-            }]
-        },
-        options: criarOpcoesGrafico({
-            plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 12, color: '#333' } },
-                tooltip: { enabled: activeLabels.length > 0 },
-                datalabels: { display: false }
-            }
-        })
-    });
-}
-
 async function carregarGraficoGastoMensalLavagem() {
     const canvas = document.getElementById('chartGastoMensalLavagem');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -697,31 +640,6 @@ async function carregarGraficoGastoAnualEngraxe() {
     } catch (error) {
         console.error('Erro ao carregar grafico de gasto anual engraxe:', error);
     }
-}
-
-function iniciarRolagemAutomatica() {
-    const wrapper = document.querySelector('.marquee-wrapper');
-    if (!wrapper) return;
-
-    let direction = 1;
-    let isPaused = false;
-    const speed = 0.8;
-
-    function step() {
-        if (!isPaused && wrapper.scrollWidth > wrapper.clientWidth) {
-            if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) direction = -1;
-            else if (wrapper.scrollLeft <= 0) direction = 1;
-            wrapper.scrollLeft += speed * direction;
-        }
-        requestAnimationFrame(step);
-    }
-
-    wrapper.addEventListener('mouseenter', () => { isPaused = true; });
-    wrapper.addEventListener('mouseleave', () => { isPaused = false; });
-    wrapper.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
-    wrapper.addEventListener('touchend', () => { isPaused = false; }, { passive: true });
-
-    requestAnimationFrame(step);
 }
 
 function criarOpcoesGrafico(overrides = {}) {
