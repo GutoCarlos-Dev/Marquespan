@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function bindEvents() {
+    document.getElementById('btnToggleMenuLateralPesoRota')?.addEventListener('click', toggleMenuLateralPesoRota);
     document.getElementById('btnCarregarRotas')?.addEventListener('click', carregarDados);
     document.getElementById('btnAdicionarLinha')?.addEventListener('click', adicionarLinha);
     document.getElementById('btnImportarRoteiro')?.addEventListener('click', () => {
@@ -84,6 +85,18 @@ function bindEvents() {
     tbody?.addEventListener('change', handleGridChange);
     tbody?.addEventListener('click', handleGridClick);
     tbody?.addEventListener('paste', handlePaste);
+}
+
+function toggleMenuLateralPesoRota() {
+    document.body.classList.toggle('peso-rota-menu-oculto');
+    const oculto = document.body.classList.contains('peso-rota-menu-oculto');
+    const btn = document.getElementById('btnToggleMenuLateralPesoRota');
+
+    if (btn) {
+        const title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+        btn.title = title;
+        btn.setAttribute('aria-label', title);
+    }
 }
 
 function setupResizableColumns() {
