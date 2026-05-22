@@ -29,6 +29,100 @@
     font-weight: 700;
 }
 
+.header-actions-estoque {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.realtime-status,
+.ultima-atualizacao {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.realtime-status i {
+    font-size: 0.62rem;
+}
+
+.realtime-status.online i {
+    color: #37d67a;
+}
+
+.realtime-status.offline i {
+    color: #ffc107;
+}
+
+.realtime-status.error i {
+    color: #ff6b6b;
+}
+
+.kpi-grid-estoque {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 25px;
+}
+
+.kpi-card {
+    background: #ffffff;
+    border: var(--glass-border);
+    border-radius: 14px;
+    box-shadow: var(--glass-shadow);
+    padding: 18px;
+}
+
+.kpi-card span {
+    display: block;
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.kpi-card strong {
+    display: block;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    line-height: 1.1;
+}
+
+.charts-grid-estoque {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 18px;
+}
+
+.chart-card-estoque {
+    min-width: 0;
+    border: 1px solid rgba(0, 105, 55, 0.12);
+    border-radius: 12px;
+    padding: 14px;
+    background: #fbfcfd;
+}
+
+.chart-card-estoque h4 {
+    margin: 0 0 12px;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.chart-wrapper-estoque {
+    position: relative;
+    height: 320px;
+}
+
 /* Painéis (Cards) */
 .glass-panel {
     background-color: #ffffff !important;
@@ -159,3 +253,31 @@
 
 .text-right.entrada { color: #28a745; font-weight: bold; }
 .text-right.saida { color: #dc3545; font-weight: bold; }
+
+@media (max-width: 980px) {
+    .glass-header {
+        align-items: flex-start !important;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .header-actions-estoque {
+        justify-content: flex-start;
+    }
+
+    .kpi-grid-estoque,
+    .charts-grid-estoque {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .kpi-grid-estoque,
+    .charts-grid-estoque {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-wrapper-estoque {
+        height: 280px;
+    }
+}

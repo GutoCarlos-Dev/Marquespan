@@ -793,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         tanque_id: parseInt(tanqueId),
                         qtd_litros: delta, // Pode ser positivo ou negativo
                         valor_litro: 0,
-                        valor_total: 0,
+                        valor_total: novoEstoque,
                         usuario: usuario
                     });
                 }
@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const [ajustesResult, saidasResult] = await Promise.all([
                     supabaseClient
                         .from('abastecimentos')
-                        .select('id, data, usuario, tanque_id, qtd_litros, tanques(nome, tipo_combustivel)')
+                        .select('id, data, usuario, tanque_id, qtd_litros, valor_total, tanques(nome, tipo_combustivel)')
                         .eq('numero_nota', 'AJUSTE DE ESTOQUE')
                         .gte('data', `${dataInicial}T00:00:00-03:00`)
                         .lte('data', `${dataFinal}T23:59:59-03:00`)
@@ -899,7 +899,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rows = await Promise.all(data.map(async ajuste => {
                     const diferenca = parseFloat(ajuste.qtd_litros) || 0;
                     const estoqueAnterior = await this.calcularEstoqueAntes(ajuste.tanque_id, ajuste.data);
-                    const estoqueAtual = estoqueAnterior + diferenca;
+                    const estoqueInformado = parseFloat(ajuste.valor_total) || 0;
+                    const estoqueAtual = estoqueInformado > 0 ? estoqueInformado : estoqueAnterior + diferenca;
                     const dataAjuste = this.getDataSaoPaulo(ajuste.data);
                     const totalSaidasDia = saidasPorTanqueDia.get(`${ajuste.tanque_id}|${dataAjuste}`) || 0;
 
@@ -996,6 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .from('abastecimentos')
                     .update({
                         qtd_litros: novaDiferenca,
+                        valor_total: novoEstoque,
                         usuario: this.getUsuarioLogado()
                     })
                     .eq('id', id)

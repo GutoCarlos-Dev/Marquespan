@@ -71,6 +71,14 @@ function parseLitrosMobile(valor) {
     return Number.isFinite(numero) ? numero : 0;
 }
 
+function getEstoqueInformadoAjusteMobile(entrada) {
+    const valorInformado = parseFloat(entrada.valor_total) || 0;
+    if (valorInformado > 0) return valorInformado;
+
+    const diferencaLegada = parseFloat(entrada.qtd_litros) || 0;
+    return diferencaLegada !== 0 ? Math.abs(diferencaLegada) : null;
+}
+
 function aplicarMascaraLitrosMobile(input) {
     if (!input) return;
 
@@ -503,14 +511,14 @@ async function carregarEstoque() {
         // 2. Buscar Entradas (Abastecimentos)
         const { data: entradas, error: errEntradas } = await supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, qtd_litros');
+            .select('tanque_id, qtd_litros, data, numero_nota, valor_total');
         
         if (errEntradas) throw errEntradas;
 
         // 3. Buscar Saídas
         const { data: saidas, error: errSaidas } = await supabaseClient
             .from('saidas_combustivel')
-            .select('qtd_litros, bicos(bombas(tanque_id))');
+            .select('qtd_litros, data_hora, bicos(bombas(tanque_id))');
 
         if (errSaidas) throw errSaidas;
 
@@ -520,17 +528,48 @@ async function carregarEstoque() {
             estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
         });
 
+        const movimentosPorTanque = new Map();
+        tanques.forEach(t => movimentosPorTanque.set(Number(t.id), []));
+
         entradas.forEach(e => {
-            if (estoqueMap.has(e.tanque_id)) {
-                estoqueMap.get(e.tanque_id).estoque_atual += (parseFloat(e.qtd_litros) || 0);
-            }
+            const tanqueId = Number(e.tanque_id);
+            if (!movimentosPorTanque.has(tanqueId)) return;
+            movimentosPorTanque.get(tanqueId).push({
+                data: e.data,
+                tipo: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'AJUSTE' : 'ENTRADA',
+                litros: parseFloat(e.qtd_litros) || 0,
+                estoqueInformado: e.numero_nota === 'AJUSTE DE ESTOQUE' ? getEstoqueInformadoAjusteMobile(e) : null
+            });
         });
 
         saidas.forEach(s => {
-            const tanqueId = s.bicos?.bombas?.tanque_id;
-            if (tanqueId && estoqueMap.has(tanqueId)) {
-                estoqueMap.get(tanqueId).estoque_atual -= (parseFloat(s.qtd_litros) || 0);
-            }
+            const tanqueId = Number(s.bicos?.bombas?.tanque_id);
+            if (!movimentosPorTanque.has(tanqueId)) return;
+            movimentosPorTanque.get(tanqueId).push({
+                data: s.data_hora,
+                tipo: 'SAIDA',
+                litros: parseFloat(s.qtd_litros) || 0
+            });
+        });
+
+        movimentosPorTanque.forEach((movimentos, tanqueId) => {
+            const tanque = estoqueMap.get(tanqueId);
+            if (!tanque) return;
+
+            movimentos
+                .filter(movimento => movimento.data)
+                .sort((a, b) => new Date(a.data) - new Date(b.data))
+                .forEach(movimento => {
+                    if (movimento.tipo === 'SAIDA') {
+                        tanque.estoque_atual -= movimento.litros;
+                    } else if (movimento.tipo === 'AJUSTE') {
+                        tanque.estoque_atual = movimento.estoqueInformado !== null
+                            ? movimento.estoqueInformado
+                            : tanque.estoque_atual + movimento.litros;
+                    } else {
+                        tanque.estoque_atual += movimento.litros;
+                    }
+                });
         });
 
         // Popula Lista de Estoque (Aba 3)
@@ -794,7 +833,7 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado, btn) {
             tanque_id: parseInt(id),
             qtd_litros: diferenca, // Pode ser positivo (entrada) ou negativo (saída)
             valor_litro: 0,
-            valor_total: 0,
+            valor_total: novoValor,
             usuario: usuario
         }]);
 
