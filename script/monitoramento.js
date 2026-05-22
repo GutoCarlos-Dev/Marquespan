@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
 
 // Variáveis globais para armazenar as instâncias dos gráficos
 let chartEvolucao = null;
@@ -172,7 +173,7 @@ async function carregarDados() {
     const status = statusEl ? statusEl.value : '';
 
     carregarTotalFrota(filial); // Busca total da frota
-    carregarDadosEstoque(); // Busca dados de estoque para o novo gráfico
+    carregarDadosEstoque(filial); // Busca dados de estoque para o novo gráfico
     const kpiCounts = await carregarKPIsDetalhados(dtIni, dtFim, filial, status); // Busca KPIs com contagem exata e aguarda retorno
     carregarEmManutencaoAtual(filial); // Carrega gráfico geral filtrado apenas por filial
     carregarDadosTopPlacas(dtIni, dtFim, filial); // Carrega Top 10 Placas (independente de status)
@@ -482,69 +483,10 @@ function atualizarGraficos(data, kpiCounts) {
     renderChartPendentesInternados(data, kpiCounts);
 }
 
-async function carregarDadosEstoque() {
+async function carregarDadosEstoque(filial = '') {
     try {
-        // 1. Buscar todos os tanques
-        const { data: tanques, error: tanquesError } = await supabaseClient
-            .from('tanques')
-            .select('id, nome, capacidade, tipo_combustivel');
-        if (tanquesError) throw tanquesError;
-
-        const step = 1000;
-
-        // 2. Buscar todas as entradas (abastecimentos)
-        let entradas = [];
-        let fromEntradas = 0;
-        let keepFetchingEntradas = true;
-        while (keepFetchingEntradas) {
-            const { data, error } = await supabaseClient.from('abastecimentos').select('tanque_id, qtd_litros').range(fromEntradas, fromEntradas + step - 1);
-            if (error) throw error;
-            if (data && data.length > 0) {
-                entradas.push(...data);
-                if (data.length < step) keepFetchingEntradas = false;
-                else fromEntradas += step;
-            } else {
-                keepFetchingEntradas = false;
-            }
-        }
-
-        // 3. Buscar todas as saídas
-        let saidas = [];
-        let fromSaidas = 0;
-        let keepFetchingSaidas = true;
-        while (keepFetchingSaidas) {
-            const { data, error } = await supabaseClient.from('saidas_combustivel').select('qtd_litros, bicos(bombas(tanque_id))').range(fromSaidas, fromSaidas + step - 1);
-            if (error) throw error;
-            if (data && data.length > 0) {
-                saidas.push(...data);
-                if (data.length < step) keepFetchingSaidas = false;
-                else fromSaidas += step;
-            } else {
-                keepFetchingSaidas = false;
-            }
-        }
-
-        // 4. Calcular o estoque atual
-        const estoqueMap = new Map();
-        tanques.forEach(t => {
-            estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
-        });
-        entradas.forEach(e => {
-            if (estoqueMap.has(e.tanque_id)) {
-                estoqueMap.get(e.tanque_id).estoque_atual += e.qtd_litros;
-            }
-        });
-        saidas.forEach(s => {
-            const tanqueId = s.bicos?.bombas?.tanque_id;
-            if (tanqueId && estoqueMap.has(tanqueId)) {
-                estoqueMap.get(tanqueId).estoque_atual -= s.qtd_litros;
-            }
-        });
-        const estoqueCalculado = Array.from(estoqueMap.values());
-
-        // 5. Renderizar o novo gráfico
+        const estoqueCalculado = await calcularEstoqueAtual(supabaseClient, filial);
         renderChartNivelTanques(estoqueCalculado);
-
     } catch (error) {
         console.error('Erro ao carregar dados de estoque para o monitoramento:', error);
     }
@@ -554,7 +496,7 @@ function renderChartNivelTanques(estoqueData) {
     const labels = estoqueData.map(t => `${t.nome} (${t.tipo_combustivel})`);
     const percentages = estoqueData.map(t => {
         const capacidade = t.capacidade > 0 ? t.capacidade : 1; // Evita divisão por zero
-        return ((t.estoque_atual / capacidade) * 100).toFixed(1);
+        return Number(((Number(t.estoque_atual || 0) / capacidade) * 100).toFixed(1));
     });
 
     const backgroundColors = percentages.map(p => {
