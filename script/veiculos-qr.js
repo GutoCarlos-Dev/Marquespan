@@ -153,11 +153,7 @@ async function exportarPDF() {
         const response = await fetch('logo.png');
         if (response.ok) {
             const blob = await response.blob();
-            logoDataUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
+            logoDataUrl = await converterLogoParaFundoBranco(blob);
         }
     } catch (e) {
         console.warn('Logo não carregado', e);
@@ -209,6 +205,39 @@ async function exportarPDF() {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
+}
+
+function converterLogoParaFundoBranco(blob) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(blob);
+
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                URL.revokeObjectURL(objectUrl);
+                resolve(canvas.toDataURL('image/png'));
+            } catch (error) {
+                URL.revokeObjectURL(objectUrl);
+                reject(error);
+            }
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Falha ao carregar logo.png'));
+        };
+
+        img.src = objectUrl;
+    });
 }
 
 function generateQRImage(text, container) {
