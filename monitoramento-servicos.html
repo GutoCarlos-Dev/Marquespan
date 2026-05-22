@@ -3,138 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitoramento de Serviços - Marquespan</title>
-  <!-- Fundação e Layout -->
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/menu.css" />
-  <!-- Estilo Atual -->
+  <title>Monitoramento de Servicos - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
   <link rel="stylesheet" href="css/monitoramento-servicos.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script type="module" src="./script/auth-guard.js"></script>
   <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
   <div class="container">
     <div id="menu-container"></div>
-    
+
     <div class="main-content">
       <header class="header glass-header header-flex">
-        <span><i class="fas fa-tasks"></i> Monitoramento de Serviços (Lavagem & Engraxe) (Real-Time)</span>
+        <span><i class="fas fa-screwdriver-wrench"></i> Monitoramento de Servicos Real-Time</span>
         <div class="header-controls">
-            <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
-            <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
-            <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
-            <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+          <span id="realtime-status" class="realtime-pill offline"><i class="fas fa-circle"></i> Conectando</span>
+          <span id="last-update" class="last-update-text">Atualizado as: --:--</span>
+          <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+          <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
+          <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
         </div>
       </header>
 
       <section class="section">
-        <!-- Filtros -->
         <div class="filter-bar glass-panel">
-            <div class="form-group">
-                <label for="filtroFilial">Filial:</label>
-                <select id="filtroFilial" class="glass-input">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="dataInicial">De:</label>
-                <input type="date" id="dataInicial" class="glass-input">
-            </div>
-            <div class="form-group">
-                <label for="dataFinal">Até:</label>
-                <input type="date" id="dataFinal" class="glass-input">
-            </div>
-            <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
+          <div class="form-group">
+            <label for="dataInicial">Data inicial:</label>
+            <input type="date" id="dataInicial" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="dataFinal">Data final:</label>
+            <input type="date" id="dataFinal" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="filtroFilial">Filial:</label>
+            <select id="filtroFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group servicos-search">
+            <label for="searchInput">Buscar:</label>
+            <input type="text" id="searchInput" class="glass-input" placeholder="Lista, placa, modelo, marca...">
+          </div>
+          <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
         </div>
 
-        <!-- KPIs -->
-        <div class="kpi-grid">
-            <div class="kpi-card glass-card blue">
-                <div class="kpi-icon"><i class="fas fa-list-check"></i></div>
+        <div class="servicos-kpi-groups">
+          <div class="kpi-service-group glass-panel">
+            <div class="kpi-service-title">
+              <i class="fas fa-shower"></i>
+              <span>Lavagem</span>
+            </div>
+            <div class="kpi-grid servicos-kpis">
+              <div class="kpi-card glass-card green">
+                <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
                 <div class="kpi-info">
-                    <h3>Listas Abertas</h3>
-                    <p id="kpi-listas-abertas">0</p>
+                  <h3>Concluidos</h3>
+                  <p id="kpi-lavagem-concluidos">0</p>
                 </div>
+              </div>
+              <div class="kpi-card glass-card orange">
+                <div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="kpi-info">
+                  <h3>Pendentes</h3>
+                  <p id="kpi-lavagem-pendentes">0</p>
+                </div>
+              </div>
+              <div class="kpi-card glass-card blue">
+                <div class="kpi-icon"><i class="fas fa-truck"></i></div>
+                <div class="kpi-info">
+                  <h3>Quantidade</h3>
+                  <p id="kpi-lavagem-total">0</p>
+                </div>
+              </div>
             </div>
-            <!-- Container para injeção dinâmica de cards de lavagem por lista -->
-            <div id="lavagem-dynamic-container" style="display: contents;"></div>
-            <!-- Container para injeção dinâmica de cards de engraxe por lista -->
-            <div id="engraxe-dynamic-container" style="display: contents;"></div>
+          </div>
+
+          <div class="kpi-service-group glass-panel">
+            <div class="kpi-service-title">
+              <i class="fas fa-oil-can"></i>
+              <span>Engraxe</span>
+            </div>
+            <div class="kpi-grid servicos-kpis">
+              <div class="kpi-card glass-card green">
+                <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
+                <div class="kpi-info">
+                  <h3>Concluidos</h3>
+                  <p id="kpi-engraxe-concluidos">0</p>
+                </div>
+              </div>
+              <div class="kpi-card glass-card orange">
+                <div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="kpi-info">
+                  <h3>Pendentes</h3>
+                  <p id="kpi-engraxe-pendentes">0</p>
+                </div>
+              </div>
+              <div class="kpi-card glass-card blue">
+                <div class="kpi-icon"><i class="fas fa-truck"></i></div>
+                <div class="kpi-info">
+                  <h3>Quantidade</h3>
+                  <p id="kpi-engraxe-total">0</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Dashboard Principal -->
-        <div class="monitor-container">
-            <!-- Seção Lavagem -->
-            <div class="monitor-row">
-                <div class="glass-panel chart-card">
-                    <h3><i class="fas fa-shower"></i> Progresso Lavagem (Geral)</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartProgressoLavagem"></canvas>
-                    </div>
-                </div>
-                <div class="glass-panel chart-card">
-                    <h3><i class="fas fa-chart-pie"></i> Resumo por Lista (Lavagem)</h3>
-                    <div class="side-pizzas-container" id="containerPizzasLavagem"></div>
-                </div>
-            </div>
-
-            <!-- Seção Engraxe -->
-            <div class="monitor-row">
-                <div class="glass-panel chart-card">
-                    <h3><i class="fas fa-oil-can"></i> Progresso Engraxe (Geral)</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartProgressoEngraxe"></canvas>
-                    </div>
-                </div>
-                <div class="glass-panel chart-card">
-                    <h3><i class="fas fa-chart-pie"></i> Resumo por Lista (Engraxe)</h3>
-                    <div class="side-pizzas-container" id="containerPizzasEngraxe"></div>
-                </div>
-            </div>
+        <div class="servicos-progress glass-panel">
+          <div class="progress-info">
+            <strong>Progresso geral dos servicos</strong>
+            <span id="progress-label">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="progress-bar" class="progress-bar"></div>
+          </div>
         </div>
 
-        <!-- Carrossel de Gráficos (Marquee) -->
-        <div class="marquee-wrapper">
+        <div class="servicos-live-grid">
+          <div class="glass-panel servicos-column">
+            <div class="column-header lavagem">
+              <h3><i class="fas fa-shower"></i> Lavagem</h3>
+              <span id="count-lavagem-lista">0</span>
+            </div>
+            <div id="lista-lavagem" class="service-list"></div>
+          </div>
+
+          <div class="glass-panel servicos-column">
+            <div class="column-header engraxe">
+              <h3><i class="fas fa-oil-can"></i> Engraxe</h3>
+              <span id="count-engraxe-lista">0</span>
+            </div>
+            <div id="lista-engraxe" class="service-list"></div>
+          </div>
+        </div>
+
+        <div class="servicos-chart-carousel glass-panel">
+          <div class="carousel-header">
+            <h3><i class="fas fa-chart-line"></i> Indicadores financeiros e status</h3>
+          </div>
+          <div class="marquee-wrapper">
             <div class="marquee-track" id="marqueeTrack">
-                <div class="chart-container glass-panel marquee-item">
-                    <h3><i class="fas fa-pie-chart"></i> Distribuição por Status</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartStatusServicos"></canvas>
-                    </div>
+              <div class="chart-container marquee-item">
+                <h3><i class="fas fa-chart-pie"></i> Distribui&ccedil;&atilde;o por Status</h3>
+                <div class="chart-wrapper">
+                  <canvas id="chartStatusServicos"></canvas>
                 </div>
-                <div class="chart-container glass-panel marquee-item">
-                    <h3><i class="fas fa-hand-holding-usd"></i> Gasto Mensal - Lavagens</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartGastoMensalLavagem"></canvas>
-                    </div>
+              </div>
+              <div class="chart-container marquee-item">
+                <h3><i class="fas fa-hand-holding-dollar"></i> Gasto Mensal - Lavagens</h3>
+                <div class="chart-wrapper">
+                  <canvas id="chartGastoMensalLavagem"></canvas>
                 </div>
-                <div class="chart-container glass-panel marquee-item">
-                    <h3><i class="fas fa-calendar-alt"></i> Gasto Anual - Lavagens</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartGastoAnualLavagem"></canvas>
-                    </div>
+              </div>
+              <div class="chart-container marquee-item">
+                <h3><i class="fas fa-calendar-days"></i> Gasto Anual - Lavagens</h3>
+                <div class="chart-wrapper">
+                  <canvas id="chartGastoAnualLavagem"></canvas>
                 </div>
-                <div class="chart-container glass-panel marquee-item">
-                    <h3><i class="fas fa-oil-can"></i> Gasto Mensal - Engraxe</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartGastoTotalEngraxe"></canvas>
-                    </div>
+              </div>
+              <div class="chart-container marquee-item">
+                <h3><i class="fas fa-oil-can"></i> Gasto Mensal - Engraxe</h3>
+                <div class="chart-wrapper">
+                  <canvas id="chartGastoTotalEngraxe"></canvas>
                 </div>
-                <div class="chart-container glass-panel marquee-item">
-                    <h3><i class="fas fa-calendar-check"></i> Gasto Anual - Engraxe</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chartGastoAnualEngraxe"></canvas>
-                    </div>
+              </div>
+              <div class="chart-container marquee-item">
+                <h3><i class="fas fa-calendar-check"></i> Gasto Anual - Engraxe</h3>
+                <div class="chart-wrapper">
+                  <canvas id="chartGastoAnualEngraxe"></canvas>
                 </div>
+              </div>
             </div>
+          </div>
         </div>
       </section>
     </div>
   </div>
+
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/monitoramento-servicos.js"></script>
