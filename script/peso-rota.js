@@ -32,7 +32,7 @@ const CAMPOS_GRID = [
     'peso_carga',
     'qtd_caixas',
     'qtd_clientes',
-    'dia_retorno',
+    'dia_semana_retorno',
     'horario_chegada',
     'descricao'
 ];
@@ -256,6 +256,23 @@ function getDataDaSemana(semanaAno, semanaNome) {
     return formatDateUTC(data);
 }
 
+function getDiaSemanaPorData(dataIso) {
+    if (!dataIso) return '';
+
+    const dias = {
+        1: 'SEGUNDA',
+        2: 'TERÇA',
+        3: 'QUARTA',
+        4: 'QUINTA',
+        5: 'SEXTA',
+        6: 'SABADO',
+        7: 'DOMINGO'
+    };
+    const data = parseDateUTC(dataIso);
+    const diaSemana = data.getUTCDay() || 7;
+    return dias[diaSemana] || '';
+}
+
 function parseDateUTC(dataIso) {
     const [ano, mes, dia] = String(dataIso).split('-').map(Number);
     return new Date(Date.UTC(ano, mes - 1, dia));
@@ -419,11 +436,13 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno) {
 function criarLinha(data = {}) {
     const semanaAno = data.semana_ano || getSemanaAnoSelecionada();
     const semana = normalizarSemana(data.semana);
+    const diaRetorno = data.dia_retorno || getDataDaSemana(semanaAno, semana);
     const row = {
         id: data.id || null,
         rota: normalizarTexto(data.rota),
         semana,
         semana_ano: semanaAno,
+        dia_semana_retorno: normalizarSemana(data.dia_semana_retorno || semana || getDiaSemanaPorData(diaRetorno)),
         supervisor: normalizarUpper(data.supervisor),
         motorista: normalizarUpper(data.motorista),
         auxiliar: normalizarUpper(data.auxiliar),
@@ -434,7 +453,7 @@ function criarLinha(data = {}) {
         qtd_caixas: parseInteiro(data.qtd_caixas),
         qtd_clientes: parseInteiro(data.qtd_clientes),
         status_percentual: parseNumero(data.status_percentual),
-        dia_retorno: data.dia_retorno || getDataDaSemana(semanaAno, semana),
+        dia_retorno: diaRetorno,
         horario_chegada: normalizarTexto(data.horario_chegada).slice(0, 5),
         descricao: normalizarTexto(data.descricao)
     };
@@ -546,7 +565,7 @@ function renderLinha(row, index) {
             <td class="col-qtd">${inputNumber(index, 'qtd_caixas', row.qtd_caixas, false, '1')}</td>
             <td class="col-qtd">${inputNumber(index, 'qtd_clientes', row.qtd_clientes, false, '1')}</td>
             <td class="col-status"><span class="peso-status ${status.classe}" data-status-row="${index}">${status.texto}</span></td>
-            <td class="col-data">${inputDate(index, 'dia_retorno', row.dia_retorno)}</td>
+            <td class="col-data">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
             <td class="col-hora">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
             <td class="col-descricao">${textarea(index, 'descricao', row.descricao)}</td>
         </tr>
@@ -581,6 +600,16 @@ function selectSemana(index, value) {
     }).join('');
 
     return `<select data-row-index="${index}" data-field="semana">${options}</select>`;
+}
+
+function selectDiaRetorno(index, value) {
+    const atual = normalizarSemana(value);
+    const options = [''].concat(SEMANAS).map(semana => {
+        const label = semana || '-';
+        return `<option value="${escapeHtml(semana)}" ${atual === semana ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
+
+    return `<select data-row-index="${index}" data-field="dia_semana_retorno">${options}</select>`;
 }
 
 function getStatus(row) {
@@ -623,8 +652,8 @@ function handleGridInput(event) {
     if (!row) return;
 
     let value = event.target.value;
-    if (['supervisor', 'motorista', 'auxiliar', 'placa', 'tipo_veiculo', 'semana'].includes(field)) {
-        value = field === 'placa' ? normalizarPlaca(value) : (field === 'semana' ? normalizarSemana(value) : normalizarUpper(value));
+    if (['supervisor', 'motorista', 'auxiliar', 'placa', 'tipo_veiculo', 'semana', 'dia_semana_retorno'].includes(field)) {
+        value = field === 'placa' ? normalizarPlaca(value) : (['semana', 'dia_semana_retorno'].includes(field) ? normalizarSemana(value) : normalizarUpper(value));
         event.target.value = value;
     }
 
@@ -640,13 +669,14 @@ function handleGridInput(event) {
 
     if (field === 'semana') {
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
+        row.dia_semana_retorno = value;
         const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
-        const dataInput = tr?.querySelector('[data-field="dia_retorno"]');
-        if (dataInput) dataInput.value = row.dia_retorno;
+        const diaSelect = tr?.querySelector('[data-field="dia_semana_retorno"]');
+        if (diaSelect) diaSelect.value = row.dia_semana_retorno;
     }
 
-    if (field === 'dia_retorno') {
-        row.semana_ano = getSemanaAnoDaData(value);
+    if (field === 'dia_semana_retorno') {
+        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
     }
 }
 
@@ -790,9 +820,9 @@ async function salvarTudo() {
             .upsert(payload, { onConflict: 'dia_retorno,rota' })
             .select();
 
-        if (error && isErroColunaSemanaAno(error)) {
-            console.warn('Coluna semana_ano ausente no Supabase. Salvando sem esse campo.', error);
-            payload = payload.map(({ semana_ano, ...item }) => item);
+        if (error && isErroColunaOpcional(error)) {
+            console.warn('Coluna opcional ausente no Supabase. Salvando sem campos opcionais.', error);
+            payload = payload.map(({ semana_ano, dia_semana_retorno, ...item }) => item);
             const retry = await supabaseClient
                 .from('peso_rota')
                 .upsert(payload, { onConflict: 'dia_retorno,rota' })
@@ -820,8 +850,9 @@ async function salvarTudo() {
     }
 }
 
-function isErroColunaSemanaAno(error) {
-    return String(error?.message || '').toLowerCase().includes('semana_ano');
+function isErroColunaOpcional(error) {
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes('semana_ano') || message.includes('dia_semana_retorno');
 }
 
 async function atualizarPbtVeiculosEmBranco() {
@@ -870,6 +901,7 @@ function prepararPayload(row) {
         rota: normalizarTexto(row.rota),
         semana: normalizarSemana(row.semana) || null,
         semana_ano: getSemanaAnoDaData(row.dia_retorno),
+        dia_semana_retorno: normalizarSemana(row.dia_semana_retorno || row.semana || getDiaSemanaPorData(row.dia_retorno)) || null,
         supervisor: normalizarUpper(row.supervisor) || null,
         motorista: normalizarUpper(row.motorista) || null,
         auxiliar: normalizarUpper(row.auxiliar) || null,
@@ -885,8 +917,6 @@ function prepararPayload(row) {
         descricao: normalizarTexto(row.descricao) || null,
         updated_at: new Date().toISOString()
     };
-
-    if (row.id) payload.id = row.id;
 
     return payload;
 }
@@ -1108,6 +1138,7 @@ function aplicarImportacaoRoteiro(importados) {
         }
 
         row.semana_ano = item.semana_ano;
+        row.dia_semana_retorno = semanaImportada;
         row.dia_retorno = item.dia_retorno;
         row.placa = item.placa || row.placa;
         row.motorista = item.motorista || row.motorista;
@@ -1171,9 +1202,14 @@ function aplicarValorNaLinha(row, campo, valor) {
     } else if (campo === 'semana') {
         row[campo] = normalizarSemana(valor);
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row[campo]);
+        row.dia_semana_retorno = row[campo];
+    } else if (campo === 'dia_semana_retorno') {
+        row[campo] = normalizarSemana(valor);
+        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row[campo]);
     } else if (campo === 'dia_retorno') {
         row[campo] = normalizarTexto(valor);
         row.semana_ano = getSemanaAnoDaData(row[campo]);
+        row.dia_semana_retorno = getDiaSemanaPorData(row[campo]);
     } else if (['supervisor', 'motorista', 'auxiliar', 'tipo_veiculo'].includes(campo)) {
         row[campo] = normalizarUpper(valor);
     } else {

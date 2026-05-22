@@ -15,6 +15,7 @@ create table if not exists public.peso_rota (
     qtd_clientes integer,
     status_percentual numeric,
     semana_ano text,
+    dia_semana_retorno text,
     dia_retorno date not null,
     horario_chegada time,
     descricao text,
@@ -22,13 +23,30 @@ create table if not exists public.peso_rota (
 );
 
 alter table public.peso_rota add column if not exists semana_ano text;
+alter table public.peso_rota add column if not exists dia_semana_retorno text;
 
 update public.peso_rota
 set semana_ano = to_char(dia_retorno, 'IYYY-"W"IW')
 where semana_ano is null and dia_retorno is not null;
 
+update public.peso_rota
+set dia_semana_retorno = coalesce(
+    nullif(semana, ''),
+    case extract(isodow from dia_retorno)
+        when 1 then 'SEGUNDA'
+        when 2 then 'TERÇA'
+        when 3 then 'QUARTA'
+        when 4 then 'QUINTA'
+        when 5 then 'SEXTA'
+        when 6 then 'SABADO'
+        when 7 then 'DOMINGO'
+    end
+)
+where dia_semana_retorno is null and dia_retorno is not null;
+
 create index if not exists idx_peso_rota_dia_retorno on public.peso_rota (dia_retorno);
 create index if not exists idx_peso_rota_semana_ano on public.peso_rota (semana_ano);
+create index if not exists idx_peso_rota_dia_semana_retorno on public.peso_rota (dia_semana_retorno);
 create index if not exists idx_peso_rota_rota on public.peso_rota (rota);
 
 alter table public.peso_rota enable row level security;
