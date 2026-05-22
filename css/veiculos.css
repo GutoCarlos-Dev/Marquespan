@@ -236,6 +236,12 @@
 /* Cores Solicitadas */
 .btn-orange { background: linear-gradient(135deg, #fd7e14, #d35400); } /* Importar */
 .btn-purple { background: linear-gradient(135deg, #6f42c1, #5a32a3); } /* Excel */
+.btn-red { background: linear-gradient(135deg, #dc3545, #bd2130); }
+
+#btnBaixarPDFQRCode {
+    background: linear-gradient(135deg, #dc3545, #bd2130);
+    color: #ffffff;
+}
 
 /* --- Estilos Aprimorados do Modal --- */
 .glass-modal {
