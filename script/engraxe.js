@@ -12,10 +12,33 @@ let sortStateVencimentos = { key: 'diasRestantes', asc: true };
 let sortStateItensModal = { key: 'placa', asc: true };
 
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
+const PAGE_SIZE = 1000;
+
+async function fetchAll(buildQuery) {
+    const rows = [];
+    let from = 0;
+
+    while (true) {
+        const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+
+        if (!data || data.length === 0) break;
+
+        rows.push(...data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+    }
+
+    return rows;
+}
 
 function getDatePart(value) {
     if (!value) return '';
     return String(value).split('T')[0];
+}
+
+function normalizarPlaca(value) {
+    return String(value || '').trim().toUpperCase();
 }
 
 function getTodayISO() {
@@ -71,6 +94,63 @@ function atualizarStatusVencimento(item, dataReferencia) {
     item.diasRestantes = diasRestantes;
     item.status = diasRestantes < 0 ? 'VENCIDO' : 'EM_DIA';
     return item;
+}
+
+function getDataHistoricoItemEngraxe(item) {
+    const statusItem = String(item.status || '').toUpperCase();
+    const lista = item.engraxe_listas || {};
+    const listaFinalizada = String(lista.status || '').toUpperCase() === 'FINALIZADA';
+
+    if (item.data_realizado) return getDatePart(item.data_realizado);
+    if (listaFinalizada && ['OK', 'REALIZADO'].includes(statusItem)) return getDatePart(lista.data_lista);
+    return '';
+}
+
+async function carregarHistoricoRealizacoesEngraxe() {
+    const itens = await fetchAll(() => supabaseClient
+        .from('engraxe_itens')
+        .select('placa, status, data_realizado, engraxe_listas(status, data_lista, created_at)'));
+
+    return (itens || [])
+        .map(item => ({
+            placa: normalizarPlaca(item.placa),
+            data_realizado: getDataHistoricoItemEngraxe(item)
+        }))
+        .filter(item => item.placa && item.data_realizado);
+}
+
+function obterUltimaRealizacaoPorPlaca(historico, placa) {
+    const placaNormalizada = normalizarPlaca(placa);
+    return (historico || [])
+        .filter(item => item.placa === placaNormalizada)
+        .sort((a, b) => new Date(b.data_realizado) - new Date(a.data_realizado))[0]?.data_realizado || null;
+}
+
+async function preencherDatasItensOkAntesDeFinalizar(listaAtual) {
+    if (!listaAtual?.id) return;
+
+    const dataLista = getDatePart(listaAtual.data_lista) || getTodayISO();
+    const { data: itens, error } = await supabaseClient
+        .from('engraxe_itens')
+        .select('id, status, data_realizado, data_proximo')
+        .eq('lista_id', listaAtual.id);
+
+    if (error) throw error;
+
+    const pendentesData = (itens || []).filter(item => (
+        ['OK', 'REALIZADO'].includes(String(item.status || '').toUpperCase()) && !item.data_realizado
+    ));
+
+    await Promise.all(pendentesData.map(item => supabaseClient
+        .from('engraxe_itens')
+        .update({
+            data_realizado: dataLista,
+            data_proximo: item.data_proximo || addDaysISO(dataLista, 21)
+        })
+        .eq('id', item.id)
+        .then(({ error: updateError }) => {
+            if (updateError) throw updateError;
+        })));
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -320,24 +400,16 @@ async function abrirModalNovaLista() {
 
     try {
         // Busca veículos e histórico de engraxe (apenas itens realizados)
-        const [veiculosRes, itensRes] = await Promise.all([
+        const [veiculosRes, historicoRealizacoes] = await Promise.all([
             supabaseClient.from('veiculos').select('placa, modelo, marca, tipo, filial').eq('situacao', 'ativo').order('placa'),
-            supabaseClient.from('engraxe_itens').select('placa, data_realizado').not('data_realizado', 'is', null)
+            carregarHistoricoRealizacoesEngraxe()
         ]);
 
         const { data: veiculos, error: veiculosError } = veiculosRes;
         if (veiculosError) throw veiculosError;
 
-        const todosItens = itensRes.data || [];
-
         veiculosCacheNovaLista = (veiculos || []).map(v => {
-            const itensVeiculo = todosItens.filter(i => i.placa === v.placa);
-            
-            let ultimaData = null;
-            if (itensVeiculo.length > 0) {
-                itensVeiculo.sort((a, b) => new Date(b.data_realizado) - new Date(a.data_realizado));
-                ultimaData = itensVeiculo[0].data_realizado;
-            }
+            const ultimaData = obterUltimaRealizacaoPorPlaca(historicoRealizacoes, v.placa);
 
             let proximaData = null;
              if (ultimaData) {
@@ -803,6 +875,8 @@ window.abrirLista = async function(id, nome) {
             
             newBtn.addEventListener('click', async () => {
                 if (confirm('Tem certeza que deseja finalizar esta lista? O status será alterado para FINALIZADA.')) {
+                    await preencherDatasItensOkAntesDeFinalizar(listaAtual);
+
                     const { error } = await supabaseClient
                         .from('engraxe_listas')
                         .update({ status: 'FINALIZADA' })
@@ -1417,27 +1491,14 @@ async function abrirControleVencimentos() {
         if (error) throw error;
 
         // 2. Buscar Histórico de Engraxe (apenas itens realizados)
-        const { data: todosItens, error: itensError } = await supabaseClient
-            .from('engraxe_itens')
-            .select('placa, data_realizado')
-            .not('data_realizado', 'is', null);
-
-        if (itensError) throw itensError;
+        const todosItens = await carregarHistoricoRealizacoesEngraxe();
 
         // 3. Processar Dados (Cruzar Veículos com Histórico)
         const dataReferencia = dataListaInput.value;
 
         currentVencimentosData = veiculos.map(v => {
             // Filtra itens deste veículo que tenham data realizada válida
-            const itensVeiculo = todosItens.filter(i => i.placa === v.placa);
-            
-            // Encontra a data mais recente
-            let ultimaData = null;
-            if (itensVeiculo.length > 0) {
-                // Ordena decrescente por data
-                itensVeiculo.sort((a, b) => new Date(b.data_realizado) - new Date(a.data_realizado));
-                ultimaData = itensVeiculo[0].data_realizado;
-            }
+            const ultimaData = obterUltimaRealizacaoPorPlaca(todosItens, v.placa);
 
             let proximaData = null;
             let status = 'PENDENTE'; // Default se nunca fez
