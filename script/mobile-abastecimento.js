@@ -72,6 +72,9 @@ function parseLitrosMobile(valor) {
 }
 
 function getEstoqueInformadoAjusteMobile(entrada) {
+    const valorLitroInformado = parseFloat(entrada.valor_litro) || 0;
+    if (valorLitroInformado > 0) return valorLitroInformado;
+
     const valorInformado = parseFloat(entrada.valor_total) || 0;
     if (valorInformado > 0) return valorInformado;
 
@@ -511,7 +514,7 @@ async function carregarEstoque() {
         // 2. Buscar Entradas (Abastecimentos)
         const { data: entradas, error: errEntradas } = await supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_total');
+            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total');
         
         if (errEntradas) throw errEntradas;
 
@@ -832,7 +835,7 @@ async function realizarAjusteEstoque(id, nome, estoqueCalculado, btn) {
             numero_nota: 'AJUSTE DE ESTOQUE',
             tanque_id: parseInt(id),
             qtd_litros: diferenca, // Pode ser positivo (entrada) ou negativo (saída)
-            valor_litro: 0,
+            valor_litro: novoValor,
             valor_total: novoValor,
             usuario: usuario
         }]);

@@ -1,5 +1,6 @@
 function getNivelEstoque(estoque, capacidade) {
-    const percentual = capacidade > 0 ? ((estoque / capacidade) * 100).toFixed(0) : 0;
+    const percentualRaw = capacidade > 0 ? (estoque / capacidade) * 100 : 0;
+    const percentual = Math.round(percentualRaw);
     let color = '#006937';
 
     if (percentual < 20) color = '#dc3545';
@@ -26,9 +27,9 @@ export function montarHtmlEstoque(tanques, { canViewAuditoria, formatLitros, tot
                 <td style="width: 250px; vertical-align: middle;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <div style="flex-grow: 1; background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
-                            <div style="width: ${Math.min(percentual, 100)}%; background: ${color}; height: 100%; border-radius: 5px; transition: width 0.5s ease;"></div>
+                            <div class="estoque-nivel-barra" style="width: ${Math.min(percentual, 100)}%; background: ${color}; height: 100%; border-radius: 5px; transition: width 0.5s ease;"></div>
                         </div>
-                        <span style="font-weight: bold; color: ${color}; font-size: 0.9rem; min-width: 40px; text-align: right;">${percentual}%</span>
+                        <span class="estoque-nivel-percentual" style="font-weight: bold; color: ${color}; font-size: 0.9rem; min-width: 40px; text-align: right;">${percentual}%</span>
                     </div>
                 </td>
                 ${canViewAuditoria ? `<td class="estoque-anterior">${formatLitros(estoque)} L</td>` : ''}

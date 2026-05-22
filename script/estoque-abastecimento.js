@@ -32,6 +32,9 @@ function escapeHtml(value) {
 }
 
 function getEstoqueInformadoAjuste(entrada) {
+    const valorLitroInformado = parseNumero(entrada.valor_litro);
+    if (valorLitroInformado > 0) return valorLitroInformado;
+
     const valorInformado = parseNumero(entrada.valor_total);
     if (valorInformado > 0) return valorInformado;
 
@@ -154,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const entradas = await fetchAll(() => supabaseClient
                 .from('abastecimentos')
-                .select('tanque_id, qtd_litros, data, numero_nota, usuario, valor_total')
+                .select('tanque_id, qtd_litros, data, numero_nota, usuario, valor_litro, valor_total')
                 .order('data', { ascending: false }));
 
             const saidas = await fetchAll(() => supabaseClient

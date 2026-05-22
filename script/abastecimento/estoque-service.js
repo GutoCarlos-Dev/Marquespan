@@ -6,6 +6,9 @@ function parseNumero(value) {
 }
 
 function getEstoqueInformadoAjuste(entrada) {
+    const valorLitroInformado = parseNumero(entrada.valor_litro);
+    if (valorLitroInformado > 0) return valorLitroInformado;
+
     const valorInformado = parseNumero(entrada.valor_total);
     if (valorInformado > 0) return valorInformado;
 
@@ -126,7 +129,7 @@ export async function calcularEstoqueAtual(supabaseClient, filial) {
     const [entradas, saidas] = await Promise.all([
         fetchAll(() => supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_total')
+            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
             .order('data', { ascending: true })),
         fetchAll(() => supabaseClient
             .from('saidas_combustivel')
@@ -143,7 +146,7 @@ export async function calcularEstoqueAntes(supabaseClient, tanqueId, dataHora) {
     const [entradas, saidas] = await Promise.all([
         fetchAll(() => supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_total')
+            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
             .eq('tanque_id', tanqueId)
             .lt('data', dataHora)
             .order('data', { ascending: true })),

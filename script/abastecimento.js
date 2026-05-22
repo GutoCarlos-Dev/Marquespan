@@ -606,6 +606,30 @@ document.addEventListener('DOMContentLoaded', () => {
             else diferencaCell.classList.add('diferenca-zero');
         },
 
+        atualizarNivelEstoque(input) {
+            const tr = input.closest('tr');
+            if (!tr) return;
+
+            const capacidade = parseFloat(input.dataset.capacidade);
+            const novoEstoque = this.parseLitros(input.value);
+            const barra = tr.querySelector('.estoque-nivel-barra');
+            const percentualEl = tr.querySelector('.estoque-nivel-percentual');
+
+            if (!barra || !percentualEl || isNaN(capacidade) || capacidade <= 0 || isNaN(novoEstoque)) return;
+
+            const percentual = Math.round((novoEstoque / capacidade) * 100);
+            const percentualVisual = Math.max(0, Math.min(percentual, 100));
+            let color = '#006937';
+
+            if (percentual < 20) color = '#dc3545';
+            else if (percentual < 50) color = '#ffc107';
+
+            barra.style.width = `${percentualVisual}%`;
+            barra.style.background = color;
+            percentualEl.textContent = `${percentual}%`;
+            percentualEl.style.color = color;
+        },
+
         toggleEstoqueAuditoriaColumns(canView) {
             const tabela = this.tbodyEstoque?.closest('table');
             if (!tabela) return;
@@ -753,6 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`O valor informado excede a capacidade máxima do tanque (${capacidade.toLocaleString('pt-BR')} L).`);
                 input.value = this.formatLitros(capacidade);
             }
+            this.atualizarNivelEstoque(input);
             this.atualizarDiferencaEstoque(input);
         },
 
@@ -792,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         numero_nota: 'AJUSTE DE ESTOQUE',
                         tanque_id: parseInt(tanqueId),
                         qtd_litros: delta, // Pode ser positivo ou negativo
-                        valor_litro: 0,
+                        valor_litro: novoEstoque,
                         valor_total: novoEstoque,
                         usuario: usuario
                     });
@@ -873,7 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const [ajustesResult, saidasResult] = await Promise.all([
                     supabaseClient
                         .from('abastecimentos')
-                        .select('id, data, usuario, tanque_id, qtd_litros, valor_total, tanques(nome, tipo_combustivel)')
+                        .select('id, data, usuario, tanque_id, qtd_litros, valor_litro, valor_total, tanques(nome, tipo_combustivel)')
                         .eq('numero_nota', 'AJUSTE DE ESTOQUE')
                         .gte('data', `${dataInicial}T00:00:00-03:00`)
                         .lte('data', `${dataFinal}T23:59:59-03:00`)
@@ -899,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rows = await Promise.all(data.map(async ajuste => {
                     const diferenca = parseFloat(ajuste.qtd_litros) || 0;
                     const estoqueAnterior = await this.calcularEstoqueAntes(ajuste.tanque_id, ajuste.data);
-                    const estoqueInformado = parseFloat(ajuste.valor_total) || 0;
+                    const estoqueInformado = parseFloat(ajuste.valor_litro) || parseFloat(ajuste.valor_total) || 0;
                     const estoqueAtual = estoqueInformado > 0 ? estoqueInformado : estoqueAnterior + diferenca;
                     const dataAjuste = this.getDataSaoPaulo(ajuste.data);
                     const totalSaidasDia = saidasPorTanqueDia.get(`${ajuste.tanque_id}|${dataAjuste}`) || 0;
@@ -997,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .from('abastecimentos')
                     .update({
                         qtd_litros: novaDiferenca,
+                        valor_litro: novoEstoque,
                         valor_total: novoEstoque,
                         usuario: this.getUsuarioLogado()
                     })
