@@ -109,6 +109,27 @@ body {
     color: #555;
 }
 
+.status-summary-mobile .badge {
+    border: 0;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.status-summary-mobile .badge:hover,
+.status-summary-mobile .badge.active {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+}
+
+.status-summary-mobile .badge:not(.active) {
+    opacity: 0.78;
+}
+
+.status-summary-mobile .status-todos {
+    background-color: #007bff;
+}
+
 .glass-input,
 input,
 select,
@@ -569,7 +590,7 @@ textarea {
 
     .status-summary-mobile .badge {
         padding: 8px 6px !important;
-        font-size: 0.72rem !important;
+        font-size: 0.68rem !important;
         min-width: 0;
     }
 

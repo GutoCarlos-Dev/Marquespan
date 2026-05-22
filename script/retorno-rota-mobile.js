@@ -35,6 +35,7 @@ let motoristasCache = []; // Cache para a lista de motoristas
 let placasCache = []; // Cache para as placas cadastradas
 let rotasCache = []; // Cache para as rotas cadastradas
 let retornoSnapshotInicial = null;
+let filtroStatusMobile = 'todos';
 
 function normalizeBooleanFlag(value) {
     return value === true || value === 1 || value === '1' || value === 'true';
@@ -484,6 +485,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('buscaMobile').addEventListener('input', renderCards);
     document.getElementById('btnAdicionarRetornoMobile')?.addEventListener('click', openNewModal);
+    document.querySelectorAll('[data-status-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+            filtroStatusMobile = button.dataset.statusFilter || 'todos';
+            renderCards();
+        });
+    });
 
     // Modal Principal
     const modalRetorno = document.getElementById('modalRetorno');
@@ -606,7 +613,7 @@ function renderCards() {
     const container = document.getElementById('listaRetornoMobile');
     const termoBusca = document.getElementById('buscaMobile').value.toUpperCase();
 
-    const filteredData = allData.filter(item => {
+    const dadosBusca = allData.filter(item => {
         const placa = item.placa || '';
         const rota = item.rota || '';
         const motorista = item.nome_mot || '';
@@ -614,12 +621,26 @@ function renderCards() {
     });
 
     // Calcular e atualizar os contadores (Retornaram vs Aguardando)
-    const countRetornaram = filteredData.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '').length;
-    const countAguardando = filteredData.length - countRetornaram;
+    const retornaramData = dadosBusca.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '');
+    const aguardandoData = dadosBusca.filter(row => !row.operador_recebimento || row.operador_recebimento.trim() === '');
+    const countRetornaram = retornaramData.length;
+    const countAguardando = aguardandoData.length;
     const elRetornaram = document.getElementById('count-retornaram');
+    const elTodos = document.getElementById('count-todos');
     const elAguardando = document.getElementById('count-aguardando');
     if (elRetornaram) elRetornaram.textContent = countRetornaram;
+    if (elTodos) elTodos.textContent = dadosBusca.length;
     if (elAguardando) elAguardando.textContent = countAguardando;
+
+    document.querySelectorAll('[data-status-filter]').forEach(button => {
+        button.classList.toggle('active', button.dataset.statusFilter === filtroStatusMobile);
+    });
+
+    const filteredData = filtroStatusMobile === 'retornaram'
+        ? retornaramData
+        : filtroStatusMobile === 'aguardando'
+            ? aguardandoData
+            : dadosBusca;
 
     if (filteredData.length === 0) {
         container.innerHTML = `<div class="loading-placeholder">Nenhum retorno encontrado.</div>`;
