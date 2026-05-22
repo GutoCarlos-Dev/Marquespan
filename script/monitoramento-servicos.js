@@ -15,6 +15,7 @@ let chartGastoMensalLavagem = null;
 let chartGastoAnualLavagem = null;
 let chartGastoMensalEngraxe = null;
 let chartGastoAnualEngraxe = null;
+let wakeLock = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initServicosRealTime();
@@ -31,11 +32,15 @@ function initServicosRealTime() {
     document.getElementById('searchInput')?.addEventListener('input', renderDashboard);
 
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') ativarWakeLock();
+    });
 
     carregarFiliais();
     carregarDados();
     configurarRealtime();
     iniciarRolagemAutomatica();
+    ativarWakeLock();
 
     refreshTimer = setInterval(carregarDados, REFRESH_INTERVAL);
 }
@@ -402,6 +407,20 @@ function renderErro() {
     const engraxe = document.getElementById('lista-engraxe');
     if (lavagem) lavagem.innerHTML = mensagem;
     if (engraxe) engraxe.innerHTML = mensagem;
+}
+
+async function ativarWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    if (wakeLock) return;
+
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+        });
+    } catch (error) {
+        console.warn('Wake Lock nao disponivel neste navegador:', error);
+    }
 }
 
 function carregarGraficosFinanceiros() {
