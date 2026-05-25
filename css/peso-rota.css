@@ -274,6 +274,54 @@ body.resizing-column .column-resizer::after {
     background: #eef6f1;
 }
 
+.data-grid tbody tr.retorno-atrasado {
+    background: #fff1f1;
+}
+
+.data-grid tbody tr.retorno-atrasado:hover {
+    background: #ffe4e4;
+}
+
+.data-grid tbody tr.retorno-atrasado td {
+    border-bottom-color: #f5b5b5;
+}
+
+.data-grid tbody tr.retorno-atrasado input,
+.data-grid tbody tr.retorno-atrasado select,
+.data-grid tbody tr.retorno-atrasado textarea {
+    color: #9f1d2a;
+    font-weight: 700;
+}
+
+.data-grid .retorno-atrasado-cell select {
+    background: #fee4e2;
+    box-shadow: inset 0 0 0 1px #dc3545;
+}
+
+.data-grid tbody tr.retorno-antecipado {
+    background: #fff8e6;
+}
+
+.data-grid tbody tr.retorno-antecipado:hover {
+    background: #fff1c2;
+}
+
+.data-grid tbody tr.retorno-antecipado td {
+    border-bottom-color: #f3d27a;
+}
+
+.data-grid tbody tr.retorno-antecipado input,
+.data-grid tbody tr.retorno-antecipado select,
+.data-grid tbody tr.retorno-antecipado textarea {
+    color: #7a4b00;
+    font-weight: 700;
+}
+
+.data-grid .retorno-antecipado-cell select {
+    background: #fef0c7;
+    box-shadow: inset 0 0 0 1px #f59e0b;
+}
+
 .data-grid td {
     border-bottom: 1px solid #edf1ef;
     padding: 0;

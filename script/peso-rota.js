@@ -44,6 +44,8 @@ let sortConfig = { key: 'rota', asc: true };
 let lastSelectedRowIndex = null;
 let resizingColumn = null;
 
+const ORDEM_DIAS_ROTA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
+
 document.addEventListener('DOMContentLoaded', async () => {
     const filtroSemanaAno = document.getElementById('filtroSemanaAno');
     if (filtroSemanaAno && !filtroSemanaAno.value) filtroSemanaAno.value = getSemanaAnoAtual();
@@ -388,7 +390,7 @@ async function carregarDados() {
         const [rotasResult, pesosResult] = await Promise.all([
             supabaseClient
                 .from('rotas')
-                .select('numero, semana, supervisor')
+                .select('numero, semana, supervisor, dias')
                 .order('numero', { ascending: true }),
             supabaseClient
                 .from('peso_rota')
@@ -416,6 +418,7 @@ async function carregarDados() {
 
 function mesclarRotasComPesos(rotas, pesos, semanaAno) {
     const pesosPorChave = new Map((pesos || []).map(item => [getChaveLinha(item), item]));
+    const rotasPorNumero = new Map((rotas || []).map(rota => [normalizarRota(rota.numero), rota]));
     const linhas = [];
     const chavesIncluidas = new Set();
 
@@ -429,10 +432,12 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno) {
         linhas.push(criarLinha({
             rota: numeroRota,
             semana,
+            dias_rota: rota.dias,
             supervisor: rota.supervisor || '',
             dia_retorno: diaRetorno,
             semana_ano: semanaAno,
-            ...salvo
+            ...salvo,
+            dias_rota: salvo?.dias_rota ?? rota.dias
         }));
         chavesIncluidas.add(chave);
     });
@@ -440,7 +445,12 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno) {
     (pesos || []).forEach(item => {
         const chave = getChaveLinha(item);
         if (!chavesIncluidas.has(chave)) {
-            linhas.push(criarLinha({ ...item, semana_ano: item.semana_ano || semanaAno }));
+            const rotaBase = rotasPorNumero.get(normalizarRota(item.rota));
+            linhas.push(criarLinha({
+                ...item,
+                semana_ano: item.semana_ano || semanaAno,
+                dias_rota: item.dias_rota ?? rotaBase?.dias
+            }));
         }
     });
 
@@ -457,6 +467,7 @@ function criarLinha(data = {}) {
         semana,
         semana_ano: semanaAno,
         dia_semana_retorno: normalizarSemana(data.dia_semana_retorno || semana || getDiaSemanaPorData(diaRetorno)),
+        dias_rota: parseInteiro(data.dias_rota ?? data.dias),
         supervisor: normalizarUpper(data.supervisor),
         motorista: normalizarUpper(data.motorista),
         auxiliar: normalizarUpper(data.auxiliar),
@@ -564,8 +575,9 @@ function ordenarLinhas(linhas) {
 
 function renderLinha(row, index) {
     const status = getStatus(row);
+    const retornoStatus = getStatusPrazoRetorno(row);
     return `
-        <tr data-row-index="${index}">
+        <tr data-row-index="${index}" class="${retornoStatus ? `retorno-${retornoStatus}` : ''}">
             <td class="select-col"><input type="checkbox" class="row-select" data-row-index="${index}"></td>
             <td class="col-rota">${inputText(index, 'rota', row.rota)}</td>
             <td class="col-semana">${selectSemana(index, row.semana)}</td>
@@ -579,11 +591,27 @@ function renderLinha(row, index) {
             <td class="col-qtd">${inputNumber(index, 'qtd_caixas', row.qtd_caixas, false, '1')}</td>
             <td class="col-qtd">${inputNumber(index, 'qtd_clientes', row.qtd_clientes, false, '1')}</td>
             <td class="col-status"><span class="peso-status ${status.classe}" data-status-row="${index}">${status.texto}</span></td>
-            <td class="col-data">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
+            <td class="col-data ${retornoStatus ? `retorno-${retornoStatus}-cell` : ''}">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
             <td class="col-hora">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
             <td class="col-descricao">${textarea(index, 'descricao', row.descricao)}</td>
         </tr>
     `;
+}
+
+function getStatusPrazoRetorno(row) {
+    const semana = normalizarSemana(row.semana);
+    const diaRetorno = normalizarSemana(row.dia_semana_retorno);
+    const diasRota = parseInteiro(row.dias_rota) || 1;
+    if (!semana || !diaRetorno) return '';
+
+    const inicio = ORDEM_DIAS_ROTA.indexOf(semana);
+    const retorno = ORDEM_DIAS_ROTA.indexOf(diaRetorno);
+    if (inicio === -1 || retorno === -1) return '';
+
+    const limite = inicio + Math.max(diasRota, 1) - 1;
+    if (retorno < inicio) return 'antecipado';
+    if (retorno > limite) return 'atrasado';
+    return '';
 }
 
 function inputText(index, field, value, extraClass = '', readonly = false) {
