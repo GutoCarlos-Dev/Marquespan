@@ -1210,12 +1210,31 @@ function escolherRetornoParaLinha(row, indicesRetorno, dataEsperada) {
     const motorista = normalizarBusca(row.motorista);
     if (!rota || !dataEsperada) return null;
 
+    const candidatos = indicesRetorno.porRotaData.get(getChaveRetornoRotaData(dataEsperada, rota)) || [];
+
     if (motorista) {
-        return indicesRetorno.porRotaMotoristaData.get(getChaveRetorno(dataEsperada, rota, motorista)) || null;
+        const exato = indicesRetorno.porRotaMotoristaData.get(getChaveRetorno(dataEsperada, rota, motorista));
+        if (exato) return exato;
+
+        const parecido = candidatos.find(item => {
+            const motoristaRetorno = normalizarBusca(item.nome_mot);
+            return motoristaRetorno && (motoristaRetorno.includes(motorista) || motorista.includes(motoristaRetorno));
+        });
+        if (parecido) return parecido;
     }
 
-    const candidatos = indicesRetorno.porRotaData.get(getChaveRetornoRotaData(dataEsperada, rota)) || [];
     return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+function atualizarCamposRetornoLinha(rowIndex, row) {
+    const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
+    if (!tr) return;
+
+    const diaSelect = tr.querySelector('[data-field="dia_semana_retorno"]');
+    const horaInput = tr.querySelector('[data-field="horario_chegada"]');
+
+    if (diaSelect) diaSelect.value = row.dia_semana_retorno || '';
+    if (horaInput) horaInput.value = row.horario_chegada || '';
 }
 
 async function importarRetornoRota() {
@@ -1256,10 +1275,11 @@ async function importarRetornoRota() {
         }
 
         let aplicadas = 0;
+        let aplicadasComHorario = 0;
         let semRetorno = 0;
         let ignoradasPorSemana = 0;
 
-        gridData.forEach(row => {
+        gridData.forEach((row, rowIndex) => {
             if (!normalizarRota(row.rota)) return;
 
             const semanaLinha = normalizarSemana(row.semana || row.dia_semana_retorno);
@@ -1281,10 +1301,12 @@ async function importarRetornoRota() {
             row.dia_semana_retorno = getDiaSemanaPorData(retorno.data_retorno);
             row.horario_chegada = normalizarHoraRetorno(retorno);
             aplicadas += 1;
+            if (row.horario_chegada) aplicadasComHorario += 1;
+            atualizarCamposRetornoLinha(rowIndex, row);
         });
 
         renderGrid();
-        alert(`Importacao de retorno concluida.\nRotas atualizadas: ${aplicadas}\nSem retorno encontrado: ${semRetorno}\nIgnoradas por outro dia da semana: ${ignoradasPorSemana}`);
+        alert(`Importacao de retorno concluida.\nRotas atualizadas: ${aplicadas}\nCom horario preenchido: ${aplicadasComHorario}\nSem retorno encontrado: ${semRetorno}\nIgnoradas por outro dia da semana: ${ignoradasPorSemana}`);
     } catch (error) {
         console.error('Erro ao importar retorno de rota:', error);
         alert(`Erro ao importar retorno de rota: ${error.message || 'verifique o console.'}`);
