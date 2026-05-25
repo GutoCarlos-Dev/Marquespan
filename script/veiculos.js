@@ -152,7 +152,7 @@ async function carregarFiliais() {
 
         // Limpa opções exceto a primeira
         if (select) select.innerHTML = '<option value="">Todas</option>';
-        if (selectImport) selectImport.innerHTML = '<option value="">Selecione a Filial</option>';
+        if (selectImport) selectImport.innerHTML = '<option value="">Não alterar / não preencher</option>';
         if (selectModal) selectModal.innerHTML = '<option value="">Selecione</option>';
 
         if (data) {
@@ -613,26 +613,71 @@ function baixarModeloImportacao() {
     if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX não carregada.');
 
     const headers = [
-        'PLACA', 'FILIAL', 'MODELO', 'TIPO', 'RENAVAN', 'SITUACAO', 'QRCODE', 'MARCA', 'CHASSI',
-        'ANO_FAB', 'ANO_MOD', 'QTD_TANQUE', 'VOLUME_TANQUE', 'MEDIA_KM', 'FABRICANTE',
-        'TRANSMISSAO', 'EIXOS', 'PBT', 'DIMENSOES', 'VUC', 'COR', 'CIDADE_EMPLAC',
-        'MODELO_TK', 'SERIE_TK', 'BAU_TIPO', 'SERIE_BAU', 'MECANISMO', 'SERIE_MECANISMO', 'RASTREADOR'
+        'PLACA', 'FILIAL', 'SITUACAO', 'MODELO', 'TIPO', 'QRCODE',
+        'RENAVAN', 'ANO_FAB', 'ANO_MOD', 'NUMERO_CRV', 'CHASSI', 'FABRICANTE',
+        'MODELO_VERSAO', 'ESPECIE', 'COR', 'COMBUSTIVEL', 'POTENCIA_CILINDRADA',
+        'MOTOR', 'EIXOS', 'PBT', 'CARROCERIA', 'LOCAL_EMPLACAMENTO', 'OBSERVACOES_VEICULO',
+        'TRANSMISSAO', 'VUC', 'DIMENSOES', 'TANQUE_COMBUSTIVEL_1', 'TANQUE_COMBUSTIVEL_2',
+        'VOLUME_TANQUE', 'MEDIA_KM', 'TARA_VEICULO', 'TACOGRAFO_TIPO', 'TACOGRAFO_MARCA',
+        'RASTREADOR', 'VIDEO_MONITORAMENTO', 'COBRANCA_AUTOMATICA_PEDAGIO', 'CATEGORIA_COBRANCA',
+        'MODELO_TK', 'SERIE_TK', 'MOTOR_TK', 'COMPRESSOR_TK', 'BAU_TIPO', 'MARCA_IMPLEMENTO',
+        'SERIE_BAU', 'MES_ANO_FABRICACAO', 'MECANISMO', 'SERIE_MECANISMO'
     ];
 
     const data = [{
-        'PLACA': 'ABC1234', 'FILIAL': 'MATRIZ', 'MODELO': 'VOLVO FH 540', 'TIPO': 'LS', 'RENAVAN': '123456789',
-        'SITUACAO': 'ativo', 'QRCODE': '', 'MARCA': 'VOLVO', 'CHASSI': '9BWZZZ0000000000',
-        'ANO_FAB': 2023, 'ANO_MOD': 2024, 'QTD_TANQUE': 2, 'VOLUME_TANQUE': 800, 'MEDIA_KM': 2.5,
-        'FABRICANTE': 'VOLVO', 'TRANSMISSAO': 'AUTOMÁTICA', 'EIXOS': 6, 'PBT': 74.0,
-        'DIMENSOES': '18.0/2.6/4.4', 'VUC': 'NÃO', 'COR': 'BRANCO', 'CIDADE_EMPLAC': 'SÃO PAULO',
-        'MODELO_TK': '', 'SERIE_TK': '', 'BAU_TIPO': 'REFRIGERADO', 'SERIE_BAU': '',
-        'MECANISMO': '', 'SERIE_MECANISMO': '', 'RASTREADOR': 'SASCAR'
+        'PLACA': 'ABC1234', 'FILIAL': 'MATRIZ', 'SITUACAO': 'ativo', 'MODELO': 'FH 540', 'TIPO': 'LS', 'QRCODE': '',
+        'RENAVAN': '123456789', 'ANO_FAB': 2023, 'ANO_MOD': 2024, 'NUMERO_CRV': '1234567890', 'CHASSI': '9BWZZZ0000000000',
+        'FABRICANTE': 'VOLVO', 'MODELO_VERSAO': 'FH 540 6X4', 'ESPECIE': 'CARGA', 'COR': 'BRANCO', 'COMBUSTIVEL': 'DIESEL',
+        'POTENCIA_CILINDRADA': '540CV', 'MOTOR': 'D13', 'EIXOS': 6, 'PBT': 74.0, 'CARROCERIA': 'BAÚ', 'LOCAL_EMPLACAMENTO': 'SÃO PAULO',
+        'OBSERVACOES_VEICULO': '', 'TRANSMISSAO': 'AUTOMÁTICA', 'VUC': 'NÃO', 'DIMENSOES': '18.0/2.6/4.4',
+        'TANQUE_COMBUSTIVEL_1': 400, 'TANQUE_COMBUSTIVEL_2': 400, 'VOLUME_TANQUE': 800, 'MEDIA_KM': 2.5,
+        'TARA_VEICULO': 9300, 'TACOGRAFO_TIPO': 'DIGITAL', 'TACOGRAFO_MARCA': 'VDO', 'RASTREADOR': 'SASCAR',
+        'VIDEO_MONITORAMENTO': 'SIM', 'COBRANCA_AUTOMATICA_PEDAGIO': 'SIM', 'CATEGORIA_COBRANCA': '6 EIXOS',
+        'MODELO_TK': '', 'SERIE_TK': '', 'MOTOR_TK': '', 'COMPRESSOR_TK': '', 'BAU_TIPO': 'REFRIGERADO',
+        'MARCA_IMPLEMENTO': 'FACCHINI', 'SERIE_BAU': '', 'MES_ANO_FABRICACAO': '01/2024',
+        'MECANISMO': '', 'SERIE_MECANISMO': ''
     }];
 
     const ws = XLSX.utils.json_to_sheet(data, { header: headers });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Modelo");
     XLSX.writeFile(wb, "Modelo_Importacao_Veiculos.xlsx");
+}
+
+function normalizarValorImportacao(dbCol, valor) {
+    let excelVal = String(valor).trim();
+
+    if (dbCol === 'situacao') return excelVal.toLowerCase();
+    if (['vuc', 'video_monitoramento', 'cobranca_automatica_pedagio'].includes(dbCol)) {
+        const normalized = excelVal.toUpperCase();
+        return normalized === 'SIM' || normalized === 'TRUE' || normalized === 'S' || normalized === '1';
+    }
+    if (['anofab', 'anomod', 'qtdtanque', 'eixos'].includes(dbCol)) {
+        return parseInt(excelVal, 10) || null;
+    }
+    if ([
+        'volume_tanque', 'media_km', 'pbt', 'tanque_combustivel_1',
+        'tanque_combustivel_2', 'tara_veiculo'
+    ].includes(dbCol)) {
+        return parseFloat(excelVal.replace(',', '.')) || null;
+    }
+
+    return excelVal;
+}
+
+function aplicarTotaisTanqueImportacao(target, base = {}) {
+    const alterouTanque = Object.prototype.hasOwnProperty.call(target, 'tanque_combustivel_1') ||
+        Object.prototype.hasOwnProperty.call(target, 'tanque_combustivel_2');
+
+    if (!alterouTanque || Object.prototype.hasOwnProperty.call(target, 'volume_tanque')) return;
+
+    const tanque1 = Number(target.tanque_combustivel_1 ?? base.tanque_combustivel_1) || 0;
+    const tanque2 = Number(target.tanque_combustivel_2 ?? base.tanque_combustivel_2) || 0;
+
+    if (tanque1 > 0 || tanque2 > 0) {
+        target.volume_tanque = tanque1 + tanque2;
+        target.qtdtanque = [tanque1, tanque2].filter(valor => valor > 0).length;
+    }
 }
 
 async function handleImportacao(e) {
@@ -713,6 +758,15 @@ async function handleImportacao(e) {
                     'CHASSI': 'chassi',
                     'ANO_FAB': 'anofab',
                     'ANO_MOD': 'anomod',
+                    'NUMERO_CRV': 'numero_crv',
+                    'MODELO_VERSAO': 'modelo_versao',
+                    'ESPECIE': 'especie',
+                    'COMBUSTIVEL': 'combustivel',
+                    'POTENCIA_CILINDRADA': 'potencia_cilindrada',
+                    'MOTOR': 'motor',
+                    'CARROCERIA': 'carroceria',
+                    'LOCAL_EMPLACAMENTO': 'local_emplacamento',
+                    'OBSERVACOES_VEICULO': 'observacoes_veiculo',
                     'QTD_TANQUE': 'qtdtanque',
                     'VOLUME_TANQUE': 'volume_tanque',
                     'MEDIA_KM': 'media_km',
@@ -724,10 +778,22 @@ async function handleImportacao(e) {
                     'VUC': 'vuc',
                     'COR': 'cor',
                     'CIDADE_EMPLAC': 'cidade_emplacamento',
+                    'TANQUE_COMBUSTIVEL_1': 'tanque_combustivel_1',
+                    'TANQUE_COMBUSTIVEL_2': 'tanque_combustivel_2',
+                    'TARA_VEICULO': 'tara_veiculo',
+                    'TACOGRAFO_TIPO': 'tacografo_tipo',
+                    'TACOGRAFO_MARCA': 'tacografo_marca',
+                    'VIDEO_MONITORAMENTO': 'video_monitoramento',
+                    'COBRANCA_AUTOMATICA_PEDAGIO': 'cobranca_automatica_pedagio',
+                    'CATEGORIA_COBRANCA': 'categoria_cobranca',
                     'MODELO_TK': 'modelo_tk',
                     'SERIE_TK': 'serie_tk',
+                    'MOTOR_TK': 'motor_tk',
+                    'COMPRESSOR_TK': 'compressor_tk',
                     'BAU_TIPO': 'bau_tipo',
+                    'MARCA_IMPLEMENTO': 'marca_implemento',
                     'SERIE_BAU': 'serie_bau',
+                    'MES_ANO_FABRICACAO': 'mes_ano_fabricacao',
                     'MECANISMO': 'mecanismo_operacional',
                     'SERIE_MECANISMO': 'serie_mecanismo',
                     'RASTREADOR': 'rastreador'
@@ -741,17 +807,7 @@ async function handleImportacao(e) {
                         let excelVal = rowNormalized[excelCol];
 
                         if (excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '') {
-                            excelVal = String(excelVal).trim();
-
-                            // Tratamento de tipos de dados
-                            if (dbCol === 'situacao') excelVal = excelVal.toLowerCase();
-                            if (dbCol === 'vuc') excelVal = (excelVal.toUpperCase() === 'SIM' || excelVal.toUpperCase() === 'TRUE');
-                            if (['anofab', 'anomod', 'qtdtanque', 'volume_tanque', 'eixos'].includes(dbCol)) {
-                                excelVal = parseInt(excelVal) || null;
-                            }
-                            if (['media_km', 'pbt'].includes(dbCol)) {
-                                excelVal = parseFloat(String(excelVal).replace(',', '.')) || null;
-                            }
+                            excelVal = normalizarValorImportacao(dbCol, excelVal);
 
                             const dbVal = existing[dbCol];
 
@@ -765,6 +821,7 @@ async function handleImportacao(e) {
                     }
 
                     if (hasChanges) {
+                        aplicarTotaisTanqueImportacao(updates, existing);
                         const { error } = await supabaseClient.from('veiculos').update(updates).eq('id', existing.id);
                         if (error) errors.push(`Erro ao atualizar ${placa}: ${error.message}`);
                         else updatedCount++;
@@ -778,22 +835,19 @@ async function handleImportacao(e) {
                     for (const [excelCol, dbCol] of Object.entries(fieldsMap)) {
                         let excelVal = rowNormalized[excelCol];
                         if (excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '') {
-                            excelVal = String(excelVal).trim();
-                            if (dbCol === 'situacao') excelVal = excelVal.toLowerCase();
-                            if (dbCol === 'vuc') excelVal = (excelVal.toUpperCase() === 'SIM' || excelVal.toUpperCase() === 'TRUE');
-                            if (['anofab', 'anomod', 'qtdtanque', 'volume_tanque', 'eixos'].includes(dbCol)) {
-                                excelVal = parseInt(excelVal) || null;
-                            }
-                            if (['media_km', 'pbt'].includes(dbCol)) {
-                                excelVal = parseFloat(String(excelVal).replace(',', '.')) || null;
-                            }
-                            newRecord[dbCol] = excelVal;
+                            newRecord[dbCol] = normalizarValorImportacao(dbCol, excelVal);
                         }
                     }
 
                     // Valores padrão obrigatórios se não vierem na planilha
+                    aplicarTotaisTanqueImportacao(newRecord);
                     if (!newRecord.filial) newRecord.filial = filialPadrao;
                     if (!newRecord.situacao) newRecord.situacao = 'ativo';
+
+                    if (!newRecord.filial) {
+                        errors.push(`Erro ao inserir ${placa}: informe FILIAL na planilha ou selecione uma filial padrão no modal.`);
+                        continue;
+                    }
 
                     const { error } = await supabaseClient.from('veiculos').insert([newRecord]);
                     if (error) errors.push(`Erro ao inserir ${placa}: ${error.message}`);
@@ -801,8 +855,8 @@ async function handleImportacao(e) {
                 }
             }
 
-            let message = `Processamento concluído!\nInseridos: ${insertedCount}\nAtualizados: ${updatedCount}\nSem alterações: ${skippedCount}`;
-            if (errors.length > 0) message += `\n\nâš ï¸ Erros (${errors.length}):\n` + errors.slice(0, 5).join('\n');
+            let message = `Processamento concluido!\nInseridos: ${insertedCount}\nAtualizados: ${updatedCount}\nSem alteracoes: ${skippedCount}`;
+            if (errors.length > 0) message += `\n\nErros (${errors.length}):\n` + errors.slice(0, 5).join('\n');
 
             alert(message);
             document.getElementById('modalImportacao').classList.add('hidden');

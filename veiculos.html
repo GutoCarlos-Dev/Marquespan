@@ -145,9 +145,9 @@
         <div class="modal-body">
             <form id="formImportacao">
                 <div class="form-group">
-                    <label for="importFilial">Filial para todos os veículos *</label>
-                    <select id="importFilial" class="glass-input" required>
-                      <option value="">Selecione a Filial</option>
+                    <label for="importFilial">Filial padrão para novos veículos</label>
+                    <select id="importFilial" class="glass-input">
+                      <option value="">Não alterar / não preencher</option>
                     </select>
                 </div>
 
@@ -161,7 +161,7 @@
                     <div class="file-upload-wrapper glass-input" id="dropZoneImportacao" style="height: auto; min-height: 100px;">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
                         <span class="upload-text" id="arquivoImportacaoLabel">Clique ou arraste o arquivo aqui</span>
-                        <p class="helper-text" style="font-size: 0.8rem; color: #888; margin-top: 5px;">Colunas: PLACA (Obrigatório), MODELO, TIPO, etc.</p>
+                        <p class="helper-text" style="font-size: 0.8rem; color: #888; margin-top: 5px;">Use PLACA e apenas as colunas que deseja atualizar. Células vazias são ignoradas.</p>
                         <input type="file" id="arquivoImportacao" accept=".xlsx, .xls" required>
                     </div>
                 </div>
