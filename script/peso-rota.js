@@ -840,7 +840,7 @@ function atualizarStatusLinha(rowIndex) {
 
 function atualizarContadores() {
     const contadores = { ok: 0, alerta: 0, excesso: 0 };
-    gridData.forEach(row => {
+    getLinhasVisiveis().forEach(({ row }) => {
         const status = getStatus(row);
         if (status.classe === 'status-ok') contadores.ok += 1;
         if (status.classe === 'status-alerta') contadores.alerta += 1;
