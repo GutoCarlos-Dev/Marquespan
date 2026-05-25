@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -98,7 +99,7 @@ async function carregarDados() {
 
     try {
         const intervalo = getIntervaloDiaSaoPaulo(dataAbastecimento);
-        const [resSaidas, resRetornos, resTanques, resEntradasEstoque, resSaidasEstoque] = await Promise.all([
+        const [resSaidas, resRetornos, estoqueAtual] = await Promise.all([
             supabaseClient
                 .from('saidas_combustivel')
                 .select('*, bicos(bombas(tanque_id, tanques(id, nome, tipo_combustivel, filial, capacidade)))')
@@ -109,26 +110,15 @@ async function carregarDados() {
                 .from('retorno_rota')
                 .select('id, data_retorno, placa, rota, nome_mot, hora_mot, operador_recebimento')
                 .eq('data_retorno', dataAbastecimento),
-            supabaseClient
-                .from('tanques')
-                .select('id, nome, tipo_combustivel, filial, capacidade'),
-            supabaseClient
-                .from('abastecimentos')
-                .select('tanque_id, qtd_litros'),
-            supabaseClient
-                .from('saidas_combustivel')
-                .select('qtd_litros, bicos(bombas(tanque_id))')
+            calcularEstoqueAtual(supabaseClient)
         ]);
 
         if (resSaidas.error) throw resSaidas.error;
         if (resRetornos.error) throw resRetornos.error;
-        if (resTanques.error) throw resTanques.error;
-        if (resEntradasEstoque.error) throw resEntradasEstoque.error;
-        if (resSaidasEstoque.error) throw resSaidasEstoque.error;
 
         saidasCombustivel = resSaidas.data || [];
         retornosRecebimento = resRetornos.data || [];
-        estoqueTanques = calcularEstoqueTanques(resTanques.data || [], resEntradasEstoque.data || [], resSaidasEstoque.data || []);
+        estoqueTanques = new Map((estoqueAtual || []).map(tanque => [Number(tanque.id), tanque]));
         await carregarVeiculosRecebimento(retornosRecebimento);
         renderDashboard();
         atualizarTimestamp();
@@ -151,6 +141,18 @@ function configurarRealtime() {
     abastecimentoChannel = supabaseClient
         .channel('monitoramento-abastecimento-interno')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'saidas_combustivel' }, () => {
+            carregarDados();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'abastecimentos' }, () => {
+            carregarDados();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tanques' }, () => {
+            carregarDados();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bombas' }, () => {
+            carregarDados();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bicos' }, () => {
             carregarDados();
         })
         .subscribe((status) => {
@@ -302,32 +304,6 @@ function agruparPorOrigem(registros) {
     return Array.from(mapa.values()).sort((a, b) => b.litros - a.litros);
 }
 
-function calcularEstoqueTanques(tanques, entradas, saidas) {
-    const mapa = new Map();
-
-    (tanques || []).forEach(tanque => {
-        mapa.set(Number(tanque.id), {
-            ...tanque,
-            capacidade: parseNumero(tanque.capacidade),
-            estoque_atual: 0
-        });
-    });
-
-    (entradas || []).forEach(entrada => {
-        const tanqueId = Number(entrada.tanque_id);
-        const tanque = mapa.get(tanqueId);
-        if (tanque) tanque.estoque_atual += parseNumero(entrada.qtd_litros);
-    });
-
-    (saidas || []).forEach(saida => {
-        const tanqueId = Number(saida.bicos?.bombas?.tanque_id);
-        const tanque = mapa.get(tanqueId);
-        if (tanque) tanque.estoque_atual -= parseNumero(saida.qtd_litros);
-    });
-
-    return mapa;
-}
-
 function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
     const placasAbastecidas = new Set((veiculosAbastecidos || []).map(item => normalizarPlaca(item.placa)));
     const filial = document.getElementById('filtroFilial')?.value || '';
@@ -442,7 +418,8 @@ function renderListaOrigens(origens) {
 function montarBarraTanque(item) {
     const capacidade = parseNumero(item.capacidade);
     const estoqueAtual = parseNumero(item.estoqueAtual);
-    const percentual = capacidade > 0 ? Math.max(0, Math.min(100, (estoqueAtual / capacidade) * 100)) : 0;
+    const percentual = capacidade > 0 ? (estoqueAtual / capacidade) * 100 : 0;
+    const largura = Math.max(0, Math.min(100, percentual));
     const percentualLabel = capacidade > 0 ? `${percentual.toFixed(0)}%` : '--%';
     const capacidadeLabel = capacidade > 0 ? `${formatarLitros(capacidade)} L` : 'capacidade N/I';
 
@@ -453,7 +430,7 @@ function montarBarraTanque(item) {
                 <strong>${percentualLabel}</strong>
             </div>
             <div class="tank-level-bar">
-                <span style="width: ${percentual}%"></span>
+                <span style="width: ${largura}%"></span>
             </div>
         </div>
     `;
