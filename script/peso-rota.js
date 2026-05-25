@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const SEMANAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'EXTRA', 'AVULSA'];
+const DIAS_RETORNO = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO', 'EXTRA', 'AVULSA'];
 const SEMANA_DIA_OFFSET = {
     SEGUNDA: 0,
     TERÇA: 1,
@@ -646,7 +647,7 @@ function selectSemana(index, value) {
 
 function selectDiaRetorno(index, value) {
     const atual = normalizarSemana(value);
-    const options = [''].concat(SEMANAS).map(semana => {
+    const options = [''].concat(DIAS_RETORNO).map(semana => {
         const label = semana || '-';
         return `<option value="${escapeHtml(semana)}" ${atual === semana ? 'selected' : ''}>${escapeHtml(label)}</option>`;
     }).join('');
