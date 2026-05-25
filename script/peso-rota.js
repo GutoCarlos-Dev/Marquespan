@@ -60,6 +60,7 @@ function bindEvents() {
     document.getElementById('btnImportarRoteiro')?.addEventListener('click', () => {
         document.getElementById('inputImportarRoteiro')?.click();
     });
+    document.getElementById('btnImportarRetornoRota')?.addEventListener('click', importarRetornoRota);
     document.getElementById('inputImportarRoteiro')?.addEventListener('change', importarRoteiroPeso);
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
@@ -1166,6 +1167,133 @@ function aplicarImportacaoRoteiro(importados) {
     }
 
     return { aplicadas, rotasNaoEncontradas };
+}
+
+function normalizarHoraRetorno(item) {
+    const hora = item?.hora_mot || item?.hora_aux || item?.hora_terceiro || '';
+    const match = String(hora).match(/\d{1,2}:\d{2}/);
+    return match ? match[0].padStart(5, '0') : '';
+}
+
+function getChaveRetorno(data, rota, motorista) {
+    return `${data}|${normalizarRota(rota)}|${normalizarBusca(motorista)}`;
+}
+
+function getChaveRetornoRotaData(data, rota) {
+    return `${data}|${normalizarRota(rota)}`;
+}
+
+function indexarRetornosRota(retornos) {
+    const porRotaMotoristaData = new Map();
+    const porRotaData = new Map();
+
+    (retornos || []).forEach(item => {
+        const rota = normalizarRota(item.rota);
+        const data = item.data_retorno;
+        if (!rota || !data) return;
+
+        const chaveRotaData = getChaveRetornoRotaData(data, rota);
+        if (!porRotaData.has(chaveRotaData)) porRotaData.set(chaveRotaData, []);
+        porRotaData.get(chaveRotaData).push(item);
+
+        const motorista = normalizarBusca(item.nome_mot);
+        if (motorista) {
+            porRotaMotoristaData.set(getChaveRetorno(data, rota, motorista), item);
+        }
+    });
+
+    return { porRotaMotoristaData, porRotaData };
+}
+
+function escolherRetornoParaLinha(row, indicesRetorno, dataEsperada) {
+    const rota = normalizarRota(row.rota);
+    const motorista = normalizarBusca(row.motorista);
+    if (!rota || !dataEsperada) return null;
+
+    if (motorista) {
+        return indicesRetorno.porRotaMotoristaData.get(getChaveRetorno(dataEsperada, rota, motorista)) || null;
+    }
+
+    const candidatos = indicesRetorno.porRotaData.get(getChaveRetornoRotaData(dataEsperada, rota)) || [];
+    return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+async function importarRetornoRota() {
+    const btn = document.getElementById('btnImportarRetornoRota');
+    const textoOriginal = btn?.innerHTML;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+    }
+
+    try {
+        const semanaAno = getSemanaAnoSelecionada();
+        const semanaSelecionada = normalizarSemana(document.getElementById('filtroSemana')?.value);
+        const periodo = getPeriodoSemanaAno(semanaAno);
+        const dataSelecionada = semanaSelecionada ? getDataDaSemana(semanaAno, semanaSelecionada) : null;
+
+        let query = supabaseClient
+            .from('retorno_rota')
+            .select('rota, data_retorno, nome_mot, hora_mot, hora_aux, hora_terceiro')
+            .order('data_retorno', { ascending: true });
+
+        if (dataSelecionada) {
+            query = query.eq('data_retorno', dataSelecionada);
+        } else {
+            query = query.gte('data_retorno', periodo.inicio).lte('data_retorno', periodo.fim);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const indicesRetorno = indexarRetornosRota(data || []);
+
+        if ((data || []).length === 0) {
+            const periodoTexto = dataSelecionada ? `${semanaSelecionada} (${dataSelecionada})` : `semana ${semanaAno}`;
+            alert(`Nenhum retorno de rota encontrado para ${periodoTexto}.`);
+            return;
+        }
+
+        let aplicadas = 0;
+        let semRetorno = 0;
+        let ignoradasPorSemana = 0;
+
+        gridData.forEach(row => {
+            if (!normalizarRota(row.rota)) return;
+
+            const semanaLinha = normalizarSemana(row.semana || row.dia_semana_retorno);
+            if (semanaSelecionada && semanaLinha !== semanaSelecionada) {
+                ignoradasPorSemana += 1;
+                return;
+            }
+
+            const dataEsperada = dataSelecionada ||
+                getDataDaSemana(row.semana_ano || semanaAno, row.dia_semana_retorno || row.semana);
+            const retorno = escolherRetornoParaLinha(row, indicesRetorno, dataEsperada);
+            if (!retorno) {
+                semRetorno += 1;
+                return;
+            }
+
+            row.dia_retorno = retorno.data_retorno;
+            row.semana_ano = getSemanaAnoDaData(retorno.data_retorno);
+            row.dia_semana_retorno = getDiaSemanaPorData(retorno.data_retorno);
+            row.horario_chegada = normalizarHoraRetorno(retorno);
+            aplicadas += 1;
+        });
+
+        renderGrid();
+        alert(`Importacao de retorno concluida.\nRotas atualizadas: ${aplicadas}\nSem retorno encontrado: ${semRetorno}\nIgnoradas por outro dia da semana: ${ignoradasPorSemana}`);
+    } catch (error) {
+        console.error('Erro ao importar retorno de rota:', error);
+        alert(`Erro ao importar retorno de rota: ${error.message || 'verifique o console.'}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    }
 }
 
 async function handlePaste(event) {
