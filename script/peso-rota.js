@@ -1,14 +1,16 @@
 import { supabaseClient } from './supabase.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
-const SEMANAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'EXTRA', 'AVULSA'];
+const SEMANAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
 const DIAS_RETORNO = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO', 'EXTRA', 'AVULSA'];
 const SEMANA_DIA_OFFSET = {
     SEGUNDA: 0,
     TERÇA: 1,
     QUARTA: 2,
     QUINTA: 3,
-    SEXTA: 4
+    SEXTA: 4,
+    SABADO: 5,
+    DOMINGO: 6
 };
 const PLANILHAS_DIAS_SEMANA = [
     'SEGUNDA',
@@ -418,44 +420,79 @@ async function carregarDados() {
 }
 
 function mesclarRotasComPesos(rotas, pesos, semanaAno) {
-    const pesosPorChave = new Map((pesos || []).map(item => [getChaveLinha(item), item]));
+    const pesosPorRota = criarMapaPesosPorRota(pesos);
     const rotasPorNumero = new Map((rotas || []).map(rota => [normalizarRota(rota.numero), rota]));
     const linhas = [];
-    const chavesIncluidas = new Set();
+    const rotasIncluidas = new Set();
 
     (rotas || []).forEach(rota => {
         const numeroRota = String(rota.numero || '').trim();
+        const chaveRota = normalizarRota(numeroRota);
+        if (!chaveRota || rotasIncluidas.has(chaveRota)) return;
+
         const semana = normalizarSemana(rota.semana);
         const diaRetorno = getDataDaSemana(semanaAno, semana);
-        const chave = `${diaRetorno}|${numeroRota}`;
-        const salvo = pesosPorChave.get(chave);
+        const salvo = pesosPorRota.get(chaveRota);
 
         linhas.push(criarLinha({
+            ...salvo,
             rota: numeroRota,
             semana,
             dias_rota: rota.dias,
-            supervisor: rota.supervisor || '',
-            dia_retorno: diaRetorno,
-            semana_ano: semanaAno,
-            ...salvo,
-            dias_rota: salvo?.dias_rota ?? rota.dias
+            supervisor: salvo?.supervisor || rota.supervisor || '',
+            dia_retorno: salvo?.dia_retorno || diaRetorno,
+            semana_ano: salvo?.semana_ano || semanaAno
         }));
-        chavesIncluidas.add(chave);
+        rotasIncluidas.add(chaveRota);
     });
 
     (pesos || []).forEach(item => {
-        const chave = getChaveLinha(item);
-        if (!chavesIncluidas.has(chave)) {
-            const rotaBase = rotasPorNumero.get(normalizarRota(item.rota));
+        const chaveRota = normalizarRota(item.rota);
+        if (chaveRota && !rotasIncluidas.has(chaveRota)) {
+            const rotaBase = rotasPorNumero.get(chaveRota);
             linhas.push(criarLinha({
                 ...item,
                 semana_ano: item.semana_ano || semanaAno,
                 dias_rota: item.dias_rota ?? rotaBase?.dias
             }));
+            rotasIncluidas.add(chaveRota);
         }
     });
 
     return linhas;
+}
+
+function criarMapaPesosPorRota(pesos) {
+    const mapa = new Map();
+
+    (pesos || []).forEach(item => {
+        const chaveRota = normalizarRota(item.rota);
+        if (!chaveRota) return;
+
+        const atual = mapa.get(chaveRota);
+        if (!atual || deveSubstituirPesoSalvo(atual, item)) {
+            mapa.set(chaveRota, item);
+        }
+    });
+
+    return mapa;
+}
+
+function deveSubstituirPesoSalvo(atual, candidato) {
+    const dataAtual = Date.parse(atual?.updated_at || atual?.created_at || '');
+    const dataCandidato = Date.parse(candidato?.updated_at || candidato?.created_at || '');
+
+    if (Number.isFinite(dataAtual) || Number.isFinite(dataCandidato)) {
+        return (Number.isFinite(dataCandidato) ? dataCandidato : 0) >= (Number.isFinite(dataAtual) ? dataAtual : 0);
+    }
+
+    const scoreAtual = contarCamposPreenchidos(atual);
+    const scoreCandidato = contarCamposPreenchidos(candidato);
+    return scoreCandidato >= scoreAtual;
+}
+
+function contarCamposPreenchidos(item) {
+    return Object.values(item || {}).filter(value => value !== null && value !== undefined && String(value).trim() !== '').length;
 }
 
 function criarLinha(data = {}) {
@@ -852,11 +889,14 @@ async function salvarTudo() {
             .filter(row => normalizarTexto(row.rota))
             .map(row => prepararPayload(row));
 
+        payload = deduplicarPayloadPorRota(payload);
+
         if (payload.length === 0) {
             alert('Nenhuma rota preenchida para salvar.');
             return;
         }
 
+        await removerDuplicadosDaSemana(payload);
         marcarLinhas('saving');
         let { data, error } = await supabaseClient
             .from('peso_rota')
@@ -890,6 +930,35 @@ async function salvarTudo() {
             btn.disabled = false;
             btn.innerHTML = textoOriginal;
         }
+    }
+}
+
+function deduplicarPayloadPorRota(payload) {
+    return Array.from((payload || []).reduce((mapa, item) => {
+        const chaveRota = normalizarRota(item.rota);
+        if (chaveRota) mapa.set(chaveRota, item);
+        return mapa;
+    }, new Map()).values());
+}
+
+async function removerDuplicadosDaSemana(payload) {
+    const periodo = getPeriodoSemanaAno(getSemanaAnoSelecionada());
+    const rotasProcessadas = new Set();
+
+    for (const item of payload || []) {
+        const chaveRota = normalizarRota(item.rota);
+        if (!chaveRota || !item.dia_retorno || rotasProcessadas.has(chaveRota)) continue;
+        rotasProcessadas.add(chaveRota);
+
+        const { error } = await supabaseClient
+            .from('peso_rota')
+            .delete()
+            .gte('dia_retorno', periodo.inicio)
+            .lte('dia_retorno', periodo.fim)
+            .eq('rota', item.rota)
+            .neq('dia_retorno', item.dia_retorno);
+
+        if (error) throw error;
     }
 }
 
