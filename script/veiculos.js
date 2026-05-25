@@ -18,13 +18,13 @@ function setupEventListeners() {
     if (btnBuscar) {
         btnBuscar.addEventListener('click', carregarVeiculos);
     }
-    
+
     // Botão Novo Veículo
     const btnNovo = document.getElementById('btn-novo-veiculo');
     if (btnNovo) {
         btnNovo.addEventListener('click', () => abrirModalVeiculo());
     }
-    
+
     // Botão Importar
     const btnImportar = document.getElementById('btn-importar-massa');
     if (btnImportar) {
@@ -33,13 +33,13 @@ function setupEventListeners() {
             if (modal) modal.classList.remove('hidden');
         });
     }
-    
+
     // Botão Exportar
     const btnExportar = document.getElementById('btn-exportar-xls');
     if (btnExportar) {
         btnExportar.addEventListener('click', exportarExcel);
     }
-    
+
     // Fechar modal de importação (Botão X)
     const closeImportBtn = document.querySelector('#modalImportacao .close-button');
     if (closeImportBtn) {
@@ -59,7 +59,7 @@ function setupEventListeners() {
     if (closeVeiculoBtn) {
         closeVeiculoBtn.addEventListener('click', fecharModalVeiculo);
     }
-    
+
     // Form de Veículo - Salvar
     const formVeiculo = document.getElementById('formVeiculo');
     if (formVeiculo) {
@@ -95,7 +95,7 @@ function setupEventListeners() {
         });
     }
 
-    // ✅ Adiciona atalho Ctrl+S para salvar no modal do veículo
+    // Adiciona atalho Ctrl+S para salvar no modal do veículo.
     const modalVeiculo = document.getElementById('modalVeiculo');
     if (modalVeiculo) {
         modalVeiculo.addEventListener('keydown', (e) => {
@@ -104,7 +104,7 @@ function setupEventListeners() {
 
             if (e.ctrlKey && e.key.toLowerCase() === 's') {
                 e.preventDefault(); // Impede a ação padrão do navegador (salvar página)
-                
+
                 // Encontra o botão de salvar dentro do formulário e simula um clique
                 const formVeiculo = document.getElementById('formVeiculo');
                 const btnSalvar = formVeiculo?.querySelector('button[type="submit"]');
@@ -115,18 +115,11 @@ function setupEventListeners() {
         });
     }
 
-    // Listener para o link "Mais Detalhes" no modal de veículo
-    const btnMaisDetalhes = document.getElementById('btnMaisDetalhes');
-    const secaoDetalhes = document.getElementById('secaoDetalhesAdicionais');
-    if (btnMaisDetalhes && secaoDetalhes) {
-        btnMaisDetalhes.addEventListener('click', (e) => {
-            e.preventDefault();
-            secaoDetalhes.classList.toggle('hidden');
-            btnMaisDetalhes.innerHTML = secaoDetalhes.classList.contains('hidden') 
-                ? '<i class="fas fa-plus-circle"></i> Mais Detalhes' 
-                : '<i class="fas fa-minus-circle"></i> Menos Detalhes';
-        });
-    }
+    // Atualiza capacidade total ao informar os dois tanques.
+    ['veiculoTanque1', 'veiculoTanque2'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', atualizarCapacidadeTotalCombustivel);
+    });
 
 // Botão para baixar modelo de importação no modal
     const btnModeloImport = document.getElementById('btnBaixarModeloVeiculos');
@@ -148,7 +141,7 @@ async function carregarFiliais() {
     const select = document.getElementById('campo-filial');
     const selectImport = document.getElementById('importFilial');
     const selectModal = document.getElementById('veiculoFilial');
-    
+
     try {
         const { data, error } = await supabaseClient
             .from('filiais')
@@ -167,7 +160,7 @@ async function carregarFiliais() {
                 const option = document.createElement('option');
                 option.value = f.sigla || f.nome;
                 option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
-                
+
                 if (select) select.appendChild(option.cloneNode(true));
                 if (selectImport) selectImport.appendChild(option.cloneNode(true));
                 if (selectModal) selectModal.appendChild(option.cloneNode(true));
@@ -181,12 +174,12 @@ async function carregarFiliais() {
 function carregarTipos() {
     const container = document.getElementById('campo-tipo-options');
     const selectModal = document.getElementById('veiculoTipo');
-    
+
     // Lista fixa conforme solicitado
     const tipos = ['CAMINHÃO 3/4','BITREM','BITRUCK','HR/VAN','LS','MUNCK','SEMI-REBOQUE','TRUCK','EMPILHADEIRA', 'GERADOR'];
-    
+
     if (!container) return;
-    
+
     container.innerHTML = '';
 
     tipos.forEach(tipo => {
@@ -210,14 +203,14 @@ function carregarTipos() {
 async function carregarVeiculos() {
     const tbody = document.getElementById('grid-veiculos-body');
     if (!tbody) return;
-    
+
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     const filial = document.getElementById('campo-filial').value;
     const placa = document.getElementById('campo-placa').value.trim();
     const modelo = document.getElementById('campo-modelo').value.trim();
     const situacao = document.getElementById('campo-situacao').value;
-    
+
     // Tipos selecionados
     const tiposSelecionados = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
 
@@ -239,7 +232,7 @@ async function carregarVeiculos() {
 
         veiculosData = data;
         renderizarTabela(data);
-        
+
         // Atualiza contador
         const contador = document.getElementById('grid-records-count');
         if (contador) contador.textContent = `${data.length} veículos`;
@@ -261,13 +254,13 @@ function renderizarTabela(veiculos) {
 
     veiculos.forEach(v => {
         const tr = document.createElement('tr');
-        
+
         const tdFilial = document.createElement('td'); tdFilial.textContent = v.filial || '-';
         const tdPlaca = document.createElement('td'); tdPlaca.textContent = v.placa; tdPlaca.style.fontWeight = 'bold';
         const tdModelo = document.createElement('td'); tdModelo.textContent = v.modelo || '-';
         const tdRenavan = document.createElement('td'); tdRenavan.textContent = v.renavan || '-';
         const tdTipo = document.createElement('td'); tdTipo.textContent = v.tipo || '-';
-        
+
         const tdSituacao = document.createElement('td');
         const spanStatus = document.createElement('span');
         spanStatus.className = `status-badge ${v.situacao === 'ativo' ? 'status-ativo' : 'status-inativo'}`;
@@ -282,13 +275,13 @@ function renderizarTabela(veiculos) {
         }
 
         const tdAcoes = document.createElement('td');
-        
+
         const btnEdit = document.createElement('button');
         btnEdit.className = 'btn-icon edit btn-edit';
         btnEdit.title = 'Editar';
         btnEdit.dataset.id = v.id;
         btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
-        
+
         const btnDelete = document.createElement('button');
         btnDelete.className = 'btn-icon delete btn-delete';
         btnDelete.title = 'Excluir';
@@ -345,6 +338,35 @@ function updateTipoFilterText(optionsContainer, textElement) {
     }
 }
 
+function setInputValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? '';
+}
+
+function setSelectBoolean(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value ? 'true' : 'false';
+}
+
+function parseNumberValue(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = parseFloat(String(value).replace(',', '.'));
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
+function atualizarCapacidadeTotalCombustivel() {
+    const tanque1 = parseNumberValue(document.getElementById('veiculoTanque1')?.value) || 0;
+    const tanque2 = parseNumberValue(document.getElementById('veiculoTanque2')?.value) || 0;
+    const total = document.getElementById('veiculoVolumeTanque');
+    if (total) total.value = tanque1 + tanque2 > 0 ? (tanque1 + tanque2).toFixed(2) : '';
+}
+
+function configurarObrigatoriedadeFotos(isNovo) {
+    document.querySelectorAll('.veiculo-foto-input[data-required-new="true"]').forEach(input => {
+        input.required = isNovo;
+    });
+}
+
 function abrirModalVeiculo(veiculo = null) {
     const modal = document.getElementById('modalVeiculo');
     const form = document.getElementById('formVeiculo');
@@ -353,62 +375,69 @@ function abrirModalVeiculo(veiculo = null) {
     if (!modal || !form) return;
 
     form.reset();
-    
-    // Reseta a visibilidade da seção de detalhes adicionais ao abrir o modal
-    const secaoDetalhes = document.getElementById('secaoDetalhesAdicionais');
-    if (secaoDetalhes) secaoDetalhes.classList.add('hidden');
-    if (document.getElementById('btnMaisDetalhes')) document.getElementById('btnMaisDetalhes').innerHTML = '<i class="fas fa-plus-circle"></i> Mais Detalhes';
+    configurarObrigatoriedadeFotos(!veiculo);
 
     if (veiculo) {
         title.textContent = 'Editar Veículo';
-        document.getElementById('veiculoId').value = veiculo.id;
-        document.getElementById('veiculoFilial').value = veiculo.filial || '';
-        document.getElementById('veiculoPlaca').value = veiculo.placa || '';
-        document.getElementById('veiculoMarca').value = veiculo.marca || '';
-        document.getElementById('veiculoModelo').value = veiculo.modelo || '';
-        document.getElementById('veiculoRenavan').value = veiculo.renavan || '';
-        document.getElementById('veiculoTipo').value = veiculo.tipo || '';
-        document.getElementById('veiculoSituacao').value = veiculo.situacao || 'ativo';
-        document.getElementById('veiculoQrcode').value = veiculo.qrcode || '';
-        document.getElementById('veiculoMediaKm').value = (veiculo.media_km !== null && veiculo.media_km !== undefined) ? veiculo.media_km : '';
-        document.getElementById('veiculoChassi').value = veiculo.chassi || '';
-        
-        const anoFab = document.getElementById('veiculoAnoFab');
-        if(anoFab) anoFab.value = veiculo.anofab || '';
-        
-        const anoMod = document.getElementById('veiculoAnoMod');
-        if(anoMod) anoMod.value = veiculo.anomod || '';
-        
-        const qtdTanque = document.getElementById('veiculoQtdTanque');
-        if(qtdTanque) qtdTanque.value = veiculo.qtdtanque || '';
-
-        const volumeTanque = document.getElementById('veiculoVolumeTanque');
-        if(volumeTanque) volumeTanque.value = veiculo.volume_tanque || '';
-
-        // Preenchimento dos campos adicionais (Mais Detalhes)
-        if(document.getElementById('veiculoFabricante')) document.getElementById('veiculoFabricante').value = veiculo.fabricante || '';
-        if(document.getElementById('veiculoTransmissao')) document.getElementById('veiculoTransmissao').value = veiculo.transmissao || '';
-        if(document.getElementById('veiculoEixos')) document.getElementById('veiculoEixos').value = veiculo.eixos || '';
-        if(document.getElementById('veiculoPBT')) document.getElementById('veiculoPBT').value = veiculo.pbt || '';
-        if(document.getElementById('veiculoDimensoes')) document.getElementById('veiculoDimensoes').value = veiculo.dimensoes || '';
-        if(document.getElementById('veiculoVuc')) document.getElementById('veiculoVuc').value = veiculo.vuc ? 'true' : 'false';
-        if(document.getElementById('veiculoCor')) document.getElementById('veiculoCor').value = veiculo.cor || '';
-        if(document.getElementById('veiculoCidadeEmplac')) document.getElementById('veiculoCidadeEmplac').value = veiculo.cidade_emplacamento || '';
-        if(document.getElementById('veiculoModeloTK')) document.getElementById('veiculoModeloTK').value = veiculo.modelo_tk || '';
-        if(document.getElementById('veiculoSerieTK')) document.getElementById('veiculoSerieTK').value = veiculo.serie_tk || '';
-        if(document.getElementById('veiculoBau')) document.getElementById('veiculoBau').value = veiculo.bau_tipo || '';
-        if(document.getElementById('veiculoSerieBau')) document.getElementById('veiculoSerieBau').value = veiculo.serie_bau || '';
-        if(document.getElementById('veiculoMecanismo')) document.getElementById('veiculoMecanismo').value = veiculo.mecanismo_operacional || '';
-        if(document.getElementById('veiculoSerieMecanismo')) document.getElementById('veiculoSerieMecanismo').value = veiculo.serie_mecanismo || '';
-        if(document.getElementById('veiculoRastreador')) document.getElementById('veiculoRastreador').value = veiculo.rastreador || '';
+        setInputValue('veiculoId', veiculo.id);
+        setInputValue('veiculoFilial', veiculo.filial);
+        setInputValue('veiculoPlaca', veiculo.placa);
+        setInputValue('veiculoModelo', veiculo.modelo);
+        setInputValue('veiculoTipo', veiculo.tipo);
+        setInputValue('veiculoSituacao', veiculo.situacao || 'ativo');
+        setInputValue('veiculoQrcode', veiculo.qrcode);
+        setInputValue('veiculoRenavan', veiculo.renavan);
+        setInputValue('veiculoAnoFab', veiculo.anofab);
+        setInputValue('veiculoAnoMod', veiculo.anomod);
+        setInputValue('veiculoNumeroCRV', veiculo.numero_crv);
+        setInputValue('veiculoChassi', veiculo.chassi);
+        setInputValue('veiculoFabricante', veiculo.fabricante || veiculo.marca);
+        setInputValue('veiculoModeloVersao', veiculo.modelo_versao);
+        setInputValue('veiculoEspecie', veiculo.especie);
+        setInputValue('veiculoCor', veiculo.cor);
+        setInputValue('veiculoCombustivel', veiculo.combustivel);
+        setInputValue('veiculoPotenciaCilindrada', veiculo.potencia_cilindrada);
+        setInputValue('veiculoMotor', veiculo.motor);
+        setInputValue('veiculoEixos', veiculo.eixos);
+        setInputValue('veiculoPBT', veiculo.pbt);
+        setInputValue('veiculoCarroceria', veiculo.carroceria);
+        setInputValue('veiculoCidadeEmplac', veiculo.cidade_emplacamento || veiculo.local_emplacamento);
+        setInputValue('veiculoObservacoes', veiculo.observacoes_veiculo);
+        setInputValue('veiculoTransmissao', veiculo.transmissao);
+        setSelectBoolean('veiculoVuc', veiculo.vuc);
+        setInputValue('veiculoDimensoes', veiculo.dimensoes);
+        setInputValue('veiculoTanque1', veiculo.tanque_combustivel_1);
+        setInputValue('veiculoTanque2', veiculo.tanque_combustivel_2);
+        setInputValue('veiculoVolumeTanque', veiculo.volume_tanque);
+        setInputValue('veiculoMediaKm', veiculo.media_km);
+        setInputValue('veiculoTara', veiculo.tara_veiculo);
+        setInputValue('veiculoTacografoTipo', veiculo.tacografo_tipo);
+        setInputValue('veiculoTacografoMarca', veiculo.tacografo_marca);
+        setInputValue('veiculoRastreador', veiculo.rastreador);
+        setSelectBoolean('veiculoVideoMonitoramento', veiculo.video_monitoramento);
+        setSelectBoolean('veiculoPedagioAutomatico', veiculo.cobranca_automatica_pedagio);
+        setInputValue('veiculoCategoriaCobranca', veiculo.categoria_cobranca);
+        setInputValue('veiculoModeloTK', veiculo.modelo_tk);
+        setInputValue('veiculoSerieTK', veiculo.serie_tk);
+        setInputValue('veiculoMotorTK', veiculo.motor_tk);
+        setInputValue('veiculoCompressorTK', veiculo.compressor_tk);
+        setInputValue('veiculoBau', veiculo.bau_tipo || veiculo.marca_implemento);
+        setInputValue('veiculoSerieBau', veiculo.serie_bau);
+        setInputValue('veiculoMesAnoFabr', veiculo.mes_ano_fabricacao);
+        setInputValue('veiculoMecanismo', veiculo.mecanismo_operacional);
+        setInputValue('veiculoSerieMecanismo', veiculo.serie_mecanismo);
     } else {
         title.textContent = 'Novo Veículo';
-        document.getElementById('veiculoId').value = '';
+        setInputValue('veiculoId', '');
+        setInputValue('veiculoSituacao', 'ativo');
+        setSelectBoolean('veiculoVuc', false);
+        setSelectBoolean('veiculoVideoMonitoramento', false);
+        setSelectBoolean('veiculoPedagioAutomatico', false);
     }
 
+    atualizarCapacidadeTotalCombustivel();
     modal.classList.remove('hidden');
 }
-
 function fecharModalVeiculo() {
     const modal = document.getElementById('modalVeiculo');
     if (modal) modal.classList.add('hidden');
@@ -432,72 +461,93 @@ async function editarVeiculo(id) {
 
 async function salvarVeiculo(e) {
     e.preventDefault();
-    
+
     const id = document.getElementById('veiculoId').value;
-    
-    // Helper para pegar valor ou null
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? (el.value || null) : null;
     };
 
+    atualizarCapacidadeTotalCombustivel();
+
     const payload = {
         filial: getVal('veiculoFilial'),
         placa: getVal('veiculoPlaca')?.toUpperCase(),
-        marca: getVal('veiculoMarca'),
         modelo: getVal('veiculoModelo'),
-        renavan: getVal('veiculoRenavan'),
         tipo: getVal('veiculoTipo'),
         situacao: getVal('veiculoSituacao'),
         qrcode: getVal('veiculoQrcode'),
-        chassi: getVal('veiculoChassi'),
+        renavan: getVal('veiculoRenavan'),
         anofab: getVal('veiculoAnoFab'),
         anomod: getVal('veiculoAnoMod'),
-        qtdtanque: getVal('veiculoQtdTanque'),
-        volume_tanque: getVal('veiculoVolumeTanque'),
-        media_km: getVal('veiculoMediaKm'),
+        numero_crv: getVal('veiculoNumeroCRV'),
+        chassi: getVal('veiculoChassi'),
         fabricante: getVal('veiculoFabricante'),
-        transmissao: getVal('veiculoTransmissao'),
-        eixos: parseInt(getVal('veiculoEixos')) || null,
-        pbt: parseFloat(getVal('veiculoPBT')) || null,
-        dimensoes: getVal('veiculoDimensoes'),
-        vuc: getVal('veiculoVuc') === 'true',
+        marca: getVal('veiculoFabricante'),
+        modelo_versao: getVal('veiculoModeloVersao'),
+        especie: getVal('veiculoEspecie'),
         cor: getVal('veiculoCor'),
+        combustivel: getVal('veiculoCombustivel'),
+        potencia_cilindrada: getVal('veiculoPotenciaCilindrada'),
+        motor: getVal('veiculoMotor'),
+        eixos: parseInt(getVal('veiculoEixos')) || null,
+        pbt: parseNumberValue(getVal('veiculoPBT')),
+        carroceria: getVal('veiculoCarroceria'),
         cidade_emplacamento: getVal('veiculoCidadeEmplac'),
+        local_emplacamento: getVal('veiculoCidadeEmplac'),
+        observacoes_veiculo: getVal('veiculoObservacoes'),
+        transmissao: getVal('veiculoTransmissao'),
+        vuc: getVal('veiculoVuc') === 'true',
+        dimensoes: getVal('veiculoDimensoes'),
+        tanque_combustivel_1: parseNumberValue(getVal('veiculoTanque1')),
+        tanque_combustivel_2: parseNumberValue(getVal('veiculoTanque2')),
+        volume_tanque: parseNumberValue(getVal('veiculoVolumeTanque')),
+        qtdtanque: [getVal('veiculoTanque1'), getVal('veiculoTanque2')].filter(v => parseNumberValue(v) > 0).length || null,
+        media_km: parseNumberValue(getVal('veiculoMediaKm')),
+        tara_veiculo: parseNumberValue(getVal('veiculoTara')),
+        tacografo_tipo: getVal('veiculoTacografoTipo'),
+        tacografo_marca: getVal('veiculoTacografoMarca'),
+        rastreador: getVal('veiculoRastreador'),
+        video_monitoramento: getVal('veiculoVideoMonitoramento') === 'true',
+        cobranca_automatica_pedagio: getVal('veiculoPedagioAutomatico') === 'true',
+        categoria_cobranca: getVal('veiculoCategoriaCobranca'),
         modelo_tk: getVal('veiculoModeloTK'),
         serie_tk: getVal('veiculoSerieTK'),
+        motor_tk: getVal('veiculoMotorTK'),
+        compressor_tk: getVal('veiculoCompressorTK'),
         bau_tipo: getVal('veiculoBau'),
+        marca_implemento: getVal('veiculoBau'),
         serie_bau: getVal('veiculoSerieBau'),
+        mes_ano_fabricacao: getVal('veiculoMesAnoFabr'),
         mecanismo_operacional: getVal('veiculoMecanismo'),
-        serie_mecanismo: getVal('veiculoSerieMecanismo'),
-        rastreador: getVal('veiculoRastreador')
+        serie_mecanismo: getVal('veiculoSerieMecanismo')
     };
 
-   // Processa media_km para lidar com vírgula como separador decimal
-    if (payload.media_km) {
-        const cleanedMediaKm = String(payload.media_km).replace(',', '.');
-        const parsedMediaKm = parseFloat(cleanedMediaKm);
-        payload.media_km = isNaN(parsedMediaKm) ? null : parsedMediaKm;
-    } else {
-        payload.media_km = null; // Garante que seja null se a string estiver vazia
-    }
-
-    // Remove campos que são nulos e não devem ser enviados
-    if (!payload.anofab) delete payload.anofab;
-    if (!payload.anomod) delete payload.anomod;
-    if (!payload.qtdtanque) delete payload.qtdtanque;
-    if (!payload.volume_tanque) delete payload.volume_tanque;
-    if (payload.media_km === null) delete payload.media_km; // Remove se for null após o parsing
+    Object.keys(payload).forEach(key => {
+        if (payload[key] === null || payload[key] === undefined || payload[key] === '') delete payload[key];
+    });
 
     try {
+        let savedId = id;
         let error;
+
         if (id) {
             ({ error } = await supabaseClient.from('veiculos').update(payload).eq('id', id));
         } else {
-            ({ error } = await supabaseClient.from('veiculos').insert([payload]));
+            const result = await supabaseClient.from('veiculos').insert([payload]).select('id').single();
+            error = result.error;
+            savedId = result.data?.id;
         }
 
         if (error) throw error;
+        if (!savedId) throw new Error('ID do veículo não retornado após salvar.');
+
+        const fotosPayload = await uploadFotosVeiculo(savedId, payload.placa);
+        if (Object.keys(fotosPayload).length > 0) {
+            const { error: fotoError } = await supabaseClient.from('veiculos').update(fotosPayload).eq('id', savedId);
+            if (fotoError) throw fotoError;
+        }
+
         alert('Veículo salvo com sucesso!');
         fecharModalVeiculo();
         carregarVeiculos();
@@ -505,6 +555,35 @@ async function salvarVeiculo(e) {
         console.error('Erro ao salvar:', err);
         alert('Erro ao salvar veículo: ' + err.message);
     }
+}
+
+async function uploadFotosVeiculo(veiculoId, placa) {
+    const fotos = [
+        { inputId: 'veiculoFotoDianteira', coluna: 'foto_dianteira_url', nome: 'dianteira' },
+        { inputId: 'veiculoFotoTraseira', coluna: 'foto_traseira_url', nome: 'traseira' },
+        { inputId: 'veiculoFotoLateral1', coluna: 'foto_lateral_1_url', nome: 'lateral_1' },
+        { inputId: 'veiculoFotoLateral2', coluna: 'foto_lateral_2_url', nome: 'lateral_2' }
+    ];
+
+    const uploaded = {};
+    const pasta = String(placa || veiculoId).replace(/[^a-z0-9]/gi, '_').toUpperCase();
+
+    for (const foto of fotos) {
+        const input = document.getElementById(foto.inputId);
+        const file = input?.files?.[0];
+        if (!file) continue;
+
+        const ext = file.name.split('.').pop() || 'jpg';
+        const filePath = `${pasta}/${foto.nome}.${ext}`;
+        const { error } = await supabaseClient.storage
+            .from('veiculos_fotos')
+            .upload(filePath, file, { upsert: true, contentType: file.type });
+
+        if (error) throw new Error(`Falha ao enviar ${foto.nome}: ${error.message}`);
+        uploaded[foto.coluna] = filePath;
+    }
+
+    return uploaded;
 }
 
 async function excluirVeiculo(id) {
@@ -534,17 +613,17 @@ function baixarModeloImportacao() {
     if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX não carregada.');
 
     const headers = [
-        'PLACA', 'FILIAL', 'MODELO', 'TIPO', 'RENAVAN', 'SITUACAO', 'QRCODE', 'MARCA', 'CHASSI', 
-        'ANO_FAB', 'ANO_MOD', 'QTD_TANQUE', 'VOLUME_TANQUE', 'MEDIA_KM', 'FABRICANTE', 
-        'TRANSMISSAO', 'EIXOS', 'PBT', 'DIMENSOES', 'VUC', 'COR', 'CIDADE_EMPLAC', 
+        'PLACA', 'FILIAL', 'MODELO', 'TIPO', 'RENAVAN', 'SITUACAO', 'QRCODE', 'MARCA', 'CHASSI',
+        'ANO_FAB', 'ANO_MOD', 'QTD_TANQUE', 'VOLUME_TANQUE', 'MEDIA_KM', 'FABRICANTE',
+        'TRANSMISSAO', 'EIXOS', 'PBT', 'DIMENSOES', 'VUC', 'COR', 'CIDADE_EMPLAC',
         'MODELO_TK', 'SERIE_TK', 'BAU_TIPO', 'SERIE_BAU', 'MECANISMO', 'SERIE_MECANISMO', 'RASTREADOR'
     ];
 
     const data = [{
         'PLACA': 'ABC1234', 'FILIAL': 'MATRIZ', 'MODELO': 'VOLVO FH 540', 'TIPO': 'LS', 'RENAVAN': '123456789',
-        'SITUACAO': 'ativo', 'QRCODE': '', 'MARCA': 'VOLVO', 'CHASSI': '9BWZZZ0000000000', 
+        'SITUACAO': 'ativo', 'QRCODE': '', 'MARCA': 'VOLVO', 'CHASSI': '9BWZZZ0000000000',
         'ANO_FAB': 2023, 'ANO_MOD': 2024, 'QTD_TANQUE': 2, 'VOLUME_TANQUE': 800, 'MEDIA_KM': 2.5,
-        'FABRICANTE': 'VOLVO', 'TRANSMISSAO': 'AUTOMÁTICA', 'EIXOS': 6, 'PBT': 74.0, 
+        'FABRICANTE': 'VOLVO', 'TRANSMISSAO': 'AUTOMÁTICA', 'EIXOS': 6, 'PBT': 74.0,
         'DIMENSOES': '18.0/2.6/4.4', 'VUC': 'NÃO', 'COR': 'BRANCO', 'CIDADE_EMPLAC': 'SÃO PAULO',
         'MODELO_TK': '', 'SERIE_TK': '', 'BAU_TIPO': 'REFRIGERADO', 'SERIE_BAU': '',
         'MECANISMO': '', 'SERIE_MECANISMO': '', 'RASTREADOR': 'SASCAR'
@@ -558,12 +637,12 @@ function baixarModeloImportacao() {
 
 async function handleImportacao(e) {
     e.preventDefault();
-    
+
     const fileInput = document.getElementById('arquivoImportacao');
     const filialSelect = document.getElementById('importFilial');
     const filialPadrao = filialSelect.value;
     const btnSubmit = e.target.querySelector('button[type="submit"]');
-    
+
     if (!fileInput.files.length) {
         alert('Selecione um arquivo (.xlsx ou .xls).');
         return;
@@ -660,10 +739,10 @@ async function handleImportacao(e) {
 
                     for (const [excelCol, dbCol] of Object.entries(fieldsMap)) {
                         let excelVal = rowNormalized[excelCol];
-                        
+
                         if (excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '') {
                             excelVal = String(excelVal).trim();
-                            
+
                             // Tratamento de tipos de dados
                             if (dbCol === 'situacao') excelVal = excelVal.toLowerCase();
                             if (dbCol === 'vuc') excelVal = (excelVal.toUpperCase() === 'SIM' || excelVal.toUpperCase() === 'TRUE');
@@ -675,7 +754,7 @@ async function handleImportacao(e) {
                             }
 
                             const dbVal = existing[dbCol];
-                            
+
                             // Se a coluna na planilha tiver valor e for diferente do que está no banco, atualiza.
                             // Se estiver vazio na planilha, o IF externo já ignora a coluna.
                             if (excelVal !== dbVal) {
@@ -695,7 +774,7 @@ async function handleImportacao(e) {
 
                 } else {
                     const newRecord = { placa: placa };
-                    
+
                     for (const [excelCol, dbCol] of Object.entries(fieldsMap)) {
                         let excelVal = rowNormalized[excelCol];
                         if (excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '') {
@@ -722,9 +801,9 @@ async function handleImportacao(e) {
                 }
             }
 
-            let message = `Processamento concluído!\n✅ Inseridos: ${insertedCount}\n🔄 Atualizados: ${updatedCount}\n⏭️ Sem alterações: ${skippedCount}`;
-            if (errors.length > 0) message += `\n\n⚠️ Erros (${errors.length}):\n` + errors.slice(0, 5).join('\n');
-            
+            let message = `Processamento concluído!\nInseridos: ${insertedCount}\nAtualizados: ${updatedCount}\nSem alterações: ${skippedCount}`;
+            if (errors.length > 0) message += `\n\nâš ï¸ Erros (${errors.length}):\n` + errors.slice(0, 5).join('\n');
+
             alert(message);
             document.getElementById('modalImportacao').classList.add('hidden');
             carregarVeiculos();
@@ -764,7 +843,7 @@ function ordenarVeiculos(column) {
     document.querySelectorAll('th.sortable i').forEach(icon => {
         icon.className = 'fas fa-sort';
     });
-    
+
     const activeTh = document.querySelector(`th[data-sort="${column}"] i`);
     if (activeTh) {
         activeTh.className = currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';

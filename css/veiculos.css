@@ -307,7 +307,8 @@
 
 /* Inputs do Modal */
 .modal-body input,
-.modal-body select {
+.modal-body select,
+.modal-body textarea {
     width: 100%;
     padding: 10px 15px;
     border: 1px solid #e0e0e0;
@@ -323,11 +324,27 @@
 }
 
 .modal-body input:focus,
-.modal-body select:focus {
+.modal-body select:focus,
+.modal-body textarea:focus {
     background-color: #fff;
     border-color: #006937;
     box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
     outline: none;
+}
+
+.modal-body textarea {
+    min-height: 86px;
+    height: auto;
+    resize: vertical;
+}
+
+.modal-body input[type="file"] {
+    padding: 8px 12px;
+}
+
+.modal-body input[readonly] {
+    background-color: #f8f9fa;
+    color: #555;
 }
 
 .modal-body label {
@@ -355,6 +372,61 @@
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+.veiculo-modal {
+    max-width: 1180px;
+}
+
+.veiculo-form-section {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 18px;
+    background: #ffffff;
+}
+
+.veiculo-form-section h4 {
+    margin: 0 0 16px;
+    color: #006937;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.veiculo-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+.veiculo-form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.veiculo-upload-hint {
+    margin: 12px 0 0;
+    color: #666;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+    .veiculo-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .veiculo-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .veiculo-form-section {
+        padding: 14px;
+    }
 }
 
 /* Botões de Ação na Tabela */

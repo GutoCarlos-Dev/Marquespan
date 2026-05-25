@@ -28,7 +28,7 @@
     <!-- Container para injeção do Menu Lateral -->
     <div id="menu-container"></div>
 
-    <!-- 🧩 Conteúdo principal -->
+    <!-- ðŸ§© Conteúdo principal -->
     <div class="main-content">
       <header class="header glass-header">
         <h1><i class="fas fa-truck"></i> Gestão de Veículos</h1>
@@ -100,8 +100,7 @@
         </div>
       </section>
     </div>
-
-    <!-- ✅ Grid com rolagem horizontal -->
+    <!-- Grid com rolagem horizontal -->
     <div class="glass-panel">
       <div class="panel-header">
         <h3><i class="fas fa-list"></i> Lista de Veículos</h3>
@@ -130,11 +129,11 @@
     </div>
   </div>
 
-  <!-- 🦶 Rodapé -->
+  <!-- ðŸ¦¶ Rodapé -->
   <footer class="footer">
     &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
   </footer>
-  <!-- 🚀 Scripts -->
+  <!-- Scripts -->
 
   <!-- Modal para Importação em Massa -->
   <div id="modalImportacao" class="modal-backdrop hidden">
@@ -151,7 +150,7 @@
                       <option value="">Selecione a Filial</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group file-upload-container">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <label style="margin-bottom: 0;">Arquivo Excel (.xlsx)</label>
@@ -178,7 +177,7 @@
 
   <!-- Modal para Cadastro/Edição de Veículo -->
   <div id="modalVeiculo" class="modal-backdrop hidden">
-    <div class="glass-modal" style="max-width: 750px;">
+    <div class="glass-modal veiculo-modal">
         <div class="modal-header">
             <h3 id="modalTitle">Novo Veículo</h3>
             <button class="close-button" id="btnCloseModalVeiculo">&times;</button>
@@ -186,108 +185,86 @@
         <div class="modal-body">
             <form id="formVeiculo">
                 <input type="hidden" id="veiculoId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoFilial">Filial *</label>
-                        <select id="veiculoFilial" class="glass-input" required>
-                            <option value="">Selecione</option>
-                        </select>
+                <section class="veiculo-form-section">
+                    <h4><i class="fas fa-circle-info"></i> Informações Básicas</h4>
+                    <div class="veiculo-form-grid">
+                        <div class="form-group"><label for="veiculoFilial">Filial *</label><select id="veiculoFilial" class="glass-input" required><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label for="veiculoSituacao">Situação *</label><select id="veiculoSituacao" class="glass-input" required><option value="ativo">ATIVO</option><option value="inativo">INATIVO</option><option value="INTERNADO">INTERNADO</option></select></div>
+                        <div class="form-group"><label for="veiculoPlaca">Placa *</label><input type="text" id="veiculoPlaca" class="glass-input" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234"></div>
+                        <div class="form-group"><label for="veiculoModelo">Visual Escala (Modelo) *</label><input type="text" id="veiculoModelo" class="glass-input" required placeholder="Ex: FH 540"></div>
+                        <div class="form-group"><label for="veiculoTipo">Tipo *</label><select id="veiculoTipo" class="glass-input" required><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label for="veiculoQrcode">QR Code</label><input type="text" id="veiculoQrcode" class="glass-input" placeholder="Código do QR"></div>
                     </div>
-                    <div class="form-group">
-                        <label for="veiculoPlaca">Placa *</label>
-                        <input type="text" id="veiculoPlaca" class="glass-input" required maxlength="7" style="text-transform: uppercase;" placeholder="ABC1234">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoMarca">Marca</label>
-                        <input type="text" id="veiculoMarca" class="glass-input" placeholder="Ex: Volvo">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoModelo">Modelo *</label>
-                        <input type="text" id="veiculoModelo" class="glass-input" required placeholder="Ex: FH 540">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoRenavan">Renavan</label>
-                        <input type="text" id="veiculoRenavan" class="glass-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoTipo">Tipo *</label>
-                        <select id="veiculoTipo" class="glass-input" required>
-                            <option value="">Selecione</option>
-                            <!-- Opções preenchidas via JS -->
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoVolumeTanque">Volume do Tanque Total (L)</label>
-                        <input type="number" id="veiculoVolumeTanque" class="glass-input" step="0.01" placeholder="Ex: 200">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoSituacao">Situação *</label>
-                        <select id="veiculoSituacao" class="glass-input" required>
-                            <option value="ativo">ATIVO</option>
-                            <option value="inativo">INATIVO</option>
-                            <option value="INTERNADO">INTERNADO</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoQrcode">QR Code</label>
-                        <input type="text" id="veiculoQrcode" class="glass-input" placeholder="Código do QR">
-                    </div>
-                </div>
-                <!-- Campos para Média/KM e Chassi -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="veiculoMediaKm">Média KM / LITRO</label>
-                        <input type="number" id="veiculoMediaKm" class="glass-input" step="0.01" min="0" placeholder="Ex: 3.5 KM/L">
-                    </div>
-                    <div class="form-group">
-                        <label for="veiculoChassi">Chassi</label>
-                        <input type="text" id="veiculoChassi" class="glass-input" placeholder="Número do Chassi">
-                    </div>
-                </div>
+                </section>
 
-                <!-- Link para expandir detalhes -->
-                <div style="grid-column: 1 / -1;">
-                    <a href="#" id="btnMaisDetalhes" class="btn-detalhes-link">
-                        <i class="fas fa-plus-circle"></i> Mais Detalhes
-                    </a>
-                </div>
-
-                <!-- Seção Oculta com os Novos Campos -->
-                <div id="secaoDetalhesAdicionais" class="hidden" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px dashed #ccc;">
-                    <div class="form-group"><label>Fabricante</label><input type="text" id="veiculoFabricante" class="glass-input"></div>
-                    <div class="form-group">
-                        <label>Transmissão</label>
-                        <select id="veiculoTransmissao" class="glass-input">
-                            <option value="">Selecione</option>
-                            <option value="MANUAL">MANUAL</option>
-                            <option value="AUTOMÁTICA">AUTOMÁTICA</option>
-                            <option value="AUTOMATIZADA">AUTOMATIZADA</option>
-                        </select>
+                <section class="veiculo-form-section">
+                    <h4><i class="fas fa-id-card"></i> Informações CRLV</h4>
+                    <div class="veiculo-form-grid">
+                        <div class="form-group"><label for="veiculoRenavan">Renavan</label><input type="text" id="veiculoRenavan" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoAnoFab">Ano Fabricação</label><input type="number" id="veiculoAnoFab" class="glass-input" min="1900" max="2099" placeholder="AAAA"></div>
+                        <div class="form-group"><label for="veiculoAnoMod">Ano Modelo</label><input type="number" id="veiculoAnoMod" class="glass-input" min="1900" max="2099" placeholder="AAAA"></div>
+                        <div class="form-group"><label for="veiculoNumeroCRV">Número do CRV</label><input type="text" id="veiculoNumeroCRV" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoChassi">Chassi</label><input type="text" id="veiculoChassi" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoFabricante">Fabricante</label><input type="text" id="veiculoFabricante" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoModeloVersao">Modelo / Versão</label><input type="text" id="veiculoModeloVersao" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoEspecie">Espécie</label><input type="text" id="veiculoEspecie" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoCor">Cor Predominante</label><input type="text" id="veiculoCor" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoCombustivel">Combustível</label><input type="text" id="veiculoCombustivel" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoPotenciaCilindrada">Potência/Cilindrada</label><input type="text" id="veiculoPotenciaCilindrada" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoMotor">Motor</label><input type="text" id="veiculoMotor" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoEixos">Eixos</label><input type="number" id="veiculoEixos" class="glass-input" min="0"></div>
+                        <div class="form-group"><label for="veiculoPBT">Peso Bruto Total (PBT)</label><input type="number" step="0.01" id="veiculoPBT" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoCarroceria">Carroceria</label><input type="text" id="veiculoCarroceria" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoCidadeEmplac">Local Emplacamento</label><input type="text" id="veiculoCidadeEmplac" class="glass-input"></div>
+                        <div class="form-group full-width"><label for="veiculoObservacoes">Observações do Veículo</label><textarea id="veiculoObservacoes" class="glass-input" rows="3"></textarea></div>
                     </div>
-                    <div class="form-group"><label>Ano Fabr.</label><input type="number" id="veiculoAnoFab" class="glass-input" placeholder="AAAA"></div>
-                    <div class="form-group"><label>Ano Mod.</label><input type="number" id="veiculoAnoMod" class="glass-input" placeholder="AAAA"></div>
-                    <div class="form-group"><label>Eixos</label><input type="number" id="veiculoEixos" class="glass-input"></div>
-                    <div class="form-group"><label>PBT (Peso Bruto Total)</label><input type="number" step="0.1" id="veiculoPBT" class="glass-input"></div>
-                    <div class="form-group"><label>Dimensões (Comp/Larg/Alt)</label><input type="text" id="veiculoDimensoes" class="glass-input" placeholder="Ex: 8.50/2.60/3.20"></div>
-                    <div class="form-group"><label>VUC</label><select id="veiculoVuc" class="glass-input"><option value="false">Não</option><option value="true">Sim</option></select></div>
-                    <div class="form-group"><label>Cor</label><input type="text" id="veiculoCor" class="glass-input"></div>
-                    <div class="form-group"><label>Cidade Emplac.</label><input type="text" id="veiculoCidadeEmplac" class="glass-input"></div>
-                    <div class="form-group"><label>Modelo T.K</label><input type="text" id="veiculoModeloTK" class="glass-input"></div>
-                    <div class="form-group"><label>N. Série T.K</label><input type="text" id="veiculoSerieTK" class="glass-input"></div>
-                    <div class="form-group"><label>Baú</label><input type="text" id="veiculoBau" class="glass-input" placeholder="Tipo do Baú"></div>
-                    <div class="form-group"><label>N. Série Baú</label><input type="text" id="veiculoSerieBau" class="glass-input"></div>
-                    <div class="form-group"><label>Mecanismo Operacional</label><input type="text" id="veiculoMecanismo" class="glass-input"></div>
-                    <div class="form-group"><label>N. Série Mecanismo</label><input type="text" id="veiculoSerieMecanismo" class="glass-input"></div>
-                    <div class="form-group"><label>Qt Tanque Combustível</label><input type="number" id="veiculoQtdTanque" class="glass-input" placeholder="Ex: 1 ou 2"></div>
-                    <div class="form-group"><label>Rastreador</label><input type="text" id="veiculoRastreador" class="glass-input" placeholder="Empresa/Modelo"></div>
-                </div>
+                </section>
 
+                <section class="veiculo-form-section">
+                    <h4><i class="fas fa-sliders"></i> Informações Complementares</h4>
+                    <div class="veiculo-form-grid">
+                        <div class="form-group"><label for="veiculoTransmissao">Transmissão</label><select id="veiculoTransmissao" class="glass-input"><option value="">Selecione</option><option value="MANUAL">MANUAL</option><option value="AUTOMÁTICA">AUTOMÁTICA</option><option value="AUTOMATIZADA">AUTOMATIZADA</option></select></div>
+                        <div class="form-group"><label for="veiculoVuc">VUC</label><select id="veiculoVuc" class="glass-input"><option value="false">Não</option><option value="true">Sim</option></select></div>
+                        <div class="form-group"><label for="veiculoDimensoes">Dimensões (Comp/Larg/Alt)</label><input type="text" id="veiculoDimensoes" class="glass-input" placeholder="Ex: 8.50/2.60/3.20"></div>
+                        <div class="form-group"><label for="veiculoTanque1">TQ Combustível 1</label><input type="number" id="veiculoTanque1" class="glass-input" step="0.01" min="0"></div>
+                        <div class="form-group"><label for="veiculoTanque2">TQ Combustível 2</label><input type="number" id="veiculoTanque2" class="glass-input" step="0.01" min="0"></div>
+                        <div class="form-group"><label for="veiculoVolumeTanque">Capacidade Total Combustível</label><input type="number" id="veiculoVolumeTanque" class="glass-input" step="0.01" readonly></div>
+                        <div class="form-group"><label for="veiculoMediaKm">Média KM/Litro</label><input type="number" id="veiculoMediaKm" class="glass-input" step="0.01" min="0"></div>
+                        <div class="form-group"><label for="veiculoTara">Tara do Veículo</label><input type="number" id="veiculoTara" class="glass-input" step="0.01" min="0"></div>
+                        <div class="form-group"><label for="veiculoTacografoTipo">Tacógrafo</label><select id="veiculoTacografoTipo" class="glass-input"><option value="">Selecione</option><option value="ANALÓGICO">ANALÓGICO</option><option value="DIGITAL">DIGITAL</option></select></div>
+                        <div class="form-group"><label for="veiculoTacografoMarca">Marca Tacógrafo</label><input type="text" id="veiculoTacografoMarca" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoRastreador">Rastreador</label><input type="text" id="veiculoRastreador" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoVideoMonitoramento">Vídeo Monitoramento</label><select id="veiculoVideoMonitoramento" class="glass-input"><option value="false">Não</option><option value="true">Sim</option></select></div>
+                        <div class="form-group"><label for="veiculoPedagioAutomatico">Cobrança automática Pedágio</label><select id="veiculoPedagioAutomatico" class="glass-input"><option value="false">Não</option><option value="true">Sim</option></select></div>
+                        <div class="form-group"><label for="veiculoCategoriaCobranca">Categoria Cobrança</label><input type="text" id="veiculoCategoriaCobranca" class="glass-input"></div>
+                    </div>
+                </section>
+
+                <section class="veiculo-form-section">
+                    <h4><i class="fas fa-snowflake"></i> Equipamentos Acoplados</h4>
+                    <div class="veiculo-form-grid">
+                        <div class="form-group"><label for="veiculoModeloTK">Modelo T.K</label><input type="text" id="veiculoModeloTK" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoSerieTK">N. Série T.K</label><input type="text" id="veiculoSerieTK" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoMotorTK">Motor T.K (modelo)</label><input type="text" id="veiculoMotorTK" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoCompressorTK">Compressor T.K (modelo)</label><input type="text" id="veiculoCompressorTK" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoBau">Marca Implemento (Baú)</label><input type="text" id="veiculoBau" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoSerieBau">N. Série Implemento (Baú)</label><input type="text" id="veiculoSerieBau" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoMesAnoFabr">Mês/Ano Fabr.</label><input type="text" id="veiculoMesAnoFabr" class="glass-input" placeholder="MM/AAAA"></div>
+                        <div class="form-group"><label for="veiculoMecanismo">Mecanismo Operacional</label><input type="text" id="veiculoMecanismo" class="glass-input"></div>
+                        <div class="form-group"><label for="veiculoSerieMecanismo">N. Série Mecanismo</label><input type="text" id="veiculoSerieMecanismo" class="glass-input"></div>
+                    </div>
+                </section>
+
+                <section class="veiculo-form-section">
+                    <h4><i class="fas fa-camera"></i> Anexar Fotos do Veículo</h4>
+                    <div class="veiculo-form-grid fotos-grid">
+                        <div class="form-group"><label for="veiculoFotoDianteira">*Foto Dianteira</label><input type="file" id="veiculoFotoDianteira" class="glass-input veiculo-foto-input" accept="image/*" data-required-new="true"></div>
+                        <div class="form-group"><label for="veiculoFotoTraseira">*Foto Traseira</label><input type="file" id="veiculoFotoTraseira" class="glass-input veiculo-foto-input" accept="image/*" data-required-new="true"></div>
+                        <div class="form-group"><label for="veiculoFotoLateral1">*Foto Lateral 1</label><input type="file" id="veiculoFotoLateral1" class="glass-input veiculo-foto-input" accept="image/*" data-required-new="true"></div>
+                        <div class="form-group"><label for="veiculoFotoLateral2">*Foto Lateral 2</label><input type="file" id="veiculoFotoLateral2" class="glass-input veiculo-foto-input" accept="image/*" data-required-new="true"></div>
+                    </div>
+                    <p class="veiculo-upload-hint">Ao editar um veículo, envie uma nova foto apenas se quiser substituir a atual.</p>
+                </section>
                 <div class="form-actions">
                     <button type="button" class="btn-glass btn-red" onclick="document.getElementById('modalVeiculo').classList.add('hidden')">Cancelar</button>
                     <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
@@ -310,11 +287,11 @@
                 <input type="number" id="qtdQRCode" class="glass-input" min="1" max="100" value="10">
                 <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Serão gerados códigos únicos que não existem no banco de dados.</p>
             </div>
-            
+
             <div id="previewQRCodes" style="max-height: 200px; overflow-y: auto; margin: 15px 0; border: 1px solid #eee; padding: 10px; display: none; background: #f9f9f9; border-radius: 4px;">
                 <!-- Lista prévia dos códigos gerados -->
             </div>
-            
+
             <!-- Container oculto para renderização do QR Code antes do PDF -->
             <div id="qr-code-hidden-container" style="display: none;"></div>
 
@@ -326,7 +303,7 @@
     </div>
   </div>
 
-  <!-- 🚀 Scripts -->
+  <!-- ðŸš€ Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/veiculos.js" defer></script>
