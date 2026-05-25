@@ -614,6 +614,7 @@ function ordenarLinhas(linhas) {
 function renderLinha(row, index) {
     const status = getStatus(row);
     const retornoStatus = getStatusPrazoRetorno(row);
+    const horarioChegadaAlerta = isHorarioChegadaAlerta(row.horario_chegada);
     return `
         <tr data-row-index="${index}" class="${retornoStatus ? `retorno-${retornoStatus}` : ''}">
             <td class="select-col"><input type="checkbox" class="row-select" data-row-index="${index}"></td>
@@ -630,7 +631,7 @@ function renderLinha(row, index) {
             <td class="col-qtd">${inputNumber(index, 'qtd_clientes', row.qtd_clientes, false, '1')}</td>
             <td class="col-status"><span class="peso-status ${status.classe}" data-status-row="${index}">${status.texto}</span></td>
             <td class="col-data ${retornoStatus ? `retorno-${retornoStatus}-cell` : ''}">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
-            <td class="col-hora">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
+            <td class="col-hora ${horarioChegadaAlerta ? 'horario-chegada-alerta' : ''}">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
             <td class="col-descricao">${textarea(index, 'descricao', row.descricao)}</td>
         </tr>
     `;
@@ -666,6 +667,17 @@ function inputDate(index, field, value) {
 
 function inputTime(index, field, value) {
     return `<input type="time" data-row-index="${index}" data-field="${field}" value="${escapeHtml(value || '')}">`;
+}
+
+function isHorarioChegadaAlerta(value) {
+    const match = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return false;
+
+    const hora = Number(match[1]);
+    const minuto = Number(match[2]);
+    if (!Number.isFinite(hora) || !Number.isFinite(minuto)) return false;
+
+    return hora > 20 || (hora === 20 && minuto >= 0);
 }
 
 function textarea(index, field, value) {
@@ -758,6 +770,10 @@ function handleGridInput(event) {
     if (field === 'dia_semana_retorno') {
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
     }
+
+    if (field === 'horario_chegada') {
+        atualizarAlertaHorarioChegada(rowIndex);
+    }
 }
 
 async function handleGridChange(event) {
@@ -836,6 +852,15 @@ function atualizarStatusLinha(rowIndex) {
         statusEl.textContent = status.texto;
     }
     atualizarContadores();
+}
+
+function atualizarAlertaHorarioChegada(rowIndex) {
+    const row = gridData[rowIndex];
+    const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
+    const horaCell = tr?.querySelector('.col-hora');
+    if (!row || !horaCell) return;
+
+    horaCell.classList.toggle('horario-chegada-alerta', isHorarioChegadaAlerta(row.horario_chegada));
 }
 
 function atualizarContadores() {
@@ -1333,6 +1358,7 @@ function atualizarCamposRetornoLinha(rowIndex, row) {
 
     if (diaSelect) diaSelect.value = row.dia_semana_retorno || '';
     if (horaInput) horaInput.value = row.horario_chegada || '';
+    atualizarAlertaHorarioChegada(rowIndex);
 }
 
 async function importarRetornoRota() {
