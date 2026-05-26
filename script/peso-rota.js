@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     bindEvents();
     setupResizableColumns();
+    await carregarFiliaisFiltro();
     await carregarDados();
 });
 
@@ -70,6 +71,7 @@ function bindEvents() {
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
     document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
     document.getElementById('filtroSemanaAno')?.addEventListener('change', carregarDados);
     document.getElementById('searchInput')?.addEventListener('input', renderGrid);
 
@@ -249,6 +251,53 @@ function getSemanaAnoSelecionada() {
     return document.getElementById('filtroSemanaAno')?.value || getSemanaAnoAtual();
 }
 
+function getFilialSelecionada() {
+    return normalizarTexto(document.getElementById('filtroFilial')?.value);
+}
+
+async function carregarFiliaisFiltro() {
+    const select = document.getElementById('filtroFilial');
+    if (!select) return;
+
+    try {
+        const [filiaisResult, rotasResult] = await Promise.all([
+            supabaseClient
+                .from('filiais')
+                .select('nome, sigla')
+                .order('nome', { ascending: true }),
+            supabaseClient
+                .from('rotas')
+                .select('filial')
+                .not('filial', 'is', null)
+        ]);
+
+        if (filiaisResult.error) throw filiaisResult.error;
+        if (rotasResult.error) throw rotasResult.error;
+
+        const opcoes = new Map();
+        (filiaisResult.data || []).forEach(filial => {
+            const value = normalizarTexto(filial.sigla || filial.nome);
+            if (!value) return;
+            opcoes.set(value, filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome);
+        });
+
+        (rotasResult.data || []).forEach(rota => {
+            const value = normalizarTexto(rota.filial);
+            if (value && !opcoes.has(value)) opcoes.set(value, value);
+        });
+
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="">Todas</option>';
+        [...opcoes.entries()]
+            .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { numeric: true }))
+            .forEach(([value, label]) => select.add(new Option(label, value)));
+
+        if (valorAtual && opcoes.has(valorAtual)) select.value = valorAtual;
+    } catch (error) {
+        console.warn('Erro ao carregar filiais para o filtro:', error);
+    }
+}
+
 function getPeriodoSemanaAno(semanaAno) {
     const [anoTexto, semanaTexto] = String(semanaAno || getSemanaAnoAtual()).split('-W');
     const ano = Number(anoTexto);
@@ -389,12 +438,19 @@ async function carregarDados() {
 
     try {
         const semanaAno = getSemanaAnoSelecionada();
+        const filial = getFilialSelecionada();
         const periodo = getPeriodoSemanaAno(semanaAno);
+        let rotasQuery = supabaseClient
+            .from('rotas')
+            .select('numero, semana, supervisor, dias, filial')
+            .order('numero', { ascending: true });
+
+        if (filial) {
+            rotasQuery = rotasQuery.eq('filial', filial);
+        }
+
         const [rotasResult, pesosResult] = await Promise.all([
-            supabaseClient
-                .from('rotas')
-                .select('numero, semana, supervisor, dias')
-                .order('numero', { ascending: true }),
+            rotasQuery,
             supabaseClient
                 .from('peso_rota')
                 .select('*')
@@ -407,7 +463,7 @@ async function carregarDados() {
         if (pesosResult.error) throw pesosResult.error;
 
         rotasBase = rotasResult.data || [];
-        gridData = mesclarRotasComPesos(rotasBase, pesosResult.data || [], semanaAno);
+        gridData = mesclarRotasComPesos(rotasBase, pesosResult.data || [], semanaAno, !filial);
 
         await preencherVeiculosDasLinhas();
         renderGrid();
@@ -419,7 +475,7 @@ async function carregarDados() {
     }
 }
 
-function mesclarRotasComPesos(rotas, pesos, semanaAno) {
+function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true) {
     const pesosPorRota = criarMapaPesosPorRota(pesos);
     const rotasPorNumero = new Map((rotas || []).map(rota => [normalizarRota(rota.numero), rota]));
     const linhas = [];
@@ -446,18 +502,20 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno) {
         rotasIncluidas.add(chaveRota);
     });
 
-    (pesos || []).forEach(item => {
-        const chaveRota = normalizarRota(item.rota);
-        if (chaveRota && !rotasIncluidas.has(chaveRota)) {
-            const rotaBase = rotasPorNumero.get(chaveRota);
-            linhas.push(criarLinha({
-                ...item,
-                semana_ano: item.semana_ano || semanaAno,
-                dias_rota: item.dias_rota ?? rotaBase?.dias
-            }));
-            rotasIncluidas.add(chaveRota);
-        }
-    });
+    if (incluirPesosSemCadastro) {
+        (pesos || []).forEach(item => {
+            const chaveRota = normalizarRota(item.rota);
+            if (chaveRota && !rotasIncluidas.has(chaveRota)) {
+                const rotaBase = rotasPorNumero.get(chaveRota);
+                linhas.push(criarLinha({
+                    ...item,
+                    semana_ano: item.semana_ano || semanaAno,
+                    dias_rota: item.dias_rota ?? rotaBase?.dias
+                }));
+                rotasIncluidas.add(chaveRota);
+            }
+        });
+    }
 
     return linhas;
 }
