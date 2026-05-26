@@ -214,6 +214,22 @@ const DespesasUI = {
         }
     },
 
+    getCurrentUserName() {
+        try {
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+            return usuarioLogado?.nome || usuarioLogado?.email || 'Sistema';
+        } catch (e) {
+            return 'Sistema';
+        }
+    },
+
+    formatDateTime(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleString('pt-BR');
+    },
+
     async handleFormSubmit(e) {
         e.preventDefault();
 
@@ -264,6 +280,10 @@ const DespesasUI = {
                 valor_total: valorTotal,
                 forma_pagamento: this.formaPagamentoSelect.value
             };
+
+            if (!this.editingIdInput.value) {
+                payload.usuario = this.getCurrentUserName();
+            }
 
             const { error } = await supabaseClient.from('despesas').upsert(payload);
             if (error) throw error;
@@ -416,19 +436,19 @@ const DespesasUI = {
                 const matchingIds = Array.from(ids);
 
                 if (matchingIds.length === 0) {
-                    this.tableBody.innerHTML = `<tr><td colspan="6">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
+                    this.tableBody.innerHTML = `<tr><td colspan="7">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
                     return;
                 }
 
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
+                    .select('id, usuario, created_at, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                     .in('id', matchingIds);
 
             } else {
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
+                    .select('id, usuario, created_at, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
             if (this.sortField === 'hotel.nome') {
@@ -447,6 +467,10 @@ const DespesasUI = {
 
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
+                    <td>
+                        ${d.usuario || '-'}
+                        <br><small>${this.formatDateTime(d.created_at)}</small>
+                    </td>
                     <td>${d.numero_rota}</td>
                     <td>${d.hoteis?.nome || 'N/A'}</td>
                     <td>
@@ -463,7 +487,7 @@ const DespesasUI = {
             `).join('');
         } catch (err) {
             console.error('Erro ao renderizar grid de despesas:', err);
-            this.tableBody.innerHTML = `<tr><td colspan="6">Erro ao carregar dados.</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar dados.</td></tr>`;
         }
     },
 
