@@ -1,9 +1,100 @@
+@import url("base.css");
+@import url("menu.css");
+
 :root {
     --peso-primary: #006937;
     --peso-primary-dark: #004b28;
     --peso-border: #d9e2dc;
     --peso-row: #f8faf9;
     --peso-focus: #007bff;
+    --peso-radius: 10px;
+    --peso-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.main-content {
+    margin-left: 290px;
+    min-height: 100vh;
+    padding: 30px;
+    transition: margin-left 0.25s ease;
+}
+
+.glass-header {
+    background: linear-gradient(135deg, rgba(0, 105, 55, 0.92), rgba(0, 77, 41, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--peso-radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    color: #fff;
+    margin-bottom: 18px;
+    padding: 18px 24px;
+}
+
+.glass-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #333;
+    font-size: 0.95rem;
+    outline: none;
+    padding: 9px 12px;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+}
+
+.glass-input:focus {
+    background: #fff;
+    border-color: var(--peso-primary);
+    box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.12);
+}
+
+.btn-glass {
+    align-items: center;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 700;
+    gap: 8px;
+    justify-content: center;
+    padding: 10px 14px;
+    transition: box-shadow 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+}
+
+.btn-glass:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.16);
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+}
+
+.btn-glass:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+    opacity: 0.6;
+    pointer-events: none;
+    transform: none;
+}
+
+.btn-blue {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.btn-green {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.footer {
+    color: #667085;
+    font-size: 0.85rem;
+    margin: 14px 30px 20px 320px;
+    text-align: center;
 }
 
 .menu-floating-toggle {
@@ -59,8 +150,8 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
 .glass-panel {
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    border-radius: var(--peso-radius);
+    box-shadow: var(--peso-shadow);
     padding: 12px;
 }
 
@@ -216,7 +307,7 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
     min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.15;
 }
 
@@ -454,6 +545,20 @@ tr.saved-error td {
 }
 
 @media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px 10px;
+    }
+
+    .glass-header {
+        margin-top: 42px;
+        padding: 16px;
+    }
+
+    .glass-header h1 {
+        font-size: 1.35rem;
+    }
+
     .menu-floating-toggle {
         top: 58px;
         left: 14px;
@@ -461,5 +566,9 @@ tr.saved-error td {
 
     body.peso-rota-menu-oculto .main-content {
         margin-left: 0 !important;
+    }
+
+    .footer {
+        margin: 12px 10px;
     }
 }
