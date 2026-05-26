@@ -274,6 +274,11 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
     background: #fee4e2;
 }
 
+.status-retorno-atrasado {
+    color: #9f1d2a;
+    background: #ffe4e4;
+}
+
 .status-sem-dados {
     color: #344054;
     background: #eaecf0;

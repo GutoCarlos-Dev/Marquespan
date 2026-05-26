@@ -970,20 +970,54 @@ function atualizarAlertaHorarioChegada(rowIndex) {
 }
 
 function atualizarContadores() {
-    const contadores = { ok: 0, alerta: 0, excesso: 0 };
+    const contadores = { ok: 0, alerta: 0, excesso: 0, retornoAtrasado: 0 };
+    const rotasPorStatus = { ok: [], alerta: [], excesso: [], retornoAtrasado: [] };
     getLinhasVisiveis().forEach(({ row }) => {
         const status = getStatus(row);
-        if (status.classe === 'status-ok') contadores.ok += 1;
-        if (status.classe === 'status-alerta') contadores.alerta += 1;
-        if (status.classe === 'status-excesso') contadores.excesso += 1;
+        const rota = normalizarTexto(row.rota) || '-';
+        if (status.classe === 'status-ok') {
+            contadores.ok += 1;
+            rotasPorStatus.ok.push(rota);
+        }
+        if (status.classe === 'status-alerta') {
+            contadores.alerta += 1;
+            rotasPorStatus.alerta.push(rota);
+        }
+        if (status.classe === 'status-excesso') {
+            contadores.excesso += 1;
+            rotasPorStatus.excesso.push(rota);
+        }
+        if (getStatusPrazoRetorno(row) === 'atrasado') {
+            contadores.retornoAtrasado += 1;
+            rotasPorStatus.retornoAtrasado.push(rota);
+        }
     });
 
     const countOk = document.getElementById('count-ok');
     const countAlerta = document.getElementById('count-alerta');
     const countExcesso = document.getElementById('count-excesso');
+    const countRetornoAtrasado = document.getElementById('count-retorno-atrasado');
     if (countOk) countOk.textContent = contadores.ok;
     if (countAlerta) countAlerta.textContent = contadores.alerta;
     if (countExcesso) countExcesso.textContent = contadores.excesso;
+    if (countRetornoAtrasado) countRetornoAtrasado.textContent = contadores.retornoAtrasado;
+
+    atualizarTooltipContador('count-ok', 'Rotas dentro do PBT', rotasPorStatus.ok);
+    atualizarTooltipContador('count-alerta', 'Rotas acima de 90%', rotasPorStatus.alerta);
+    atualizarTooltipContador('count-excesso', 'Rotas em excesso', rotasPorStatus.excesso);
+    atualizarTooltipContador('count-retorno-atrasado', 'Rotas com retorno atrasado', rotasPorStatus.retornoAtrasado);
+}
+
+function atualizarTooltipContador(counterId, titulo, rotas) {
+    const badge = document.getElementById(counterId)?.closest('.badge');
+    if (!badge) return;
+
+    const rotasUnicas = [...new Set(rotas.filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), 'pt-BR', { numeric: true })
+    );
+    const lista = rotasUnicas.length ? rotasUnicas.join(', ') : 'Nenhuma rota';
+    badge.title = `${titulo}: ${lista}`;
+    badge.setAttribute('aria-label', `${titulo}: ${lista}`);
 }
 
 function ordenarPor(key) {
@@ -1490,11 +1524,15 @@ function atualizarStatusPrazoRetorno(rowIndex) {
     });
 
     const retornoStatus = getStatusPrazoRetorno(row);
-    if (!retornoStatus) return;
+    if (!retornoStatus) {
+        atualizarContadores();
+        return;
+    }
 
     tr.classList.add(`retorno-${retornoStatus}`);
     const diaRetornoCell = tr.querySelector('.dia-retorno-cell');
     if (diaRetornoCell) diaRetornoCell.classList.add(`retorno-${retornoStatus}-cell`);
+    atualizarContadores();
 }
 
 async function importarRetornoRota() {
