@@ -39,6 +39,22 @@ const CAMPOS_GRID = [
     'horario_chegada',
     'descricao'
 ];
+const COLUNAS_COLAGEM = {
+    rota: ['ROTA', 'NUMERO ROTA', 'NUMERO DA ROTA'],
+    semana: ['SEMANA', 'DIA DA SEMANA', 'DIA SEMANA'],
+    supervisor: ['SUPERVISOR'],
+    motorista: ['MOTORISTA', 'MOT'],
+    auxiliar: ['AUXILIAR', 'AJUDANTE', 'AUX'],
+    placa: ['PLACA', 'VEICULO'],
+    tipo_veiculo: ['TIPO', 'TIPO VEICULO', 'TIPO DO VEICULO'],
+    pbt: ['PBT'],
+    peso_carga: ['PESO', 'PESO CARGA', 'PESO DA CARGA'],
+    qtd_caixas: ['QTD CAIXAS', 'QTDE CAIXAS', 'CAIXAS'],
+    qtd_clientes: ['QTD CLIENTES', 'QTDE CLIENTES', 'CLIENTES'],
+    dia_semana_retorno: ['DIA RETORNO', 'DIA SEMANA RETORNO', 'DIA DA SEMANA RETORNO'],
+    horario_chegada: ['HORARIO CHEGADA', 'HORA CHEGADA', 'CHEGADA'],
+    descricao: ['DESCRICAO', 'OBS', 'OBSERVACAO']
+};
 
 let gridData = [];
 let rotasBase = [];
@@ -48,6 +64,17 @@ let lastSelectedRowIndex = null;
 let resizingColumn = null;
 
 const ORDEM_DIAS_ROTA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
+const CLASSES_DIA_RETORNO = [
+    'dia-retorno-segunda',
+    'dia-retorno-terca',
+    'dia-retorno-quarta',
+    'dia-retorno-quinta',
+    'dia-retorno-sexta',
+    'dia-retorno-sabado',
+    'dia-retorno-domingo',
+    'dia-retorno-extra',
+    'dia-retorno-avulsa'
+];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const filtroSemanaAno = document.getElementById('filtroSemanaAno');
@@ -673,6 +700,7 @@ function renderLinha(row, index) {
     const status = getStatus(row);
     const retornoStatus = getStatusPrazoRetorno(row);
     const horarioChegadaAlerta = isHorarioChegadaAlerta(row.horario_chegada);
+    const classeDiaRetorno = getClasseDiaRetorno(row.dia_semana_retorno);
     return `
         <tr data-row-index="${index}" class="${retornoStatus ? `retorno-${retornoStatus}` : ''}">
             <td class="select-col"><input type="checkbox" class="row-select" data-row-index="${index}"></td>
@@ -688,7 +716,7 @@ function renderLinha(row, index) {
             <td class="col-qtd">${inputNumber(index, 'qtd_caixas', row.qtd_caixas, false, '1')}</td>
             <td class="col-qtd">${inputNumber(index, 'qtd_clientes', row.qtd_clientes, false, '1')}</td>
             <td class="col-status"><span class="peso-status ${status.classe}" data-status-row="${index}">${status.texto}</span></td>
-            <td class="col-data ${retornoStatus ? `retorno-${retornoStatus}-cell` : ''}">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
+            <td class="col-data dia-retorno-cell ${classeDiaRetorno} ${retornoStatus ? `retorno-${retornoStatus}-cell` : ''}">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
             <td class="col-hora ${horarioChegadaAlerta ? 'horario-chegada-alerta' : ''}">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
             <td class="col-descricao">${textarea(index, 'descricao', row.descricao)}</td>
         </tr>
@@ -709,6 +737,22 @@ function getStatusPrazoRetorno(row) {
     if (retorno < inicio) return 'antecipado';
     if (retorno > limite) return 'atrasado';
     return '';
+}
+
+function getClasseDiaRetorno(value) {
+    const dia = normalizarSemana(value);
+    const mapa = {
+        SEGUNDA: 'dia-retorno-segunda',
+        'TERÇA': 'dia-retorno-terca',
+        QUARTA: 'dia-retorno-quarta',
+        QUINTA: 'dia-retorno-quinta',
+        SEXTA: 'dia-retorno-sexta',
+        SABADO: 'dia-retorno-sabado',
+        DOMINGO: 'dia-retorno-domingo',
+        EXTRA: 'dia-retorno-extra',
+        AVULSA: 'dia-retorno-avulsa'
+    };
+    return mapa[dia] || '';
 }
 
 function inputText(index, field, value, extraClass = '', readonly = false) {
@@ -823,10 +867,12 @@ function handleGridInput(event) {
         const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
         const diaSelect = tr?.querySelector('[data-field="dia_semana_retorno"]');
         if (diaSelect) diaSelect.value = row.dia_semana_retorno;
+        atualizarCorDiaRetorno(rowIndex);
     }
 
     if (field === 'dia_semana_retorno') {
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
+        atualizarCorDiaRetorno(rowIndex);
     }
 
     if (field === 'horario_chegada') {
@@ -1416,7 +1462,18 @@ function atualizarCamposRetornoLinha(rowIndex, row) {
 
     if (diaSelect) diaSelect.value = row.dia_semana_retorno || '';
     if (horaInput) horaInput.value = row.horario_chegada || '';
+    atualizarCorDiaRetorno(rowIndex);
     atualizarAlertaHorarioChegada(rowIndex);
+}
+
+function atualizarCorDiaRetorno(rowIndex) {
+    const row = gridData[rowIndex];
+    const td = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"] .dia-retorno-cell`);
+    if (!row || !td) return;
+
+    td.classList.remove(...CLASSES_DIA_RETORNO);
+    const classe = getClasseDiaRetorno(row.dia_semana_retorno);
+    if (classe) td.classList.add(classe);
 }
 
 async function importarRetornoRota() {
@@ -1510,12 +1567,17 @@ async function handlePaste(event) {
     if (startColumnIndex === -1) return;
 
     const text = event.clipboardData?.getData('text');
-    if (!text || !text.includes('\t')) return;
+    if (!text) return;
+
+    const matriz = parseClipboardTable(text);
+    if (matriz.length === 0) return;
+    if (matriz.length === 1 && matriz[0].length === 1) return;
 
     event.preventDefault();
-    const linhas = text.replace(/\r/g, '').split('\n').filter(linha => linha.length > 0);
+    const { linhas, campos } = prepararColagemGrid(matriz, startColumnIndex);
+    if (linhas.length === 0 || campos.length === 0) return;
 
-    linhas.forEach((linha, offsetLinha) => {
+    linhas.forEach((valores, offsetLinha) => {
         const rowIndex = startRowIndex + offsetLinha;
         while (!gridData[rowIndex]) {
             gridData.push(criarLinha({
@@ -1525,9 +1587,8 @@ async function handlePaste(event) {
             }));
         }
 
-        const valores = linha.split('\t');
         valores.forEach((valor, offsetColuna) => {
-            const campo = CAMPOS_GRID[startColumnIndex + offsetColuna];
+            const campo = campos[offsetColuna];
             if (!campo) return;
             aplicarValorNaLinha(gridData[rowIndex], campo, valor);
         });
@@ -1535,6 +1596,130 @@ async function handlePaste(event) {
 
     await preencherVeiculosDasLinhas();
     renderGrid();
+}
+
+function parseClipboardTable(text) {
+    const normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const linhas = normalized
+        .split('\n')
+        .filter((linha, index, array) => linha.length > 0 || index < array.length - 1)
+        .filter(linha => linha.trim() !== '');
+
+    if (linhas.length === 0) return [];
+
+    const separador = detectarSeparadorColagem(linhas);
+    return linhas
+        .map(linha => parseLinhaColagem(linha, separador))
+        .filter(valores => valores.some(valor => normalizarTexto(valor)));
+}
+
+function detectarSeparadorColagem(linhas) {
+    const candidatos = ['\t', ';', ','];
+    const pontuacoes = candidatos.map(separador => ({
+        separador,
+        colunas: linhas.reduce((total, linha) => total + parseLinhaColagem(linha, separador).length, 0)
+    }));
+    pontuacoes.sort((a, b) => b.colunas - a.colunas);
+    return pontuacoes[0].colunas > linhas.length ? pontuacoes[0].separador : /\s{2,}/;
+}
+
+function parseLinhaColagem(linha, separador) {
+    if (separador instanceof RegExp) {
+        return String(linha).split(separador).map(valor => valor.trim());
+    }
+
+    if (separador === '\t') {
+        return String(linha).split('\t').map(valor => valor.trim());
+    }
+
+    const valores = [];
+    let atual = '';
+    let emAspas = false;
+
+    for (let i = 0; i < linha.length; i++) {
+        const char = linha[i];
+        const next = linha[i + 1];
+        if (char === '"' && next === '"') {
+            atual += '"';
+            i++;
+        } else if (char === '"') {
+            emAspas = !emAspas;
+        } else if (char === separador && !emAspas) {
+            valores.push(atual.trim());
+            atual = '';
+        } else {
+            atual += char;
+        }
+    }
+
+    valores.push(atual.trim());
+    return valores;
+}
+
+function prepararColagemGrid(matriz, startColumnIndex) {
+    const camposCabecalho = detectarCamposCabecalho(matriz[0]);
+    if (camposCabecalho.length > 0) {
+        return {
+            campos: camposCabecalho,
+            linhas: matriz.slice(1)
+        };
+    }
+
+    const camposBlocoNumerico = detectarCamposBlocoNumerico(matriz, startColumnIndex);
+    if (camposBlocoNumerico.length > 0) {
+        return {
+            campos: camposBlocoNumerico,
+            linhas: matriz.map(linha => linha.slice(0, camposBlocoNumerico.length))
+        };
+    }
+
+    return {
+        campos: CAMPOS_GRID.slice(startColumnIndex, startColumnIndex + Math.max(...matriz.map(linha => linha.length))),
+        linhas: matriz
+    };
+}
+
+function detectarCamposCabecalho(linha) {
+    const campos = (linha || []).map(valor => getCampoPorCabecalho(valor));
+    const reconhecidos = campos.filter(Boolean).length;
+    return reconhecidos >= 2 ? campos : [];
+}
+
+function getCampoPorCabecalho(value) {
+    const header = normalizarBusca(value);
+    if (!header) return '';
+
+    return Object.entries(COLUNAS_COLAGEM).find(([, aliases]) =>
+        aliases.some(alias => header === normalizarBusca(alias) || header.includes(normalizarBusca(alias)))
+    )?.[0] || '';
+}
+
+function detectarCamposBlocoNumerico(matriz, startColumnIndex) {
+    const startField = CAMPOS_GRID[startColumnIndex];
+    const colunasPorLinha = matriz.map(linha => linha.filter(valor => normalizarTexto(valor) !== '').length);
+    const minColunas = Math.min(...colunasPorLinha);
+    if (!Number.isFinite(minColunas) || minColunas < 3) return [];
+
+    const todasNumericas = matriz.every(linha =>
+        linha.slice(0, Math.min(minColunas, 4)).every(valor => isValorNumericoColagem(valor))
+    );
+    if (!todasNumericas) return [];
+
+    if (minColunas >= 4 && ['pbt', 'peso_carga', 'qtd_caixas'].includes(startField)) {
+        return ['pbt', 'peso_carga', 'qtd_caixas', 'qtd_clientes'];
+    }
+
+    if (minColunas === 3 && ['peso_carga', 'qtd_caixas'].includes(startField)) {
+        return ['peso_carga', 'qtd_caixas', 'qtd_clientes'];
+    }
+
+    return [];
+}
+
+function isValorNumericoColagem(value) {
+    const texto = normalizarTexto(value);
+    if (!texto) return false;
+    return /^-?\d{1,3}([.,]\d{3})*([.,]\d+)?$|^-?\d+([.,]\d+)?$/.test(texto);
 }
 
 function aplicarValorNaLinha(row, campo, valor) {
