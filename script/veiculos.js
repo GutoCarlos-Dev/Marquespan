@@ -121,6 +121,11 @@ function setupEventListeners() {
         if (input) input.addEventListener('input', atualizarCapacidadeTotalCombustivel);
     });
 
+    ['veiculoTara', 'veiculoCapacidadeCarga'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', atualizarPbtPorTaraECapacidade);
+    });
+
 // Botão para baixar modelo de importação no modal
     const btnModeloImport = document.getElementById('btnBaixarModeloVeiculos');
     if (btnModeloImport) {
@@ -361,6 +366,16 @@ function atualizarCapacidadeTotalCombustivel() {
     if (total) total.value = tanque1 + tanque2 > 0 ? (tanque1 + tanque2).toFixed(2) : '';
 }
 
+function atualizarPbtPorTaraECapacidade() {
+    const tara = parseNumberValue(document.getElementById('veiculoTara')?.value);
+    const capacidadeCarga = parseNumberValue(document.getElementById('veiculoCapacidadeCarga')?.value);
+    const pbt = document.getElementById('veiculoPBT');
+
+    if (!pbt || tara === null || capacidadeCarga === null) return;
+
+    pbt.value = (tara + capacidadeCarga).toFixed(2);
+}
+
 function configurarObrigatoriedadeFotos(isNovo) {
     document.querySelectorAll('.veiculo-foto-input[data-required-new="true"]').forEach(input => {
         input.required = isNovo;
@@ -411,6 +426,7 @@ function abrirModalVeiculo(veiculo = null) {
         setInputValue('veiculoVolumeTanque', veiculo.volume_tanque);
         setInputValue('veiculoMediaKm', veiculo.media_km);
         setInputValue('veiculoTara', veiculo.tara_veiculo);
+        setInputValue('veiculoCapacidadeCarga', veiculo.capacidade_carga);
         setInputValue('veiculoTacografoTipo', veiculo.tacografo_tipo);
         setInputValue('veiculoTacografoMarca', veiculo.tacografo_marca);
         setInputValue('veiculoRastreador', veiculo.rastreador);
@@ -436,6 +452,7 @@ function abrirModalVeiculo(veiculo = null) {
     }
 
     atualizarCapacidadeTotalCombustivel();
+    atualizarPbtPorTaraECapacidade();
     modal.classList.remove('hidden');
 }
 function fecharModalVeiculo() {
@@ -469,6 +486,7 @@ async function salvarVeiculo(e) {
     };
 
     atualizarCapacidadeTotalCombustivel();
+    atualizarPbtPorTaraECapacidade();
 
     const payload = {
         filial: getVal('veiculoFilial'),
@@ -505,6 +523,7 @@ async function salvarVeiculo(e) {
         qtdtanque: [getVal('veiculoTanque1'), getVal('veiculoTanque2')].filter(v => parseNumberValue(v) > 0).length || null,
         media_km: parseNumberValue(getVal('veiculoMediaKm')),
         tara_veiculo: parseNumberValue(getVal('veiculoTara')),
+        capacidade_carga: parseNumberValue(getVal('veiculoCapacidadeCarga')),
         tacografo_tipo: getVal('veiculoTacografoTipo'),
         tacografo_marca: getVal('veiculoTacografoMarca'),
         rastreador: getVal('veiculoRastreador'),
@@ -618,7 +637,7 @@ function baixarModeloImportacao() {
         'MODELO_VERSAO', 'ESPECIE', 'COR', 'COMBUSTIVEL', 'POTENCIA_CILINDRADA',
         'MOTOR', 'EIXOS', 'PBT', 'CARROCERIA', 'LOCAL_EMPLACAMENTO', 'OBSERVACOES_VEICULO',
         'TRANSMISSAO', 'VUC', 'DIMENSOES', 'TANQUE_COMBUSTIVEL_1', 'TANQUE_COMBUSTIVEL_2',
-        'VOLUME_TANQUE', 'MEDIA_KM', 'TARA_VEICULO', 'TACOGRAFO_TIPO', 'TACOGRAFO_MARCA',
+        'VOLUME_TANQUE', 'MEDIA_KM', 'TARA_VEICULO', 'CAPACIDADE_CARGA', 'TACOGRAFO_TIPO', 'TACOGRAFO_MARCA',
         'RASTREADOR', 'VIDEO_MONITORAMENTO', 'COBRANCA_AUTOMATICA_PEDAGIO', 'CATEGORIA_COBRANCA',
         'MODELO_TK', 'SERIE_TK', 'MOTOR_TK', 'COMPRESSOR_TK', 'BAU_TIPO', 'MARCA_IMPLEMENTO',
         'SERIE_BAU', 'MES_ANO_FABRICACAO', 'MECANISMO', 'SERIE_MECANISMO'
@@ -631,7 +650,7 @@ function baixarModeloImportacao() {
         'POTENCIA_CILINDRADA': '540CV', 'MOTOR': 'D13', 'EIXOS': 6, 'PBT': 74.0, 'CARROCERIA': 'BAÚ', 'LOCAL_EMPLACAMENTO': 'SÃO PAULO',
         'OBSERVACOES_VEICULO': '', 'TRANSMISSAO': 'AUTOMÁTICA', 'VUC': 'NÃO', 'DIMENSOES': '18.0/2.6/4.4',
         'TANQUE_COMBUSTIVEL_1': 400, 'TANQUE_COMBUSTIVEL_2': 400, 'VOLUME_TANQUE': 800, 'MEDIA_KM': 2.5,
-        'TARA_VEICULO': 9300, 'TACOGRAFO_TIPO': 'DIGITAL', 'TACOGRAFO_MARCA': 'VDO', 'RASTREADOR': 'SASCAR',
+        'TARA_VEICULO': 9300, 'CAPACIDADE_CARGA': 74000, 'TACOGRAFO_TIPO': 'DIGITAL', 'TACOGRAFO_MARCA': 'VDO', 'RASTREADOR': 'SASCAR',
         'VIDEO_MONITORAMENTO': 'SIM', 'COBRANCA_AUTOMATICA_PEDAGIO': 'SIM', 'CATEGORIA_COBRANCA': '6 EIXOS',
         'MODELO_TK': '', 'SERIE_TK': '', 'MOTOR_TK': '', 'COMPRESSOR_TK': '', 'BAU_TIPO': 'REFRIGERADO',
         'MARCA_IMPLEMENTO': 'FACCHINI', 'SERIE_BAU': '', 'MES_ANO_FABRICACAO': '01/2024',
@@ -657,7 +676,7 @@ function normalizarValorImportacao(dbCol, valor) {
     }
     if ([
         'volume_tanque', 'media_km', 'pbt', 'tanque_combustivel_1',
-        'tanque_combustivel_2', 'tara_veiculo'
+        'tanque_combustivel_2', 'tara_veiculo', 'capacidade_carga'
     ].includes(dbCol)) {
         return parseFloat(excelVal.replace(',', '.')) || null;
     }
@@ -781,6 +800,8 @@ async function handleImportacao(e) {
                     'TANQUE_COMBUSTIVEL_1': 'tanque_combustivel_1',
                     'TANQUE_COMBUSTIVEL_2': 'tanque_combustivel_2',
                     'TARA_VEICULO': 'tara_veiculo',
+                    'CAPACIDADE_CARGA': 'capacidade_carga',
+                    'CAPACIDADE_DE_CARGA': 'capacidade_carga',
                     'TACOGRAFO_TIPO': 'tacografo_tipo',
                     'TACOGRAFO_MARCA': 'tacografo_marca',
                     'VIDEO_MONITORAMENTO': 'video_monitoramento',

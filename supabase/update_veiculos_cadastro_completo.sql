@@ -14,6 +14,7 @@ ALTER TABLE public.veiculos
     ADD COLUMN IF NOT EXISTS tanque_combustivel_1 numeric,
     ADD COLUMN IF NOT EXISTS tanque_combustivel_2 numeric,
     ADD COLUMN IF NOT EXISTS tara_veiculo numeric,
+    ADD COLUMN IF NOT EXISTS capacidade_carga numeric,
     ADD COLUMN IF NOT EXISTS tacografo_tipo text,
     ADD COLUMN IF NOT EXISTS tacografo_marca text,
     ADD COLUMN IF NOT EXISTS video_monitoramento boolean DEFAULT false,

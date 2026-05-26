@@ -47,7 +47,7 @@ const COLUNAS_COLAGEM = {
     auxiliar: ['AUXILIAR', 'AJUDANTE', 'AUX'],
     placa: ['PLACA', 'VEICULO'],
     tipo_veiculo: ['TIPO', 'TIPO VEICULO', 'TIPO DO VEICULO'],
-    pbt: ['PBT'],
+    pbt: ['PBT', 'CAPACIDADE CARGA', 'CAPACIDADE DE CARGA', 'CAPACIDADE'],
     peso_carga: ['PESO', 'PESO CARGA', 'PESO DA CARGA'],
     qtd_caixas: ['QTD CAIXAS', 'QTDE CAIXAS', 'CAIXAS'],
     qtd_clientes: ['QTD CLIENTES', 'QTDE CLIENTES', 'CLIENTES'],
@@ -618,7 +618,7 @@ async function preencherVeiculosDasLinhas() {
     if (placasNaoCarregadas.length > 0) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa, tipo, pbt')
+            .select('placa, tipo, pbt, capacidade_carga')
             .in('placa', placasNaoCarregadas);
 
         if (error) {
@@ -639,7 +639,7 @@ function preencherVeiculoNaLinha(row) {
     if (!veiculo) return;
 
     row.tipo_veiculo = row.tipo_veiculo || normalizarUpper(veiculo.tipo);
-    row.pbt = row.pbt || parseNumero(veiculo.pbt);
+    row.pbt = row.pbt || parseNumero(veiculo.capacidade_carga ?? veiculo.pbt);
     row.status_percentual = calcularPercentual(row);
 }
 
@@ -917,7 +917,7 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
     if (!veiculosPorPlaca.has(row.placa)) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa, tipo, pbt')
+            .select('placa, tipo, pbt, capacidade_carga')
             .eq('placa', row.placa)
             .maybeSingle();
 
@@ -1002,7 +1002,7 @@ function atualizarContadores() {
     if (countExcesso) countExcesso.textContent = contadores.excesso;
     if (countRetornoAtrasado) countRetornoAtrasado.textContent = contadores.retornoAtrasado;
 
-    atualizarTooltipContador('count-ok', 'Rotas dentro do PBT', rotasPorStatus.ok);
+    atualizarTooltipContador('count-ok', 'Rotas dentro da capacidade', rotasPorStatus.ok);
     atualizarTooltipContador('count-alerta', 'Rotas acima de 90%', rotasPorStatus.alerta);
     atualizarTooltipContador('count-excesso', 'Rotas em excesso', rotasPorStatus.excesso);
     atualizarTooltipContador('count-retorno-atrasado', 'Rotas com retorno atrasado', rotasPorStatus.retornoAtrasado);
@@ -1144,7 +1144,7 @@ async function atualizarPbtVeiculosEmBranco() {
         if (!veiculo) {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, tipo, pbt')
+                .select('placa, tipo, pbt, capacidade_carga')
                 .eq('placa', row.placa)
                 .maybeSingle();
 
@@ -1155,19 +1155,19 @@ async function atualizarPbtVeiculosEmBranco() {
             veiculosPorPlaca.set(row.placa, veiculo);
         }
 
-        if (parseNumero(veiculo.pbt) !== null) continue;
+        if (parseNumero(veiculo.capacidade_carga ?? veiculo.pbt) !== null) continue;
 
         const novoPbt = parseNumero(row.pbt);
         const { error } = await supabaseClient
             .from('veiculos')
-            .update({ pbt: novoPbt })
+            .update({ capacidade_carga: novoPbt })
             .eq('placa', row.placa);
 
         if (error) throw error;
 
         veiculosPorPlaca.set(row.placa, {
             ...veiculo,
-            pbt: novoPbt
+            capacidade_carga: novoPbt
         });
     }
 }
