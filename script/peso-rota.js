@@ -56,6 +56,8 @@ const COLUNAS_COLAGEM = {
     descricao: ['DESCRICAO', 'OBS', 'OBSERVACAO']
 };
 
+const CAMPO_CAPACIDADE_GRID = 'pbt';
+
 let gridData = [];
 let rotasBase = [];
 let veiculosPorPlaca = new Map();
@@ -1225,12 +1227,13 @@ async function atualizarPbtVeiculosEmBranco() {
             cacheVeiculo(veiculo);
         }
 
-        if (parseNumero(veiculo.capacidade_carga) !== null) continue;
+        const novaCapacidade = parseNumero(row.pbt);
+        const capacidadeAtual = parseNumero(veiculo.capacidade_carga);
+        if (novaCapacidade === null || capacidadeAtual === novaCapacidade) continue;
 
-        const novoPbt = parseNumero(row.pbt);
         let updateQuery = supabaseClient
             .from('veiculos')
-            .update({ capacidade_carga: novoPbt });
+            .update({ capacidade_carga: novaCapacidade });
 
         updateQuery = veiculo.id
             ? updateQuery.eq('id', veiculo.id)
@@ -1242,7 +1245,7 @@ async function atualizarPbtVeiculosEmBranco() {
 
         cacheVeiculo({
             ...veiculo,
-            capacidade_carga: novoPbt
+            capacidade_carga: novaCapacidade
         });
     }
 }
@@ -1712,10 +1715,7 @@ async function handlePaste(event) {
     const startColumnIndex = CAMPOS_GRID.indexOf(field);
     if (startColumnIndex === -1) return;
 
-    const text = event.clipboardData?.getData('text');
-    if (!text) return;
-
-    const matriz = parseClipboardTable(text);
+    const matriz = getMatrizColagem(event.clipboardData);
     if (matriz.length === 0) return;
     if (matriz.length === 1 && matriz[0].length === 1) return;
 
@@ -1742,6 +1742,26 @@ async function handlePaste(event) {
 
     await preencherVeiculosDasLinhas();
     renderGrid();
+}
+
+function getMatrizColagem(clipboardData) {
+    const html = clipboardData?.getData('text/html');
+    const matrizHtml = parseClipboardHtmlTable(html);
+    if (matrizHtml.length > 0) return matrizHtml;
+
+    return parseClipboardTable(clipboardData?.getData('text'));
+}
+
+function parseClipboardHtmlTable(html) {
+    if (!html || typeof DOMParser === 'undefined') return [];
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const table = doc.querySelector('table');
+    if (!table) return [];
+
+    return Array.from(table.querySelectorAll('tr'))
+        .map(tr => Array.from(tr.querySelectorAll('th,td')).map(td => normalizarTexto(td.textContent)))
+        .filter(valores => valores.some(valor => normalizarTexto(valor)));
 }
 
 function parseClipboardTable(text) {
@@ -1803,6 +1823,8 @@ function parseLinhaColagem(linha, separador) {
 }
 
 function prepararColagemGrid(matriz, startColumnIndex) {
+    matriz = normalizarMatrizColagem(matriz);
+
     const camposCabecalho = detectarCamposCabecalho(matriz[0]);
     if (camposCabecalho.length > 0) {
         return {
@@ -1825,6 +1847,24 @@ function prepararColagemGrid(matriz, startColumnIndex) {
     };
 }
 
+function normalizarMatrizColagem(matriz) {
+    let linhas = (matriz || [])
+        .map(linha => Array.isArray(linha) ? linha : [])
+        .filter(linha => linha.some(valor => normalizarTexto(valor)));
+
+    if (linhas.length === 0) return [];
+
+    while (linhas.every(linha => normalizarTexto(linha[0]) === '')) {
+        linhas = linhas.map(linha => linha.slice(1));
+    }
+
+    while (linhas.every(linha => normalizarTexto(linha[linha.length - 1]) === '')) {
+        linhas = linhas.map(linha => linha.slice(0, -1));
+    }
+
+    return linhas;
+}
+
 function detectarCamposCabecalho(linha) {
     const campos = (linha || []).map(valor => getCampoPorCabecalho(valor));
     const reconhecidos = campos.filter(Boolean).length;
@@ -1844,19 +1884,27 @@ function detectarCamposBlocoNumerico(matriz, startColumnIndex) {
     const startField = CAMPOS_GRID[startColumnIndex];
     const colunasPorLinha = matriz.map(linha => linha.filter(valor => normalizarTexto(valor) !== '').length);
     const minColunas = Math.min(...colunasPorLinha);
-    if (!Number.isFinite(minColunas) || minColunas < 3) return [];
+    if (!Number.isFinite(minColunas) || minColunas < 2) return [];
 
     const todasNumericas = matriz.every(linha =>
-        linha.slice(0, Math.min(minColunas, 4)).every(valor => isValorNumericoColagem(valor))
+        linha.slice(0, minColunas).every(valor => isValorNumericoColagem(valor))
     );
     if (!todasNumericas) return [];
 
-    if (minColunas >= 4 && ['pbt', 'peso_carga', 'qtd_caixas'].includes(startField)) {
-        return ['pbt', 'peso_carga', 'qtd_caixas', 'qtd_clientes'];
+    if (startField === CAMPO_CAPACIDADE_GRID) {
+        return [CAMPO_CAPACIDADE_GRID, 'peso_carga', 'qtd_caixas', 'qtd_clientes'].slice(0, minColunas);
     }
 
-    if (minColunas === 3 && ['peso_carga', 'qtd_caixas'].includes(startField)) {
-        return ['peso_carga', 'qtd_caixas', 'qtd_clientes'];
+    if (startField === 'peso_carga' && minColunas >= 4) {
+        return [CAMPO_CAPACIDADE_GRID, 'peso_carga', 'qtd_caixas', 'qtd_clientes'].slice(0, minColunas);
+    }
+
+    if (startField === 'peso_carga') {
+        return ['peso_carga', 'qtd_caixas', 'qtd_clientes'].slice(0, minColunas);
+    }
+
+    if (startField === 'qtd_caixas') {
+        return ['qtd_caixas', 'qtd_clientes'].slice(0, minColunas);
     }
 
     return [];
