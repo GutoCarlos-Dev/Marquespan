@@ -412,14 +412,26 @@ function normalizarRota(value) {
     }
 
     const textoBusca = normalizarBusca(textoOriginal);
-    const apenasDigitos = textoBusca.replace(/\D/g, '');
-    if (apenasDigitos) return String(parseInt(apenasDigitos, 10));
-
     return textoBusca.replace(/[^A-Z0-9]/g, '');
 }
 
 function normalizarPlaca(value) {
     return normalizarUpper(value).replace(/[^A-Z0-9]/g, '');
+}
+
+function getVariantesPlaca(value) {
+    const placa = normalizarPlaca(value);
+    if (!placa) return [];
+
+    const variantes = [placa];
+    if (placa.length > 3) variantes.push(`${placa.slice(0, 3)}-${placa.slice(3)}`);
+
+    return [...new Set(variantes)];
+}
+
+function cacheVeiculo(veiculo) {
+    if (!veiculo?.placa) return;
+    veiculosPorPlaca.set(normalizarPlaca(veiculo.placa), veiculo);
 }
 
 function limparPlacaImportada(value) {
@@ -457,6 +469,37 @@ function escapeHtml(value) {
 function getChaveLinha(row) {
     const data = row.dia_retorno || getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row.semana);
     return `${data}|${String(row.rota || '').trim()}`;
+}
+
+function somarDiasIso(dataIso, dias) {
+    if (!dataIso) return '';
+
+    const [ano, mes, dia] = String(dataIso).split('-').map(Number);
+    if (!ano || !mes || !dia) return '';
+
+    const data = new Date(Date.UTC(ano, mes - 1, dia));
+    data.setUTCDate(data.getUTCDate() + Number(dias || 0));
+    return data.toISOString().slice(0, 10);
+}
+
+function calcularDataRetornoPrevista(semanaAno, semana, diasRota) {
+    const dataSaida = getDataDaSemana(semanaAno, semana);
+    if (!dataSaida) return '';
+
+    const dias = Math.max(parseInteiro(diasRota) || 1, 1);
+    return somarDiasIso(dataSaida, dias - 1);
+}
+
+function temRetornoImportado(row) {
+    return Boolean(normalizarTexto(row?.horario_chegada));
+}
+
+function aplicarRetornoPrevisto(row) {
+    if (!row) return;
+
+    const diaRetorno = calcularDataRetornoPrevista(row.semana_ano || getSemanaAnoSelecionada(), row.semana, row.dias_rota);
+    row.dia_retorno = diaRetorno || getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row.semana);
+    row.dia_semana_retorno = getDiaSemanaPorData(row.dia_retorno) || normalizarSemana(row.semana);
 }
 
 async function carregarDados() {
@@ -514,8 +557,10 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
         if (!chaveRota || rotasIncluidas.has(chaveRota)) return;
 
         const semana = normalizarSemana(rota.semana);
-        const diaRetorno = getDataDaSemana(semanaAno, semana);
+        const diaRetornoPrevisto = calcularDataRetornoPrevista(semanaAno, semana, rota.dias);
         const salvo = pesosPorRota.get(chaveRota);
+        const manterRetornoSalvo = temRetornoImportado(salvo);
+        const diaRetorno = manterRetornoSalvo ? salvo.dia_retorno : diaRetornoPrevisto;
 
         linhas.push(criarLinha({
             ...salvo,
@@ -523,7 +568,8 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
             semana,
             dias_rota: rota.dias,
             supervisor: salvo?.supervisor || rota.supervisor || '',
-            dia_retorno: salvo?.dia_retorno || diaRetorno,
+            dia_retorno: diaRetorno,
+            dia_semana_retorno: manterRetornoSalvo ? (salvo?.dia_semana_retorno || getDiaSemanaPorData(diaRetorno)) : getDiaSemanaPorData(diaRetorno),
             semana_ano: salvo?.semana_ano || semanaAno
         }));
         rotasIncluidas.add(chaveRota);
@@ -583,14 +629,15 @@ function contarCamposPreenchidos(item) {
 function criarLinha(data = {}) {
     const semanaAno = data.semana_ano || getSemanaAnoSelecionada();
     const semana = normalizarSemana(data.semana);
-    const diaRetorno = data.dia_retorno || getDataDaSemana(semanaAno, semana);
+    const diasRota = parseInteiro(data.dias_rota ?? data.dias);
+    const diaRetorno = data.dia_retorno || calcularDataRetornoPrevista(semanaAno, semana, diasRota);
     const row = {
         id: data.id || null,
         rota: normalizarTexto(data.rota),
         semana,
         semana_ano: semanaAno,
-        dia_semana_retorno: normalizarSemana(data.dia_semana_retorno || semana || getDiaSemanaPorData(diaRetorno)),
-        dias_rota: parseInteiro(data.dias_rota ?? data.dias),
+        dia_semana_retorno: normalizarSemana(data.dia_semana_retorno || getDiaSemanaPorData(diaRetorno) || semana),
+        dias_rota: diasRota,
         supervisor: normalizarUpper(data.supervisor),
         motorista: normalizarUpper(data.motorista),
         auxiliar: normalizarUpper(data.auxiliar),
@@ -615,31 +662,33 @@ async function preencherVeiculosDasLinhas() {
     if (placas.length === 0) return;
 
     const placasNaoCarregadas = placas.filter(placa => !veiculosPorPlaca.has(placa));
-    if (placasNaoCarregadas.length > 0) {
+    const placasConsulta = [...new Set(placasNaoCarregadas.flatMap(getVariantesPlaca))];
+    if (placasConsulta.length > 0) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa, tipo, pbt, capacidade_carga')
-            .in('placa', placasNaoCarregadas);
+            .select('id, placa, tipo, pbt, capacidade_carga')
+            .in('placa', placasConsulta);
 
         if (error) {
             console.warn('Erro ao buscar veiculos:', error);
         } else {
-            (data || []).forEach(veiculo => {
-                veiculosPorPlaca.set(normalizarPlaca(veiculo.placa), veiculo);
-            });
+            (data || []).forEach(cacheVeiculo);
         }
     }
 
     gridData.forEach(preencherVeiculoNaLinha);
 }
 
-function preencherVeiculoNaLinha(row) {
+function preencherVeiculoNaLinha(row, substituirValores = false) {
     if (!row.placa) return;
     const veiculo = veiculosPorPlaca.get(row.placa);
     if (!veiculo) return;
 
-    row.tipo_veiculo = row.tipo_veiculo || normalizarUpper(veiculo.tipo);
-    row.pbt = row.pbt || parseNumero(veiculo.capacidade_carga ?? veiculo.pbt);
+    const tipo = normalizarUpper(veiculo.tipo);
+    const capacidadeCarga = parseNumero(veiculo.capacidade_carga ?? veiculo.pbt);
+
+    row.tipo_veiculo = substituirValores ? tipo : (row.tipo_veiculo || tipo);
+    row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
     row.status_percentual = calcularPercentual(row);
 }
 
@@ -728,6 +777,16 @@ function getStatusPrazoRetorno(row) {
     const diaRetorno = normalizarSemana(row.dia_semana_retorno);
     const diasRota = parseInteiro(row.dias_rota) || 1;
     if (!semana || !diaRetorno) return '';
+
+    const dataSaida = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), semana);
+    if (dataSaida && row.dia_retorno) {
+        const diferencaDias = Math.round((Date.parse(row.dia_retorno) - Date.parse(dataSaida)) / 86400000);
+        if (Number.isFinite(diferencaDias)) {
+            if (diferencaDias < 0) return 'antecipado';
+            if (diferencaDias > Math.max(diasRota, 1) - 1) return 'atrasado';
+            return '';
+        }
+    }
 
     const inicio = ORDEM_DIAS_ROTA.indexOf(semana);
     const retorno = ORDEM_DIAS_ROTA.indexOf(diaRetorno);
@@ -862,8 +921,7 @@ function handleGridInput(event) {
     }
 
     if (field === 'semana') {
-        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
-        row.dia_semana_retorno = value;
+        aplicarRetornoPrevisto(row);
         const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
         const diaSelect = tr?.querySelector('[data-field="dia_semana_retorno"]');
         if (diaSelect) diaSelect.value = row.dia_semana_retorno;
@@ -917,8 +975,9 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
     if (!veiculosPorPlaca.has(row.placa)) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa, tipo, pbt, capacidade_carga')
-            .eq('placa', row.placa)
+            .select('id, placa, tipo, pbt, capacidade_carga')
+            .in('placa', getVariantesPlaca(row.placa))
+            .limit(1)
             .maybeSingle();
 
         if (error) {
@@ -926,10 +985,10 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
             return;
         }
 
-        if (data) veiculosPorPlaca.set(row.placa, data);
+        if (data) cacheVeiculo(data);
     }
 
-    preencherVeiculoNaLinha(row);
+    preencherVeiculoNaLinha(row, true);
     atualizarCamposVeiculo(rowIndex);
     atualizarStatusLinha(rowIndex);
 }
@@ -1030,12 +1089,22 @@ function ordenarPor(key) {
 }
 
 function adicionarLinha() {
-    gridData.push(criarLinha({
-        semana: 'SEGUNDA',
+    const filtroSemana = normalizarSemana(document.getElementById('filtroSemana')?.value);
+    const semana = filtroSemana || 'SEGUNDA';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput?.value) searchInput.value = '';
+
+    const row = criarLinha({
+        semana,
         semana_ano: getSemanaAnoSelecionada(),
-        dia_retorno: getDataDaSemana(getSemanaAnoSelecionada(), 'SEGUNDA')
-    }));
+        dia_retorno: calcularDataRetornoPrevista(getSemanaAnoSelecionada(), semana, 1)
+    });
+
+    gridData.push(row);
     renderGrid();
+
+    const rowIndex = gridData.length - 1;
+    document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"] [data-field="rota"]`)?.focus();
 }
 
 async function salvarTudo() {
@@ -1144,28 +1213,34 @@ async function atualizarPbtVeiculosEmBranco() {
         if (!veiculo) {
             const { data, error } = await supabaseClient
                 .from('veiculos')
-                .select('placa, tipo, pbt, capacidade_carga')
-                .eq('placa', row.placa)
+                .select('id, placa, tipo, pbt, capacidade_carga')
+                .in('placa', getVariantesPlaca(row.placa))
+                .limit(1)
                 .maybeSingle();
 
             if (error) throw error;
             if (!data) continue;
 
             veiculo = data;
-            veiculosPorPlaca.set(row.placa, veiculo);
+            cacheVeiculo(veiculo);
         }
 
-        if (parseNumero(veiculo.capacidade_carga ?? veiculo.pbt) !== null) continue;
+        if (parseNumero(veiculo.capacidade_carga) !== null) continue;
 
         const novoPbt = parseNumero(row.pbt);
-        const { error } = await supabaseClient
+        let updateQuery = supabaseClient
             .from('veiculos')
-            .update({ capacidade_carga: novoPbt })
-            .eq('placa', row.placa);
+            .update({ capacidade_carga: novoPbt });
+
+        updateQuery = veiculo.id
+            ? updateQuery.eq('id', veiculo.id)
+            : updateQuery.in('placa', getVariantesPlaca(row.placa));
+
+        const { error } = await updateQuery;
 
         if (error) throw error;
 
-        veiculosPorPlaca.set(row.placa, {
+        cacheVeiculo({
             ...veiculo,
             capacidade_carga: novoPbt
         });
@@ -1282,7 +1357,8 @@ function mapearColunasRoteiro(cabecalho) {
         rota: encontrarIndice(['ROTA']),
         placa: encontrarIndice(['PLACA', 'VEICULO']),
         motorista: encontrarIndice(['MOTORISTA', 'MOT']),
-        auxiliar: encontrarIndice(['AUXILIAR', 'AJUDANTE', 'AUX'])
+        auxiliar: encontrarIndice(['AUXILIAR', 'AJUDANTE', 'AUX']),
+        status: encontrarIndice(['STA', 'STAT', 'STATUS'])
     };
 }
 
@@ -1307,6 +1383,7 @@ async function importarRoteiroPeso(event) {
 
         const importados = [];
         const abasUsadas = [];
+        let ignoradasPorStatusP = 0;
         const semanaSelecionada = normalizarSemana(document.getElementById('filtroSemana')?.value);
 
         for (const nomeAba of workbook.SheetNames) {
@@ -1336,6 +1413,12 @@ async function importarRoteiroPeso(event) {
             const primeiraLinhaDados = Math.max(linhaCabecalhoIndex + 1, 4);
             for (let i = primeiraLinhaDados; i < linhas.length; i++) {
                 const linha = linhas[i] || [];
+                const statusImportacao = colunas.status >= 0 ? normalizarBusca(linha[colunas.status]) : '';
+                if (statusImportacao === 'P') {
+                    ignoradasPorStatusP += 1;
+                    continue;
+                }
+
                 const rota = normalizarTexto(linha[colunas.rota] ?? linha[3]);
                 const placa = limparPlacaImportada(linha[colunas.placa] ?? linha[2]);
                 const motorista = normalizarUpper(linha[colunas.motorista] ?? linha[5]);
@@ -1371,7 +1454,8 @@ async function importarRoteiroPeso(event) {
             await carregarDados();
         }
 
-        if (!confirm(`Importar ${importados.length} linha(s) do roteiro?\nAbas: ${abasUsadas.join(', ')}`)) {
+        const detalheIgnoradas = ignoradasPorStatusP > 0 ? `\nIgnoradas com STA/STAT = P: ${ignoradasPorStatusP}` : '';
+        if (!confirm(`Importar ${importados.length} linha(s) do roteiro?\nAbas: ${abasUsadas.join(', ')}${detalheIgnoradas}`)) {
             return;
         }
 
@@ -1379,7 +1463,7 @@ async function importarRoteiroPeso(event) {
         await preencherVeiculosDasLinhas();
         renderGrid();
 
-        alert(`Importacao concluida. ${resultado.aplicadas} linha(s) preenchida(s) na grade.`);
+        alert(`Importacao concluida. ${resultado.aplicadas} linha(s) preenchida(s) na grade.${detalheIgnoradas}`);
     } catch (error) {
         console.error('Erro ao importar roteiro:', error);
         alert(`Erro ao importar roteiro: ${error.message || 'verifique o console.'}`);
@@ -1415,11 +1499,14 @@ function aplicarImportacaoRoteiro(importados) {
         }
 
         row.semana_ano = item.semana_ano;
-        row.dia_semana_retorno = semanaImportada;
-        row.dia_retorno = item.dia_retorno;
+        row.semana = semanaImportada || row.semana;
+        if (!temRetornoImportado(row)) aplicarRetornoPrevisto(row);
         row.placa = item.placa || row.placa;
         row.motorista = item.motorista || row.motorista;
         row.auxiliar = item.auxiliar || row.auxiliar;
+        row.peso_carga = null;
+        row.qtd_caixas = null;
+        row.qtd_clientes = null;
         row.status_percentual = calcularPercentual(row);
         aplicadas += 1;
     });
@@ -1548,17 +1635,17 @@ async function importarRetornoRota() {
         const semanaAno = getSemanaAnoSelecionada();
         const semanaSelecionada = normalizarSemana(document.getElementById('filtroSemana')?.value);
         const periodo = getPeriodoSemanaAno(semanaAno);
-        const dataSelecionada = semanaSelecionada ? getDataDaSemana(semanaAno, semanaSelecionada) : null;
+        const dataSaidaSelecionada = semanaSelecionada ? getDataDaSemana(semanaAno, semanaSelecionada) : null;
 
         let query = supabaseClient
             .from('retorno_rota')
             .select('rota, data_retorno, nome_mot, hora_mot, hora_aux, hora_terceiro')
             .order('data_retorno', { ascending: true });
 
-        if (dataSelecionada) {
-            query = query.eq('data_retorno', dataSelecionada);
+        if (dataSaidaSelecionada) {
+            query = query.gte('data_retorno', dataSaidaSelecionada).lte('data_retorno', somarDiasIso(dataSaidaSelecionada, 6));
         } else {
-            query = query.gte('data_retorno', periodo.inicio).lte('data_retorno', periodo.fim);
+            query = query.gte('data_retorno', periodo.inicio).lte('data_retorno', somarDiasIso(periodo.fim, 6));
         }
 
         const { data, error } = await query;
@@ -1567,7 +1654,7 @@ async function importarRetornoRota() {
         const indicesRetorno = indexarRetornosRota(data || []);
 
         if ((data || []).length === 0) {
-            const periodoTexto = dataSelecionada ? `${semanaSelecionada} (${dataSelecionada})` : `semana ${semanaAno}`;
+            const periodoTexto = dataSaidaSelecionada ? `${semanaSelecionada} a partir de ${dataSaidaSelecionada}` : `semana ${semanaAno}`;
             alert(`Nenhum retorno de rota encontrado para ${periodoTexto}.`);
             return;
         }
@@ -1586,8 +1673,8 @@ async function importarRetornoRota() {
                 return;
             }
 
-            const dataEsperada = dataSelecionada ||
-                getDataDaSemana(row.semana_ano || semanaAno, row.dia_semana_retorno || row.semana);
+            const dataEsperada = row.dia_retorno ||
+                calcularDataRetornoPrevista(row.semana_ano || semanaAno, row.semana, row.dias_rota);
             const retorno = escolherRetornoParaLinha(row, indicesRetorno, dataEsperada);
             if (!retorno) {
                 semRetorno += 1;
@@ -1790,8 +1877,7 @@ function aplicarValorNaLinha(row, campo, valor) {
         row[campo] = normalizarPlaca(valor);
     } else if (campo === 'semana') {
         row[campo] = normalizarSemana(valor);
-        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row[campo]);
-        row.dia_semana_retorno = row[campo];
+        if (!temRetornoImportado(row)) aplicarRetornoPrevisto(row);
     } else if (campo === 'dia_semana_retorno') {
         row[campo] = normalizarSemana(valor);
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row[campo]);
