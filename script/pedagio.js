@@ -1,6 +1,9 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
+const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
+const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
+
 const PedagioUI = {
     async init() {
         console.log('Página de Gestão de Pedágios iniciada.');
@@ -182,8 +185,8 @@ const PedagioUI = {
     setupLancamentosTab() {
         const hoje = new Date();
         const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        this.filtroDataInicialLancamento.valueAsDate = primeiroDiaMes;
-        this.filtroDataFinalLancamento.valueAsDate = hoje;
+        this.filtroDataInicialLancamento.value = this.formatarDataInput(primeiroDiaMes);
+        this.filtroDataFinalLancamento.value = this.formatarDataInput(hoje);
     },
 
     getUsuarioLogado() {
@@ -346,8 +349,7 @@ const PedagioUI = {
         
         // Define a data atual no formato local para o input datetime-local
         const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        if (this.lancamentoDataHora) this.lancamentoDataHora.value = now.toISOString().slice(0, 16);
+        if (this.lancamentoDataHora) this.lancamentoDataHora.value = this.formatarDateTimeLocalInput(now);
         
         if (this.modalLancamento) this.modalLancamento.classList.remove('hidden');
 
@@ -409,7 +411,7 @@ const PedagioUI = {
             placa: this.lancamentoPlaca.value.toUpperCase(),
             marca_veiculo: this.lancamentoTipo.value.toUpperCase() || null,
             categoria_eixos: parseInt(this.lancamentoCateg.value) || null, // Corrigido: 'eixos' para 'categoria_eixos'
-            data_hora_passagem: new Date(this.lancamentoDataHora.value).toISOString(),
+            data_hora_passagem: this.datetimeLocalToISOString(this.lancamentoDataHora.value),
             empresa_id: document.getElementById('lancamentoEmpresa')?.value || null,
             filial: this.getValorFilial(this.lancamentoFilial.value) || null,
             motorista: this.lancamentoMotorista.value.toUpperCase() || null,
@@ -469,8 +471,8 @@ const PedagioUI = {
                 .from('pedagios_lancamentos')
                 .select('*');
 
-            if (dataInicial) query = query.gte('data_hora_passagem', `${dataInicial}T00:00:00`);
-            if (dataFinal) query = query.lte('data_hora_passagem', `${dataFinal}T23:59:59`);
+            if (dataInicial) query = query.gte('data_hora_passagem', this.dataLocalToISOString(dataInicial, '00:00:00'));
+            if (dataFinal) query = query.lte('data_hora_passagem', this.dataLocalToISOString(dataFinal, '23:59:59'));
             if (searchPlaca) query = query.ilike('placa', `%${searchPlaca}%`);
 
             query = query.order(this.sortState.field, { ascending: this.sortState.ascending });
@@ -498,7 +500,7 @@ const PedagioUI = {
                 tr.innerHTML = `
                     <td class="selection-col"><input type="checkbox" class="lancamento-checkbox" value="${item.id}" aria-label="Selecionar lançamento ${item.placa}"></td>
                     <td>${item.usuario_nome || '-'}</td>
-                    <td>${new Date(item.data_hora_passagem).toLocaleString('pt-BR')}</td>
+                    <td>${this.formatarDataHoraBrasilia(item.data_hora_passagem)}</td>
                     <td>${item.placa}</td>
                     <td>${veiculo?.tipo || item.marca_veiculo || '-'}</td>
                     <td>${item.motorista || '-'}</td>
@@ -613,7 +615,7 @@ const PedagioUI = {
             this.preencherDadosVeiculo();
             this.lancamentoCateg.value = data.categoria_eixos || '';
             this.lancamentoFilial.value = this.getValorFilial(data.filial || this.lancamentoFilial.value || '');
-            this.lancamentoDataHora.value = new Date(data.data_hora_passagem).toISOString().slice(0, 16);
+            this.lancamentoDataHora.value = this.formatarDateTimeLocalInput(data.data_hora_passagem);
             this.lancamentoMotorista.value = data.motorista || '';
             this.lancamentoRota.value = data.rota || '';
             this.lancamentoRodovia.value = data.rodovia;
@@ -734,34 +736,70 @@ const PedagioUI = {
         };
     },
 
+    datetimeLocalToISOString(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            throw new Error(`Data/hora inválida: ${value}`);
+        }
+        return date.toISOString();
+    },
+
+    dataLocalToISOString(dataIso, horario) {
+        return this.datetimeLocalToISOString(`${dataIso}T${horario}`);
+    },
+
+    formatarDateTimeLocalInput(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return local.toISOString().slice(0, 16);
+    },
+
+    formatarDataInput(date) {
+        return [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0')
+        ].join('-');
+    },
+
+    formatarDataHoraBrasilia(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleString('pt-BR', { timeZone: TIMEZONE_BRASILIA });
+    },
+
     parseDataHoraPlanilha(dataValue, horaValue) {
-        const excelSerialToDate = (serial) => {
-            const utcDays = Math.floor(serial - 25569);
-            const utcValue = utcDays * 86400;
-            const dateInfo = new Date(utcValue * 1000);
-            const fractionalDay = serial - Math.floor(serial);
-            const totalSeconds = Math.round(fractionalDay * 86400);
-            dateInfo.setUTCHours(
+        const excelSerialToLocalDate = (serial) => {
+            const wholeDays = Math.floor(serial);
+            const utcDate = new Date(EXCEL_EPOCH_UTC + wholeDays * 86400000);
+            const localDate = new Date(
+                utcDate.getUTCFullYear(),
+                utcDate.getUTCMonth(),
+                utcDate.getUTCDate()
+            );
+            const fractionalDay = serial - wholeDays;
+            if (fractionalDay > 0) {
+                aplicarSegundos(localDate, Math.round(fractionalDay * 86400));
+            }
+            return localDate;
+        };
+
+        const aplicarSegundos = (date, totalSeconds) => {
+            date.setHours(
                 Math.floor(totalSeconds / 3600),
                 Math.floor((totalSeconds % 3600) / 60),
                 totalSeconds % 60,
                 0
             );
-            return dateInfo;
+            return date;
         };
 
         const aplicarHora = (date, hora) => {
             if (hora === null || hora === undefined || String(hora).trim() === '') return date;
 
             if (typeof hora === 'number') {
-                const totalSeconds = Math.round((hora % 1) * 86400);
-                date.setHours(
-                    Math.floor(totalSeconds / 3600),
-                    Math.floor((totalSeconds % 3600) / 60),
-                    totalSeconds % 60,
-                    0
-                );
-                return date;
+                return aplicarSegundos(date, Math.round((hora % 1) * 86400));
             }
 
             const match = String(hora).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
@@ -773,7 +811,7 @@ const PedagioUI = {
 
         let date;
         if (typeof dataValue === 'number') {
-            date = excelSerialToDate(dataValue);
+            date = excelSerialToLocalDate(dataValue);
         } else {
             const dataStr = String(dataValue || '').trim();
             const brMatch = dataStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -1164,7 +1202,7 @@ const PedagioUI = {
             content += "✅ LANÇAMENTOS IMPORTADOS COM SUCESSO:\n";
             content += "------------------------------------------------\n";
             importados.forEach((r, i) => {
-                content += `${String(i + 1).padStart(3, '0')}. Placa: ${r.placa} | Data: ${new Date(r.data_hora_passagem).toLocaleString('pt-BR')} | Valor: R$ ${parseFloat(r.valor).toFixed(2)}\n`;
+                content += `${String(i + 1).padStart(3, '0')}. Placa: ${r.placa} | Data: ${this.formatarDataHoraBrasilia(r.data_hora_passagem)} | Valor: R$ ${parseFloat(r.valor).toFixed(2)}\n`;
             });
             content += "\n";
         }

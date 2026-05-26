@@ -1,5 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
+const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
+
 let dadosCompletos = [];
 let sortState = { field: 'data_hora_passagem', ascending: false };
 let fleetMonthlyTotal = 0; // Armazena o cálculo da mensalidade da frota
@@ -9,8 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Configura datas iniciais
     const hoje = new Date();
     const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    document.getElementById('dataInicial').valueAsDate = primeiroDia;
-    document.getElementById('dataFinal').valueAsDate = hoje;
+    document.getElementById('dataInicial').value = formatarDataInput(primeiroDia);
+    document.getElementById('dataFinal').value = formatarDataInput(hoje);
 
     await carregarFiltros();
 
@@ -31,6 +33,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         th.querySelector('i').style.marginLeft = '5px'; // Adiciona um pequeno espaçamento ao ícone
     });
 });
+
+function formatarDataInput(date) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
+}
+
+function datetimeLocalToISOString(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString();
+}
+
+function dataLocalToISOString(dataIso, horario) {
+    return datetimeLocalToISOString(`${dataIso}T${horario}`);
+}
+
+function formatarDataHoraBrasilia(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('pt-BR', { timeZone: TIMEZONE_BRASILIA });
+}
 
 function configurarFiltroCategoria() {
     const display = document.getElementById('categoriaDisplay');
@@ -131,8 +157,8 @@ async function buscarDados() {
                 .from('pedagios_lancamentos')
                 .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)')
                 .order('data_hora_passagem', { ascending: false });
-            if (dataIni) query = query.gte('data_hora_passagem', `${dataIni}T00:00:00`);
-            if (dataFim) query = query.lte('data_hora_passagem', `${dataFim}T23:59:59`);
+            if (dataIni) query = query.gte('data_hora_passagem', dataLocalToISOString(dataIni, '00:00:00'));
+            if (dataFim) query = query.lte('data_hora_passagem', dataLocalToISOString(dataFim, '23:59:59'));
             if (filial) query = query.eq('veiculos.filial', filial);
             if (placa) query = query.eq('placa', placa);
             if (motorista) query = query.ilike('motorista', `%${motorista}%`);
@@ -236,7 +262,7 @@ function renderizarTabela() {
 
         return `
         <tr ${rowBg}>
-            <td>${new Date(d.data_hora_passagem).toLocaleString('pt-BR')}</td>
+            <td>${formatarDataHoraBrasilia(d.data_hora_passagem)}</td>
             <td><strong>${d.placa}</strong></td>
             <td>${d.motorista || '-'}</td>
             <td>${d.rota || '-'}</td>
@@ -324,7 +350,7 @@ async function exportarPDF() {
         const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
 
         return [
-            new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
+            formatarDataHoraBrasilia(d.data_hora_passagem),
             d.placa,
             d.motorista || '',
             d.rota || '',
@@ -392,7 +418,7 @@ function exportarExcel() {
         const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
 
         return {
-            "Data/Hora": new Date(d.data_hora_passagem).toLocaleString('pt-BR'),
+            "Data/Hora": formatarDataHoraBrasilia(d.data_hora_passagem),
             "Placa": d.placa,
             "Motorista": d.motorista || '',
             "Rota": d.rota || '',
