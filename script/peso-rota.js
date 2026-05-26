@@ -868,11 +868,13 @@ function handleGridInput(event) {
         const diaSelect = tr?.querySelector('[data-field="dia_semana_retorno"]');
         if (diaSelect) diaSelect.value = row.dia_semana_retorno;
         atualizarCorDiaRetorno(rowIndex);
+        atualizarStatusPrazoRetorno(rowIndex);
     }
 
     if (field === 'dia_semana_retorno') {
         row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
         atualizarCorDiaRetorno(rowIndex);
+        atualizarStatusPrazoRetorno(rowIndex);
     }
 
     if (field === 'horario_chegada') {
@@ -1463,6 +1465,7 @@ function atualizarCamposRetornoLinha(rowIndex, row) {
     if (diaSelect) diaSelect.value = row.dia_semana_retorno || '';
     if (horaInput) horaInput.value = row.horario_chegada || '';
     atualizarCorDiaRetorno(rowIndex);
+    atualizarStatusPrazoRetorno(rowIndex);
     atualizarAlertaHorarioChegada(rowIndex);
 }
 
@@ -1474,6 +1477,24 @@ function atualizarCorDiaRetorno(rowIndex) {
     td.classList.remove(...CLASSES_DIA_RETORNO);
     const classe = getClasseDiaRetorno(row.dia_semana_retorno);
     if (classe) td.classList.add(classe);
+}
+
+function atualizarStatusPrazoRetorno(rowIndex) {
+    const row = gridData[rowIndex];
+    const tr = document.querySelector(`#tbodyPesoRota tr[data-row-index="${rowIndex}"]`);
+    if (!row || !tr) return;
+
+    tr.classList.remove('retorno-atrasado', 'retorno-antecipado');
+    tr.querySelectorAll('.retorno-atrasado-cell, .retorno-antecipado-cell').forEach(cell => {
+        cell.classList.remove('retorno-atrasado-cell', 'retorno-antecipado-cell');
+    });
+
+    const retornoStatus = getStatusPrazoRetorno(row);
+    if (!retornoStatus) return;
+
+    tr.classList.add(`retorno-${retornoStatus}`);
+    const diaRetornoCell = tr.querySelector('.dia-retorno-cell');
+    if (diaRetornoCell) diaRetornoCell.classList.add(`retorno-${retornoStatus}-cell`);
 }
 
 async function importarRetornoRota() {
