@@ -367,9 +367,16 @@ const RelatorioDespesasUI = {
         }
     },
 
+    formatDateTime(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleString('pt-BR');
+    },
+
     async carregarDados() {
         try {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
             
             // Captura filtros selecionados antes do loop
             const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
@@ -644,6 +651,7 @@ const RelatorioDespesasUI = {
 
         thead.innerHTML = `
             <tr>
+                <th data-sort="created_at" style="cursor:pointer">USUÁRIO / LANÇAMENTO <i class="fas fa-sort"></i></th>
                 <th data-sort="data_checkin" style="cursor:pointer">DATA Check-in <i class="fas fa-sort"></i></th>
                 <th data-sort="numero_rota" style="cursor:pointer">ROTA <i class="fas fa-sort"></i></th>
                 <th data-sort="supervisor" style="cursor:pointer">SUPERVISOR <i class="fas fa-sort"></i></th>
@@ -672,7 +680,7 @@ const RelatorioDespesasUI = {
         this.tableBodyResultados.innerHTML = '';
         
         if (!data || data.length === 0) {
-            this.tableBodyResultados.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+            this.tableBodyResultados.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
             this.totalQtd.textContent = '0';
             this.totalValor.textContent = 'R$ 0,00';
             return;
@@ -683,7 +691,7 @@ const RelatorioDespesasUI = {
             let valA = a[this.currentSort.column];
             let valB = b[this.currentSort.column];
 
-            if (this.currentSort.column === 'data_checkin') {
+            if (this.currentSort.column === 'data_checkin' || this.currentSort.column === 'created_at') {
                 valA = new Date(valA);
                 valB = new Date(valB);
             } else if (this.currentSort.column === 'hotel') {
@@ -722,6 +730,10 @@ const RelatorioDespesasUI = {
             totalValor += valor;
 
             tr.innerHTML = `
+                <td>
+                    ${item.usuario || '-'}
+                    <br><small>${this.formatDateTime(item.created_at)}</small>
+                </td>
                 <td>${dataCheckin}</td>
                 <td>${item.numero_rota || '-'}</td>
                 <td>${item.supervisor || '-'}</td>
