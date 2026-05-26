@@ -668,7 +668,7 @@ async function preencherVeiculosDasLinhas() {
     if (placasConsulta.length > 0) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, tipo, pbt, capacidade_carga')
+            .select('id, placa, tipo, capacidade_carga')
             .in('placa', placasConsulta);
 
         if (error) {
@@ -687,10 +687,12 @@ function preencherVeiculoNaLinha(row, substituirValores = false) {
     if (!veiculo) return;
 
     const tipo = normalizarUpper(veiculo.tipo);
-    const capacidadeCarga = parseNumero(veiculo.capacidade_carga ?? veiculo.pbt);
+    const capacidadeCarga = getCapacidadeCargaVeiculo(veiculo);
 
     row.tipo_veiculo = substituirValores ? tipo : (row.tipo_veiculo || tipo);
-    row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
+    if (capacidadeCarga !== null) {
+        row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
+    }
     row.status_percentual = calcularPercentual(row);
 }
 
@@ -953,6 +955,10 @@ async function handleGridChange(event) {
     if (field === 'placa') {
         await buscarEPreencherVeiculo(row, rowIndex);
     }
+
+    if (field === 'pbt') {
+        await salvarCapacidadeCargaVeiculo(row, rowIndex);
+    }
 }
 
 function handleGridClick(event) {
@@ -977,7 +983,7 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
     if (!veiculosPorPlaca.has(row.placa)) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, tipo, pbt, capacidade_carga')
+            .select('id, placa, tipo, capacidade_carga')
             .in('placa', getVariantesPlaca(row.placa))
             .limit(1)
             .maybeSingle();
@@ -1119,7 +1125,7 @@ async function salvarTudo() {
 
     try {
         await preencherVeiculosDasLinhas();
-        await atualizarPbtVeiculosEmBranco();
+        await sincronizarCapacidadeCargaVeiculos();
 
         let payload = gridData
             .filter(row => normalizarTexto(row.rota))
@@ -1203,50 +1209,68 @@ function isErroColunaOpcional(error) {
     return message.includes('semana_ano') || message.includes('dia_semana_retorno');
 }
 
-async function atualizarPbtVeiculosEmBranco() {
+function getCapacidadeCargaVeiculo(veiculo) {
+    return parseNumero(veiculo?.capacidade_carga);
+}
+
+async function buscarVeiculoPorPlaca(placa) {
+    const placaNormalizada = normalizarPlaca(placa);
+    if (!placaNormalizada) return null;
+
+    const veiculoCache = veiculosPorPlaca.get(placaNormalizada);
+    if (veiculoCache) return veiculoCache;
+
+    const { data, error } = await supabaseClient
+        .from('veiculos')
+        .select('id, placa, tipo, capacidade_carga')
+        .in('placa', getVariantesPlaca(placaNormalizada))
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+    if (data) cacheVeiculo(data);
+    return data || null;
+}
+
+async function salvarCapacidadeCargaVeiculo(row, rowIndex = null) {
+    const novaCapacidade = parseNumero(row?.pbt);
+    if (!row?.placa || novaCapacidade === null) return;
+
+    const veiculo = await buscarVeiculoPorPlaca(row.placa);
+    if (!veiculo) {
+        console.warn(`Veiculo nao encontrado para atualizar capacidade de carga: ${row.placa}`);
+        return;
+    }
+
+    const capacidadeAtual = getCapacidadeCargaVeiculo(veiculo);
+    if (capacidadeAtual === novaCapacidade) return;
+
+    const { data, error } = await supabaseClient
+        .from('veiculos')
+        .update({ capacidade_carga: novaCapacidade })
+        .eq('id', veiculo.id)
+        .select('id, placa, tipo, capacidade_carga')
+        .single();
+
+    if (error) throw error;
+
+    cacheVeiculo(data || {
+        ...veiculo,
+        capacidade_carga: novaCapacidade
+    });
+
+    row.pbt = novaCapacidade;
+    if (rowIndex !== null) atualizarCamposVeiculo(rowIndex);
+}
+
+async function sincronizarCapacidadeCargaVeiculos() {
     const linhasComPbt = gridData.filter(row => row.placa && parseNumero(row.pbt) !== null);
     const placasProcessadas = new Set();
 
     for (const row of linhasComPbt) {
         if (placasProcessadas.has(row.placa)) continue;
         placasProcessadas.add(row.placa);
-
-        let veiculo = veiculosPorPlaca.get(row.placa);
-        if (!veiculo) {
-            const { data, error } = await supabaseClient
-                .from('veiculos')
-                .select('id, placa, tipo, pbt, capacidade_carga')
-                .in('placa', getVariantesPlaca(row.placa))
-                .limit(1)
-                .maybeSingle();
-
-            if (error) throw error;
-            if (!data) continue;
-
-            veiculo = data;
-            cacheVeiculo(veiculo);
-        }
-
-        const novaCapacidade = parseNumero(row.pbt);
-        const capacidadeAtual = parseNumero(veiculo.capacidade_carga);
-        if (novaCapacidade === null || capacidadeAtual === novaCapacidade) continue;
-
-        let updateQuery = supabaseClient
-            .from('veiculos')
-            .update({ capacidade_carga: novaCapacidade });
-
-        updateQuery = veiculo.id
-            ? updateQuery.eq('id', veiculo.id)
-            : updateQuery.in('placa', getVariantesPlaca(row.placa));
-
-        const { error } = await updateQuery;
-
-        if (error) throw error;
-
-        cacheVeiculo({
-            ...veiculo,
-            capacidade_carga: novaCapacidade
-        });
+        await salvarCapacidadeCargaVeiculo(row);
     }
 }
 
