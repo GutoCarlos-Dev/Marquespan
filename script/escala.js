@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectSemana = document.getElementById('escalaSemana');
     const selectFilial = document.getElementById('escalaFilial');
     const escalaAuditInfo = document.getElementById('escalaAuditInfo');
+    const btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralEscala');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
     const painelEscala = document.getElementById('painelEscala');
     const tituloDia = document.getElementById('tituloDia');
@@ -58,6 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentHeaderTarget = null;
     let currentCellTarget = null;
     let filiaisCache = [];
+
+    function toggleMenuLateralEscala() {
+        document.body.classList.toggle('escala-menu-oculto');
+        const oculto = document.body.classList.contains('escala-menu-oculto');
+        if (btnToggleMenuLateral) {
+            btnToggleMenuLateral.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+            btnToggleMenuLateral.setAttribute('aria-label', btnToggleMenuLateral.title);
+        }
+    }
 
     const NOTE_FIELDS = ['motorista', 'auxiliar', 'terceiro', 'motorista_ausente', 'auxiliar_ausente'];
 
@@ -3243,6 +3253,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAdicionarLinhaPlanejamento = document.getElementById('btnAdicionarLinhaPlanejamento');
     if (btnAdicionarLinhaPlanejamento) {
         btnAdicionarLinhaPlanejamento.addEventListener('click', adicionarLinhaPlanejamento);
+    }
+
+    if (btnToggleMenuLateral) {
+        btnToggleMenuLateral.addEventListener('click', toggleMenuLateralEscala);
     }
 
     const buscaPlanejamento = document.getElementById('buscaPlanejamento');
