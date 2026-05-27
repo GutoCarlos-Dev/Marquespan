@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DO DOM ---
     const selectSemana = document.getElementById('escalaSemana');
     const selectFilial = document.getElementById('escalaFilial');
+    const escalaAuditInfo = document.getElementById('escalaAuditInfo');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
     const painelEscala = document.getElementById('painelEscala');
     const tituloDia = document.getElementById('tituloDia');
@@ -73,6 +74,97 @@ document.addEventListener('DOMContentLoaded', () => {
     function aplicarFiltroFilial(query) {
         const filial = getFilialEscala();
         return filial ? query.eq('filial', filial) : query;
+    }
+
+    function getUsuarioAuditoria() {
+        return usuarioLogado?.nome || usuarioLogado?.nomecompleto || usuarioLogado?.nome_completo || usuarioLogado?.usuario_login || usuarioLogado?.email || 'Sistema';
+    }
+
+    function comAuditoria(payload = {}) {
+        return {
+            ...payload,
+            ultima_alteracao_por: getUsuarioAuditoria(),
+            ultima_alteracao_em: new Date().toISOString()
+        };
+    }
+
+    function formatarDataHoraAuditoria(value) {
+        if (!value) return '';
+        return new Date(value).toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function atualizarInfoAuditoria(row = null) {
+        if (!escalaAuditInfo) return;
+        const span = escalaAuditInfo.querySelector('span') || escalaAuditInfo;
+
+        if (!row?.ultima_alteracao_em) {
+            span.textContent = 'Nenhuma alteração registrada para a escala aberta.';
+            return;
+        }
+
+        span.textContent = `Última alteração: ${row.ultima_alteracao_por || 'Sistema'} em ${formatarDataHoraAuditoria(row.ultima_alteracao_em)}`;
+    }
+
+    async function carregarUltimaAuditoriaEscala(contexto = {}) {
+        if (!escalaAuditInfo) return;
+
+        const semana = contexto.semana || selectSemana?.value;
+        const dia = contexto.dia || document.querySelector('.tab-btn.active')?.dataset.dia;
+        const isPlanejamento = contexto.planejamento || document.querySelector('.tab-btn.active')?.dataset.tab === 'planejamento';
+        if (!semana) {
+            atualizarInfoAuditoria(null);
+            return;
+        }
+
+        try {
+            let registros = [];
+            if (isPlanejamento) {
+                const { data, error } = await aplicarFiltroFilial(
+                    supabaseClient
+                        .from('planejamento_semanal')
+                        .select('ultima_alteracao_por, ultima_alteracao_em')
+                        .eq('semana_nome', semana)
+                        .not('ultima_alteracao_em', 'is', null)
+                ).order('ultima_alteracao_em', { ascending: false }).limit(1);
+                if (error) throw error;
+                registros = data || [];
+            } else if (dia && CACHE_DATAS[semana]?.[dia]) {
+                const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+                const [resEscala, resFaltas] = await Promise.all([
+                    aplicarFiltroFilial(
+                        supabaseClient
+                            .from('escala')
+                            .select('ultima_alteracao_por, ultima_alteracao_em')
+                            .eq('data_escala', dataISO)
+                            .not('ultima_alteracao_em', 'is', null)
+                    ).order('ultima_alteracao_em', { ascending: false }).limit(1),
+                    supabaseClient
+                        .from('faltas_afastamentos')
+                        .select('ultima_alteracao_por, ultima_alteracao_em')
+                        .eq('data_escala', dataISO)
+                        .not('ultima_alteracao_em', 'is', null)
+                        .order('ultima_alteracao_em', { ascending: false })
+                        .limit(1)
+                ]);
+                if (resEscala.error) throw resEscala.error;
+                if (resFaltas.error) throw resFaltas.error;
+                registros = [...(resEscala.data || []), ...(resFaltas.data || [])];
+            }
+
+            const ultima = registros
+                .filter(row => row.ultima_alteracao_em)
+                .sort((a, b) => new Date(b.ultima_alteracao_em) - new Date(a.ultima_alteracao_em))[0];
+            atualizarInfoAuditoria(ultima || null);
+        } catch (err) {
+            console.error('Erro ao carregar auditoria da escala:', err);
+            atualizarInfoAuditoria(null);
+        }
     }
 
     function getCellNoteId(tabela, id, key) {
@@ -382,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (inserts.length > 0) {
-                    const { error: insertError } = await supabaseClient.from('escala').insert(inserts);
+                    const { error: insertError } = await supabaseClient.from('escala').insert(inserts.map(item => comAuditoria(item)));
                     if (insertError) throw insertError;
                     alert('Planejamento aplicado à escala com sucesso!');
                     modalCopiarPlanejamento.style.display = 'none';
@@ -621,11 +713,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataISO = dataObj.toISOString().split('T')[0];
         const config = SECAO_PARA_DB[section];
 
-        const payload = {
+        const payload = comAuditoria({
             semana_nome: semana,
             data_escala: dataISO,
             filial: getFilialEscala()
-        };
+        });
 
         if (config.tabela === 'escala') {
             payload.tipo_escala = config.tipo;
@@ -753,6 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupEscalaGridTools();
             filtrarDiaEscala();
             applyCellAnnotations();
+            carregarUltimaAuditoriaEscala({ semana, dia });
 
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
@@ -998,9 +1091,10 @@ document.addEventListener('DOMContentLoaded', () => {
         verificarDuplicidades();
 
         try {
+            const auditPayload = comAuditoria({ [key]: valor, ...extraUpdates });
             const { error } = await supabaseClient
                 .from(tabela)
-                .update({ [key]: valor, ...extraUpdates })
+                .update(auditPayload)
                 .eq('id', id);
 
             if (error) throw error;
@@ -1020,6 +1114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusIndicator.innerHTML = '<span class="status-saved"><i class="fas fa-check"></i> Salvo</span>';
                 setTimeout(() => statusIndicator.innerHTML = '', 2000);
             }
+            atualizarInfoAuditoria(auditPayload);
         } catch (err) {
             console.error('Erro ao salvar:', err);
             if (statusIndicator) statusIndicator.innerHTML = '<span class="status-error"><i class="fas fa-times"></i> Erro</span>';
@@ -1104,11 +1199,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Insere
             if (novosEscala.length > 0) {
-                const { error } = await supabaseClient.from('escala').insert(novosEscala);
+                const { error } = await supabaseClient.from('escala').insert(novosEscala.map(item => comAuditoria(item)));
                 if (error) throw error;
             }
             if (novosFaltas.length > 0) {
-                const { error } = await supabaseClient.from('faltas_afastamentos').insert(novosFaltas);
+                const { error } = await supabaseClient.from('faltas_afastamentos').insert(novosFaltas.map(item => comAuditoria(item)));
                 if (error) throw error;
             }
 
@@ -1193,8 +1288,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             try {
-                if (insertsEscala.length > 0) await supabaseClient.from('escala').insert(insertsEscala);
-                if (insertsFaltas.length > 0) await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                if (insertsEscala.length > 0) await supabaseClient.from('escala').insert(insertsEscala.map(item => comAuditoria(item)));
+                if (insertsFaltas.length > 0) await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas.map(item => comAuditoria(item)));
                 await sincronizarPlanejamentoDaSemana(semana);
                 
                 alert('Importação concluída!');
@@ -1311,7 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const inserts = Array.from(consolidado.values());
                 if (confirm(`Deseja importar o planejamento consolidado de ${consolidado.size} veículos para a ${semana}?`)) {
-                    const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
+                        const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts.map(item => comAuditoria(item)));
                     if (error) throw error;
                     alert('✅ Planejamento semanal importado com sucesso!');
                     carregarPlanejamento(semana);
@@ -1514,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const modeloVisual = getModeloVisualByPlaca(placa) || modelo;
             if (!placa && !rota && !status && !motorista && !auxiliar && !terceiro) continue;
 
-            insertsEscala.push({
+            insertsEscala.push(comAuditoria({
                 semana_nome: semana,
                 data_escala: dataISO,
                 filial: getFilialEscala(),
@@ -1526,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 motorista,
                 auxiliar,
                 terceiro
-            });
+            }));
         }
 
         return { dataISO, insertsEscala, insertsFaltas };
@@ -1552,7 +1647,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (parsed.insertsFaltas.length > 0) {
-            const { error } = await supabaseClient.from('faltas_afastamentos').insert(parsed.insertsFaltas);
+            const { error } = await supabaseClient.from('faltas_afastamentos').insert(parsed.insertsFaltas.map(item => comAuditoria(item)));
             if (error) throw error;
         }
 
@@ -1642,12 +1737,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const placa = normalizeVehiclePlate(item.placa);
         if (!item.semana_nome || !placa) return;
 
-        const payload = {
+        const payload = comAuditoria({
             ...item,
             filial: item.filial || getFilialEscala(),
             placa,
             modelo: getModeloVisualByPlaca(placa) || item.modelo || ''
-        };
+        });
 
         const { data: existentes, error: selectError } = await supabaseClient
             .from('planejamento_semanal')
@@ -1766,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const diasAusentes = IMPORT_DAYS.filter(dia => !diasPresentes.includes(dia));
         if (!semana || diasAusentes.length === 0) return;
 
-        const payload = {};
+        const payload = comAuditoria({});
         diasAusentes.forEach(dia => {
             const diaKey = DIA_KEY_MAP[dia];
             payload[`${diaKey}_rota`] = '';
@@ -1808,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { error: updateError } = await supabaseClient
                 .from('escala')
-                .update(payload)
+                .update(comAuditoria(payload))
                 .eq('semana_nome', row.semana_nome)
                 .eq('filial', row.filial || getFilialEscala())
                 .in('data_escala', datasSemana)
@@ -1839,7 +1934,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (selectError) throw selectError;
 
-        const payload = {
+        const payload = comAuditoria({
             semana_nome: row.semana_nome,
             data_escala: dataISO,
             filial: row.filial || getFilialEscala(),
@@ -1851,12 +1946,12 @@ document.addEventListener('DOMContentLoaded', () => {
             terceiro: row.terceiro || '',
             rota,
             status
-        };
+        });
 
         if (existentes && existentes.length > 0) {
             const updatePayload = campo === 'rota'
-                ? { rota, placa: placaAtual, modelo: payload.modelo }
-                : { status, placa: placaAtual, modelo: payload.modelo };
+                ? comAuditoria({ rota, placa: placaAtual, modelo: payload.modelo })
+                : comAuditoria({ status, placa: placaAtual, modelo: payload.modelo });
             const { error: updateError } = await supabaseClient
                 .from('escala')
                 .update(updatePayload)
@@ -1988,7 +2083,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         progressText.textContent = 'Processando: 90%';
                         progressDetails.textContent = 'Enviando para banco de dados...';
 
-                        const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts);
+                    const { error } = await supabaseClient.from('planejamento_semanal').insert(inserts.map(item => comAuditoria(item)));
                         if (error) throw error;
 
                         progressBar.style.width = '100%';
@@ -2219,11 +2314,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         progressDetails.textContent = 'Enviando para banco de dados...';
 
                         if (insertsEscala.length > 0) {
-                            const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala);
+                            const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala.map(item => comAuditoria(item)));
                             if (escalaError) throw escalaError;
                         }
                         if (insertsFaltas.length > 0) {
-                            const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                            const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas.map(item => comAuditoria(item)));
                             if (faltasError) throw faltasError;
                         }
                         await sincronizarPlanejamentoDaSemana(semana);
@@ -2336,11 +2431,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Insere dados no dia destino
                 if (insertsEscala.length > 0) {
-                    const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala);
+                    const { error: escalaError } = await supabaseClient.from('escala').insert(insertsEscala.map(item => comAuditoria(item)));
                     if (escalaError) throw escalaError;
                 }
                 if (insertsFaltas.length > 0) {
-                    const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                    const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas.map(item => comAuditoria(item)));
                     if (faltasError) throw faltasError;
                 }
 
@@ -2681,7 +2776,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { data, error } = await supabaseClient
             .from('escala')
-            .update({ terceiro: funcionario })
+            .update(comAuditoria({ terceiro: funcionario }))
             .eq('data_escala', contexto.dataISO)
             .eq('filial', getFilialEscala())
             .eq('rota', rota)
@@ -2713,7 +2808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { error } = await supabaseClient
             .from('escala')
-            .update({ terceiro: null })
+            .update(comAuditoria({ terceiro: null }))
             .eq('id', btn.dataset.id);
 
         if (error) {
@@ -4623,7 +4718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Cria o registro no banco primeiro para obter o ID
             const { data, error } = await supabaseClient
                 .from('planejamento_semanal')
-                .insert([{ semana_nome: semana, filial: getFilialEscala() }])
+                .insert([comAuditoria({ semana_nome: semana, filial: getFilialEscala() })])
                 .select()
                 .single();
 
@@ -4633,6 +4728,8 @@ document.addEventListener('DOMContentLoaded', () => {
             filtrarPlanejamento();
             applyCellAnnotations();
             verificarDuplicidades();
+            atualizarInfoAuditoria(data);
+            carregarUltimaAuditoriaEscala({ semana, planejamento: true });
         } catch (err) {
             console.error('Erro ao adicionar linha de planejamento:', err);
             alert('Erro ao criar linha no banco de dados.');
