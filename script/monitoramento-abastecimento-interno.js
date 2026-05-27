@@ -40,6 +40,7 @@ let estoqueTanques = new Map();
 let abastecimentoChannel = null;
 let retornoChannel = null;
 let refreshTimer = null;
+let wakeLockSentinel = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initAbastecimentoRealTime();
@@ -58,12 +59,48 @@ function initAbastecimentoRealTime() {
     document.getElementById('searchInput')?.addEventListener('input', renderDashboard);
 
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
+    document.addEventListener('visibilitychange', restaurarWakeLockQuandoVisivel);
 
     carregarFiliais();
     carregarDados();
     configurarRealtime();
+    ativarBloqueioDescansoTela();
 
     refreshTimer = setInterval(carregarDados, REFRESH_INTERVAL);
+}
+
+async function ativarBloqueioDescansoTela() {
+    if (!('wakeLock' in navigator)) {
+        console.warn('Wake Lock API nao suportada neste navegador.');
+        return;
+    }
+
+    try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+            wakeLockSentinel = null;
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel manter a tela ativa:', error);
+    }
+}
+
+function restaurarWakeLockQuandoVisivel() {
+    if (document.visibilityState === 'visible' && !wakeLockSentinel) {
+        ativarBloqueioDescansoTela();
+    }
+}
+
+async function liberarBloqueioDescansoTela() {
+    if (!wakeLockSentinel) return;
+
+    try {
+        await wakeLockSentinel.release();
+    } catch (error) {
+        console.warn('Nao foi possivel liberar o bloqueio de descanso da tela:', error);
+    } finally {
+        wakeLockSentinel = null;
+    }
 }
 
 async function carregarFiliais() {
@@ -574,4 +611,5 @@ window.addEventListener('beforeunload', () => {
     if (abastecimentoChannel) supabaseClient.removeChannel(abastecimentoChannel);
     if (retornoChannel) supabaseClient.removeChannel(retornoChannel);
     if (refreshTimer) clearInterval(refreshTimer);
+    liberarBloqueioDescansoTela();
 });
