@@ -578,6 +578,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tituloDia.innerHTML = `
             <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
+            <span class="day-search-wrap">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="buscaDiaEscala" class="glass-input day-search-input" placeholder="Buscar placa, rota, motorista...">
+            </span>
             <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
             <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
                 <i class="fa-solid fa-copy"></i>
@@ -641,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const tr = document.createElement('tr');
                         tr.dataset.id = item.id; // ID do banco para updates
                         tr.dataset.tabela = sec === 'Faltas' ? 'faltas_afastamentos' : 'escala';
+                        tr.dataset.placa = item.placa || '';
 
                         if (sec === 'Faltas') {
                             tr.innerHTML = `
@@ -674,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             verificarDuplicidades();
             setupEscalaGridTools();
+            filtrarDiaEscala();
 
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
@@ -854,6 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = tr.dataset.id;
         const tabela = tr.dataset.tabela;
         const key = target.dataset.key;
+        const placaAnterior = tr.dataset.placa || '';
         
         if (!key) return;
 
@@ -891,6 +898,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('id', id);
 
             if (error) throw error;
+
+            if (tabela === 'escala') {
+                await sincronizarEscalaParaPlanejamento(id);
+            } else if (tabela === 'planejamento_semanal') {
+                await sincronizarPlanejamentoParaEscala(id, key, placaAnterior);
+                if (key.includes('_rota') || key.includes('_status')) {
+                    carregarPlanejamento(selectSemana.value);
+                }
+            }
+
+            if (key === 'placa') {
+                tr.dataset.placa = normalizeVehiclePlate(valor);
+            }
+
             if (statusIndicator) {
                 statusIndicator.innerHTML = '<span class="status-saved"><i class="fas fa-check"></i> Salvo</span>';
                 setTimeout(() => statusIndicator.innerHTML = '', 2000);
@@ -1068,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 if (insertsEscala.length > 0) await supabaseClient.from('escala').insert(insertsEscala);
                 if (insertsFaltas.length > 0) await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
+                await sincronizarPlanejamentoDaSemana(semana);
                 
                 alert('Importação concluída!');
                 carregarDadosDia(dia, semana);
@@ -1212,10 +1234,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+    const DIA_KEY_MAP = {
+        DOMINGO: 'domingo',
+        SEGUNDA: 'segunda',
+        TERCA: 'terca',
+        QUARTA: 'quarta',
+        QUINTA: 'quinta',
+        SEXTA: 'sexta',
+        SABADO: 'sabado'
+    };
 
     function getDiaFromSheetName(sheetName) {
         const normalized = normalizeString(sheetName);
         return IMPORT_DAYS.find(dia => normalized === dia || normalized.startsWith(`${dia} `)) || null;
+    }
+
+    function getDiaByDataEscala(semana, dataISO) {
+        const datas = CACHE_DATAS[semana];
+        if (!datas || !dataISO) return null;
+        const dataNormalizada = String(dataISO).slice(0, 10);
+        return IMPORT_DAYS.find(dia => datas[dia]?.toISOString().split('T')[0] === dataNormalizada) || null;
+    }
+
+    function getDatasSemanaISO(semana) {
+        const datas = CACHE_DATAS[semana];
+        if (!datas) return [];
+        return IMPORT_DAYS.map(dia => datas[dia]?.toISOString().split('T')[0]).filter(Boolean);
+    }
+
+    function getDatasDiasISO(semana, dias) {
+        const datas = CACHE_DATAS[semana];
+        if (!datas) return [];
+        return dias.map(dia => datas[dia]?.toISOString().split('T')[0]).filter(Boolean);
     }
 
     function cleanImportValue(value, { keepZero = false } = {}) {
@@ -1397,6 +1447,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) throw error;
         }
 
+        const diaImportado = getDiaFromSheetName(sheetName);
+        await sincronizarPlanejamentoDaSemana(semana, diaImportado ? [diaImportado] : null);
         if (diaParaRecarregar) carregarDadosDia(diaParaRecarregar, semana);
         return total;
     }
@@ -1430,6 +1482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (sheetsDias.length === 0) {
                     throw new Error('Nao foram encontradas abas de dias da semana no arquivo.');
                 }
+                const diasImportados = [...new Set(sheetsDias.map(item => item.dia))];
 
                 const resumo = sheetsDias.map(({ sheetName }) => {
                     const parsed = parseRoteiroSheet(workbook, sheetName, semana);
@@ -1451,6 +1504,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalImportado += await importarRoteiroDiario(workbook, sheetName, semana);
                 }
 
+                progressDetails.textContent = 'Atualizando planejamento semanal...';
+                await sincronizarPlanejamentoDaSemana(semana, diasImportados);
+                await limparDiasAusentesDoPlanejamento(semana, diasImportados);
+
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Processando: 100%';
                 progressDetails.textContent = 'Importacao concluida.';
@@ -1469,6 +1526,232 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         reader.readAsArrayBuffer(file);
+    }
+
+    async function upsertPlanejamentoItem(item) {
+        const placa = normalizeVehiclePlate(item.placa);
+        if (!item.semana_nome || !placa) return;
+
+        const payload = {
+            ...item,
+            placa,
+            modelo: getModeloVisualByPlaca(placa) || item.modelo || ''
+        };
+
+        const { data: existentes, error: selectError } = await supabaseClient
+            .from('planejamento_semanal')
+            .select('id, placa')
+            .eq('semana_nome', payload.semana_nome);
+
+        if (selectError) throw selectError;
+
+        const existentesDaPlaca = (existentes || []).filter(row => normalizeVehiclePlate(row.placa) === placa);
+        if (existentesDaPlaca.length > 0) {
+            const ids = existentesDaPlaca.map(row => row.id);
+            const { error } = await supabaseClient
+                .from('planejamento_semanal')
+                .update(payload)
+                .in('id', ids);
+            if (error) throw error;
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('planejamento_semanal')
+            .insert([payload]);
+        if (error) throw error;
+    }
+
+    async function sincronizarEscalaParaPlanejamentoPorLinha(row) {
+        if (!row || !row.semana_nome || !row.data_escala || !row.placa) return;
+
+        const dia = getDiaByDataEscala(row.semana_nome, row.data_escala);
+        const diaKey = DIA_KEY_MAP[dia];
+        if (!diaKey) return;
+
+        await upsertPlanejamentoItem({
+            semana_nome: row.semana_nome,
+            placa: row.placa,
+            modelo: row.modelo || '',
+            motorista: row.motorista || '',
+            auxiliar: row.auxiliar || '',
+            terceiro: row.terceiro || '',
+            [`${diaKey}_rota`]: row.rota || '',
+            [`${diaKey}_status`]: row.status || ''
+        });
+    }
+
+    async function sincronizarEscalaParaPlanejamento(id) {
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        await sincronizarEscalaParaPlanejamentoPorLinha(data);
+    }
+
+    async function sincronizarPlanejamentoDaSemana(semana, diasPermitidos = null) {
+        if (!semana) return;
+
+        const diasSync = Array.isArray(diasPermitidos) && diasPermitidos.length > 0 ? diasPermitidos : IMPORT_DAYS;
+        const datasSemana = getDatasDiasISO(semana, diasSync);
+        if (datasSemana.length === 0) return;
+
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('*')
+            .in('data_escala', datasSemana)
+            .order('data_escala')
+            .order('id');
+
+        if (error) throw error;
+        if (!data || data.length === 0) return;
+
+        const mapa = new Map();
+        data.forEach(row => {
+            const placa = normalizeVehiclePlate(row.placa);
+            if (!placa) return;
+
+            if (!mapa.has(placa)) {
+                mapa.set(placa, {
+                    semana_nome: semana,
+                    placa,
+                    modelo: row.modelo || '',
+                    motorista: row.motorista || '',
+                    auxiliar: row.auxiliar || '',
+                    terceiro: row.terceiro || ''
+                });
+            }
+
+            const item = mapa.get(placa);
+            if (!row.semana_nome || row.semana_nome !== semana) row.semana_nome = semana;
+            if (!item.modelo && row.modelo) item.modelo = row.modelo;
+            if (!item.motorista && row.motorista) item.motorista = row.motorista;
+            if (!item.auxiliar && row.auxiliar) item.auxiliar = row.auxiliar;
+            if (!item.terceiro && row.terceiro) item.terceiro = row.terceiro;
+
+            const dia = getDiaByDataEscala(semana, row.data_escala);
+            if (!diasSync.includes(dia)) return;
+            const diaKey = DIA_KEY_MAP[dia];
+            if (!diaKey) return;
+            const rotaKey = `${diaKey}_rota`;
+            const statusKey = `${diaKey}_status`;
+            if (row.rota || !item[rotaKey]) item[rotaKey] = row.rota || '';
+            if (row.status || !item[statusKey]) item[statusKey] = row.status || '';
+        });
+
+        for (const item of mapa.values()) {
+            await upsertPlanejamentoItem(item);
+        }
+    }
+
+    async function limparDiasAusentesDoPlanejamento(semana, diasPresentes) {
+        const diasAusentes = IMPORT_DAYS.filter(dia => !diasPresentes.includes(dia));
+        if (!semana || diasAusentes.length === 0) return;
+
+        const payload = {};
+        diasAusentes.forEach(dia => {
+            const diaKey = DIA_KEY_MAP[dia];
+            payload[`${diaKey}_rota`] = '';
+            payload[`${diaKey}_status`] = '';
+        });
+
+        const { error } = await supabaseClient
+            .from('planejamento_semanal')
+            .update(payload)
+            .eq('semana_nome', semana);
+
+        if (error) throw error;
+    }
+
+    async function sincronizarPlanejamentoParaEscala(id, key, placaAnterior = '') {
+        const { data: row, error } = await supabaseClient
+            .from('planejamento_semanal')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        if (!row || !row.semana_nome) return;
+
+        const placaAtual = normalizeVehiclePlate(row.placa);
+        const placaBusca = normalizeVehiclePlate(placaAnterior) || placaAtual;
+        if (!placaBusca) return;
+
+        const datasSemana = getDatasSemanaISO(row.semana_nome);
+        if (datasSemana.length === 0) return;
+
+        const camposComuns = ['placa', 'modelo', 'motorista', 'auxiliar', 'terceiro'];
+        if (camposComuns.includes(key)) {
+            const payload = {};
+            if (key === 'placa') payload.placa = placaAtual;
+            else payload[key] = row[key] || '';
+            if (key === 'placa' || key === 'modelo') payload.modelo = getModeloVisualByPlaca(placaAtual) || row.modelo || '';
+
+            const { error: updateError } = await supabaseClient
+                .from('escala')
+                .update(payload)
+                .eq('semana_nome', row.semana_nome)
+                .in('data_escala', datasSemana)
+                .eq('placa', placaBusca);
+
+            if (updateError) throw updateError;
+            return;
+        }
+
+        const dayMatch = key.match(/^(domingo|segunda|terca|quarta|quinta|sexta|sabado)_(rota|status)$/);
+        if (!dayMatch) return;
+
+        const diaKey = dayMatch[1];
+        const campo = dayMatch[2];
+        const dia = Object.keys(DIA_KEY_MAP).find(d => DIA_KEY_MAP[d] === diaKey);
+        const dataISO = CACHE_DATAS[row.semana_nome]?.[dia]?.toISOString().split('T')[0];
+        if (!dataISO) return;
+
+        const rota = row[`${diaKey}_rota`] || '';
+        const status = row[`${diaKey}_status`] || '';
+
+        const { data: existentes, error: selectError } = await supabaseClient
+            .from('escala')
+            .select('id')
+            .eq('data_escala', dataISO)
+            .eq('placa', placaBusca);
+
+        if (selectError) throw selectError;
+
+        const payload = {
+            semana_nome: row.semana_nome,
+            data_escala: dataISO,
+            tipo_escala: 'PADRAO',
+            placa: placaAtual,
+            modelo: getModeloVisualByPlaca(placaAtual) || row.modelo || '',
+            motorista: row.motorista || '',
+            auxiliar: row.auxiliar || '',
+            terceiro: row.terceiro || '',
+            rota,
+            status
+        };
+
+        if (existentes && existentes.length > 0) {
+            const updatePayload = campo === 'rota'
+                ? { rota, placa: placaAtual, modelo: payload.modelo }
+                : { status, placa: placaAtual, modelo: payload.modelo };
+            const { error: updateError } = await supabaseClient
+                .from('escala')
+                .update(updatePayload)
+                .in('id', existentes.map(item => item.id));
+            if (updateError) throw updateError;
+            return;
+        }
+
+        if (rota || status) {
+            const { error: insertError } = await supabaseClient
+                .from('escala')
+                .insert([payload]);
+            if (insertError) throw insertError;
+        }
     }
 
     async function importarExcelPlanejamento(e) {
@@ -1819,6 +2102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas);
                             if (faltasError) throw faltasError;
                         }
+                        await sincronizarPlanejamentoDaSemana(semana);
 
                         progressBar.style.width = '100%';
                         progressText.textContent = 'Processando: 100%';
@@ -2284,6 +2568,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert(`Nenhuma linha encontrada para a rota ${rota} nesta data.`);
         }
 
+        await sincronizarPlanejamentoDaSemana(contexto.semana);
         alert(`Terceiro aplicado em ${data.length} linha(s) da rota ${rota}.`);
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
@@ -2308,6 +2593,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert('Erro ao limpar terceiro: ' + error.message);
         }
 
+        await sincronizarEscalaParaPlanejamento(btn.dataset.id);
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
     }
@@ -2621,10 +2907,97 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getPlanningTripColorMap(item) {
+        const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+        const map = {};
+        let activeTrip = null;
+
+        dias.forEach(dia => {
+            const rota = cleanImportValue(item[`${dia}_rota`], { keepZero: true });
+            const status = normalizeString(item[`${dia}_status`]);
+
+            if (status === 'V') {
+                activeTrip = { rota, color: PLANNING_DAY_COLORS[dia] };
+            }
+
+            if (activeTrip && (!activeTrip.rota || !rota || rota === activeTrip.rota)) {
+                map[`${dia}_rota`] = activeTrip.color;
+                map[`${dia}_status`] = activeTrip.color;
+            }
+
+            if (activeTrip && status === 'R' && (!activeTrip.rota || !rota || rota === activeTrip.rota)) {
+                activeTrip = null;
+            }
+        });
+
+        return map;
+    }
+
+    function getPlanningTripStyle(item, key) {
+        const color = getPlanningTripColorMap(item)[key];
+        return color ? `background-color: ${color} !important; color: #000; font-weight: bold;` : '';
+    }
+
+    function filtrarPlanejamento() {
+        const inputBusca = document.getElementById('buscaPlanejamento');
+        const tbody = document.getElementById('tbodyPlanejamento');
+        if (!inputBusca || !tbody) return;
+
+        const termo = normalizeString(inputBusca.value);
+        const termos = termo.split(' ').filter(Boolean);
+
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const valores = Array.from(tr.querySelectorAll('input.table-input'))
+                .filter(input => {
+                    const key = input.dataset.key || '';
+                    return key === 'placa'
+                        || key === 'motorista'
+                        || key === 'auxiliar'
+                        || key === 'terceiro'
+                        || key.endsWith('_rota');
+                })
+                .map(input => input.value)
+                .join(' ');
+
+            const texto = normalizeString(valores);
+            tr.style.display = termos.every(t => texto.includes(t)) ? '' : 'none';
+        });
+    }
+
+    function filtrarDiaEscala() {
+        const inputBusca = document.getElementById('buscaDiaEscala');
+        const painelDias = document.getElementById('conteudoDias');
+        if (!inputBusca || !painelDias) return;
+
+        const termos = normalizeString(inputBusca.value).split(' ').filter(Boolean);
+        const tbodies = ['tbodyPadrao', 'tbodyTransferencia', 'tbodyEquipamento', 'tbodyReservas', 'tbodyFaltas'];
+
+        tbodies.forEach(tbodyId => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            tbody.querySelectorAll('tr').forEach(tr => {
+                const valoresInputs = Array.from(tr.querySelectorAll('input.table-input'))
+                    .map(input => input.value)
+                    .join(' ');
+                const valoresEditaveis = Array.from(tr.querySelectorAll('[contenteditable="true"]'))
+                    .map(cell => cell.innerText)
+                    .join(' ');
+                const texto = normalizeString(`${valoresInputs} ${valoresEditaveis}`);
+                tr.style.display = termos.every(t => texto.includes(t)) ? '' : 'none';
+            });
+        });
+    }
+
     // --- LISTENERS GERAIS ---
     const btnAdicionarLinhaPlanejamento = document.getElementById('btnAdicionarLinhaPlanejamento');
     if (btnAdicionarLinhaPlanejamento) {
         btnAdicionarLinhaPlanejamento.addEventListener('click', adicionarLinhaPlanejamento);
+    }
+
+    const buscaPlanejamento = document.getElementById('buscaPlanejamento');
+    if (buscaPlanejamento) {
+        buscaPlanejamento.addEventListener('input', filtrarPlanejamento);
     }
 
     if (btnAbrirEscala) {
@@ -2675,7 +3048,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tabButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             tabButtons.forEach(b => b.classList.remove('active'));
             e.currentTarget.classList.add('active');
             
@@ -2687,6 +3060,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tab === 'planejamento') {
                 if(painelDias) painelDias.classList.add('hidden');
                 if(painelPlan) painelPlan.classList.remove('hidden');
+                await sincronizarPlanejamentoDaSemana(selectSemana.value);
                 carregarPlanejamento(selectSemana.value);
                 atualizarBotaoTerceiroSuspenso();
             } else {
@@ -2743,6 +3117,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Listener para o input file dinâmico
+        tituloDia.addEventListener('input', (e) => {
+            if (e.target.id === 'buscaDiaEscala') filtrarDiaEscala();
+        });
+
         tituloDia.addEventListener('change', (e) => {
             if (e.target.id === 'fileImportarDia') importarExcelDia(e);
         });
@@ -4055,6 +4433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  // Opcional: mostrar mensagem de vazio ou deixar em branco
             }
             data.forEach(item => renderLinhaPlanejamento(item, tbody));
+            filtrarPlanejamento();
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -4065,14 +4444,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const tr = document.createElement('tr');
         tr.dataset.id = item.id;
         tr.dataset.tabela = 'planejamento_semanal';
+        tr.dataset.placa = item.placa || '';
 
         const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
         let diasHtml = '';
         
         dias.forEach(dia => {
             diasHtml += `
-                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getCellStyle('planejamento_semanal', item.id, dia + '_rota', item[dia + '_rota'])}"></td>
-                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" title="${getStatusTitleAttr(item[dia + '_status'])}" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status', item[dia + '_status'])}"></td>
+                <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getPlanningTripStyle(item, dia + '_rota') || getCellStyle('planejamento_semanal', item.id, dia + '_rota', item[dia + '_rota'])}"></td>
+                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" title="${getStatusTitleAttr(item[dia + '_status'])}" style="${getPlanningTripStyle(item, dia + '_status') || getCellStyle('planejamento_semanal', item.id, dia + '_status', item[dia + '_status'])}"></td>
             `;
         });
 

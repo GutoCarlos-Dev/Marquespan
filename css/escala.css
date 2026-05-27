@@ -163,6 +163,55 @@
     cursor: not-allowed;
 }
 
+.planning-search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+    min-width: 260px;
+    max-width: 380px;
+    flex: 1 1 260px;
+}
+
+.planning-search-wrap i {
+    position: absolute;
+    left: 10px;
+    color: #777;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.planning-search-input {
+    width: 100%;
+    height: 30px;
+    padding-left: 30px !important;
+    font-size: 12px;
+}
+
+.day-search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-width: 260px;
+    max-width: 420px;
+    flex: 1 1 280px;
+}
+
+.day-search-wrap i {
+    position: absolute;
+    left: 10px;
+    color: #777;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.day-search-input {
+    width: 100%;
+    height: 30px;
+    padding-left: 30px !important;
+    font-size: 12px;
+}
+
 /* Layout de Filtros e Ações */
 .filters-actions-container {
     display: grid;
