@@ -1181,6 +1181,255 @@ document.addEventListener('DOMContentLoaded', () => {
         return Object.keys(row).find(key => aliases.some(alias => key.includes(alias)) && key.includes(type)) || null;
     }
 
+    const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+
+    function getDiaFromSheetName(sheetName) {
+        const normalized = normalizeString(sheetName);
+        return IMPORT_DAYS.find(dia => normalized === dia || normalized.startsWith(`${dia} `)) || null;
+    }
+
+    function cleanImportValue(value, { keepZero = false } = {}) {
+        if (value === null || value === undefined) return '';
+        const text = String(value).replace(/\s+/g, ' ').trim();
+        if (!keepZero && (text === '0' || normalizeString(text) === 'SYSTEM.XML.XMLELEMENT')) return '';
+        return text;
+    }
+
+    function splitPlacaModelo(value) {
+        const text = cleanImportValue(value);
+        if (!text) return { placa: '', modelo: '' };
+
+        const match = text.match(/^([A-Z]{3}\s*-?\s*[0-9A-Z]{4})\s*-?\s*(.*)$/i);
+        if (!match) return { placa: text, modelo: '' };
+
+        const placa = match[1].replace(/[\s-]+/g, '').toUpperCase();
+        const modelo = cleanImportValue(match[2]);
+        return { placa, modelo };
+    }
+
+    function excelDateToISO(cell) {
+        if (!cell) return '';
+
+        if (cell.v instanceof Date) {
+            return cell.v.toISOString().split('T')[0];
+        }
+
+        const rawValue = cell.v ?? cell.w;
+        const numericValue = Number(rawValue);
+        if (!Number.isNaN(numericValue) && numericValue > 0) {
+            const utc = Date.UTC(1899, 11, 30) + numericValue * 86400000;
+            return new Date(utc).toISOString().split('T')[0];
+        }
+
+        const text = cleanImportValue(rawValue || cell.w, { keepZero: true });
+        const match = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+        if (!match) return '';
+
+        const day = match[1].padStart(2, '0');
+        const month = match[2].padStart(2, '0');
+        const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+        return `${year}-${month}-${day}`;
+    }
+
+    function identifyImportSection(row) {
+        const marker = normalizeString(row[1] || '');
+        if (marker.includes('TRANSFERENCIA')) return 'TRANSFERENCIA';
+        if (marker.includes('EQUIPAMENTO')) return 'EQUIPAMENTO';
+        if (marker.includes('RESERVAS')) return 'RESERVA';
+        if (marker.includes('FALTAS') || marker.includes('FERIAS') || marker.includes('AFASTADOS')) return 'FALTAS';
+        return null;
+    }
+
+    function isImportHeaderRow(row) {
+        const cod = normalizeString(row[1] || '');
+        const placa = normalizeString(row[2] || '');
+        const rota = normalizeString(row[3] || '');
+        return cod === 'COD' && placa.includes('PLACA') && rota.includes('ROTA');
+    }
+
+    function getSheetCellText(sheet, address) {
+        const cell = sheet[address];
+        if (!cell) return '';
+        if (cell.w !== undefined && cell.w !== null) return cleanImportValue(cell.w, { keepZero: true });
+        if (cell.v !== undefined && cell.v !== null && typeof cell.v !== 'object') return cleanImportValue(cell.v, { keepZero: true });
+        return '';
+    }
+
+    function getRoteiroRow(sheet, rowNumber) {
+        return [
+            '',
+            getSheetCellText(sheet, `B${rowNumber}`),
+            getSheetCellText(sheet, `C${rowNumber}`),
+            getSheetCellText(sheet, `D${rowNumber}`),
+            getSheetCellText(sheet, `E${rowNumber}`),
+            getSheetCellText(sheet, `F${rowNumber}`),
+            getSheetCellText(sheet, `G${rowNumber}`),
+            getSheetCellText(sheet, `H${rowNumber}`)
+        ];
+    }
+
+    function parseRoteiroSheet(workbook, sheetName, semana) {
+        const sheet = workbook.Sheets[sheetName];
+        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:H1');
+        const dataISO = excelDateToISO(sheet['G4']);
+        const insertsEscala = [];
+        const insertsFaltas = [];
+
+        let currentSection = 'PADRAO';
+        let headerFound = false;
+
+        for (let rowNumber = range.s.r + 1; rowNumber <= range.e.r + 1; rowNumber++) {
+            const row = getRoteiroRow(sheet, rowNumber);
+            const nextSection = identifyImportSection(row);
+            if (nextSection) {
+                currentSection = nextSection;
+                headerFound = false;
+                continue;
+            }
+
+            if (isImportHeaderRow(row)) {
+                headerFound = true;
+                continue;
+            }
+
+            if (!headerFound) continue;
+
+            const rota = cleanImportValue(row[3], { keepZero: true });
+            const status = cleanImportValue(row[4], { keepZero: true });
+            const motorista = cleanImportValue(row[5]);
+            const auxiliar = cleanImportValue(row[6]);
+            const terceiro = cleanImportValue(row[7]);
+
+            if (currentSection === 'FALTAS') {
+                if (!motorista && !auxiliar) continue;
+                insertsFaltas.push({
+                    semana_nome: semana,
+                    data_escala: dataISO,
+                    motorista_ausente: motorista,
+                    motivo_motorista: motorista ? rota : '',
+                    auxiliar_ausente: auxiliar,
+                    motivo_auxiliar: auxiliar ? rota : ''
+                });
+                continue;
+            }
+
+            const { placa, modelo } = splitPlacaModelo(row[2]);
+            if (!placa && !rota && !status && !motorista && !auxiliar && !terceiro) continue;
+
+            insertsEscala.push({
+                semana_nome: semana,
+                data_escala: dataISO,
+                tipo_escala: currentSection,
+                placa,
+                modelo,
+                rota,
+                status,
+                motorista,
+                auxiliar,
+                terceiro
+            });
+        }
+
+        return { dataISO, insertsEscala, insertsFaltas };
+    }
+
+    async function importarRoteiroDiario(workbook, sheetName, semana, diaParaRecarregar = null) {
+        const parsed = parseRoteiroSheet(workbook, sheetName, semana);
+        if (!parsed) {
+            throw new Error(`Falha ao processar a aba ${sheetName}.`);
+        }
+        const total = parsed.insertsEscala.length + parsed.insertsFaltas.length;
+        if (!parsed.dataISO) {
+            throw new Error(`Nao foi possivel ler a data em G4 na aba ${sheetName}.`);
+        }
+        if (total === 0) {
+            throw new Error(`Nenhum registro valido encontrado na aba ${sheetName}.`);
+        }
+
+        if (parsed.insertsEscala.length > 0) {
+            const { error } = await supabaseClient.from('escala').insert(parsed.insertsEscala);
+            if (error) throw error;
+        }
+
+        if (parsed.insertsFaltas.length > 0) {
+            const { error } = await supabaseClient.from('faltas_afastamentos').insert(parsed.insertsFaltas);
+            if (error) throw error;
+        }
+
+        if (diaParaRecarregar) carregarDadosDia(diaParaRecarregar, semana);
+        return total;
+    }
+
+    async function importarRoteiroSemana(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana antes de importar.');
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const importModal = document.getElementById('importProgressModal');
+            const progressBar = document.getElementById('importProgressBar');
+            const progressText = document.getElementById('importProgressText');
+            const progressDetails = document.getElementById('importProgressDetails');
+
+            try {
+                importModal.classList.remove('hidden');
+                progressBar.style.width = '15%';
+                progressText.textContent = 'Processando: 15%';
+                progressDetails.textContent = 'Lendo arquivo Excel...';
+
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+                const sheetsDias = workbook.SheetNames
+                    .map(sheetName => ({ sheetName, dia: getDiaFromSheetName(sheetName) }))
+                    .filter(item => item.dia);
+
+                if (sheetsDias.length === 0) {
+                    throw new Error('Nao foram encontradas abas de dias da semana no arquivo.');
+                }
+
+                const resumo = sheetsDias.map(({ sheetName }) => {
+                    const parsed = parseRoteiroSheet(workbook, sheetName, semana);
+                    if (!parsed) return `${sheetName}: falha ao processar`;
+                    return `${sheetName}: ${parsed.insertsEscala.length + parsed.insertsFaltas.length} registros`;
+                }).join('\n');
+
+                importModal.classList.add('hidden');
+                if (!confirm(`Importar as abas diarias encontradas?\n\n${resumo}`)) return;
+
+                importModal.classList.remove('hidden');
+                let totalImportado = 0;
+                for (let i = 0; i < sheetsDias.length; i++) {
+                    const { sheetName } = sheetsDias[i];
+                    const progress = 20 + Math.round((i / sheetsDias.length) * 70);
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `Processando: ${progress}%`;
+                    progressDetails.textContent = `Importando ${sheetName}...`;
+                    totalImportado += await importarRoteiroDiario(workbook, sheetName, semana);
+                }
+
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Processando: 100%';
+                progressDetails.textContent = 'Importacao concluida.';
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+                alert(`Importacao concluida: ${totalImportado} registros importados.`);
+
+                const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
+                if (diaAtual) carregarDadosDia(diaAtual, semana);
+            } catch (err) {
+                console.error('Erro ao importar roteiro:', err);
+                alert('Erro ao importar roteiro: ' + err.message);
+            } finally {
+                importModal.classList.add('hidden');
+                e.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
     async function importarExcelPlanejamento(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -1406,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressDetails.textContent = 'Lendo arquivo Excel...';
 
                 const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: false });
 
                 await new Promise(resolve => setTimeout(resolve, 200));
                 progressBar.style.width = '30%';
@@ -1418,6 +1667,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!semana || !dia) {
                     importModal.classList.add('hidden');
                     return alert('Selecione uma semana e dia.');
+                }
+
+                const roteiroSheetName = workbook.SheetNames.find(sheetName => getDiaFromSheetName(sheetName) === dia);
+                if (roteiroSheetName) {
+                    const parsed = parseRoteiroSheet(workbook, roteiroSheetName, semana);
+                    const totalRoteiro = parsed.insertsEscala.length + parsed.insertsFaltas.length;
+
+                    importModal.classList.add('hidden');
+                    if (totalRoteiro === 0) {
+                        e.target.value = '';
+                        return alert(`Nenhum registro valido encontrado na aba ${roteiroSheetName}.`);
+                    }
+
+                    if (confirm(`Importar ${totalRoteiro} registros da aba ${roteiroSheetName} para a data ${parsed.dataISO}?`)) {
+                        importModal.classList.remove('hidden');
+                        progressBar.style.width = '85%';
+                        progressText.textContent = 'Processando: 85%';
+                        progressDetails.textContent = 'Enviando para banco de dados...';
+
+                        await importarRoteiroDiario(workbook, roteiroSheetName, semana, dia);
+
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Processando: 100%';
+                        progressDetails.textContent = 'Importacao concluida com sucesso!';
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        importModal.classList.add('hidden');
+                        alert('Importacao concluida!');
+                    }
+                    e.target.value = '';
+                    return;
                 }
 
                 const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
@@ -2184,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (btnImportarSemana && fileImportarSemana) {
         btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
-        fileImportarSemana.addEventListener('change', importarExcelPlanejamento);
+        fileImportarSemana.addEventListener('change', importarRoteiroSemana);
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
     if (btnPDF) {
