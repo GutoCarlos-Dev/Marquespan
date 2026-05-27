@@ -89,6 +89,15 @@
     color: var(--primary-color);
 }
 
+.planning-sort-label {
+    display: inline-block;
+    padding-right: 22px;
+}
+
+#tabelaPlanejamento .column-sort-btn {
+    margin-left: 6px;
+}
+
 .column-drag-handle {
     color: #888;
     font-size: 11px;
@@ -158,6 +167,12 @@
 
 .data-grid td input.table-input.cell-has-note {
     background-color: #198754 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+
+.data-grid td input.table-input.cell-duplicate {
+    background-color: #dc3545 !important;
     color: #fff !important;
     font-weight: 700 !important;
 }

@@ -585,11 +585,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reseta estilo (mantendo a cor do status se for o caso, mas aqui estamos resetando duplicidade)
                 // Se for status, a cor é gerenciada por updateInputColor, então não resetamos background aqui se for status
                 // Mas status não está em groupsToCheck, então ok.
-                input.style.backgroundColor = '';
-                input.style.color = '';
-                input.style.fontWeight = '';
+                input.classList.remove('cell-duplicate');
+                if (input.title === 'Registro repetido') input.removeAttribute('title');
 
-                const val = input.value.trim().toUpperCase();
+                const val = input.dataset.key === 'placa'
+                    ? normalizeVehiclePlate(input.value)
+                    : normalizeString(input.value);
                 if (val) {
                     if (!valuesMap.has(val)) valuesMap.set(val, []);
                     valuesMap.get(val).push(input);
@@ -599,9 +600,11 @@ document.addEventListener('DOMContentLoaded', () => {
             valuesMap.forEach((elements) => {
                 if (elements.length > 1) {
                     elements.forEach(el => {
-                        el.style.backgroundColor = '#dc3545';
-                        el.style.color = 'white';
-                        el.style.fontWeight = 'bold';
+                        el.style.removeProperty('background-color');
+                        el.style.removeProperty('color');
+                        el.style.removeProperty('font-weight');
+                        el.classList.add('cell-duplicate');
+                        el.title = 'Registro repetido';
                     });
                 }
             });
@@ -3163,6 +3166,18 @@ document.addEventListener('DOMContentLoaded', () => {
         buscaPlanejamento.addEventListener('input', filtrarPlanejamento);
     }
 
+    const tabelaPlanejamento = document.getElementById('tabelaPlanejamento');
+    if (tabelaPlanejamento) {
+        tabelaPlanejamento.addEventListener('click', (e) => {
+            const sortButton = e.target.closest('[data-plan-sort]');
+            if (!sortButton) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            sortPlanejamentoByKey(sortButton.dataset.planSort);
+        });
+    }
+
     if (btnAbrirEscala) {
         btnAbrirEscala.addEventListener('click', () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
@@ -4017,6 +4032,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const columnSortState = {};
+    const planejamentoSortState = {};
 
     function getTableSection(table) {
         const tbody = table?.querySelector('tbody[id^="tbody"]');
@@ -4243,6 +4259,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? (direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
                 : 'fas fa-sort';
         });
+    }
+
+    function sortPlanejamentoByKey(key) {
+        const table = document.getElementById('tabelaPlanejamento');
+        const tbody = document.getElementById('tbodyPlanejamento');
+        if (!table || !tbody || !key) return;
+
+        const nextDirection = planejamentoSortState[key] === 'asc' ? 'desc' : 'asc';
+        Object.keys(planejamentoSortState).forEach(k => delete planejamentoSortState[k]);
+        planejamentoSortState[key] = nextDirection;
+
+        const rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+        rows.sort((rowA, rowB) => {
+            const valueA = getPlanningSortValue(rowA, key);
+            const valueB = getPlanningSortValue(rowB, key);
+            const result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
+            return nextDirection === 'asc' ? result : -result;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+        table.querySelectorAll('[data-plan-sort] i').forEach(icon => {
+            const button = icon.closest('[data-plan-sort]');
+            icon.className = button?.dataset.planSort === key
+                ? (nextDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
+    }
+
+    function getPlanningSortValue(row, key) {
+        const input = row.querySelector(`input[data-key="${key}"]`);
+        return (input?.value || '').trim();
     }
 
     function applySavedColumnWidths(table, section) {
@@ -4536,6 +4583,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Seleciona inputs na primeira coluna (PLACA) de todas as tabelas de dados
                 const inputs = document.querySelectorAll('.data-grid tbody input.table-input[data-key="placa"]');
                 inputs.forEach(input => {
+                    if (input.classList.contains('cell-duplicate')) return;
                     const placa = normalizeVehiclePlate(input.value);
                     if (placasInternadas.has(placa)) {
                         input.style.setProperty('background-color', corFundoInternado, 'important');
@@ -4621,6 +4669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data.forEach(item => renderLinhaPlanejamento(item, tbody));
             filtrarPlanejamento();
             applyCellAnnotations();
+            verificarDuplicidades();
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -4655,6 +4704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         tbody.appendChild(tr);
         applyCellAnnotations();
+        verificarDuplicidades();
     }
 
     // --- LÓGICA BOTÃO FLUTUANTE (FAB) ---
