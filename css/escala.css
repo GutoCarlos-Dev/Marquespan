@@ -156,6 +156,12 @@
     z-index: 2;
 }
 
+.data-grid td input.table-input.cell-has-note {
+    background-color: #198754 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+
 .data-grid td input.table-input[readonly],
 .data-grid td input.table-input.non-editable {
     background-color: #f5f5f5;

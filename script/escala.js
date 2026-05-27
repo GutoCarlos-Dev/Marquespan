@@ -6,6 +6,7 @@ let dadosPadraoDoDia = [];
 
 const COLUMN_COLORS_KEY = 'marquespan_column_colors';
 const CELL_COLORS_KEY = 'marquespan_cell_colors';
+const CELL_NOTES_KEY = 'marquespan_cell_notes';
 const SAVED_COLORS_KEY = 'marquespan_saved_colors';
 const COLUMN_ORDER_KEY_PREFIX = 'marquespan_escala_column_order_';
 const COLUMN_WIDTH_KEY_PREFIX = 'marquespan_escala_column_width_';
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ELEMENTOS DO DOM ---
     const selectSemana = document.getElementById('escalaSemana');
+    const selectFilial = document.getElementById('escalaFilial');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
     const painelEscala = document.getElementById('painelEscala');
     const tituloDia = document.getElementById('tituloDia');
@@ -54,6 +56,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentHeaderTarget = null;
     let currentCellTarget = null;
+    let filiaisCache = [];
+
+    const NOTE_FIELDS = ['motorista', 'auxiliar', 'terceiro', 'motorista_ausente', 'auxiliar_ausente'];
+
+    function getFilialEscala() {
+        return (selectFilial?.value || usuarioLogado?.filial || '').trim();
+    }
+
+    function exigirFilialEscala() {
+        if (getFilialEscala()) return true;
+        alert('Selecione uma filial.');
+        return false;
+    }
+
+    function aplicarFiltroFilial(query) {
+        const filial = getFilialEscala();
+        return filial ? query.eq('filial', filial) : query;
+    }
+
+    function getCellNoteId(tabela, id, key) {
+        return `${tabela}:${id}:${key}`;
+    }
+
+    function getCellNotes() {
+        try {
+            return JSON.parse(localStorage.getItem(CELL_NOTES_KEY) || '{}');
+        } catch {
+            return {};
+        }
+    }
+
+    function setCellNote(tabela, id, key, note) {
+        const notes = getCellNotes();
+        const noteId = getCellNoteId(tabela, id, key);
+        const value = (note || '').trim();
+        if (value) notes[noteId] = value;
+        else delete notes[noteId];
+        localStorage.setItem(CELL_NOTES_KEY, JSON.stringify(notes));
+    }
+
+    function getCellNote(tabela, id, key) {
+        return getCellNotes()[getCellNoteId(tabela, id, key)] || '';
+    }
+
+    function applyCellAnnotations() {
+        const notes = getCellNotes();
+        document.querySelectorAll('#painelEscala tr[data-id][data-tabela] input.table-input').forEach(input => {
+            const key = input.dataset.key;
+            if (!NOTE_FIELDS.includes(key)) return;
+
+            const tr = input.closest('tr');
+            const note = notes[getCellNoteId(tr.dataset.tabela, tr.dataset.id, key)] || '';
+            if (note) {
+                input.classList.add('cell-has-note');
+                input.style.setProperty('background-color', '#198754', 'important');
+                input.style.setProperty('color', '#fff', 'important');
+                input.style.setProperty('font-weight', '700', 'important');
+                input.title = note;
+            } else {
+                if (input.classList.contains('cell-has-note')) {
+                    input.style.cssText = getCellStyle(tr.dataset.tabela, tr.dataset.id, key);
+                }
+                input.classList.remove('cell-has-note');
+                input.removeAttribute('title');
+            }
+        });
+    }
 
     // Funções para Cores Salvas
     function getSavedColors() {
@@ -266,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetWeek = document.getElementById('selectSemanaDestinoPlan').value;
 
             if (!sourceWeek || !targetWeek) return;
+            if (!exigirFilialEscala()) return;
             if (!confirm(`Confirma aplicar o planejamento da ${sourceWeek} na escala da ${targetWeek}?`)) return;
 
             try {
@@ -273,7 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data: planData, error } = await supabaseClient
                     .from('planejamento_semanal')
                     .select('*')
-                    .eq('semana_nome', sourceWeek);
+                    .eq('semana_nome', sourceWeek)
+                    .eq('filial', getFilialEscala());
 
                 if (error) throw error;
                 if (!planData || planData.length === 0) {
@@ -296,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             inserts.push({
                                 semana_nome: targetWeek,
                                 data_escala: dataEscala,
+                                filial: getFilialEscala(),
                                 tipo_escala: 'PADRAO', // Assume que planejamento vai para PADRAO
                                 placa: row.placa,
                                 modelo: row.modelo,
@@ -540,6 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const semana = selectSemana.value;
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
         if (!semana || !dia) return;
+        if (!exigirFilialEscala()) return;
 
         const dataObj = CACHE_DATAS[semana][dia];
         const dataISO = dataObj.toISOString().split('T')[0];
@@ -547,7 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const payload = {
             semana_nome: semana,
-            data_escala: dataISO
+            data_escala: dataISO,
+            filial: getFilialEscala()
         };
 
         if (config.tabela === 'escala') {
@@ -611,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Busca dados das duas tabelas em paralelo
             const [resEscala, resFaltas] = await Promise.all([
-                supabaseClient.from('escala').select('*').eq('data_escala', dataISO).order('id'),
+                aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO)).order('id'),
                 supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO).order('id')
             ]);
 
@@ -680,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
             verificarDuplicidades();
             setupEscalaGridTools();
             filtrarDiaEscala();
+            applyCellAnnotations();
 
         } catch (err) {
             console.error('Erro ao carregar dados:', err);
@@ -762,6 +837,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Adiciona opção de Boleta se aplicável
                 const key = input.dataset.key;
+                if (NOTE_FIELDS.includes(key)) {
+                    const note = getCellNote(tr.dataset.tabela, tr.dataset.id, key);
+                    menuHTML += `<div class="context-menu-item-separator" style="border-bottom:1px solid #eee; margin: 4px 0;"></div>`;
+                    menuHTML += `<div class="context-menu-item" data-action="editarAnotacao"><i class="fas fa-note-sticky" style="margin-right: 8px; color: #198754;"></i>${note ? 'Editar Anotacao' : 'Incluir Anotacao'}</div>`;
+                    if (note) {
+                        menuHTML += `<div class="context-menu-item" data-action="excluirAnotacao"><i class="fas fa-trash-can" style="margin-right: 8px; color: #dc3545;"></i>Excluir Anotacao</div>`;
+                    }
+                }
+
                 if ((key === 'motorista' || key === 'auxiliar' || key === 'terceiro') && input.value.trim() !== '') {
                     const nome = input.value.trim();
                     const placa = tr.querySelector('input[data-key="placa"]')?.value || '';
@@ -785,6 +869,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(itemMenu) {
                     itemMenu.addEventListener('click', () => {
                         abrirModalBoletaComDados(itemMenu.dataset.nome, itemMenu.dataset.placa, itemMenu.dataset.rota, itemMenu.dataset.modelo);
+                        contextMenu.style.display = 'none';
+                    });
+                }
+
+                const itemEditarAnotacao = contextMenu.querySelector('[data-action="editarAnotacao"]');
+                if (itemEditarAnotacao) {
+                    itemEditarAnotacao.addEventListener('click', () => {
+                        const atual = getCellNote(currentCellTarget.tabela, currentCellTarget.id, currentCellTarget.key);
+                        const anotacao = prompt('Anotacao da celula:', atual);
+                        if (anotacao !== null) {
+                            setCellNote(currentCellTarget.tabela, currentCellTarget.id, currentCellTarget.key, anotacao);
+                            applyCellAnnotations();
+                        }
+                        contextMenu.style.display = 'none';
+                    });
+                }
+
+                const itemExcluirAnotacao = contextMenu.querySelector('[data-action="excluirAnotacao"]');
+                if (itemExcluirAnotacao) {
+                    itemExcluirAnotacao.addEventListener('click', () => {
+                        if (confirm('Excluir a anotacao desta celula?')) {
+                            setCellNote(currentCellTarget.tabela, currentCellTarget.id, currentCellTarget.key, '');
+                            applyCellAnnotations();
+                        }
                         contextMenu.style.display = 'none';
                     });
                 }
@@ -949,6 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const semanaAtual = selectSemana.value;
             const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
             if (!semanaAtual || !diaAtual) return;
+            if (!exigirFilialEscala()) return;
 
             const dataOrigem = CACHE_DATAS[semanaAtual][diaAtual].toISOString().split('T')[0];
             
@@ -971,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 1. Busca dados origem
             const [resEscala, resFaltas] = await Promise.all([
-                supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem),
+                aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
                 supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)
             ]);
 
@@ -987,7 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const novosEscala = resEscala.data.map(({ id, created_at, updated_at, ...rest }) => ({
                 ...rest,
                 semana_nome: semanaDestino,
-                data_escala: dataDestino
+                data_escala: dataDestino,
+                filial: getFilialEscala()
             }));
             
             const novosFaltas = resFaltas.data.map(({ id, created_at, updated_at, ...rest }) => ({
@@ -1182,6 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!consolidado.has(placa)) {
                                 consolidado.set(placa, {
                                     semana_nome: semana,
+                                    filial: getFilialEscala(),
                                     placa: placa,
                                     modelo: String(r['MODELO'] || '').trim(),
                                     motorista: String(r['MOTORISTA'] || '').trim(),
@@ -1410,6 +1521,7 @@ document.addEventListener('DOMContentLoaded', () => {
             insertsEscala.push({
                 semana_nome: semana,
                 data_escala: dataISO,
+                filial: getFilialEscala(),
                 tipo_escala: currentSection,
                 placa,
                 modelo: modeloVisual,
@@ -1425,6 +1537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function importarRoteiroDiario(workbook, sheetName, semana, diaParaRecarregar = null) {
+        if (!exigirFilialEscala()) return 0;
         const parsed = parseRoteiroSheet(workbook, sheetName, semana);
         if (!parsed) {
             throw new Error(`Falha ao processar a aba ${sheetName}.`);
@@ -1459,6 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const semana = selectSemana.value;
         if (!semana) return alert('Selecione uma semana antes de importar.');
+        if (!exigirFilialEscala()) return;
 
         const reader = new FileReader();
         reader.onload = async (evt) => {
@@ -1534,6 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const payload = {
             ...item,
+            filial: item.filial || getFilialEscala(),
             placa,
             modelo: getModeloVisualByPlaca(placa) || item.modelo || ''
         };
@@ -1541,7 +1656,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data: existentes, error: selectError } = await supabaseClient
             .from('planejamento_semanal')
             .select('id, placa')
-            .eq('semana_nome', payload.semana_nome);
+            .eq('semana_nome', payload.semana_nome)
+            .eq('filial', payload.filial);
 
         if (selectError) throw selectError;
 
@@ -1571,6 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await upsertPlanejamentoItem({
             semana_nome: row.semana_nome,
+            filial: row.filial || getFilialEscala(),
             placa: row.placa,
             modelo: row.modelo || '',
             motorista: row.motorista || '',
@@ -1603,6 +1720,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('escala')
             .select('*')
             .in('data_escala', datasSemana)
+            .eq('filial', getFilialEscala())
             .order('data_escala')
             .order('id');
 
@@ -1617,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!mapa.has(placa)) {
                 mapa.set(placa, {
                     semana_nome: semana,
+                    filial: getFilialEscala(),
                     placa,
                     modelo: row.modelo || '',
                     motorista: row.motorista || '',
@@ -1661,7 +1780,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await supabaseClient
             .from('planejamento_semanal')
             .update(payload)
-            .eq('semana_nome', semana);
+            .eq('semana_nome', semana)
+            .eq('filial', getFilialEscala());
 
         if (error) throw error;
     }
@@ -1694,6 +1814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('escala')
                 .update(payload)
                 .eq('semana_nome', row.semana_nome)
+                .eq('filial', row.filial || getFilialEscala())
                 .in('data_escala', datasSemana)
                 .eq('placa', placaBusca);
 
@@ -1717,6 +1838,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('escala')
             .select('id')
             .eq('data_escala', dataISO)
+            .eq('filial', row.filial || getFilialEscala())
             .eq('placa', placaBusca);
 
         if (selectError) throw selectError;
@@ -1724,6 +1846,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = {
             semana_nome: row.semana_nome,
             data_escala: dataISO,
+            filial: row.filial || getFilialEscala(),
             tipo_escala: 'PADRAO',
             placa: placaAtual,
             modelo: getModeloVisualByPlaca(placaAtual) || row.modelo || '',
@@ -1992,6 +2115,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     importModal.classList.add('hidden');
                     return alert('Selecione uma semana e dia.');
                 }
+                if (!exigirFilialEscala()) {
+                    importModal.classList.add('hidden');
+                    return;
+                }
 
                 const roteiroSheetName = workbook.SheetNames.find(sheetName => getDiaFromSheetName(sheetName) === dia);
                 if (roteiroSheetName) {
@@ -2059,6 +2186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 insertsEscala.push({
                                     semana_nome: semana,
                                     data_escala: dataISO,
+                                    filial: getFilialEscala(),
                                     tipo_escala: config.tipo,
                                     placa: row['PLACA'],
                                     modelo: row['MODELO'],
@@ -2189,7 +2317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Busca dados do dia de origem
                 const [resEscala, resFaltas] = await Promise.all([
-                    supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem),
+                    aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
                     supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)
                 ]);
 
@@ -2200,6 +2328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const insertsEscala = resEscala.data.map(item => ({
                     ...item,
                     data_escala: dataDestino,
+                    filial: getFilialEscala(),
                     id: undefined // Remove ID para criar novo registro
                 }));
 
@@ -2279,7 +2408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
 
         // Busca dados apenas do dia selecionado
-        const { data: dadosEscala, error: escalaError } = await supabaseClient.from('escala').select('*').eq('data_escala', dataISO);
+        const { data: dadosEscala, error: escalaError } = await aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO));
         const { data: dadosFaltas, error: faltasError } = await supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO);
 
         if (escalaError || faltasError) {
@@ -2505,10 +2634,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
-        const { data, error } = await supabaseClient
-            .from('escala')
-            .select('id, placa, modelo, rota, motorista, auxiliar, terceiro')
-            .eq('data_escala', contexto.dataISO)
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .select('id, placa, modelo, rota, motorista, auxiliar, terceiro')
+                .eq('data_escala', contexto.dataISO)
+        )
             .not('terceiro', 'is', null)
             .neq('terceiro', '')
             .order('rota')
@@ -2556,6 +2687,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('escala')
             .update({ terceiro: funcionario })
             .eq('data_escala', contexto.dataISO)
+            .eq('filial', getFilialEscala())
             .eq('rota', rota)
             .select('id');
 
@@ -2772,6 +2904,32 @@ document.addEventListener('DOMContentLoaded', () => {
             selectSemana.appendChild(new Option(nome, nome));
         }
         selectSemana.value = `SEMANA ${String(semanaAtual).padStart(2, '0')} - 2026`;
+    }
+
+    async function carregarFiliaisEscala() {
+        if (!selectFilial) return;
+
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+
+        if (error) {
+            console.error('Erro ao carregar filiais:', error);
+            return;
+        }
+
+        filiaisCache = data || [];
+        selectFilial.innerHTML = '<option value="">Selecione a Filial</option>' + filiaisCache.map(filial => {
+            const value = filial.sigla || filial.nome || '';
+            const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+            return `<option value="${escapeAttribute(value)}">${escapeAttribute(label)}</option>`;
+        }).join('');
+
+        const filialUsuario = usuarioLogado?.filial || '';
+        if (filialUsuario && Array.from(selectFilial.options).some(opt => opt.value === filialUsuario)) {
+            selectFilial.value = filialUsuario;
+        }
     }
 
     const PLANNING_DAY_COLORS = {
@@ -3004,6 +3162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAbrirEscala) {
         btnAbrirEscala.addEventListener('click', () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
+            if (!exigirFilialEscala()) return;
             
             // Atualiza datas nas abas
             const dadosSemana = CACHE_DATAS[selectSemana.value];
@@ -3048,6 +3207,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (selectFilial) {
+        selectFilial.addEventListener('change', async () => {
+            if (!painelEscala || painelEscala.classList.contains('hidden')) return;
+
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab?.dataset.tab === 'planejamento') {
+                await sincronizarPlanejamentoDaSemana(selectSemana.value);
+                carregarPlanejamento(selectSemana.value);
+            } else if (activeTab?.dataset.dia) {
+                carregarDadosDia(activeTab.dataset.dia, selectSemana.value);
+            }
+            atualizarBotaoTerceiroSuspenso();
+        });
+    }
+
     tabButtons.forEach(btn => {
         btn.addEventListener('click', async (e) => {
             tabButtons.forEach(b => b.classList.remove('active'));
@@ -3059,12 +3233,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const painelPlan = document.getElementById('conteudoPlanejamento');
 
             if (tab === 'planejamento') {
+                if (!exigirFilialEscala()) return;
                 if(painelDias) painelDias.classList.add('hidden');
                 if(painelPlan) painelPlan.classList.remove('hidden');
                 await sincronizarPlanejamentoDaSemana(selectSemana.value);
                 carregarPlanejamento(selectSemana.value);
                 atualizarBotaoTerceiroSuspenso();
             } else {
+                if (!exigirFilialEscala()) return;
                 if(painelPlan) painelPlan.classList.add('hidden');
                 if(painelDias) painelDias.classList.remove('hidden');
                 if(dia) {
@@ -3090,13 +3266,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const semana = selectSemana.value;
             const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
             if (!semana || !dia) return;
+            if (!exigirFilialEscala()) return;
 
             const dataObj = CACHE_DATAS[semana][dia];
             const dataISO = dataObj.toISOString().split('T')[0];
             const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
             if (confirm(`ATENÇÃO: Apagar TODOS os dados do dia ${formattedDate}?`)) {
-                await supabaseClient.from('escala').delete().eq('data_escala', dataISO);
+                await aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO));
                 await supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO);
                 alert(`Dados do dia ${formattedDate} foram limpos.`);
                 if(dia) carregarDadosDia(dia, semana);
@@ -4399,12 +4576,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const semana = selectSemana.value;
         if (!semana) return alert('Selecione uma semana.');
+        if (!exigirFilialEscala()) return;
 
         try {
             // Cria o registro no banco primeiro para obter o ID
             const { data, error } = await supabaseClient
                 .from('planejamento_semanal')
-                .insert([{ semana_nome: semana }])
+                .insert([{ semana_nome: semana, filial: getFilialEscala() }])
                 .select()
                 .single();
 
@@ -4423,11 +4601,12 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;">Carregando...</td></tr>';
 
         try {
-            const { data, error } = await supabaseClient
-                .from('planejamento_semanal')
-                .select('*')
-                .eq('semana_nome', semana)
-                .order('id');
+            const { data, error } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .eq('semana_nome', semana)
+            ).order('id');
 
             if (error) throw error;
 
@@ -4437,6 +4616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             data.forEach(item => renderLinhaPlanejamento(item, tbody));
             filtrarPlanejamento();
+            applyCellAnnotations();
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -4470,6 +4650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
         `;
         tbody.appendChild(tr);
+        applyCellAnnotations();
     }
 
     // --- LÓGICA BOTÃO FLUTUANTE (FAB) ---
@@ -4562,6 +4743,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicialização
     carregarSemanas();
+    carregarFiliaisEscala();
     preencherCacheDatas();
     carregarListasAuxiliares();
     setupEscalaGridTools();
