@@ -663,15 +663,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
                 <i class="fa-solid fa-copy"></i>
             </button>
-            <button id="btnModeloDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #6c757d; color: white;" title="Baixar Modelo">
-                <i class="fa-solid fa-download"></i>
-            </button>
-            <button id="btnImportarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #28a745; color: white;" title="Importar XLSX">
-                <i class="fa-solid fa-file-import"></i>
-            </button>
-            <button id="btnExcluirSelecionadosDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #dc3545; color: white;" title="Excluir Selecionados">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
             <span class="day-search-wrap">
                 <i class="fa-solid fa-search"></i>
                 <input type="text" id="buscaDiaEscala" class="glass-input day-search-input" placeholder="Buscar placa, rota, motorista...">
@@ -1018,9 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await sincronizarEscalaParaPlanejamento(id);
             } else if (tabela === 'planejamento_semanal') {
                 await sincronizarPlanejamentoParaEscala(id, key, placaAnterior);
-                if (key.includes('_rota') || key.includes('_status')) {
-                    carregarPlanejamento(selectSemana.value);
-                }
+                verificarDuplicidades();
             }
 
             if (key === 'placa') {
@@ -4641,6 +4630,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) throw error;
             
             renderLinhaPlanejamento(data, tbody);
+            filtrarPlanejamento();
+            applyCellAnnotations();
+            verificarDuplicidades();
         } catch (err) {
             console.error('Erro ao adicionar linha de planejamento:', err);
             alert('Erro ao criar linha no banco de dados.');
@@ -4703,8 +4695,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
         `;
         tbody.appendChild(tr);
-        applyCellAnnotations();
-        verificarDuplicidades();
     }
 
     // --- LÓGICA BOTÃO FLUTUANTE (FAB) ---
