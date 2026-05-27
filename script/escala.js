@@ -2801,6 +2801,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'TRI +': { bg: '#E91E63', color: 'white', desc: 'Rota do Trimais: tem que ir palete de madeira.' },
         '152/257': { bg: '#00BCD4', color: 'black', desc: 'Rotas dos proximos dias na programacao do caminhao e da dupla.' },
         '194 TER': { bg: '#009688', color: 'white', desc: 'Rotas dos proximos dias na programacao do caminhao e da dupla.' },
+        'INTERNADO': { bg: '#004085', color: 'white', desc: 'Veiculo internado.' },
         // Status Legados
         'OK': { bg: '#28a745', color: 'white', desc: 'Status OK.' },
         'MANUTENÇÃO': { bg: '#dc3545', color: 'white' },
@@ -4346,24 +4347,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const placasInternadas = new Set(veiculos.map(v => v.placa.trim().toUpperCase()));
+            const placasInternadas = new Set((veiculos || []).map(v => normalizeVehiclePlate(v.placa)));
             const corFundoInternado = '#004085'; // Cor do fundo INTERNADO (azul escuro)
             const corTextoInternado = '#FFFFFF'; // Cor do texto INTERNADO (branco)
 
             const aplicarEstilo = () => {
                 // Seleciona inputs na primeira coluna (PLACA) de todas as tabelas de dados
-                const inputs = document.querySelectorAll('.data-grid tbody tr td:first-child input');
+                const inputs = document.querySelectorAll('.data-grid tbody input.table-input[data-key="placa"]');
                 inputs.forEach(input => {
-                    const placa = input.value.trim().toUpperCase();
+                    const placa = normalizeVehiclePlate(input.value);
                     if (placasInternadas.has(placa)) {
-                        input.style.backgroundColor = corFundoInternado;
-                        input.style.color = corTextoInternado;
+                        input.style.setProperty('background-color', corFundoInternado, 'important');
+                        input.style.setProperty('color', corTextoInternado, 'important');
                         input.style.fontWeight = 'bold';
+                        input.title = 'INTERNADO';
                     } else {
                         // Reseta para o padrão se não for internado
                         input.style.backgroundColor = '';
                         input.style.color = '';
                         input.style.fontWeight = '';
+                        if (input.title === 'INTERNADO') input.removeAttribute('title');
                     }
                 });
             };
@@ -4380,7 +4383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Reaplica ao digitar (caso mude a placa manualmente)
             document.addEventListener('input', (e) => {
-                if (e.target.matches('.data-grid tbody tr td:first-child input')) {
+                if (e.target.matches('.data-grid tbody input.table-input[data-key="placa"]')) {
                     aplicarEstilo();
                 }
             });
