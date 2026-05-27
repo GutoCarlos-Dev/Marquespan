@@ -189,6 +189,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataDestinoCopia = document.getElementById('dataDestinoCopia');
     const textoOrigemCopia = document.getElementById('textoOrigemCopia');
 
+    const btnTerceiroRotaSuspenso = document.createElement('button');
+    btnTerceiroRotaSuspenso.id = 'btnTerceiroRotaSuspenso';
+    btnTerceiroRotaSuspenso.className = 'floating-terceiro-btn hidden';
+    btnTerceiroRotaSuspenso.type = 'button';
+    btnTerceiroRotaSuspenso.disabled = true;
+    btnTerceiroRotaSuspenso.innerHTML = '<i class="fa-solid fa-user-plus"></i><span>Terceiro</span>';
+    document.body.appendChild(btnTerceiroRotaSuspenso);
+
+    btnTerceiroRotaSuspenso.addEventListener('click', () => {
+        if (!btnTerceiroRotaSuspenso.disabled) abrirModalTerceiroRota();
+    });
+
+    function atualizarBotaoTerceiroSuspenso() {
+        const contexto = getDataEscalaAberta();
+        const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
+        const ativo = !!contexto && escalaAberta;
+
+        btnTerceiroRotaSuspenso.disabled = !ativo;
+        btnTerceiroRotaSuspenso.classList.toggle('hidden', !ativo);
+
+        if (ativo) {
+            btnTerceiroRotaSuspenso.title = `Gerenciar terceiro por rota - ${contexto.dia} ${contexto.dataBR}`;
+            btnTerceiroRotaSuspenso.querySelector('span').textContent = `Terceiro ${contexto.dia}`;
+        } else {
+            btnTerceiroRotaSuspenso.title = 'Abra uma escala e selecione uma data.';
+            btnTerceiroRotaSuspenso.querySelector('span').textContent = 'Terceiro';
+        }
+    }
+
     if (btnCancelarCopia) btnCancelarCopia.addEventListener('click', () => modalCopiarEscala.style.display = 'none');
     modalCopiarEscala.addEventListener('click', (e) => { if (e.target === modalCopiarEscala) modalCopiarEscala.style.display = 'none'; });
 
@@ -626,9 +655,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             tr.innerHTML = `
                                 <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-dia"></td>
                                 <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('escala', item.id, 'placa')}"></td>
-                                <td><input type="text" list="listaModelos" class="table-input" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" style="${getCellStyle('escala', item.id, 'modelo')}"></td>
+                                <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('escala', item.id, 'modelo')}"></td>
                                 <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota" style="${getCellStyle('escala', item.id, 'rota')}"></td>
-                                <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" style="${getCellStyle('escala', item.id, 'status', item.status)}"></td>
+                                <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" title="${getStatusTitleAttr(item.status)}" style="${getCellStyle('escala', item.id, 'status', item.status)}"></td>
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('escala', item.id, 'motorista')}"></td>
                                 <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('escala', item.id, 'auxiliar')}"></td>
                                 <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('escala', item.id, 'terceiro')}"></td>
@@ -836,8 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-preencher Modelo se a Placa for alterada
         let extraUpdates = {};
         if (key === 'placa' && (tabela === 'escala' || tabela === 'planejamento_semanal')) {
-            const placaBusca = String(valor).trim().toUpperCase();
-            const veiculoEncontrado = listaVeiculos.find(v => v.placa === placaBusca);
+            const placaBusca = normalizeVehiclePlate(valor);
+            const veiculoEncontrado = listaVeiculos.find(v => v.placa_normalizada === placaBusca || normalizeVehiclePlate(v.placa) === placaBusca);
             if (veiculoEncontrado) {
                 extraUpdates.modelo = veiculoEncontrado.modelo;
                 const inputModelo = tr.querySelector('input[data-key="modelo"]');
@@ -850,6 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Atualiza cor no Planejamento (se preenchido)
         if (tabela === 'planejamento_semanal' && (key.includes('_rota') || key.includes('_status'))) {
             updatePlanningInputColor(target);
+            if (key.includes('_status')) target.title = getStatusTooltip(target.value);
         }
 
         verificarDuplicidades();
@@ -1195,6 +1225,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return text;
     }
 
+    function normalizeVehiclePlate(value) {
+        return cleanImportValue(value).replace(/[\s-]+/g, '').toUpperCase();
+    }
+
+    function getModeloVisualByPlaca(placa) {
+        const placaBusca = normalizeVehiclePlate(placa);
+        const veiculo = listaVeiculos.find(v => v.placa_normalizada === placaBusca || normalizeVehiclePlate(v.placa) === placaBusca);
+        return veiculo ? cleanImportValue(veiculo.modelo) : '';
+    }
+
     function splitPlacaModelo(value) {
         const text = cleanImportValue(value);
         if (!text) return { placa: '', modelo: '' };
@@ -1202,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const match = text.match(/^([A-Z]{3}\s*-?\s*[0-9A-Z]{4})\s*-?\s*(.*)$/i);
         if (!match) return { placa: text, modelo: '' };
 
-        const placa = match[1].replace(/[\s-]+/g, '').toUpperCase();
+        const placa = normalizeVehiclePlate(match[1]);
         const modelo = cleanImportValue(match[2]);
         return { placa, modelo };
     }
@@ -1314,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const { placa, modelo } = splitPlacaModelo(row[2]);
+            const modeloVisual = getModeloVisualByPlaca(placa) || modelo;
             if (!placa && !rota && !status && !motorista && !auxiliar && !terceiro) continue;
 
             insertsEscala.push({
@@ -1321,7 +1362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data_escala: dataISO,
                 tipo_escala: currentSection,
                 placa,
-                modelo,
+                modelo: modeloVisual,
                 rota,
                 status,
                 motorista,
@@ -2088,6 +2129,189 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modalExpedicao').style.display = 'flex';
     }
 
+    function getDataEscalaAberta() {
+        const semana = selectSemana.value;
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semana || !dia || !CACHE_DATAS[semana] || !CACHE_DATAS[semana][dia]) return null;
+
+        const dataObj = CACHE_DATAS[semana][dia];
+        return {
+            semana,
+            dia,
+            dataISO: dataObj.toISOString().split('T')[0],
+            dataBR: dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+        };
+    }
+
+    function ensureModalTerceiroRota() {
+        let modal = document.getElementById('modalTerceiroRota');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalTerceiroRota';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content">
+                <div class="terceiro-modal-header">
+                    <h3><i class="fa-solid fa-user-plus"></i> Terceiro por Rota</h3>
+                    <button type="button" id="btnFecharTerceiroRota" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="terceiro-modal-subtitle" id="terceiroRotaContexto"></div>
+                <div class="terceiro-form-grid">
+                    <div class="form-group">
+                        <label for="terceiroRotaFuncionario">Funcionario</label>
+                        <input type="text" id="terceiroRotaFuncionario" list="listaTerceiros" class="glass-input" placeholder="Selecione o funcionario">
+                    </div>
+                    <div class="form-group">
+                        <label for="terceiroRotaNumero">Rota</label>
+                        <input type="text" id="terceiroRotaNumero" list="listaRotas" class="glass-input" placeholder="Informe a rota">
+                    </div>
+                    <button type="button" id="btnAplicarTerceiroRota" class="btn-glass btn-blue">
+                        <i class="fa-solid fa-check"></i> Aplicar
+                    </button>
+                </div>
+                <div class="terceiro-table-wrap">
+                    <table class="data-grid terceiro-table">
+                        <thead>
+                            <tr>
+                                <th>ROTA</th>
+                                <th>PLACA</th>
+                                <th>MODELO</th>
+                                <th>MOTORISTA</th>
+                                <th>AUXILIAR</th>
+                                <th>TERCEIRO</th>
+                                <th>ACOES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTerceiroRota"></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('#btnFecharTerceiroRota')) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        modal.querySelector('#btnAplicarTerceiroRota').addEventListener('click', aplicarTerceiroPorRota);
+        modal.querySelector('#tbodyTerceiroRota').addEventListener('click', limparTerceiroDaLinha);
+
+        return modal;
+    }
+
+    async function abrirModalTerceiroRota() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return alert('Abra uma semana e um dia antes de gerenciar terceiros.');
+
+        const modal = ensureModalTerceiroRota();
+        modal.querySelector('#terceiroRotaContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
+        modal.querySelector('#terceiroRotaFuncionario').value = '';
+        modal.querySelector('#terceiroRotaNumero').value = '';
+        modal.classList.remove('hidden');
+        await carregarTerceiroRotaModal();
+    }
+
+    async function carregarTerceiroRotaModal() {
+        const contexto = getDataEscalaAberta();
+        const tbody = document.getElementById('tbodyTerceiroRota');
+        if (!contexto || !tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('id, placa, modelo, rota, motorista, auxiliar, terceiro')
+            .eq('data_escala', contexto.dataISO)
+            .not('terceiro', 'is', null)
+            .neq('terceiro', '')
+            .order('rota')
+            .order('id');
+
+        if (error) {
+            console.error('Erro ao carregar terceiros por rota:', error);
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc3545;">Erro ao carregar dados.</td></tr>';
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum terceiro preenchido para esta data.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(item => `
+            <tr>
+                <td>${escapeAttribute(item.rota || '')}</td>
+                <td>${escapeAttribute(item.placa || '')}</td>
+                <td>${escapeAttribute(item.modelo || '')}</td>
+                <td>${escapeAttribute(item.motorista || '')}</td>
+                <td>${escapeAttribute(item.auxiliar || '')}</td>
+                <td>${escapeAttribute(item.terceiro || '')}</td>
+                <td class="actions-cell">
+                    <button type="button" class="btn-icon delete btn-limpar-terceiro" data-id="${item.id}" title="Limpar terceiro">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function aplicarTerceiroPorRota() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return;
+
+        const funcionario = cleanImportValue(document.getElementById('terceiroRotaFuncionario')?.value);
+        const rota = cleanImportValue(document.getElementById('terceiroRotaNumero')?.value, { keepZero: true });
+
+        if (!funcionario) return alert('Selecione o funcionario.');
+        if (!rota) return alert('Informe a rota.');
+
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .update({ terceiro: funcionario })
+            .eq('data_escala', contexto.dataISO)
+            .eq('rota', rota)
+            .select('id');
+
+        if (error) {
+            console.error('Erro ao aplicar terceiro por rota:', error);
+            return alert('Erro ao aplicar terceiro: ' + error.message);
+        }
+
+        if (!data || data.length === 0) {
+            return alert(`Nenhuma linha encontrada para a rota ${rota} nesta data.`);
+        }
+
+        alert(`Terceiro aplicado em ${data.length} linha(s) da rota ${rota}.`);
+        await carregarTerceiroRotaModal();
+        carregarDadosDia(contexto.dia, contexto.semana);
+    }
+
+    async function limparTerceiroDaLinha(e) {
+        const btn = e.target.closest('.btn-limpar-terceiro');
+        if (!btn) return;
+
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return;
+
+        if (!confirm('Limpar o terceiro desta linha?')) return;
+
+        const { error } = await supabaseClient
+            .from('escala')
+            .update({ terceiro: null })
+            .eq('id', btn.dataset.id);
+
+        if (error) {
+            console.error('Erro ao limpar terceiro:', error);
+            return alert('Erro ao limpar terceiro: ' + error.message);
+        }
+
+        await carregarTerceiroRotaModal();
+        carregarDadosDia(contexto.dia, contexto.semana);
+    }
+
     function popularFiltrosExpedicao(dados) {
         const columns = ['placa', 'modelo', 'rota', 'status', 'motorista'];
         columns.forEach(col => {
@@ -2279,34 +2503,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Configuração de Status baseada em status.html
     const STATUS_CONFIG = {
-        'CNT SP': { bg: '#FF9800', color: 'white' },
-        'ZMRC': { bg: '#F44336', color: 'white' },
-        'ZMRC CPN': { bg: '#B71C1C', color: 'white' },
-        'V': { bg: '#2196F3', color: 'white' },
-        'P': { bg: '#9C27B0', color: 'white' },
-        'R': { bg: '#4CAF50', color: 'white' },
-        'V - RESTR': { bg: '#3F51B5', color: 'white' },
-        'RESTR': { bg: '#795548', color: 'white' },
-        'BGMN': { bg: '#FFEB3B', color: 'black' },
-        'TRI +': { bg: '#E91E63', color: 'white' },
-        '152/257': { bg: '#00BCD4', color: 'black' },
-        '194 TER': { bg: '#009688', color: 'white' },
+        'CNT SP': { bg: '#FF9800', color: 'white', desc: 'Centro de SP: caminhao precisa sair ate 12h.' },
+        'ZMRC': { bg: '#F44336', color: 'white', desc: 'Sao Paulo Zona de Maxima Restricao de Circulacao: precisa ser VUC.' },
+        'ZMRC CPN': { bg: '#B71C1C', color: 'white', desc: 'Campinas Zona de Maxima Restricao de Circulacao: precisa ser VUC.' },
+        'V': { bg: '#2196F3', color: 'white', desc: 'Rota vai para viagem de pernoite.' },
+        'P': { bg: '#9C27B0', color: 'white', desc: 'Rota vai pernoitar.' },
+        'R': { bg: '#4CAF50', color: 'white', desc: 'Rota vai retornar.' },
+        'V - RESTR': { bg: '#3F51B5', color: 'white', desc: 'Vai para pernoite e tem restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
+        'RESTR': { bg: '#795548', color: 'white', desc: 'Rota com restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
+        'BGMN': { bg: '#FFEB3B', color: 'black', desc: 'Rota do Bergamini: tem que ir palete de madeira.' },
+        'TRI +': { bg: '#E91E63', color: 'white', desc: 'Rota do Trimais: tem que ir palete de madeira.' },
+        '152/257': { bg: '#00BCD4', color: 'black', desc: 'Rotas dos proximos dias na programacao do caminhao e da dupla.' },
+        '194 TER': { bg: '#009688', color: 'white', desc: 'Rotas dos proximos dias na programacao do caminhao e da dupla.' },
         // Status Legados
-        'OK': { bg: '#28a745', color: 'white' },
+        'OK': { bg: '#28a745', color: 'white', desc: 'Status OK.' },
         'MANUTENÇÃO': { bg: '#dc3545', color: 'white' },
-        'FALTA': { bg: '#dc3545', color: 'white' },
-        'FERIAS': { bg: '#17a2b8', color: 'white' },
-        'FOLGA': { bg: '#6c757d', color: 'white' },
-        'ATESTADO': { bg: '#ffc107', color: 'black' }
+        'FALTA': { bg: '#dc3545', color: 'white', desc: 'Falta.' },
+        'FERIAS': { bg: '#17a2b8', color: 'white', desc: 'Ferias.' },
+        'FOLGA': { bg: '#6c757d', color: 'white', desc: 'Folga.' },
+        'ATESTADO': { bg: '#ffc107', color: 'black', desc: 'Atestado.' }
     };
+    STATUS_CONFIG.MANUTENCAO = STATUS_CONFIG.MANUTENCAO || { bg: '#dc3545', color: 'white', desc: 'Veiculo em manutencao.' };
 
     async function carregarListasAuxiliares() {
         // Veículos
         const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
-        listaVeiculos = veiculos || [];
+        listaVeiculos = (veiculos || []).map(v => ({
+            ...v,
+            placa_normalizada: normalizeVehiclePlate(v.placa)
+        }));
         const dlPlacas = document.getElementById('listaVeiculos');
         const dlModelos = document.getElementById('listaModelos');
-        if (dlPlacas) dlPlacas.innerHTML = listaVeiculos.map(v => `<option value="${v.placa}">`).join('');
+        if (dlPlacas) dlPlacas.innerHTML = listaVeiculos.map(v => `<option value="${v.placa_normalizada}">`).join('');
         if (dlModelos) dlModelos.innerHTML = [...new Set(listaVeiculos.map(v => v.modelo))].map(m => `<option value="${m}">`).join('');
 
         // Rotas
@@ -2315,27 +2543,65 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dlRotas && rotas) dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(r => `<option value="${r}">`).join('');
 
         // Funcionários
-        const { data: funcs } = await supabaseClient.from('funcionario').select('nome_completo, funcao').eq('status', 'Ativo');
+        const { data: funcs } = await supabaseClient.from('funcionario').select('nome_completo, funcao, status');
         const dlMot = document.getElementById('listaMotoristas');
         const dlAux = document.getElementById('listaAuxiliares');
+        const dlTer = document.getElementById('listaTerceiros');
         if (funcs) {
-            if (dlMot) dlMot.innerHTML = funcs.filter(f => f.funcao === 'Motorista').map(f => `<option value="${f.nome_completo}">`).join('');
-            if (dlAux) dlAux.innerHTML = funcs.filter(f => f.funcao === 'Auxiliar').map(f => `<option value="${f.nome_completo}">`).join('');
+            const funcionariosAtivos = funcs.filter(f => normalizeString(f.status) === 'ATIVO');
+            const optionHTML = (items) => [...new Set(items.map(f => cleanImportValue(f.nome_completo)).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                .map(nome => `<option value="${nome.replace(/"/g, '&quot;')}">`)
+                .join('');
+
+            const motoristas = funcionariosAtivos.filter(f => normalizeString(f.funcao).includes('MOTORISTA'));
+            const auxiliares = funcionariosAtivos.filter(f => {
+                const funcao = normalizeString(f.funcao);
+                return funcao.includes('AUXILIAR') || funcao.includes('AJUDANTE');
+            });
+
+            if (dlMot) dlMot.innerHTML = optionHTML(motoristas);
+            if (dlAux) dlAux.innerHTML = optionHTML(auxiliares);
+            if (dlTer) dlTer.innerHTML = optionHTML([...motoristas, ...auxiliares]);
         }
         
         // Status
         const dlStatus = document.getElementById('listaStatus');
-        if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}">`).join('');
+        if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}" label="${escapeAttribute(STATUS_CONFIG[s].desc || '')}">`).join('');
     }
 
     function getStatusStyle(status) {
-        const config = STATUS_CONFIG[status?.toUpperCase()] || STATUS_CONFIG[status];
+        const config = getStatusConfig(status);
         if (config) {
             return `background-color: ${config.bg}; color: ${config.color}; font-weight: bold; text-align: center;`;
         }
         return '';
     }
-    function updateInputColor(input) { input.style.cssText = getStatusStyle(input.value); }
+
+    function getStatusConfig(status) {
+        const normalized = normalizeString(status);
+        return STATUS_CONFIG[status?.toUpperCase()] || STATUS_CONFIG[status] || STATUS_CONFIG[normalized] || null;
+    }
+
+    function getStatusTooltip(status) {
+        const value = cleanImportValue(status, { keepZero: true });
+        const config = getStatusConfig(value);
+        if (!value) return 'Informe o status da rota.';
+        return config?.desc ? `${value}: ${config.desc}` : `${value}: status sem descricao cadastrada.`;
+    }
+
+    function escapeAttribute(value) {
+        return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function getStatusTitleAttr(status) {
+        return escapeAttribute(getStatusTooltip(status));
+    }
+
+    function updateInputColor(input) {
+        input.style.cssText = getStatusStyle(input.value);
+        input.title = getStatusTooltip(input.value);
+    }
 
     function updatePlanningInputColor(input) {
         const key = input.dataset.key;
@@ -2379,6 +2645,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             painelEscala.classList.remove('hidden');
             document.querySelector('.tab-btn[data-dia="DOMINGO"]')?.click();
+            atualizarBotaoTerceiroSuspenso();
+        });
+    }
+
+    if (selectSemana) {
+        selectSemana.addEventListener('change', () => {
+            if (!painelEscala || painelEscala.classList.contains('hidden')) {
+                atualizarBotaoTerceiroSuspenso();
+                return;
+            }
+
+            const activeDia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            const dadosSemana = CACHE_DATAS[selectSemana.value];
+            tabButtons.forEach(btn => {
+                const dia = btn.dataset.dia;
+                if (!dia) return;
+                const date = dadosSemana ? dadosSemana[dia] : new Date();
+                const diaNome = btn.textContent.split(' ')[0].trim();
+                btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+            });
+
+            if (activeDia) {
+                atualizarTituloDia(activeDia, selectSemana.value);
+                carregarDadosDia(activeDia, selectSemana.value);
+            }
+            atualizarBotaoTerceiroSuspenso();
         });
     }
 
@@ -2396,6 +2688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(painelDias) painelDias.classList.add('hidden');
                 if(painelPlan) painelPlan.classList.remove('hidden');
                 carregarPlanejamento(selectSemana.value);
+                atualizarBotaoTerceiroSuspenso();
             } else {
                 if(painelPlan) painelPlan.classList.add('hidden');
                 if(painelDias) painelDias.classList.remove('hidden');
@@ -2403,6 +2696,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Atualizar título da aba dinamicamente
                     atualizarTituloDia(dia, selectSemana.value);
                     carregarDadosDia(dia, selectSemana.value);
+                    atualizarBotaoTerceiroSuspenso();
                 }
             }
         });
@@ -3778,7 +4072,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dias.forEach(dia => {
             diasHtml += `
                 <td><input type="text" class="table-input" value="${item[dia + '_rota'] || ''}" data-key="${dia}_rota" placeholder="Rota" style="${getCellStyle('planejamento_semanal', item.id, dia + '_rota', item[dia + '_rota'])}"></td>
-                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status', item[dia + '_status'])}"></td>
+                <td><input type="text" list="listaStatus" class="table-input" value="${item[dia + '_status'] || ''}" data-key="${dia}_status" placeholder="Status" title="${getStatusTitleAttr(item[dia + '_status'])}" style="${getCellStyle('planejamento_semanal', item.id, dia + '_status', item[dia + '_status'])}"></td>
             `;
         });
 
@@ -3891,6 +4185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSectionMinimizers();
     enableColumnResizing();
     updateColumnColorsStyle(); // Carrega cores salvas
+    atualizarBotaoTerceiroSuspenso();
     destacarVeiculosInternados();
 
 });
