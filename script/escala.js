@@ -645,6 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const coresDia = { 'SEGUNDA': '#007bff', 'TERCA': '#fd7e14', 'QUARTA': '#28a745', 'QUINTA': '#6f42c1', 'SEXTA': '#dc3545', 'SABADO': '#17a2b8', 'DOMINGO': '#e83e8c' };
         tituloDia.style.color = coresDia[dia] || '#006937';
+        tituloDia.style.display = 'flex';
+        tituloDia.style.alignItems = 'center';
+        tituloDia.style.gap = '10px';
+        tituloDia.style.flexWrap = 'wrap';
 
         const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
         const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
