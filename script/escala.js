@@ -652,10 +652,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tituloDia.innerHTML = `
             <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
-            <span class="day-search-wrap">
-                <i class="fa-solid fa-search"></i>
-                <input type="text" id="buscaDiaEscala" class="glass-input day-search-input" placeholder="Buscar placa, rota, motorista...">
-            </span>
             <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
             <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
                 <i class="fa-solid fa-copy"></i>
@@ -668,7 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
             <button id="btnExcluirSelecionadosDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #dc3545; color: white;" title="Excluir Selecionados">
                 <i class="fa-solid fa-trash-can"></i>
-            </button>`;
+            </button>
+            <span class="day-search-wrap">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="buscaDiaEscala" class="glass-input day-search-input" placeholder="Buscar placa, rota, motorista...">
+            </span>`;
     }
 
     async function carregarDadosDia(dia, semana) {
@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Verifica se é Célula (Input) para pintar célula ou gerar boleta
-            const input = target.closest('input.table-input');
+            const input = target.closest('input.table-input') || target.closest('td')?.querySelector('input.table-input');
             const tr = target.closest('tr');
 
             if (input && tr && tr.dataset.id) {
