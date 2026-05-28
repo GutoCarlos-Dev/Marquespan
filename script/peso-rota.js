@@ -46,7 +46,7 @@ const COLUNAS_COLAGEM = {
     motorista: ['MOTORISTA', 'MOT'],
     auxiliar: ['AUXILIAR', 'AJUDANTE', 'AUX'],
     placa: ['PLACA', 'VEICULO'],
-    tipo_veiculo: ['TIPO', 'TIPO VEICULO', 'TIPO DO VEICULO'],
+    tipo_veiculo: ['MODELO', 'TIPO', 'TIPO VEICULO', 'TIPO DO VEICULO'],
     pbt: ['PBT', 'CAPACIDADE CARGA', 'CAPACIDADE DE CARGA', 'CAPACIDADE'],
     peso_carga: ['PESO', 'PESO CARGA', 'PESO DA CARGA'],
     qtd_caixas: ['QTD CAIXAS', 'QTDE CAIXAS', 'CAIXAS'],
@@ -668,7 +668,7 @@ async function preencherVeiculosDasLinhas() {
     if (placasConsulta.length > 0) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, tipo, capacidade_carga')
+            .select('id, placa, modelo, tipo, capacidade_carga')
             .in('placa', placasConsulta);
 
         if (error) {
@@ -686,10 +686,10 @@ function preencherVeiculoNaLinha(row, substituirValores = false) {
     const veiculo = veiculosPorPlaca.get(row.placa);
     if (!veiculo) return;
 
-    const tipo = normalizarUpper(veiculo.tipo);
+    const modelo = normalizarUpper(veiculo.modelo || veiculo.tipo);
     const capacidadeCarga = getCapacidadeCargaVeiculo(veiculo);
 
-    row.tipo_veiculo = substituirValores ? tipo : (row.tipo_veiculo || tipo);
+    row.tipo_veiculo = substituirValores ? modelo : (row.tipo_veiculo || modelo);
     if (capacidadeCarga !== null) {
         row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
     }
@@ -983,7 +983,7 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
     if (!veiculosPorPlaca.has(row.placa)) {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('id, placa, tipo, capacidade_carga')
+            .select('id, placa, modelo, tipo, capacidade_carga')
             .in('placa', getVariantesPlaca(row.placa))
             .limit(1)
             .maybeSingle();
@@ -1228,7 +1228,7 @@ async function buscarVeiculoPorPlaca(placa) {
 
     const { data, error } = await supabaseClient
         .from('veiculos')
-        .select('id, placa, tipo, capacidade_carga')
+        .select('id, placa, modelo, tipo, capacidade_carga')
         .in('placa', getVariantesPlaca(placaNormalizada))
         .limit(1)
         .maybeSingle();
@@ -1255,7 +1255,7 @@ async function salvarCapacidadeCargaVeiculo(row, rowIndex = null) {
         .from('veiculos')
         .update({ capacidade_carga: novaCapacidade })
         .eq('id', veiculo.id)
-        .select('id, placa, tipo, capacidade_carga')
+        .select('id, placa, modelo, tipo, capacidade_carga')
         .single();
 
     if (error) throw error;
