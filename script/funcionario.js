@@ -8,7 +8,6 @@ const FuncionarioUI = {
         this.cache();
         this.bind();
         this.renderGrid();
-        this.renderSummary(); // Adiciona a chamada para renderizar o resumo
     },
 
     cache() {
@@ -26,11 +25,13 @@ const FuncionarioUI = {
         this.statusFilterOptions = document.getElementById('statusFilterOptions');
         this.statusFilterText = document.getElementById('statusFilterText');
         this.monthFilter = document.getElementById('monthFilter');
-        this.yearFilter = document.getElementById('yearFilter'); // Novo filtro por ano
+        this.admissaoMonthYearFilter = document.getElementById('admissaoMonthYearFilter');
+        this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
+        this.filterCount = document.getElementById('funcFilterCount');
     },
 
     // Adiciona o campo Data de Nascimento ao cache
@@ -47,8 +48,11 @@ const FuncionarioUI = {
         if (this.monthFilter) {
             this.monthFilter.addEventListener('change', () => this.renderGrid());
         }
-        if (this.yearFilter) {
-            this.yearFilter.addEventListener('input', () => this.renderGrid());
+        if (this.admissaoMonthYearFilter) {
+            this.admissaoMonthYearFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.demissaoMonthYearFilter) {
+            this.demissaoMonthYearFilter.addEventListener('change', () => this.renderGrid());
         }
         if (this.statusSelect) {
             this.statusSelect.addEventListener('change', () => this.toggleDesligamentoField());
@@ -183,7 +187,8 @@ const FuncionarioUI = {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
         const selectedMonth = this.monthFilter?.value || '';
-        const selectedYear = this.yearFilter?.value || ''; // Captura o valor do ano digitado
+        const selectedAdmissaoMonthYear = this.admissaoMonthYearFilter?.value || '';
+        const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
 
         try {
             let query = supabaseClient.from('funcionario').select('*');
@@ -213,18 +218,28 @@ const FuncionarioUI = {
                 });
             }
 
-            // Filtro de ano de admissão (realizado no cliente)
-            if (selectedYear && selectedYear.length === 4) {
+            // Filtro de mes/ano de admissao (YYYY-MM)
+            if (selectedAdmissaoMonthYear) {
                 list = list.filter(f => {
                     if (!f.data_admissao) return false;
-                    const ano = f.data_admissao.split('-')[0]; // Extrai o YYYY de YYYY-MM-DD
-                    return ano === selectedYear;
+                    return f.data_admissao.slice(0, 7) === selectedAdmissaoMonthYear;
+                });
+            }
+
+            // Filtro de mes/ano de demissao (YYYY-MM)
+            if (selectedDemissaoMonthYear) {
+                list = list.filter(f => {
+                    if (!f.data_desligamento) return false;
+                    return f.data_desligamento.slice(0, 7) === selectedDemissaoMonthYear;
                 });
             }
 
             this.listData = list; // Atualiza cache para exportação
             if (this.gridCount) {
                 this.gridCount.textContent = `(${list.length})`;
+            }
+            if (this.filterCount) {
+                this.filterCount.textContent = `Quantidade listada: ${list.length}`;
             }
             
             this.tableBody.innerHTML = list.map(f => `
@@ -242,6 +257,7 @@ const FuncionarioUI = {
                     </td>
                 </tr>
             `).join('');
+            this.renderSummary(list);
             this.updateSortIcons(); // Atualiza os ícones após renderizar
         } catch (e) { console.error('Erro ao carregar grid:', e); }
     },
@@ -380,12 +396,16 @@ const FuncionarioUI = {
         return result.length > 0 ? result.join(', ') : 'Menos de 1 dia';
     },
 
-    async renderSummary() {
+    async renderSummary(sourceList = null) {
         if (!this.funcSummaryBody) return;
 
         try {
-            const { data: list, error } = await supabaseClient.from('funcionario').select('funcao, status');
-            if (error) throw error;
+            let list = sourceList;
+            if (!Array.isArray(list)) {
+                const { data, error } = await supabaseClient.from('funcionario').select('funcao, status');
+                if (error) throw error;
+                list = data || [];
+            }
 
             const summaryData = {}; 
             const grandTotals = { 'Ativo': 0, 'Desligado': 0, 'Transferido': 0, 'Ferias': 0, 'Afastado': 0, 'Total': 0 };
@@ -464,8 +484,7 @@ const FuncionarioUI = {
     async deleteFuncionario(id) {
         if (confirm('Deseja realmente excluir este colaborador?')) {
             await supabaseClient.from('funcionario').delete().eq('id', id);
-            this.renderGrid();
-            await this.renderSummary();
+            await this.renderGrid();
         }
     },
 

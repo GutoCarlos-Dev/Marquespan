@@ -231,6 +231,7 @@
 
 .status-ativo { background-color: #28a745; }
 .status-desligado { background-color: #dc3545; }
+.status-transferido { background-color: #007bff; }
 .status-ferias { background-color: #ffc107; color: #333; }
 .status-afastado { background-color: #6c757d; }
 
@@ -284,6 +285,33 @@
 }
 .table-compact th {
     background-color: #f1f3f5 !important;
+}
+
+.funcionario-filters-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 180px 180px 180px 250px;
+    gap: 15px;
+    margin-bottom: 8px;
+    align-items: end;
+}
+
+.func-filter-count {
+    margin: 0 0 15px;
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+    .funcionario-filters-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .funcionario-filters-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Estilos para a tabela de resumo */

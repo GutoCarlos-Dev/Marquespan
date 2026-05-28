@@ -182,7 +182,7 @@
         <hr style="margin: 30px 0; border-color: rgba(0,0,0,0.1);">
 
         <h3><i class="fas fa-id-card"></i> Quadro de Funcionários <span id="countFuncGrid" style="font-size: 0.85rem; color: #666; font-weight: normal; margin-left: 8px;">(0)</span></h3>
-        <div class="filters-actions-grid" style="display: grid; grid-template-columns: 1fr 180px 140px 250px; gap: 15px; margin-bottom: 15px; align-items: end;">
+        <div class="filters-actions-grid funcionario-filters-grid">
             <div class="form-group">
                 <label for="searchFuncInput">Busca</label>
                 <input type="text" id="searchFuncInput" placeholder="🔍 Filtrar por nome, RH ou função..." class="glass-input">
@@ -206,8 +206,12 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="yearFilter">Ano de Admissão</label>
-                <input type="number" id="yearFilter" class="glass-input" placeholder="Ex: 2025" min="1900" max="2099">
+                <label for="admissaoMonthYearFilter">Mês/Ano Admissão</label>
+                <input type="month" id="admissaoMonthYearFilter" class="glass-input">
+            </div>
+            <div class="form-group">
+                <label for="demissaoMonthYearFilter">Mês/Ano Demissão</label>
+                <input type="month" id="demissaoMonthYearFilter" class="glass-input">
             </div>
             <div class="form-group custom-multiselect">
                 <label>Filtrar Status</label>
@@ -224,6 +228,7 @@
                 </div>
             </div>
         </div>
+        <div id="funcFilterCount" class="func-filter-count">Quantidade listada: 0</div>
 
         <div class="table-responsive funcionario-table-container">
             <table class="glass-table data-grid">
