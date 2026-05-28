@@ -1264,6 +1264,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: registroClicado } = await supabaseClient.from('abastecimentos').select('numero_nota').eq('id', id).single();
             if (!registroClicado) return;
 
+            if (registroClicado.numero_nota === 'AJUSTE DE ESTOQUE') {
+                await this.loadAjusteForEditing(id);
+                return;
+            }
+
             const { data: todosRegistrosDaNota, error } = await supabaseClient.from('abastecimentos').select('*').eq('numero_nota', registroClicado.numero_nota);
             if (error || !todosRegistrosDaNota || todosRegistrosDaNota.length === 0) {
                 alert('Erro ao carregar dados para edição.');

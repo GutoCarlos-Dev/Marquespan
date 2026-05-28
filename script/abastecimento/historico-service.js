@@ -7,7 +7,8 @@ export async function buscarAbastecimentosEntrada({
 }) {
     let query = supabaseClient
         .from('abastecimentos')
-        .select('*, tanques!inner(nome, tipo_combustivel, filial)');
+        .select('*, tanques!inner(nome, tipo_combustivel, filial)')
+        .neq('numero_nota', 'AJUSTE DE ESTOQUE');
 
     if (filial) query = query.eq('tanques.filial', filial);
 
