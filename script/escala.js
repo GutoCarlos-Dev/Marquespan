@@ -3070,6 +3070,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'V': { bg: '#2196F3', color: 'white', desc: 'Rota vai para viagem de pernoite.' },
         'P': { bg: '#9C27B0', color: 'white', desc: 'Rota vai pernoitar.' },
         'R': { bg: '#4CAF50', color: 'white', desc: 'Rota vai retornar.' },
+        'REST.TAB': { bg: '#6D4C41', color: 'white', desc: 'Restrição Taboão da Serra' },
+        'V-REST': { bg: '#303F9F', color: 'white', desc: 'Viajem com Restrição' },
         'V - RESTR': { bg: '#3F51B5', color: 'white', desc: 'Vai para pernoite e tem restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
         'RESTR': { bg: '#795548', color: 'white', desc: 'Rota com restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
         'BGMN': { bg: '#FFEB3B', color: 'black', desc: 'Rota do Bergamini: tem que ir palete de madeira.' },
