@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const inserts = [];
+                const registrosModelo = [];
                 const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
 
                 // 2. Transforma o planejamento em registros de escala diária
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Só cria registro se houver rota ou status definido para o dia
                         if (rota || status) {
                             const dataEscala = CACHE_DATAS[targetWeek][dia].toISOString().split('T')[0];
-                            inserts.push({
+                            registrosModelo.push({
                                 semana_nome: targetWeek,
                                 data_escala: dataEscala,
                                 filial: getFilialEscala(),
@@ -483,9 +483,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
 
-                if (inserts.length > 0) {
-                    const { error: insertError } = await supabaseClient.from('escala').insert(inserts.map(item => comAuditoria(item)));
-                    if (insertError) throw insertError;
+                if (registrosModelo.length > 0) {
+                    for (const registro of registrosModelo) {
+                        const placaModelo = normalizeVehiclePlate(registro.placa);
+                        if (!placaModelo) continue;
+
+                        const { data: existentes, error: selectError } = await supabaseClient
+                            .from('escala')
+                            .select('id, placa')
+                            .eq('data_escala', registro.data_escala)
+                            .eq('filial', getFilialEscala());
+
+                        if (selectError) throw selectError;
+
+                        const idsExistentes = (existentes || [])
+                            .filter(item => normalizeVehiclePlate(item.placa) === placaModelo)
+                            .map(item => item.id);
+
+                        if (idsExistentes.length > 0) {
+                            const { error: updateError } = await supabaseClient
+                                .from('escala')
+                                .update(comAuditoria(registro))
+                                .in('id', idsExistentes);
+                            if (updateError) throw updateError;
+                        } else {
+                            const { error: insertError } = await supabaseClient
+                                .from('escala')
+                                .insert([comAuditoria(registro)]);
+                            if (insertError) throw insertError;
+                        }
+                    }
                     alert('Planejamento aplicado à escala com sucesso!');
                     modalCopiarPlanejamento.style.display = 'none';
                 } else {
@@ -1109,9 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) throw error;
 
-            if (tabela === 'escala') {
-                await sincronizarEscalaParaPlanejamento(id);
-            } else if (tabela === 'planejamento_semanal') {
+            if (tabela === 'planejamento_semanal') {
                 await sincronizarPlanejamentoParaEscala(id, key, placaAnterior);
                 verificarDuplicidades();
             }
@@ -1300,8 +1325,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 if (insertsEscala.length > 0) await supabaseClient.from('escala').insert(insertsEscala.map(item => comAuditoria(item)));
                 if (insertsFaltas.length > 0) await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas.map(item => comAuditoria(item)));
-                await sincronizarPlanejamentoDaSemana(semana);
-                
                 alert('Importação concluída!');
                 carregarDadosDia(dia, semana);
             } catch (err) {
@@ -1661,8 +1684,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) throw error;
         }
 
-        const diaImportado = getDiaFromSheetName(sheetName);
-        await sincronizarPlanejamentoDaSemana(semana, diaImportado ? [diaImportado] : null);
         if (diaParaRecarregar) carregarDadosDia(diaParaRecarregar, semana);
         return total;
     }
@@ -1719,9 +1740,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalImportado += await importarRoteiroDiario(workbook, sheetName, semana);
                 }
 
-                progressDetails.textContent = 'Atualizando planejamento semanal...';
-                await sincronizarPlanejamentoDaSemana(semana, diasImportados);
-                await limparDiasAusentesDoPlanejamento(semana, diasImportados);
+                progressDetails.textContent = 'Finalizando importacao...';
 
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Processando: 100%';
@@ -2331,8 +2350,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             const { error: faltasError } = await supabaseClient.from('faltas_afastamentos').insert(insertsFaltas.map(item => comAuditoria(item)));
                             if (faltasError) throw faltasError;
                         }
-                        await sincronizarPlanejamentoDaSemana(semana);
-
                         progressBar.style.width = '100%';
                         progressText.textContent = 'Processando: 100%';
                         progressDetails.textContent = 'Importação concluída com sucesso!';
@@ -2801,7 +2818,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert(`Nenhuma linha encontrada para a rota ${rota} nesta data.`);
         }
 
-        await sincronizarPlanejamentoDaSemana(contexto.semana);
         alert(`Terceiro aplicado em ${data.length} linha(s) da rota ${rota}.`);
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
@@ -2826,7 +2842,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert('Erro ao limpar terceiro: ' + error.message);
         }
 
-        await sincronizarEscalaParaPlanejamento(btn.dataset.id);
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
     }
@@ -3045,6 +3060,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
+    let mapaNomesFuncionarios = new Map();
 
     // Configuração de Status baseada em status.html
     const STATUS_CONFIG = {
@@ -3073,11 +3089,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarListasAuxiliares() {
         // Veículos
-        const { data: veiculos } = await supabaseClient.from('veiculos').select('placa, modelo').eq('situacao', 'ativo');
+        let queryVeiculos = supabaseClient.from('veiculos').select('placa, modelo, filial, situacao').order('placa');
+        const filial = getFilialEscala();
+        if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
+
+        const { data: veiculos } = await queryVeiculos;
         listaVeiculos = (veiculos || []).map(v => ({
             ...v,
             placa_normalizada: normalizeVehiclePlate(v.placa)
-        }));
+        })).filter(v => v.placa_normalizada);
         const dlPlacas = document.getElementById('listaVeiculos');
         const dlModelos = document.getElementById('listaModelos');
         if (dlPlacas) dlPlacas.innerHTML = listaVeiculos.map(v => `<option value="${v.placa_normalizada}">`).join('');
@@ -3089,13 +3109,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dlRotas && rotas) dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(r => `<option value="${r}">`).join('');
 
         // Funcionários
-        const { data: funcs } = await supabaseClient.from('funcionario').select('nome_completo, funcao, status');
+        const { data: funcs } = await supabaseClient.from('funcionario').select('nome, nome_completo, funcao, status');
         const dlMot = document.getElementById('listaMotoristas');
         const dlAux = document.getElementById('listaAuxiliares');
         const dlTer = document.getElementById('listaTerceiros');
         if (funcs) {
             const funcionariosAtivos = funcs.filter(f => normalizeString(f.status) === 'ATIVO');
-            const optionHTML = (items) => [...new Set(items.map(f => cleanImportValue(f.nome_completo)).filter(Boolean))]
+            mapaNomesFuncionarios = new Map();
+            funcs.forEach(f => {
+                const nomeCurto = cleanImportValue(f.nome);
+                if (!nomeCurto) return;
+                [f.nome, f.nome_completo].forEach(nome => {
+                    const chave = normalizeString(nome);
+                    if (chave) mapaNomesFuncionarios.set(chave, nomeCurto);
+                });
+            });
+
+            const optionHTML = (items) => [...new Set(items.map(f => cleanImportValue(f.nome)).filter(Boolean))]
                 .sort((a, b) => a.localeCompare(b, 'pt-BR'))
                 .map(nome => `<option value="${nome.replace(/"/g, '&quot;')}">`)
                 .join('');
@@ -3114,6 +3144,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Status
         const dlStatus = document.getElementById('listaStatus');
         if(dlStatus) dlStatus.innerHTML = Object.keys(STATUS_CONFIG).map(s => `<option value="${s}" label="${escapeAttribute(STATUS_CONFIG[s].desc || '')}">`).join('');
+    }
+
+    function getNomeFuncionarioExibicao(valor) {
+        const nome = cleanImportValue(valor);
+        if (!nome) return '';
+        return mapaNomesFuncionarios.get(normalizeString(nome)) || nome;
     }
 
     function getStatusStyle(status) {
@@ -3277,9 +3313,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnAbrirEscala) {
-        btnAbrirEscala.addEventListener('click', () => {
+        btnAbrirEscala.addEventListener('click', async () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
             if (!exigirFilialEscala()) return;
+            await carregarListasAuxiliares();
             
             // Atualiza datas nas abas
             const dadosSemana = CACHE_DATAS[selectSemana.value];
@@ -3326,11 +3363,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (selectFilial) {
         selectFilial.addEventListener('change', async () => {
+            await carregarListasAuxiliares();
             if (!painelEscala || painelEscala.classList.contains('hidden')) return;
 
             const activeTab = document.querySelector('.tab-btn.active');
             if (activeTab?.dataset.tab === 'planejamento') {
-                await sincronizarPlanejamentoDaSemana(selectSemana.value);
                 carregarPlanejamento(selectSemana.value);
             } else if (activeTab?.dataset.dia) {
                 carregarDadosDia(activeTab.dataset.dia, selectSemana.value);
@@ -3353,7 +3390,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!exigirFilialEscala()) return;
                 if(painelDias) painelDias.classList.add('hidden');
                 if(painelPlan) painelPlan.classList.remove('hidden');
-                await sincronizarPlanejamentoDaSemana(selectSemana.value);
                 carregarPlanejamento(selectSemana.value);
                 atualizarBotaoTerceiroSuspenso();
             } else {
@@ -4750,12 +4786,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function normalizarNomesPlanejamento(rows) {
+        const campos = ['motorista', 'auxiliar', 'terceiro'];
+        const updates = [];
+
+        rows.forEach(row => {
+            const payload = {};
+            campos.forEach(campo => {
+                const nomeExibicao = getNomeFuncionarioExibicao(row[campo]);
+                if (nomeExibicao && nomeExibicao !== row[campo]) {
+                    payload[campo] = nomeExibicao;
+                    row[campo] = nomeExibicao;
+                }
+            });
+
+            if (Object.keys(payload).length > 0) {
+                updates.push(
+                    supabaseClient
+                        .from('planejamento_semanal')
+                        .update(comAuditoria(payload))
+                        .eq('id', row.id)
+                );
+            }
+        });
+
+        const results = await Promise.all(updates);
+        const erro = results.find(result => result.error)?.error;
+        if (erro) throw erro;
+    }
+
+    async function garantirPlacasPlanejamento(semana, rows) {
+        if (!semana || !getFilialEscala()) return rows;
+
+        const placasExistentes = new Set((rows || []).map(row => normalizeVehiclePlate(row.placa)).filter(Boolean));
+        const novosRegistros = [];
+        listaVeiculos.forEach(veiculo => {
+            if (!veiculo.placa_normalizada || placasExistentes.has(veiculo.placa_normalizada)) return;
+            placasExistentes.add(veiculo.placa_normalizada);
+            novosRegistros.push(comAuditoria({
+                semana_nome: semana,
+                filial: getFilialEscala(),
+                placa: veiculo.placa_normalizada,
+                modelo: veiculo.modelo || ''
+            }));
+        });
+
+        if (novosRegistros.length === 0) return rows;
+
+        const { data: criados, error } = await supabaseClient
+            .from('planejamento_semanal')
+            .insert(novosRegistros)
+            .select('*');
+
+        if (error) throw error;
+        return [...rows, ...(criados || [])];
+    }
+
     async function carregarPlanejamento(semana) {
         const tbody = document.getElementById('tbodyPlanejamento');
         if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;">Carregando...</td></tr>';
 
         try {
+            await carregarListasAuxiliares();
             const { data, error } = await aplicarFiltroFilial(
                 supabaseClient
                     .from('planejamento_semanal')
@@ -4765,11 +4858,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) throw error;
 
+            const dadosPlanejamento = await garantirPlacasPlanejamento(semana, data || []);
+            await normalizarNomesPlanejamento(dadosPlanejamento);
+
             tbody.innerHTML = '';
-            if (data.length === 0) {
+            if (dadosPlanejamento.length === 0) {
                  // Opcional: mostrar mensagem de vazio ou deixar em branco
             }
-            data.forEach(item => renderLinhaPlanejamento(item, tbody));
+            dadosPlanejamento.forEach(item => renderLinhaPlanejamento(item, tbody));
             filtrarPlanejamento();
             applyCellAnnotations();
             verificarDuplicidades();
@@ -4800,9 +4896,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('planejamento_semanal', item.id, 'placa')}"></td>
             <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'modelo')}"></td>
             ${diasHtml}
-            <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
-            <td><input type="text" list="listaAuxiliares" class="table-input" value="${item.auxiliar || ''}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('planejamento_semanal', item.id, 'auxiliar')}"></td>
-            <td><input type="text" list="listaTerceiros" class="table-input" value="${item.terceiro || ''}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('planejamento_semanal', item.id, 'terceiro')}"></td>
+            <td><input type="text" list="listaMotoristas" class="table-input" value="${getNomeFuncionarioExibicao(item.motorista)}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
+            <td><input type="text" list="listaAuxiliares" class="table-input" value="${getNomeFuncionarioExibicao(item.auxiliar)}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('planejamento_semanal', item.id, 'auxiliar')}"></td>
+            <td><input type="text" list="listaTerceiros" class="table-input" value="${getNomeFuncionarioExibicao(item.terceiro)}" data-key="terceiro" placeholder="Terceiro" style="${getCellStyle('planejamento_semanal', item.id, 'terceiro')}"></td>
             <td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
         `;
         tbody.appendChild(tr);
