@@ -918,6 +918,95 @@ body.escala-menu-oculto .menu-floating-toggle i {
     text-align: center;
 }
 
+.diaria-modal-content {
+    width: min(1100px, 96vw);
+}
+
+.diaria-modal-header {
+    background: linear-gradient(135deg, #006937, #004d29);
+    color: #fff;
+    border-bottom: 0;
+}
+
+.diaria-modal-header h3,
+.diaria-modal-header .terceiro-modal-close {
+    color: #fff;
+}
+
+.diaria-controls {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) minmax(130px, 1fr) minmax(160px, 1fr) auto auto;
+    gap: 10px;
+    align-items: end;
+    padding: 14px 18px 8px;
+}
+
+.diaria-summary-card {
+    border: 1px solid #dfe8e2;
+    border-radius: 8px;
+    background: #f7fbf8;
+    padding: 9px 10px;
+}
+
+.diaria-summary-card span {
+    display: block;
+    color: #66736b;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.diaria-summary-card strong {
+    display: block;
+    margin-top: 3px;
+    color: #1f3328;
+    font-size: 14px;
+}
+
+.diaria-meta {
+    padding: 0 18px 10px;
+    color: #66736b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.diaria-table-wrap {
+    flex: 1;
+    min-height: 0;
+}
+
+.diaria-table {
+    min-width: 850px;
+}
+
+.diaria-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.diaria-status {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 76px;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.diaria-status.apto {
+    background: #e8f4ec;
+    color: #006937;
+}
+
+.diaria-status.bloqueado {
+    background: #fdecec;
+    color: #a71d2a;
+}
+
 @media (max-width: 700px) {
     .floating-troca-veiculo-btn {
         right: 100px;
@@ -925,6 +1014,10 @@ body.escala-menu-oculto .menu-floating-toggle i {
     }
 
     .terceiro-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .diaria-controls {
         grid-template-columns: 1fr;
     }
 }

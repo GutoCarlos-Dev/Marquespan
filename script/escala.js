@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const escalaAuditInfo = document.getElementById('escalaAuditInfo');
     const btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralEscala');
     const btnAbrirEscala = document.getElementById('btnAbrirEscala');
+    const btnDiaria = document.getElementById('btnDiaria');
     const painelEscala = document.getElementById('painelEscala');
     const tituloDia = document.getElementById('tituloDia');
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -43,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
     const btnPDFExpedicaoModelo = document.getElementById('btnPDFExpedicaoModelo');
-    const globalSearch = document.getElementById('globalSearch');
     
     // --- ELEMENTOS DINÂMICOS ---
     const contextMenu = document.createElement('div');
@@ -2832,7 +2832,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
             });
 
-            const usarColunas = dadosOrdenados.length > 96;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pageWidth = doc.internal.pageSize.getWidth();
@@ -2862,80 +2861,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            if (usarColunas) {
-                const columnGap = 2;
-                const tableWidth = (pageWidth - (margin * 2) - columnGap) / 2;
-                const maxRowsPerColumn = 108;
-                const maxRowsPerPage = maxRowsPerColumn * 2;
-
-                for (let start = 0, pageIndex = 0; start < body.length; start += maxRowsPerPage, pageIndex++) {
-                    if (pageIndex > 0) doc.addPage();
-
-                    const pageRows = body.slice(start, start + maxRowsPerPage);
-                    const ultimaPagina = start + maxRowsPerPage >= body.length;
-                    const splitIndex = pageRows.length > maxRowsPerColumn
-                        ? Math.ceil(pageRows.length / 2)
-                        : pageRows.length;
-                    const leftRows = pageRows.slice(0, splitIndex);
-                    const rightRows = pageRows.slice(splitIndex);
-                    const totalRow = ['', '', '', 'TOTAL', String(dadosOrdenados.length)];
-                    const rightRowsRender = ultimaPagina
-                        ? (rightRows.length > 0 ? [...rightRows, totalRow] : [])
-                        : rightRows;
-                    const leftRowsRender = ultimaPagina && rightRows.length === 0
-                        ? [...leftRows, totalRow]
-                        : leftRows;
-
-                    doc.autoTable({
-                        ...baseTableOptions,
-                        body: leftRowsRender,
-                        startY: margin,
-                        margin: { left: margin, right: margin, top: margin, bottom: margin },
-                        tableWidth,
-                        columnStyles: {
-                            0: { cellWidth: 16 },
-                            1: { cellWidth: 22 },
-                            2: { cellWidth: 10, halign: 'center' },
-                            3: { cellWidth: 12, halign: 'center' },
-                            4: { cellWidth: tableWidth - 60 }
-                        }
-                    });
-                    if (rightRowsRender.length > 0) {
-                        const rightX = margin + tableWidth + columnGap;
-                        doc.autoTable({
-                            ...baseTableOptions,
-                            body: rightRowsRender,
-                            startY: margin,
-                            margin: { left: rightX, right: margin, top: margin, bottom: margin },
-                            tableWidth,
-                            columnStyles: {
-                                0: { cellWidth: 16 },
-                                1: { cellWidth: 22 },
-                                2: { cellWidth: 10, halign: 'center' },
-                                3: { cellWidth: 12, halign: 'center' },
-                                4: { cellWidth: tableWidth - 60 }
-                            }
-                        });
-                    }
+            doc.autoTable({
+                ...baseTableOptions,
+                body: [...body, ['', '', '', 'TOTAL', String(dadosOrdenados.length)]],
+                startY: margin,
+                margin: { left: margin, right: margin, top: margin, bottom: margin },
+                tableWidth: pageWidth - (margin * 2),
+                styles: { ...baseTableOptions.styles, fontSize: 5.4, cellPadding: 0.24 },
+                headStyles: { ...baseTableOptions.headStyles, fontSize: 5.5 },
+                columnStyles: {
+                    0: { cellWidth: 22 },
+                    1: { cellWidth: 38 },
+                    2: { cellWidth: 15, halign: 'center' },
+                    3: { cellWidth: 17, halign: 'center' },
+                    4: { cellWidth: pageWidth - (margin * 2) - 92 }
                 }
-            } else {
-                doc.autoTable({
-                    ...baseTableOptions,
-                    body: [...body, ['', '', '', 'TOTAL', String(dadosOrdenados.length)]],
-                    startY: margin,
-                    margin: { left: margin, right: margin, top: margin, bottom: margin },
-                    tableWidth: pageWidth - (margin * 2),
-                    styles: { ...baseTableOptions.styles, fontSize: 5.1, cellPadding: 0.22 },
-                    headStyles: { ...baseTableOptions.headStyles, fontSize: 5.2 },
-                    columnStyles: {
-                        0: { cellWidth: 22 },
-                        1: { cellWidth: 36 },
-                        2: { cellWidth: 15, halign: 'center' },
-                        3: { cellWidth: 17, halign: 'center' },
-                        4: { cellWidth: pageWidth - (margin * 2) - 90 }
-                    }
-                });
-            }
+            });
 
             doc.save(`Expedicao_${contexto.dataBR.replace(/\D/g, '')}.pdf`);
             document.getElementById('modalPDFExpedicaoModelo')?.classList.add('hidden');
@@ -3068,6 +3009,270 @@ document.addEventListener('DOMContentLoaded', () => {
             dataISO: dataObj.toISOString().split('T')[0],
             dataBR: dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
         };
+    }
+
+    function parseMoedaBR(value) {
+        if (value === null || value === undefined) return 0;
+        const normalized = String(value).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+        const number = Number(normalized);
+        return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatMoedaBR(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function isStatusAusenciaDiaria(value) {
+        const status = normalizeString(value);
+        return status.includes('FALTA')
+            || status.includes('FERIAS')
+            || status.includes('AFAST')
+            || status.includes('AUSENTE');
+    }
+
+    function ensureModalDiaria() {
+        let modal = document.getElementById('modalDiaria');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalDiaria';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content diaria-modal-content">
+                <div class="terceiro-modal-header diaria-modal-header">
+                    <h3><i class="fa-solid fa-money-bill-wave"></i> Diaria</h3>
+                    <button type="button" id="btnFecharDiaria" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="diaria-controls">
+                    <div class="form-group">
+                        <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
+                        <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                    </div>
+                    <div class="diaria-summary-card">
+                        <span>Valor por dia</span>
+                        <strong id="diariaValorDia">R$ 0,00</strong>
+                    </div>
+                    <div class="diaria-summary-card">
+                        <span>Desconto prox. semana</span>
+                        <strong id="diariaTotalDesconto">R$ 0,00</strong>
+                    </div>
+                    <button type="button" id="btnCalcularDiaria" class="pdf-expedicao-btn secondary">
+                        <i class="fas fa-calculator"></i> Calcular
+                    </button>
+                    <button type="button" id="btnSalvarDiaria" class="pdf-expedicao-btn primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+                <div class="diaria-meta" id="diariaContexto"></div>
+                <div class="terceiro-table-wrap diaria-table-wrap">
+                    <table class="data-grid diaria-table">
+                        <thead>
+                            <tr>
+                                <th>FUNCIONARIO</th>
+                                <th>FUNCAO</th>
+                                <th>STATUS</th>
+                                <th>DIAS DESC.</th>
+                                <th>RECEBE</th>
+                                <th>DESCONTO PROX. SEMANA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDiaria"></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('#btnFecharDiaria')) modal.classList.add('hidden');
+            if (e.target.closest('#btnCalcularDiaria')) carregarDiariaModal();
+            if (e.target.closest('#btnSalvarDiaria')) salvarDiariaSemana();
+        });
+
+        modal.querySelector('#diariaValorSemana').addEventListener('input', atualizarResumoDiaria);
+        return modal;
+    }
+
+    function atualizarResumoDiaria() {
+        const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+        const valorDia = valorSemana / 5;
+        const totalDesconto = Array.from(document.querySelectorAll('#tbodyDiaria tr'))
+            .reduce((sum, tr) => sum + Number(tr.dataset.valorDesconto || 0), 0);
+
+        const elValorDia = document.getElementById('diariaValorDia');
+        const elTotalDesconto = document.getElementById('diariaTotalDesconto');
+        if (elValorDia) elValorDia.textContent = formatMoedaBR(valorDia);
+        if (elTotalDesconto) elTotalDesconto.textContent = formatMoedaBR(totalDesconto);
+    }
+
+    async function abrirModalDiaria() {
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana.');
+        if (!exigirFilialEscala()) return;
+
+        const modal = ensureModalDiaria();
+        modal.classList.remove('hidden');
+        modal.querySelector('#diariaContexto').textContent = `${semana} - ${getFilialEscala()}`;
+        await carregarDiariaModal();
+    }
+
+    async function carregarDiariaModal() {
+        const semana = selectSemana.value;
+        const tbody = document.getElementById('tbodyDiaria');
+        if (!semana || !tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+
+        try {
+            const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+            const valorDia = valorSemana / 5;
+            const datasSemana = getDatasSemanaISO(semana);
+
+            const [resFuncionarios, resFaltas] = await Promise.all([
+                aplicarFiltroFilial(
+                    supabaseClient
+                        .from('funcionario')
+                        .select('nome, nome_completo, funcao, status, filial')
+                ).order('nome'),
+                aplicarFiltroFilial(
+                    supabaseClient
+                        .from('faltas_afastamentos')
+                        .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala, filial')
+                        .in('data_escala', datasSemana)
+                )
+            ]);
+
+            if (resFuncionarios.error) throw resFuncionarios.error;
+            if (resFaltas.error) throw resFaltas.error;
+
+            const nomeDiariaMap = new Map();
+            (resFuncionarios.data || []).forEach(f => {
+                const nomeCurto = cleanImportValue(f.nome) || cleanImportValue(f.nome_completo);
+                if (!nomeCurto) return;
+                [f.nome, f.nome_completo].forEach(nome => {
+                    const key = normalizeString(nome);
+                    if (key) nomeDiariaMap.set(key, nomeCurto);
+                });
+            });
+            const getNomeDiaria = (nome) => nomeDiariaMap.get(normalizeString(nome)) || getNomeFuncionarioExibicao(nome);
+
+            const ausencias = new Map();
+            (resFaltas.data || []).forEach(row => {
+                [
+                    { nome: row.motorista_ausente, motivo: row.motivo_motorista },
+                    { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar }
+                ].forEach(item => {
+                    const nome = getNomeDiaria(item.nome);
+                    if (!nome) return;
+                    const key = normalizeString(nome);
+                    const motivo = cleanImportValue(item.motivo) || 'FALTA';
+                    if (!isStatusAusenciaDiaria(motivo) && cleanImportValue(item.motivo)) return;
+                    if (!ausencias.has(key)) ausencias.set(key, { dias: new Set(), motivos: new Set() });
+                    ausencias.get(key).dias.add(String(row.data_escala || '').slice(0, 10));
+                    ausencias.get(key).motivos.add(motivo);
+                });
+            });
+
+            const funcionarios = (resFuncionarios.data || [])
+                .filter(f => normalizeString(f.status) === 'ATIVO')
+                .filter(f => {
+                    const funcao = normalizeString(f.funcao);
+                    return funcao.includes('MOTORISTA') || funcao.includes('AUXILIAR') || funcao.includes('AJUDANTE');
+                })
+                .map(f => ({
+                    nome: getNomeDiaria(f.nome || f.nome_completo),
+                    funcao: cleanImportValue(f.funcao)
+                }))
+                .filter(f => f.nome)
+                .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+            if (funcionarios.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
+                atualizarResumoDiaria();
+                return;
+            }
+
+            tbody.innerHTML = funcionarios.map(func => {
+                const ausencia = ausencias.get(normalizeString(func.nome));
+                const diasDesconto = ausencia ? ausencia.dias.size : 0;
+                const valorDesconto = diasDesconto * valorDia;
+                const recebe = diasDesconto === 0;
+                const status = recebe ? 'APTO' : [...ausencia.motivos].join(', ');
+                return `
+                    <tr data-nome="${escapeAttribute(func.nome)}" data-funcao="${escapeAttribute(func.funcao)}" data-status="${escapeAttribute(status)}" data-dias-desconto="${diasDesconto}" data-valor-desconto="${valorDesconto}" data-recebe="${recebe ? 'true' : 'false'}">
+                        <td>${escapeAttribute(func.nome)}</td>
+                        <td>${escapeAttribute(func.funcao)}</td>
+                        <td><span class="diaria-status ${recebe ? 'apto' : 'bloqueado'}">${escapeAttribute(status)}</span></td>
+                        <td>${diasDesconto}</td>
+                        <td>${recebe ? 'SIM' : 'NAO'}</td>
+                        <td>${formatMoedaBR(valorDesconto)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            atualizarResumoDiaria();
+        } catch (error) {
+            console.error('Erro ao carregar diaria:', error);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+        }
+    }
+
+    async function salvarDiariaSemana() {
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana.');
+        if (!exigirFilialEscala()) return;
+
+        const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+        if (valorSemana <= 0) return alert('Informe o valor da diaria semanal.');
+
+        const rows = Array.from(document.querySelectorAll('#tbodyDiaria tr[data-nome]'));
+        if (rows.length === 0) return alert('Calcule a diaria antes de salvar.');
+
+        const valorDia = valorSemana / 5;
+        const itens = rows.map(tr => ({
+            funcionario_nome: tr.dataset.nome,
+            funcao: tr.dataset.funcao,
+            status_diaria: tr.dataset.status,
+            dias_desconto: Number(tr.dataset.diasDesconto || 0),
+            valor_desconto: Number(tr.dataset.valorDesconto || 0),
+            recebe_diaria: tr.dataset.recebe === 'true'
+        }));
+
+        const totalDesconto = itens.reduce((sum, item) => sum + item.valor_desconto, 0);
+        const datasSemana = getDatasSemanaISO(semana);
+
+        try {
+            const { data: diaria, error } = await supabaseClient
+                .from('escala_diarias')
+                .insert([comAuditoria({
+                    semana_nome: semana,
+                    filial: getFilialEscala(),
+                    valor_diaria: valorSemana,
+                    valor_dia: valorDia,
+                    dias_base: 5,
+                    data_inicio: datasSemana[0] || null,
+                    data_fim: datasSemana[datasSemana.length - 1] || null,
+                    total_funcionarios: itens.length,
+                    total_aptos: itens.filter(item => item.recebe_diaria).length,
+                    total_bloqueados: itens.filter(item => !item.recebe_diaria).length,
+                    total_desconto: totalDesconto
+                })])
+                .select('id')
+                .single();
+
+            if (error) throw error;
+
+            const { error: itensError } = await supabaseClient
+                .from('escala_diaria_itens')
+                .insert(itens.map(item => comAuditoria({ ...item, diaria_id: diaria.id })));
+
+            if (itensError) throw itensError;
+
+            alert('Diaria registrada com sucesso.');
+        } catch (error) {
+            console.error('Erro ao salvar diaria:', error);
+            alert('Erro ao salvar diaria. Verifique se o script SQL da tabela escala_diarias foi aplicado. Detalhe: ' + error.message);
+        }
     }
 
     function ensureModalTerceiroRota() {
@@ -4272,6 +4477,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnImportarSemana && fileImportarSemana) {
         btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
         fileImportarSemana.addEventListener('change', importarRoteiroSemana);
+    }
+    if (btnDiaria) {
+        btnDiaria.addEventListener('click', abrirModalDiaria);
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
     if (btnPDF) {
