@@ -2965,6 +2965,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dados.length === 0) return alert('Nenhuma placa encontrada para os modelos selecionados.');
 
             const headers = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA'];
+            const resumoModelos = [...dados.reduce((map, item) => {
+                const modelo = cleanImportValue(item.modelo) || 'SEM MODELO';
+                map.set(modelo, (map.get(modelo) || 0) + 1);
+                return map;
+            }, new Map())]
+                .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true, sensitivity: 'base' }));
             const wsData = [
                 headers,
                 ...dados.map(item => [
@@ -2974,7 +2980,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     cleanImportValue(item.status, { keepZero: true }),
                     cleanImportValue(item.motorista)
                 ]),
-                ['', '', '', 'TOTAL', dados.length]
+                [],
+                ['RESUMO POR MODELO', 'QTD', '', '', ''],
+                ...resumoModelos.map(([modelo, qtd]) => [modelo, qtd, '', '', '']),
+                ['TOTAL', dados.length, '', '', '']
             ];
 
             const wb = XLSX.utils.book_new();
@@ -3001,17 +3010,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            const resumoHeaderIndex = dados.length + 2;
             const totalRowIndex = wsData.length - 1;
-            for (let col = range.s.c; col <= range.e.c; col++) {
-                const cellRef = XLSX.utils.encode_cell({ r: totalRowIndex, c: col });
-                if (ws[cellRef]) {
-                    ws[cellRef].s = {
-                        font: { bold: true },
-                        fill: { fgColor: { rgb: 'E6E6E6' } },
-                        alignment: { horizontal: col >= 3 ? 'center' : 'left' }
-                    };
+            [resumoHeaderIndex, totalRowIndex].forEach(rowIndex => {
+                for (let col = range.s.c; col <= range.e.c; col++) {
+                    const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: col });
+                    if (ws[cellRef]) {
+                        ws[cellRef].s = {
+                            font: { bold: true },
+                            fill: { fgColor: { rgb: rowIndex === totalRowIndex ? 'E6E6E6' : 'DDEFE4' } },
+                            alignment: { horizontal: col === 1 ? 'center' : 'left' }
+                        };
+                    }
                 }
-            }
+            });
 
             XLSX.utils.book_append_sheet(wb, ws, 'Expedicao');
             XLSX.writeFile(wb, `Expedicao_${contexto.dataBR.replace(/\D/g, '')}.xlsx`);
