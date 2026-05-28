@@ -1125,7 +1125,6 @@ async function salvarTudo() {
 
     try {
         await preencherVeiculosDasLinhas();
-        await sincronizarCapacidadeCargaVeiculos();
 
         let payload = gridData
             .filter(row => normalizarTexto(row.rota))
@@ -1186,21 +1185,28 @@ function deduplicarPayloadPorRota(payload) {
 async function removerDuplicadosDaSemana(payload) {
     const periodo = getPeriodoSemanaAno(getSemanaAnoSelecionada());
     const rotasProcessadas = new Set();
+    const operacoes = [];
 
     for (const item of payload || []) {
         const chaveRota = normalizarRota(item.rota);
         if (!chaveRota || !item.dia_retorno || rotasProcessadas.has(chaveRota)) continue;
         rotasProcessadas.add(chaveRota);
 
-        const { error } = await supabaseClient
-            .from('peso_rota')
-            .delete()
-            .gte('dia_retorno', periodo.inicio)
-            .lte('dia_retorno', periodo.fim)
-            .eq('rota', item.rota)
-            .neq('dia_retorno', item.dia_retorno);
+        operacoes.push(() => supabaseClient
+                .from('peso_rota')
+                .delete()
+                .gte('dia_retorno', periodo.inicio)
+                .lte('dia_retorno', periodo.fim)
+                .eq('rota', item.rota)
+                .neq('dia_retorno', item.dia_retorno));
+    }
 
-        if (error) throw error;
+    const tamanhoLote = 10;
+    for (let i = 0; i < operacoes.length; i += tamanhoLote) {
+        const resultados = await Promise.all(operacoes.slice(i, i + tamanhoLote).map(operacao => operacao()));
+        const erro = resultados.find(resultado => resultado.error)?.error;
+
+        if (erro) throw erro;
     }
 }
 
