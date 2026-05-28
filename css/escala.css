@@ -760,6 +760,164 @@ body.escala-menu-oculto .menu-floating-toggle i {
     font-size: 11px;
 }
 
+.pdf-expedicao-modelo-content {
+    width: min(560px, 94vw);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.pdf-expedicao-modelo-header {
+    background: linear-gradient(135deg, #006937, #004d29);
+    color: #fff;
+    border-bottom: 0;
+}
+
+.pdf-expedicao-modelo-header h3 {
+    color: #fff;
+}
+
+.pdf-expedicao-modelo-header .terceiro-modal-close {
+    color: #fff;
+    opacity: 0.9;
+}
+
+.pdf-expedicao-modelo-summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    margin: 14px 18px 0;
+    padding: 12px;
+    border: 1px solid #dfe8e2;
+    border-radius: 8px;
+    background: #f7fbf8;
+}
+
+.pdf-expedicao-modelo-summary span {
+    display: block;
+    color: #66736b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pdf-expedicao-modelo-summary strong {
+    display: block;
+    margin-top: 2px;
+    color: #1f3328;
+    font-size: 14px;
+}
+
+.pdf-expedicao-modelo-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 18px 0;
+}
+
+.pdf-expedicao-modelo-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    overflow: auto;
+    padding: 14px 18px;
+    max-height: 45vh;
+}
+
+.pdf-expedicao-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 18px 18px;
+    border-top: 1px solid #e7eee9;
+    background: #fbfdfb;
+}
+
+.pdf-expedicao-btn {
+    min-height: 36px;
+    border: 0;
+    border-radius: 7px;
+    padding: 0 14px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.pdf-expedicao-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16);
+}
+
+.pdf-expedicao-btn.primary {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+    min-width: 132px;
+}
+
+.pdf-expedicao-btn.secondary {
+    background: linear-gradient(135deg, #006937, #004d29);
+}
+
+.pdf-expedicao-btn.excel {
+    background: linear-gradient(135deg, #198754, #0f5132);
+    min-width: 132px;
+}
+
+.pdf-expedicao-btn.ghost {
+    background: #f1f4f2;
+    color: #334139;
+    border: 1px solid #d8e1dc;
+}
+
+.pdf-expedicao-modelo-option {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #d9e2dd;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.pdf-expedicao-modelo-option:hover {
+    border-color: #006937;
+    box-shadow: 0 4px 14px rgba(0, 105, 55, 0.12);
+    transform: translateY(-1px);
+}
+
+.pdf-expedicao-modelo-option input {
+    width: 16px;
+    height: 16px;
+    accent-color: #006937;
+}
+
+.pdf-expedicao-modelo-name {
+    color: #1f3328;
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pdf-expedicao-modelo-option small {
+    min-width: 28px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #e8f4ec;
+    color: #006937;
+    font-weight: 700;
+    text-align: center;
+}
+
 @media (max-width: 700px) {
     .floating-troca-veiculo-btn {
         right: 100px;

@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileImportarSemana = document.getElementById('fileImportarSemana');
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
+    const btnPDFExpedicaoModelo = document.getElementById('btnPDFExpedicaoModelo');
     const globalSearch = document.getElementById('globalSearch');
     
     // --- ELEMENTOS DINÂMICOS ---
@@ -2669,6 +2670,357 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- FUNÇÕES DO MODAL DE EXPEDIÇÃO ---
+    function isStatusExcluidoPDFExpedicao(status) {
+        const compact = normalizeString(status).replace(/[\s.-]+/g, '');
+        return compact === 'P' || compact === 'R';
+    }
+
+    function getContextoPDFExpedicao() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) {
+            alert('Abra uma semana e selecione um dia para gerar o PDF de expedicao.');
+            return null;
+        }
+        return contexto;
+    }
+
+    async function buscarDadosPDFExpedicao(contexto) {
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .select('placa, modelo, rota, status, motorista, auxiliar, terceiro, tipo_escala')
+                .eq('data_escala', contexto.dataISO)
+        );
+
+        if (error) throw error;
+
+        return (data || [])
+            .filter(item => normalizeVehiclePlate(item.placa))
+            .filter(item => !isStatusExcluidoPDFExpedicao(item.status))
+            .sort((a, b) => {
+                const modeloCompare = cleanImportValue(a.modelo).localeCompare(cleanImportValue(b.modelo), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (modeloCompare !== 0) return modeloCompare;
+                const rotaCompare = cleanImportValue(a.rota, { keepZero: true }).localeCompare(cleanImportValue(b.rota, { keepZero: true }), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (rotaCompare !== 0) return rotaCompare;
+                return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
+            });
+    }
+
+    function ensureModalPDFExpedicaoModelo() {
+        let modal = document.getElementById('modalPDFExpedicaoModelo');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalPDFExpedicaoModelo';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content pdf-expedicao-modelo-content">
+                <div class="terceiro-modal-header pdf-expedicao-modelo-header">
+                    <h3><i class="fa-solid fa-file-pdf"></i> PDF Expedicao</h3>
+                    <button type="button" id="btnFecharPDFExpedicaoModelo" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="pdf-expedicao-modelo-summary">
+                    <div>
+                        <span>Data</span>
+                        <strong id="pdfExpedicaoModeloContexto"></strong>
+                    </div>
+                    <div>
+                        <span>Total</span>
+                        <strong id="pdfExpedicaoModeloTotal">0 placas</strong>
+                    </div>
+                </div>
+                <div class="pdf-expedicao-modelo-actions">
+                    <button type="button" id="btnSelecionarTodosModelosExp" class="pdf-expedicao-btn secondary">
+                        <i class="fas fa-check-double"></i> Selecionar todos
+                    </button>
+                    <button type="button" id="btnLimparModelosExp" class="pdf-expedicao-btn ghost">
+                        <i class="fas fa-eraser"></i> Limpar
+                    </button>
+                </div>
+                <div id="pdfExpedicaoModeloLista" class="pdf-expedicao-modelo-list"></div>
+                <div class="pdf-expedicao-footer">
+                    <button type="button" id="btnGerarXLSXExpedicaoModelo" class="pdf-expedicao-btn excel">
+                        <i class="fas fa-file-excel"></i> Gerar XLSX
+                    </button>
+                    <button type="button" id="btnGerarPDFExpedicaoModelo" class="pdf-expedicao-btn primary">
+                        <i class="fas fa-file-pdf"></i> Gerar PDF
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('#btnFecharPDFExpedicaoModelo')) {
+                modal.classList.add('hidden');
+            }
+
+            if (e.target.closest('#btnSelecionarTodosModelosExp')) {
+                modal.querySelectorAll('.pdf-expedicao-modelo-check').forEach(chk => chk.checked = true);
+            }
+
+            if (e.target.closest('#btnLimparModelosExp')) {
+                modal.querySelectorAll('.pdf-expedicao-modelo-check').forEach(chk => chk.checked = false);
+            }
+
+            if (e.target.closest('#btnGerarPDFExpedicaoModelo')) {
+                const modelos = Array.from(modal.querySelectorAll('.pdf-expedicao-modelo-check:checked')).map(chk => chk.value);
+                gerarPDFExpedicaoModelo(modelos);
+            }
+
+            if (e.target.closest('#btnGerarXLSXExpedicaoModelo')) {
+                const modelos = Array.from(modal.querySelectorAll('.pdf-expedicao-modelo-check:checked')).map(chk => chk.value);
+                gerarXLSXExpedicaoModelo(modelos);
+            }
+        });
+
+        return modal;
+    }
+
+    async function abrirModalPDFExpedicaoModelo() {
+        const contexto = getContextoPDFExpedicao();
+        if (!contexto) return;
+
+        try {
+            const dados = await buscarDadosPDFExpedicao(contexto);
+            if (dados.length === 0) return alert('Nenhuma placa encontrada para esta data apos excluir status P e R.');
+
+            const modelos = [...new Set(dados.map(item => cleanImportValue(item.modelo) || 'SEM MODELO'))]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+
+            const modal = ensureModalPDFExpedicaoModelo();
+            modal.querySelector('#pdfExpedicaoModeloContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
+            modal.querySelector('#pdfExpedicaoModeloTotal').textContent = `${dados.length} placa(s)`;
+            modal.querySelector('#pdfExpedicaoModeloLista').innerHTML = modelos.map(modelo => {
+                const qtd = dados.filter(item => (cleanImportValue(item.modelo) || 'SEM MODELO') === modelo).length;
+                return `
+                    <label class="pdf-expedicao-modelo-option">
+                        <input type="checkbox" class="pdf-expedicao-modelo-check" value="${escapeAttribute(modelo)}" checked>
+                        <span class="pdf-expedicao-modelo-name">${escapeAttribute(modelo)}</span>
+                        <small>${qtd}</small>
+                    </label>
+                `;
+            }).join('');
+            modal.classList.remove('hidden');
+        } catch (error) {
+            console.error('Erro ao abrir PDF de expedicao:', error);
+            alert('Erro ao carregar modelos para o PDF de expedicao: ' + error.message);
+        }
+    }
+
+    async function gerarPDFExpedicaoModelo(modelosSelecionados) {
+        if (!window.jspdf) return alert('Biblioteca PDF nao carregada.');
+        if (!modelosSelecionados || modelosSelecionados.length === 0) return alert('Selecione pelo menos um modelo.');
+
+        const contexto = getContextoPDFExpedicao();
+        if (!contexto) return;
+
+        try {
+            const dados = (await buscarDadosPDFExpedicao(contexto))
+                .filter(item => modelosSelecionados.includes(cleanImportValue(item.modelo) || 'SEM MODELO'));
+
+            if (dados.length === 0) return alert('Nenhuma placa encontrada para os modelos selecionados.');
+
+            const margin = 3;
+
+            const dadosOrdenados = [...dados].sort((a, b) => {
+                const modeloCompare = cleanImportValue(a.modelo).localeCompare(cleanImportValue(b.modelo), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (modeloCompare !== 0) return modeloCompare;
+                const rotaCompare = cleanImportValue(a.rota, { keepZero: true }).localeCompare(cleanImportValue(b.rota, { keepZero: true }), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (rotaCompare !== 0) return rotaCompare;
+                return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
+            });
+
+            const usarColunas = dadosOrdenados.length > 96;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const head = [['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA']];
+            const body = dadosOrdenados.map(item => [
+                normalizeVehiclePlate(item.placa),
+                cleanImportValue(item.modelo),
+                cleanImportValue(item.rota, { keepZero: true }),
+                cleanImportValue(item.status, { keepZero: true }),
+                cleanImportValue(item.motorista)
+            ]);
+
+            const baseTableOptions = {
+                theme: 'grid',
+                head,
+                styles: { fontSize: 4.8, cellPadding: 0.18, lineWidth: 0.05, overflow: 'ellipsize', valign: 'middle' },
+                headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 5 },
+                alternateRowStyles: { fillColor: [244, 248, 245] },
+                didParseCell: (data) => {
+                    if (data.section !== 'body') return;
+                    const row = data.row.raw || [];
+                    if (row[3] === 'TOTAL') {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [230, 230, 230];
+                        if (data.column.index >= 3) data.cell.styles.halign = 'center';
+                    }
+                }
+            };
+
+            if (usarColunas) {
+                const columnGap = 2;
+                const tableWidth = (pageWidth - (margin * 2) - columnGap) / 2;
+                const maxRowsPerColumn = 108;
+                const maxRowsPerPage = maxRowsPerColumn * 2;
+
+                for (let start = 0, pageIndex = 0; start < body.length; start += maxRowsPerPage, pageIndex++) {
+                    if (pageIndex > 0) doc.addPage();
+
+                    const pageRows = body.slice(start, start + maxRowsPerPage);
+                    const ultimaPagina = start + maxRowsPerPage >= body.length;
+                    const splitIndex = pageRows.length > maxRowsPerColumn
+                        ? Math.ceil(pageRows.length / 2)
+                        : pageRows.length;
+                    const leftRows = pageRows.slice(0, splitIndex);
+                    const rightRows = pageRows.slice(splitIndex);
+                    const totalRow = ['', '', '', 'TOTAL', String(dadosOrdenados.length)];
+                    const rightRowsRender = ultimaPagina
+                        ? (rightRows.length > 0 ? [...rightRows, totalRow] : [])
+                        : rightRows;
+                    const leftRowsRender = ultimaPagina && rightRows.length === 0
+                        ? [...leftRows, totalRow]
+                        : leftRows;
+
+                    doc.autoTable({
+                        ...baseTableOptions,
+                        body: leftRowsRender,
+                        startY: margin,
+                        margin: { left: margin, right: margin, top: margin, bottom: margin },
+                        tableWidth,
+                        columnStyles: {
+                            0: { cellWidth: 16 },
+                            1: { cellWidth: 22 },
+                            2: { cellWidth: 10, halign: 'center' },
+                            3: { cellWidth: 12, halign: 'center' },
+                            4: { cellWidth: tableWidth - 60 }
+                        }
+                    });
+                    if (rightRowsRender.length > 0) {
+                        const rightX = margin + tableWidth + columnGap;
+                        doc.autoTable({
+                            ...baseTableOptions,
+                            body: rightRowsRender,
+                            startY: margin,
+                            margin: { left: rightX, right: margin, top: margin, bottom: margin },
+                            tableWidth,
+                            columnStyles: {
+                                0: { cellWidth: 16 },
+                                1: { cellWidth: 22 },
+                                2: { cellWidth: 10, halign: 'center' },
+                                3: { cellWidth: 12, halign: 'center' },
+                                4: { cellWidth: tableWidth - 60 }
+                            }
+                        });
+                    }
+                }
+            } else {
+                doc.autoTable({
+                    ...baseTableOptions,
+                    body: [...body, ['', '', '', 'TOTAL', String(dadosOrdenados.length)]],
+                    startY: margin,
+                    margin: { left: margin, right: margin, top: margin, bottom: margin },
+                    tableWidth: pageWidth - (margin * 2),
+                    styles: { ...baseTableOptions.styles, fontSize: 5.1, cellPadding: 0.22 },
+                    headStyles: { ...baseTableOptions.headStyles, fontSize: 5.2 },
+                    columnStyles: {
+                        0: { cellWidth: 22 },
+                        1: { cellWidth: 36 },
+                        2: { cellWidth: 15, halign: 'center' },
+                        3: { cellWidth: 17, halign: 'center' },
+                        4: { cellWidth: pageWidth - (margin * 2) - 90 }
+                    }
+                });
+            }
+
+            doc.save(`Expedicao_${contexto.dataBR.replace(/\D/g, '')}.pdf`);
+            document.getElementById('modalPDFExpedicaoModelo')?.classList.add('hidden');
+        } catch (error) {
+            console.error('Erro ao gerar PDF de expedicao:', error);
+            alert('Erro ao gerar PDF de expedicao: ' + error.message);
+        }
+    }
+
+    async function gerarXLSXExpedicaoModelo(modelosSelecionados) {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX nao carregada.');
+        if (!modelosSelecionados || modelosSelecionados.length === 0) return alert('Selecione pelo menos um modelo.');
+
+        const contexto = getContextoPDFExpedicao();
+        if (!contexto) return;
+
+        try {
+            const dados = (await buscarDadosPDFExpedicao(contexto))
+                .filter(item => modelosSelecionados.includes(cleanImportValue(item.modelo) || 'SEM MODELO'))
+                .sort((a, b) => {
+                    const modeloCompare = cleanImportValue(a.modelo).localeCompare(cleanImportValue(b.modelo), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                    if (modeloCompare !== 0) return modeloCompare;
+                    const rotaCompare = cleanImportValue(a.rota, { keepZero: true }).localeCompare(cleanImportValue(b.rota, { keepZero: true }), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                    if (rotaCompare !== 0) return rotaCompare;
+                    return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                });
+
+            if (dados.length === 0) return alert('Nenhuma placa encontrada para os modelos selecionados.');
+
+            const headers = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA'];
+            const wsData = [
+                headers,
+                ...dados.map(item => [
+                    normalizeVehiclePlate(item.placa),
+                    cleanImportValue(item.modelo),
+                    cleanImportValue(item.rota, { keepZero: true }),
+                    cleanImportValue(item.status, { keepZero: true }),
+                    cleanImportValue(item.motorista)
+                ]),
+                ['', '', '', 'TOTAL', dados.length]
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws['!cols'] = [
+                { wch: 12 },
+                { wch: 18 },
+                { wch: 10 },
+                { wch: 12 },
+                { wch: 32 }
+            ];
+            ws['!autofilter'] = { ref: `A1:E${wsData.length}` };
+            ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let col = range.s.c; col <= range.e.c; col++) {
+                const headerRef = XLSX.utils.encode_cell({ r: 0, c: col });
+                if (ws[headerRef]) {
+                    ws[headerRef].s = {
+                        font: { bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: '006937' } },
+                        alignment: { horizontal: 'center' }
+                    };
+                }
+            }
+
+            const totalRowIndex = wsData.length - 1;
+            for (let col = range.s.c; col <= range.e.c; col++) {
+                const cellRef = XLSX.utils.encode_cell({ r: totalRowIndex, c: col });
+                if (ws[cellRef]) {
+                    ws[cellRef].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: 'E6E6E6' } },
+                        alignment: { horizontal: col >= 3 ? 'center' : 'left' }
+                    };
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Expedicao');
+            XLSX.writeFile(wb, `Expedicao_${contexto.dataBR.replace(/\D/g, '')}.xlsx`);
+        } catch (error) {
+            console.error('Erro ao gerar XLSX de expedicao:', error);
+            alert('Erro ao gerar XLSX de expedicao: ' + error.message);
+        }
+    }
+
     function abrirModalExpedicao() {
         const semana = selectSemana.value;
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
@@ -3925,6 +4277,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('pdfOrientationModal').style.display = 'none';
             gerarPDF('portrait', selected);
         });
+    }
+    if (btnPDFExpedicaoModelo) {
+        btnPDFExpedicaoModelo.addEventListener('click', abrirModalPDFExpedicaoModelo);
     }
 
     const btnImportarPlanejamento = document.getElementById('btnImportarPlanejamento');
