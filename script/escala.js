@@ -372,6 +372,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btnTerceiroRotaSuspenso.disabled) abrirModalTerceiroRota();
     });
 
+    const btnTrocaVeiculoSuspenso = document.createElement('button');
+    btnTrocaVeiculoSuspenso.id = 'btnTrocaVeiculoSuspenso';
+    btnTrocaVeiculoSuspenso.className = 'floating-terceiro-btn floating-troca-veiculo-btn hidden';
+    btnTrocaVeiculoSuspenso.type = 'button';
+    btnTrocaVeiculoSuspenso.disabled = true;
+    btnTrocaVeiculoSuspenso.innerHTML = '<i class="fa-solid fa-truck"></i><span>Troca Veiculo</span>';
+    document.body.appendChild(btnTrocaVeiculoSuspenso);
+
+    btnTrocaVeiculoSuspenso.addEventListener('click', () => {
+        if (!btnTrocaVeiculoSuspenso.disabled) abrirModalTrocaVeiculo();
+    });
+
     function atualizarBotaoTerceiroSuspenso() {
         const contexto = getDataEscalaAberta();
         const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
@@ -386,6 +398,25 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             btnTerceiroRotaSuspenso.title = 'Abra uma escala e selecione uma data.';
             btnTerceiroRotaSuspenso.querySelector('span').textContent = 'Terceiro';
+        }
+
+        atualizarBotaoTrocaVeiculoSuspenso();
+    }
+
+    function atualizarBotaoTrocaVeiculoSuspenso() {
+        const contexto = getDataEscalaAberta();
+        const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
+        const ativo = !!contexto && escalaAberta;
+
+        btnTrocaVeiculoSuspenso.disabled = !ativo;
+        btnTrocaVeiculoSuspenso.classList.toggle('hidden', !ativo);
+
+        if (ativo) {
+            btnTrocaVeiculoSuspenso.title = `Trocar veiculo por rota - ${contexto.dia} ${contexto.dataBR}`;
+            btnTrocaVeiculoSuspenso.querySelector('span').textContent = `Troca Veiculo ${contexto.dia}`;
+        } else {
+            btnTrocaVeiculoSuspenso.title = 'Abra uma escala e selecione uma data.';
+            btnTrocaVeiculoSuspenso.querySelector('span').textContent = 'Troca Veiculo';
         }
     }
 
@@ -2844,6 +2875,412 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
+    }
+
+    const trocaVeiculoSortState = { key: 'placa', direction: 'asc' };
+    let trocaVeiculoReloadTimer = null;
+
+    function ensureModalTrocaVeiculo() {
+        let modal = document.getElementById('modalTrocaVeiculo');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalTrocaVeiculo';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content troca-veiculo-modal-content">
+                <div class="terceiro-modal-header">
+                    <h3><i class="fa-solid fa-truck"></i> Troca de Veiculo</h3>
+                    <button type="button" id="btnFecharTrocaVeiculo" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="terceiro-modal-subtitle" id="trocaVeiculoContexto"></div>
+                <div class="terceiro-form-grid troca-veiculo-form-grid">
+                    <div class="form-group">
+                        <label for="trocaVeiculoRota">Rota</label>
+                        <input type="text" id="trocaVeiculoRota" list="listaRotas" class="glass-input" placeholder="Informe a rota">
+                    </div>
+                    <div class="form-group">
+                        <label for="trocaVeiculoPlaca">Nova placa disponivel</label>
+                        <input type="text" id="trocaVeiculoPlaca" list="listaTrocaVeiculosDisponiveis" class="glass-input" placeholder="Selecione a placa">
+                        <datalist id="listaTrocaVeiculosDisponiveis"></datalist>
+                    </div>
+                    <button type="button" id="btnAplicarTrocaVeiculo" class="btn-glass btn-green">
+                        <i class="fa-solid fa-check"></i> Aplicar
+                    </button>
+                </div>
+                <div class="terceiro-table-wrap">
+                    <table class="data-grid terceiro-table troca-veiculo-table">
+                        <thead>
+                            <tr>
+                                <th><button type="button" class="troca-sort-btn" data-troca-sort="placa">PLACA <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="troca-sort-btn" data-troca-sort="modelo">MODELO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="troca-sort-btn" data-troca-sort="rotaPlanejada">ROTA PLANEJADA <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="troca-sort-btn" data-troca-sort="statusPlanejado">STATUS PLANEJADO <i class="fas fa-sort"></i></button></th>
+                                <th>ACAO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTrocaVeiculo"></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('#btnFecharTrocaVeiculo')) {
+                modal.classList.add('hidden');
+            }
+
+            const btnSelecionar = e.target.closest('.btn-selecionar-troca-veiculo');
+            if (btnSelecionar) {
+                const inputPlaca = modal.querySelector('#trocaVeiculoPlaca');
+                if (inputPlaca) inputPlaca.value = btnSelecionar.dataset.placa || '';
+            }
+
+            const sortButton = e.target.closest('[data-troca-sort]');
+            if (sortButton) {
+                const key = sortButton.dataset.trocaSort;
+                trocaVeiculoSortState.direction = trocaVeiculoSortState.key === key && trocaVeiculoSortState.direction === 'asc' ? 'desc' : 'asc';
+                trocaVeiculoSortState.key = key;
+                carregarTrocaVeiculoModal();
+            }
+        });
+
+        modal.querySelector('#btnAplicarTrocaVeiculo').addEventListener('click', aplicarTrocaVeiculoPorRota);
+        modal.querySelector('#trocaVeiculoRota').addEventListener('input', () => {
+            modal.querySelector('#trocaVeiculoPlaca').value = '';
+            clearTimeout(trocaVeiculoReloadTimer);
+            trocaVeiculoReloadTimer = setTimeout(() => carregarTrocaVeiculoModal(), 350);
+        });
+
+        return modal;
+    }
+
+    async function abrirModalTrocaVeiculo() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return alert('Abra uma semana e um dia antes de trocar o veiculo.');
+
+        const modal = ensureModalTrocaVeiculo();
+        modal.querySelector('#trocaVeiculoContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
+        modal.querySelector('#trocaVeiculoRota').value = '';
+        modal.querySelector('#trocaVeiculoPlaca').value = '';
+        modal.classList.remove('hidden');
+        await carregarTrocaVeiculoModal();
+    }
+
+    function isStatusBloqueanteTrocaVeiculo(status) {
+        const normalized = normalizeString(status);
+        if (!normalized) return false;
+
+        const compact = normalized.replace(/[\s.-]+/g, '');
+        return compact === 'V'
+            || compact === 'P'
+            || compact === 'R'
+            || compact === 'VREST'
+            || normalized.includes('PERNOITE')
+            || normalized.includes('RETORNO')
+            || normalized.includes('VIAGEM')
+            || normalized.includes('VIAJEM');
+    }
+
+    function isStatusRetornoTrocaVeiculo(status) {
+        const normalized = normalizeString(status);
+        const compact = normalized.replace(/[\s.-]+/g, '');
+        return compact === 'R' || normalized.includes('RETORNO');
+    }
+
+    function isStatusContinuidadeTrocaVeiculo(status) {
+        const normalized = normalizeString(status);
+        const compact = normalized.replace(/[\s.-]+/g, '');
+        return compact === 'V'
+            || compact === 'P'
+            || compact === 'VREST'
+            || normalized.includes('PERNOITE')
+            || normalized.includes('VIAGEM')
+            || normalized.includes('VIAJEM');
+    }
+
+    function getDiaKeyByDataISO(semana, dataISO) {
+        const dia = getDiaByDataEscala(semana, dataISO);
+        return DIA_KEY_MAP[dia] || '';
+    }
+
+    function isMesmaRotaTrocaVeiculo(rotaA, rotaB) {
+        const a = cleanImportValue(rotaA, { keepZero: true });
+        const b = cleanImportValue(rotaB, { keepZero: true });
+        if (!a || !b) return false;
+        if (a === b) return true;
+
+        const numA = Number(a);
+        const numB = Number(b);
+        return Number.isFinite(numA) && Number.isFinite(numB) && numA === numB;
+    }
+
+    async function getSequenciaTrocaVeiculo(contexto, rota) {
+        const rotaBusca = cleanImportValue(rota, { keepZero: true });
+        const diaInicialIndex = IMPORT_DAYS.indexOf(contexto?.dia);
+        if (!contexto || !rotaBusca || diaInicialIndex < 0) return [];
+
+        const datasSemana = IMPORT_DAYS
+            .slice(diaInicialIndex)
+            .map(dia => CACHE_DATAS[contexto.semana]?.[dia]?.toISOString().split('T')[0])
+            .filter(Boolean);
+
+        if (datasSemana.length === 0) return [];
+
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .select('id, data_escala, rota, status, placa, modelo')
+                .in('data_escala', datasSemana)
+        ).order('data_escala').order('id');
+
+        if (error) throw error;
+
+        const porData = new Map();
+        (data || []).forEach(item => {
+            if (!isMesmaRotaTrocaVeiculo(item.rota, rotaBusca)) return;
+            const dataISO = String(item.data_escala || '').slice(0, 10);
+            if (!porData.has(dataISO)) porData.set(dataISO, []);
+            porData.get(dataISO).push(item);
+        });
+
+        const sequencia = [];
+        for (const dataISO of datasSemana) {
+            const linhasDia = porData.get(dataISO) || [];
+            if (linhasDia.length === 0) {
+                if (sequencia.length > 0) break;
+                continue;
+            }
+
+            sequencia.push(...linhasDia);
+
+            const statusDia = linhasDia.map(item => item.status).find(Boolean) || '';
+            if (isStatusRetornoTrocaVeiculo(statusDia)) break;
+            if (sequencia.length > 0 && !isStatusContinuidadeTrocaVeiculo(statusDia)) break;
+        }
+
+        return sequencia;
+    }
+
+    async function listarVeiculosDisponiveisTroca(contexto, datasAlvo = null, rotaAlvo = '') {
+        const diaKey = DIA_KEY_MAP[contexto?.dia];
+        if (!contexto || !diaKey) return [];
+
+        const rotaAlvoNormalizada = cleanImportValue(rotaAlvo, { keepZero: true });
+        const datasParaValidar = Array.isArray(datasAlvo) && datasAlvo.length > 0
+            ? [...new Set(datasAlvo.map(data => String(data || '').slice(0, 10)).filter(Boolean))]
+            : [contexto.dataISO];
+
+        const [resPlanejamento, resEscalaDia] = await Promise.all([
+            aplicarFiltroFilial(
+                supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .eq('semana_nome', contexto.semana)
+            ).order('placa'),
+            aplicarFiltroFilial(
+                supabaseClient
+                    .from('escala')
+                    .select('placa, data_escala, rota')
+                    .in('data_escala', datasParaValidar)
+            )
+        ]);
+
+        if (resPlanejamento.error) throw resPlanejamento.error;
+        if (resEscalaDia.error) throw resEscalaDia.error;
+
+        const dadosPlanejamento = await garantirPlacasPlanejamento(contexto.semana, resPlanejamento.data || []);
+        const placasEmUsoNoDia = new Set((resEscalaDia.data || [])
+            .filter(item => !rotaAlvoNormalizada || !isMesmaRotaTrocaVeiculo(item.rota, rotaAlvoNormalizada))
+            .map(item => normalizeVehiclePlate(item.placa))
+            .filter(Boolean));
+
+        return (dadosPlanejamento || [])
+            .map(item => {
+                const placa = normalizeVehiclePlate(item.placa);
+                let rotaPlanejada = '';
+                let statusPlanejado = '';
+                let motivoBloqueio = '';
+
+                for (const dataISO of datasParaValidar) {
+                    const keyDia = getDiaKeyByDataISO(contexto.semana, dataISO);
+                    if (!keyDia) continue;
+
+                    const rotaDia = cleanImportValue(item[`${keyDia}_rota`], { keepZero: true });
+                    const statusDia = cleanImportValue(item[`${keyDia}_status`], { keepZero: true });
+                    const rotaDoMesmoAlvo = isMesmaRotaTrocaVeiculo(rotaDia, rotaAlvoNormalizada);
+
+                    if (!rotaPlanejada && rotaDia) rotaPlanejada = `${rotaDia} (${dataISO.split('-').reverse().join('/')})`;
+                    if (!statusPlanejado && statusDia) statusPlanejado = `${statusDia} (${dataISO.split('-').reverse().join('/')})`;
+
+                    if (rotaDia && !rotaDoMesmoAlvo) {
+                        motivoBloqueio = `Possui rota planejada ${rotaPlanejada}`;
+                        break;
+                    }
+
+                    if (isStatusBloqueanteTrocaVeiculo(statusDia) && !rotaDoMesmoAlvo) {
+                        motivoBloqueio = `Status planejado ${statusPlanejado}`;
+                        break;
+                    }
+                }
+
+                if (!placa) motivoBloqueio = 'Sem placa no planejamento';
+                else if (placasEmUsoNoDia.has(placa)) motivoBloqueio = 'Ja esta escalado nesta data';
+
+                return {
+                    placa,
+                    modelo: cleanImportValue(item.modelo) || getModeloVisualByPlaca(placa),
+                    rotaPlanejada,
+                    statusPlanejado,
+                    disponivel: !motivoBloqueio,
+                    motivoBloqueio
+                };
+            })
+            .filter(item => item.placa && item.disponivel);
+    }
+
+    function ordenarVeiculosDisponiveisTroca(disponiveis) {
+        const direction = trocaVeiculoSortState.direction === 'desc' ? -1 : 1;
+        const key = trocaVeiculoSortState.key || 'placa';
+
+        return [...(disponiveis || [])].sort((a, b) => {
+            const valueA = cleanImportValue(a[key], { keepZero: true });
+            const valueB = cleanImportValue(b[key], { keepZero: true });
+            return valueA.localeCompare(valueB, 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
+        });
+    }
+
+    function atualizarOrdenacaoTrocaVeiculo() {
+        document.querySelectorAll('#modalTrocaVeiculo [data-troca-sort] i').forEach(icon => {
+            const button = icon.closest('[data-troca-sort]');
+            const ativo = button?.dataset.trocaSort === trocaVeiculoSortState.key;
+            icon.className = ativo
+                ? (trocaVeiculoSortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
+    }
+
+    function renderTrocaVeiculoDisponiveis(disponiveis) {
+        const tbody = document.getElementById('tbodyTrocaVeiculo');
+        const datalist = document.getElementById('listaTrocaVeiculosDisponiveis');
+        if (!tbody) return;
+
+        const ordenados = ordenarVeiculosDisponiveisTroca(disponiveis);
+
+        if (datalist) {
+            datalist.innerHTML = ordenados
+                .map(item => `<option value="${escapeAttribute(item.placa)}" label="${escapeAttribute(item.modelo || '')}">`)
+                .join('');
+        }
+
+        atualizarOrdenacaoTrocaVeiculo();
+
+        if (ordenados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma placa disponivel pelo planejamento para esta rota/data.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ordenados.map(item => `
+            <tr>
+                <td>${escapeAttribute(item.placa)}</td>
+                <td>${escapeAttribute(item.modelo || '')}</td>
+                <td>${escapeAttribute(item.rotaPlanejada || '-')}</td>
+                <td>${escapeAttribute(item.statusPlanejado || '-')}</td>
+                <td class="actions-cell">
+                    <button type="button" class="btn-icon edit btn-selecionar-troca-veiculo" data-placa="${escapeAttribute(item.placa)}" title="Selecionar placa">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function carregarTrocaVeiculoModal() {
+        const contexto = getDataEscalaAberta();
+        const tbody = document.getElementById('tbodyTrocaVeiculo');
+        const datalist = document.getElementById('listaTrocaVeiculosDisponiveis');
+        if (!contexto || !tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+        if (datalist) datalist.innerHTML = '';
+
+        try {
+            const rota = cleanImportValue(document.getElementById('trocaVeiculoRota')?.value, { keepZero: true });
+            let datasAlvo = null;
+
+            if (rota) {
+                const sequenciaRota = await getSequenciaTrocaVeiculo(contexto, rota);
+                if (sequenciaRota.length === 0) {
+                    renderTrocaVeiculoDisponiveis([]);
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhuma linha encontrada para a rota ${escapeAttribute(rota)} a partir desta data.</td></tr>`;
+                    return;
+                }
+
+                datasAlvo = [...new Set(sequenciaRota
+                    .map(item => String(item.data_escala || '').slice(0, 10))
+                    .filter(Boolean))];
+            }
+
+            const disponiveis = await listarVeiculosDisponiveisTroca(contexto, datasAlvo, rota);
+            renderTrocaVeiculoDisponiveis(disponiveis);
+        } catch (error) {
+            console.error('Erro ao carregar veiculos disponiveis para troca:', error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc3545;">Erro ao carregar placas disponiveis.</td></tr>';
+        }
+    }
+
+    async function aplicarTrocaVeiculoPorRota() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return;
+
+        const rota = cleanImportValue(document.getElementById('trocaVeiculoRota')?.value, { keepZero: true });
+        const placa = normalizeVehiclePlate(document.getElementById('trocaVeiculoPlaca')?.value);
+
+        if (!rota) return alert('Informe a rota.');
+        if (!placa) return alert('Selecione a nova placa.');
+
+        try {
+            const sequenciaRota = await getSequenciaTrocaVeiculo(contexto, rota);
+            if (sequenciaRota.length === 0) {
+                return alert(`Nenhuma linha encontrada para a rota ${rota} a partir desta data.`);
+            }
+
+            const datasAfetadas = [...new Set(sequenciaRota
+                .map(item => String(item.data_escala || '').slice(0, 10))
+                .filter(Boolean))];
+
+            const disponiveis = await listarVeiculosDisponiveisTroca(contexto, datasAfetadas, rota);
+            const veiculo = disponiveis.find(item => item.placa === placa);
+            if (!veiculo) {
+                await carregarTrocaVeiculoModal();
+                return alert('Esta placa nao esta disponivel para todos os dias da rota ate o retorno.');
+            }
+
+            const idsAfetados = sequenciaRota.map(item => item.id).filter(Boolean);
+            const { data, error } = await supabaseClient
+                .from('escala')
+                .update(comAuditoria({
+                    placa: veiculo.placa,
+                    modelo: veiculo.modelo || getModeloVisualByPlaca(veiculo.placa)
+                }))
+                .in('id', idsAfetados)
+                .select('id');
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                return alert(`Nenhuma linha encontrada para a rota ${rota} a partir desta data.`);
+            }
+
+            alert(`Veiculo ${veiculo.placa} aplicado em ${data.length} linha(s) da rota ${rota}, em ${datasAfetadas.length} dia(s).`);
+            document.getElementById('trocaVeiculoPlaca').value = '';
+            await carregarTrocaVeiculoModal();
+            carregarDadosDia(contexto.dia, contexto.semana);
+        } catch (error) {
+            console.error('Erro ao aplicar troca de veiculo:', error);
+            alert('Erro ao aplicar troca de veiculo: ' + error.message);
+        }
     }
 
     function popularFiltrosExpedicao(dados) {
