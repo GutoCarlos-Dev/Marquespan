@@ -3030,6 +3030,9 @@ document.addEventListener('DOMContentLoaded', () => {
             || status.includes('AUSENTE');
     }
 
+    const diariaSortState = { key: 'nome', direction: 'asc' };
+    let diariaDadosAtual = [];
+
     function ensureModalDiaria() {
         let modal = document.getElementById('modalDiaria');
         if (modal) return modal;
@@ -3056,6 +3059,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span>Desconto prox. semana</span>
                         <strong id="diariaTotalDesconto">R$ 0,00</strong>
                     </div>
+                    <div class="diaria-summary-card">
+                        <span>Total a pagar</span>
+                        <strong id="diariaTotalPagar">R$ 0,00</strong>
+                    </div>
+                    <div class="form-group">
+                        <label for="diariaFiltroStatus">Status</label>
+                        <select id="diariaFiltroStatus" class="glass-input">
+                            <option value="">Todos</option>
+                            <option value="APTO">Apto</option>
+                            <option value="BLOQUEADO">Bloqueado</option>
+                        </select>
+                    </div>
                     <button type="button" id="btnCalcularDiaria" class="pdf-expedicao-btn secondary">
                         <i class="fas fa-calculator"></i> Calcular
                     </button>
@@ -3068,12 +3083,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <table class="data-grid diaria-table">
                         <thead>
                             <tr>
-                                <th>FUNCIONARIO</th>
-                                <th>FUNCAO</th>
-                                <th>STATUS</th>
-                                <th>DIAS DESC.</th>
-                                <th>RECEBE</th>
-                                <th>DESCONTO PROX. SEMANA</th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nome">FUNCIONARIO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="diasDesconto">DIAS DESC. <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="descontoAnterior">DESC. ANTERIOR <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorPagar">VALOR A PAGAR <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorDesconto">DESC. PROX. SEMANA <i class="fas fa-sort"></i></button></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyDiaria"></tbody>
@@ -3087,22 +3103,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.closest('#btnFecharDiaria')) modal.classList.add('hidden');
             if (e.target.closest('#btnCalcularDiaria')) carregarDiariaModal();
             if (e.target.closest('#btnSalvarDiaria')) salvarDiariaSemana();
+
+            const sortButton = e.target.closest('[data-diaria-sort]');
+            if (sortButton) {
+                const key = sortButton.dataset.diariaSort;
+                diariaSortState.direction = diariaSortState.key === key && diariaSortState.direction === 'asc' ? 'desc' : 'asc';
+                diariaSortState.key = key;
+                renderDiariaTabela();
+            }
         });
 
         modal.querySelector('#diariaValorSemana').addEventListener('input', atualizarResumoDiaria);
+        modal.querySelector('#diariaFiltroStatus').addEventListener('change', renderDiariaTabela);
         return modal;
     }
 
     function atualizarResumoDiaria() {
         const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
         const valorDia = valorSemana / 5;
-        const totalDesconto = Array.from(document.querySelectorAll('#tbodyDiaria tr'))
-            .reduce((sum, tr) => sum + Number(tr.dataset.valorDesconto || 0), 0);
+        const totalDesconto = diariaDadosAtual.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0);
+        const totalPagar = diariaDadosAtual.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0);
 
         const elValorDia = document.getElementById('diariaValorDia');
         const elTotalDesconto = document.getElementById('diariaTotalDesconto');
+        const elTotalPagar = document.getElementById('diariaTotalPagar');
         if (elValorDia) elValorDia.textContent = formatMoedaBR(valorDia);
         if (elTotalDesconto) elTotalDesconto.textContent = formatMoedaBR(totalDesconto);
+        if (elTotalPagar) elTotalPagar.textContent = formatMoedaBR(totalPagar);
     }
 
     async function abrirModalDiaria() {
@@ -3116,12 +3143,113 @@ document.addEventListener('DOMContentLoaded', () => {
         await carregarDiariaModal();
     }
 
+    function getSemanaAnteriorNome(semana) {
+        const datasSemana = CACHE_DATAS[semana];
+        const inicioSemana = datasSemana?.DOMINGO || datasSemana?.SEGUNDA;
+        if (!inicioSemana) return '';
+
+        const alvo = addDays(inicioSemana, -7).toISOString().split('T')[0];
+        return Object.keys(CACHE_DATAS).find(nomeSemana => {
+            const datas = CACHE_DATAS[nomeSemana];
+            return IMPORT_DAYS.some(dia => datas?.[dia]?.toISOString().split('T')[0] === alvo);
+        }) || '';
+    }
+
+    async function carregarDescontosDiariaAnterior(semana) {
+        const semanaAnterior = getSemanaAnteriorNome(semana);
+        if (!semanaAnterior) return new Map();
+
+        try {
+            const { data: diaria, error } = await supabaseClient
+                .from('escala_diarias')
+                .select('id')
+                .eq('semana_nome', semanaAnterior)
+                .eq('filial', getFilialEscala())
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error || !diaria?.id) return new Map();
+
+            const { data: itens, error: itensError } = await supabaseClient
+                .from('escala_diaria_itens')
+                .select('funcionario_nome, valor_desconto')
+                .eq('diaria_id', diaria.id);
+
+            if (itensError) return new Map();
+
+            const descontos = new Map();
+            (itens || []).forEach(item => {
+                const key = normalizeString(item.funcionario_nome);
+                descontos.set(key, (descontos.get(key) || 0) + Number(item.valor_desconto || 0));
+            });
+            return descontos;
+        } catch (error) {
+            console.warn('Descontos anteriores de diaria nao carregados:', error);
+            return new Map();
+        }
+    }
+
+    function ordenarDiariaDados(dados) {
+        const direction = diariaSortState.direction === 'desc' ? -1 : 1;
+        const key = diariaSortState.key || 'nome';
+        return [...dados].sort((a, b) => {
+            const valueA = a[key];
+            const valueB = b[key];
+            if (typeof valueA === 'number' || typeof valueB === 'number') {
+                return ((Number(valueA) || 0) - (Number(valueB) || 0)) * direction;
+            }
+            return cleanImportValue(valueA).localeCompare(cleanImportValue(valueB), 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
+        });
+    }
+
+    function renderDiariaTabela() {
+        const tbody = document.getElementById('tbodyDiaria');
+        if (!tbody) return;
+
+        const filtroStatus = document.getElementById('diariaFiltroStatus')?.value || '';
+        const dadosFiltrados = diariaDadosAtual.filter(item => {
+            if (!filtroStatus) return true;
+            return filtroStatus === 'APTO' ? item.recebe : !item.recebe;
+        });
+
+        const dadosOrdenados = ordenarDiariaDados(dadosFiltrados);
+
+        document.querySelectorAll('#modalDiaria [data-diaria-sort] i').forEach(icon => {
+            const button = icon.closest('[data-diaria-sort]');
+            const ativo = button?.dataset.diariaSort === diariaSortState.key;
+            icon.className = ativo
+                ? (diariaSortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
+
+        if (dadosOrdenados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum funcionario encontrado para o filtro.</td></tr>';
+            atualizarResumoDiaria();
+            return;
+        }
+
+        tbody.innerHTML = dadosOrdenados.map(item => `
+            <tr data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}" data-dias-desconto="${item.diasDesconto}" data-desconto-anterior="${item.descontoAnterior}" data-valor-pagar="${item.valorPagar}" data-valor-desconto="${item.valorDesconto}" data-recebe="${item.recebe ? 'true' : 'false'}">
+                <td>${escapeAttribute(item.nome)}</td>
+                <td>${escapeAttribute(item.funcao)}</td>
+                <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}">${escapeAttribute(item.status)}</span></td>
+                <td>${item.diasDesconto}</td>
+                <td>${formatMoedaBR(item.descontoAnterior)}</td>
+                <td>${formatMoedaBR(item.valorPagar)}</td>
+                <td>${formatMoedaBR(item.valorDesconto)}</td>
+            </tr>
+        `).join('');
+
+        atualizarResumoDiaria();
+    }
+
     async function carregarDiariaModal() {
         const semana = selectSemana.value;
         const tbody = document.getElementById('tbodyDiaria');
         if (!semana || !tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
         try {
             const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
@@ -3129,21 +3257,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const datasSemana = getDatasSemanaISO(semana);
 
             const [resFuncionarios, resFaltas] = await Promise.all([
-                aplicarFiltroFilial(
-                    supabaseClient
-                        .from('funcionario')
-                        .select('nome, nome_completo, funcao, status, filial')
-                ).order('nome'),
-                aplicarFiltroFilial(
-                    supabaseClient
-                        .from('faltas_afastamentos')
-                        .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala, filial')
-                        .in('data_escala', datasSemana)
-                )
+                supabaseClient
+                    .from('funcionario')
+                    .select('nome, nome_completo, funcao, status')
+                    .order('nome'),
+                supabaseClient
+                    .from('faltas_afastamentos')
+                    .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
+                    .in('data_escala', datasSemana)
             ]);
 
             if (resFuncionarios.error) throw resFuncionarios.error;
             if (resFaltas.error) throw resFaltas.error;
+            const descontosAnteriores = await carregarDescontosDiariaAnterior(semana);
 
             const nomeDiariaMap = new Map();
             (resFuncionarios.data || []).forEach(f => {
@@ -3187,33 +3313,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
             if (funcionarios.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
+                diariaDadosAtual = [];
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
                 atualizarResumoDiaria();
                 return;
             }
 
-            tbody.innerHTML = funcionarios.map(func => {
+            diariaDadosAtual = funcionarios.map(func => {
                 const ausencia = ausencias.get(normalizeString(func.nome));
                 const diasDesconto = ausencia ? ausencia.dias.size : 0;
                 const valorDesconto = diasDesconto * valorDia;
+                const descontoAnterior = descontosAnteriores.get(normalizeString(func.nome)) || 0;
                 const recebe = diasDesconto === 0;
                 const status = recebe ? 'APTO' : [...ausencia.motivos].join(', ');
-                return `
-                    <tr data-nome="${escapeAttribute(func.nome)}" data-funcao="${escapeAttribute(func.funcao)}" data-status="${escapeAttribute(status)}" data-dias-desconto="${diasDesconto}" data-valor-desconto="${valorDesconto}" data-recebe="${recebe ? 'true' : 'false'}">
-                        <td>${escapeAttribute(func.nome)}</td>
-                        <td>${escapeAttribute(func.funcao)}</td>
-                        <td><span class="diaria-status ${recebe ? 'apto' : 'bloqueado'}">${escapeAttribute(status)}</span></td>
-                        <td>${diasDesconto}</td>
-                        <td>${recebe ? 'SIM' : 'NAO'}</td>
-                        <td>${formatMoedaBR(valorDesconto)}</td>
-                    </tr>
-                `;
-            }).join('');
+                const valorPagar = recebe ? Math.max(valorSemana - descontoAnterior, 0) : 0;
+                return {
+                    nome: func.nome,
+                    funcao: func.funcao,
+                    status,
+                    diasDesconto,
+                    descontoAnterior,
+                    valorPagar,
+                    valorDesconto,
+                    recebe
+                };
+            });
 
-            atualizarResumoDiaria();
+            renderDiariaTabela();
         } catch (error) {
             console.error('Erro ao carregar diaria:', error);
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
         }
     }
 
@@ -3225,20 +3354,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
         if (valorSemana <= 0) return alert('Informe o valor da diaria semanal.');
 
-        const rows = Array.from(document.querySelectorAll('#tbodyDiaria tr[data-nome]'));
-        if (rows.length === 0) return alert('Calcule a diaria antes de salvar.');
+        if (diariaDadosAtual.length === 0) return alert('Calcule a diaria antes de salvar.');
 
         const valorDia = valorSemana / 5;
-        const itens = rows.map(tr => ({
-            funcionario_nome: tr.dataset.nome,
-            funcao: tr.dataset.funcao,
-            status_diaria: tr.dataset.status,
-            dias_desconto: Number(tr.dataset.diasDesconto || 0),
-            valor_desconto: Number(tr.dataset.valorDesconto || 0),
-            recebe_diaria: tr.dataset.recebe === 'true'
+        const itens = diariaDadosAtual.map(item => ({
+            funcionario_nome: item.nome,
+            funcao: item.funcao,
+            status_diaria: item.status,
+            dias_desconto: Number(item.diasDesconto || 0),
+            desconto_anterior: Number(item.descontoAnterior || 0),
+            valor_pagar: Number(item.valorPagar || 0),
+            valor_desconto: Number(item.valorDesconto || 0),
+            recebe_diaria: item.recebe
         }));
 
         const totalDesconto = itens.reduce((sum, item) => sum + item.valor_desconto, 0);
+        const totalDescontoAnterior = itens.reduce((sum, item) => sum + item.desconto_anterior, 0);
+        const totalPagar = itens.reduce((sum, item) => sum + item.valor_pagar, 0);
         const datasSemana = getDatasSemanaISO(semana);
 
         try {
@@ -3255,6 +3387,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     total_funcionarios: itens.length,
                     total_aptos: itens.filter(item => item.recebe_diaria).length,
                     total_bloqueados: itens.filter(item => !item.recebe_diaria).length,
+                    total_desconto_anterior: totalDescontoAnterior,
+                    total_pagar: totalPagar,
                     total_desconto: totalDesconto
                 })])
                 .select('id')

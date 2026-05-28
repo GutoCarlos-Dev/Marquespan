@@ -10,6 +10,8 @@ create table if not exists public.escala_diarias (
     total_funcionarios integer not null default 0,
     total_aptos integer not null default 0,
     total_bloqueados integer not null default 0,
+    total_desconto_anterior numeric(12,2) not null default 0,
+    total_pagar numeric(12,2) not null default 0,
     total_desconto numeric(12,2) not null default 0,
     ultima_alteracao_por text,
     ultima_alteracao_em timestamptz,
@@ -23,6 +25,8 @@ create table if not exists public.escala_diaria_itens (
     funcao text,
     status_diaria text,
     dias_desconto integer not null default 0,
+    desconto_anterior numeric(12,2) not null default 0,
+    valor_pagar numeric(12,2) not null default 0,
     valor_desconto numeric(12,2) not null default 0,
     recebe_diaria boolean not null default true,
     ultima_alteracao_por text,
@@ -35,3 +39,11 @@ create index if not exists idx_escala_diarias_semana_filial
 
 create index if not exists idx_escala_diaria_itens_diaria
     on public.escala_diaria_itens (diaria_id);
+
+alter table if exists public.escala_diarias
+    add column if not exists total_desconto_anterior numeric(12,2) not null default 0,
+    add column if not exists total_pagar numeric(12,2) not null default 0;
+
+alter table if exists public.escala_diaria_itens
+    add column if not exists desconto_anterior numeric(12,2) not null default 0,
+    add column if not exists valor_pagar numeric(12,2) not null default 0;
