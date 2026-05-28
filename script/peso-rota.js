@@ -1569,11 +1569,15 @@ function getChaveRetornoRotaData(data, rota) {
 function indexarRetornosRota(retornos) {
     const porRotaMotoristaData = new Map();
     const porRotaData = new Map();
+    const porRota = new Map();
 
     (retornos || []).forEach(item => {
         const rota = normalizarRota(item.rota);
         const data = item.data_retorno;
         if (!rota || !data) return;
+
+        if (!porRota.has(rota)) porRota.set(rota, []);
+        porRota.get(rota).push(item);
 
         const chaveRotaData = getChaveRetornoRotaData(data, rota);
         if (!porRotaData.has(chaveRotaData)) porRotaData.set(chaveRotaData, []);
@@ -1585,10 +1589,30 @@ function indexarRetornosRota(retornos) {
         }
     });
 
-    return { porRotaMotoristaData, porRotaData };
+    return { porRotaMotoristaData, porRotaData, porRota };
 }
 
-function escolherRetornoParaLinha(row, indicesRetorno, dataEsperada) {
+function escolherRetornoPorMotorista(candidatos, motorista) {
+    if (!motorista) return null;
+
+    return candidatos.find(item => {
+        const motoristaRetorno = normalizarBusca(item.nome_mot);
+        return motoristaRetorno && (motoristaRetorno.includes(motorista) || motorista.includes(motoristaRetorno));
+    }) || null;
+}
+
+function escolherRetornoMaisProximo(candidatos, dataEsperada) {
+    if (candidatos.length <= 1 || !dataEsperada) return candidatos[0] || null;
+
+    const dataBase = Date.parse(`${dataEsperada}T00:00:00Z`);
+    return [...candidatos].sort((a, b) => {
+        const diffA = Math.abs(Date.parse(`${a.data_retorno}T00:00:00Z`) - dataBase);
+        const diffB = Math.abs(Date.parse(`${b.data_retorno}T00:00:00Z`) - dataBase);
+        return diffA - diffB;
+    })[0] || null;
+}
+
+function escolherRetornoParaLinha(row, indicesRetorno, dataEsperada, permitirForaData = false) {
     const rota = normalizarRota(row.rota);
     const motorista = normalizarBusca(row.motorista);
     if (!rota || !dataEsperada) return null;
@@ -1599,14 +1623,18 @@ function escolherRetornoParaLinha(row, indicesRetorno, dataEsperada) {
         const exato = indicesRetorno.porRotaMotoristaData.get(getChaveRetorno(dataEsperada, rota, motorista));
         if (exato) return exato;
 
-        const parecido = candidatos.find(item => {
-            const motoristaRetorno = normalizarBusca(item.nome_mot);
-            return motoristaRetorno && (motoristaRetorno.includes(motorista) || motorista.includes(motoristaRetorno));
-        });
+        const parecido = escolherRetornoPorMotorista(candidatos, motorista);
         if (parecido) return parecido;
     }
 
-    return candidatos.length === 1 ? candidatos[0] : null;
+    if (candidatos.length === 1) return candidatos[0];
+    if (!permitirForaData) return null;
+
+    const candidatosPorRota = indicesRetorno.porRota.get(rota) || [];
+    const retornoPorMotorista = escolherRetornoPorMotorista(candidatosPorRota, motorista);
+    if (retornoPorMotorista) return retornoPorMotorista;
+
+    return escolherRetornoMaisProximo(candidatosPorRota, dataEsperada);
 }
 
 function atualizarCamposRetornoLinha(rowIndex, row) {
@@ -1708,7 +1736,7 @@ async function importarRetornoRota() {
 
             const dataEsperada = row.dia_retorno ||
                 calcularDataRetornoPrevista(row.semana_ano || semanaAno, row.semana, row.dias_rota);
-            const retorno = escolherRetornoParaLinha(row, indicesRetorno, dataEsperada);
+            const retorno = escolherRetornoParaLinha(row, indicesRetorno, dataEsperada, !semanaSelecionada);
             if (!retorno) {
                 semRetorno += 1;
                 return;
