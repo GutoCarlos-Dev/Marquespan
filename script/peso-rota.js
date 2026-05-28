@@ -1037,11 +1037,12 @@ function atualizarAlertaHorarioChegada(rowIndex) {
 }
 
 function atualizarContadores() {
-    const contadores = { ok: 0, alerta: 0, excesso: 0, retornoAtrasado: 0 };
-    const rotasPorStatus = { ok: [], alerta: [], excesso: [], retornoAtrasado: [] };
+    const contadores = { ok: 0, alerta: 0, excesso: 0, retornoAtrasado: 0, retornoAntecipado: 0 };
+    const rotasPorStatus = { ok: [], alerta: [], excesso: [], retornoAtrasado: [], retornoAntecipado: [] };
     getLinhasVisiveis().forEach(({ row }) => {
         const status = getStatus(row);
         const rota = normalizarTexto(row.rota) || '-';
+        const statusRetorno = getStatusPrazoRetorno(row);
         if (status.classe === 'status-ok') {
             contadores.ok += 1;
             rotasPorStatus.ok.push(rota);
@@ -1054,9 +1055,13 @@ function atualizarContadores() {
             contadores.excesso += 1;
             rotasPorStatus.excesso.push(rota);
         }
-        if (getStatusPrazoRetorno(row) === 'atrasado') {
+        if (statusRetorno === 'atrasado') {
             contadores.retornoAtrasado += 1;
             rotasPorStatus.retornoAtrasado.push(rota);
+        }
+        if (statusRetorno === 'antecipado') {
+            contadores.retornoAntecipado += 1;
+            rotasPorStatus.retornoAntecipado.push(rota);
         }
     });
 
@@ -1064,15 +1069,18 @@ function atualizarContadores() {
     const countAlerta = document.getElementById('count-alerta');
     const countExcesso = document.getElementById('count-excesso');
     const countRetornoAtrasado = document.getElementById('count-retorno-atrasado');
+    const countRetornoAntecipado = document.getElementById('count-retorno-antecipado');
     if (countOk) countOk.textContent = contadores.ok;
     if (countAlerta) countAlerta.textContent = contadores.alerta;
     if (countExcesso) countExcesso.textContent = contadores.excesso;
     if (countRetornoAtrasado) countRetornoAtrasado.textContent = contadores.retornoAtrasado;
+    if (countRetornoAntecipado) countRetornoAntecipado.textContent = contadores.retornoAntecipado;
 
     atualizarTooltipContador('count-ok', 'Rotas dentro da capacidade', rotasPorStatus.ok);
     atualizarTooltipContador('count-alerta', 'Rotas acima de 90%', rotasPorStatus.alerta);
     atualizarTooltipContador('count-excesso', 'Rotas em excesso', rotasPorStatus.excesso);
     atualizarTooltipContador('count-retorno-atrasado', 'Rotas com retorno atrasado', rotasPorStatus.retornoAtrasado);
+    atualizarTooltipContador('count-retorno-antecipado', 'Rotas com retorno antecipado', rotasPorStatus.retornoAntecipado);
 }
 
 function atualizarTooltipContador(counterId, titulo, rotas) {

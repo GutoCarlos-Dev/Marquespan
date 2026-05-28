@@ -279,6 +279,11 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
     background: #ffe4e4;
 }
 
+.status-retorno-antecipado {
+    color: #05603a;
+    background: #d1fadf;
+}
+
 .status-sem-dados {
     color: #344054;
     background: #eaecf0;
@@ -395,27 +400,27 @@ body.resizing-column .column-resizer::after {
 }
 
 .data-grid tbody tr.retorno-antecipado {
-    background: #fff8e6;
+    background: #ecfdf3;
 }
 
 .data-grid tbody tr.retorno-antecipado:hover {
-    background: #fff1c2;
+    background: #d1fadf;
 }
 
 .data-grid tbody tr.retorno-antecipado td {
-    border-bottom-color: #f3d27a;
+    border-bottom-color: #a6f4c5;
 }
 
 .data-grid tbody tr.retorno-antecipado input,
 .data-grid tbody tr.retorno-antecipado select,
 .data-grid tbody tr.retorno-antecipado textarea {
-    color: #7a4b00;
+    color: #05603a;
     font-weight: 700;
 }
 
 .data-grid .retorno-antecipado-cell select {
-    background: #fef0c7;
-    box-shadow: inset 0 0 0 1px #f59e0b;
+    background: #d1fadf;
+    box-shadow: inset 0 0 0 1px #12b76a;
 }
 
 .data-grid .dia-retorno-cell {
