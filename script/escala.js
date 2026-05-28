@@ -2690,6 +2690,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('escala')
                 .select('placa, modelo, rota, status, motorista, auxiliar, terceiro, tipo_escala')
                 .eq('data_escala', contexto.dataISO)
+                .eq('tipo_escala', 'PADRAO')
         );
 
         if (error) throw error;
