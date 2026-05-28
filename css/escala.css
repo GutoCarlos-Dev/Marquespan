@@ -636,7 +636,8 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .floating-troca-veiculo-btn {
-    right: 255px;
+    right: 100px;
+    bottom: 88px;
     min-width: 176px;
     background: linear-gradient(135deg, #198754, #0f5132);
 }

@@ -2927,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(modal);
 
         modal.addEventListener('click', (e) => {
-            if (e.target === modal || e.target.closest('#btnFecharTrocaVeiculo')) {
+            if (e.target.closest('#btnFecharTrocaVeiculo')) {
                 modal.classList.add('hidden');
             }
 
@@ -3275,6 +3275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             alert(`Veiculo ${veiculo.placa} aplicado em ${data.length} linha(s) da rota ${rota}, em ${datasAfetadas.length} dia(s).`);
             document.getElementById('trocaVeiculoPlaca').value = '';
+            document.getElementById('modalTrocaVeiculo')?.classList.add('hidden');
             await carregarTrocaVeiculoModal();
             carregarDadosDia(contexto.dia, contexto.semana);
         } catch (error) {
