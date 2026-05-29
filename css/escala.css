@@ -717,15 +717,24 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .troca-veiculo-modal-content {
-    width: min(860px, 96vw);
+    width: min(980px, 96vw);
 }
 
 .troca-veiculo-form-grid {
-    grid-template-columns: minmax(140px, 220px) minmax(220px, 1fr) auto;
+    grid-template-columns: minmax(130px, 180px) minmax(190px, 240px) minmax(220px, 1fr) auto;
 }
 
 .troca-veiculo-table {
-    min-width: 650px;
+    min-width: 720px;
+}
+
+.troca-veiculo-row-info {
+    cursor: help;
+}
+
+.troca-veiculo-row-info .btn-icon:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
 }
 
 .troca-veiculo-modal-content .terceiro-table-wrap {

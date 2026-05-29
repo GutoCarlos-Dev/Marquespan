@@ -4425,6 +4425,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="text" id="trocaVeiculoRota" list="listaRotas" class="glass-input" placeholder="Informe a rota">
                     </div>
                     <div class="form-group">
+                        <label for="trocaVeiculoModoGrid">Mostrar no grid</label>
+                        <select id="trocaVeiculoModoGrid" class="glass-input">
+                            <option value="DISPONIVEIS">Placas disponiveis</option>
+                            <option value="OFICINA">Internado / Check-in oficina</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="trocaVeiculoPlaca">Nova placa disponivel</label>
                         <input type="text" id="trocaVeiculoPlaca" list="listaTrocaVeiculosDisponiveis" class="glass-input" placeholder="Selecione a placa">
                         <datalist id="listaTrocaVeiculosDisponiveis"></datalist>
@@ -4477,6 +4484,10 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(trocaVeiculoReloadTimer);
             trocaVeiculoReloadTimer = setTimeout(() => carregarTrocaVeiculoModal(), 350);
         });
+        modal.querySelector('#trocaVeiculoModoGrid').addEventListener('change', () => {
+            modal.querySelector('#trocaVeiculoPlaca').value = '';
+            carregarTrocaVeiculoModal();
+        });
 
         return modal;
     }
@@ -4489,6 +4500,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.querySelector('#trocaVeiculoContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
         modal.querySelector('#trocaVeiculoRota').value = '';
         modal.querySelector('#trocaVeiculoPlaca').value = '';
+        modal.querySelector('#trocaVeiculoModoGrid').value = 'DISPONIVEIS';
         modal.classList.remove('hidden');
         await carregarTrocaVeiculoModal();
     }
@@ -4523,6 +4535,19 @@ document.addEventListener('DOMContentLoaded', () => {
             || normalized.includes('PERNOITE')
             || normalized.includes('VIAGEM')
             || normalized.includes('VIAJEM');
+    }
+
+    function isStatusOficinaTrocaVeiculo(status) {
+        const normalized = normalizeString(status);
+        const compact = normalized.replace(/[\s.-]+/g, '');
+        return normalized === 'INTERNADO' || compact === 'CHECKINOFICINA';
+    }
+
+    function getOficinaTrocaVeiculo(item) {
+        return cleanImportValue(item?.oficinas?.nome)
+            || cleanImportValue(item?.oficina)
+            || cleanImportValue(item?.nome_oficina)
+            || 'Oficina nao informada';
     }
 
     function getDiaKeyByDataISO(semana, dataISO) {
@@ -4666,6 +4691,95 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(item => item.placa && item.disponivel);
     }
 
+    async function listarVeiculosOficinaTroca() {
+        const filial = getFilialEscala();
+        let queryVeiculos = supabaseClient
+            .from('veiculos')
+            .select('placa, modelo, tipo, filial, situacao')
+            .order('placa');
+
+        if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
+
+        let queryChecklist = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select(`
+                id,
+                status,
+                oficina_id,
+                coletas_manutencao!inner (
+                    id,
+                    data_hora,
+                    placa,
+                    modelo,
+                    veiculos!inner (
+                        placa,
+                        modelo,
+                        tipo,
+                        filial,
+                        situacao
+                    )
+                ),
+                oficinas (
+                    nome
+                )
+            `)
+            .in('status', ['INTERNADO', 'CHECK-IN OFICINA'])
+            .order('id', { ascending: false })
+            .limit(1000);
+
+        if (filial) queryChecklist = queryChecklist.eq('coletas_manutencao.veiculos.filial', filial);
+
+        const [resVeiculos, resChecklist] = await Promise.all([queryVeiculos, queryChecklist]);
+        if (resVeiculos.error) throw resVeiculos.error;
+        if (resChecklist.error) throw resChecklist.error;
+
+        const mapa = new Map();
+
+        (resVeiculos.data || [])
+            .filter(item => isStatusOficinaTrocaVeiculo(item.situacao))
+            .forEach(item => {
+                const placa = normalizeVehiclePlate(item.placa);
+                if (!placa || isTipoVeiculoOcultoEscala(item.tipo)) return;
+
+                mapa.set(placa, {
+                    placa,
+                    modelo: cleanImportValue(item.modelo) || getModeloVisualByPlaca(placa),
+                    tipo: cleanImportValue(item.tipo) || getTipoVisualByPlaca(placa),
+                    rotaPlanejada: '-',
+                    statusPlanejado: cleanImportValue(item.situacao) || 'INTERNADO',
+                    oficina: 'Oficina nao informada',
+                    bloqueadoTroca: true
+                });
+            });
+
+        (resChecklist.data || [])
+            .filter(item => isStatusOficinaTrocaVeiculo(item.status))
+            .sort((a, b) => {
+                const dataA = new Date(a?.coletas_manutencao?.data_hora || 0).getTime();
+                const dataB = new Date(b?.coletas_manutencao?.data_hora || 0).getTime();
+                return dataB - dataA || (Number(b.id) || 0) - (Number(a.id) || 0);
+            })
+            .forEach(item => {
+                const coleta = item.coletas_manutencao || {};
+                const veiculo = coleta.veiculos || {};
+                const placa = normalizeVehiclePlate(coleta.placa || veiculo.placa);
+                if (!placa || isTipoVeiculoOcultoEscala(veiculo.tipo)) return;
+                if (mapa.has(placa) && mapa.get(placa).oficina !== 'Oficina nao informada') return;
+
+                mapa.set(placa, {
+                    placa,
+                    modelo: cleanImportValue(coleta.modelo) || cleanImportValue(veiculo.modelo) || getModeloVisualByPlaca(placa),
+                    tipo: cleanImportValue(veiculo.tipo) || getTipoVisualByPlaca(placa),
+                    rotaPlanejada: '-',
+                    statusPlanejado: cleanImportValue(item.status) || cleanImportValue(veiculo.situacao) || 'INTERNADO',
+                    oficina: getOficinaTrocaVeiculo(item),
+                    bloqueadoTroca: true
+                });
+            });
+
+        return Array.from(mapa.values());
+    }
+
     function ordenarVeiculosDisponiveisTroca(disponiveis) {
         const direction = trocaVeiculoSortState.direction === 'desc' ? -1 : 1;
         const key = trocaVeiculoSortState.key || 'placa';
@@ -4696,6 +4810,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (datalist) {
             datalist.innerHTML = ordenados
+                .filter(item => !item.bloqueadoTroca)
                 .map(item => `<option value="${escapeAttribute(item.placa)}" label="${escapeAttribute(item.modelo || '')}">`)
                 .join('');
         }
@@ -4708,13 +4823,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         tbody.innerHTML = ordenados.map(item => `
-            <tr>
+            <tr class="${item.bloqueadoTroca ? 'troca-veiculo-row-info' : ''}" title="${escapeAttribute(item.oficina ? `Oficina: ${item.oficina}` : '')}">
                 <td>${escapeAttribute(item.placa)}</td>
                 <td>${escapeAttribute(item.modelo || '')}</td>
                 <td>${escapeAttribute(item.rotaPlanejada || '-')}</td>
                 <td>${escapeAttribute(item.statusPlanejado || '-')}</td>
                 <td class="actions-cell">
-                    <button type="button" class="btn-icon edit btn-selecionar-troca-veiculo" data-placa="${escapeAttribute(item.placa)}" title="Selecionar placa">
+                    <button type="button" class="btn-icon edit btn-selecionar-troca-veiculo" data-placa="${escapeAttribute(item.placa)}" title="${escapeAttribute(item.bloqueadoTroca ? `Veiculo em oficina: ${item.oficina || 'Oficina nao informada'}` : 'Selecionar placa')}" ${item.bloqueadoTroca ? 'disabled' : ''}>
                         <i class="fas fa-check"></i>
                     </button>
                 </td>
@@ -4733,6 +4848,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const rota = cleanImportValue(document.getElementById('trocaVeiculoRota')?.value, { keepZero: true });
+            const modoGrid = document.getElementById('trocaVeiculoModoGrid')?.value || 'DISPONIVEIS';
+
+            if (modoGrid === 'OFICINA') {
+                const veiculosOficina = await listarVeiculosOficinaTroca();
+                renderTrocaVeiculoDisponiveis(veiculosOficina);
+                if (veiculosOficina.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma placa com status INTERNADO ou CHECK-IN OFICINA.</td></tr>';
+                }
+                return;
+            }
+
             let datasAlvo = null;
 
             if (rota) {
