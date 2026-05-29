@@ -1023,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (resEscala.error) throw resEscala.error;
             if (resFaltas.error) throw resFaltas.error;
 
-            const dadosEscala = resEscala.data;
+            const dadosEscala = (resEscala.data || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa));
             const dadosFaltas = resFaltas.data;
 
             // Renderiza cada seção
@@ -2303,7 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || data.length === 0) return;
 
         const mapa = new Map();
-        data.forEach(row => {
+        data.filter(row => !isPlacaVeiculoOcultaEscala(row.placa)).forEach(row => {
             const placa = normalizeVehiclePlate(row.placa);
             if (!placa) return;
 
@@ -5026,6 +5026,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
     let mapaNomesFuncionarios = new Map();
+    let placasVeiculosOcultosEscala = new Set();
+    const TIPOS_VEICULO_OCULTOS_ESCALA = new Set(['EMPILHADEIRA', 'GERADOR']);
+
+    function isTipoVeiculoOcultoEscala(tipo) {
+        return TIPOS_VEICULO_OCULTOS_ESCALA.has(normalizeString(tipo));
+    }
+
+    function isPlacaVeiculoOcultaEscala(placa) {
+        return placasVeiculosOcultosEscala.has(normalizeVehiclePlate(placa));
+    }
 
     // Configuração de Status baseada em status.html
     const STATUS_CONFIG = {
@@ -5034,6 +5044,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'ZMRC CPN': { bg: '#B71C1C', color: 'white', desc: 'Campinas Zona de Maxima Restricao de Circulacao: precisa ser VUC.' },
         'V': { bg: '#2196F3', color: 'white', desc: 'Rota vai para viagem de pernoite.' },
         'P': { bg: '#9C27B0', color: 'white', desc: 'Rota vai pernoitar.' },
+        'P-RESTR': { bg: '#6f42c1', color: 'white', desc: 'Pernoite Restricao.' },
         'R': { bg: '#4CAF50', color: 'white', desc: 'Rota vai retornar.' },
         'REST.TAB': { bg: '#6D4C41', color: 'white', desc: 'Restrição Taboão da Serra' },
         'V-REST': { bg: '#303F9F', color: 'white', desc: 'Viajem com Restrição' },
@@ -5062,10 +5073,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
 
         const { data: veiculos } = await queryVeiculos;
+        placasVeiculosOcultosEscala = new Set((veiculos || [])
+            .filter(v => isTipoVeiculoOcultoEscala(v.tipo))
+            .map(v => normalizeVehiclePlate(v.placa))
+            .filter(Boolean));
         listaVeiculos = (veiculos || []).map(v => ({
             ...v,
             placa_normalizada: normalizeVehiclePlate(v.placa)
-        })).filter(v => v.placa_normalizada);
+        })).filter(v => v.placa_normalizada && !isTipoVeiculoOcultoEscala(v.tipo));
         const dlPlacas = document.getElementById('listaVeiculos');
         const dlModelos = document.getElementById('listaModelos');
         if (dlPlacas) dlPlacas.innerHTML = listaVeiculos.map(v => `<option value="${v.placa_normalizada}">`).join('');
@@ -6841,7 +6856,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) throw error;
 
-            const dadosPlanejamento = await garantirPlacasPlanejamento(semana, data || []);
+            const dadosPlanejamento = await garantirPlacasPlanejamento(
+                semana,
+                (data || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa))
+            );
             await normalizarNomesPlanejamento(dadosPlanejamento);
 
             tbody.innerHTML = '';
