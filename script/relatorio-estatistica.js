@@ -721,6 +721,7 @@ const RelatorioEstatistica = {
             const value = row[col];
             if (col.includes('VALOR') || col.includes('HOSPEDAGEM') || col.includes('PEDÁGIO') || col.includes('TOTAL')) return this.formatCurrency(value);
             if (col.includes('LITROS')) return `${this.formatNumber(value)} L`;
+            if (col.includes('LTS')) return Number(value) > 0 ? this.formatNumber(value, 2) : 'N/I';
             if (col.includes('KM')) return value ? `${this.formatNumber(value, 0)} km` : '';
             return value ?? '';
         }));

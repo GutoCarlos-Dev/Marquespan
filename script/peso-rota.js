@@ -1403,6 +1403,11 @@ function mapearColunasRoteiro(cabecalho) {
     };
 }
 
+function isStatusRetornoRoteiro(status) {
+    const normalized = normalizarBusca(status);
+    return normalized === 'R' || normalized.includes('RETORNO');
+}
+
 async function importarRoteiroPeso(event) {
     const input = event.target;
     const arquivo = input.files?.[0];
@@ -1473,6 +1478,7 @@ async function importarRoteiroPeso(event) {
                     semana,
                     semana_ano: getSemanaAnoDaData(dataPlanilha),
                     dia_retorno: dataPlanilha,
+                    status: statusImportacao,
                     placa,
                     motorista,
                     auxiliar
@@ -1516,10 +1522,31 @@ function aplicarImportacaoRoteiro(importados) {
     let aplicadas = 0;
     const semanaSelecionada = normalizarSemana(document.getElementById('filtroSemana')?.value);
     const rotasNaoEncontradasExemplo = [];
+    const rotasComSaida = new Set();
+    const retornoPorRota = new Map();
+
+    importados.forEach(item => {
+        const rotaImportada = normalizarRota(item.rota);
+        if (!rotaImportada) return;
+
+        if (isStatusRetornoRoteiro(item.status)) {
+            const retornoAtual = retornoPorRota.get(rotaImportada);
+            if (!retornoAtual || String(item.dia_retorno || '') > retornoAtual) {
+                retornoPorRota.set(rotaImportada, item.dia_retorno);
+            }
+        } else {
+            rotasComSaida.add(rotaImportada);
+        }
+    });
 
     importados.forEach(item => {
         const rotaImportada = normalizarRota(item.rota);
         const semanaImportada = normalizarSemana(item.semana);
+        const retornoImportado = retornoPorRota.get(rotaImportada);
+
+        if (isStatusRetornoRoteiro(item.status) && rotasComSaida.has(rotaImportada)) {
+            return;
+        }
 
         let row = gridData.find(linha =>
             normalizarRota(linha.rota) === rotaImportada &&
@@ -1541,7 +1568,14 @@ function aplicarImportacaoRoteiro(importados) {
 
         row.semana_ano = item.semana_ano;
         row.semana = semanaImportada || row.semana;
-        if (!temRetornoImportado(row)) aplicarRetornoPrevisto(row);
+        if (!temRetornoImportado(row)) {
+            if (retornoImportado) {
+                row.dia_retorno = retornoImportado;
+                row.dia_semana_retorno = getDiaSemanaPorData(retornoImportado) || row.dia_semana_retorno;
+            } else {
+                aplicarRetornoPrevisto(row);
+            }
+        }
         row.placa = item.placa || row.placa;
         row.motorista = item.motorista || row.motorista;
         row.auxiliar = item.auxiliar || row.auxiliar;
