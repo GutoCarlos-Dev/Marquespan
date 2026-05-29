@@ -2006,12 +2006,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return { dataISO, insertsEscala, insertsFaltas };
     }
 
-    async function importarRoteiroDiario(workbook, sheetName, semana, diaParaRecarregar = null) {
+    function aplicarDataRoteiroParsed(parsed, semana, dataISO) {
+        if (!parsed || !dataISO) return parsed;
+        parsed.dataISO = dataISO;
+        parsed.insertsEscala.forEach(item => {
+            item.semana_nome = semana;
+            item.data_escala = dataISO;
+        });
+        parsed.insertsFaltas.forEach(item => {
+            item.semana_nome = semana;
+            item.data_escala = dataISO;
+        });
+        return parsed;
+    }
+
+    async function importarRoteiroDiario(workbook, sheetName, semana, diaParaRecarregar = null, dataISOOverride = '') {
         if (!exigirFilialEscala()) return 0;
         const parsed = parseRoteiroSheet(workbook, sheetName, semana);
         if (!parsed) {
             throw new Error(`Falha ao processar a aba ${sheetName}.`);
         }
+        aplicarDataRoteiroParsed(parsed, semana, dataISOOverride);
         const total = parsed.insertsEscala.length + parsed.insertsFaltas.length;
         if (!parsed.dataISO) {
             throw new Error(`Nao foi possivel ler a data em G4 na aba ${sheetName}.`);
@@ -2236,7 +2251,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const dataObj = dateFromISO(parsed?.dataISO);
                         if (dataObj) datasModelo[dia] = dataObj;
                     }
-                    totalImportado += await importarRoteiroDiario(workbook, sheetName, semana);
+                    const dataAlvo = isSemanaModeloPlanejamento(semana)
+                        ? ''
+                        : getDataSemanaDia(semana, dia).toISOString().split('T')[0];
+                    totalImportado += await importarRoteiroDiario(workbook, sheetName, semana, null, dataAlvo);
                 }
 
                 progressDetails.textContent = 'Finalizando importacao...';
@@ -2341,7 +2359,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const diasSync = Array.isArray(diasPermitidos) && diasPermitidos.length > 0 ? diasPermitidos : IMPORT_DAYS;
         const datasSemana = getDatasDiasISO(semana, diasSync);
-        if (datasSemana.length === 0) return;
+        if (datasSemana.length === 0) return 0;
 
         const { data, error } = await supabaseClient
             .from('escala')
@@ -2352,7 +2370,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .order('id');
 
         if (error) throw error;
-        if (!data || data.length === 0) return;
+        if (!data || data.length === 0) return 0;
 
         const mapa = new Map();
         data.filter(row => !isPlacaVeiculoOcultaEscala(row.placa)).forEach(row => {
@@ -2392,6 +2410,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const item of mapa.values()) {
             await upsertPlanejamentoItem(item);
+        }
+
+        return mapa.size;
+    }
+
+    async function recalcularPlanejamentoPelasAbas() {
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana antes de recalcular o planejamento.');
+        if (!exigirFilialEscala()) return;
+
+        if (isSemanaModeloPlanejamento(semana)) {
+            await carregarDatasSemanaModeloBanco();
+        }
+
+        const datasSemana = getDatasSemanaISO(semana);
+        if (datasSemana.length === 0) {
+            return alert('Nao foi possivel identificar as datas da semana para recalcular o planejamento.');
+        }
+
+        if (!confirm(`Recalcular o planejamento da ${semana} usando as abas diarias salvas?\n\nO planejamento atual desta semana/filial sera substituido.`)) {
+            return;
+        }
+
+        try {
+            const { error: deleteError } = await supabaseClient
+                .from('planejamento_semanal')
+                .delete()
+                .eq('semana_nome', semana)
+                .eq('filial', getFilialEscala());
+
+            if (deleteError) throw deleteError;
+
+            const total = await sincronizarPlanejamentoDaSemana(semana);
+            await carregarPlanejamento(semana);
+            alert(`Planejamento recalculado com sucesso. ${total || 0} placa(s) atualizada(s).`);
+        } catch (err) {
+            console.error('Erro ao recalcular planejamento:', err);
+            alert('Erro ao recalcular planejamento: ' + err.message);
         }
     }
 
@@ -2787,6 +2843,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roteiroSheetName = workbook.SheetNames.find(sheetName => getDiaFromSheetName(sheetName) === dia);
                 if (roteiroSheetName) {
                     const parsed = parseRoteiroSheet(workbook, roteiroSheetName, semana);
+                    const dataAlvo = isSemanaModeloPlanejamento(semana)
+                        ? parsed.dataISO
+                        : getDataSemanaDia(semana, dia).toISOString().split('T')[0];
                     const totalRoteiro = parsed.insertsEscala.length + parsed.insertsFaltas.length;
 
                     importModal.classList.add('hidden');
@@ -2795,13 +2854,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         return alert(`Nenhum registro valido encontrado na aba ${roteiroSheetName}.`);
                     }
 
-                    if (confirm(`Importar ${totalRoteiro} registros da aba ${roteiroSheetName} para a data ${parsed.dataISO}?`)) {
+                    if (confirm(`Importar ${totalRoteiro} registros da aba ${roteiroSheetName} para a data ${dataAlvo}?`)) {
                         importModal.classList.remove('hidden');
                         progressBar.style.width = '85%';
                         progressText.textContent = 'Processando: 85%';
                         progressDetails.textContent = 'Enviando para banco de dados...';
 
-                        await importarRoteiroDiario(workbook, roteiroSheetName, semana, dia);
+                        await importarRoteiroDiario(workbook, roteiroSheetName, semana, dia, dataAlvo);
 
                         progressBar.style.width = '100%';
                         progressText.textContent = 'Processando: 100%';
@@ -5452,6 +5511,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnAdicionarLinhaPlanejamento.addEventListener('click', adicionarLinhaPlanejamento);
     }
 
+    const btnRecalcularPlanejamento = document.getElementById('btnRecalcularPlanejamento');
+    if (btnRecalcularPlanejamento) {
+        btnRecalcularPlanejamento.addEventListener('click', recalcularPlanejamentoPelasAbas);
+    }
+
     if (btnToggleMenuLateral) {
         btnToggleMenuLateral.addEventListener('click', toggleMenuLateralEscala);
     }
@@ -6878,10 +6942,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function destacarVeiculosInternados() {
         try {
             // Busca todas as placas com situação INTERNADO
-            const { data: veiculos, error } = await supabaseClient
-                .from('veiculos')
-                .select('placa')
-                .eq('situacao', 'INTERNADO');
+            const [{ data: veiculos, error }, veiculosOficina] = await Promise.all([
+                supabaseClient
+                    .from('veiculos')
+                    .select('placa')
+                    .eq('situacao', 'INTERNADO'),
+                listarVeiculosOficinaTroca().catch(err => {
+                    console.warn('Oficinas dos veiculos internados nao carregadas:', err);
+                    return [];
+                })
+            ]);
 
             if (error) {
                 console.error('Erro ao buscar veículos internados:', error);
@@ -6889,6 +6959,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const placasInternadas = new Set((veiculos || []).map(v => normalizeVehiclePlate(v.placa)));
+            const oficinasPorPlaca = new Map((veiculosOficina || []).map(item => [normalizeVehiclePlate(item.placa), item.oficina || 'Oficina nao informada']));
             const corFundoInternado = '#004085'; // Cor do fundo INTERNADO (azul escuro)
             const corTextoInternado = '#FFFFFF'; // Cor do texto INTERNADO (branco)
 
@@ -6899,16 +6970,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (input.classList.contains('cell-duplicate')) return;
                     const placa = normalizeVehiclePlate(input.value);
                     if (placasInternadas.has(placa)) {
+                        const oficina = oficinasPorPlaca.get(placa) || 'Oficina nao informada';
                         input.style.setProperty('background-color', corFundoInternado, 'important');
                         input.style.setProperty('color', corTextoInternado, 'important');
                         input.style.fontWeight = 'bold';
-                        input.title = 'INTERNADO';
+                        input.title = `INTERNADO - Oficina: ${oficina}`;
                     } else {
                         // Reseta para o padrão se não for internado
                         input.style.backgroundColor = '';
                         input.style.color = '';
                         input.style.fontWeight = '';
                         if (input.title === 'INTERNADO') input.removeAttribute('title');
+                        if (input.title.startsWith('INTERNADO - Oficina:')) input.removeAttribute('title');
                     }
                 });
             };
