@@ -215,7 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const note = notes[getCellNoteId(tr.dataset.tabela, tr.dataset.id, key)] || '';
             if (note) {
                 input.classList.add('cell-has-note');
-                input.style.setProperty('background-color', '#198754', 'important');
+                const bgColor = note.includes('Carga em Excesso') ? '#dc3545' : '#198754';
+                input.style.setProperty('background-color', bgColor, 'important');
                 input.style.setProperty('color', '#fff', 'important');
                 input.style.setProperty('font-weight', '700', 'important');
                 input.title = note;
@@ -7282,6 +7283,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCalculoPeso.addEventListener('click', () => {
             modalCalculoPeso.classList.remove('hidden');
             modalCalculoPeso.style.display = 'flex';
+            if (calculoPesoAnularTransferencia) {
+                calculoPesoAnularTransferencia.checked = false;
+                const containerRotaDestino = document.getElementById('containerRotaDestino');
+                if (containerRotaDestino) containerRotaDestino.style.display = 'block';
+            }
             carregarVeiculosCalculoPeso();
         });
     }
@@ -7337,7 +7343,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (calculoPesoPlaca) calculoPesoPlaca.addEventListener('change', preencherDadosVeiculoCalculoPeso);
-    if (calculoPesoAnularTransferencia) calculoPesoAnularTransferencia.addEventListener('change', realizarCalculoPeso);
+    if (calculoPesoAnularTransferencia) {
+        calculoPesoAnularTransferencia.addEventListener('change', () => {
+            const containerRotaDestino = document.getElementById('containerRotaDestino');
+            if (containerRotaDestino) {
+                const isChecked = calculoPesoAnularTransferencia.checked;
+                containerRotaDestino.style.display = isChecked ? 'none' : 'block';
+                if (isChecked && calculoPesoRotaDestino) {
+                    calculoPesoRotaDestino.value = ''; // Limpa o campo ao ocultar
+                }
+            }
+            realizarCalculoPeso();
+        });
+    }
+
     if (calculoPesoCapacidade) calculoPesoCapacidade.addEventListener('input', realizarCalculoPeso);
     if (calculoPesoCargaTotal) calculoPesoCargaTotal.addEventListener('input', realizarCalculoPeso);
     if (btnCalcularPeso) btnCalcularPeso.addEventListener('click', realizarCalculoPeso);
