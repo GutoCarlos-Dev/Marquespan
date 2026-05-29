@@ -2034,11 +2034,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return total;
     }
 
-    async function substituirRoteiroDia(parsed, semana, dia) {
-        const dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+    async function substituirRoteiroDia(parsed, semana, dia, dataISOOverride = '') {
+        const dataISO = dataISOOverride || CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
         if (!dataISO) throw new Error('Nao foi possivel identificar a data do dia aberto.');
         if (parsed.dataISO !== dataISO) {
             throw new Error(`A data da planilha (${parsed.dataISO || 'nao identificada'}) nao confere com o dia aberto (${dataISO}).`);
+        }
+
+        if (isSemanaModeloPlanejamento(semana)) {
+            salvarDatasSemanaModelo({
+                ...(CACHE_DATAS[semana] || {}),
+                [dia]: dateFromISO(dataISO)
+            });
         }
 
         const diaDaData = getDiaByDataEscala(semana, parsed.dataISO);
@@ -2150,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressText.textContent = 'Processando: 80%';
                 progressDetails.textContent = 'Atualizando o dia selecionado...';
 
-                const totalAtualizado = await substituirRoteiroDia(candidatoDoDia.parsed, semana, dia);
+                const totalAtualizado = await substituirRoteiroDia(candidatoDoDia.parsed, semana, dia, dataISO);
                 atualizarDatasAbasEscala(semana);
 
                 progressBar.style.width = '100%';
