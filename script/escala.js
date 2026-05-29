@@ -3192,6 +3192,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <option value="BLOQUEADO">Bloqueado</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="diariaFiltroFuncao">Funcoes</label>
+                            <select id="diariaFiltroFuncao" class="glass-input diaria-multi-select" multiple size="4">
+                            </select>
+                        </div>
                     </div>
                     <div class="diaria-actions-card">
                         <span>Acoes</span>
@@ -3220,6 +3225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nomeCompleto">NOME COMPLETO <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="cpf">CPF <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
+                                <th>PAGAR</th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="diasDesconto">DIAS DESC. <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="descontoAnterior">DESC. ANTERIOR <i class="fas fa-sort"></i></button></th>
@@ -3241,6 +3247,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.closest('#btnXLSXDiaria')) gerarXLSXDiaria();
             if (e.target.closest('#btnPDFDiaria')) gerarPDFDiaria();
 
+            const pagarToggle = e.target.closest('.diaria-pagar-toggle');
+            if (pagarToggle) {
+                atualizarPagamentoManualDiaria(pagarToggle.dataset.diariaKey, pagarToggle.checked);
+                return;
+            }
+
             const sortButton = e.target.closest('[data-diaria-sort]');
             if (sortButton) {
                 const key = sortButton.dataset.diariaSort;
@@ -3250,8 +3262,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        modal.querySelector('#diariaValorSemana').addEventListener('input', atualizarResumoDiaria);
+        modal.querySelector('#diariaValorSemana').addEventListener('input', recalcularDiariaComValorAtual);
         modal.querySelector('#diariaFiltroStatus').addEventListener('change', renderDiariaTabela);
+        modal.querySelector('#diariaFiltroFuncao').addEventListener('change', renderDiariaTabela);
         return modal;
     }
 
@@ -3267,6 +3280,72 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elValorDia) elValorDia.textContent = formatMoedaBR(valorDia);
         if (elTotalDesconto) elTotalDesconto.textContent = formatMoedaBR(totalDesconto);
         if (elTotalPagar) elTotalPagar.textContent = formatMoedaBR(totalPagar);
+    }
+
+    function recalcularItemDiaria(item, valorSemana) {
+        const valorDia = valorSemana / 5;
+        const pagarManual = item.pagarManual !== false;
+        const motivosAusencia = Array.isArray(item.motivosAusencia) ? item.motivosAusencia : [];
+        const statusCadastro = cleanImportValue(item.statusCadastro);
+        const temStatusCadastroAusencia = statusCadastro && isStatusAusenciaDiaria(statusCadastro);
+        const temAusencia = Number(item.diasDesconto || 0) > 0;
+        const motivosBloqueio = [...new Set([
+            ...motivosAusencia,
+            ...(temStatusCadastroAusencia ? [statusCadastro] : [])
+        ].filter(Boolean))];
+        const temBloqueioStatus = temAusencia || temStatusCadastroAusencia;
+
+        item.valorDesconto = temAusencia ? Number(item.diasDesconto || 0) * valorDia : 0;
+        item.recebe = pagarManual && !temBloqueioStatus;
+        item.bloqueioStatus = temBloqueioStatus;
+
+        if (!pagarManual) {
+            item.status = [
+                ...motivosBloqueio,
+                item.foraEscala ? 'FORA DA ESCALA' : 'NAO PAGAR'
+            ].join(', ');
+            item.descricaoStatus = [
+                ...motivosBloqueio.map(motivo => `Status: ${motivo}`),
+                item.foraEscala
+                    ? 'Funcionario nao encontrado como motorista ou auxiliar na escala da semana.'
+                    : 'Pagamento de diaria desmarcado manualmente.'
+            ].join(' ');
+        } else if (temBloqueioStatus) {
+            item.status = motivosBloqueio.length > 0 ? motivosBloqueio.join(', ') : 'FALTA';
+            const datasFalta = Array.isArray(item.datasFalta) ? item.datasFalta : [];
+            item.descricaoStatus = [
+                ...(datasFalta.length > 0 ? [`Falta em: ${datasFalta.join(', ')}`] : []),
+                ...(temStatusCadastroAusencia ? [`Status cadastral: ${statusCadastro}`] : [])
+            ].join(' ');
+        } else {
+            item.status = 'APTO';
+            item.descricaoStatus = item.foraEscala
+                ? 'Funcionario fora da escala, mas marcado manualmente para receber.'
+                : '';
+        }
+
+        item.valorPagar = item.recebe ? Math.max(valorSemana - Number(item.descontoAnterior || 0), 0) : 0;
+        return item;
+    }
+
+    function atualizarPagamentoManualDiaria(key, pagarManual) {
+        const item = diariaDadosAtual.find(row => row.key === key);
+        if (!item) return;
+        const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+        item.pagarManual = pagarManual;
+        recalcularItemDiaria(item, valorSemana);
+        renderDiariaTabela();
+    }
+
+    function recalcularDiariaComValorAtual() {
+        if (diariaDadosAtual.length === 0) {
+            atualizarResumoDiaria();
+            return;
+        }
+
+        const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+        diariaDadosAtual.forEach(item => recalcularItemDiaria(item, valorSemana));
+        renderDiariaTabela();
     }
 
     async function abrirModalDiaria() {
@@ -3362,7 +3441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (dadosOrdenados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para o filtro.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionario encontrado para o filtro.</td></tr>';
             atualizarResumoDiaria();
             return;
         }
@@ -3373,6 +3452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${escapeAttribute(item.nomeCompleto)}</td>
                 <td>${escapeAttribute(item.cpf)}</td>
                 <td>${escapeAttribute(item.funcao)}</td>
+                <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento ou ferias' : 'Marcar para pagar diaria'}"></td>
                 <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
                 <td>${item.diasDesconto}</td>
                 <td>${formatMoedaBR(item.descontoAnterior)}</td>
@@ -3384,11 +3464,38 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarResumoDiaria();
     }
 
+    function atualizarFiltroFuncaoDiaria() {
+        const select = document.getElementById('diariaFiltroFuncao');
+        if (!select) return;
+
+        const valoresAtuais = new Set(Array.from(select.selectedOptions).map(opt => opt.value));
+        const funcoes = [...new Set(diariaDadosAtual.map(item => cleanImportValue(item.funcao)).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+        select.innerHTML = funcoes
+            .map(funcao => `<option value="${escapeAttribute(funcao)}">${escapeAttribute(funcao)}</option>`)
+            .join('');
+
+        Array.from(select.options).forEach(option => {
+            option.selected = valoresAtuais.has(option.value);
+        });
+    }
+
+    function getDiariaFuncoesSelecionadas() {
+        const select = document.getElementById('diariaFiltroFuncao');
+        if (!select) return [];
+        return Array.from(select.selectedOptions)
+            .map(opt => normalizeString(opt.value))
+            .filter(Boolean);
+    }
+
     function getDiariaDadosExportacao() {
         const filtroStatus = document.getElementById('diariaFiltroStatus')?.value || '';
+        const funcoesSelecionadas = getDiariaFuncoesSelecionadas();
         const dadosFiltrados = diariaDadosAtual.filter(item => {
-            if (!filtroStatus) return true;
-            return filtroStatus === 'APTO' ? item.recebe : !item.recebe;
+            const statusOk = !filtroStatus || (filtroStatus === 'APTO' ? item.recebe : !item.recebe);
+            const funcaoOk = funcoesSelecionadas.length === 0 || funcoesSelecionadas.includes(normalizeString(item.funcao));
+            return statusOk && funcaoOk;
         });
         return ordenarDiariaDados(dadosFiltrados);
     }
@@ -3420,7 +3527,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resumo = getDiariaResumoExportacao(dados);
         const semana = selectSemana.value || '';
         const filial = getFilialEscala() || '';
-        const headers = ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA'];
+        const headers = ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA'];
         const wsData = [
             [`DIARIA - ${semana} - ${filial}`],
             [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto prox. semana: ${formatMoedaBR(resumo.totalDesconto)}`, `Aptos: ${resumo.totalAptos}`, `Bloqueados: ${resumo.totalBloqueados}`],
@@ -3431,6 +3538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.nomeCompleto,
                 item.cpf,
                 item.funcao,
+                item.recebe ? 'SIM' : 'NAO',
                 item.status,
                 item.descricaoStatus,
                 Number(item.diasDesconto || 0),
@@ -3448,6 +3556,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 42 },
             { wch: 16 },
             { wch: 20 },
+            { wch: 10 },
             { wch: 16 },
             { wch: 36 },
             { wch: 12 },
@@ -3455,7 +3564,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 16 },
             { wch: 18 }
         ];
-        ws['!autofilter'] = { ref: `A4:J${wsData.length}` };
+        ws['!autofilter'] = { ref: `A4:K${wsData.length}` };
 
         const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
         const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
@@ -3466,7 +3575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cell) cell.s = headerStyle;
         });
         for (let row = 4; row < wsData.length; row++) {
-            [7, 8, 9].forEach(col => {
+            [8, 9, 10].forEach(col => {
                 const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
                 if (cell) cell.s = moneyStyle;
             });
@@ -3537,12 +3646,13 @@ document.addEventListener('DOMContentLoaded', () => {
             startY: doc.lastAutoTable.finalY + 5,
             margin: { left: 8, right: 8 },
             theme: 'grid',
-            head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA']],
+            head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA']],
             body: dados.map(item => [
                 item.nome,
                 item.nomeCompleto,
                 item.cpf,
                 item.funcao,
+                item.recebe ? 'SIM' : 'NAO',
                 item.status,
                 item.descricaoStatus,
                 String(item.diasDesconto || 0),
@@ -3554,19 +3664,20 @@ document.addEventListener('DOMContentLoaded', () => {
             headStyles: { fillColor: [0, 105, 55], textColor: 255 },
             alternateRowStyles: { fillColor: [242, 247, 244] },
             columnStyles: {
-                0: { cellWidth: 30 },
-                1: { cellWidth: 42 },
-                2: { cellWidth: 22, halign: 'center' },
-                3: { cellWidth: 22 },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 35 },
-                6: { cellWidth: 16, halign: 'center' },
-                7: { cellWidth: 26, halign: 'right' },
-                8: { cellWidth: 26, halign: 'right' },
-                9: { cellWidth: 30, halign: 'right' }
+                0: { cellWidth: 28 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 20, halign: 'center' },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 14, halign: 'center' },
+                5: { cellWidth: 20, halign: 'center' },
+                6: { cellWidth: 34 },
+                7: { cellWidth: 15, halign: 'center' },
+                8: { cellWidth: 24, halign: 'right' },
+                9: { cellWidth: 24, halign: 'right' },
+                10: { cellWidth: 28, halign: 'right' }
             },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 4) {
+                if (data.section === 'body' && data.column.index === 5) {
                     const status = String(data.cell.raw || '');
                     if (normalizeString(status) === 'APTO') {
                         data.cell.styles.textColor = [0, 105, 55];
@@ -3595,14 +3706,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('tbodyDiaria');
         if (!semana || !tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Carregando...</td></tr>';
 
         try {
             const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
-            const valorDia = valorSemana / 5;
             const datasSemana = getDatasSemanaISO(semana);
 
-            const [resFuncionarios, resFaltas] = await Promise.all([
+            const [resFuncionarios, resFaltas, resEscala] = await Promise.all([
                 supabaseClient
                     .from('funcionario')
                     .select('nome, nome_completo, cpf, funcao, status')
@@ -3610,11 +3720,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 supabaseClient
                     .from('faltas_afastamentos')
                     .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
+                    .in('data_escala', datasSemana),
+                aplicarFiltroFilial(supabaseClient
+                    .from('escala')
+                    .select('motorista, auxiliar')
                     .in('data_escala', datasSemana)
+                    .not('tipo_escala', 'eq', 'RESERVA'))
             ]);
 
             if (resFuncionarios.error) throw resFuncionarios.error;
             if (resFaltas.error) throw resFaltas.error;
+            if (resEscala.error) throw resEscala.error;
             const descontosAnteriores = await carregarDescontosDiariaAnterior(semana);
 
             const nomeDiariaMap = new Map();
@@ -3627,6 +3743,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             const getNomeDiaria = (nome) => nomeDiariaMap.get(normalizeString(nome)) || getNomeFuncionarioExibicao(nome);
+
+            const funcionariosEscalados = new Set();
+            (resEscala.data || []).forEach(row => {
+                [row.motorista, row.auxiliar].forEach(nome => {
+                    const nomeDiaria = getNomeDiaria(nome);
+                    const key = normalizeString(nomeDiaria);
+                    if (key) funcionariosEscalados.add(key);
+                });
+            });
 
             const ausencias = new Map();
             (resFaltas.data || []).forEach(row => {
@@ -3646,57 +3771,59 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const funcionarios = (resFuncionarios.data || [])
-                .filter(f => normalizeString(f.status) === 'ATIVO')
-                .filter(f => {
-                    const funcao = normalizeString(f.funcao);
-                    return funcao.includes('MOTORISTA') || funcao.includes('AUXILIAR') || funcao.includes('AJUDANTE');
+                .map(f => {
+                    const nome = getNomeDiaria(f.nome || f.nome_completo);
+                    return {
+                        nome,
+                        nomeCompleto: cleanImportValue(f.nome_completo),
+                        cpf: cleanImportValue(f.cpf),
+                        funcao: cleanImportValue(f.funcao),
+                        statusCadastro: cleanImportValue(f.status)
+                    };
                 })
-                .map(f => ({
-                    nome: getNomeDiaria(f.nome || f.nome_completo),
-                    nomeCompleto: cleanImportValue(f.nome_completo),
-                    cpf: cleanImportValue(f.cpf),
-                    funcao: cleanImportValue(f.funcao)
-                }))
                 .filter(f => f.nome)
                 .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
             if (funcionarios.length === 0) {
                 diariaDadosAtual = [];
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
                 atualizarResumoDiaria();
                 return;
             }
 
             diariaDadosAtual = funcionarios.map(func => {
+                const key = normalizeString(func.nome);
                 const ausencia = ausencias.get(normalizeString(func.nome));
                 const diasDesconto = ausencia ? ausencia.dias.size : 0;
-                const valorDesconto = diasDesconto * valorDia;
                 const descontoAnterior = descontosAnteriores.get(normalizeString(func.nome)) || 0;
-                const recebe = diasDesconto === 0;
-                const status = recebe ? 'APTO' : [...ausencia.motivos].join(', ');
                 const datasFalta = ausencia ? [...ausencia.dias].sort().map(formatDataISOBR) : [];
-                const descricaoStatus = datasFalta.length > 0 ? `Falta em: ${datasFalta.join(', ')}` : '';
-                const valorPagar = recebe ? Math.max(valorSemana - descontoAnterior, 0) : 0;
-                return {
+                const foraEscala = !funcionariosEscalados.has(key);
+                return recalcularItemDiaria({
+                    key,
                     nome: func.nome,
                     nomeCompleto: func.nomeCompleto,
                     cpf: func.cpf,
                     funcao: func.funcao,
-                    status,
-                    descricaoStatus,
+                    statusCadastro: func.statusCadastro,
+                    status: 'APTO',
+                    descricaoStatus: '',
                     datasFalta,
+                    motivosAusencia: ausencia ? [...ausencia.motivos] : [],
                     diasDesconto,
                     descontoAnterior,
-                    valorPagar,
-                    valorDesconto,
-                    recebe
-                };
+                    valorPagar: 0,
+                    valorDesconto: 0,
+                    recebe: true,
+                    foraEscala,
+                    pagarManual: !foraEscala
+                }, valorSemana);
             });
 
+            atualizarFiltroFuncaoDiaria();
             renderDiariaTabela();
         } catch (error) {
             console.error('Erro ao carregar diaria:', error);
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
         }
     }
 

@@ -943,7 +943,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .diaria-controls {
     display: grid;
-    grid-template-columns: minmax(170px, 240px) minmax(120px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr) minmax(120px, 170px);
+    grid-template-columns: minmax(170px, 220px) minmax(110px, 1fr) minmax(140px, 1fr) minmax(130px, 1fr) minmax(115px, 155px) minmax(140px, 190px);
     gap: 10px;
     align-items: end;
 }
@@ -1010,7 +1010,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .diaria-table {
-    min-width: 1260px;
+    min-width: 1340px;
 }
 
 .diaria-table thead th {
@@ -1038,6 +1038,27 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .diaria-sort-btn i {
     font-size: 10px;
+}
+
+.diaria-pagar-toggle {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #006937;
+}
+
+.diaria-pagar-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.diaria-multi-select {
+    min-height: 74px;
+    padding: 6px;
+}
+
+.diaria-multi-select option {
+    padding: 3px 5px;
 }
 
 .diaria-status {
