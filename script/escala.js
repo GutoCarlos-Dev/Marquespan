@@ -824,6 +824,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
                 <i class="fa-solid fa-copy"></i>
             </button>
+            <input type="file" id="fileAtualizarDiaSemana" accept=".xlsx, .xls" style="display: none;">
+            <button id="btnAtualizarDiaSemana" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #0d6efd; color: white;" title="Atualizar este dia pela planilha da semana">
+                <i class="fa-solid fa-file-import"></i>
+            </button>
             <span class="day-search-wrap">
                 <i class="fa-solid fa-search"></i>
                 <input type="text" id="buscaDiaEscala" class="glass-input day-search-input" placeholder="Buscar placa, rota, motorista...">
@@ -1718,6 +1722,122 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (diaParaRecarregar) carregarDadosDia(diaParaRecarregar, semana);
         return total;
+    }
+
+    async function substituirRoteiroDia(parsed, semana, dia) {
+        const dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+        if (!dataISO) throw new Error('Nao foi possivel identificar a data do dia aberto.');
+        if (parsed.dataISO !== dataISO) {
+            throw new Error(`A data da planilha (${parsed.dataISO || 'nao identificada'}) nao confere com o dia aberto (${dataISO}).`);
+        }
+
+        const diaDaData = getDiaByDataEscala(semana, parsed.dataISO);
+        if (diaDaData !== dia) {
+            throw new Error('A data encontrada na planilha nao pertence ao dia selecionado dentro da semana aberta.');
+        }
+
+        const total = parsed.insertsEscala.length + parsed.insertsFaltas.length;
+        if (total === 0) {
+            throw new Error('Nenhum registro valido encontrado para atualizar este dia.');
+        }
+
+        await aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO));
+        await supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO);
+
+        if (parsed.insertsEscala.length > 0) {
+            const { error } = await supabaseClient.from('escala').insert(parsed.insertsEscala);
+            if (error) throw error;
+        }
+
+        if (parsed.insertsFaltas.length > 0) {
+            const { error } = await supabaseClient.from('faltas_afastamentos').insert(parsed.insertsFaltas.map(item => comAuditoria(item)));
+            if (error) throw error;
+        }
+
+        carregarDadosDia(dia, semana);
+        return total;
+    }
+
+    async function atualizarDiaPorPlanilhaSemana(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const semana = selectSemana.value;
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semana || !dia) {
+            e.target.value = '';
+            return alert('Selecione uma semana e um dia antes de importar.');
+        }
+        if (!exigirFilialEscala()) {
+            e.target.value = '';
+            return;
+        }
+
+        const dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+        if (!dataISO) {
+            e.target.value = '';
+            return alert('Nao foi possivel identificar a data do dia aberto.');
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const importModal = document.getElementById('importProgressModal');
+            const progressBar = document.getElementById('importProgressBar');
+            const progressText = document.getElementById('importProgressText');
+            const progressDetails = document.getElementById('importProgressDetails');
+
+            try {
+                importModal.classList.remove('hidden');
+                progressBar.style.width = '20%';
+                progressText.textContent = 'Processando: 20%';
+                progressDetails.textContent = 'Lendo arquivo Excel...';
+
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+
+                progressBar.style.width = '45%';
+                progressText.textContent = 'Processando: 45%';
+                progressDetails.textContent = 'Localizando a data do dia aberto...';
+
+                const candidatos = workbook.SheetNames
+                    .map(sheetName => {
+                        const parsed = parseRoteiroSheet(workbook, sheetName, semana);
+                        return parsed ? { sheetName, parsed } : null;
+                    })
+                    .filter(item => item && item.parsed.dataISO === dataISO);
+
+                if (candidatos.length === 0) {
+                    throw new Error(`Nenhuma aba da planilha possui a data ${dataISO} em G4.`);
+                }
+
+                const candidatoDoDia = candidatos.find(item => getDiaFromSheetName(item.sheetName) === dia) || candidatos[0];
+                const total = candidatoDoDia.parsed.insertsEscala.length + candidatoDoDia.parsed.insertsFaltas.length;
+
+                importModal.classList.add('hidden');
+                if (!confirm(`Atualizar somente ${dia} (${dataISO}) com ${total} registros da aba ${candidatoDoDia.sheetName}?\n\nOs dados atuais deste dia serao substituidos.`)) return;
+
+                importModal.classList.remove('hidden');
+                progressBar.style.width = '80%';
+                progressText.textContent = 'Processando: 80%';
+                progressDetails.textContent = 'Atualizando o dia selecionado...';
+
+                const totalAtualizado = await substituirRoteiroDia(candidatoDoDia.parsed, semana, dia);
+
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Processando: 100%';
+                progressDetails.textContent = 'Atualizacao concluida.';
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+                alert(`Atualizacao concluida: ${totalAtualizado} registros importados para ${dia}.`);
+            } catch (err) {
+                console.error('Erro ao atualizar dia pela planilha semanal:', err);
+                alert('Erro ao atualizar dia: ' + err.message);
+            } finally {
+                importModal.classList.add('hidden');
+                e.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
     }
 
     async function importarRoteiroSemana(e) {
@@ -4215,6 +4335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'REST.TAB': { bg: '#6D4C41', color: 'white', desc: 'Restrição Taboão da Serra' },
         'V-REST': { bg: '#303F9F', color: 'white', desc: 'Viajem com Restrição' },
         'V - RESTR': { bg: '#3F51B5', color: 'white', desc: 'Vai para pernoite e tem restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
+        'R- RESTR': { bg: '#2E7D32', color: 'white', desc: 'Retorno com Restricao.' },
         'RESTR': { bg: '#795548', color: 'white', desc: 'Rota com restricao a circulacao de caminhoes; precisa cadastrar a placa.' },
         'BGMN': { bg: '#FFEB3B', color: 'black', desc: 'Rota do Bergamini: tem que ir palete de madeira.' },
         'TRI +': { bg: '#E91E63', color: 'white', desc: 'Rota do Trimais: tem que ir palete de madeira.' },
@@ -4588,6 +4709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target.id === 'btnModeloDia') baixarModeloDia();
             if (target.id === 'btnImportarDia') tituloDia.querySelector('#fileImportarDia')?.click();
             if (target.id === 'btnCopiarDia') copiarDia();
+            if (target.id === 'btnAtualizarDiaSemana') tituloDia.querySelector('#fileAtualizarDiaSemana')?.click();
             if (target.id === 'btnExcluirSelecionadosDia') excluirSelecionadosDia();
         });
 
@@ -4598,6 +4720,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tituloDia.addEventListener('change', (e) => {
             if (e.target.id === 'fileImportarDia') importarExcelDia(e);
+            if (e.target.id === 'fileAtualizarDiaSemana') atualizarDiaPorPlanilhaSemana(e);
         });
     }
 
