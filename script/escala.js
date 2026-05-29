@@ -11,6 +11,8 @@ const SAVED_COLORS_KEY = 'marquespan_saved_colors';
 const COLUMN_ORDER_KEY_PREFIX = 'marquespan_escala_column_order_';
 const COLUMN_WIDTH_KEY_PREFIX = 'marquespan_escala_column_width_';
 const SECTION_COLLAPSE_KEY = 'marquespan_escala_collapsed_sections';
+const SEMANA_MODELO_PLANEJAMENTO = 'SEMANA PADRAO - MODELO';
+const SEMANA_MODELO_DATAS_KEY = 'marquespan_semana_modelo_datas';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Página de Controle de Escala carregada.');
@@ -453,8 +455,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCopiarPlanejamento.addEventListener('click', () => {
             const selectDest = document.getElementById('selectSemanaDestinoPlan');
             // Copia as opções do seletor principal de semanas
-            selectDest.innerHTML = selectSemana.innerHTML;
-            selectDest.value = selectSemana.value;
+            selectDest.innerHTML = Array.from(selectSemana.options)
+                .filter(option => !isSemanaModeloPlanejamento(option.value))
+                .map(option => `<option value="${escapeAttribute(option.value)}">${escapeAttribute(option.textContent)}</option>`)
+                .join('');
+            selectDest.value = isSemanaModeloPlanejamento(selectSemana.value) ? '' : selectSemana.value;
             modalCopiarPlanejamento.style.display = 'flex';
         });
     }
@@ -469,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetWeek = document.getElementById('selectSemanaDestinoPlan').value;
 
             if (!sourceWeek || !targetWeek) return;
+            if (isSemanaModeloPlanejamento(targetWeek)) return alert('Selecione uma semana real como destino.');
             if (!exigirFilialEscala()) return;
             if (!confirm(`Confirma aplicar o planejamento da ${sourceWeek} na escala da ${targetWeek}?`)) return;
 
@@ -559,6 +565,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Modal de Orientação do PDF
+    function montarPayloadPlanejamentoModelo(row, semanaDestino) {
+        const campos = [
+            'placa', 'modelo',
+            'domingo_rota', 'domingo_status',
+            'segunda_rota', 'segunda_status',
+            'terca_rota', 'terca_status',
+            'quarta_rota', 'quarta_status',
+            'quinta_rota', 'quinta_status',
+            'sexta_rota', 'sexta_status',
+            'sabado_rota', 'sabado_status',
+            'motorista', 'auxiliar', 'terceiro'
+        ];
+
+        const payload = {
+            semana_nome: semanaDestino,
+            filial: getFilialEscala()
+        };
+        campos.forEach(campo => {
+            payload[campo] = row[campo] || null;
+        });
+        return payload;
+    }
+
+    async function copiarModeloPlanejamentoParaSemana() {
+        const semanaDestino = selectSemana.value;
+        if (!semanaDestino) return alert('Selecione uma semana.');
+        if (isSemanaModeloPlanejamento(semanaDestino)) return alert('Selecione a semana que deve receber o modelo.');
+        if (!exigirFilialEscala()) return;
+
+        try {
+            const { data: modelo, error } = await supabaseClient
+                .from('planejamento_semanal')
+                .select('*')
+                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                .eq('filial', getFilialEscala())
+                .order('id');
+
+            if (error) throw error;
+            if (!modelo || modelo.length === 0) {
+                alert('A Semana Padrao - Modelo ainda nao possui planejamento cadastrado.');
+                return;
+            }
+
+            if (!confirm(`Copiar a Semana Padrao - Modelo para ${semanaDestino}? O planejamento atual desta semana sera substituido.`)) return;
+
+            const { error: deleteError } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('planejamento_semanal')
+                    .delete()
+                    .eq('semana_nome', semanaDestino)
+            );
+            if (deleteError) throw deleteError;
+
+            const payloads = modelo.map(row => comAuditoria(montarPayloadPlanejamentoModelo(row, semanaDestino)));
+            const { error: insertError } = await supabaseClient
+                .from('planejamento_semanal')
+                .insert(payloads);
+
+            if (insertError) throw insertError;
+
+            await carregarPlanejamento(semanaDestino);
+            alert('Planejamento preenchido com o modelo com sucesso.');
+        } catch (err) {
+            console.error('Erro ao copiar modelo de planejamento:', err);
+            alert('Erro ao copiar modelo de planejamento: ' + err.message);
+        }
+    }
+
+    const btnCopiarModeloPlanejamento = document.getElementById('btnCopiarModeloPlanejamento');
+    if (btnCopiarModeloPlanejamento) {
+        btnCopiarModeloPlanejamento.addEventListener('click', copiarModeloPlanejamentoParaSemana);
+    }
+
     const pdfModal = document.createElement('div');
     pdfModal.id = 'pdfOrientationModal';
     pdfModal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:2000;';
@@ -655,6 +734,92 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CACHE DE DATAS ---
     const CACHE_DATAS = {};
 
+    function isSemanaModeloPlanejamento(semana) {
+        return semana === SEMANA_MODELO_PLANEJAMENTO;
+    }
+
+    function dateFromISO(dataISO) {
+        const value = String(dataISO || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    function salvarDatasSemanaModelo(datasPorDia) {
+        const datas = {};
+        IMPORT_DAYS.forEach(dia => {
+            const dataObj = datasPorDia?.[dia];
+            if (dataObj instanceof Date && !Number.isNaN(dataObj.getTime())) {
+                datas[dia] = dataObj.toISOString().split('T')[0];
+            }
+        });
+
+        if (Object.keys(datas).length === 0) return;
+        CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO] = {};
+        Object.entries(datas).forEach(([dia, dataISO]) => {
+            CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO][dia] = dateFromISO(dataISO);
+        });
+        localStorage.setItem(SEMANA_MODELO_DATAS_KEY, JSON.stringify(datas));
+    }
+
+    function carregarDatasSemanaModeloLocal() {
+        try {
+            const raw = localStorage.getItem(SEMANA_MODELO_DATAS_KEY);
+            if (!raw) return false;
+            const datas = JSON.parse(raw);
+            const cache = {};
+            Object.entries(datas || {}).forEach(([dia, dataISO]) => {
+                const dataObj = dateFromISO(dataISO);
+                if (dataObj) cache[dia] = dataObj;
+            });
+            if (Object.keys(cache).length === 0) return false;
+            CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO] = cache;
+            return true;
+        } catch (error) {
+            console.warn('Datas da semana modelo nao carregadas:', error);
+            return false;
+        }
+    }
+
+    function getDataSemanaDia(semana, dia) {
+        if (isSemanaModeloPlanejamento(semana)) {
+            return getDataSemanaDiaOuNulo(semana, dia) || new Date();
+        }
+        return CACHE_DATAS[semana]?.[dia] || new Date();
+    }
+
+    function getDataSemanaDiaOuNulo(semana, dia) {
+        return CACHE_DATAS[semana]?.[dia] || null;
+    }
+
+    async function carregarDatasSemanaModeloBanco() {
+        if (!getFilialEscala()) return false;
+
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .select('data_escala')
+                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+        );
+
+        if (error) {
+            console.warn('Datas da semana modelo nao carregadas do banco:', error);
+            return false;
+        }
+
+        const datasPorDia = {};
+        (data || []).forEach(row => {
+            const dataObj = dateFromISO(row.data_escala);
+            if (!dataObj) return;
+            const dia = IMPORT_DAYS[dataObj.getUTCDay()];
+            if (dia && !datasPorDia[dia]) datasPorDia[dia] = dataObj;
+        });
+
+        if (Object.keys(datasPorDia).length === 0) return carregarDatasSemanaModeloLocal();
+        salvarDatasSemanaModelo(datasPorDia);
+        return true;
+    }
+
     function preencherCacheDatas() {
         const baseDate = new Date(Date.UTC(2025, 11, 28)); // 28 de Dezembro de 2025
 
@@ -671,6 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'SABADO':   addDays(startOfWeek, 6)
             };
         }
+        carregarDatasSemanaModeloLocal();
     }
 
     function addDays(date, days) {
@@ -778,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!semana || !dia) return;
         if (!exigirFilialEscala()) return;
 
-        const dataObj = CACHE_DATAS[semana][dia];
+        const dataObj = getDataSemanaDia(semana, dia);
         const dataISO = dataObj.toISOString().split('T')[0];
         const config = SECAO_PARA_DB[section];
 
@@ -814,12 +980,14 @@ document.addEventListener('DOMContentLoaded', () => {
         tituloDia.style.gap = '10px';
         tituloDia.style.flexWrap = 'wrap';
 
-        const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
-        const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+        const dataObj = getDataSemanaDiaOuNulo(semana, dia);
+        const formattedDate = dataObj
+            ? dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+            : '';
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
 
         tituloDia.innerHTML = `
-            <span><i class="fa-solid fa-calendar-day"></i> ${diaNome} - ${formattedDate}</span>
+            <span><i class="fa-solid fa-calendar-day"></i> ${diaNome}${formattedDate ? ` - ${formattedDate}` : ''}</span>
             <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
             <button id="btnCopiarDia" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #17a2b8; color: white;" title="Copiar Escala">
                 <i class="fa-solid fa-copy"></i>
@@ -842,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center;">Carregando...</td></tr>`;
         });
 
-        const dataObj = CACHE_DATAS[semana] ? CACHE_DATAS[semana][dia] : new Date();
+        const dataObj = getDataSemanaDia(semana, dia);
         const dataISO = dataObj.toISOString().split('T')[0];
 
         try {
@@ -1197,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const diaAtual = document.querySelector('.tab-btn.active')?.dataset.dia;
         if (!semanaAtual || !diaAtual) return;
 
-        const dataObj = CACHE_DATAS[semanaAtual][diaAtual];
+        const dataObj = getDataSemanaDia(semanaAtual, diaAtual);
         const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
         if (textoOrigemCopia) textoOrigemCopia.textContent = `Copiando escala de: ${formattedDate}`;
@@ -1221,7 +1389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!semanaAtual || !diaAtual) return;
             if (!exigirFilialEscala()) return;
 
-            const dataOrigem = CACHE_DATAS[semanaAtual][diaAtual].toISOString().split('T')[0];
+            const dataOrigem = getDataSemanaDia(semanaAtual, diaAtual).toISOString().split('T')[0];
             
             // Calcular semana de destino
             const dateDestinoUTC = new Date(Date.UTC(
@@ -1307,7 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const semana = selectSemana.value;
             const dia = document.querySelector('.tab-btn.active').dataset.dia;
-            const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+            const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
 
             // Mapeamento de nomes de abas do Excel para IDs internos das seções
             const mapaAbas = {
@@ -1424,6 +1592,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const semana = selectSemana.value;
         if (!semana) return alert('Selecione uma semana antes de importar.');
 
+        const readerDiario = new FileReader();
+        readerDiario.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const parsed = parsePlanejamentoPorAbasDiarias(workbook, semana);
+
+                if (parsed.inserts.length === 0) {
+                    throw new Error('Nao foram encontrados dados validos nas abas diarias (ex: Segunda 01/01/2025, Terca 02/01/2025).');
+                }
+
+                if (confirm(`Deseja importar o planejamento consolidado de ${parsed.inserts.length} registros para a ${semana}?`)) {
+                    const { error } = await supabaseClient
+                        .from('planejamento_semanal')
+                        .insert(parsed.inserts.map(item => comAuditoria(item)));
+                    if (error) throw error;
+                    alert('Planejamento semanal importado com sucesso!');
+                    carregarPlanejamento(semana);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erro na importacao: ' + err.message);
+            }
+            e.target.value = '';
+        };
+        readerDiario.readAsArrayBuffer(file);
+        return;
+
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
@@ -1518,6 +1714,85 @@ document.addEventListener('DOMContentLoaded', () => {
     function getDiaFromSheetName(sheetName) {
         const normalized = normalizeString(sheetName);
         return IMPORT_DAYS.find(dia => normalized === dia || normalized.startsWith(`${dia} `)) || null;
+    }
+
+    function parsePlanejamentoPorAbasDiarias(workbook, semana) {
+        const consolidado = new Map();
+        const abasDiarias = workbook.SheetNames
+            .map(sheetName => ({ sheetName, dia: getDiaFromSheetName(sheetName) }))
+            .filter(item => item.dia);
+
+        const findHeaderIndex = (headers, terms) => headers.findIndex(header => terms.some(term => header.includes(term)));
+
+        abasDiarias.forEach(({ sheetName, dia }) => {
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '', raw: false });
+            const headerRowIndex = rows.findIndex(row => {
+                const headers = (row || []).map(normalizeString);
+                return headers.some(header => header.includes('PLACA'))
+                    && headers.some(header => header.includes('ROTA'))
+                    && headers.some(header => header.includes('MOTORISTA'));
+            });
+
+            if (headerRowIndex < 0) return;
+
+            const headers = rows[headerRowIndex].map(normalizeString);
+            const placaIndex = findHeaderIndex(headers, ['PLACA', 'VEICULO', 'CAMINHAO', 'CARRO']);
+            const modeloIndex = findHeaderIndex(headers, ['MODELO']);
+            const motoristaIndex = findHeaderIndex(headers, ['MOTORISTA', 'CONDUTOR', 'CHOFER']);
+            const auxiliarIndex = findHeaderIndex(headers, ['AUXILIAR', 'AJUDANTE', 'APOIO']);
+            const terceiroIndex = findHeaderIndex(headers, ['TERCEIRO', 'TERCEIRA', 'TERCEIR']);
+            const rotaIndex = findHeaderIndex(headers, ['ROTA']);
+            const statusIndex = findHeaderIndex(headers, ['STATUS', 'STAT']);
+
+            rows.slice(headerRowIndex + 1).forEach(rawRow => {
+                const placaModelo = placaIndex >= 0 ? cleanImportValue(rawRow[placaIndex]).toUpperCase() : '';
+                const split = splitPlacaModelo(placaModelo);
+                const placa = split.placa || placaModelo;
+                const modelo = modeloIndex >= 0
+                    ? cleanImportValue(rawRow[modeloIndex])
+                    : split.modelo;
+                const motorista = motoristaIndex >= 0 ? cleanImportValue(rawRow[motoristaIndex]) : '';
+                const auxiliar = auxiliarIndex >= 0 ? cleanImportValue(rawRow[auxiliarIndex]) : '';
+                const terceiro = terceiroIndex >= 0 ? cleanImportValue(rawRow[terceiroIndex]) : '';
+                const rota = rotaIndex >= 0 ? cleanImportValue(rawRow[rotaIndex], { keepZero: true }) : '';
+                const statusRaw = statusIndex >= 0 ? cleanImportValue(rawRow[statusIndex], { keepZero: true }) : '';
+                const status = statusRaw === '0' ? '' : statusRaw;
+
+                if (!placa && !motorista && !auxiliar && !terceiro && !rota && !status) return;
+
+                const chave = normalizeVehiclePlate(placa)
+                    || normalizeString([motorista, auxiliar, terceiro, modelo].filter(Boolean).join('|'));
+                if (!chave) return;
+
+                if (!consolidado.has(chave)) {
+                    consolidado.set(chave, {
+                        semana_nome: semana,
+                        filial: getFilialEscala(),
+                        placa,
+                        modelo,
+                        motorista,
+                        auxiliar,
+                        terceiro
+                    });
+                }
+
+                const item = consolidado.get(chave);
+                if (!item.placa && placa) item.placa = placa;
+                if (!item.modelo && modelo) item.modelo = modelo;
+                if (!item.motorista && motorista) item.motorista = motorista;
+                if (!item.auxiliar && auxiliar) item.auxiliar = auxiliar;
+                if (!item.terceiro && terceiro) item.terceiro = terceiro;
+
+                const diaKey = DIA_KEY_MAP[dia];
+                item[`${diaKey}_rota`] = rota;
+                item[`${diaKey}_status`] = status;
+            });
+        });
+
+        return {
+            abas: abasDiarias.map(item => item.sheetName),
+            inserts: Array.from(consolidado.values())
+        };
     }
 
     function getDiaByDataEscala(semana, dataISO) {
@@ -1871,6 +2146,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error('Nao foram encontradas abas de dias da semana no arquivo.');
                 }
                 const diasImportados = [...new Set(sheetsDias.map(item => item.dia))];
+                if (isSemanaModeloPlanejamento(semana)) {
+                    delete CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO];
+                    localStorage.removeItem(SEMANA_MODELO_DATAS_KEY);
+                }
 
                 const resumo = sheetsDias.map(({ sheetName }) => {
                     const parsed = parseRoteiroSheet(workbook, sheetName, semana);
@@ -1883,16 +2162,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 importModal.classList.remove('hidden');
                 let totalImportado = 0;
+                const datasModelo = {};
                 for (let i = 0; i < sheetsDias.length; i++) {
-                    const { sheetName } = sheetsDias[i];
+                    const { sheetName, dia } = sheetsDias[i];
                     const progress = 20 + Math.round((i / sheetsDias.length) * 70);
                     progressBar.style.width = `${progress}%`;
                     progressText.textContent = `Processando: ${progress}%`;
                     progressDetails.textContent = `Importando ${sheetName}...`;
+                    if (isSemanaModeloPlanejamento(semana)) {
+                        const parsed = parseRoteiroSheet(workbook, sheetName, semana);
+                        const dataObj = dateFromISO(parsed?.dataISO);
+                        if (dataObj) datasModelo[dia] = dataObj;
+                    }
                     totalImportado += await importarRoteiroDiario(workbook, sheetName, semana);
                 }
 
                 progressDetails.textContent = 'Finalizando importacao...';
+                if (isSemanaModeloPlanejamento(semana)) {
+                    salvarDatasSemanaModelo(datasModelo);
+                    await sincronizarPlanejamentoDaSemana(semana, Object.keys(datasModelo));
+                    carregarPlanejamento(semana);
+                }
 
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Processando: 100%';
@@ -2187,6 +2477,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     return alert('Selecione uma semana.');
                 }
 
+                const planejamentoDiario = parsePlanejamentoPorAbasDiarias(workbook, semana);
+                if (planejamentoDiario.abas.length > 0) {
+                    if (planejamentoDiario.inserts.length === 0) {
+                        importModal.classList.add('hidden');
+                        return alert('As abas diarias foram encontradas, mas nenhum registro valido foi identificado.');
+                    }
+
+                    importModal.classList.add('hidden');
+                    if (confirm(`Importar ${planejamentoDiario.inserts.length} registros das abas diarias para o Planejamento da ${semana}?`)) {
+                        importModal.classList.remove('hidden');
+                        progressBar.style.width = '90%';
+                        progressText.textContent = 'Processando: 90%';
+                        progressDetails.textContent = 'Enviando planejamento consolidado...';
+
+                        const { error } = await supabaseClient
+                            .from('planejamento_semanal')
+                            .insert(planejamentoDiario.inserts.map(item => comAuditoria(item)));
+                        if (error) throw error;
+
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Processando: 100%';
+                        progressDetails.textContent = 'Importacao concluida com sucesso!';
+
+                        await new Promise(resolve => setTimeout(resolve, 600));
+                        importModal.classList.add('hidden');
+                        alert('Planejamento montado pelas abas diarias com sucesso!');
+                        carregarPlanejamento(semana);
+                    }
+                    e.target.value = '';
+                    return;
+                }
+
                 const sheetName = findSheetForSemana(workbook, semana);
                 if (!sheetName) {
                     importModal.classList.add('hidden');
@@ -2422,7 +2744,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+                const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
                 const insertsEscala = [];
                 const insertsFaltas = [];
 
@@ -2582,8 +2904,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm(`Copiar dados do ${diaOrigem} para ${diaAtual}?`)) return;
 
             try {
-                const dataOrigem = CACHE_DATAS[semana][diaOrigem].toISOString().split('T')[0];
-                const dataDestino = CACHE_DATAS[semana][diaAtual].toISOString().split('T')[0];
+                const dataOrigem = getDataSemanaDia(semana, diaOrigem).toISOString().split('T')[0];
+                const dataDestino = getDataSemanaDia(semana, diaAtual).toISOString().split('T')[0];
 
                 // Busca dados do dia de origem
                 const [resEscala, resFaltas] = await Promise.all([
@@ -2675,7 +2997,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert('Nenhuma semana ou dia selecionado para gerar o PDF.');
         }
 
-        const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+        const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
 
         // Busca dados apenas do dia selecionado
         const { data: dadosEscala, error: escalaError } = await aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO));
@@ -2710,7 +3032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
 
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
-        const formattedDate = CACHE_DATAS[semana][dia].toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        const formattedDate = getDataSemanaDia(semana, dia).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         
         doc.setFontSize(18);
         doc.text(`ESCALA - ${semana} - ${diaNome} - ${formattedDate}`, centerX, 20, { align: 'center' });
@@ -3100,7 +3422,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
         if (!semana || !dia) return;
 
-        const dataObj = CACHE_DATAS[semana][dia];
+        const dataObj = getDataSemanaDia(semana, dia);
         const formattedDate = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
         const diaNome = dia === 'TERCA' ? 'TERÇA' : dia;
 
@@ -3122,7 +3444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
         if (!semana || !dia || !CACHE_DATAS[semana] || !CACHE_DATAS[semana][dia]) return null;
 
-        const dataObj = CACHE_DATAS[semana][dia];
+        const dataObj = getDataSemanaDia(semana, dia);
         return {
             semana,
             dia,
@@ -4638,6 +4960,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (semanaAtual < 1) semanaAtual = 1;
 
         selectSemana.innerHTML = '';
+        selectSemana.appendChild(new Option('SEMANA PADRÃO - MODELO', SEMANA_MODELO_PLANEJAMENTO));
         for (let i = 1; i <= 53; i++) {
             const nome = `SEMANA ${String(i).padStart(2, '0')} - 2026`;
             selectSemana.appendChild(new Option(nome, nome));
@@ -4943,6 +5266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
             if (!exigirFilialEscala()) return;
             await carregarListasAuxiliares();
+            if (isSemanaModeloPlanejamento(selectSemana.value)) await carregarDatasSemanaModeloBanco();
             
             // Atualiza datas nas abas
             const dadosSemana = CACHE_DATAS[selectSemana.value];
@@ -4950,9 +5274,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dia = btn.dataset.dia; // Pode ser undefined para a aba 'PLANEJAMENTO'
                 // Apenas processa botões que representam um dia da semana
                 if (dia) {
-                    const date = dadosSemana ? dadosSemana[dia] : new Date();
+                    const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
                     const diaNome = btn.textContent.split(' ')[0].trim();
-                    btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+                    const dateText = date ? date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'}) : '';
+                    btn.innerHTML = `${diaNome}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
                 }
             });
 
@@ -4963,23 +5288,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (selectSemana) {
-        selectSemana.addEventListener('change', () => {
+        selectSemana.addEventListener('change', async () => {
             if (!painelEscala || painelEscala.classList.contains('hidden')) {
                 atualizarBotaoTerceiroSuspenso();
                 return;
             }
 
-            const activeDia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            if (isSemanaModeloPlanejamento(selectSemana.value)) {
+                await carregarDatasSemanaModeloBanco();
+            }
+
+            const activeTab = document.querySelector('.tab-btn.active');
+            const activeDia = activeTab?.dataset.dia;
             const dadosSemana = CACHE_DATAS[selectSemana.value];
             tabButtons.forEach(btn => {
                 const dia = btn.dataset.dia;
                 if (!dia) return;
-                const date = dadosSemana ? dadosSemana[dia] : new Date();
+                const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
                 const diaNome = btn.textContent.split(' ')[0].trim();
-                btn.innerHTML = `${diaNome} <span class="tab-date">${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'})}</span>`;
+                const dateText = date ? date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'}) : '';
+                btn.innerHTML = `${diaNome}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
             });
 
-            if (activeDia) {
+            if (activeTab?.dataset.tab === 'planejamento') {
+                carregarPlanejamento(selectSemana.value);
+            } else if (activeDia) {
                 atualizarTituloDia(activeDia, selectSemana.value);
                 carregarDadosDia(activeDia, selectSemana.value);
             }
@@ -5020,6 +5353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 atualizarBotaoTerceiroSuspenso();
             } else {
                 if (!exigirFilialEscala()) return;
+                if (isSemanaModeloPlanejamento(selectSemana.value)) await carregarDatasSemanaModeloBanco();
                 if(painelPlan) painelPlan.classList.add('hidden');
                 if(painelDias) painelDias.classList.remove('hidden');
                 if(dia) {
@@ -5047,7 +5381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!semana || !dia) return;
             if (!exigirFilialEscala()) return;
 
-            const dataObj = CACHE_DATAS[semana][dia];
+            const dataObj = getDataSemanaDia(semana, dia);
             const dataISO = dataObj.toISOString().split('T')[0];
             const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
@@ -5126,12 +5460,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnImportarPlanejamento && fileImportarPlanejamento) {
         btnImportarPlanejamento.addEventListener('click', () => fileImportarPlanejamento.click());
         fileImportarPlanejamento.addEventListener('change', importarExcelPlanejamento);
-        btnImportarPlanejamento.addEventListener('click', () => {
-            // Abre o seletor de arquivos
-            fileImportarPlanejamento.click();
-        });
         // Altera para usar a lógica global que é mais flexível com múltiplas abas ou nomes variados
-        fileImportarPlanejamento.addEventListener('change', importarExcelPlanejamentoGlobal);
     }
 
     const btnModeloPlanejamento = document.getElementById('btnModeloPlanejamento');
