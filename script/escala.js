@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal de Orientação do PDF
     function montarPayloadPlanejamentoModelo(row, semanaDestino) {
         const campos = [
-            'placa', 'modelo',
+            'placa', 'modelo', 'tipo',
             'domingo_rota', 'domingo_status',
             'segunda_rota', 'segunda_status',
             'terca_rota', 'terca_status',
@@ -1318,6 +1318,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 extraUpdates.modelo = veiculoEncontrado.modelo;
                 const inputModelo = tr.querySelector('input[data-key="modelo"]');
                 if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
+                if (tabela === 'planejamento_semanal') {
+                    extraUpdates.tipo = veiculoEncontrado.tipo || '';
+                    const inputTipo = tr.querySelector('input[data-key="tipo"]');
+                    if (inputTipo) inputTipo.value = veiculoEncontrado.tipo || '';
+                }
             }
         }
         // Atualiza cor se for Status
@@ -1831,6 +1836,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return veiculo ? cleanImportValue(veiculo.modelo) : '';
     }
 
+    function getTipoVisualByPlaca(placa) {
+        const placaBusca = normalizeVehiclePlate(placa);
+        const veiculo = listaVeiculos.find(v => v.placa_normalizada === placaBusca || normalizeVehiclePlate(v.placa) === placaBusca);
+        return veiculo ? cleanImportValue(veiculo.tipo) : '';
+    }
+
     function splitPlacaModelo(value) {
         const text = cleanImportValue(value);
         if (!text) return { placa: '', modelo: '' };
@@ -2212,7 +2223,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ...item,
             filial: item.filial || getFilialEscala(),
             placa,
-            modelo: getModeloVisualByPlaca(placa) || item.modelo || ''
+            modelo: getModeloVisualByPlaca(placa) || item.modelo || '',
+            tipo: getTipoVisualByPlaca(placa) || item.tipo || ''
         });
 
         const { data: existentes, error: selectError } = await supabaseClient
@@ -2252,6 +2264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filial: row.filial || getFilialEscala(),
             placa: row.placa,
             modelo: row.modelo || '',
+            tipo: row.tipo || getTipoVisualByPlaca(row.placa),
             motorista: row.motorista || '',
             auxiliar: row.auxiliar || '',
             terceiro: row.terceiro || '',
@@ -2300,6 +2313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     filial: getFilialEscala(),
                     placa,
                     modelo: row.modelo || '',
+                    tipo: row.tipo || getTipoVisualByPlaca(placa),
                     motorista: row.motorista || '',
                     auxiliar: row.auxiliar || '',
                     terceiro: row.terceiro || ''
@@ -2309,6 +2323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = mapa.get(placa);
             if (!row.semana_nome || row.semana_nome !== semana) row.semana_nome = semana;
             if (!item.modelo && row.modelo) item.modelo = row.modelo;
+            if (!item.tipo) item.tipo = row.tipo || getTipoVisualByPlaca(placa);
             if (!item.motorista && row.motorista) item.motorista = row.motorista;
             if (!item.auxiliar && row.auxiliar) item.auxiliar = row.auxiliar;
             if (!item.terceiro && row.terceiro) item.terceiro = row.terceiro;
@@ -2549,14 +2564,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const auxiliarKey = findRowKey(row, ['AUXILIAR', 'APOIO']);
                     const terceiroKey = findRowKey(row, ['TERCEIRO', 'TERCEIRA', 'TERCEIR']);
 
-                    const item = {
-                        semana_nome: semana,
-                        placa: placaKey ? String(row[placaKey]).trim() : '',
-                        modelo: modeloKey ? String(row[modeloKey]).trim() : '',
-                        motorista: motoristaKey ? String(row[motoristaKey]).trim() : '',
-                        auxiliar: auxiliarKey ? String(row[auxiliarKey]).trim() : '',
-                        terceiro: terceiroKey ? String(row[terceiroKey]).trim() : ''
-                    };
+            const item = {
+                semana_nome: semana,
+                placa: placaKey ? String(row[placaKey]).trim() : '',
+                modelo: modeloKey ? String(row[modeloKey]).trim() : '',
+                tipo: '',
+                motorista: motoristaKey ? String(row[motoristaKey]).trim() : '',
+                auxiliar: auxiliarKey ? String(row[auxiliarKey]).trim() : '',
+                terceiro: terceiroKey ? String(row[terceiroKey]).trim() : ''
+            };
+
+            item.tipo = getTipoVisualByPlaca(item.placa);
 
                     let hasAnyData = !!item.placa || !!item.motorista || !!item.auxiliar || !!item.terceiro;
 
@@ -4638,6 +4656,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     placa,
                     modelo: cleanImportValue(item.modelo) || getModeloVisualByPlaca(placa),
+                    tipo: cleanImportValue(item.tipo) || getTipoVisualByPlaca(placa),
                     rotaPlanejada,
                     statusPlanejado,
                     disponivel: !motivoBloqueio,
@@ -5038,7 +5057,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarListasAuxiliares() {
         // Veículos
-        let queryVeiculos = supabaseClient.from('veiculos').select('placa, modelo, filial, situacao').order('placa');
+        let queryVeiculos = supabaseClient.from('veiculos').select('placa, modelo, tipo, filial, situacao').order('placa');
         const filial = getFilialEscala();
         if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
 
@@ -6790,7 +6809,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 semana_nome: semana,
                 filial: getFilialEscala(),
                 placa: veiculo.placa_normalizada,
-                modelo: veiculo.modelo || ''
+                modelo: veiculo.modelo || '',
+                tipo: veiculo.tipo || ''
             }));
         });
 
@@ -6808,7 +6828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarPlanejamento(semana) {
         const tbody = document.getElementById('tbodyPlanejamento');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="22" style="text-align:center;">Carregando...</td></tr>';
 
         try {
             await carregarListasAuxiliares();
@@ -6834,7 +6854,7 @@ document.addEventListener('DOMContentLoaded', () => {
             verificarDuplicidades();
         } catch (err) {
             console.error(err);
-            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
         }
     }
 
@@ -6858,6 +6878,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-plan" data-id="${item.id}"></td>
             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('planejamento_semanal', item.id, 'placa')}"></td>
             <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'modelo')}"></td>
+            <td><input type="text" class="table-input non-editable" value="${item.tipo || getTipoVisualByPlaca(item.placa) || ''}" data-key="tipo" placeholder="Tipo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'tipo')}"></td>
             ${diasHtml}
             <td><input type="text" list="listaMotoristas" class="table-input" value="${getNomeFuncionarioExibicao(item.motorista)}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
             <td><input type="text" list="listaAuxiliares" class="table-input" value="${getNomeFuncionarioExibicao(item.auxiliar)}" data-key="auxiliar" placeholder="Auxiliar" style="${getCellStyle('planejamento_semanal', item.id, 'auxiliar')}"></td>
