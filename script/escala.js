@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const NOTE_FIELDS = ['motorista', 'auxiliar', 'terceiro', 'motorista_ausente', 'auxiliar_ausente'];
+    const NOTE_FIELDS = ['placa', 'motorista', 'auxiliar', 'terceiro', 'motorista_ausente', 'auxiliar_ausente'];
 
     function getFilialEscala() {
         return (selectFilial?.value || usuarioLogado?.filial || '').trim();
@@ -7260,5 +7260,228 @@ document.addEventListener('DOMContentLoaded', () => {
     updateColumnColorsStyle(); // Carrega cores salvas
     atualizarBotaoTerceiroSuspenso();
     destacarVeiculosInternados();
+
+    // --- LÓGICA PARA CÁLCULO DE PESO ---
+    const modalCalculoPeso = document.getElementById('modalCalculoPeso');
+    const btnCalculoPeso = document.getElementById('btnCalculoPeso');
+    const btnCloseModalCalculoPeso = document.getElementById('btnCloseModalCalculoPeso');
+    const calculoPesoPlaca = document.getElementById('calculoPesoPlaca');
+    const calculoPesoRotaOrigem = document.getElementById('calculoPesoRotaOrigem');
+    const listaVeiculosCalculoPeso = document.getElementById('listaVeiculosCalculoPeso');
+    const calculoPesoModelo = document.getElementById('calculoPesoModelo');
+    const calculoPesoTipo = document.getElementById('calculoPesoTipo');
+    const calculoPesoCapacidade = document.getElementById('calculoPesoCapacidade');
+    const calculoPesoCargaTotal = document.getElementById('calculoPesoCargaTotal');
+    const calculoPesoRotaDestino = document.getElementById('calculoPesoRotaDestino');
+    const calculoPesoTransferir = document.getElementById('calculoPesoTransferir');
+    const calculoPesoAnularTransferencia = document.getElementById('calculoPesoAnularTransferencia');
+    const btnTransferirCarga = document.getElementById('btnTransferirCarga');
+    const btnCalcularPeso = document.getElementById('btnCalcularPeso');
+
+    if (btnCalculoPeso) {
+        btnCalculoPeso.addEventListener('click', () => {
+            modalCalculoPeso.classList.remove('hidden');
+            modalCalculoPeso.style.display = 'flex';
+            carregarVeiculosCalculoPeso();
+        });
+    }
+
+    if (btnCloseModalCalculoPeso) {
+        btnCloseModalCalculoPeso.addEventListener('click', () => {
+            modalCalculoPeso.classList.add('hidden');
+            modalCalculoPeso.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modalCalculoPeso) {
+            modalCalculoPeso.classList.add('hidden');
+            modalCalculoPeso.style.display = 'none';
+        }
+    });
+
+    if (calculoPesoRotaOrigem) {
+        calculoPesoRotaOrigem.addEventListener('change', () => {
+            const rota = (calculoPesoRotaOrigem.value || '').trim();
+            if (!rota) return;
+
+            // Busca a placa na tabela ativa (dia atual)
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (!activeTab || activeTab.dataset.tab === 'planejamento') {
+                return alert('Por favor, selecione um dia da semana para buscar por rota.');
+            }
+
+            const painelDias = document.getElementById('conteudoDias');
+            const rows = painelDias.querySelectorAll('tbody tr');
+            let found = false;
+
+            for (const tr of rows) {
+                const inputRota = tr.querySelector('input[data-key="rota"]');
+                const inputStatus = tr.querySelector('input[data-key="status"]');
+                const inputPlaca = tr.querySelector('input[data-key="placa"]');
+
+                if (inputRota && inputPlaca && inputRota.value.trim() === rota) {
+                    const status = (inputStatus?.value || '').toUpperCase();
+                    // Verifica status exceto P e R
+                    if (status.includes('P') || status.includes('R')) continue;
+
+                    calculoPesoPlaca.value = inputPlaca.value;
+                    preencherDadosVeiculoCalculoPeso();
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) alert(`Não foi encontrada uma placa ativa para a rota ${rota} no dia selecionado (verificando status exceto P e R).`);
+        });
+    }
+
+    if (calculoPesoPlaca) calculoPesoPlaca.addEventListener('change', preencherDadosVeiculoCalculoPeso);
+    if (calculoPesoAnularTransferencia) calculoPesoAnularTransferencia.addEventListener('change', realizarCalculoPeso);
+    if (calculoPesoCapacidade) calculoPesoCapacidade.addEventListener('input', realizarCalculoPeso);
+    if (calculoPesoCargaTotal) calculoPesoCargaTotal.addEventListener('input', realizarCalculoPeso);
+    if (btnCalcularPeso) btnCalcularPeso.addEventListener('click', realizarCalculoPeso);
+
+    async function carregarVeiculosCalculoPeso() {
+        if (!listaVeiculosCalculoPeso) return;
+        try {
+            const { data, error } = await supabaseClient.from('veiculos').select('placa').order('placa');
+            if (error) throw error;
+            listaVeiculosCalculoPeso.innerHTML = data.map(v => `<option value="${v.placa}"></option>`).join('');
+        } catch (err) { console.error('Erro ao carregar veículos:', err); }
+    }
+
+    async function preencherDadosVeiculoCalculoPeso() {
+        const placa = calculoPesoPlaca.value.trim().toUpperCase();
+        if (!placa) return;
+        try {
+            const { data: v, error } = await supabaseClient.from('veiculos').select('modelo, tipo, capacidade_carga').eq('placa', placa).single();
+            if (error) {
+                calculoPesoModelo.value = 'Não encontrado';
+                calculoPesoTipo.value = '';
+                calculoPesoCapacidade.value = '';
+                calculoPesoCapacidade.readOnly = false;
+                calculoPesoCapacidade.style.backgroundColor = '';
+                return;
+            }
+            calculoPesoModelo.value = v.modelo || '';
+            calculoPesoTipo.value = v.tipo || '';
+            
+            if (v.capacidade_carga && v.capacidade_carga > 0) {
+                calculoPesoCapacidade.value = v.capacidade_carga;
+                calculoPesoCapacidade.readOnly = true;
+                calculoPesoCapacidade.style.backgroundColor = '#f0f0f0';
+            } else {
+                calculoPesoCapacidade.value = '';
+                calculoPesoCapacidade.readOnly = false;
+                calculoPesoCapacidade.style.backgroundColor = '';
+            }
+            
+            realizarCalculoPeso();
+        } catch (err) { console.error('Erro ao buscar dados do veículo:', err); }
+    }
+
+    function realizarCalculoPeso() {
+        const cap = parseFloat(calculoPesoCapacidade.value) || 0;
+        const total = parseFloat(calculoPesoCargaTotal.value) || 0;
+        const excedente = Math.max(0, total - cap);
+        
+        calculoPesoTransferir.value = excedente.toFixed(2);
+        calculoPesoTransferir.style.color = excedente > 0 ? '#dc3545' : '#28a745';
+
+        // Cálculo de Caixas e Paletes
+        // 1 Caixa = 21kg
+        // 1 Palete = 42 caixas
+        const totalCaixasNecessarias = Math.ceil(excedente / 21);
+        const qtdPaletes = Math.floor(totalCaixasNecessarias / 42);
+        const qtdCaixasAvulsas = totalCaixasNecessarias % 42;
+
+        const inputPaletes = document.getElementById('calculoPesoPaletes');
+        const inputCaixas = document.getElementById('calculoPesoCaixas');
+        
+        if (inputPaletes) inputPaletes.value = excedente > 0 ? qtdPaletes : 0;
+        if (inputCaixas) inputCaixas.value = excedente > 0 ? qtdCaixasAvulsas : 0;
+    }
+
+    // Botão Transferência de Carga
+    if (btnTransferirCarga) {
+        btnTransferirCarga.addEventListener('click', () => {
+            const rotaOrig = (calculoPesoRotaOrigem?.value || '').trim();
+            const rotaDest = (calculoPesoRotaDestino?.value || '').trim();
+            const placaOrig = (calculoPesoPlaca?.value || '').trim();
+            const peso = parseFloat(calculoPesoTransferir.value) || 0;
+            const paletes = parseInt(document.getElementById('calculoPesoPaletes').value) || 0;
+            const caixas = parseInt(document.getElementById('calculoPesoCaixas').value) || 0;
+            const anularTransferencia = calculoPesoAnularTransferencia?.checked;
+
+            if (!placaOrig || peso <= 0) return alert('Informe um veículo com excesso de carga para realizar a transferência.');
+            if (!anularTransferencia && !rotaDest) return alert('Informe a rota de destino da transferência.');
+
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (!activeTab || activeTab.dataset.tab === 'planejamento') return alert('Selecione um dia da semana para vincular a transferência.');
+
+            const painelDias = document.getElementById('conteudoDias');
+            const rows = painelDias.querySelectorAll('tbody tr');
+            
+            let rowOrig = null;
+            let rowDest = null;
+
+            rows.forEach(tr => {
+                const p = (tr.querySelector('input[data-key="placa"]')?.value || '').trim().toUpperCase();
+                const r = (tr.querySelector('input[data-key="rota"]')?.value || '').trim();
+                
+                if (p === placaOrig.toUpperCase()) rowOrig = tr;
+                if (!anularTransferencia && r === rotaDest) rowDest = tr;
+            });
+
+            if (!rowOrig) return alert('Veículo de origem não encontrado na escala do dia.');
+
+            if (anularTransferencia) {
+                const idOrig = rowOrig.dataset.id;
+                const tabOrig = rowOrig.dataset.tabela;
+                let msgOrig = `Carga em Excesso: ${peso.toFixed(0)}kg. Transferência anulada.`;
+                const notaAtualOrig = getCellNote(tabOrig, idOrig, 'placa');
+                if (notaAtualOrig) msgOrig = notaAtualOrig + ' | ' + msgOrig;
+                setCellNote(tabOrig, idOrig, 'placa', msgOrig);
+                applyCellAnnotations();
+                alert(`Anotação de "Carga em Excesso" registrada na placa ${placaOrig}.`);
+            } else {
+                const paletes = parseInt(document.getElementById('calculoPesoPaletes').value) || 0;
+                const caixas = parseInt(document.getElementById('calculoPesoCaixas').value) || 0;
+
+                if (peso <= 0) return alert('Não há peso para transferir.');
+                if (!rowDest) return alert('Rota de destino não encontrada na escala do dia para realizar a transferência.');
+
+                // Criar Anotações
+                const idOrig = rowOrig.dataset.id;
+                const tabOrig = rowOrig.dataset.tabela;
+                const idDest = rowDest.dataset.id;
+                const tabDest = rowDest.dataset.tabela;
+
+                // Nota na Origem
+                let msgOrig = `Excesso: ${peso.toFixed(0)}kg, ${paletes} Paletes e ${caixas} Caixas -> Transf. p/ Rota ${rotaDest}`;
+                const notaAtualOrig = getCellNote(tabOrig, idOrig, 'placa');
+                if (notaAtualOrig) msgOrig = notaAtualOrig + ' | ' + msgOrig;
+                setCellNote(tabOrig, idOrig, 'placa', msgOrig);
+
+                // Nota no Destino
+                let msgDest = `Recebendo: ${paletes} Paletes e ${caixas} Caixas da Rota ${rotaOrig || placaOrig}`;
+                const notaAtualDest = getCellNote(tabDest, idDest, 'placa');
+                if (notaAtualDest) msgDest = notaAtualDest + ' | ' + msgDest;
+                setCellNote(tabDest, idDest, 'placa', msgDest);
+
+                applyCellAnnotations();
+                
+                alert(`Transferência de carga registrada nas anotações!\n\nOrigem: ${placaOrig}\nDestino: Rota ${rotaDest}`);
+            }
+            
+            // Limpa campos de rota no modal
+            if (calculoPesoRotaOrigem) calculoPesoRotaOrigem.value = '';
+            if (calculoPesoRotaDestino) calculoPesoRotaDestino.value = '';
+            
+            // Fecha modal
+            modalCalculoPeso.classList.add('hidden');
+        });
+    }
 
 });

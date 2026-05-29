@@ -65,6 +65,7 @@
                             <button id="btnPDF" class="btn-glass btn-red"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                             <button id="btnPDFExpedicaoModelo" class="btn-glass btn-red"><i class="fa-solid fa-truck-fast"></i> PDF Expedição</button>
                             <button id="btnXLSX" class="btn-glass btn-green"><i class="fa-solid fa-file-excel"></i> XLSX</button>
+                            <button id="btnCalculoPeso" class="btn-glass btn-blue"><i class="fa-solid fa-weight-hanging"></i> Cálculo de Peso</button>
                             <button id="btnImportarSemana" class="btn-glass btn-blue"><i class="fa-solid fa-file-import"></i> Importar Semana</button>
                         </div>
                         <input type="file" id="fileImportar" accept=".xlsx, .xls" style="display: none;">
@@ -380,6 +381,72 @@
                 <div id="importProgressBar" class="progress-bar" style="width: 0%;"></div>
             </div>
             <p id="importProgressDetails" style="font-size: 12px; color: #666; margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <!-- Modal Cálculo de Peso -->
+    <div id="modalCalculoPeso" class="panel-backdrop hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div class="panel" style="background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <h3 style="margin: 0;"><i class="fa-solid fa-weight-hanging"></i> Cálculo de Peso</h3>
+                <button class="close-button" id="btnCloseModalCalculoPeso" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group" style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label for="calculoPesoRotaOrigem" style="display: block; margin-bottom: 5px; font-weight: bold;">Rota Origem</label>
+                        <input type="text" id="calculoPesoRotaOrigem" list="listaRotas" placeholder="Buscar por rota..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="calculoPesoPlaca" style="display: block; margin-bottom: 5px; font-weight: bold;">Placa</label>
+                        <input type="text" id="calculoPesoPlaca" list="listaVeiculosCalculoPeso" placeholder="Digite a placa..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label for="calculoPesoModelo" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em;">Modelo</label>
+                        <input type="text" id="calculoPesoModelo" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
+                    </div>
+                    <div>
+                        <label for="calculoPesoTipo" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em;">Tipo</label>
+                        <input type="text" id="calculoPesoTipo" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="calculoPesoCapacidade" style="display: block; margin-bottom: 5px; font-weight: bold;">Capacidade de Carga (PBT)</label>
+                    <input type="number" id="calculoPesoCapacidade" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="calculoPesoCargaTotal" style="display: block; margin-bottom: 5px; font-weight: bold;">Peso Total da Carga (kg)</label>
+                    <input type="number" id="calculoPesoCargaTotal" class="form-control" placeholder="Informe o peso total" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="calculoPesoTransferir" style="display: block; margin-bottom: 5px; font-weight: bold;">Peso a Transferir (kg)</label>
+                    <input type="number" id="calculoPesoTransferir" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0; font-weight: bold; color: #dc3545;">
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div>
+                        <label for="calculoPesoPaletes" style="display: block; margin-bottom: 5px; font-weight: bold;">Paletes</label>
+                        <input type="number" id="calculoPesoPaletes" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0; font-weight: bold;">
+                    </div>
+                    <div>
+                        <label for="calculoPesoCaixas" style="display: block; margin-bottom: 5px; font-weight: bold;">Caixas</label>
+                        <input type="number" id="calculoPesoCaixas" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0; font-weight: bold;">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="calculoPesoAnularTransferencia" style="width: auto; cursor: pointer;">
+                    <label for="calculoPesoAnularTransferencia" style="margin: 0; cursor: pointer; font-weight: bold; color: #dc3545;">Anular transferência (Registrar apenas excesso)</label>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="calculoPesoRotaDestino" style="display: block; margin-bottom: 5px; font-weight: bold;">Rota Destino (Recebe Carga)</label>
+                    <input type="text" id="calculoPesoRotaDestino" list="listaRotas" placeholder="Selecione a rota que recebe a transferência" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 10px;">
+                    <button id="btnTransferirCarga" class="btn-custom" style="background-color: #fd7e14; color: white;"><i class="fa-solid fa-truck-ramp-box"></i> Transferir Carga</button>
+                    <button id="btnCalcularPeso" class="btn-custom btn-blue"><i class="fa-solid fa-calculator"></i> Calcular</button>
+                </div>
+            </div>
         </div>
     </div>
 
