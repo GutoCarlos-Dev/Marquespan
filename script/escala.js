@@ -792,6 +792,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return CACHE_DATAS[semana]?.[dia] || null;
     }
 
+    function getDiaNomeAba(dia) {
+        return {
+            DOMINGO: 'DOMINGO',
+            SEGUNDA: 'SEGUNDA',
+            TERCA: 'TERÇA',
+            QUARTA: 'QUARTA',
+            QUINTA: 'QUINTA',
+            SEXTA: 'SEXTA',
+            SABADO: 'SÁBADO'
+        }[dia] || dia;
+    }
+
+    function atualizarDatasAbasEscala(semana = selectSemana?.value) {
+        const dadosSemana = CACHE_DATAS[semana];
+        tabButtons.forEach(btn => {
+            const dia = btn.dataset.dia;
+            if (!dia) return;
+
+            const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(semana, dia);
+            const dateText = date ? date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '';
+            btn.innerHTML = `${getDiaNomeAba(dia)}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
+        });
+    }
+
     async function carregarDatasSemanaModeloBanco() {
         if (!getFilialEscala()) return false;
 
@@ -2127,6 +2151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressDetails.textContent = 'Atualizando o dia selecionado...';
 
                 const totalAtualizado = await substituirRoteiroDia(candidatoDoDia.parsed, semana, dia);
+                atualizarDatasAbasEscala(semana);
 
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Processando: 100%';
@@ -2210,6 +2235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressDetails.textContent = 'Finalizando importacao...';
                 if (isSemanaModeloPlanejamento(semana)) {
                     salvarDatasSemanaModelo(datasModelo);
+                    atualizarDatasAbasEscala(semana);
                     await sincronizarPlanejamentoDaSemana(semana, Object.keys(datasModelo));
                     carregarPlanejamento(semana);
                 }
@@ -5460,6 +5486,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            atualizarDatasAbasEscala(selectSemana.value);
+
             painelEscala.classList.remove('hidden');
             document.querySelector('.tab-btn[data-dia="DOMINGO"]')?.click();
             atualizarBotaoTerceiroSuspenso();
@@ -5488,6 +5516,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dateText = date ? date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'}) : '';
                 btn.innerHTML = `${diaNome}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
             });
+
+            atualizarDatasAbasEscala(selectSemana.value);
 
             if (activeTab?.dataset.tab === 'planejamento') {
                 carregarPlanejamento(selectSemana.value);
