@@ -56,6 +56,7 @@ const EstoqueGeralUI = {
         this.retiradaObservacao = document.getElementById('retirada-observacao');
         this.btnRegistrarSaida = document.getElementById('btn-registrar-saida');
         this.btnGerarPdfSaida = document.getElementById('btn-gerar-pdf-saida');
+        this.btnModeloRequisicao = document.getElementById('btn-modelo-requisicao');
 
         // Aba Gerenciar Produtos
         this.formProduto = document.getElementById('formCadastrarProduto');
@@ -177,6 +178,7 @@ const EstoqueGeralUI = {
 
         this.btnRegistrarSaida.addEventListener('click', () => this.registrarSaida());
         if (this.btnGerarPdfSaida) this.btnGerarPdfSaida.addEventListener('click', () => this.gerarPdfSaida());
+        if (this.btnModeloRequisicao) this.btnModeloRequisicao.addEventListener('click', () => this.gerarPdfModeloRequisicao());
 
         // Batimento
         this.batimentoProdutoInput.addEventListener('input', (e) => this.handleProdutoInput(e, 'batimento'));
@@ -984,6 +986,140 @@ const EstoqueGeralUI = {
     },
 
     // --- LÓGICA DE BATIMENTO ---
+
+    async gerarPdfModeloRequisicao() {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('Biblioteca jsPDF nao carregada. Recarregue a pagina e tente novamente.');
+            return;
+        }
+
+        const btn = this.btnModeloRequisicao;
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+        }
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const logoBase64 = await this.getLogoBase64PDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            const halfHeight = pageHeight / 2;
+
+            const drawField = (label, x, y, width) => {
+                doc.setFontSize(7);
+                doc.setTextColor(80);
+                doc.text(label, x, y);
+                doc.setDrawColor(70);
+                doc.setLineWidth(0.15);
+                doc.line(x, y + 5, x + width, y + 5);
+            };
+
+            const drawBoxField = (label, x, y, width, height) => {
+                doc.setFontSize(7);
+                doc.setTextColor(80);
+                doc.text(label, x, y);
+                doc.setDrawColor(110);
+                doc.setLineWidth(0.15);
+                doc.rect(x, y + 2, width, height);
+            };
+
+            const drawRequisicao = (top, viaLabel) => {
+                const left = margin;
+                const usableWidth = pageWidth - (margin * 2);
+                const bottom = top + halfHeight - 8;
+
+                doc.setDrawColor(0, 105, 55);
+                doc.setLineWidth(0.45);
+                doc.roundedRect(left, top + 5, usableWidth, halfHeight - 15, 2, 2);
+
+                if (logoBase64) {
+                    doc.setFillColor(255, 255, 255);
+                    doc.rect(left + 4, top + 8, 36, 12, 'F');
+                    doc.addImage(logoBase64, 'JPEG', left + 5, top + 9, 34, 9);
+                }
+
+                doc.setTextColor(0, 105, 55);
+                doc.setFontSize(13);
+                doc.setFont(undefined, 'bold');
+                doc.text('REQUISICAO DE PECAS - ESTOQUE', pageWidth / 2, top + 14, { align: 'center' });
+
+                doc.setFontSize(7);
+                doc.setTextColor(90);
+                doc.setFont(undefined, 'normal');
+                doc.text(viaLabel, pageWidth - margin - 4, top + 10, { align: 'right' });
+                doc.text('N.: __________________', pageWidth - margin - 4, top + 16, { align: 'right' });
+
+                const y1 = top + 27;
+                drawField('DATA', left + 5, y1, 34);
+                drawField('SOLICITANTE', left + 45, y1, 62);
+                drawField('SETOR', left + 113, y1, 37);
+                drawField('VEICULO / EQUIPAMENTO', left + 156, y1, 31);
+
+                const y2 = top + 40;
+                drawField('CENTRO DE CUSTO / OBRA', left + 5, y2, 54);
+                drawField('AUTORIZADO POR', left + 65, y2, 61);
+                drawField('PRIORIDADE', left + 132, y2, 27);
+                drawField('OS / ROTA', left + 165, y2, 22);
+
+                doc.autoTable({
+                    startY: top + 51,
+                    margin: { left: left + 5, right: left + 5 },
+                    tableWidth: usableWidth - 10,
+                    theme: 'grid',
+                    head: [['CODIGO', 'DESCRICAO DA PECA / MATERIAL', 'UN', 'QTD', 'RETIRADO']],
+                    body: Array.from({ length: 7 }, () => ['', '', '', '', '']),
+                    styles: { fontSize: 7, cellPadding: 1.2, minCellHeight: 6, textColor: [30, 30, 30], lineWidth: 0.12 },
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                    columnStyles: {
+                        0: { cellWidth: 24 },
+                        1: { cellWidth: 88 },
+                        2: { cellWidth: 14, halign: 'center' },
+                        3: { cellWidth: 16, halign: 'center' },
+                        4: { cellWidth: 36 }
+                    }
+                });
+
+                const obsY = Math.min((doc.lastAutoTable?.finalY || top + 98) + 5, bottom - 26);
+                drawBoxField('OBSERVACOES / MOTIVO DA REQUISICAO', left + 5, obsY, usableWidth - 10, 12);
+
+                const sigY = bottom - 8;
+                doc.setDrawColor(70);
+                doc.setLineWidth(0.18);
+                doc.line(left + 8, sigY, left + 58, sigY);
+                doc.line(left + 74, sigY, left + 124, sigY);
+                doc.line(left + 140, sigY, left + 190, sigY);
+                doc.setFontSize(7);
+                doc.setTextColor(80);
+                doc.text('Solicitante', left + 33, sigY + 4, { align: 'center' });
+                doc.text('Almoxarifado', left + 99, sigY + 4, { align: 'center' });
+                doc.text('Autorizacao', left + 165, sigY + 4, { align: 'center' });
+            };
+
+            drawRequisicao(0, '1a VIA - ESTOQUE');
+            doc.setDrawColor(130);
+            doc.setLineDashPattern([2, 2], 0);
+            doc.line(margin, halfHeight, pageWidth - margin, halfHeight);
+            doc.setLineDashPattern([], 0);
+            doc.setFontSize(7);
+            doc.setTextColor(120);
+            doc.text('CORTE AQUI', pageWidth / 2, halfHeight - 2, { align: 'center' });
+            drawRequisicao(halfHeight, '2a VIA - SOLICITANTE');
+
+            doc.save(`Modelo_Requisicao_Pecas_${new Date().toISOString().slice(0, 10)}.pdf`);
+        } catch (err) {
+            console.error('Erro ao gerar modelo de requisicao:', err);
+            alert('Erro ao gerar modelo de requisicao: ' + (err.message || err));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    },
 
     async registrarBatimento(e) {
         e.preventDefault();
