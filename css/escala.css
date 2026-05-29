@@ -919,7 +919,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .diaria-modal-content {
-    width: min(1100px, 96vw);
+    width: min(1240px, 96vw);
 }
 
 .diaria-modal-header {
@@ -933,12 +933,46 @@ body.escala-menu-oculto .menu-floating-toggle i {
     color: #fff;
 }
 
-.diaria-controls {
+.diaria-toolbar {
     display: grid;
-    grid-template-columns: minmax(170px, 240px) minmax(120px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr) minmax(120px, 170px) auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
     gap: 10px;
     align-items: end;
     padding: 14px 18px 8px;
+}
+
+.diaria-controls {
+    display: grid;
+    grid-template-columns: minmax(170px, 240px) minmax(120px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr) minmax(120px, 170px);
+    gap: 10px;
+    align-items: end;
+}
+
+.diaria-actions-card {
+    border: 1px solid #dfe8e2;
+    border-radius: 8px;
+    background: #f7fbf8;
+    padding: 9px 10px 10px;
+}
+
+.diaria-actions-card > span {
+    display: block;
+    color: #66736b;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+}
+
+.diaria-actions-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.diaria-actions-buttons .pdf-expedicao-btn {
+    min-width: 0;
+    padding: 0 10px;
 }
 
 .diaria-summary-card {
@@ -976,7 +1010,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .diaria-table {
-    min-width: 1050px;
+    min-width: 1260px;
 }
 
 .diaria-table thead th {
@@ -1037,6 +1071,10 @@ body.escala-menu-oculto .menu-floating-toggle i {
     }
 
     .diaria-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .diaria-toolbar {
         grid-template-columns: 1fr;
     }
 }

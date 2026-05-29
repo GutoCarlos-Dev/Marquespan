@@ -3166,37 +3166,50 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3><i class="fa-solid fa-money-bill-wave"></i> Diaria</h3>
                     <button type="button" id="btnFecharDiaria" class="terceiro-modal-close" title="Fechar">&times;</button>
                 </div>
-                <div class="diaria-controls">
-                    <div class="form-group">
-                        <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
-                        <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                <div class="diaria-toolbar">
+                    <div class="diaria-controls">
+                        <div class="form-group">
+                            <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
+                            <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                        </div>
+                        <div class="diaria-summary-card">
+                            <span>Valor por dia</span>
+                            <strong id="diariaValorDia">R$ 0,00</strong>
+                        </div>
+                        <div class="diaria-summary-card">
+                            <span>Desconto prox. semana</span>
+                            <strong id="diariaTotalDesconto">R$ 0,00</strong>
+                        </div>
+                        <div class="diaria-summary-card">
+                            <span>Total a pagar</span>
+                            <strong id="diariaTotalPagar">R$ 0,00</strong>
+                        </div>
+                        <div class="form-group">
+                            <label for="diariaFiltroStatus">Status</label>
+                            <select id="diariaFiltroStatus" class="glass-input">
+                                <option value="">Todos</option>
+                                <option value="APTO">Apto</option>
+                                <option value="BLOQUEADO">Bloqueado</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="diaria-summary-card">
-                        <span>Valor por dia</span>
-                        <strong id="diariaValorDia">R$ 0,00</strong>
+                    <div class="diaria-actions-card">
+                        <span>Acoes</span>
+                        <div class="diaria-actions-buttons">
+                            <button type="button" id="btnCalcularDiaria" class="pdf-expedicao-btn secondary">
+                                <i class="fas fa-calculator"></i> Calcular
+                            </button>
+                            <button type="button" id="btnSalvarDiaria" class="pdf-expedicao-btn primary">
+                                <i class="fas fa-save"></i> Salvar
+                            </button>
+                            <button type="button" id="btnXLSXDiaria" class="pdf-expedicao-btn excel">
+                                <i class="fas fa-file-excel"></i> XLSX
+                            </button>
+                            <button type="button" id="btnPDFDiaria" class="pdf-expedicao-btn primary">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </div>
                     </div>
-                    <div class="diaria-summary-card">
-                        <span>Desconto prox. semana</span>
-                        <strong id="diariaTotalDesconto">R$ 0,00</strong>
-                    </div>
-                    <div class="diaria-summary-card">
-                        <span>Total a pagar</span>
-                        <strong id="diariaTotalPagar">R$ 0,00</strong>
-                    </div>
-                    <div class="form-group">
-                        <label for="diariaFiltroStatus">Status</label>
-                        <select id="diariaFiltroStatus" class="glass-input">
-                            <option value="">Todos</option>
-                            <option value="APTO">Apto</option>
-                            <option value="BLOQUEADO">Bloqueado</option>
-                        </select>
-                    </div>
-                    <button type="button" id="btnCalcularDiaria" class="pdf-expedicao-btn secondary">
-                        <i class="fas fa-calculator"></i> Calcular
-                    </button>
-                    <button type="button" id="btnSalvarDiaria" class="pdf-expedicao-btn primary">
-                        <i class="fas fa-save"></i> Salvar
-                    </button>
                 </div>
                 <div class="diaria-meta" id="diariaContexto"></div>
                 <div class="terceiro-table-wrap diaria-table-wrap">
@@ -3204,6 +3217,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <thead>
                             <tr>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nome">FUNCIONARIO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nomeCompleto">NOME COMPLETO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="cpf">CPF <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="diasDesconto">DIAS DESC. <i class="fas fa-sort"></i></button></th>
@@ -3223,6 +3238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.closest('#btnFecharDiaria')) modal.classList.add('hidden');
             if (e.target.closest('#btnCalcularDiaria')) carregarDiariaModal();
             if (e.target.closest('#btnSalvarDiaria')) salvarDiariaSemana();
+            if (e.target.closest('#btnXLSXDiaria')) gerarXLSXDiaria();
+            if (e.target.closest('#btnPDFDiaria')) gerarPDFDiaria();
 
             const sortButton = e.target.closest('[data-diaria-sort]');
             if (sortButton) {
@@ -3323,17 +3340,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatDataISOBR(dataISO) {
+        const value = String(dataISO || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+        const [year, month, day] = value.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
     function renderDiariaTabela() {
         const tbody = document.getElementById('tbodyDiaria');
         if (!tbody) return;
 
-        const filtroStatus = document.getElementById('diariaFiltroStatus')?.value || '';
-        const dadosFiltrados = diariaDadosAtual.filter(item => {
-            if (!filtroStatus) return true;
-            return filtroStatus === 'APTO' ? item.recebe : !item.recebe;
-        });
-
-        const dadosOrdenados = ordenarDiariaDados(dadosFiltrados);
+        const dadosOrdenados = getDiariaDadosExportacao();
 
         document.querySelectorAll('#modalDiaria [data-diaria-sort] i').forEach(icon => {
             const button = icon.closest('[data-diaria-sort]');
@@ -3344,16 +3362,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (dadosOrdenados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum funcionario encontrado para o filtro.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para o filtro.</td></tr>';
             atualizarResumoDiaria();
             return;
         }
 
         tbody.innerHTML = dadosOrdenados.map(item => `
-            <tr data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}" data-dias-desconto="${item.diasDesconto}" data-desconto-anterior="${item.descontoAnterior}" data-valor-pagar="${item.valorPagar}" data-valor-desconto="${item.valorDesconto}" data-recebe="${item.recebe ? 'true' : 'false'}">
+            <tr data-nome="${escapeAttribute(item.nome)}" data-nome-completo="${escapeAttribute(item.nomeCompleto)}" data-cpf="${escapeAttribute(item.cpf)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}" data-dias-desconto="${item.diasDesconto}" data-desconto-anterior="${item.descontoAnterior}" data-valor-pagar="${item.valorPagar}" data-valor-desconto="${item.valorDesconto}" data-recebe="${item.recebe ? 'true' : 'false'}">
                 <td>${escapeAttribute(item.nome)}</td>
+                <td>${escapeAttribute(item.nomeCompleto)}</td>
+                <td>${escapeAttribute(item.cpf)}</td>
                 <td>${escapeAttribute(item.funcao)}</td>
-                <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}">${escapeAttribute(item.status)}</span></td>
+                <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
                 <td>${item.diasDesconto}</td>
                 <td>${formatMoedaBR(item.descontoAnterior)}</td>
                 <td>${formatMoedaBR(item.valorPagar)}</td>
@@ -3364,12 +3384,218 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarResumoDiaria();
     }
 
+    function getDiariaDadosExportacao() {
+        const filtroStatus = document.getElementById('diariaFiltroStatus')?.value || '';
+        const dadosFiltrados = diariaDadosAtual.filter(item => {
+            if (!filtroStatus) return true;
+            return filtroStatus === 'APTO' ? item.recebe : !item.recebe;
+        });
+        return ordenarDiariaDados(dadosFiltrados);
+    }
+
+    function getDiariaResumoExportacao(dados) {
+        const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+        return {
+            valorSemana,
+            valorDia: valorSemana / 5,
+            totalDesconto: dados.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0),
+            totalPagar: dados.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0),
+            totalAptos: dados.filter(item => item.recebe).length,
+            totalBloqueados: dados.filter(item => !item.recebe).length
+        };
+    }
+
+    function getDiariaNomeArquivo(ext) {
+        const semana = selectSemana.value || 'SEMANA';
+        const filial = getFilialEscala() || 'FILIAL';
+        const nome = `Diaria_${semana}_${filial}`.replace(/[^a-z0-9_-]+/gi, '_').replace(/_+/g, '_');
+        return `${nome}.${ext}`;
+    }
+
+    function gerarXLSXDiaria() {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX nao carregada.');
+        const dados = getDiariaDadosExportacao();
+        if (dados.length === 0) return alert('Nenhum dado para gerar XLSX.');
+
+        const resumo = getDiariaResumoExportacao(dados);
+        const semana = selectSemana.value || '';
+        const filial = getFilialEscala() || '';
+        const headers = ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA'];
+        const wsData = [
+            [`DIARIA - ${semana} - ${filial}`],
+            [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto prox. semana: ${formatMoedaBR(resumo.totalDesconto)}`, `Aptos: ${resumo.totalAptos}`, `Bloqueados: ${resumo.totalBloqueados}`],
+            [],
+            headers,
+            ...dados.map(item => [
+                item.nome,
+                item.nomeCompleto,
+                item.cpf,
+                item.funcao,
+                item.status,
+                item.descricaoStatus,
+                Number(item.diasDesconto || 0),
+                Number(item.descontoAnterior || 0),
+                Number(item.valorPagar || 0),
+                Number(item.valorDesconto || 0)
+            ])
+        ];
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+        ws['!cols'] = [
+            { wch: 34 },
+            { wch: 42 },
+            { wch: 16 },
+            { wch: 20 },
+            { wch: 16 },
+            { wch: 36 },
+            { wch: 12 },
+            { wch: 16 },
+            { wch: 16 },
+            { wch: 18 }
+        ];
+        ws['!autofilter'] = { ref: `A4:J${wsData.length}` };
+
+        const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
+        const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
+        const moneyStyle = { numFmt: 'R$ #,##0.00', alignment: { horizontal: 'right' } };
+        if (ws.A1) ws.A1.s = titleStyle;
+        headers.forEach((_, index) => {
+            const cell = ws[XLSX.utils.encode_cell({ r: 3, c: index })];
+            if (cell) cell.s = headerStyle;
+        });
+        for (let row = 4; row < wsData.length; row++) {
+            [7, 8, 9].forEach(col => {
+                const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
+                if (cell) cell.s = moneyStyle;
+            });
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Diaria');
+        XLSX.writeFile(wb, getDiariaNomeArquivo('xlsx'));
+    }
+
+    async function gerarPDFDiaria() {
+        if (!window.jspdf) return alert('Biblioteca PDF nao carregada.');
+        const dados = getDiariaDadosExportacao();
+        if (dados.length === 0) return alert('Nenhum dado para gerar PDF.');
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const resumo = getDiariaResumoExportacao(dados);
+        const semana = selectSemana.value || '';
+        const filial = getFilialEscala() || '';
+
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64data = await new Promise(resolve => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(8, 6, 46, 16, 1.5, 1.5, 'F');
+                doc.addImage(base64data, 'PNG', 11, 9, 40, 10);
+            }
+        } catch (error) {
+            console.warn('Logo nao carregado', error);
+        }
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 105, 55);
+        doc.text(`DIARIA - ${semana}`, pageWidth / 2, 15, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text(`Filial: ${filial}`, pageWidth / 2, 21, { align: 'center' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 10, 10, { align: 'right' });
+
+        doc.autoTable({
+            startY: 28,
+            margin: { left: 8, right: 8 },
+            theme: 'grid',
+            head: [['VALOR SEMANAL', 'VALOR POR DIA', 'TOTAL A PAGAR', 'DESC. PROX. SEMANA', 'APTOS', 'BLOQUEADOS']],
+            body: [[
+                formatMoedaBR(resumo.valorSemana),
+                formatMoedaBR(resumo.valorDia),
+                formatMoedaBR(resumo.totalPagar),
+                formatMoedaBR(resumo.totalDesconto),
+                String(resumo.totalAptos),
+                String(resumo.totalBloqueados)
+            ]],
+            styles: { fontSize: 9, cellPadding: 2, halign: 'center' },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            bodyStyles: { fillColor: [247, 251, 248] }
+        });
+
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 5,
+            margin: { left: 8, right: 8 },
+            theme: 'grid',
+            head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA']],
+            body: dados.map(item => [
+                item.nome,
+                item.nomeCompleto,
+                item.cpf,
+                item.funcao,
+                item.status,
+                item.descricaoStatus,
+                String(item.diasDesconto || 0),
+                formatMoedaBR(item.descontoAnterior),
+                formatMoedaBR(item.valorPagar),
+                formatMoedaBR(item.valorDesconto)
+            ]),
+            styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            alternateRowStyles: { fillColor: [242, 247, 244] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 42 },
+                2: { cellWidth: 22, halign: 'center' },
+                3: { cellWidth: 22 },
+                4: { cellWidth: 20, halign: 'center' },
+                5: { cellWidth: 35 },
+                6: { cellWidth: 16, halign: 'center' },
+                7: { cellWidth: 26, halign: 'right' },
+                8: { cellWidth: 26, halign: 'right' },
+                9: { cellWidth: 30, halign: 'right' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 4) {
+                    const status = String(data.cell.raw || '');
+                    if (normalizeString(status) === 'APTO') {
+                        data.cell.styles.textColor = [0, 105, 55];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else {
+                        data.cell.styles.textColor = [167, 29, 42];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(120);
+            doc.text(`Pagina ${i} de ${pageCount}`, pageWidth - 10, doc.internal.pageSize.getHeight() - 6, { align: 'right' });
+        }
+
+        doc.save(getDiariaNomeArquivo('pdf'));
+    }
+
     async function carregarDiariaModal() {
         const semana = selectSemana.value;
         const tbody = document.getElementById('tbodyDiaria');
         if (!semana || !tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
 
         try {
             const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
@@ -3379,7 +3605,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [resFuncionarios, resFaltas] = await Promise.all([
                 supabaseClient
                     .from('funcionario')
-                    .select('nome, nome_completo, funcao, status')
+                    .select('nome, nome_completo, cpf, funcao, status')
                     .order('nome'),
                 supabaseClient
                     .from('faltas_afastamentos')
@@ -3427,6 +3653,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .map(f => ({
                     nome: getNomeDiaria(f.nome || f.nome_completo),
+                    nomeCompleto: cleanImportValue(f.nome_completo),
+                    cpf: cleanImportValue(f.cpf),
                     funcao: cleanImportValue(f.funcao)
                 }))
                 .filter(f => f.nome)
@@ -3434,7 +3662,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (funcionarios.length === 0) {
                 diariaDadosAtual = [];
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario ativo encontrado para a filial.</td></tr>';
                 atualizarResumoDiaria();
                 return;
             }
@@ -3446,11 +3674,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const descontoAnterior = descontosAnteriores.get(normalizeString(func.nome)) || 0;
                 const recebe = diasDesconto === 0;
                 const status = recebe ? 'APTO' : [...ausencia.motivos].join(', ');
+                const datasFalta = ausencia ? [...ausencia.dias].sort().map(formatDataISOBR) : [];
+                const descricaoStatus = datasFalta.length > 0 ? `Falta em: ${datasFalta.join(', ')}` : '';
                 const valorPagar = recebe ? Math.max(valorSemana - descontoAnterior, 0) : 0;
                 return {
                     nome: func.nome,
+                    nomeCompleto: func.nomeCompleto,
+                    cpf: func.cpf,
                     funcao: func.funcao,
                     status,
+                    descricaoStatus,
+                    datasFalta,
                     diasDesconto,
                     descontoAnterior,
                     valorPagar,
@@ -3462,7 +3696,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderDiariaTabela();
         } catch (error) {
             console.error('Erro ao carregar diaria:', error);
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
         }
     }
 
