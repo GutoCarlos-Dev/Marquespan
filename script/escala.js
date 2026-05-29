@@ -2059,10 +2059,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
-        if (!dataISO) {
-            e.target.value = '';
-            return alert('Nao foi possivel identificar a data do dia aberto.');
+        let dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+        if (!dataISO && isSemanaModeloPlanejamento(semana)) {
+            await carregarDatasSemanaModeloBanco();
+            dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
         }
 
         const reader = new FileReader();
@@ -2085,12 +2085,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressText.textContent = 'Processando: 45%';
                 progressDetails.textContent = 'Localizando a data do dia aberto...';
 
-                const candidatos = workbook.SheetNames
+                const abasParseadas = workbook.SheetNames
                     .map(sheetName => {
                         const parsed = parseRoteiroSheet(workbook, sheetName, semana);
-                        return parsed ? { sheetName, parsed } : null;
+                        const diaAba = getDiaFromSheetName(sheetName);
+                        return parsed ? { sheetName, dia: diaAba, parsed } : null;
                     })
-                    .filter(item => item && item.parsed.dataISO === dataISO);
+                    .filter(Boolean);
+
+                if (isSemanaModeloPlanejamento(semana)) {
+                    const datasModelo = {};
+                    abasParseadas.forEach(item => {
+                        const dataObj = dateFromISO(item.parsed.dataISO);
+                        if (item.dia && dataObj) datasModelo[item.dia] = dataObj;
+                    });
+                    salvarDatasSemanaModelo(datasModelo);
+                    const abaDoDia = abasParseadas.find(item => item.dia === dia && item.parsed.dataISO);
+                    dataISO = abaDoDia?.parsed.dataISO || CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+                }
+
+                if (!dataISO) {
+                    throw new Error('Nao foi possivel identificar a data do dia aberto.');
+                }
+
+                const candidatos = abasParseadas
+                    .filter(item => item.parsed.dataISO === dataISO);
 
                 if (candidatos.length === 0) {
                     throw new Error(`Nenhuma aba da planilha possui a data ${dataISO} em G4.`);
