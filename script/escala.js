@@ -1187,13 +1187,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const count = document.querySelectorAll('.selected-cell').length;
                 const text = count > 1 ? `Pintar ${count} Células...` : 'Pintar Célula...';
 
+                const key = input.dataset.key;
                 let menuHTML = `
                     <div class="context-menu-item" onclick="triggerCellColorPicker()"><i class="fas fa-fill-drip" style="margin-right: 8px; color: #e83e8c;"></i>${text}</div>
                     <div class="context-menu-item" onclick="resetCellColor()"><i class="fas fa-eraser" style="margin-right: 8px; color: #dc3545;"></i>Limpar Cor Célula</div>
                 `;
 
+                // Opção específica para preencher Peso de Rota ao clicar na coluna ROTA
+                if (key === 'rota' && input.value.trim() !== '') {
+                    const rota = input.value.trim();
+                    const placa = tr.querySelector('input[data-key="placa"]')?.value || '';
+                    const modelo = tr.querySelector('input[data-key="modelo"]')?.value || '';
+                    const motorista = tr.querySelector('input[data-key="motorista"]')?.value || '';
+                    const auxiliar = tr.querySelector('input[data-key="auxiliar"]')?.value || '';
+
+                    menuHTML += `<div class="context-menu-item-separator" style="border-bottom:1px solid #eee; margin: 4px 0;"></div>`;
+                    menuHTML += `<div class="context-menu-item" data-action="preencherPesoRota" data-rota="${rota}" data-placa="${placa}" data-modelo="${modelo}" data-motorista="${motorista}" data-auxiliar="${auxiliar}">
+                        <i class="fas fa-weight-hanging" style="margin-right: 8px; color: #ffc107;"></i>Preencher Peso de Rota (${rota})
+                    </div>`;
+                }
+
                 // Adiciona opção de Boleta se aplicável
-                const key = input.dataset.key;
                 if (NOTE_FIELDS.includes(key)) {
                     const note = getCellNote(tr.dataset.tabela, tr.dataset.id, key);
                     menuHTML += `<div class="context-menu-item-separator" style="border-bottom:1px solid #eee; margin: 4px 0;"></div>`;
@@ -1226,6 +1240,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(itemMenu) {
                     itemMenu.addEventListener('click', () => {
                         abrirModalBoletaComDados(itemMenu.dataset.nome, itemMenu.dataset.placa, itemMenu.dataset.rota, itemMenu.dataset.modelo);
+                        contextMenu.style.display = 'none';
+                    });
+                }
+
+                const itemPesoRota = contextMenu.querySelector('[data-action="preencherPesoRota"]');
+                if(itemPesoRota) {
+                    itemPesoRota.addEventListener('click', () => {
+                        abrirModalPesoRotaComDados(itemPesoRota.dataset.rota, itemPesoRota.dataset.placa, itemPesoRota.dataset.modelo, itemPesoRota.dataset.motorista, itemPesoRota.dataset.auxiliar);
                         contextMenu.style.display = 'none';
                     });
                 }
@@ -7277,7 +7299,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculoPesoTransferir = document.getElementById('calculoPesoTransferir');
     const calculoPesoAnularTransferencia = document.getElementById('calculoPesoAnularTransferencia');
     const btnTransferirCarga = document.getElementById('btnTransferirCarga');
+    // Novos campos solicitados para o modal de Peso/Cálculo
+    const calculoPesoMotorista = document.getElementById('calculoPesoMotorista');
+    const calculoPesoAuxiliar = document.getElementById('calculoPesoAuxiliar');
+    const calculoPesoQtdClientes = document.getElementById('calculoPesoQtdClientes');
     const btnCalcularPeso = document.getElementById('btnCalcularPeso');
+    const btnSalvarPesoRota = document.getElementById('btnSalvarPesoRota');
 
     if (btnCalculoPeso) {
         btnCalculoPeso.addEventListener('click', () => {
@@ -7290,6 +7317,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             carregarVeiculosCalculoPeso();
         });
+    }
+
+    async function abrirModalPesoRotaComDados(rota, placa, modelo, motorista, auxiliar) {
+        if (!modalCalculoPeso) return;
+        
+        modalCalculoPeso.classList.remove('hidden');
+        modalCalculoPeso.style.display = 'flex';
+        
+        // Preenche os campos do modal com os dados vindos da linha da escala
+        if (calculoPesoRotaOrigem) calculoPesoRotaOrigem.value = rota;
+        if (calculoPesoPlaca) calculoPesoPlaca.value = placa;
+        if (calculoPesoModelo) calculoPesoModelo.value = modelo;
+        if (calculoPesoMotorista) calculoPesoMotorista.value = motorista;
+        if (calculoPesoAuxiliar) calculoPesoAuxiliar.value = auxiliar;
+        if (calculoPesoQtdClientes) calculoPesoQtdClientes.value = ''; // Campo manual
+
+        // Aciona a busca automática de dados do veículo (capacidade, tipo, etc)
+        if (placa) await preencherDadosVeiculoCalculoPeso();
     }
 
     if (btnCloseModalCalculoPeso) {
@@ -7403,6 +7448,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function realizarCalculoPeso() {
         const cap = parseFloat(calculoPesoCapacidade.value) || 0;
         const total = parseFloat(calculoPesoCargaTotal.value) || 0;
+        
+        // Cálculo de total de caixas (1 caixa = 21kg)
+        const totalCaixas = Math.ceil(total / 21);
+        const inputTotalCaixas = document.getElementById('calculoPesoTotalCaixas');
+        if (inputTotalCaixas) inputTotalCaixas.value = totalCaixas;
+
         const excedente = Math.max(0, total - cap);
         
         calculoPesoTransferir.value = excedente.toFixed(2);
@@ -7500,6 +7551,60 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Fecha modal
             modalCalculoPeso.classList.add('hidden');
+        });
+    }
+
+    // Botão Salvar em Peso de Rota (Sincronização entre páginas via Database)
+    if (btnSalvarPesoRota) {
+        btnSalvarPesoRota.addEventListener('click', async () => {
+            const rota = (calculoPesoRotaOrigem?.value || '').trim();
+            const placa = (calculoPesoPlaca?.value || '').trim();
+            const diaSemana = document.querySelector('.tab-btn.active')?.dataset.dia;
+            const semanaNome = selectSemana.value;
+
+            if (!rota || !placa) {
+                return alert('Por favor, identifique a Rota e a Placa antes de salvar.');
+            }
+
+            if (!confirm(`Deseja salvar os dados da rota ${rota} na página de Peso de Rota?`)) return;
+
+            try {
+                // Obtém a data real do dia selecionado para sincronizar com o campo dia_retorno
+                const dataObj = getDataSemanaDia(semanaNome, diaSemana);
+                const diaRetorno = dataObj ? dataObj.toISOString().split('T')[0] : null;
+
+                const payload = {
+                    rota: rota,
+                    semana: diaSemana,
+                    semana_ano: semanaNome,
+                    motorista: (calculoPesoMotorista.value || '').trim().toUpperCase(),
+                    auxiliar: (calculoPesoAuxiliar.value || '').trim().toUpperCase(),
+                    placa: placa,
+                    tipo_veiculo: (calculoPesoModelo.value || '').trim().toUpperCase(),
+                    pbt: parseFloat(calculoPesoCapacidade.value) || 0,
+                    peso_carga: parseFloat(calculoPesoCargaTotal.value) || 0,
+                    qtd_caixas: parseInt(document.getElementById('calculoPesoTotalCaixas').value) || 0,
+                    qtd_clientes: parseInt(calculoPesoQtdClientes.value) || 0,
+                    dia_retorno: diaRetorno, // Campo crucial para aparecer na lista de Peso de Rota
+                    status_percentual: 0,
+                    updated_at: new Date().toISOString()
+                };
+
+                // Cálculo do status percentual
+                if (payload.pbt > 0) {
+                    payload.status_percentual = Number(((payload.peso_carga / payload.pbt) * 100).toFixed(2));
+                }
+
+                // Ajuste no conflito: a chave da tabela peso_rota é baseada na data e na rota
+                const { error } = await supabaseClient.from('peso_rota').upsert([payload], { onConflict: 'dia_retorno,rota' });
+                if (error) throw error;
+
+                alert('Dados sincronizados com sucesso para Peso de Rota!');
+                modalCalculoPeso.classList.add('hidden');
+            } catch (err) {
+                console.error('Erro ao salvar:', err);
+                alert('Falha ao salvar dados: ' + err.message);
+            }
         });
     }
 

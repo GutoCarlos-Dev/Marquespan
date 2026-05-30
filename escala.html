@@ -412,6 +412,16 @@
                         <input type="text" id="calculoPesoTipo" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
                     </div>
                 </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label for="calculoPesoMotorista" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">MOTORISTA</label>
+                        <input type="text" id="calculoPesoMotorista" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
+                    </div>
+                    <div>
+                        <label for="calculoPesoAuxiliar" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">AUXILIAR</label>
+                        <input type="text" id="calculoPesoAuxiliar" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
+                    </div>
+                </div>
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="calculoPesoCapacidade" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">CAPACIDADE DE CARGA (PBT)</label>
                     <input type="number" id="calculoPesoCapacidade" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
@@ -419,6 +429,16 @@
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="calculoPesoCargaTotal" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">PESO TOTAL DA CARGA (KG)</label>
                     <input type="number" id="calculoPesoCargaTotal" class="form-control" placeholder="Informe o peso total" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label for="calculoPesoQtdClientes" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">QTD CLIENTES</label>
+                        <input type="number" id="calculoPesoQtdClientes" class="form-control" placeholder="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="calculoPesoTotalCaixas" style="display: block; margin-bottom: 6px; font-weight: 600; color: #444; font-size: 0.85rem;">QTD TOTAL CAIXAS</label>
+                        <input type="number" id="calculoPesoTotalCaixas" class="form-control" readonly style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;">
+                    </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 20px; background: #fff5f5; padding: 15px; border-radius: 12px; border: 1px solid #ffe3e3;">
                     <label for="calculoPesoTransferir" style="display: block; margin-bottom: 6px; font-weight: bold; color: #c92a2a;">PESO A TRANSFERIR (KG)</label>
@@ -444,6 +464,7 @@
                 </div>
                 <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 15px; margin-top: 10px;">
                     <button id="btnCalcularPeso" class="btn-custom" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 12px 25px; border-radius: 8px; border: none; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.3s;"><i class="fa-solid fa-calculator"></i> Calcular</button>
+                    <button id="btnSalvarPesoRota" class="btn-custom" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 12px 25px; border-radius: 8px; border: none; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);"><i class="fa-solid fa-save"></i> Salvar p/ Peso Rota</button>
                     <button id="btnTransferirCarga" class="btn-custom" style="background: linear-gradient(135deg, #fd7e14 0%, #f76707 100%); color: white; padding: 12px 25px; border-radius: 8px; border: none; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(253, 126, 20, 0.3);"><i class="fa-solid fa-truck-ramp-box"></i> Transferir Carga</button>
                 </div>
             </div>
