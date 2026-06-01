@@ -86,7 +86,7 @@ function montarValorCelulaExcel(row) {
     if (colunaItem === 'ELETRICA / MECANICA - INTERNA') {
         cellValue = `SOLICITA\u00c7\u00c3O: ${detalhes}`;
         if (status === 'FINALIZADO' || status === 'OK') {
-            cellValue += ', SOLICITA\u00c7\u00c3O REALIZADA.';
+            cellValue += ', SOLICITA\u00c7\u00c3O REALIZADA:';
         }
         if (pecasUsadas) {
             cellValue += ` ${pecasUsadas}`;
