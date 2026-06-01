@@ -84,6 +84,7 @@ export function renderizarTabelaRelatorio({ tbody, reportData, sortConfig, nivel
         tr.innerHTML = `
             <td>${escapeHtml(new Date(coleta.data_hora).toLocaleString('pt-BR'))}</td>
             <td>${escapeHtml(coleta.semana)}</td>
+            <td>${escapeHtml(coleta.usuario || '-')}</td>
             <td>${escapeHtml(coleta.placa)}</td>
             <td>${escapeHtml(coleta.modelo || '-')}</td>
             <td>${escapeHtml(item.item)}</td>
