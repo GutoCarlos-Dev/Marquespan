@@ -4,7 +4,7 @@
 -- - administrador e gerencia podem gerenciar todas as filiais;
 -- - balanca, equipe_noturno, adm_logistica e logistica podem editar a propria filial;
 -- - outros niveis com acesso a pagina leem apenas a propria filial;
--- - escrita fica restrita a administrador e gerencia.
+-- - escrita fica restrita aos niveis de gerenciamento definidos abaixo.
 
 create or replace function public.usuario_pode_acessar_pagina(p_pagina text)
 returns boolean
@@ -102,6 +102,9 @@ create index if not exists idx_peso_rota_filial_dia_rota
 
 alter table public.peso_rota
   drop constraint if exists peso_rota_dia_rota_unique;
+
+alter table public.peso_rota
+  drop constraint if exists peso_rota_dia_rota_filial_unique;
 
 alter table public.peso_rota
   add constraint peso_rota_dia_rota_filial_unique unique (dia_retorno, rota, filial);

@@ -57,6 +57,7 @@ const COLUNAS_COLAGEM = {
 };
 
 const CAMPO_CAPACIDADE_GRID = 'pbt';
+const PESO_ROTA_ON_CONFLICT = 'dia_retorno,rota,filial';
 
 let gridData = [];
 let rotasBase = [];
@@ -284,6 +285,10 @@ function getFilialSelecionada() {
     return normalizarTexto(document.getElementById('filtroFilial')?.value);
 }
 
+function getFilialRegistro(row = {}) {
+    return normalizarTexto(row.filial || getFilialSelecionada());
+}
+
 async function carregarFiliaisFiltro() {
     const select = document.getElementById('filtroFilial');
     if (!select) return;
@@ -470,7 +475,7 @@ function escapeHtml(value) {
 
 function getChaveLinha(row) {
     const data = row.dia_retorno || getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row.semana);
-    return `${data}|${String(row.rota || '').trim()}`;
+    return `${data}|${String(row.rota || '').trim()}|${getFilialRegistro(row)}`;
 }
 
 function somarDiasIso(dataIso, dias) {
@@ -521,14 +526,20 @@ async function carregarDados() {
             rotasQuery = rotasQuery.eq('filial', filial);
         }
 
-        const [rotasResult, pesosResult] = await Promise.all([
-            rotasQuery,
-            supabaseClient
+        let pesosQuery = supabaseClient
                 .from('peso_rota')
                 .select('*')
                 .gte('dia_retorno', periodo.inicio)
                 .lte('dia_retorno', periodo.fim)
-                .order('rota', { ascending: true })
+                .order('rota', { ascending: true });
+
+        if (filial) {
+            pesosQuery = pesosQuery.eq('filial', filial);
+        }
+
+        const [rotasResult, pesosResult] = await Promise.all([
+            rotasQuery,
+            pesosQuery
         ]);
 
         if (rotasResult.error) throw rotasResult.error;
@@ -549,13 +560,13 @@ async function carregarDados() {
 
 function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true) {
     const pesosPorRota = criarMapaPesosPorRota(pesos);
-    const rotasPorNumero = new Map((rotas || []).map(rota => [normalizarRota(rota.numero), rota]));
+    const rotasPorNumero = new Map((rotas || []).map(rota => [getChaveRotaFilial(rota.numero, rota.filial), rota]));
     const linhas = [];
     const rotasIncluidas = new Set();
 
     (rotas || []).forEach(rota => {
         const numeroRota = String(rota.numero || '').trim();
-        const chaveRota = normalizarRota(numeroRota);
+        const chaveRota = getChaveRotaFilial(numeroRota, rota.filial);
         if (!chaveRota || rotasIncluidas.has(chaveRota)) return;
 
         const semana = normalizarSemana(rota.semana);
@@ -567,6 +578,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
         linhas.push(criarLinha({
             ...salvo,
             rota: numeroRota,
+            filial: rota.filial || salvo?.filial || getFilialSelecionada(),
             semana,
             dias_rota: rota.dias,
             supervisor: salvo?.supervisor || rota.supervisor || '',
@@ -579,7 +591,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
 
     if (incluirPesosSemCadastro) {
         (pesos || []).forEach(item => {
-            const chaveRota = normalizarRota(item.rota);
+            const chaveRota = getChaveRotaFilial(item.rota, item.filial);
             if (chaveRota && !rotasIncluidas.has(chaveRota)) {
                 const rotaBase = rotasPorNumero.get(chaveRota);
                 linhas.push(criarLinha({
@@ -599,7 +611,7 @@ function criarMapaPesosPorRota(pesos) {
     const mapa = new Map();
 
     (pesos || []).forEach(item => {
-        const chaveRota = normalizarRota(item.rota);
+        const chaveRota = getChaveRotaFilial(item.rota, item.filial);
         if (!chaveRota) return;
 
         const atual = mapa.get(chaveRota);
@@ -609,6 +621,12 @@ function criarMapaPesosPorRota(pesos) {
     });
 
     return mapa;
+}
+
+function getChaveRotaFilial(rota, filial) {
+    const chaveRota = normalizarRota(rota);
+    if (!chaveRota) return '';
+    return `${chaveRota}|${normalizarTexto(filial || getFilialSelecionada())}`;
 }
 
 function deveSubstituirPesoSalvo(atual, candidato) {
@@ -1145,11 +1163,17 @@ async function salvarTudo() {
             return;
         }
 
+        const semFilial = payload.filter(item => !item.filial).map(item => item.rota).filter(Boolean);
+        if (semFilial.length > 0) {
+            alert(`Selecione uma filial antes de salvar estas rotas: ${semFilial.slice(0, 8).join(', ')}${semFilial.length > 8 ? '...' : ''}`);
+            return;
+        }
+
         await removerDuplicadosDaSemana(payload);
         marcarLinhas('saving');
         let { data, error } = await supabaseClient
             .from('peso_rota')
-            .upsert(payload, { onConflict: 'dia_retorno,rota' })
+            .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
             .select();
 
         if (error && isErroColunaOpcional(error)) {
@@ -1157,7 +1181,7 @@ async function salvarTudo() {
             payload = payload.map(({ semana_ano, dia_semana_retorno, ...item }) => item);
             const retry = await supabaseClient
                 .from('peso_rota')
-                .upsert(payload, { onConflict: 'dia_retorno,rota' })
+                .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
                 .select();
 
             data = retry.data;
@@ -1184,7 +1208,7 @@ async function salvarTudo() {
 
 function deduplicarPayloadPorRota(payload) {
     return Array.from((payload || []).reduce((mapa, item) => {
-        const chaveRota = normalizarRota(item.rota);
+        const chaveRota = getChaveRotaFilial(item.rota, item.filial);
         if (chaveRota) mapa.set(chaveRota, item);
         return mapa;
     }, new Map()).values());
@@ -1196,17 +1220,20 @@ async function removerDuplicadosDaSemana(payload) {
     const operacoes = [];
 
     for (const item of payload || []) {
-        const chaveRota = normalizarRota(item.rota);
+        const chaveRota = getChaveRotaFilial(item.rota, item.filial);
         if (!chaveRota || !item.dia_retorno || rotasProcessadas.has(chaveRota)) continue;
         rotasProcessadas.add(chaveRota);
 
-        operacoes.push(() => supabaseClient
+        let query = supabaseClient
                 .from('peso_rota')
                 .delete()
                 .gte('dia_retorno', periodo.inicio)
                 .lte('dia_retorno', periodo.fim)
                 .eq('rota', item.rota)
-                .neq('dia_retorno', item.dia_retorno));
+                .neq('dia_retorno', item.dia_retorno);
+
+        query = item.filial ? query.eq('filial', item.filial) : query.is('filial', null);
+        operacoes.push(() => query);
     }
 
     const tamanhoLote = 10;
@@ -1292,6 +1319,7 @@ function prepararPayload(row) {
     const status = getStatus(row);
     const payload = {
         rota: normalizarTexto(row.rota),
+        filial: getFilialRegistro(row) || null,
         semana: normalizarSemana(row.semana) || null,
         semana_ano: getSemanaAnoDaData(row.dia_retorno),
         dia_semana_retorno: normalizarSemana(row.dia_semana_retorno || row.semana || getDiaSemanaPorData(row.dia_retorno)) || null,
@@ -1315,9 +1343,9 @@ function prepararPayload(row) {
 }
 
 function atualizarIdsSalvos(data) {
-    const idsPorChave = new Map((data || []).map(item => [`${item.dia_retorno}|${item.rota}`, item.id]));
+    const idsPorChave = new Map((data || []).map(item => [`${item.dia_retorno}|${item.rota}|${getFilialRegistro(item)}`, item.id]));
     gridData.forEach(row => {
-        const id = idsPorChave.get(`${row.dia_retorno}|${row.rota}`);
+        const id = idsPorChave.get(`${row.dia_retorno}|${row.rota}|${getFilialRegistro(row)}`);
         if (id) row.id = id;
     });
 }
