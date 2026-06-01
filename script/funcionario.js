@@ -1,11 +1,34 @@
 import { supabaseClient } from './supabase.js';
 
+const FUNCIONARIO_PAGE_ID = 'funcionario.html';
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function statusClass(status) {
+    return String(status || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_-]/g, '-');
+}
+
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
     listData: [], // Armazena os dados atuais da grid para exportação
-    init() {
+    usuarioAtual: null,
+    async init() {
         this.cache();
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
         this.bind();
         this.renderGrid();
     },
@@ -92,6 +115,46 @@ const FuncionarioUI = {
             const column = th.dataset.sort;
             th.addEventListener('click', () => this.handleSort(column));
         });
+
+        if (this.tableBody) {
+            this.tableBody.addEventListener('click', (event) => {
+                const editButton = event.target.closest('.btn-edit');
+                const deleteButton = event.target.closest('.btn-delete');
+
+                if (editButton?.dataset.id) this.loadForEditing(editButton.dataset.id);
+                if (deleteButton?.dataset.id) this.deleteFuncionario(deleteButton.dataset.id);
+            });
+        }
+    },
+
+    async verificarPermissaoPagina() {
+        this.usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivel = this.usuarioAtual?.nivel?.toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') return true;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+
+            if (error) throw error;
+
+            const paginasPermitidas = data?.paginas_permitidas || [];
+            if (paginasPermitidas.includes(FUNCIONARIO_PAGE_ID)) return true;
+        } catch (error) {
+            console.error('Erro ao validar permissao da pagina de funcionarios:', error);
+        }
+
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+        return false;
     },
 
     updateStatusFilterText() {
@@ -191,7 +254,9 @@ const FuncionarioUI = {
         const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
 
         try {
-            let query = supabaseClient.from('funcionario').select('*');
+            let query = supabaseClient
+                .from('funcionario')
+                .select('id, rh_registro, nome, nome_completo, data_nascimento, funcao, data_admissao, contato_corp, status, data_desligamento, funcao_anterior, data_alteracao_funcao');
             
             if (selectedStatuses.length > 0) {
                 query = query.in('status', selectedStatuses);
@@ -200,7 +265,7 @@ const FuncionarioUI = {
             }
 
             if (searchTerm) {
-                query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
+                query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`);
             }
             
             // Aplica a ordenação configurada
@@ -244,16 +309,16 @@ const FuncionarioUI = {
             
             this.tableBody.innerHTML = list.map(f => `
                 <tr>
-                    <td><strong>${f.rh_registro}</strong></td>
-                    <td title="${f.nome_completo || ''}">${f.nome}</td>
+                    <td><strong>${escapeHtml(f.rh_registro)}</strong></td>
+                    <td title="${escapeHtml(f.nome_completo || '')}">${escapeHtml(f.nome)}</td>
                     <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                    <td>${f.funcao}</td>
+                    <td>${escapeHtml(f.funcao)}</td>
                     <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                    <td>${f.contato_corp || f.contato_pessoal || '-'}</td>
-                    <td><span class="status-badge status-${f.status.toLowerCase()}">${f.status}</span></td>
+                    <td>${escapeHtml(f.contato_corp || '-')}</td>
+                    <td><span class="status-badge status-${statusClass(f.status)}">${escapeHtml(f.status)}</span></td>
                     <td>
-                        <button class="btn-icon edit" onclick="window.FuncionarioUI.loadForEditing('${f.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon delete" onclick="window.FuncionarioUI.deleteFuncionario('${f.id}')"><i class="fas fa-trash"></i></button>
+                        <button class="btn-icon edit btn-edit" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete btn-delete" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -352,8 +417,8 @@ const FuncionarioUI = {
                 this.histFuncContainer.classList.remove('hidden');
                 this.histFuncTableBody.innerHTML = data.map(h => `
                     <tr data-id="${h.id}">
-                        <td data-key="funcao_anterior">${h.funcao_anterior}</td>
-                        <td data-key="funcao_nova">${h.funcao_nova}</td>
+                        <td data-key="funcao_anterior">${escapeHtml(h.funcao_anterior)}</td>
+                        <td data-key="funcao_nova">${escapeHtml(h.funcao_nova)}</td>
                         <td data-key="data_mudanca" data-value="${h.data_mudanca || ''}">${h.data_mudanca ? new Date(h.data_mudanca + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     </tr>
                 `).join('');
@@ -433,7 +498,7 @@ const FuncionarioUI = {
                 const data = summaryData[funcao];
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${funcao}</strong></td>
+                    <td><strong>${escapeHtml(funcao)}</strong></td>
                     <td>${data['Ativo']}</td>
                     <td>${data['Desligado']}</td>
                     <td>${data['Transferido']}</td>
