@@ -7,9 +7,9 @@ let niveisAtuais = []; // Armazena os níveis carregados para verificação
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Proteção de página: apenas administradores podem ver
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-    if (!usuario || usuario.nivel.toLowerCase() !== 'administrador') {
-        document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Você não tem permissão para acessar esta página.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+    const acessoPermitido = await verificarAdministradorAtual();
+    if (!acessoPermitido) {
+        mostrarAcessoNegado();
         return;
     }
 
@@ -20,6 +20,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('marcar-todos').addEventListener('change', marcarDesmarcarTodos);
     document.getElementById('btn-adicionar-nivel').addEventListener('click', adicionarNovoNivel);
 });
+
+async function verificarAdministradorAtual() {
+    const {
+        data: { session },
+        error: sessionError
+    } = await supabaseClient.auth.getSession();
+
+    if (sessionError || !session?.user?.id) {
+        return false;
+    }
+
+    const { data, error } = await supabaseClient
+        .from('usuarios')
+        .select('nivel, status')
+        .eq('auth_user_id', session.user.id)
+        .maybeSingle();
+
+    if (error || !data) {
+        console.error('Erro ao validar administrador:', error);
+        return false;
+    }
+
+    return String(data.status || 'ATIVO').toUpperCase() !== 'INATIVO'
+        && String(data.nivel || '').toLowerCase() === 'administrador';
+}
+
+function mostrarAcessoNegado() {
+    document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+}
+
+function normalizarPaginaId(valor) {
+    const pagina = String(valor || '').trim();
+    return /^[a-z0-9._/-]+\.html$/i.test(pagina) ? pagina : '';
+}
+
+function normalizarNivel(valor) {
+    const nivel = String(valor || '').trim().toLowerCase();
+    return /^[a-z0-9_ -]{2,40}$/.test(nivel) ? nivel : '';
+}
 
 /**
  * Carrega dinamicamente as páginas disponíveis a partir do menu.html.
@@ -35,7 +74,7 @@ async function carregarPaginasDisponiveis() {
         const paginasUnicas = new Map();
 
         links.forEach(link => {
-            const href = link.getAttribute('href');
+            const href = normalizarPaginaId(link.getAttribute('href'));
             // Usa o texto do span, ou o texto do link como fallback
             const nome = link.querySelector('span')?.textContent.trim() || link.textContent.trim();
             if (href && href !== '#' && !paginasUnicas.has(href)) {
@@ -64,7 +103,7 @@ async function carregarNiveis() {
         return;
     }
 
-    niveisAtuais = [...new Set(data.map(u => u.nivel.toLowerCase()))].sort();
+    niveisAtuais = [...new Set(data.map(u => normalizarNivel(u.nivel)).filter(Boolean))].sort();
     listaNiveisEl.innerHTML = '';
 
     niveisAtuais.forEach(nivel => {
@@ -88,10 +127,19 @@ function renderizarGridPaginas() {
     PAGINAS_SISTEMA.forEach(pagina => {
         const item = document.createElement('div');
         item.className = 'pagina-item';
-        item.innerHTML = `
-            <input type="checkbox" id="chk-${pagina.id}" data-pagina-id="${pagina.id}" class="custom-checkbox">
-            <label for="chk-${pagina.id}" class="checkbox-label">${pagina.nome}</label>
-        `;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `chk-${pagina.id}`;
+        checkbox.dataset.paginaId = pagina.id;
+        checkbox.className = 'custom-checkbox';
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.className = 'checkbox-label';
+        label.textContent = pagina.nome;
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
         gridPaginasEl.appendChild(item);
     });
 }
@@ -177,7 +225,7 @@ function marcarDesmarcarTodos(event) {
  */
 async function adicionarNovoNivel() {
     const input = document.getElementById('novo-nivel-input');
-    const novoNivel = input.value.trim().toLowerCase();
+    const novoNivel = normalizarNivel(input.value);
 
     if (!novoNivel) {
         alert('Por favor, digite o nome do novo nível.');
