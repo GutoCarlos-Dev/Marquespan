@@ -40,11 +40,21 @@ function aplicarCorStatusGeral(tr, status) {
 }
 
 function montarBotoesAcao(id, podeExcluir) {
-    let botoesAcao = `<button class="btn-action btn-edit" data-id="${id}" title="Editar"><i class="fas fa-pen"></i></button>`;
+    const safeId = escapeHtml(id);
+    let botoesAcao = `<button class="btn-action btn-edit" data-id="${safeId}" title="Editar"><i class="fas fa-pen"></i></button>`;
     if (podeExcluir) {
-        botoesAcao += `\n            <button class="btn-action btn-delete" data-id="${id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
+        botoesAcao += `\n            <button class="btn-action btn-delete" data-id="${safeId}" title="Excluir"><i class="fas fa-trash"></i></button>`;
     }
     return botoesAcao;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 export function renderizarTabelaLancamentos({ tbody, data, roleFilterItem, podeExcluir, isRestricted }) {
@@ -69,10 +79,10 @@ export function renderizarTabelaLancamentos({ tbody, data, roleFilterItem, podeE
         const valorStyle = isRestricted ? 'display: none;' : '';
 
         tr.innerHTML = `
-            <td>${new Date(item.data_hora).toLocaleString('pt-BR')}</td>
-            <td>${item.semana}</td>
-            <td>${item.placa}</td>
-            <td>${item.usuario}</td>
+            <td>${escapeHtml(new Date(item.data_hora).toLocaleString('pt-BR'))}</td>
+            <td>${escapeHtml(item.semana)}</td>
+            <td>${escapeHtml(item.placa)}</td>
+            <td>${escapeHtml(item.usuario)}</td>
             <td style="${valorStyle}">${valorDisplay}</td>
             <td>${montarBotoesAcao(item.id, podeExcluir)}</td>
         `;
@@ -82,4 +92,3 @@ export function renderizarTabelaLancamentos({ tbody, data, roleFilterItem, podeE
 
     tbody.appendChild(fragment);
 }
-

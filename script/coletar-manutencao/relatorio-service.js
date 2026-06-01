@@ -54,8 +54,7 @@ export async function buscarDadosRelatorio({
     }
 
     if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
-    if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA EXTERNA');
-    if (nivel === 'mecanica_externa') query = query.eq('item', 'MECANICA - EXTERNA');
+    if (nivel === 'mecanica_externa') query = query.in('item', ['MECANICA EXTERNA', 'MECANICA - EXTERNA']);
 
     query = aplicarFiltros(query, filtros, { oficinasMap, filtroOficinaPorDetalhes });
 
@@ -64,4 +63,3 @@ export async function buscarDadosRelatorio({
 
     return data || [];
 }
-

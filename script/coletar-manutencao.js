@@ -20,9 +20,17 @@ import {
 import { buscarLancamentosManutencao } from './coletar-manutencao/lancamentos-service.js';
 import { renderizarTabelaLancamentos } from './coletar-manutencao/lancamentos-tabela.js';
 
+const COLETAR_MANUTENCAO_PAGE_ID = 'coletar-manutencao.html';
+
 const ColetarManutencaoUI = {
-    init() {
+    async init() {
         console.log('Página de Coleta de Manutenção iniciada.');
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) {
+            this.mostrarAcessoNegado();
+            return;
+        }
+
         this.cacheDOM();
         this.fixStatusOptions();
         this.bindEvents();
@@ -49,6 +57,48 @@ const ColetarManutencaoUI = {
                 this.abrirModal();
             }
         });
+    },
+
+    async verificarPermissaoPagina() {
+        const {
+            data: { session },
+            error: sessionError
+        } = await supabaseClient.auth.getSession();
+
+        if (sessionError || !session?.user?.id) return false;
+
+        const { data: usuario, error: usuarioError } = await supabaseClient
+            .from('usuarios')
+            .select('nivel, status')
+            .eq('auth_user_id', session.user.id)
+            .maybeSingle();
+
+        if (usuarioError || !usuario) {
+            console.error('Erro ao validar permissao da pagina:', usuarioError);
+            return false;
+        }
+
+        const nivel = String(usuario.nivel || '').toLowerCase();
+        if (String(usuario.status || 'ATIVO').toUpperCase() === 'INATIVO') return false;
+        if (nivel === 'administrador') return true;
+
+        const { data: permissao, error: permissaoError } = await supabaseClient
+            .from('nivel_permissoes')
+            .select('paginas_permitidas')
+            .eq('nivel', nivel)
+            .maybeSingle();
+
+        if (permissaoError) {
+            console.error('Erro ao carregar permissao da pagina:', permissaoError);
+            return false;
+        }
+
+        return Array.isArray(permissao?.paginas_permitidas)
+            && permissao.paginas_permitidas.includes(COLETAR_MANUTENCAO_PAGE_ID);
+    },
+
+    mostrarAcessoNegado() {
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
     },
 
     cacheDOM() {

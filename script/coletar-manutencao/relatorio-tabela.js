@@ -49,11 +49,21 @@ function aplicarCorStatus(tr, status) {
 }
 
 function montarBotoesAcao(coletaId, podeExcluir) {
-    let botoesAcao = `<button class="btn-action btn-edit" data-id="${coletaId}" title="Editar"><i class="fas fa-pen"></i></button>`;
+    const id = escapeHtml(coletaId);
+    let botoesAcao = `<button class="btn-action btn-edit" data-id="${id}" title="Editar"><i class="fas fa-pen"></i></button>`;
     if (podeExcluir) {
-        botoesAcao += `\n            <button class="btn-action btn-delete" data-id="${coletaId}" title="Excluir"><i class="fas fa-trash"></i></button>`;
+        botoesAcao += `\n            <button class="btn-action btn-delete" data-id="${id}" title="Excluir"><i class="fas fa-trash"></i></button>`;
     }
     return botoesAcao;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 export function renderizarTabelaRelatorio({ tbody, reportData, sortConfig, nivelUsuario }) {
@@ -72,15 +82,15 @@ export function renderizarTabelaRelatorio({ tbody, reportData, sortConfig, nivel
 
         const nomeOficina = item.oficinas ? item.oficinas.nome : '-';
         tr.innerHTML = `
-            <td>${new Date(coleta.data_hora).toLocaleString('pt-BR')}</td>
-            <td>${coleta.semana}</td>
-            <td>${coleta.placa}</td>
-            <td>${coleta.modelo || '-'}</td>
-            <td>${item.item}</td>
-            <td>${item.status}</td>
-            <td>${nomeOficina}</td>
-            <td>${item.detalhes || '-'}</td>
-            <td>${item.pecas_usadas || '-'}</td>
+            <td>${escapeHtml(new Date(coleta.data_hora).toLocaleString('pt-BR'))}</td>
+            <td>${escapeHtml(coleta.semana)}</td>
+            <td>${escapeHtml(coleta.placa)}</td>
+            <td>${escapeHtml(coleta.modelo || '-')}</td>
+            <td>${escapeHtml(item.item)}</td>
+            <td>${escapeHtml(item.status)}</td>
+            <td>${escapeHtml(nomeOficina)}</td>
+            <td>${escapeHtml(item.detalhes || '-')}</td>
+            <td>${escapeHtml(item.pecas_usadas || '-')}</td>
             <td><strong>${(item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></td>
             <td>${montarBotoesAcao(coleta.id, podeExcluir)}</td>
         `;
@@ -90,4 +100,3 @@ export function renderizarTabelaRelatorio({ tbody, reportData, sortConfig, nivel
 
     tbody.appendChild(fragment);
 }
-
