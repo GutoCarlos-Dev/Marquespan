@@ -107,6 +107,7 @@ const ColetarManutencaoUI = {
         this.btnExportarPDFOficina = document.getElementById('btnExportarPDFOficina');
         this.graficosContainer = document.getElementById('graficos-container');
         this.contadorResultados = document.getElementById('contadorResultados');
+        this.btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralColetar');
     },
 
     // Corrige opções de status para padronizar valores
@@ -279,6 +280,8 @@ const ColetarManutencaoUI = {
         }
 
         // Eventos de ordenação da grid
+        this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
+
         document.querySelectorAll('#sectionLancamento th[data-sort]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
         });
@@ -324,6 +327,15 @@ const ColetarManutencaoUI = {
             emptyText: 'Todos',
             selectedText: (count) => `${count} selecionado(s)`
         });
+    },
+
+    toggleMenuLateral() {
+        document.body.classList.toggle('coletar-menu-oculto');
+        const oculto = document.body.classList.contains('coletar-menu-oculto');
+        if (this.btnToggleMenuLateral) {
+            this.btnToggleMenuLateral.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+            this.btnToggleMenuLateral.setAttribute('aria-label', this.btnToggleMenuLateral.title);
+        }
     },
 
     // Limpa a seleção de itens no filtro de relatório
