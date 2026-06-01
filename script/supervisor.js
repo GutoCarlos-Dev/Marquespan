@@ -1,13 +1,27 @@
 import { supabaseClient } from './supabase.js';
 
+const SUPERVISOR_PAGE_ID = 'supervisor.html';
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
 const SupervisorUI = {
     supervisorEditingId: null,
     data: [], // Armazena todos os supervisores carregados
     filteredData: [], // Armazena os supervisores atualmente filtrados/exibidos
     sortConfig: { key: 'nome', asc: true },
 
-    init() {
+    async init() {
         this.cacheDOM();
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
         this.bindEvents();
         this.carregarSupervisores();
     },
@@ -39,6 +53,44 @@ const SupervisorUI = {
         document.querySelectorAll('.data-grid thead th[data-field]').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.field));
         });
+
+        this.supervisorTableBody?.addEventListener('click', (event) => {
+            const editButton = event.target.closest('.btn-edit');
+            const deleteButton = event.target.closest('.btn-delete');
+
+            if (editButton?.dataset.id) this.editarSupervisor(editButton.dataset.id);
+            if (deleteButton?.dataset.id) this.excluirSupervisor(deleteButton.dataset.id);
+        });
+    },
+
+    async verificarPermissaoPagina() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nivel = usuario?.nivel?.toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') return true;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+
+            if (error) throw error;
+
+            const paginasPermitidas = data?.paginas_permitidas || [];
+            if (paginasPermitidas.includes(SUPERVISOR_PAGE_ID)) return true;
+        } catch (error) {
+            console.error('Erro ao validar permissao da pagina de supervisores:', error);
+        }
+
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+        return false;
     },
 
     async carregarSupervisores() {
@@ -46,7 +98,7 @@ const SupervisorUI = {
         try {
             const { data, error } = await supabaseClient
                 .from('supervisores')
-                .select('*')
+                .select('id, nome, nome_completo, uf, status')
                 .order('nome');
 
             if (error) throw error;
@@ -83,15 +135,15 @@ const SupervisorUI = {
 
         this.supervisorTableBody.innerHTML = this.filteredData.map(item => `
             <tr>
-                <td>${item.nome}</td>
-                <td>${item.nome_completo || '-'}</td>
-                <td>${item.uf || '-'}</td>
+                <td>${escapeHtml(item.nome)}</td>
+                <td>${escapeHtml(item.nome_completo || '-')}</td>
+                <td>${escapeHtml(item.uf || '-')}</td>
                 <td style="text-align:center;">
-                    <span class="badge ${item.status === 'ATIVO' ? 'status-em-dia' : 'status-dispensado'}">${item.status}</span>
+                    <span class="badge ${item.status === 'ATIVO' ? 'status-em-dia' : 'status-dispensado'}">${escapeHtml(item.status)}</span>
                 </td>
                 <td style="text-align:center;">
-                    <button class="btn-icon edit" onclick="window.SupervisorUI.editarSupervisor('${item.id}')" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon delete" onclick="window.SupervisorUI.excluirSupervisor('${item.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon edit btn-edit" data-id="${escapeHtml(item.id)}" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete btn-delete" data-id="${escapeHtml(item.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join('');
