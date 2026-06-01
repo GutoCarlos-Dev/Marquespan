@@ -226,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Elementos do filtro de histórico de SAÍDA
             this.filtroSaidaDataInicial = document.getElementById('filtroSaidaDataInicial');
             this.filtroSaidaDataFinal = document.getElementById('filtroSaidaDataFinal');
+            this.filtroSaidaTanque = document.getElementById('filtroSaidaTanque');
             this.btnFiltrarHistoricoSaida = document.getElementById('btnFiltrarHistoricoSaida');
 
             // Elementos do filtro de histórico EXTERNO
@@ -346,6 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listener para o filtro de histórico de SAÍDA
             if (this.btnFiltrarHistoricoSaida) {
                 this.btnFiltrarHistoricoSaida.addEventListener('click', () => this.renderSaidasTable(true));
+            }
+            if (this.filtroSaidaTanque) {
+                this.filtroSaidaTanque.addEventListener('change', () => this.renderSaidasTable(true));
             }
             // Listener para o filtro de histórico EXTERNO
             if (this.btnFiltrarHistoricoExt) {
@@ -558,9 +562,29 @@ document.addEventListener('DOMContentLoaded', () => {
         async loadTanques() {
             try {
                 this.tanquesDisponiveis = await buscarTanques(supabaseClient, this.getUserFilial());
+                this.preencherFiltroTanqueSaida();
                 this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
                 console.error('Erro ao carregar tanques:', error);
+            }
+        },
+
+        preencherFiltroTanqueSaida() {
+            if (!this.filtroSaidaTanque) return;
+
+            const valorAtual = this.filtroSaidaTanque.value;
+            this.filtroSaidaTanque.innerHTML = '<option value="">Todos</option>';
+
+            (this.tanquesDisponiveis || []).forEach(tanque => {
+                const option = new Option(
+                    `${tanque.nome} (${tanque.tipo_combustivel || 'Combustivel'})`,
+                    tanque.id
+                );
+                this.filtroSaidaTanque.appendChild(option);
+            });
+
+            if (valorAtual && Array.from(this.filtroSaidaTanque.options).some(option => option.value === valorAtual)) {
+                this.filtroSaidaTanque.value = valorAtual;
             }
         },
 
@@ -1433,13 +1457,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.tableBodySaidas) return;
             
             if (fetchData) {
-                this.tableBodySaidas.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
+                this.tableBodySaidas.innerHTML = '<tr><td colspan="8" class="text-center">Carregando...</td></tr>';
                 try {
                     this.saidasData = await buscarSaidasCombustivel({
                         supabaseClient,
                         filial: this.getUserFilial(),
                         dataInicial: this.filtroSaidaDataInicial?.value,
-                        dataFinal: this.filtroSaidaDataFinal?.value
+                        dataFinal: this.filtroSaidaDataFinal?.value,
+                        tanqueId: this.filtroSaidaTanque?.value
                     });
                 } catch (error) {
                     console.error('Erro ao carregar histórico de saídas:', error);

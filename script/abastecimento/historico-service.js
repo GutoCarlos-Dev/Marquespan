@@ -34,13 +34,15 @@ export async function buscarSaidasCombustivel({
     supabaseClient,
     filial,
     dataInicial,
-    dataFinal
+    dataFinal,
+    tanqueId
 }) {
     let query = supabaseClient
         .from('saidas_combustivel')
-        .select('*, bicos!inner(bombas!inner(tanques!inner(filial)))');
+        .select('*, bicos!inner(bombas!inner(tanque_id, tanques!inner(id, nome, filial)))');
 
     if (filial) query = query.eq('bicos.bombas.tanques.filial', filial);
+    if (tanqueId) query = query.eq('bicos.bombas.tanque_id', tanqueId);
 
     if (dataInicial && dataFinal) {
         query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
