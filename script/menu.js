@@ -27,12 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           const { data: dadosAtualizados, error } = await supabaseClient
             .from('usuarios')
-            .select('*')
+            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status, status_updated_at')
             .eq('id', usuario.id)
             .single();
 
           if (!error && dadosAtualizados) {
-            const nomeCompleto = dadosAtualizados.nomecompleto || dadosAtualizados.nome_completo;
+            const nomeCompleto = dadosAtualizados.nomecompleto;
             // Atualiza objeto local com dados do banco
             usuario = { ...usuario, ...dadosAtualizados };
             

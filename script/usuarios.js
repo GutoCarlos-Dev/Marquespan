@@ -1,14 +1,85 @@
 import { supabaseClient, supabaseKey } from './supabase.js';
 
+const USUARIOS_PAGE_ID = 'usuarios.html';
+const ADMIN_USUARIOS_FUNCTION_URL = 'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios';
+const NIVEIS_GERENCIAMENTO_USUARIOS = new Set(['administrador']);
+
 let usuariosCache = [];
 let sortConfig = { column: 'nome', direction: 'asc' };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const acessoPermitido = await verificarPermissaoPaginaUsuarios();
+    if (!acessoPermitido) {
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+        return;
+    }
+
     carregarUsuarios();
     carregarNiveis();
     carregarFiliais();
     setupEventListeners();
 });
+
+function getUsuarioAtual() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+async function verificarPermissaoPaginaUsuarios() {
+    const usuario = getUsuarioAtual();
+    const nivel = String(usuario?.nivel || '').toLowerCase();
+
+    if (!NIVEIS_GERENCIAMENTO_USUARIOS.has(nivel)) {
+        return false;
+    }
+
+    if (nivel === 'administrador') {
+        return true;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('nivel_permissoes')
+            .select('paginas_permitidas')
+            .eq('nivel', nivel)
+            .maybeSingle();
+
+        if (error) throw error;
+        return Array.isArray(data?.paginas_permitidas) && data.paginas_permitidas.includes(USUARIOS_PAGE_ID);
+    } catch (err) {
+        console.error('Erro ao verificar permissao da pagina:', err);
+        return false;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+async function getAdminUsuariosHeaders() {
+    const {
+        data: { session },
+        error
+    } = await supabaseClient.auth.getSession();
+
+    if (error || !session?.access_token) {
+        throw new Error('Sessao expirada. Faca login novamente.');
+    }
+
+    return {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${session.access_token}`
+    };
+}
 
 function setupEventListeners() {
     // Botão Novo Usuário
@@ -131,7 +202,7 @@ async function carregarUsuarios() {
     try {
         const { data, error } = await supabaseClient
             .from('usuarios')
-            .select('*')
+            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status, status_updated_at')
             .order('nome', { ascending: true });
 
         if (error) throw error;
@@ -159,8 +230,8 @@ function renderTable(usuarios) {
         let valB = b[sortConfig.column];
 
         if (sortConfig.column === 'nomecompleto') {
-            valA = a.nomecompleto || a.nome_completo || '';
-            valB = b.nomecompleto || b.nome_completo || '';
+            valA = a.nomecompleto || '';
+            valB = b.nomecompleto || '';
         }
 
         if (sortConfig.column === 'status') {
@@ -181,18 +252,17 @@ function renderTable(usuarios) {
 
     sorted.forEach(u => {
         const statusExibicao = getExibicaoStatus(u);
-
-        const statusClass = `status-${statusExibicao.toLowerCase()}`;
+        const statusClass = `status-${String(statusExibicao).toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${u.id}</td>
-            <td>${u.nome}</td>
-            <td>${u.nomecompleto || u.nome_completo || '-'}</td>
-            <td>${u.email || '-'}</td>
-            <td>${u.nivel || '-'}</td>
-            <td>${u.filial || 'Todas'}</td>
-            <td style="text-align:center;"><span class="badge-status ${statusClass}">${statusExibicao}</span></td>
+            <td>${escapeHtml(u.id)}</td>
+            <td>${escapeHtml(u.nome)}</td>
+            <td>${escapeHtml(u.nomecompleto || '-')}</td>
+            <td>${escapeHtml(u.email || '-')}</td>
+            <td>${escapeHtml(u.nivel || '-')}</td>
+            <td>${escapeHtml(u.filial || 'Todas')}</td>
+            <td style="text-align:center;"><span class="badge-status ${statusClass}">${escapeHtml(statusExibicao)}</span></td>
             <td>
                 <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -271,14 +341,10 @@ async function salvarUsuario(e) {
         };
 
         const response = await fetch(
-            'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios',
+            ADMIN_USUARIOS_FUNCTION_URL,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    apikey: supabaseKey,
-                    Authorization: `Bearer ${supabaseKey}`
-                },
+                headers: await getAdminUsuariosHeaders(),
                 body: JSON.stringify(payload)
             }
         );
@@ -305,7 +371,7 @@ async function salvarUsuario(e) {
 function editarUsuario(usuario) {
     document.getElementById('usuarioId').value = usuario.id;
     document.getElementById('nome').value = usuario.nome;
-    document.getElementById('nomecompleto').value = usuario.nomecompleto || usuario.nome_completo || '';
+    document.getElementById('nomecompleto').value = usuario.nomecompleto || '';
     document.getElementById('email').value = usuario.email || '';
     document.getElementById('nivel').value = usuario.nivel;
     document.getElementById('status').value = usuario.status || 'ATIVO';
@@ -317,11 +383,29 @@ function editarUsuario(usuario) {
 }
 
 async function excluirUsuario(id) {
+    const usuarioAtual = getUsuarioAtual();
+    if (String(usuarioAtual?.id || '') === String(id)) {
+        alert('Voce nao pode excluir o proprio usuario logado.');
+        return;
+    }
+
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
-        const { error } = await supabaseClient.from('usuarios').delete().eq('id', id);
-        if (error) throw error;
+        const response = await fetch(
+            ADMIN_USUARIOS_FUNCTION_URL,
+            {
+                method: 'POST',
+                headers: await getAdminUsuariosHeaders(),
+                body: JSON.stringify({ acao: 'excluir', id })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Erro ao excluir usuario.');
+        }
         
         alert('Usuário excluído com sucesso!');
         carregarUsuarios();
