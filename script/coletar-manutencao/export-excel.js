@@ -5,9 +5,9 @@ const ITEM_COLUMNS = [
     'ALINHAMENTO/BALANCEAMENTO',
     'AR-CONDICIONADO',
     'BORRACHARIA',
-    'ELETRICA INTERNA',
     'ELETRICA / MECANICA - INTERNA',
     'MECANICA EXTERNA',
+    'MECANICA - EXTERNA',
     'MOLEIRO',
     'TACOGRAFO',
     'TAPEÇARIA',
@@ -25,6 +25,25 @@ const ITEM_COLUMNS = [
 
 function formatarMoeda(valor) {
     return 'R$ ' + (valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function normalizarTexto(valor) {
+    return String(valor || '').trim();
+}
+
+function normalizarStatus(status) {
+    return normalizarTexto(status).toUpperCase();
+}
+
+function obterColunaItem(item) {
+    const itemNormalizado = normalizarTexto(item).toUpperCase();
+    if (itemNormalizado === 'ELETRICA INTERNA' || itemNormalizado === 'ELETRICA / MECANICA - INTERNA') {
+        return 'ELETRICA / MECANICA - INTERNA';
+    }
+    if (itemNormalizado === 'MECANICA EXTERNA' || itemNormalizado === 'MECANICA - EXTERNA') {
+        return 'MECANICA - EXTERNA';
+    }
+    return itemNormalizado;
 }
 
 function montarValorCelula(row) {
@@ -57,6 +76,40 @@ function montarValorCelula(row) {
     return cellValue;
 }
 
+function montarValorCelulaExcel(row) {
+    let cellValue = '';
+    const colunaItem = obterColunaItem(row.item);
+    const status = normalizarStatus(row.status);
+    const detalhes = normalizarTexto(row.detalhes);
+    const pecasUsadas = normalizarTexto(row.pecas_usadas);
+
+    if (colunaItem === 'ELETRICA / MECANICA - INTERNA') {
+        cellValue = `SOLICITA\u00c7\u00c3O: ${detalhes}`;
+        if (status === 'FINALIZADO' || status === 'OK') {
+            cellValue += ', SOLICITA\u00c7\u00c3O REALIZADA.';
+        }
+        if (pecasUsadas) {
+            cellValue += ` ${pecasUsadas}`;
+        }
+    } else if (status === 'FINALIZADO' || status === 'OK') {
+        cellValue = 'FINALIZADO';
+    } else if (status === 'INTERNADO') {
+        cellValue = 'INTERNADO';
+    } else if (status === 'CHECK-IN OFICINA') {
+        cellValue = 'CHECK-IN OFICINA';
+    } else if (status === 'CHECK-IN ROTA') {
+        cellValue = 'CHECK-IN ROTA';
+    } else {
+        cellValue = detalhes;
+    }
+
+    if (row.valor && Number(row.valor) > 0) {
+        cellValue += ` (${formatarMoeda(Number(row.valor))})`;
+    }
+
+    return cellValue;
+}
+
 function montarDadosPlanilha(data) {
     data.sort((a, b) => new Date(b.coletas_manutencao.data_hora) - new Date(a.coletas_manutencao.data_hora));
 
@@ -74,8 +127,9 @@ function montarDadosPlanilha(data) {
 
         const entry = coletasMap.get(coletaId);
         entry.totalCalculado += (Number(row.valor) || 0);
-        entry.items[row.item] = montarValorCelula(row);
-        entry.itemDetails[row.item] = row.detalhes || '';
+        const colunaItem = obterColunaItem(row.item);
+        entry.items[colunaItem] = montarValorCelulaExcel(row);
+        entry.itemDetails[colunaItem] = row.detalhes || '';
     });
 
     const dadosPlanilha = [];
@@ -94,7 +148,7 @@ function montarDadosPlanilha(data) {
         };
 
         ITEM_COLUMNS.forEach(col => {
-            row[col] = entry.itemDetails[col] || '';
+            row[col] = entry.items[col] || '';
         });
 
         dadosPlanilha.push(row);
