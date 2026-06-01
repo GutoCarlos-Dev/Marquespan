@@ -232,6 +232,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return posto ? posto.id : null;
         },
 
+        tipoMovimentacaoPermitido(tiposSelecionados, tipo) {
+            return tiposSelecionados.length === 0 || tiposSelecionados.includes(tipo);
+        },
+
         async loadTiposVeiculo() {
             if (!this.filtroTipoVeiculoOptions) return;
             try {
@@ -638,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let dadosExternos = [];
 
                 // 1. Buscar Entradas e Ajustes (se o filtro permitir)
-                if (tiposMov.length === 0 || tiposMov.includes('ENTRADA') || tiposMov.includes('AJUSTE')) {
+                if (this.tipoMovimentacaoPermitido(tiposMov, 'ENTRADA') || this.tipoMovimentacaoPermitido(tiposMov, 'AJUSTE')) {
                     let queryEntradas = supabaseClient
                         .from('abastecimentos')
                         .select('*, tanques(nome, tipo_combustivel)')
@@ -649,8 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         queryEntradas = queryEntradas.eq('tanque_id', tanqueId);
                     }
 
-                    const wantEntrada = tiposMov.length === 0 || tiposMov.includes('ENTRADA');
-                    const wantAjuste = tiposMov.length === 0 || tiposMov.includes('AJUSTE');
+                    const wantEntrada = this.tipoMovimentacaoPermitido(tiposMov, 'ENTRADA');
+                    const wantAjuste = this.tipoMovimentacaoPermitido(tiposMov, 'AJUSTE');
 
                     if (wantEntrada && !wantAjuste) {
                         queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
@@ -683,10 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 2. Buscar Saídas (se o filtro permitir)
-                if (tiposMov.length === 0 || tiposMov.includes('SAIDA')) {
+                if (this.tipoMovimentacaoPermitido(tiposMov, 'SAIDA')) {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*, bicos(nome, bombas(tanques(id, nome, tipo_combustivel)))')
+                        .select('*, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel)))')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -701,6 +705,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (bicosSelecionados.length > 0) {
                         querySaidas = querySaidas.in('bico_id', bicosSelecionados);
+                    }
+                    if (tanqueId) {
+                        querySaidas = querySaidas.eq('bicos.bombas.tanque_id', tanqueId);
                     }
 
                     // Filtro de tanque para saídas é mais complexo pois está aninhado
@@ -745,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 3. Buscar Abastecimentos Externos (se o filtro permitir)
                 // Nota: Externo não tem 'tanque_id' da empresa, então ignoramos o filtro de tanque.
-                if (tiposMov.length === 0 || tiposMov.includes('EXTERNO')) {
+                if (!tanqueId && this.tipoMovimentacaoPermitido(tiposMov, 'EXTERNO')) {
                     let queryExterno = supabaseClient
                         .from('abastecimento_externo')
                         .select('id, data_hora, usuario, posto_id, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
