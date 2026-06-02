@@ -847,7 +847,7 @@ async function gerarFormularioImpresso() {
   checkbox('Rota Viagem', margin + 40);
   y += 7;
 
-  drawClienteTable('Quantidades de Entrega (Roteiro Atual)', 23, false);
+  drawClienteTable('Quantidades de Entrega (Roteiro Atual)', 22, false);
 
   sectionTitle('Horario - Bate e Volta');
   lineField('Saida da empresa', margin, 34);
@@ -889,7 +889,7 @@ async function gerarFormularioImpresso() {
   });
   y += 103;
 
-  drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 23, true);
+  drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 22, true);
 
   addFooter();
   doc.save(`formulario_acompanhamento_${new Date().toISOString().slice(0, 10)}.pdf`);
