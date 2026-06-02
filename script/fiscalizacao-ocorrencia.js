@@ -5,6 +5,7 @@ let ocorrenciaEditandoId = null;
 let sortState = { field: 'data_ocorrencia', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
+const niveisSomenteLeitura = ['adm_colisao'];
 let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ocorrenciaData').valueAsDate = hoje;
 
   bindEvents();
+  aplicarRestricoesNivelOcorrencia();
   await carregarListas();
   await buscarOcorrencias();
 });
@@ -84,12 +86,32 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
+function getNivelUsuario() {
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+  return String(usuario.nivel || '').toLowerCase();
+}
+
+function usuarioSomenteLeitura() {
+  return niveisSomenteLeitura.includes(getNivelUsuario());
+}
+
+function aplicarRestricoesNivelOcorrencia() {
+  if (!usuarioSomenteLeitura()) return;
+  ['btnIncluirOcorrencia'].forEach(id => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.disabled = true;
+    element.classList.add('hidden');
+    element.title = 'Seu nivel permite apenas visualizar ocorrencias.';
+  });
+}
+
 async function abrirModal(item = null, modo = 'editar') {
   document.getElementById('formOcorrencia').reset();
   anexosNovos = [];
   anexosExistentes = [];
   anexosParaRemover = [];
-  visualizandoOcorrencia = modo === 'visualizar';
+  visualizandoOcorrencia = modo === 'visualizar' || usuarioSomenteLeitura();
   document.getElementById('ocorrenciaAnexos').value = '';
   ocorrenciaEditandoId = item?.id || null;
   document.querySelector('#modalOcorrencia .modal-header h3').textContent = visualizandoOcorrencia
@@ -124,7 +146,7 @@ function fecharModal() {
 
 function atualizarBotaoCompartilharModal() {
   const btn = document.getElementById('btnCompartilharOcorrenciaWhatsapp');
-  const podeCompartilhar = Boolean(ocorrenciaEditandoId);
+  const podeCompartilhar = Boolean(ocorrenciaEditandoId) && !usuarioSomenteLeitura();
   btn.classList.toggle('hidden', !podeCompartilhar);
   btn.disabled = !podeCompartilhar;
 }
@@ -147,6 +169,10 @@ async function handleTabelaClick(event) {
   if (!item) return;
 
   if (button.dataset.action === 'editar') {
+    if (usuarioSomenteLeitura()) {
+      await abrirModal(item, 'visualizar');
+      return;
+    }
     await abrirModal(item, 'editar');
     return;
   }
@@ -166,13 +192,14 @@ async function handleTabelaClick(event) {
   }
 
   if (button.dataset.action === 'whatsapp') {
+    if (usuarioSomenteLeitura()) return;
     compartilharOcorrenciaWhatsapp(item);
   }
 }
 
 async function salvarOcorrencia(event) {
   event.preventDefault();
-  if (visualizandoOcorrencia) return;
+  if (visualizandoOcorrencia || usuarioSomenteLeitura()) return;
   const btn = document.getElementById('btnSalvarOcorrencia');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
@@ -228,6 +255,10 @@ async function salvarOcorrencia(event) {
 }
 
 async function excluirOcorrencia(item) {
+  if (usuarioSomenteLeitura()) {
+    alert('Seu nivel de acesso permite apenas visualizar ocorrencias.');
+    return;
+  }
   const confirmar = confirm(`Deseja excluir a ocorrencia da placa ${item.placa || '-'} em ${formatarData(item.data_ocorrencia)}?`);
   if (!confirmar) return;
 
@@ -314,6 +345,7 @@ function getDadosGrid() {
 function renderizarTabela() {
   const tbody = document.getElementById('tbodyOcorrencias');
   const dados = getDadosGrid();
+  const somenteLeitura = usuarioSomenteLeitura();
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
@@ -332,16 +364,18 @@ function renderizarTabela() {
       <td>${escapeHtml(item.auxiliar || '-')}</td>
       <td class="ocorrencia-texto">${escapeHtml(item.relatorio || '-')}</td>
       <td class="acoes-cell">
-        <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
-          <i class="fas fa-pen"></i>
-        </button>
-        <button type="button" class="btn-grid-action btn-share" data-action="whatsapp" data-id="${escapeHtml(item.id)}" title="Compartilhar via WhatsApp">
-          <i class="fab fa-whatsapp"></i>
-        </button>
+        ${somenteLeitura ? '' : `
+          <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
+            <i class="fas fa-pen"></i>
+          </button>
+          <button type="button" class="btn-grid-action btn-share" data-action="whatsapp" data-id="${escapeHtml(item.id)}" title="Compartilhar via WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+          </button>
+        `}
         <button type="button" class="btn-grid-action btn-view" data-action="visualizar" data-id="${escapeHtml(item.id)}" title="Visualizar">
           <i class="fas fa-eye"></i>
         </button>
-        ${usuarioPodeExcluir() ? `
+        ${!somenteLeitura && usuarioPodeExcluir() ? `
           <button type="button" class="btn-grid-action btn-delete" data-action="excluir" data-id="${escapeHtml(item.id)}" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
@@ -374,8 +408,7 @@ function escapeHtml(value) {
 }
 
 function usuarioPodeExcluir() {
-  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
-  return niveisComExclusao.includes(String(usuario.nivel || '').toLowerCase());
+  return niveisComExclusao.includes(getNivelUsuario());
 }
 
 function dadosParaExportacao() {
@@ -490,6 +523,7 @@ function obterOcorrenciaDoFormulario() {
 }
 
 function compartilharOcorrenciaWhatsapp(ocorrencia = null) {
+  if (usuarioSomenteLeitura()) return;
   const dados = ocorrencia || obterOcorrenciaDoFormulario();
   if (!dados?.id && !ocorrenciaEditandoId) {
     alert('Salve a ocorrencia antes de compartilhar.');
@@ -518,6 +552,10 @@ function compartilharOcorrenciaWhatsapp(ocorrencia = null) {
 }
 
 function handleAnexosChange(event) {
+  if (usuarioSomenteLeitura()) {
+    event.target.value = '';
+    return;
+  }
   anexosNovos.push(...Array.from(event.target.files || []));
   event.target.value = '';
   renderizarAnexos();
@@ -532,12 +570,14 @@ async function handleAnexoClick(event) {
   const tipo = button.dataset.tipo;
 
   if (action === 'remover' && tipo === 'novo') {
+    if (visualizandoOcorrencia || usuarioSomenteLeitura()) return;
     anexosNovos.splice(index, 1);
     renderizarAnexos();
     return;
   }
 
   if (action === 'remover' && tipo === 'existente') {
+    if (visualizandoOcorrencia || usuarioSomenteLeitura()) return;
     const anexo = anexosExistentes.splice(index, 1)[0];
     if (anexo?.caminho_arquivo) anexosParaRemover.push(anexo);
     renderizarAnexos();
@@ -576,7 +616,7 @@ function renderizarAnexos() {
               <i class="fas fa-download"></i>
             </button>
           ` : ''}
-          ${visualizandoOcorrencia ? '' : `
+          ${visualizandoOcorrencia || usuarioSomenteLeitura() ? '' : `
             <button type="button" class="btn-anexo btn-anexo-remove" data-anexo-action="remover" data-tipo="${tipo}" data-index="${index}" title="Remover">
               <i class="fas fa-trash"></i>
             </button>
