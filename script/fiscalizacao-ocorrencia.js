@@ -2,10 +2,10 @@ import { supabaseClient } from './supabase.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
-let sortState = { field: 'data_ocorrencia', ascending: false };
+let sortState = { field: 'created_at', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
-const niveisSomenteLeitura = ['adm_colisao'];
+const niveisSomenteLeitura = [];
 let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
@@ -222,6 +222,11 @@ async function salvarOcorrencia(event) {
     if (!estavaEditando) {
       payload.usuario_id = usuario.id || null;
       payload.usuario_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
+      payload.usuario_inclusao_id = payload.usuario_id;
+      payload.usuario_inclusao_nome = payload.usuario_nome;
+    } else {
+      payload.usuario_edicao_id = usuario.id || null;
+      payload.usuario_edicao_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
     }
 
     let idOcorrencia = ocorrenciaEditandoId;
@@ -297,7 +302,7 @@ async function buscarOcorrencias() {
     if (motorista) query = query.ilike('motorista', `%${motorista}%`);
     if (rota) query = query.ilike('rota', `%${rota}%`);
 
-    const { data, error } = await query.order('data_ocorrencia', { ascending: false }).order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
 
     ocorrencias = data || [];
@@ -318,7 +323,11 @@ function getDadosGrid() {
   if (termo) {
     dados = dados.filter(item => [
       item.data_ocorrencia,
+      item.created_at,
+      item.updated_at,
       item.usuario_nome,
+      item.usuario_inclusao_nome,
+      item.usuario_edicao_nome,
       item.rota,
       item.placa,
       item.motorista,
@@ -349,15 +358,16 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
 
   tbody.innerHTML = dados.map(item => `
     <tr>
-      <td>${formatarData(item.data_ocorrencia)}</td>
-      <td>${escapeHtml(item.usuario_nome || '-')}</td>
+      <td>${formatarDataHora(item.created_at)}</td>
+      <td>${escapeHtml(item.usuario_inclusao_nome || item.usuario_nome || '-')}</td>
+      <td>${escapeHtml(formatarUltimaEdicao(item))}</td>
       <td>${escapeHtml(item.rota || '-')}</td>
       <td><strong>${escapeHtml(item.placa || '-')}</strong></td>
       <td>${escapeHtml(item.motorista || '-')}</td>
@@ -398,6 +408,25 @@ function formatarData(data) {
   return new Date(`${data}T00:00:00`).toLocaleDateString('pt-BR');
 }
 
+function formatarDataHora(value) {
+  if (!value) return '-';
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return '-';
+  return data.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function formatarUltimaEdicao(item) {
+  if (!item?.usuario_edicao_nome) return '-';
+  return `${item.usuario_edicao_nome} - ${formatarDataHora(item.updated_at)}`;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -413,8 +442,10 @@ function usuarioPodeExcluir() {
 
 function dadosParaExportacao() {
   return getDadosGrid().map(item => ({
-    Data: formatarData(item.data_ocorrencia),
-    'Usuario que Registrou': item.usuario_nome || '',
+    'Data Inclusao': formatarDataHora(item.created_at),
+    'Data Ocorrencia': formatarData(item.data_ocorrencia),
+    'Usuario que Incluiu': item.usuario_inclusao_nome || item.usuario_nome || '',
+    'Ultima Edicao': formatarUltimaEdicao(item),
     Rota: item.rota || '',
     Placa: item.placa || '',
     Motorista: item.motorista || '',
@@ -744,15 +775,15 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data', 'Horario', 'Rota', 'Placa', 'Motorista', 'Local', 'Envolvimento', 'Ocorrencia']],
+    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Rota', 'Placa', 'Motorista', 'Local', 'Ocorrencia']],
     body: rows.map(row => [
-      row.Data,
-      row.Horario,
+      row['Data Inclusao'],
+      row['Data Ocorrencia'],
+      row['Ultima Edicao'],
       row.Rota,
       row.Placa,
       row.Motorista,
       row['Local da Ocorrencia'],
-      row.Envolvimento,
       row.Ocorrencia
     ]),
     startY: 30,

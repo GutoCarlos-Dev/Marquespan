@@ -13,6 +13,10 @@ create table if not exists public.fiscalizacao_ocorrencias (
   relatorio text not null,
   usuario_id text,
   usuario_nome text not null,
+  usuario_inclusao_id text,
+  usuario_inclusao_nome text,
+  usuario_edicao_id text,
+  usuario_edicao_nome text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -25,6 +29,25 @@ alter table public.fiscalizacao_ocorrencias
 
 alter table public.fiscalizacao_ocorrencias
   add column if not exists envolvimento jsonb not null default '{}'::jsonb;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists usuario_inclusao_id text;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists usuario_inclusao_nome text;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists usuario_edicao_id text;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists usuario_edicao_nome text;
+
+update public.fiscalizacao_ocorrencias
+set
+  usuario_inclusao_id = coalesce(usuario_inclusao_id, usuario_id),
+  usuario_inclusao_nome = coalesce(usuario_inclusao_nome, usuario_nome)
+where usuario_inclusao_nome is null
+   or usuario_inclusao_id is null;
 
 create table if not exists public.fiscalizacao_ocorrencias_anexos (
   id uuid primary key default gen_random_uuid(),

@@ -118,6 +118,7 @@ async function salvarOcorrencia(event) {
 
   try {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+    const nomeUsuario = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
     const payload = {
       data_ocorrencia: document.getElementById('mobileData').value,
       hora_ocorrencia: document.getElementById('mobileHorario').value || null,
@@ -127,16 +128,20 @@ async function salvarOcorrencia(event) {
       auxiliar: document.getElementById('mobileAuxiliar').value.trim() || null,
       local_ocorrencia: document.getElementById('mobileLocalOcorrencia').value.trim() || null,
       envolvimento: coletarEnvolvimento(),
-      relatorio: document.getElementById('mobileRelatorio').value.trim(),
-      usuario_id: usuario.id || null,
-      usuario_nome: usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema'
+      relatorio: document.getElementById('mobileRelatorio').value.trim()
     };
 
     let idOcorrencia = ocorrenciaEditandoId;
     if (estavaEditando) {
+      payload.usuario_edicao_id = usuario.id || null;
+      payload.usuario_edicao_nome = nomeUsuario;
       const { error } = await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
       if (error) throw error;
     } else {
+      payload.usuario_id = usuario.id || null;
+      payload.usuario_nome = nomeUsuario;
+      payload.usuario_inclusao_id = payload.usuario_id;
+      payload.usuario_inclusao_nome = payload.usuario_nome;
       const { data, error } = await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]).select('id').single();
       if (error) throw error;
       idOcorrencia = data.id;
@@ -195,6 +200,8 @@ function renderCards() {
   const filtradas = ocorrencias.filter(item => [
     item.data_ocorrencia,
     item.usuario_nome,
+    item.usuario_inclusao_nome,
+    item.usuario_edicao_nome,
     item.rota,
     item.placa,
     item.motorista,
@@ -224,7 +231,8 @@ function renderCards() {
         <span><i class="fas fa-user"></i><strong>Auxiliar:</strong> ${escapeHtml(item.auxiliar || '-')}</span>
         <span><i class="fas fa-location-dot"></i><strong>Local:</strong> ${escapeHtml(item.local_ocorrencia || '-')}</span>
         <span><i class="fas fa-car-burst"></i><strong>Envolvimento:</strong> ${escapeHtml(resumoEnvolvimento(item.envolvimento) || '-')}</span>
-        <span><i class="fas fa-pen"></i><strong>Registro:</strong> ${escapeHtml(item.usuario_nome || '-')}</span>
+        <span><i class="fas fa-pen"></i><strong>Incluido por:</strong> ${escapeHtml(item.usuario_inclusao_nome || item.usuario_nome || '-')}</span>
+        <span><i class="fas fa-user-pen"></i><strong>Ultima edicao:</strong> ${escapeHtml(item.usuario_edicao_nome || '-')}</span>
       </div>
       <p class="card-report">${escapeHtml(item.relatorio || '-')}</p>
       <div class="card-action-hint"><i class="fas fa-pen"></i> Tocar para editar</div>
