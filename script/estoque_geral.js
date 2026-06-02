@@ -1299,12 +1299,13 @@ const EstoqueGeralUI = {
             startY = 58 + (splitObs.length * 5) + 5;
         }
 
-        const columns = ['Produto', 'Qtd', 'Saldo Anterior', 'Saldo Novo'];
+        const columns = ['Produto', 'Qtd', 'Saldo Anterior', 'Saldo Novo', 'Veiculo'];
         const rows = [[
             movimentacao.produtos?.nome || 'Produto Excluído',
             (movimentacao.quantidade || 0).toLocaleString('pt-BR'),
             (movimentacao.quantidade_anterior || 0).toLocaleString('pt-BR'),
-            (movimentacao.quantidade_nova || 0).toLocaleString('pt-BR')
+            (movimentacao.quantidade_nova || 0).toLocaleString('pt-BR'),
+            movimentacao.veiculo || '-'
         ]];
 
         doc.autoTable({
