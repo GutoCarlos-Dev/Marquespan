@@ -91,6 +91,7 @@ function abrirModal(item = null) {
 
   document.getElementById('acompanhamentoData').value = item?.data_acompanhamento || new Date().toISOString().split('T')[0];
   document.getElementById('acompanhamentoRota').value = item?.rota || '';
+  document.getElementById('acompanhamentoQtdEntregas').value = item?.qtd_entregas ?? '';
   document.getElementById('acompanhamentoPlaca').value = item?.placa || '';
   document.getElementById('acompanhamentoTipoRota').value = item?.tipo_rota || 'bate_volta';
   document.getElementById('acompanhamentoMotorista').value = item?.motorista || '';
@@ -309,6 +310,7 @@ async function salvarAcompanhamento(event) {
     const payload = {
       data_acompanhamento: document.getElementById('acompanhamentoData').value,
       rota: document.getElementById('acompanhamentoRota').value.trim(),
+      qtd_entregas: getNumeroOuNull('acompanhamentoQtdEntregas'),
       tipo_rota: document.getElementById('acompanhamentoTipoRota').value,
       placa: document.getElementById('acompanhamentoPlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('acompanhamentoMotorista').value.trim(),
@@ -445,6 +447,7 @@ function getDadosGrid() {
       item.data_acompanhamento,
       item.usuario_nome,
       item.rota,
+      item.qtd_entregas,
       item.tipo_rota,
       item.placa,
       item.motorista,
@@ -476,7 +479,7 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
@@ -486,6 +489,7 @@ function renderizarTabela() {
       <td>${formatarData(item.data_acompanhamento)}</td>
       <td>${escapeHtml(item.usuario_nome || '-')}</td>
       <td>${escapeHtml(item.rota || '-')}</td>
+      <td>${escapeHtml(item.qtd_entregas ?? '-')}</td>
       <td>${escapeHtml(formatarTipoRota(item.tipo_rota))}</td>
       <td><strong>${escapeHtml(item.placa || '-')}</strong></td>
       <td>${escapeHtml(item.motorista || '-')}</td>
@@ -564,6 +568,7 @@ function dadosParaExportacao() {
     Data: formatarData(item.data_acompanhamento),
     Usuario: item.usuario_nome || '',
     Rota: item.rota || '',
+    'QTD de Entregas': item.qtd_entregas ?? '',
     Tipo: formatarTipoRota(item.tipo_rota),
     Placa: item.placa || '',
     Motorista: item.motorista || '',
@@ -583,6 +588,11 @@ function exportarExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Acompanhamentos');
   XLSX.writeFile(wb, `fiscalizacao_acompanhamentos_${Date.now()}.xlsx`);
+}
+
+function getNumeroOuNull(id) {
+  const valor = document.getElementById(id).value;
+  return valor === '' ? null : Number(valor);
 }
 
 async function getLogoBase64() {

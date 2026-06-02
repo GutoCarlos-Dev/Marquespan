@@ -51,6 +51,7 @@ function abrirModal(item = null) {
 
   document.getElementById('mobileData').value = item?.data_acompanhamento || new Date().toISOString().split('T')[0];
   document.getElementById('mobileRota').value = item?.rota || '';
+  document.getElementById('mobileQtdEntregas').value = item?.qtd_entregas ?? '';
   document.getElementById('mobilePlaca').value = item?.placa || '';
   document.getElementById('mobileTipoRota').value = item?.tipo_rota || 'bate_volta';
   document.getElementById('mobileMotorista').value = item?.motorista || '';
@@ -279,6 +280,7 @@ async function salvarAcompanhamento(event) {
     const payload = {
       data_acompanhamento: document.getElementById('mobileData').value,
       rota: document.getElementById('mobileRota').value.trim(),
+      qtd_entregas: getNumeroOuNull('mobileQtdEntregas'),
       tipo_rota: document.getElementById('mobileTipoRota').value,
       placa: document.getElementById('mobilePlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('mobileMotorista').value.trim(),
@@ -391,6 +393,7 @@ function renderCards() {
     item.data_acompanhamento,
     item.usuario_nome,
     item.rota,
+    item.qtd_entregas,
     item.tipo_rota,
     item.placa,
     item.motorista,
@@ -417,6 +420,7 @@ function renderCards() {
       </div>
       <div class="card-info">
         <span><i class="fas fa-route"></i><strong>Rota:</strong> ${escapeHtml(item.rota || '-')}</span>
+        <span><i class="fas fa-boxes-stacked"></i><strong>Entregas:</strong> ${escapeHtml(item.qtd_entregas ?? '-')}</span>
         <span><i class="fas fa-map-signs"></i><strong>Tipo:</strong> ${escapeHtml(formatarTipoRota(item.tipo_rota))}</span>
         <span><i class="fas fa-user-tie"></i><strong>Motorista:</strong> ${escapeHtml(item.motorista || '-')}</span>
         <span><i class="fas fa-user"></i><strong>Auxiliar:</strong> ${escapeHtml(item.auxiliar || '-')}</span>
@@ -437,6 +441,11 @@ function normalizarArray(valor) {
   } catch {
     return [];
   }
+}
+
+function getNumeroOuNull(id) {
+  const valor = document.getElementById(id).value;
+  return valor === '' ? null : Number(valor);
 }
 
 function resumoClientes(clientes) {

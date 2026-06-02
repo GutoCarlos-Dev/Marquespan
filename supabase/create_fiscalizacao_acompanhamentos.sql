@@ -4,6 +4,7 @@ create table if not exists public.fiscalizacao_acompanhamentos (
   id uuid primary key default gen_random_uuid(),
   data_acompanhamento date not null,
   rota text not null,
+  qtd_entregas integer,
   tipo_rota text not null check (tipo_rota in ('bate_volta', 'viagem')),
   placa text not null,
   motorista text not null,
@@ -24,6 +25,9 @@ alter table public.fiscalizacao_acompanhamentos
 
 alter table public.fiscalizacao_acompanhamentos
   add column if not exists sugestao_roteiro jsonb not null default '[]'::jsonb;
+
+alter table public.fiscalizacao_acompanhamentos
+  add column if not exists qtd_entregas integer;
 
 do $$
 begin

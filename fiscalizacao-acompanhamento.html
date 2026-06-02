@@ -79,6 +79,7 @@
               <th class="sortable" data-sort="data_acompanhamento">Data <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="usuario_nome">Usuario <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="qtd_entregas">Entregas <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="tipo_rota">Tipo <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="placa">Placa <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="motorista">Motorista <i class="fas fa-sort"></i></th>
@@ -88,7 +89,7 @@
             </tr>
           </thead>
           <tbody id="tbodyAcompanhamentos">
-            <tr><td colspan="9" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+            <tr><td colspan="10" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -113,6 +114,10 @@
               <div class="form-group">
                 <label for="acompanhamentoRota">Rota</label>
                 <input type="text" id="acompanhamentoRota" list="listaRotas" class="glass-input" required>
+              </div>
+              <div class="form-group">
+                <label for="acompanhamentoQtdEntregas">QTD de Entregas</label>
+                <input type="number" id="acompanhamentoQtdEntregas" class="glass-input" min="0" step="1">
               </div>
               <div class="form-group">
                 <label for="acompanhamentoPlaca">Placa</label>
