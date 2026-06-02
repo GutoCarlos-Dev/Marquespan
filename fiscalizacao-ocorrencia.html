@@ -48,6 +48,12 @@
             <label for="filtroRota">Rota</label>
             <input type="text" id="filtroRota" list="listaRotas" placeholder="Buscar rota...">
           </div>
+          <div class="form-group-filter">
+            <label for="filtroFilial">Filial</label>
+            <select id="filtroFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
         </div>
       </section>
 
@@ -79,6 +85,7 @@
               <th class="sortable" data-sort="usuario_inclusao_nome">Incluido por <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="usuario_edicao_nome">Ultima edicao <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="filial">Filial <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="placa">Placa <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="motorista">Motorista <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="auxiliar">Auxiliar <i class="fas fa-sort"></i></th>
@@ -87,7 +94,7 @@
             </tr>
           </thead>
           <tbody id="tbodyOcorrencias">
-            <tr><td colspan="9" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+            <tr><td colspan="10" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -112,6 +119,12 @@
               <div class="form-group">
                 <label for="ocorrenciaHorario">Horario</label>
                 <input type="time" id="ocorrenciaHorario" class="glass-input">
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaFilial">Filial</label>
+                <select id="ocorrenciaFilial" class="glass-input" required>
+                  <option value="">Selecione a filial</option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="ocorrenciaRota">Rota</label>

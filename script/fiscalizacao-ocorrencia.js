@@ -10,6 +10,7 @@ let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
 let visualizandoOcorrencia = false;
+let veiculosPorPlaca = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -30,6 +31,8 @@ function bindEvents() {
   document.getElementById('btnExportarXLS').addEventListener('click', exportarExcel);
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
   document.getElementById('filtroLocal').addEventListener('input', renderizarTabela);
+  document.getElementById('filtroFilial').addEventListener('change', buscarOcorrencias);
+  document.getElementById('ocorrenciaPlaca').addEventListener('change', preencherFilialPorPlaca);
   document.getElementById('formOcorrencia').addEventListener('submit', salvarOcorrencia);
   document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
   document.getElementById('btnCancelarOcorrencia').addEventListener('click', fecharModal);
@@ -56,20 +59,36 @@ function bindEvents() {
 
 async function carregarListas() {
   try {
-    const [veiculosRes, motoristasRes, auxiliaresRes, rotasRes] = await Promise.all([
-      supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa'),
+    const [veiculosRes, motoristasRes, auxiliaresRes, rotasRes, filiaisRes] = await Promise.all([
+      supabaseClient.from('veiculos').select('placa, filial').eq('situacao', 'ativo').order('placa'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Motorista%').order('nome'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Auxiliar%').order('nome'),
-      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true })
+      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true }),
+      supabaseClient.from('filiais').select('nome, sigla').order('nome')
     ]);
 
+    veiculosPorPlaca = new Map((veiculosRes.data || []).map(v => [normalizarBusca(v.placa), v]));
     preencherDatalist('listaPlacas', veiculosRes.data?.map(v => v.placa));
     preencherDatalist('listaMotoristas', motoristasRes.data?.map(nomeFuncionario));
     preencherDatalist('listaAuxiliares', auxiliaresRes.data?.map(nomeFuncionario));
     preencherDatalist('listaRotas', rotasRes.data?.map(r => r.numero));
+    preencherSelectFiliais('filtroFilial', filiaisRes.data, 'Todas');
+    preencherSelectFiliais('ocorrenciaFilial', filiaisRes.data, 'Selecione a filial');
   } catch (error) {
     console.error('Erro ao carregar listas:', error);
   }
+}
+
+function preencherSelectFiliais(id, filiais = [], textoInicial = 'Todas') {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const valorAtual = select.value;
+  select.innerHTML = `<option value="">${textoInicial}</option>`;
+  (filiais || []).forEach(filial => {
+    const valor = filial.sigla || filial.nome;
+    if (valor) select.appendChild(new Option(valor, valor));
+  });
+  select.value = valorAtual;
 }
 
 function preencherDatalist(id, valores = []) {
@@ -84,6 +103,29 @@ function preencherDatalist(id, valores = []) {
 
 function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
+}
+
+function normalizarBusca(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function preencherFilialPorPlaca() {
+  const placa = normalizarBusca(document.getElementById('ocorrenciaPlaca').value);
+  const veiculo = veiculosPorPlaca.get(placa);
+  if (veiculo?.filial) definirValorSelect('ocorrenciaFilial', veiculo.filial);
+}
+
+function definirValorSelect(id, valor) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const valorNormalizado = String(valor || '').trim();
+  if (!valorNormalizado) {
+    select.value = '';
+    return;
+  }
+  const existe = Array.from(select.options).some(option => option.value === valorNormalizado);
+  if (!existe) select.appendChild(new Option(valorNormalizado, valorNormalizado));
+  select.value = valorNormalizado;
 }
 
 function getNivelUsuario() {
@@ -121,6 +163,7 @@ async function abrirModal(item = null, modo = 'editar') {
   atualizarBotaoCompartilharModal();
   document.getElementById('ocorrenciaData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
   document.getElementById('ocorrenciaHorario').value = item?.hora_ocorrencia || '';
+  definirValorSelect('ocorrenciaFilial', item?.filial || '');
   document.getElementById('ocorrenciaRota').value = item?.rota || '';
   document.getElementById('ocorrenciaPlaca').value = item?.placa || '';
   document.getElementById('ocorrenciaMotorista').value = item?.motorista || '';
@@ -210,6 +253,7 @@ async function salvarOcorrencia(event) {
     const payload = {
       data_ocorrencia: document.getElementById('ocorrenciaData').value,
       hora_ocorrencia: document.getElementById('ocorrenciaHorario').value || null,
+      filial: document.getElementById('ocorrenciaFilial').value || null,
       rota: document.getElementById('ocorrenciaRota').value.trim(),
       placa: document.getElementById('ocorrenciaPlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
@@ -294,6 +338,7 @@ async function buscarOcorrencias() {
     const placa = document.getElementById('filtroPlaca').value.trim().toUpperCase();
     const motorista = document.getElementById('filtroMotorista').value.trim();
     const rota = document.getElementById('filtroRota').value.trim();
+    const filial = document.getElementById('filtroFilial').value;
 
     let query = supabaseClient.from('fiscalizacao_ocorrencias').select('*');
     if (dataDe) query = query.gte('data_ocorrencia', dataDe);
@@ -301,6 +346,7 @@ async function buscarOcorrencias() {
     if (placa) query = query.ilike('placa', `%${placa}%`);
     if (motorista) query = query.ilike('motorista', `%${motorista}%`);
     if (rota) query = query.ilike('rota', `%${rota}%`);
+    if (filial) query = query.eq('filial', filial);
 
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
@@ -329,6 +375,7 @@ function getDadosGrid() {
       item.usuario_inclusao_nome,
       item.usuario_edicao_nome,
       item.rota,
+      item.filial,
       item.placa,
       item.motorista,
       item.auxiliar,
@@ -358,7 +405,7 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
@@ -369,6 +416,7 @@ function renderizarTabela() {
       <td>${escapeHtml(item.usuario_inclusao_nome || item.usuario_nome || '-')}</td>
       <td>${escapeHtml(formatarUltimaEdicao(item))}</td>
       <td>${escapeHtml(item.rota || '-')}</td>
+      <td>${escapeHtml(item.filial || '-')}</td>
       <td><strong>${escapeHtml(item.placa || '-')}</strong></td>
       <td>${escapeHtml(item.motorista || '-')}</td>
       <td>${escapeHtml(item.auxiliar || '-')}</td>
@@ -447,6 +495,7 @@ function dadosParaExportacao() {
     'Usuario que Incluiu': item.usuario_inclusao_nome || item.usuario_nome || '',
     'Ultima Edicao': formatarUltimaEdicao(item),
     Rota: item.rota || '',
+    Filial: item.filial || '',
     Placa: item.placa || '',
     Motorista: item.motorista || '',
     Auxiliar: item.auxiliar || '',
@@ -543,6 +592,7 @@ function obterOcorrenciaDoFormulario() {
     id: ocorrenciaEditandoId,
     data_ocorrencia: document.getElementById('ocorrenciaData').value,
     hora_ocorrencia: document.getElementById('ocorrenciaHorario').value || null,
+    filial: document.getElementById('ocorrenciaFilial').value || null,
     rota: document.getElementById('ocorrenciaRota').value.trim(),
     placa: document.getElementById('ocorrenciaPlaca').value.trim().toUpperCase(),
     motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
@@ -565,6 +615,7 @@ function compartilharOcorrenciaWhatsapp(ocorrencia = null) {
     '*Fiscalizacao - Ocorrencia*',
     `Data: ${formatarData(dados.data_ocorrencia)}`,
     `Horario: ${dados.hora_ocorrencia || '-'}`,
+    `Filial: ${dados.filial || '-'}`,
     `Rota: ${dados.rota || '-'}`,
     `Placa: ${dados.placa || '-'}`,
     `Motorista(s): ${dados.motorista || '-'}`,
@@ -775,15 +826,15 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Rota', 'Placa', 'Motorista', 'Local', 'Ocorrencia']],
+    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Filial', 'Rota', 'Placa', 'Motorista', 'Ocorrencia']],
     body: rows.map(row => [
       row['Data Inclusao'],
       row['Data Ocorrencia'],
       row['Ultima Edicao'],
+      row.Filial,
       row.Rota,
       row.Placa,
       row.Motorista,
-      row['Local da Ocorrencia'],
       row.Ocorrencia
     ]),
     startY: 30,

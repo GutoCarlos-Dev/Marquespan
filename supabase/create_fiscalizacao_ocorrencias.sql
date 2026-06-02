@@ -4,6 +4,7 @@ create table if not exists public.fiscalizacao_ocorrencias (
   id uuid primary key default gen_random_uuid(),
   data_ocorrencia date not null,
   hora_ocorrencia time,
+  filial text,
   rota text not null,
   placa text not null,
   motorista text not null,
@@ -23,6 +24,9 @@ create table if not exists public.fiscalizacao_ocorrencias (
 
 alter table public.fiscalizacao_ocorrencias
   add column if not exists hora_ocorrencia time;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists filial text;
 
 alter table public.fiscalizacao_ocorrencias
   add column if not exists local_ocorrencia text;
@@ -73,6 +77,9 @@ create index if not exists idx_fiscalizacao_ocorrencias_motorista
 
 create index if not exists idx_fiscalizacao_ocorrencias_rota
   on public.fiscalizacao_ocorrencias (rota);
+
+create index if not exists idx_fiscalizacao_ocorrencias_filial
+  on public.fiscalizacao_ocorrencias (filial);
 
 create or replace function public.update_fiscalizacao_ocorrencias_updated_at()
 returns trigger as $$
