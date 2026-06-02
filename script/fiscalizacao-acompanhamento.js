@@ -822,7 +822,7 @@ async function gerarFormularioImpresso() {
   checkbox('Rota Viagem', margin + 40);
   y += 7;
 
-  drawClienteTable('Quantidades de Entrega (Roteiro Atual)', 20, false);
+  drawClienteTable('Quantidades de Entrega (Roteiro Atual)', 23, false);
 
   sectionTitle('Horario - Bate e Volta');
   lineField('Saida da empresa', margin, 34);
