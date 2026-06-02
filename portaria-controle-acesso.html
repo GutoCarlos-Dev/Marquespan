@@ -54,6 +54,8 @@
           <button type="button" id="btnCadastroEmpresa" class="btn-glass btn-green"><i class="fas fa-building"></i> Empresa</button>
           <button type="button" id="btnCadastroPessoa" class="btn-glass btn-green"><i class="fas fa-user"></i> Pessoa</button>
           <button type="button" id="btnCadastroSetor" class="btn-glass btn-green"><i class="fas fa-sitemap"></i> Setor</button>
+          <button type="button" id="btnExportarPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" id="btnExportarXLSX" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> XLSX</button>
         </div>
       </section>
     </div>
@@ -84,7 +86,7 @@
             </tr>
           </thead>
           <tbody id="tbodyAcessos">
-            <tr><td colspan="10" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
+            <tr><td colspan="11" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -155,6 +157,29 @@
       </div>
       <form id="formEmpresa">
         <div class="modal-body">
+          <div class="form-group cadastro-search-box">
+            <label for="buscaEmpresaCadastro">Buscar empresa existente</label>
+            <div class="input-action-row">
+              <input type="text" id="buscaEmpresaCadastro" class="glass-input" placeholder="Digite nome, CNPJ ou CPF">
+              <button type="button" id="btnBuscarEmpresasCadastro" class="btn-mini" title="Buscar empresas"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="resultadoBuscaEmpresa" class="cadastro-search-results"></div>
+          </div>
+          <div class="cadastro-grid-wrap">
+            <table class="cadastro-grid-table">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Documento</th>
+                  <th>Telefone</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="gridEmpresasCadastro">
+                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+              </tbody>
+            </table>
+          </div>
           <div class="form-group">
             <label for="empresaNome">Nome da Empresa</label>
             <input type="text" id="empresaNome" class="glass-input" required>
@@ -188,6 +213,29 @@
       </div>
       <form id="formPessoa">
         <div class="modal-body">
+          <div class="form-group cadastro-search-box">
+            <label for="buscaPessoaCadastro">Buscar pessoa existente</label>
+            <div class="input-action-row">
+              <input type="text" id="buscaPessoaCadastro" class="glass-input" placeholder="Digite nome, CPF, RG ou CNH">
+              <button type="button" id="btnBuscarPessoasCadastro" class="btn-mini" title="Buscar pessoas"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="resultadoBuscaPessoa" class="cadastro-search-results"></div>
+          </div>
+          <div class="cadastro-grid-wrap">
+            <table class="cadastro-grid-table">
+              <thead>
+                <tr>
+                  <th>Pessoa</th>
+                  <th>Documento</th>
+                  <th>Empresa</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="gridPessoasCadastro">
+                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+              </tbody>
+            </table>
+          </div>
           <div class="form-group">
             <label for="pessoaNome">Nome</label>
             <input type="text" id="pessoaNome" class="glass-input" required>
@@ -221,6 +269,29 @@
       </div>
       <form id="formSetor">
         <div class="modal-body">
+          <div class="form-group cadastro-search-box">
+            <label for="buscaSetorCadastro">Buscar setor existente</label>
+            <div class="input-action-row">
+              <input type="text" id="buscaSetorCadastro" class="glass-input" placeholder="Digite nome do setor ou responsavel">
+              <button type="button" id="btnBuscarSetoresCadastro" class="btn-mini" title="Buscar setores"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="resultadoBuscaSetor" class="cadastro-search-results"></div>
+          </div>
+          <div class="cadastro-grid-wrap">
+            <table class="cadastro-grid-table">
+              <thead>
+                <tr>
+                  <th>Setor</th>
+                  <th>Responsavel</th>
+                  <th>Ramal</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="gridSetoresCadastro">
+                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+              </tbody>
+            </table>
+          </div>
           <div class="form-group">
             <label for="setorNome">Nome do Setor</label>
             <input type="text" id="setorNome" class="glass-input" required>
@@ -252,6 +323,8 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./script/portaria-controle-acesso.js" defer></script>
 </body>
 </html>

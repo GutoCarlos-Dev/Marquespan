@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portaria Real-Time - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
+  <link rel="stylesheet" href="css/monitoramento-abastecimento-interno.css" />
+  <link rel="stylesheet" href="css/monitoramento-portaria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script type="module" src="./script/auth-guard.js"></script>
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header header-flex">
+        <span><i class="fas fa-door-open"></i> Portaria Real-Time</span>
+        <div class="header-controls">
+          <span id="realtime-status" class="realtime-pill offline"><i class="fas fa-circle"></i> Conectando</span>
+          <span id="last-update" class="last-update-text">Atualizado as: --:--</span>
+          <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+          <button id="btn-fullscreen" class="btn-glass btn-blue" title="Tela Cheia"><i class="fas fa-expand"></i></button>
+          <button id="btn-refresh" class="btn-glass btn-blue" title="Atualizar Agora"><i class="fas fa-sync-alt"></i></button>
+        </div>
+      </header>
+
+      <section class="section">
+        <div class="filter-bar glass-panel">
+          <div class="form-group">
+            <label for="dataPortaria">Data:</label>
+            <input type="date" id="dataPortaria" class="glass-input">
+          </div>
+          <div class="form-group portaria-monitor-search">
+            <label for="searchInput">Buscar:</label>
+            <input type="text" id="searchInput" class="glass-input" placeholder="Empresa, pessoa, placa, setor...">
+          </div>
+          <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
+        </div>
+
+        <div class="kpi-grid portaria-monitor-kpis">
+          <div class="kpi-card glass-card orange">
+            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+            <div class="kpi-info">
+              <h3>Aguardando</h3>
+              <p id="kpi-aguardando">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card green">
+            <div class="kpi-icon"><i class="fas fa-building-circle-check"></i></div>
+            <div class="kpi-info">
+              <h3>Dentro da Empresa</h3>
+              <p id="kpi-dentro">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card blue">
+            <div class="kpi-icon"><i class="fas fa-person-walking-arrow-right"></i></div>
+            <div class="kpi-info">
+              <h3>Ja Saiu</h3>
+              <p id="kpi-saiu">0</p>
+            </div>
+          </div>
+          <div class="kpi-card glass-card red">
+            <div class="kpi-icon"><i class="fas fa-list-check"></i></div>
+            <div class="kpi-info">
+              <h3>Total do Dia</h3>
+              <p id="kpi-total">0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="portaria-live-grid">
+          <div class="glass-panel portaria-column">
+            <div class="column-header aguardando">
+              <h3><i class="fas fa-hourglass-half"></i> Aguardando Entrada</h3>
+              <span id="count-aguardando">0</span>
+            </div>
+            <div id="lista-aguardando" class="portaria-access-list"></div>
+          </div>
+
+          <div class="glass-panel portaria-column">
+            <div class="column-header dentro">
+              <h3><i class="fas fa-building-circle-check"></i> Dentro da Empresa</h3>
+              <span id="count-dentro">0</span>
+            </div>
+            <div id="lista-dentro" class="portaria-access-list"></div>
+          </div>
+
+          <div class="glass-panel portaria-column">
+            <div class="column-header saiu">
+              <h3><i class="fas fa-person-walking-arrow-right"></i> Saidas Registradas</h3>
+              <span id="count-saiu">0</span>
+            </div>
+            <div id="lista-saiu" class="portaria-access-list"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/monitoramento-portaria.js"></script>
+</body>
+</html>

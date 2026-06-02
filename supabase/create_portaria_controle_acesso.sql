@@ -116,13 +116,14 @@ using (auth.role() = 'authenticated')
 with check (auth.role() = 'authenticated');
 
 drop policy if exists "Portaria empresas excluir admin gerencia" on public.portaria_empresas;
-create policy "Portaria empresas excluir admin gerencia"
+drop policy if exists "Portaria empresas excluir administrador" on public.portaria_empresas;
+create policy "Portaria empresas excluir administrador"
 on public.portaria_empresas for delete
 using (
   exists (
     select 1 from public.usuarios u
     where u.auth_user_id = auth.uid()
-      and lower(u.nivel) in ('administrador', 'gerencia')
+      and lower(u.nivel) = 'administrador'
   )
 );
 
@@ -144,13 +145,14 @@ using (auth.role() = 'authenticated')
 with check (auth.role() = 'authenticated');
 
 drop policy if exists "Portaria pessoas excluir admin gerencia" on public.portaria_pessoas;
-create policy "Portaria pessoas excluir admin gerencia"
+drop policy if exists "Portaria pessoas excluir administrador" on public.portaria_pessoas;
+create policy "Portaria pessoas excluir administrador"
 on public.portaria_pessoas for delete
 using (
   exists (
     select 1 from public.usuarios u
     where u.auth_user_id = auth.uid()
-      and lower(u.nivel) in ('administrador', 'gerencia')
+      and lower(u.nivel) = 'administrador'
   )
 );
 
@@ -172,13 +174,14 @@ using (auth.role() = 'authenticated')
 with check (auth.role() = 'authenticated');
 
 drop policy if exists "Portaria setores excluir admin gerencia" on public.portaria_setores;
-create policy "Portaria setores excluir admin gerencia"
+drop policy if exists "Portaria setores excluir administrador" on public.portaria_setores;
+create policy "Portaria setores excluir administrador"
 on public.portaria_setores for delete
 using (
   exists (
     select 1 from public.usuarios u
     where u.auth_user_id = auth.uid()
-      and lower(u.nivel) in ('administrador', 'gerencia')
+      and lower(u.nivel) = 'administrador'
   )
 );
 
