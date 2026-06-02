@@ -1,0 +1,93 @@
+.acompanhamento-modal {
+  max-width: 980px;
+}
+
+.acompanhamento-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: #fff;
+}
+
+.acompanhamento-card h4 {
+  color: #006937;
+  font-size: 1rem;
+  margin: 0 0 14px;
+}
+
+.card-title-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.card-title-row h4 {
+  margin: 0;
+}
+
+.dynamic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dynamic-item {
+  border: 1px solid #d9e2dc;
+  border-left: 4px solid #006937;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
+.dynamic-item-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dynamic-item-title {
+  color: #111827;
+  font-weight: 700;
+}
+
+.btn-remover {
+  background: #dc3545;
+  color: #fff;
+}
+
+.checkbox-line {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.checkbox-line input {
+  width: 18px;
+  height: 18px;
+}
+
+.horario-mercado.hidden,
+.viagem-only.hidden,
+.bate-volta-only.hidden,
+.sugestao-roteiro-body.hidden {
+  display: none !important;
+}
+
+.clientes-resumo,
+.dias-resumo {
+  min-width: 220px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .card-title-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

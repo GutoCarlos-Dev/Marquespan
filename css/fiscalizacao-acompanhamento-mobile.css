@@ -1,0 +1,71 @@
+.fieldset-action-row {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: -8px;
+}
+
+.btn-small {
+  height: 36px;
+  width: 42px;
+}
+
+.mobile-dynamic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.mobile-dynamic-item {
+  background: #fbfdfc;
+  border: 1px solid #d9e2dc;
+  border-left: 4px solid #006937;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.mobile-dynamic-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mobile-dynamic-title {
+  color: #111827;
+  font-weight: 700;
+}
+
+.btn-remove-mobile {
+  background: #dc3545;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  height: 34px;
+  width: 38px;
+}
+
+.mobile-checkbox-line {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-checkbox-line input {
+  width: 18px;
+  height: 18px;
+}
+
+.mobile-horario-mercado.hidden,
+.mobile-viagem-only.hidden,
+.mobile-bate-volta-only.hidden,
+#mobileSugestaoRoteiroBody.hidden {
+  display: none !important;
+}
+
+.card-report.compact {
+  max-height: 86px;
+  overflow: hidden;
+}

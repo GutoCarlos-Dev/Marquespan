@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>App Fiscalizacao - Acompanhamento</title>
+  <link rel="stylesheet" href="css/fiscalizacao-ocorrencia-mobile.css" />
+  <link rel="stylesheet" href="css/fiscalizacao-acompanhamento-mobile.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo" class="mobile-logo">
+      <h1>Acompanhamento</h1>
+    </div>
+    <a href="fiscalizacao-acompanhamento.html" class="btn-desktop-link" title="Voltar para Desktop"><i class="fas fa-desktop"></i></a>
+  </header>
+
+  <div class="mobile-container">
+    <button type="button" id="btnAdicionarAcompanhamento" class="fab-button">
+      <i class="fas fa-plus"></i>
+    </button>
+
+    <div class="mobile-filters">
+      <div class="mobile-search">
+        <i class="fas fa-search"></i>
+        <input type="search" id="mobileBusca" placeholder="Buscar placa, rota, motorista...">
+      </div>
+      <div class="filter-row">
+        <div style="flex: 1;">
+          <label for="mobileFiltroDataDe">Data de</label>
+          <input type="date" id="mobileFiltroDataDe">
+        </div>
+        <div style="flex: 1;">
+          <label for="mobileFiltroDataAte">Data ate</label>
+          <input type="date" id="mobileFiltroDataAte">
+        </div>
+      </div>
+      <button type="button" id="btnAtualizarMobile" class="btn-primary btn-block">
+        <i class="fas fa-sync-alt"></i> Atualizar
+      </button>
+      <div class="summary-line">
+        <strong id="totalMobile">0</strong> registros
+      </div>
+    </div>
+
+    <div class="mobile-list-container">
+      <div id="listaAcompanhamentosMobile" class="card-list">
+        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalAcompanhamentoMobile" class="panel-backdrop hidden">
+    <div class="panel mobile-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-clipboard-list"></i> Novo Acompanhamento</h3>
+        <button type="button" id="btnFecharModalMobile" class="close-button">&times;</button>
+      </div>
+      <div class="panel-body">
+        <form id="formAcompanhamentoMobile">
+          <fieldset class="form-fieldset">
+            <legend>Rota</legend>
+            <div class="form-grid-mobile">
+              <div class="form-group">
+                <label for="mobileData">Data</label>
+                <input type="date" id="mobileData" required>
+              </div>
+              <div class="form-group">
+                <label for="mobileRota">Rota</label>
+                <input type="text" id="mobileRota" list="listaRotasMobile" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="mobilePlaca">Placa</label>
+                <input type="text" id="mobilePlaca" list="listaPlacasMobile" required autocomplete="off" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group">
+                <label for="mobileTipoRota">Tipo de Rota</label>
+                <select id="mobileTipoRota" required>
+                  <option value="bate_volta">Bate e Volta</option>
+                  <option value="viagem">Rota Viagem</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Equipe</legend>
+            <div class="form-grid-mobile">
+              <div class="form-group">
+                <label for="mobileMotorista">Motorista</label>
+                <input type="text" id="mobileMotorista" list="listaMotoristasMobile" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="mobileAuxiliar">Auxiliar</label>
+                <input type="text" id="mobileAuxiliar" list="listaAuxiliaresMobile" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="mobileTerceiro">Terceiro Motorista/Auxiliar</label>
+                <input type="text" id="mobileTerceiro" autocomplete="off">
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Clientes</legend>
+            <div class="fieldset-action-row">
+              <button type="button" id="btnAdicionarClienteMobile" class="btn-primary btn-small"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="clientesMobileContainer" class="mobile-dynamic-list"></div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Horario</legend>
+            <div class="fieldset-action-row">
+              <button type="button" id="btnAdicionarDiaMobile" class="btn-primary btn-small"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="horariosMobileContainer" class="mobile-dynamic-list"></div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Observacoes</legend>
+            <div class="form-grid-mobile">
+              <div class="form-group">
+                <textarea id="mobileObservacoes" rows="4"></textarea>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Sugestao de Roteiro</legend>
+            <div class="form-group mobile-checkbox-line">
+              <input type="checkbox" id="mobileHabilitarSugestaoRoteiro">
+              <label for="mobileHabilitarSugestaoRoteiro">Informar sugestao?</label>
+            </div>
+            <div id="mobileSugestaoRoteiroBody" class="hidden">
+              <div class="fieldset-action-row">
+                <button type="button" id="btnAdicionarSugestaoClienteMobile" class="btn-primary btn-small"><i class="fas fa-plus"></i></button>
+              </div>
+              <div id="sugestaoClientesMobileContainer" class="mobile-dynamic-list"></div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions mobile-actions">
+            <button type="submit" id="btnSalvarMobile" class="btn-primary btn-block btn-large">
+              <i class="fas fa-save"></i> SALVAR ACOMPANHAMENTO
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="listaPlacasMobile"></datalist>
+  <datalist id="listaMotoristasMobile"></datalist>
+  <datalist id="listaAuxiliaresMobile"></datalist>
+  <datalist id="listaRotasMobile"></datalist>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/fiscalizacao-acompanhamento-mobile.js"></script>
+</body>
+</html>
