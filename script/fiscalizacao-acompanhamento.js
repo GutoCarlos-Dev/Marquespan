@@ -155,6 +155,10 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
         <input type="time" class="glass-input cliente-chamou-descarga">
       </div>
       <div class="form-group">
+        <label>Termino da Descarga</label>
+        <input type="time" class="glass-input cliente-termino-descarga">
+      </div>
+      <div class="form-group">
         <label>Liberou Canhoto</label>
         <input type="time" class="glass-input cliente-liberou-canhoto">
       </div>
@@ -168,6 +172,7 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
   if (!isSugestao) {
     item.querySelector('.cliente-horario-chegada').value = cliente.horario_chegada || '';
     item.querySelector('.cliente-chamou-descarga').value = cliente.chamou_descarga || '';
+    item.querySelector('.cliente-termino-descarga').value = cliente.termino_descarga || '';
     item.querySelector('.cliente-liberou-canhoto').value = cliente.liberou_canhoto || '';
   }
   atualizarMercadoHorario(item);
@@ -404,6 +409,7 @@ function coletarClientesDoContainer(containerId) {
       horario_recebimento_ate: item.querySelector('.cliente-horario-recebimento').value || null,
       horario_chegada: item.querySelector('.cliente-horario-chegada')?.value || null,
       chamou_descarga: item.querySelector('.cliente-chamou-descarga')?.value || null,
+      termino_descarga: item.querySelector('.cliente-termino-descarga')?.value || null,
       liberou_canhoto: item.querySelector('.cliente-liberou-canhoto')?.value || null
     }))
     .filter(cliente => cliente.nome);

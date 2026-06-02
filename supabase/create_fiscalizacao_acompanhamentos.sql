@@ -1,5 +1,8 @@
 create extension if not exists "pgcrypto";
 
+-- Estrutura JSON em clientes:
+-- nome, mercado_horario, horario_recebimento_ate, horario_chegada,
+-- chamou_descarga, termino_descarga, liberou_canhoto.
 create table if not exists public.fiscalizacao_acompanhamentos (
   id uuid primary key default gen_random_uuid(),
   data_acompanhamento date not null,
