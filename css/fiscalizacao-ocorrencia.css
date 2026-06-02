@@ -71,7 +71,7 @@
 }
 
 .acoes-cell {
-  min-width: 96px;
+  min-width: 172px;
   text-align: center;
   white-space: nowrap;
 }
@@ -99,6 +99,14 @@
 
 .btn-delete {
   background: #dc3545;
+}
+
+.btn-share {
+  background: #25d366;
+}
+
+.btn-view {
+  background: #006a2d;
 }
 
 .fiscalizacao-modal {

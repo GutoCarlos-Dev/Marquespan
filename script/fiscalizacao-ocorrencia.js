@@ -8,6 +8,7 @@ const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
 let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
+let visualizandoOcorrencia = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -30,6 +31,7 @@ function bindEvents() {
   document.getElementById('formOcorrencia').addEventListener('submit', salvarOcorrencia);
   document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
   document.getElementById('btnCancelarOcorrencia').addEventListener('click', fecharModal);
+  document.getElementById('btnCompartilharOcorrenciaWhatsapp').addEventListener('click', () => compartilharOcorrenciaWhatsapp());
   document.getElementById('ocorrenciaAnexos').addEventListener('change', handleAnexosChange);
   document.getElementById('listaAnexosOcorrencia').addEventListener('click', handleAnexoClick);
   ['envolveVeiculoEmpresa', 'envolveVeiculoTerceiro', 'envolveOutroPatrimonio'].forEach(id => {
@@ -82,15 +84,19 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
-async function abrirModal(item = null) {
+async function abrirModal(item = null, modo = 'editar') {
   document.getElementById('formOcorrencia').reset();
   anexosNovos = [];
   anexosExistentes = [];
   anexosParaRemover = [];
+  visualizandoOcorrencia = modo === 'visualizar';
   document.getElementById('ocorrenciaAnexos').value = '';
   ocorrenciaEditandoId = item?.id || null;
-  document.querySelector('#modalOcorrencia .modal-header h3').textContent = ocorrenciaEditandoId ? 'Editar Ocorrencia' : 'Ocorrencia';
+  document.querySelector('#modalOcorrencia .modal-header h3').textContent = visualizandoOcorrencia
+    ? 'Visualizar Ocorrencia'
+    : (ocorrenciaEditandoId ? 'Editar Ocorrencia' : 'Ocorrencia');
   document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alteracoes' : 'Salvar';
+  atualizarBotaoCompartilharModal();
   document.getElementById('ocorrenciaData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
   document.getElementById('ocorrenciaHorario').value = item?.hora_ocorrencia || '';
   document.getElementById('ocorrenciaRota').value = item?.rota || '';
@@ -102,13 +108,35 @@ async function abrirModal(item = null) {
   preencherEnvolvimento(item?.envolvimento);
   atualizarGruposEnvolvimento();
   renderizarAnexos();
+  atualizarModoVisualizacao();
   document.getElementById('modalOcorrencia').classList.remove('hidden');
-  if (ocorrenciaEditandoId) await carregarAnexosExistentes(ocorrenciaEditandoId);
+  if (ocorrenciaEditandoId) {
+    await carregarAnexosExistentes(ocorrenciaEditandoId);
+    atualizarModoVisualizacao();
+  }
 }
 
 function fecharModal() {
   ocorrenciaEditandoId = null;
+  visualizandoOcorrencia = false;
   document.getElementById('modalOcorrencia').classList.add('hidden');
+}
+
+function atualizarBotaoCompartilharModal() {
+  const btn = document.getElementById('btnCompartilharOcorrenciaWhatsapp');
+  const podeCompartilhar = Boolean(ocorrenciaEditandoId);
+  btn.classList.toggle('hidden', !podeCompartilhar);
+  btn.disabled = !podeCompartilhar;
+}
+
+function atualizarModoVisualizacao() {
+  const modal = document.getElementById('modalOcorrencia');
+  modal.querySelectorAll('input, textarea, select').forEach(campo => {
+    campo.disabled = visualizandoOcorrencia;
+  });
+  document.getElementById('btnSalvarOcorrencia').classList.toggle('hidden', visualizandoOcorrencia);
+  document.getElementById('btnCancelarOcorrencia').textContent = visualizandoOcorrencia ? 'Fechar' : 'Cancelar';
+  atualizarBotaoCompartilharModal();
 }
 
 async function handleTabelaClick(event) {
@@ -119,7 +147,12 @@ async function handleTabelaClick(event) {
   if (!item) return;
 
   if (button.dataset.action === 'editar') {
-    await abrirModal(item);
+    await abrirModal(item, 'editar');
+    return;
+  }
+
+  if (button.dataset.action === 'visualizar') {
+    await abrirModal(item, 'visualizar');
     return;
   }
 
@@ -129,11 +162,17 @@ async function handleTabelaClick(event) {
       return;
     }
     await excluirOcorrencia(item);
+    return;
+  }
+
+  if (button.dataset.action === 'whatsapp') {
+    compartilharOcorrenciaWhatsapp(item);
   }
 }
 
 async function salvarOcorrencia(event) {
   event.preventDefault();
+  if (visualizandoOcorrencia) return;
   const btn = document.getElementById('btnSalvarOcorrencia');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
@@ -171,15 +210,20 @@ async function salvarOcorrencia(event) {
 
     await salvarAnexos(idOcorrencia);
 
-    fecharModal();
+    ocorrenciaEditandoId = idOcorrencia;
+    visualizandoOcorrencia = false;
+    document.querySelector('#modalOcorrencia .modal-header h3').textContent = 'Editar Ocorrencia';
+    document.getElementById('btnSalvarOcorrencia').textContent = 'Salvar Alteracoes';
+    atualizarBotaoCompartilharModal();
+    await carregarAnexosExistentes(idOcorrencia);
     await buscarOcorrencias();
-    alert(estavaEditando ? 'Ocorrencia atualizada com sucesso!' : 'Ocorrencia registrada com sucesso!');
+    alert(estavaEditando ? 'Ocorrencia atualizada com sucesso! Botao de compartilhamento habilitado.' : 'Ocorrencia registrada com sucesso! Botao de compartilhamento habilitado.');
   } catch (error) {
     console.error('Erro ao salvar ocorrencia:', error);
     alert(`Erro ao salvar ocorrencia: ${error.message}`);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Salvar';
+    btn.textContent = ocorrenciaEditandoId ? 'Salvar Alteracoes' : 'Salvar';
   }
 }
 
@@ -290,6 +334,12 @@ function renderizarTabela() {
       <td class="acoes-cell">
         <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
           <i class="fas fa-pen"></i>
+        </button>
+        <button type="button" class="btn-grid-action btn-share" data-action="whatsapp" data-id="${escapeHtml(item.id)}" title="Compartilhar via WhatsApp">
+          <i class="fab fa-whatsapp"></i>
+        </button>
+        <button type="button" class="btn-grid-action btn-view" data-action="visualizar" data-id="${escapeHtml(item.id)}" title="Visualizar">
+          <i class="fas fa-eye"></i>
         </button>
         ${usuarioPodeExcluir() ? `
           <button type="button" class="btn-grid-action btn-delete" data-action="excluir" data-id="${escapeHtml(item.id)}" title="Excluir">
@@ -424,6 +474,49 @@ function resumoEnvolvimento(envolvimento) {
   return partes.join('; ');
 }
 
+function obterOcorrenciaDoFormulario() {
+  return {
+    id: ocorrenciaEditandoId,
+    data_ocorrencia: document.getElementById('ocorrenciaData').value,
+    hora_ocorrencia: document.getElementById('ocorrenciaHorario').value || null,
+    rota: document.getElementById('ocorrenciaRota').value.trim(),
+    placa: document.getElementById('ocorrenciaPlaca').value.trim().toUpperCase(),
+    motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
+    auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
+    local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
+    envolvimento: coletarEnvolvimento(),
+    relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
+  };
+}
+
+function compartilharOcorrenciaWhatsapp(ocorrencia = null) {
+  const dados = ocorrencia || obterOcorrenciaDoFormulario();
+  if (!dados?.id && !ocorrenciaEditandoId) {
+    alert('Salve a ocorrencia antes de compartilhar.');
+    return;
+  }
+
+  const linhas = [
+    '*Fiscalizacao - Ocorrencia*',
+    `Data: ${formatarData(dados.data_ocorrencia)}`,
+    `Horario: ${dados.hora_ocorrencia || '-'}`,
+    `Rota: ${dados.rota || '-'}`,
+    `Placa: ${dados.placa || '-'}`,
+    `Motorista(s): ${dados.motorista || '-'}`,
+    `Auxiliar: ${dados.auxiliar || '-'}`,
+    `Local: ${dados.local_ocorrencia || '-'}`,
+    `Envolvimento: ${resumoEnvolvimento(dados.envolvimento) || '-'}`,
+    '',
+    '*Relatorio Ocorrido:*',
+    dados.relatorio || '-'
+  ];
+
+  const quantidadeAnexos = ocorrencia ? null : anexosExistentes.length;
+  if (quantidadeAnexos) linhas.push('', `Anexos registrados: ${quantidadeAnexos}`);
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(linhas.join('\n'))}`, '_blank');
+}
+
 function handleAnexosChange(event) {
   anexosNovos.push(...Array.from(event.target.files || []));
   event.target.value = '';
@@ -483,9 +576,11 @@ function renderizarAnexos() {
               <i class="fas fa-download"></i>
             </button>
           ` : ''}
-          <button type="button" class="btn-anexo btn-anexo-remove" data-anexo-action="remover" data-tipo="${tipo}" data-index="${index}" title="Remover">
-            <i class="fas fa-trash"></i>
-          </button>
+          ${visualizandoOcorrencia ? '' : `
+            <button type="button" class="btn-anexo btn-anexo-remove" data-anexo-action="remover" data-tipo="${tipo}" data-index="${index}" title="Remover">
+              <i class="fas fa-trash"></i>
+            </button>
+          `}
         </div>
       </div>
     `;
