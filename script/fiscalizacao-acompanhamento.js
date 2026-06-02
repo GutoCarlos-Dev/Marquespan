@@ -855,14 +855,14 @@ async function gerarFormularioImpresso() {
   });
 
   sectionTitle('Observacoes');
-  ensureSpace(44);
+  ensureSpace(104);
   doc.setDrawColor(90);
   doc.setLineWidth(0.15);
-  Array.from({ length: 6 }).forEach((_, index) => {
+  Array.from({ length: 16 }).forEach((_, index) => {
     const lineY = y + index * 6;
     doc.line(margin, lineY, pageWidth - margin, lineY);
   });
-  y += 43;
+  y += 103;
 
   drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 20, true);
 
