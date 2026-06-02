@@ -3,16 +3,41 @@ create extension if not exists "pgcrypto";
 create table if not exists public.fiscalizacao_ocorrencias (
   id uuid primary key default gen_random_uuid(),
   data_ocorrencia date not null,
+  hora_ocorrencia time,
   rota text not null,
   placa text not null,
   motorista text not null,
   auxiliar text,
+  local_ocorrencia text,
+  envolvimento jsonb not null default '{}'::jsonb,
   relatorio text not null,
   usuario_id text,
   usuario_nome text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists hora_ocorrencia time;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists local_ocorrencia text;
+
+alter table public.fiscalizacao_ocorrencias
+  add column if not exists envolvimento jsonb not null default '{}'::jsonb;
+
+create table if not exists public.fiscalizacao_ocorrencias_anexos (
+  id uuid primary key default gen_random_uuid(),
+  ocorrencia_id uuid not null references public.fiscalizacao_ocorrencias(id) on delete cascade,
+  nome_arquivo text not null,
+  caminho_arquivo text not null,
+  tipo_arquivo text,
+  tamanho_bytes bigint,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_fiscalizacao_ocorrencias_anexos_ocorrencia
+  on public.fiscalizacao_ocorrencias_anexos (ocorrencia_id);
 
 create index if not exists idx_fiscalizacao_ocorrencias_data
   on public.fiscalizacao_ocorrencias (data_ocorrencia);
@@ -41,6 +66,7 @@ for each row
 execute function public.update_fiscalizacao_ocorrencias_updated_at();
 
 alter table public.fiscalizacao_ocorrencias enable row level security;
+alter table public.fiscalizacao_ocorrencias_anexos enable row level security;
 
 drop policy if exists "Permitir leitura fiscalizacao ocorrencias" on public.fiscalizacao_ocorrencias;
 create policy "Permitir leitura fiscalizacao ocorrencias"
@@ -66,3 +92,43 @@ create policy "Permitir excluir fiscalizacao ocorrencias"
 on public.fiscalizacao_ocorrencias
 for delete
 using (true);
+
+drop policy if exists "Permitir leitura fiscalizacao ocorrencias anexos" on public.fiscalizacao_ocorrencias_anexos;
+create policy "Permitir leitura fiscalizacao ocorrencias anexos"
+on public.fiscalizacao_ocorrencias_anexos
+for select
+using (true);
+
+drop policy if exists "Permitir inserir fiscalizacao ocorrencias anexos" on public.fiscalizacao_ocorrencias_anexos;
+create policy "Permitir inserir fiscalizacao ocorrencias anexos"
+on public.fiscalizacao_ocorrencias_anexos
+for insert
+with check (true);
+
+drop policy if exists "Permitir excluir fiscalizacao ocorrencias anexos" on public.fiscalizacao_ocorrencias_anexos;
+create policy "Permitir excluir fiscalizacao ocorrencias anexos"
+on public.fiscalizacao_ocorrencias_anexos
+for delete
+using (true);
+
+insert into storage.buckets (id, name, public)
+values ('fiscalizacao_ocorrencias_anexos', 'fiscalizacao_ocorrencias_anexos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Permitir leitura storage fiscalizacao ocorrencias anexos" on storage.objects;
+create policy "Permitir leitura storage fiscalizacao ocorrencias anexos"
+on storage.objects
+for select
+using (bucket_id = 'fiscalizacao_ocorrencias_anexos');
+
+drop policy if exists "Permitir inserir storage fiscalizacao ocorrencias anexos" on storage.objects;
+create policy "Permitir inserir storage fiscalizacao ocorrencias anexos"
+on storage.objects
+for insert
+with check (bucket_id = 'fiscalizacao_ocorrencias_anexos');
+
+drop policy if exists "Permitir excluir storage fiscalizacao ocorrencias anexos" on storage.objects;
+create policy "Permitir excluir storage fiscalizacao ocorrencias anexos"
+on storage.objects
+for delete
+using (bucket_id = 'fiscalizacao_ocorrencias_anexos');

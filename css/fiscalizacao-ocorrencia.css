@@ -102,7 +102,7 @@
 }
 
 .fiscalizacao-modal {
-  max-width: 760px;
+  max-width: 980px;
 }
 
 .modal-overlay {
@@ -121,7 +121,7 @@
 }
 
 .modal-content {
-  width: min(100%, 760px);
+  width: min(100%, 980px);
   max-height: 92vh;
   overflow-y: auto;
   background: #fff;
@@ -164,6 +164,10 @@
   gap: 16px;
 }
 
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
 .btn-custom {
   border: 0;
   border-radius: 8px;
@@ -174,12 +178,118 @@
 }
 
 .ocorrencia-relatorio {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .ocorrencia-relatorio textarea {
   resize: vertical;
-  min-height: 140px;
+  min-height: 220px;
+}
+
+.ocorrencia-card-form {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.ocorrencia-card-form h4 {
+  color: #006937;
+  font-size: 1rem;
+  margin: 0 0 14px;
+}
+
+.envolvimento-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.checkbox-line {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.checkbox-line input {
+  height: 18px;
+  width: 18px;
+}
+
+.envolvimento-grupo {
+  background: #fbfdfc;
+  border: 1px solid #d9e2dc;
+  border-left: 4px solid #006937;
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.envolvimento-grupo.hidden {
+  display: none !important;
+}
+
+.envolvimento-grupo h5 {
+  color: #111827;
+  font-size: 0.96rem;
+  margin: 0 0 12px;
+}
+
+.lista-anexos-ocorrencia {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.anexo-ocorrencia-item {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.anexo-ocorrencia-nome {
+  align-items: center;
+  color: #334155;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.anexo-ocorrencia-nome span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anexo-ocorrencia-acoes {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-anexo {
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  height: 32px;
+  width: 34px;
+}
+
+.btn-anexo-download {
+  background: #007bff;
+}
+
+.btn-anexo-remove {
+  background: #dc3545;
 }
 
 @media (max-width: 768px) {

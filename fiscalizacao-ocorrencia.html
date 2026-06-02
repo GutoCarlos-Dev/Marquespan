@@ -101,32 +101,148 @@
       </div>
       <form id="formOcorrencia">
         <div class="modal-body">
-          <div class="form-grid-2-cols">
-            <div class="form-group">
-              <label for="ocorrenciaData">Data</label>
-              <input type="date" id="ocorrenciaData" class="glass-input" required>
+          <section class="ocorrencia-card-form">
+            <h4><i class="fas fa-circle-info"></i> Informacoes internas</h4>
+            <div class="form-grid-2-cols">
+              <div class="form-group">
+                <label for="ocorrenciaData">Data</label>
+                <input type="date" id="ocorrenciaData" class="glass-input" required>
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaHorario">Horario</label>
+                <input type="time" id="ocorrenciaHorario" class="glass-input">
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaRota">Rota</label>
+                <input type="text" id="ocorrenciaRota" list="listaRotas" class="glass-input" required>
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaPlaca">Placa</label>
+                <input type="text" id="ocorrenciaPlaca" list="listaPlacas" class="glass-input" required>
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaMotorista">Motorista(s)</label>
+                <input type="text" id="ocorrenciaMotorista" list="listaMotoristas" class="glass-input" required>
+              </div>
+              <div class="form-group">
+                <label for="ocorrenciaAuxiliar">Auxiliar</label>
+                <input type="text" id="ocorrenciaAuxiliar" list="listaAuxiliares" class="glass-input">
+              </div>
+              <div class="form-group form-group-full">
+                <label for="ocorrenciaLocal">Local da Ocorrencia</label>
+                <input type="text" id="ocorrenciaLocal" class="glass-input">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="ocorrenciaRota">Rota</label>
-              <input type="text" id="ocorrenciaRota" list="listaRotas" class="glass-input" required>
+          </section>
+
+          <section class="ocorrencia-card-form">
+            <h4><i class="fas fa-car-burst"></i> Envolvimento</h4>
+            <div class="envolvimento-opcoes">
+              <label class="checkbox-line">
+                <input type="checkbox" id="envolveVeiculoEmpresa">
+                <span>Outro veiculo da empresa</span>
+              </label>
+              <label class="checkbox-line">
+                <input type="checkbox" id="envolveVeiculoTerceiro">
+                <span>Veiculo de terceiros</span>
+              </label>
+              <label class="checkbox-line">
+                <input type="checkbox" id="envolveOutroPatrimonio">
+                <span>Outro patrimonio (Loja/Casa/Patrimonio Publico. Etc.)</span>
+              </label>
             </div>
-            <div class="form-group">
-              <label for="ocorrenciaPlaca">Placa</label>
-              <input type="text" id="ocorrenciaPlaca" list="listaPlacas" class="glass-input" required>
+
+            <div id="grupoVeiculoEmpresa" class="envolvimento-grupo hidden">
+              <h5>Outro veiculo da empresa</h5>
+              <div class="form-grid-2-cols">
+                <div class="form-group">
+                  <label for="empresaPlaca">Placa</label>
+                  <input type="text" id="empresaPlaca" list="listaPlacas" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="empresaModelo">Modelo</label>
+                  <input type="text" id="empresaModelo" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="empresaMotoristaResponsavel">Motorista Responsavel</label>
+                  <input type="text" id="empresaMotoristaResponsavel" list="listaMotoristas" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="empresaDanos">Danos Causados</label>
+                  <textarea id="empresaDanos" class="glass-input" rows="3"></textarea>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="ocorrenciaMotorista">Motorista</label>
-              <input type="text" id="ocorrenciaMotorista" list="listaMotoristas" class="glass-input" required>
+
+            <div id="grupoVeiculoTerceiro" class="envolvimento-grupo hidden">
+              <h5>Veiculo de terceiros</h5>
+              <div class="form-grid-2-cols">
+                <div class="form-group">
+                  <label for="terceiroPlaca">Placa</label>
+                  <input type="text" id="terceiroPlaca" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="terceiroModelo">Modelo</label>
+                  <input type="text" id="terceiroModelo" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="terceiroCor">Cor</label>
+                  <input type="text" id="terceiroCor" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="terceiroCondutor">Condutor</label>
+                  <input type="text" id="terceiroCondutor" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="terceiroContato">Contato</label>
+                  <input type="text" id="terceiroContato" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="terceiroDanos">Danos Causados</label>
+                  <textarea id="terceiroDanos" class="glass-input" rows="3"></textarea>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="ocorrenciaAuxiliar">Auxiliar</label>
-              <input type="text" id="ocorrenciaAuxiliar" list="listaAuxiliares" class="glass-input">
+
+            <div id="grupoOutroPatrimonio" class="envolvimento-grupo hidden">
+              <h5>Outro patrimonio</h5>
+              <div class="form-grid-2-cols">
+                <div class="form-group">
+                  <label for="patrimonioTipo">Tipo Patrimonio</label>
+                  <input type="text" id="patrimonioTipo" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="patrimonioResponsavel">Responsavel</label>
+                  <input type="text" id="patrimonioResponsavel" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="patrimonioContato">Contato</label>
+                  <input type="text" id="patrimonioContato" class="glass-input">
+                </div>
+                <div class="form-group">
+                  <label for="patrimonioDano">Dano Causado</label>
+                  <textarea id="patrimonioDano" class="glass-input" rows="3"></textarea>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="form-group ocorrencia-relatorio">
-            <label for="ocorrenciaRelatorio">Relatorio</label>
-            <textarea id="ocorrenciaRelatorio" class="glass-input" rows="6" required placeholder="Relate a ocorrencia..."></textarea>
-          </div>
+          </section>
+
+          <section class="ocorrencia-card-form">
+            <h4><i class="fas fa-file-lines"></i> Relatorio Ocorrido</h4>
+            <div class="form-group ocorrencia-relatorio">
+              <label for="ocorrenciaRelatorio">Relatorio</label>
+              <textarea id="ocorrenciaRelatorio" class="glass-input" rows="10" required placeholder="Relate a ocorrencia com detalhes..."></textarea>
+            </div>
+          </section>
+
+          <section class="ocorrencia-card-form">
+            <h4><i class="fas fa-paperclip"></i> Anexos</h4>
+            <div class="form-group">
+              <label for="ocorrenciaAnexos">Boletim de ocorrencia, fotos, videos e outros arquivos</label>
+              <input type="file" id="ocorrenciaAnexos" class="glass-input" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+            </div>
+            <div id="listaAnexosOcorrencia" class="lista-anexos-ocorrencia"></div>
+          </section>
         </div>
         <div class="modal-footer">
           <button type="button" id="btnCancelarOcorrencia" class="btn-custom btn-red">Cancelar</button>

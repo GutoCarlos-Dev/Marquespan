@@ -4,6 +4,10 @@ let ocorrencias = [];
 let ocorrenciaEditandoId = null;
 let sortState = { field: 'data_ocorrencia', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
+const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
+let anexosNovos = [];
+let anexosExistentes = [];
+let anexosParaRemover = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -26,6 +30,11 @@ function bindEvents() {
   document.getElementById('formOcorrencia').addEventListener('submit', salvarOcorrencia);
   document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
   document.getElementById('btnCancelarOcorrencia').addEventListener('click', fecharModal);
+  document.getElementById('ocorrenciaAnexos').addEventListener('change', handleAnexosChange);
+  document.getElementById('listaAnexosOcorrencia').addEventListener('click', handleAnexoClick);
+  ['envolveVeiculoEmpresa', 'envolveVeiculoTerceiro', 'envolveOutroPatrimonio'].forEach(id => {
+    document.getElementById(id).addEventListener('change', atualizarGruposEnvolvimento);
+  });
   document.getElementById('modalOcorrencia').addEventListener('click', (event) => {
     if (event.target.id === 'modalOcorrencia') fecharModal();
   });
@@ -73,18 +82,28 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
-function abrirModal(item = null) {
+async function abrirModal(item = null) {
   document.getElementById('formOcorrencia').reset();
+  anexosNovos = [];
+  anexosExistentes = [];
+  anexosParaRemover = [];
+  document.getElementById('ocorrenciaAnexos').value = '';
   ocorrenciaEditandoId = item?.id || null;
   document.querySelector('#modalOcorrencia .modal-header h3').textContent = ocorrenciaEditandoId ? 'Editar Ocorrencia' : 'Ocorrencia';
   document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alteracoes' : 'Salvar';
   document.getElementById('ocorrenciaData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
+  document.getElementById('ocorrenciaHorario').value = item?.hora_ocorrencia || '';
   document.getElementById('ocorrenciaRota').value = item?.rota || '';
   document.getElementById('ocorrenciaPlaca').value = item?.placa || '';
   document.getElementById('ocorrenciaMotorista').value = item?.motorista || '';
   document.getElementById('ocorrenciaAuxiliar').value = item?.auxiliar || '';
+  document.getElementById('ocorrenciaLocal').value = item?.local_ocorrencia || '';
   document.getElementById('ocorrenciaRelatorio').value = item?.relatorio || '';
+  preencherEnvolvimento(item?.envolvimento);
+  atualizarGruposEnvolvimento();
+  renderizarAnexos();
   document.getElementById('modalOcorrencia').classList.remove('hidden');
+  if (ocorrenciaEditandoId) await carregarAnexosExistentes(ocorrenciaEditandoId);
 }
 
 function fecharModal() {
@@ -100,7 +119,7 @@ async function handleTabelaClick(event) {
   if (!item) return;
 
   if (button.dataset.action === 'editar') {
-    abrirModal(item);
+    await abrirModal(item);
     return;
   }
 
@@ -124,10 +143,13 @@ async function salvarOcorrencia(event) {
     const estavaEditando = Boolean(ocorrenciaEditandoId);
     const payload = {
       data_ocorrencia: document.getElementById('ocorrenciaData').value,
+      hora_ocorrencia: document.getElementById('ocorrenciaHorario').value || null,
       rota: document.getElementById('ocorrenciaRota').value.trim(),
       placa: document.getElementById('ocorrenciaPlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
       auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
+      local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
+      envolvimento: coletarEnvolvimento(),
       relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
     };
 
@@ -136,11 +158,18 @@ async function salvarOcorrencia(event) {
       payload.usuario_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
     }
 
-    const { error } = estavaEditando
-      ? await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId)
-      : await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]);
+    let idOcorrencia = ocorrenciaEditandoId;
 
-    if (error) throw error;
+    if (estavaEditando) {
+      const { error } = await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
+      if (error) throw error;
+    } else {
+      const { data, error } = await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]).select('id').single();
+      if (error) throw error;
+      idOcorrencia = data.id;
+    }
+
+    await salvarAnexos(idOcorrencia);
 
     fecharModal();
     await buscarOcorrencias();
@@ -219,6 +248,8 @@ function getDadosGrid() {
       item.placa,
       item.motorista,
       item.auxiliar,
+      item.local_ocorrencia,
+      resumoEnvolvimento(item.envolvimento),
       item.relatorio
     ].some(valor => String(valor || '').toUpperCase().includes(termo)));
   }
@@ -305,8 +336,230 @@ function dadosParaExportacao() {
     Placa: item.placa || '',
     Motorista: item.motorista || '',
     Auxiliar: item.auxiliar || '',
+    Horario: item.hora_ocorrencia || '',
+    'Local da Ocorrencia': item.local_ocorrencia || '',
+    Envolvimento: resumoEnvolvimento(item.envolvimento),
     Ocorrencia: item.relatorio || ''
   }));
+}
+
+function coletarEnvolvimento() {
+  return {
+    veiculo_empresa: {
+      ativo: document.getElementById('envolveVeiculoEmpresa').checked,
+      placa: document.getElementById('empresaPlaca').value.trim().toUpperCase() || null,
+      modelo: document.getElementById('empresaModelo').value.trim() || null,
+      motorista_responsavel: document.getElementById('empresaMotoristaResponsavel').value.trim() || null,
+      danos_causados: document.getElementById('empresaDanos').value.trim() || null
+    },
+    veiculo_terceiro: {
+      ativo: document.getElementById('envolveVeiculoTerceiro').checked,
+      placa: document.getElementById('terceiroPlaca').value.trim().toUpperCase() || null,
+      modelo: document.getElementById('terceiroModelo').value.trim() || null,
+      cor: document.getElementById('terceiroCor').value.trim() || null,
+      condutor: document.getElementById('terceiroCondutor').value.trim() || null,
+      contato: document.getElementById('terceiroContato').value.trim() || null,
+      danos_causados: document.getElementById('terceiroDanos').value.trim() || null
+    },
+    outro_patrimonio: {
+      ativo: document.getElementById('envolveOutroPatrimonio').checked,
+      tipo_patrimonio: document.getElementById('patrimonioTipo').value.trim() || null,
+      responsavel: document.getElementById('patrimonioResponsavel').value.trim() || null,
+      contato: document.getElementById('patrimonioContato').value.trim() || null,
+      dano_causado: document.getElementById('patrimonioDano').value.trim() || null
+    }
+  };
+}
+
+function preencherEnvolvimento(envolvimento) {
+  const dados = normalizarObjeto(envolvimento);
+  const empresa = dados.veiculo_empresa || {};
+  const terceiro = dados.veiculo_terceiro || {};
+  const patrimonio = dados.outro_patrimonio || {};
+
+  document.getElementById('envolveVeiculoEmpresa').checked = Boolean(empresa.ativo);
+  document.getElementById('empresaPlaca').value = empresa.placa || '';
+  document.getElementById('empresaModelo').value = empresa.modelo || '';
+  document.getElementById('empresaMotoristaResponsavel').value = empresa.motorista_responsavel || '';
+  document.getElementById('empresaDanos').value = empresa.danos_causados || '';
+
+  document.getElementById('envolveVeiculoTerceiro').checked = Boolean(terceiro.ativo);
+  document.getElementById('terceiroPlaca').value = terceiro.placa || '';
+  document.getElementById('terceiroModelo').value = terceiro.modelo || '';
+  document.getElementById('terceiroCor').value = terceiro.cor || '';
+  document.getElementById('terceiroCondutor').value = terceiro.condutor || '';
+  document.getElementById('terceiroContato').value = terceiro.contato || '';
+  document.getElementById('terceiroDanos').value = terceiro.danos_causados || '';
+
+  document.getElementById('envolveOutroPatrimonio').checked = Boolean(patrimonio.ativo);
+  document.getElementById('patrimonioTipo').value = patrimonio.tipo_patrimonio || '';
+  document.getElementById('patrimonioResponsavel').value = patrimonio.responsavel || '';
+  document.getElementById('patrimonioContato').value = patrimonio.contato || '';
+  document.getElementById('patrimonioDano').value = patrimonio.dano_causado || '';
+}
+
+function atualizarGruposEnvolvimento() {
+  document.getElementById('grupoVeiculoEmpresa').classList.toggle('hidden', !document.getElementById('envolveVeiculoEmpresa').checked);
+  document.getElementById('grupoVeiculoTerceiro').classList.toggle('hidden', !document.getElementById('envolveVeiculoTerceiro').checked);
+  document.getElementById('grupoOutroPatrimonio').classList.toggle('hidden', !document.getElementById('envolveOutroPatrimonio').checked);
+}
+
+function normalizarObjeto(valor) {
+  if (valor && typeof valor === 'object' && !Array.isArray(valor)) return valor;
+  if (!valor) return {};
+  try {
+    const parsed = JSON.parse(valor);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function resumoEnvolvimento(envolvimento) {
+  const dados = normalizarObjeto(envolvimento);
+  const partes = [];
+  if (dados.veiculo_empresa?.ativo) partes.push('Outro veiculo da empresa');
+  if (dados.veiculo_terceiro?.ativo) partes.push('Veiculo de terceiros');
+  if (dados.outro_patrimonio?.ativo) partes.push('Outro patrimonio');
+  return partes.join('; ');
+}
+
+function handleAnexosChange(event) {
+  anexosNovos.push(...Array.from(event.target.files || []));
+  event.target.value = '';
+  renderizarAnexos();
+}
+
+async function handleAnexoClick(event) {
+  const button = event.target.closest('[data-anexo-action]');
+  if (!button) return;
+
+  const index = Number(button.dataset.index);
+  const action = button.dataset.anexoAction;
+  const tipo = button.dataset.tipo;
+
+  if (action === 'remover' && tipo === 'novo') {
+    anexosNovos.splice(index, 1);
+    renderizarAnexos();
+    return;
+  }
+
+  if (action === 'remover' && tipo === 'existente') {
+    const anexo = anexosExistentes.splice(index, 1)[0];
+    if (anexo?.caminho_arquivo) anexosParaRemover.push(anexo);
+    renderizarAnexos();
+    return;
+  }
+
+  if (action === 'baixar' && tipo === 'existente') {
+    await baixarAnexo(anexosExistentes[index]);
+  }
+}
+
+function renderizarAnexos() {
+  const container = document.getElementById('listaAnexosOcorrencia');
+  const itens = [
+    ...anexosExistentes.map((anexo, index) => ({ anexo, index, tipo: 'existente' })),
+    ...anexosNovos.map((anexo, index) => ({ anexo, index, tipo: 'novo' }))
+  ];
+
+  if (!itens.length) {
+    container.innerHTML = '<div class="anexo-ocorrencia-item"><span class="anexo-ocorrencia-nome">Nenhum anexo selecionado.</span></div>';
+    return;
+  }
+
+  container.innerHTML = itens.map(({ anexo, index, tipo }) => {
+    const nome = tipo === 'novo' ? anexo.name : anexo.nome_arquivo;
+    return `
+      <div class="anexo-ocorrencia-item">
+        <div class="anexo-ocorrencia-nome">
+          <i class="fas fa-file"></i>
+          <span>${escapeHtml(nome || 'Arquivo')}</span>
+          ${tipo === 'novo' ? '<strong>(Novo)</strong>' : ''}
+        </div>
+        <div class="anexo-ocorrencia-acoes">
+          ${tipo === 'existente' ? `
+            <button type="button" class="btn-anexo btn-anexo-download" data-anexo-action="baixar" data-tipo="${tipo}" data-index="${index}" title="Baixar">
+              <i class="fas fa-download"></i>
+            </button>
+          ` : ''}
+          <button type="button" class="btn-anexo btn-anexo-remove" data-anexo-action="remover" data-tipo="${tipo}" data-index="${index}" title="Remover">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function carregarAnexosExistentes(idOcorrencia) {
+  try {
+    const { data, error } = await supabaseClient
+      .from('fiscalizacao_ocorrencias_anexos')
+      .select('*')
+      .eq('ocorrencia_id', idOcorrencia)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    anexosExistentes = data || [];
+    renderizarAnexos();
+  } catch (error) {
+    console.error('Erro ao carregar anexos:', error);
+    anexosExistentes = [];
+    renderizarAnexos();
+  }
+}
+
+async function salvarAnexos(idOcorrencia) {
+  if (anexosParaRemover.length) {
+    const caminhos = anexosParaRemover.map(anexo => anexo.caminho_arquivo).filter(Boolean);
+    if (caminhos.length) {
+      const { error: storageError } = await supabaseClient.storage.from(bucketAnexos).remove(caminhos);
+      if (storageError) throw storageError;
+
+      const { error: deleteError } = await supabaseClient.from('fiscalizacao_ocorrencias_anexos').delete().in('caminho_arquivo', caminhos);
+      if (deleteError) throw deleteError;
+    }
+  }
+
+  for (const file of anexosNovos) {
+    const caminho = `${idOcorrencia}/${Date.now()}-${sanitizarNomeArquivo(file.name)}`;
+    const { data, error } = await supabaseClient.storage
+      .from(bucketAnexos)
+      .upload(caminho, file, { contentType: file.type || 'application/octet-stream' });
+
+    if (error) throw error;
+
+    const { error: insertError } = await supabaseClient
+      .from('fiscalizacao_ocorrencias_anexos')
+      .insert({
+        ocorrencia_id: idOcorrencia,
+        nome_arquivo: file.name,
+        caminho_arquivo: data.path,
+        tipo_arquivo: file.type || null,
+        tamanho_bytes: file.size || null
+      });
+
+    if (insertError) throw insertError;
+  }
+
+  anexosNovos = [];
+  anexosParaRemover = [];
+}
+
+async function baixarAnexo(anexo) {
+  if (!anexo?.caminho_arquivo) return;
+  const { data, error } = await supabaseClient.storage.from(bucketAnexos).createSignedUrl(anexo.caminho_arquivo, 60);
+  if (error) return alert(`Erro ao gerar link do anexo: ${error.message}`);
+  window.open(data.signedUrl, '_blank');
+}
+
+function sanitizarNomeArquivo(nome) {
+  return String(nome || 'arquivo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_');
 }
 
 function exportarExcel() {
@@ -356,14 +609,15 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data', 'Usuario que Registrou', 'Rota', 'Placa', 'Motorista', 'Auxiliar', 'Ocorrencia']],
+    head: [['Data', 'Horario', 'Rota', 'Placa', 'Motorista', 'Local', 'Envolvimento', 'Ocorrencia']],
     body: rows.map(row => [
       row.Data,
-      row['Usuario que Registrou'],
+      row.Horario,
       row.Rota,
       row.Placa,
       row.Motorista,
-      row.Auxiliar,
+      row['Local da Ocorrencia'],
+      row.Envolvimento,
       row.Ocorrencia
     ]),
     startY: 30,
@@ -372,7 +626,7 @@ async function exportarPDF() {
     styles: { fontSize: 8, cellPadding: 2 },
     alternateRowStyles: { fillColor: [240, 240, 240] },
     columnStyles: {
-      6: { cellWidth: 90 }
+      7: { cellWidth: 80 }
     }
   });
 
