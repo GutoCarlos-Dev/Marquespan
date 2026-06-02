@@ -1,0 +1,179 @@
+.portaria-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.portaria-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.portaria-filtros {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.acoes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.portaria-table-wrap {
+  max-height: calc(100vh - 340px);
+  overflow: auto;
+}
+
+.portaria-modal {
+  max-width: 920px;
+}
+
+.portaria-modal-sm {
+  max-width: 560px;
+}
+
+.form-grid-2-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.input-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-mini {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: #006a2d;
+  color: #fff;
+  cursor: pointer;
+}
+
+.btn-mini:hover {
+  filter: brightness(1.08);
+}
+
+.portaria-modal .modal-footer,
+.portaria-modal-sm .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.portaria-modal .btn-custom,
+.portaria-modal-sm .btn-custom {
+  min-width: 118px;
+  height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 18px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.portaria-modal .btn-custom:hover,
+.portaria-modal-sm .btn-custom:hover {
+  filter: brightness(1.08);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.status-aguardando {
+  background: #ffc107;
+  color: #1f2937;
+}
+
+.status-entrada {
+  background: #006a2d;
+}
+
+.status-saida {
+  background: #6c757d;
+}
+
+.acoes-cell {
+  min-width: 156px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-grid-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  margin: 0 2px;
+}
+
+.btn-entry {
+  background: #006a2d;
+}
+
+.btn-exit {
+  background: #6c757d;
+}
+
+.btn-edit {
+  background: #007bff;
+}
+
+.btn-delete {
+  background: #dc3545;
+}
+
+.btn-grid-action:hover {
+  filter: brightness(1.08);
+}
+
+@media (max-width: 900px) {
+  .portaria-top-grid,
+  .portaria-filtros,
+  .form-grid-2-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .acoes-grid {
+    grid-template-columns: 1fr;
+  }
+}
