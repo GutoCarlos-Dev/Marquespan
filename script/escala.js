@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const nivelUsuarioEscala = String(usuarioLogado.nivel || '').toLowerCase();
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
+    const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
 
     const acessoPermitido = await verificarPermissaoPaginaEscala();
     if (!acessoPermitido) {
@@ -63,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fileImportarSemana = document.getElementById('fileImportarSemana');
     const btnSalvar = document.getElementById('btnSalvar'); // Agora usado para feedback ou ações em lote
     const btnPDF = document.getElementById('btnPDF');
+    const btnXLSX = document.getElementById('btnXLSX');
     const btnPDFExpedicaoModelo = document.getElementById('btnPDFExpedicaoModelo');
     
     // --- ELEMENTOS DINÂMICOS ---
@@ -160,8 +162,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             'btnSalvarPesoRota',
             'btnTransferirCarga',
             'btnAtualizarDiaSemana',
-            'btnCopiarDia'
+            'btnCopiarDia',
+            'btnExcluirSelecionadosDia',
+            'btnExcluirSelecionadosPlan',
+            'btnLimparEscala',
+            'btnTerceiroRotaSuspenso',
+            'btnTrocaVeiculoSuspenso'
         ];
+
+        if (isAdmPedidoEscala) {
+            idsSomenteGerencia.push(
+                'btnPDFExpedicaoModelo',
+                'btnCalculoPeso',
+                'btnGerarBoleta',
+                'btnModeloDia',
+                'btnImportarDia',
+                'btnModeloPlanejamento'
+            );
+        }
 
         idsSomenteGerencia.forEach(id => {
             const element = document.getElementById(id);
@@ -169,6 +187,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             element.disabled = true;
             element.classList.add('hidden');
             element.title = 'Disponivel apenas para administrador ou gerencia';
+        });
+
+        aplicarModoVisualizacaoEscala();
+    }
+
+    function aplicarModoVisualizacaoEscala() {
+        if (podeGerenciarEscala) return;
+
+        document.querySelectorAll('#painelEscala .table-input, #painelEscala .row-selector-plan, #painelEscala .row-selector-dia, #painelEscala .select-all-dia, #selectAllPlanejamento').forEach(element => {
+            element.disabled = true;
+            element.title = 'Seu nivel permite apenas visualizar a escala.';
+        });
+
+        document.querySelectorAll('#painelEscala [contenteditable="true"]').forEach(element => {
+            element.contentEditable = 'false';
+            element.title = 'Seu nivel permite apenas visualizar a escala.';
+        });
+
+        document.querySelectorAll('#painelEscala .btn-delete-row, #painelEscala .btn-limpar-terceiro').forEach(element => {
+            element.disabled = true;
+            element.classList.add('hidden');
+            element.title = 'Disponivel apenas para administrador ou gerencia';
+        });
+
+        document.querySelectorAll('#painelEscala .section-add-row-container button').forEach(element => {
+            element.disabled = true;
+            element.classList.add('hidden');
+            element.title = 'Disponivel apenas para administrador ou gerencia';
+        });
+
+        document.querySelectorAll('#painelEscala .btn-selecionar-troca-veiculo').forEach(element => {
+            element.disabled = true;
         });
     }
 
@@ -462,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function atualizarBotaoTerceiroSuspenso() {
         const contexto = getDataEscalaAberta();
         const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
-        const ativo = !!contexto && escalaAberta;
+        const ativo = !!contexto && escalaAberta && podeGerenciarEscala;
 
         btnTerceiroRotaSuspenso.disabled = !ativo;
         btnTerceiroRotaSuspenso.classList.toggle('hidden', !ativo);
@@ -481,7 +531,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function atualizarBotaoTrocaVeiculoSuspenso() {
         const contexto = getDataEscalaAberta();
         const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
-        const ativo = !!contexto && escalaAberta;
+        const ativo = !!contexto && escalaAberta && podeGerenciarEscala;
 
         btnTrocaVeiculoSuspenso.disabled = !ativo;
         btnTrocaVeiculoSuspenso.classList.toggle('hidden', !ativo);
@@ -1184,6 +1234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             setupEscalaGridTools();
             filtrarDiaEscala();
             applyCellAnnotations();
+            aplicarModoVisualizacaoEscala();
             carregarUltimaAuditoriaEscala({ semana, dia });
 
         } catch (err) {
@@ -5755,6 +5806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Injeta botão Limpar Semana
         const btnLimpar = document.createElement('button');
+        btnLimpar.id = 'btnLimparEscala';
         btnLimpar.className = 'btn-custom';
         btnLimpar.classList.add('btn-pdf'); // Adiciona a classe para a cor vermelha padrão
         btnLimpar.innerHTML = '<i class="fas fa-trash"></i> Limpar Escala';
@@ -5777,6 +5829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
         if(btnSalvar.parentNode) btnSalvar.parentNode.insertBefore(btnLimpar, btnSalvar);
+        aplicarRestricoesNivelEscala();
     }
 
     // --- CORREÇÃO: Delegação de eventos para botões dinâmicos no Título do Dia ---
@@ -5814,10 +5867,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
         fileImportarSemana.addEventListener('change', importarRoteiroSemana);
     }
+
+    function getTextoCelulaXLSX(cell) {
+        const inputs = [...cell.querySelectorAll('input, select, textarea')];
+        if (inputs.length) {
+            return inputs
+                .map(input => input.type === 'checkbox' ? (input.checked ? 'Sim' : '') : input.value)
+                .filter(Boolean)
+                .join(' / ');
+        }
+        return cell.textContent.trim();
+    }
+
+    function extrairTabelaXLSX(table) {
+        const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.replace(/\s+/g, ' ').trim());
+        const colunasValidas = headers
+            .map((header, index) => ({ header, index }))
+            .filter(col => col.header && !(col.header.length <= 8 && /^A.*ES$/i.test(col.header)));
+
+        const linhas = [...table.querySelectorAll('tbody tr')]
+            .map(tr => colunasValidas.map(col => getTextoCelulaXLSX(tr.children[col.index] || document.createElement('td'))))
+            .filter(row => row.some(value => String(value || '').trim()) && !String(row.join(' ')).includes('Aguardando dados'));
+
+        return [
+            colunasValidas.map(col => col.header),
+            ...linhas
+        ];
+    }
+
+    function gerarXLSXEscalaAtual() {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX nao carregada.');
+
+        const wb = XLSX.utils.book_new();
+        const semana = selectSemana?.value || 'Escala';
+        const abaPlanejamentoAtiva = document.querySelector('.tab-btn.active')?.dataset.tab === 'planejamento';
+
+        if (abaPlanejamentoAtiva) {
+            const table = document.getElementById('tabelaPlanejamento');
+            const dados = table ? extrairTabelaXLSX(table) : [];
+            if (dados.length <= 1) return alert('Nenhum dado para exportar.');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dados), 'Planejamento');
+        } else {
+            const dia = document.querySelector('.tab-btn.active')?.dataset.dia || 'Dia';
+            const secoes = ['Padrao', 'Transferencia', 'Equipamento', 'Reservas', 'Faltas'];
+            let adicionouAba = false;
+
+            secoes.forEach(secao => {
+                const tbody = document.getElementById(`tbody${secao}`);
+                const table = tbody?.closest('table');
+                const dados = table ? extrairTabelaXLSX(table) : [];
+                if (dados.length <= 1) return;
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dados), secao.slice(0, 31));
+                adicionouAba = true;
+            });
+
+            if (!adicionouAba) return alert('Nenhum dado para exportar.');
+            wb.Props = { Title: `Escala ${dia}` };
+        }
+
+        const nomeArquivo = `Escala_${semana.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+        XLSX.writeFile(wb, nomeArquivo);
+    }
+
     if (btnDiaria) {
         btnDiaria.addEventListener('click', abrirModalDiaria);
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
+    if (btnXLSX) {
+        btnXLSX.addEventListener('click', gerarXLSXEscalaAtual);
+    }
     if (btnPDF) {
         btnPDF.addEventListener('click', () => {
             document.getElementById('pdfOrientationModal').style.display = 'flex';
@@ -7134,6 +7252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             filtrarPlanejamento();
             applyCellAnnotations();
             verificarDuplicidades();
+            aplicarModoVisualizacaoEscala();
             atualizarInfoAuditoria(data);
             carregarUltimaAuditoriaEscala({ semana, planejamento: true });
         } catch (err) {
@@ -7229,6 +7348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             filtrarPlanejamento();
             applyCellAnnotations();
             verificarDuplicidades();
+            aplicarModoVisualizacaoEscala();
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
