@@ -35,6 +35,7 @@ function bindEvents() {
   document.getElementById('btnCadastroSetor').addEventListener('click', () => abrirModalCadastro('modalSetor'));
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
   document.getElementById('btnExportarXLSX').addEventListener('click', exportarXLSX);
+  document.getElementById('btnToggleMenuLateralPortaria')?.addEventListener('click', toggleMenuLateral);
   document.getElementById('btnAbrirEmpresaNoAcesso').addEventListener('click', () => abrirModalCadastro('modalEmpresa', 'modalAcesso'));
   document.getElementById('btnAbrirPessoaNoAcesso').addEventListener('click', () => abrirModalCadastro('modalPessoa', 'modalAcesso'));
   document.getElementById('btnAbrirSetorNoAcesso').addEventListener('click', () => abrirModalCadastro('modalSetor', 'modalAcesso'));
@@ -68,6 +69,16 @@ function bindEvents() {
       }
     });
   });
+}
+
+function toggleMenuLateral() {
+  document.body.classList.toggle('portaria-menu-oculto');
+  const oculto = document.body.classList.contains('portaria-menu-oculto');
+  const btn = document.getElementById('btnToggleMenuLateralPortaria');
+  if (!btn) return;
+  const titulo = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+  btn.title = titulo;
+  btn.setAttribute('aria-label', titulo);
 }
 
 async function carregarCadastros() {

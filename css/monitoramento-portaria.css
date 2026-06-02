@@ -2,6 +2,22 @@
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
+.header-flex {
+  gap: 12px;
+}
+
+.header-flex > span {
+  min-width: 0;
+}
+
+.header-controls {
+  flex-wrap: wrap;
+}
+
+.filter-bar {
+  flex-wrap: wrap;
+}
+
 .portaria-monitor-search {
   min-width: min(360px, 100%);
   flex: 1;
@@ -117,6 +133,11 @@
   font-size: 0.84rem;
 }
 
+.portaria-access-details span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .portaria-access-observacao {
   margin-top: 8px;
   padding-top: 8px;
@@ -137,12 +158,138 @@
 }
 
 @media (max-width: 640px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .section {
+    padding: 0;
+  }
+
+  .header-flex {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .header-flex > span {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .header-controls {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .realtime-pill,
+  .last-update-text {
+    font-size: 0.72rem;
+  }
+
+  .last-update-text {
+    grid-column: 1 / -1;
+    order: 2;
+  }
+
+  .header-controls .btn-glass {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    padding: 0;
+  }
+
+  .filter-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .filter-bar .form-group,
+  .portaria-monitor-search,
+  .filter-bar .btn-glass {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-bar .btn-glass {
+    justify-content: center;
+    min-height: 40px;
+  }
+
   .portaria-monitor-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .portaria-monitor-kpis .kpi-card {
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  .portaria-monitor-kpis .kpi-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .portaria-monitor-kpis .kpi-info h3 {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+
+  .portaria-monitor-kpis .kpi-info p {
+    font-size: 1.35rem;
   }
 
   .portaria-access-list {
     padding: 10px;
+  }
+
+  .portaria-column {
+    border-radius: 8px;
+  }
+
+  .column-header {
+    padding: 12px;
+  }
+
+  .column-header h3 {
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .column-header span {
+    min-width: 30px;
+    height: 26px;
+    font-size: 0.82rem;
+  }
+
+  .portaria-access-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .portaria-access-name {
+    font-size: 0.94rem;
+  }
+
+  .portaria-access-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    font-size: 0.8rem;
   }
 }
 
@@ -160,5 +307,27 @@
     width: 36px;
     height: 36px;
     font-size: 1rem;
+  }
+
+  .header-controls {
+    grid-template-columns: 1fr repeat(3, 36px);
+  }
+
+  .header-controls .btn-glass {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .portaria-access-title {
+    gap: 6px;
+  }
+
+  .portaria-access-plate {
+    font-size: 0.76rem;
+  }
+
+  .portaria-access-observacao {
+    font-size: 0.78rem;
   }
 }
