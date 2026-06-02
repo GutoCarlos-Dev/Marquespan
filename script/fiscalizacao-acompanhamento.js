@@ -29,6 +29,7 @@ function bindEvents() {
   document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente());
   document.getElementById('btnAdicionarSugestaoCliente').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesContainer'));
   document.getElementById('btnAdicionarDia').addEventListener('click', () => adicionarDia());
+  document.getElementById('btnCompartilharSugestaoWhatsapp').addEventListener('click', compartilharSugestaoWhatsapp);
   document.getElementById('habilitarSugestaoRoteiro').addEventListener('change', atualizarSugestaoRoteiro);
   document.getElementById('acompanhamentoTipoRota').addEventListener('change', atualizarTipoRota);
   document.getElementById('modalAcompanhamento').addEventListener('click', (event) => {
@@ -38,6 +39,7 @@ function bindEvents() {
   document.getElementById('clientesContainer').addEventListener('click', handleDynamicRemove);
   document.getElementById('sugestaoClientesContainer').addEventListener('change', handleClienteChange);
   document.getElementById('sugestaoClientesContainer').addEventListener('click', handleDynamicRemove);
+  document.getElementById('horariosContainer').addEventListener('input', handleHorarioInput);
   document.getElementById('horariosContainer').addEventListener('click', handleDynamicRemove);
   document.getElementById('tbodyAcompanhamentos').addEventListener('click', handleTabelaClick);
 
@@ -121,6 +123,7 @@ function fecharModal() {
 
 function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
   const container = document.getElementById(containerId);
+  const isSugestao = containerId === 'sugestaoClientesContainer';
   const index = container.querySelectorAll('.cliente-item').length + 1;
   const item = document.createElement('div');
   item.className = 'dynamic-item cliente-item';
@@ -142,6 +145,7 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
         <label>Horario de Recebimento ate</label>
         <input type="time" class="glass-input cliente-horario-recebimento">
       </div>
+      ${isSugestao ? '' : `
       <div class="form-group">
         <label>Horario de chegada</label>
         <input type="time" class="glass-input cliente-horario-chegada">
@@ -154,15 +158,18 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
         <label>Liberou Canhoto</label>
         <input type="time" class="glass-input cliente-liberou-canhoto">
       </div>
+      `}
     </div>
   `;
   container.appendChild(item);
   item.querySelector('.cliente-nome').value = cliente.nome || '';
   item.querySelector('.cliente-mercado-horario').checked = Boolean(cliente.mercado_horario);
   item.querySelector('.cliente-horario-recebimento').value = cliente.horario_recebimento_ate || '';
-  item.querySelector('.cliente-horario-chegada').value = cliente.horario_chegada || '';
-  item.querySelector('.cliente-chamou-descarga').value = cliente.chamou_descarga || '';
-  item.querySelector('.cliente-liberou-canhoto').value = cliente.liberou_canhoto || '';
+  if (!isSugestao) {
+    item.querySelector('.cliente-horario-chegada').value = cliente.horario_chegada || '';
+    item.querySelector('.cliente-chamou-descarga').value = cliente.chamou_descarga || '';
+    item.querySelector('.cliente-liberou-canhoto').value = cliente.liberou_canhoto || '';
+  }
   atualizarMercadoHorario(item);
 }
 
@@ -185,12 +192,28 @@ function adicionarDia(dia = {}, numeroInformado = null) {
         <input type="time" class="glass-input dia-saida-viagem">
       </div>
       <div class="form-group">
-        <label>Cafe</label>
-        <input type="time" class="glass-input dia-cafe">
+        <label>Cafe de</label>
+        <input type="time" class="glass-input dia-cafe-de">
       </div>
       <div class="form-group">
-        <label>Almoco</label>
-        <input type="time" class="glass-input dia-almoco">
+        <label>Cafe ate</label>
+        <input type="time" class="glass-input dia-cafe-ate">
+      </div>
+      <div class="form-group">
+        <label>Total Cafe</label>
+        <div class="tempo-totalizador dia-cafe-total">0min</div>
+      </div>
+      <div class="form-group">
+        <label>Almoco de</label>
+        <input type="time" class="glass-input dia-almoco-de">
+      </div>
+      <div class="form-group">
+        <label>Almoco ate</label>
+        <input type="time" class="glass-input dia-almoco-ate">
+      </div>
+      <div class="form-group">
+        <label>Total Almoco</label>
+        <div class="tempo-totalizador dia-almoco-total">0min</div>
       </div>
       <div class="form-group">
         <label>Finalizacao das Entregas</label>
@@ -209,11 +232,14 @@ function adicionarDia(dia = {}, numeroInformado = null) {
   document.getElementById('horariosContainer').appendChild(item);
   item.querySelector('.dia-saida-empresa').value = dia.saida_empresa || '';
   item.querySelector('.dia-saida-viagem').value = dia.saida_viagem || dia.saida_empresa || dia.saida_hotel || '';
-  item.querySelector('.dia-cafe').value = dia.cafe || '';
-  item.querySelector('.dia-almoco').value = dia.almoco || '';
+  item.querySelector('.dia-cafe-de').value = dia.cafe_de || dia.cafe || '';
+  item.querySelector('.dia-cafe-ate').value = dia.cafe_ate || '';
+  item.querySelector('.dia-almoco-de').value = dia.almoco_de || dia.almoco || '';
+  item.querySelector('.dia-almoco-ate').value = dia.almoco_ate || '';
   item.querySelector('.dia-finalizacao').value = dia.finalizacao_entregas || '';
   item.querySelector('.dia-chegada-empresa').value = dia.chegada_empresa || '';
   item.querySelector('.dia-chegada-viagem').value = dia.chegada_viagem || dia.chegada_hotel || dia.chegada_hotel_empresa || '';
+  atualizarTotalizadoresDia(item);
   atualizarTipoRota();
 }
 
@@ -225,6 +251,19 @@ function handleClienteChange(event) {
 function atualizarMercadoHorario(item) {
   const campoHorario = item.querySelector('.horario-mercado');
   campoHorario.classList.toggle('hidden', !item.querySelector('.cliente-mercado-horario').checked);
+}
+
+function handleHorarioInput(event) {
+  if (!event.target.matches('.dia-cafe-de, .dia-cafe-ate, .dia-almoco-de, .dia-almoco-ate')) return;
+  atualizarTotalizadoresDia(event.target.closest('.dia-item'));
+}
+
+function atualizarTotalizadoresDia(item) {
+  if (!item) return;
+  const cafeMinutos = calcularMinutos(item.querySelector('.dia-cafe-de').value, item.querySelector('.dia-cafe-ate').value);
+  const almocoMinutos = calcularMinutos(item.querySelector('.dia-almoco-de').value, item.querySelector('.dia-almoco-ate').value);
+  item.querySelector('.dia-cafe-total').textContent = formatarDuracao(cafeMinutos);
+  item.querySelector('.dia-almoco-total').textContent = formatarDuracao(almocoMinutos);
 }
 
 function atualizarSugestaoRoteiro() {
@@ -363,9 +402,9 @@ function coletarClientesDoContainer(containerId) {
       nome: item.querySelector('.cliente-nome').value.trim(),
       mercado_horario: item.querySelector('.cliente-mercado-horario').checked,
       horario_recebimento_ate: item.querySelector('.cliente-horario-recebimento').value || null,
-      horario_chegada: item.querySelector('.cliente-horario-chegada').value || null,
-      chamou_descarga: item.querySelector('.cliente-chamou-descarga').value || null,
-      liberou_canhoto: item.querySelector('.cliente-liberou-canhoto').value || null
+      horario_chegada: item.querySelector('.cliente-horario-chegada')?.value || null,
+      chamou_descarga: item.querySelector('.cliente-chamou-descarga')?.value || null,
+      liberou_canhoto: item.querySelector('.cliente-liberou-canhoto')?.value || null
     }))
     .filter(cliente => cliente.nome);
 }
@@ -377,8 +416,12 @@ function coletarHorarios() {
     tipo_rota: tipo,
     saida_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-saida-empresa').value || null : null,
     saida_viagem: tipo === 'viagem' ? item.querySelector('.dia-saida-viagem').value || null : null,
-    cafe: item.querySelector('.dia-cafe').value || null,
-    almoco: item.querySelector('.dia-almoco').value || null,
+    cafe_de: item.querySelector('.dia-cafe-de').value || null,
+    cafe_ate: item.querySelector('.dia-cafe-ate').value || null,
+    cafe_total_minutos: calcularMinutos(item.querySelector('.dia-cafe-de').value, item.querySelector('.dia-cafe-ate').value),
+    almoco_de: item.querySelector('.dia-almoco-de').value || null,
+    almoco_ate: item.querySelector('.dia-almoco-ate').value || null,
+    almoco_total_minutos: calcularMinutos(item.querySelector('.dia-almoco-de').value, item.querySelector('.dia-almoco-ate').value),
     finalizacao_entregas: item.querySelector('.dia-finalizacao').value || null,
     chegada_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-chegada-empresa').value || null : null,
     chegada_viagem: tipo === 'viagem' ? item.querySelector('.dia-chegada-viagem').value || null : null
@@ -537,7 +580,11 @@ function resumoClientes(clientes) {
 function resumoHorarios(horarios) {
   const lista = normalizarArray(horarios);
   if (!lista.length) return '-';
-  return lista.map(dia => `Dia ${dia.dia || 1}: fim ${dia.finalizacao_entregas || '-'}`).join('\n');
+  return lista.map(dia => {
+    const cafeTotal = dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de, dia.cafe_ate);
+    const almocoTotal = dia.almoco_total_minutos ?? calcularMinutos(dia.almoco_de, dia.almoco_ate);
+    return `Dia ${dia.dia || 1}: fim ${dia.finalizacao_entregas || '-'} | cafe ${formatarDuracao(cafeTotal)} | almoco ${formatarDuracao(almocoTotal)}`;
+  }).join('\n');
 }
 
 function formatarTipoRota(tipo) {
@@ -547,6 +594,48 @@ function formatarTipoRota(tipo) {
 function formatarData(data) {
   if (!data) return '-';
   return new Date(`${data}T00:00:00`).toLocaleDateString('pt-BR');
+}
+
+function calcularMinutos(inicio, fim) {
+  if (!inicio || !fim) return 0;
+  const [hIni, mIni] = inicio.split(':').map(Number);
+  const [hFim, mFim] = fim.split(':').map(Number);
+  if ([hIni, mIni, hFim, mFim].some(Number.isNaN)) return 0;
+  let total = (hFim * 60 + mFim) - (hIni * 60 + mIni);
+  if (total < 0) total += 24 * 60;
+  return total;
+}
+
+function formatarDuracao(minutos) {
+  const total = Number(minutos) || 0;
+  if (total <= 0) return '0min';
+  const horas = Math.floor(total / 60);
+  const mins = total % 60;
+  return horas ? `${horas}h${String(mins).padStart(2, '0')}` : `${mins}min`;
+}
+
+function compartilharSugestaoWhatsapp() {
+  const sugestao = coletarSugestaoRoteiro();
+  if (!sugestao.length) return alert('Informe pelo menos um cliente na sugestao de roteiro.');
+
+  const rota = document.getElementById('acompanhamentoRota').value.trim() || '-';
+  const placa = document.getElementById('acompanhamentoPlaca').value.trim().toUpperCase() || '-';
+  const motorista = document.getElementById('acompanhamentoMotorista').value.trim() || '-';
+  const linhas = [
+    '*Sugestao de Roteiro*',
+    `Rota: ${rota}`,
+    `Placa: ${placa}`,
+    `Motorista: ${motorista}`,
+    '',
+    ...sugestao.map((cliente, index) => {
+      const horario = cliente.mercado_horario && cliente.horario_recebimento_ate
+        ? ` - recebimento ate ${cliente.horario_recebimento_ate}`
+        : '';
+      return `${index + 1}. ${cliente.nome}${cliente.mercado_horario ? ' (mercado de horario)' : ''}${horario}`;
+    })
+  ];
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(linhas.join('\n'))}`, '_blank');
 }
 
 function escapeHtml(value) {

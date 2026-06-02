@@ -58,6 +58,24 @@
   height: 18px;
 }
 
+.tempo-totalizador {
+  align-items: center;
+  background: #eef8f1;
+  border: 1px solid #cfe8d7;
+  border-radius: 6px;
+  color: #006a2d;
+  display: flex;
+  font-weight: 700;
+  min-height: 45px;
+  padding: 10px;
+}
+
+.btn-whatsapp {
+  height: 46px;
+  margin-top: 12px;
+  font-weight: 700;
+}
+
 .mobile-horario-mercado.hidden,
 .mobile-viagem-only.hidden,
 .mobile-bate-volta-only.hidden,

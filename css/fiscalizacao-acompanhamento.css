@@ -72,6 +72,24 @@
   height: 18px;
 }
 
+.tempo-totalizador {
+  align-items: center;
+  background: #eef8f1;
+  border: 1px solid #cfe8d7;
+  border-radius: 8px;
+  color: #006a2d;
+  display: flex;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.sugestao-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 .horario-mercado.hidden,
 .viagem-only.hidden,
 .bate-volta-only.hidden,
