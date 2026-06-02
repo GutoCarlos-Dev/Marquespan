@@ -4,6 +4,7 @@ let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
 let sortState = { field: 'data_acompanhamento', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
+let rotasCadastradas = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -33,6 +34,8 @@ function bindEvents() {
   document.getElementById('btnCompartilharSugestaoWhatsapp').addEventListener('click', compartilharSugestaoWhatsapp);
   document.getElementById('habilitarSugestaoRoteiro').addEventListener('change', atualizarSugestaoRoteiro);
   document.getElementById('acompanhamentoTipoRota').addEventListener('change', atualizarTipoRota);
+  document.getElementById('acompanhamentoRota').addEventListener('change', preencherSupervisorDaRota);
+  document.getElementById('acompanhamentoRota').addEventListener('blur', preencherSupervisorDaRota);
   document.getElementById('modalAcompanhamento').addEventListener('click', (event) => {
     if (event.target.id === 'modalAcompanhamento') fecharModal();
   });
@@ -60,13 +63,14 @@ async function carregarListas() {
       supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Motorista%').order('nome'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Auxiliar%').order('nome'),
-      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true })
+      supabaseClient.from('rotas').select('numero, supervisor').order('numero', { ascending: true })
     ]);
 
+    rotasCadastradas = rotasRes.data || [];
     preencherDatalist('listaPlacas', veiculosRes.data?.map(v => v.placa));
     preencherDatalist('listaMotoristas', motoristasRes.data?.map(nomeFuncionario));
     preencherDatalist('listaAuxiliares', auxiliaresRes.data?.map(nomeFuncionario));
-    preencherDatalist('listaRotas', rotasRes.data?.map(r => r.numero));
+    preencherDatalist('listaRotas', rotasCadastradas.map(r => r.numero));
   } catch (error) {
     console.error('Erro ao carregar listas:', error);
   }
@@ -86,6 +90,20 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
+function normalizarTextoBusca(valor) {
+  return String(valor || '').trim().toUpperCase();
+}
+
+function obterSupervisorDaRota(numeroRota) {
+  const rota = rotasCadastradas.find(item => normalizarTextoBusca(item.numero) === normalizarTextoBusca(numeroRota));
+  return rota?.supervisor || '';
+}
+
+function preencherSupervisorDaRota() {
+  const supervisor = obterSupervisorDaRota(document.getElementById('acompanhamentoRota').value);
+  document.getElementById('acompanhamentoSupervisor').value = supervisor;
+}
+
 function abrirModal(item = null) {
   document.getElementById('formAcompanhamento').reset();
   acompanhamentoEditandoId = item?.id || null;
@@ -95,6 +113,7 @@ function abrirModal(item = null) {
   document.getElementById('acompanhamentoData').value = item?.data_acompanhamento || new Date().toISOString().split('T')[0];
   document.getElementById('acompanhamentoRota').value = item?.rota || '';
   document.getElementById('acompanhamentoQtdEntregas').value = item?.qtd_entregas ?? '';
+  document.getElementById('acompanhamentoSupervisor').value = item?.supervisor || obterSupervisorDaRota(item?.rota) || '';
   document.getElementById('acompanhamentoPlaca').value = item?.placa || '';
   document.getElementById('acompanhamentoTipoRota').value = item?.tipo_rota || 'bate_volta';
   document.getElementById('acompanhamentoMotorista').value = item?.motorista || '';
@@ -356,6 +375,7 @@ async function salvarAcompanhamento(event) {
       data_acompanhamento: document.getElementById('acompanhamentoData').value,
       rota: document.getElementById('acompanhamentoRota').value.trim(),
       qtd_entregas: getNumeroOuNull('acompanhamentoQtdEntregas'),
+      supervisor: document.getElementById('acompanhamentoSupervisor').value.trim() || null,
       tipo_rota: document.getElementById('acompanhamentoTipoRota').value,
       placa: document.getElementById('acompanhamentoPlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('acompanhamentoMotorista').value.trim(),
@@ -497,6 +517,7 @@ function getDadosGrid() {
       item.data_acompanhamento,
       item.usuario_nome,
       item.rota,
+      item.supervisor,
       item.qtd_entregas,
       item.tipo_rota,
       item.placa,
@@ -529,7 +550,7 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
@@ -539,6 +560,7 @@ function renderizarTabela() {
       <td>${formatarData(item.data_acompanhamento)}</td>
       <td>${escapeHtml(item.usuario_nome || '-')}</td>
       <td>${escapeHtml(item.rota || '-')}</td>
+      <td>${escapeHtml(item.supervisor || '-')}</td>
       <td>${escapeHtml(item.qtd_entregas ?? '-')}</td>
       <td>${escapeHtml(formatarTipoRota(item.tipo_rota))}</td>
       <td><strong>${escapeHtml(item.placa || '-')}</strong></td>
@@ -664,6 +686,7 @@ function dadosParaExportacao() {
     Data: formatarData(item.data_acompanhamento),
     Usuario: item.usuario_nome || '',
     Rota: item.rota || '',
+    Supervisor: item.supervisor || '',
     'QTD de Entregas': item.qtd_entregas ?? '',
     Tipo: formatarTipoRota(item.tipo_rota),
     Placa: item.placa || '',
@@ -810,13 +833,15 @@ async function gerarFormularioImpresso() {
   sectionTitle('Dados da Rota');
   lineField('Data', margin, 28);
   lineField('Rota', margin + 34, 28);
-  lineField('QTD de Entregas', margin + 68, 32);
-  lineField('Placa', margin + 106, 28);
-  lineField('Tipo de Rota', margin + 140, 42);
+  lineField('Supervisor', margin + 68, 58);
+  lineField('QTD de Entregas', margin + 132, 28);
   y += 13;
-  lineField('Motorista', margin, 58);
-  lineField('Auxiliar', margin + 64, 58);
-  lineField('Terceiro Motorista/Auxiliar', margin + 128, 54);
+  lineField('Placa', margin, 28);
+  lineField('Tipo de Rota', margin + 34, 42);
+  lineField('Motorista', margin + 82, 50);
+  lineField('Auxiliar', margin + 138, 44);
+  y += 13;
+  lineField('Terceiro Motorista/Auxiliar', margin, 70);
   y += 13;
   checkbox('Bate e Volta', margin);
   checkbox('Rota Viagem', margin + 40);
@@ -889,16 +914,16 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data', 'Rota', 'Tipo', 'Placa', 'Motorista', 'Clientes', 'Horarios']],
-    body: rows.map(row => [row.Data, row.Rota, row.Tipo, row.Placa, row.Motorista, row.Clientes, row.Horarios]),
+    head: [['Data', 'Rota', 'Supervisor', 'Tipo', 'Placa', 'Motorista', 'Clientes', 'Horarios']],
+    body: rows.map(row => [row.Data, row.Rota, row.Supervisor, row.Tipo, row.Placa, row.Motorista, row.Clientes, row.Horarios]),
     startY: 30,
     theme: 'grid',
     headStyles: { fillColor: [0, 105, 55], fontSize: 9 },
     styles: { fontSize: 8, cellPadding: 2 },
     alternateRowStyles: { fillColor: [240, 240, 240] },
     columnStyles: {
-      5: { cellWidth: 55 },
-      6: { cellWidth: 45 }
+      6: { cellWidth: 50 },
+      7: { cellWidth: 40 }
     }
   });
 

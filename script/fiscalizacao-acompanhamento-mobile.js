@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
+let rotasCadastradas = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date().toISOString().split('T')[0];
@@ -29,6 +30,8 @@ function bindEvents() {
   document.getElementById('btnAdicionarDiaMobile').addEventListener('click', () => adicionarDia());
   document.getElementById('btnCompartilharSugestaoWhatsappMobile').addEventListener('click', compartilharSugestaoWhatsapp);
   document.getElementById('mobileTipoRota').addEventListener('change', atualizarTipoRota);
+  document.getElementById('mobileRota').addEventListener('change', preencherSupervisorDaRota);
+  document.getElementById('mobileRota').addEventListener('blur', preencherSupervisorDaRota);
   document.getElementById('mobileHabilitarSugestaoRoteiro').addEventListener('change', atualizarSugestaoRoteiro);
   document.getElementById('clientesMobileContainer').addEventListener('change', handleClienteChange);
   document.getElementById('clientesMobileContainer').addEventListener('click', handleDynamicRemove);
@@ -54,6 +57,7 @@ function abrirModal(item = null) {
   document.getElementById('mobileData').value = item?.data_acompanhamento || new Date().toISOString().split('T')[0];
   document.getElementById('mobileRota').value = item?.rota || '';
   document.getElementById('mobileQtdEntregas').value = item?.qtd_entregas ?? '';
+  document.getElementById('mobileSupervisor').value = item?.supervisor || obterSupervisorDaRota(item?.rota) || '';
   document.getElementById('mobilePlaca').value = item?.placa || '';
   document.getElementById('mobileTipoRota').value = item?.tipo_rota || 'bate_volta';
   document.getElementById('mobileMotorista').value = item?.motorista || '';
@@ -89,13 +93,14 @@ async function carregarListas() {
       supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Motorista%').order('nome'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Auxiliar%').order('nome'),
-      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true })
+      supabaseClient.from('rotas').select('numero, supervisor').order('numero', { ascending: true })
     ]);
 
+    rotasCadastradas = rotasRes.data || [];
     preencherDatalist('listaPlacasMobile', veiculosRes.data?.map(v => v.placa));
     preencherDatalist('listaMotoristasMobile', motoristasRes.data?.map(nomeFuncionario));
     preencherDatalist('listaAuxiliaresMobile', auxiliaresRes.data?.map(nomeFuncionario));
-    preencherDatalist('listaRotasMobile', rotasRes.data?.map(r => r.numero));
+    preencherDatalist('listaRotasMobile', rotasCadastradas.map(r => r.numero));
   } catch (error) {
     console.error('Erro ao carregar listas:', error);
   }
@@ -113,6 +118,20 @@ function preencherDatalist(id, valores = []) {
 
 function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
+}
+
+function normalizarTextoBusca(valor) {
+  return String(valor || '').trim().toUpperCase();
+}
+
+function obterSupervisorDaRota(numeroRota) {
+  const rota = rotasCadastradas.find(item => normalizarTextoBusca(item.numero) === normalizarTextoBusca(numeroRota));
+  return rota?.supervisor || '';
+}
+
+function preencherSupervisorDaRota() {
+  const supervisor = obterSupervisorDaRota(document.getElementById('mobileRota').value);
+  document.getElementById('mobileSupervisor').value = supervisor;
 }
 
 function adicionarCliente(cliente = {}, containerId = 'clientesMobileContainer') {
@@ -325,6 +344,7 @@ async function salvarAcompanhamento(event) {
       data_acompanhamento: document.getElementById('mobileData').value,
       rota: document.getElementById('mobileRota').value.trim(),
       qtd_entregas: getNumeroOuNull('mobileQtdEntregas'),
+      supervisor: document.getElementById('mobileSupervisor').value.trim() || null,
       tipo_rota: document.getElementById('mobileTipoRota').value,
       placa: document.getElementById('mobilePlaca').value.trim().toUpperCase(),
       motorista: document.getElementById('mobileMotorista').value.trim(),
@@ -442,6 +462,7 @@ function renderCards() {
     item.data_acompanhamento,
     item.usuario_nome,
     item.rota,
+    item.supervisor,
     item.qtd_entregas,
     item.tipo_rota,
     item.placa,
@@ -469,6 +490,7 @@ function renderCards() {
       </div>
       <div class="card-info">
         <span><i class="fas fa-route"></i><strong>Rota:</strong> ${escapeHtml(item.rota || '-')}</span>
+        <span><i class="fas fa-user-shield"></i><strong>Supervisor:</strong> ${escapeHtml(item.supervisor || '-')}</span>
         <span><i class="fas fa-boxes-stacked"></i><strong>Entregas:</strong> ${escapeHtml(item.qtd_entregas ?? '-')}</span>
         <span><i class="fas fa-map-signs"></i><strong>Tipo:</strong> ${escapeHtml(formatarTipoRota(item.tipo_rota))}</span>
         <span><i class="fas fa-user-tie"></i><strong>Motorista:</strong> ${escapeHtml(item.motorista || '-')}</span>

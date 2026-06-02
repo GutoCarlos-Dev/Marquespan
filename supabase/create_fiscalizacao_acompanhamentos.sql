@@ -8,6 +8,7 @@ create table if not exists public.fiscalizacao_acompanhamentos (
   data_acompanhamento date not null,
   rota text not null,
   qtd_entregas integer,
+  supervisor text,
   tipo_rota text not null check (tipo_rota in ('bate_volta', 'viagem')),
   placa text not null,
   motorista text not null,
@@ -31,6 +32,9 @@ alter table public.fiscalizacao_acompanhamentos
 
 alter table public.fiscalizacao_acompanhamentos
   add column if not exists qtd_entregas integer;
+
+alter table public.fiscalizacao_acompanhamentos
+  add column if not exists supervisor text;
 
 do $$
 begin
