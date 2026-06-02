@@ -62,11 +62,15 @@
       <div class="panel-body">
         <form id="formOcorrenciaMobile">
           <fieldset class="form-fieldset">
-            <legend>Rota</legend>
+            <legend>Informacoes internas</legend>
             <div class="form-grid-mobile">
               <div class="form-group">
                 <label for="mobileData">Data</label>
                 <input type="date" id="mobileData" required>
+              </div>
+              <div class="form-group">
+                <label for="mobileHorario">Horario</label>
+                <input type="time" id="mobileHorario">
               </div>
               <div class="form-group">
                 <label for="mobileRota">Rota</label>
@@ -76,31 +80,132 @@
                 <label for="mobilePlaca">Placa</label>
                 <input type="text" id="mobilePlaca" list="listaPlacasMobile" required autocomplete="off" style="text-transform: uppercase;">
               </div>
-            </div>
-          </fieldset>
-
-          <fieldset class="form-fieldset">
-            <legend>Equipe</legend>
-            <div class="form-grid-mobile">
               <div class="form-group">
-                <label for="mobileMotorista">Motorista</label>
+                <label for="mobileMotorista">Motorista(s)</label>
                 <input type="text" id="mobileMotorista" list="listaMotoristasMobile" required autocomplete="off">
               </div>
               <div class="form-group">
                 <label for="mobileAuxiliar">Auxiliar</label>
                 <input type="text" id="mobileAuxiliar" list="listaAuxiliaresMobile" autocomplete="off">
               </div>
+              <div class="form-group">
+                <label for="mobileLocalOcorrencia">Local da Ocorrencia</label>
+                <input type="text" id="mobileLocalOcorrencia" autocomplete="off">
+              </div>
             </div>
           </fieldset>
 
           <fieldset class="form-fieldset">
-            <legend>Relatorio</legend>
+            <legend>Envolvimento</legend>
+            <div class="mobile-checkbox-group">
+              <label class="mobile-checkbox-line">
+                <input type="checkbox" id="mobileEnvolveVeiculoEmpresa">
+                <span>Outro veiculo da empresa</span>
+              </label>
+              <label class="mobile-checkbox-line">
+                <input type="checkbox" id="mobileEnvolveVeiculoTerceiro">
+                <span>Veiculo de terceiros</span>
+              </label>
+              <label class="mobile-checkbox-line">
+                <input type="checkbox" id="mobileEnvolveOutroPatrimonio">
+                <span>Outro patrimonio</span>
+              </label>
+            </div>
+
+            <div id="mobileGrupoVeiculoEmpresa" class="mobile-envolvimento-grupo hidden">
+              <h4>Outro veiculo da empresa</h4>
+              <div class="form-grid-mobile">
+                <div class="form-group">
+                  <label for="mobileEmpresaPlaca">Placa</label>
+                  <input type="text" id="mobileEmpresaPlaca" list="listaPlacasMobile" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileEmpresaModelo">Modelo</label>
+                  <input type="text" id="mobileEmpresaModelo" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileEmpresaMotoristaResponsavel">Motorista Responsavel</label>
+                  <input type="text" id="mobileEmpresaMotoristaResponsavel" list="listaMotoristasMobile" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileEmpresaDanos">Danos Causados</label>
+                  <textarea id="mobileEmpresaDanos" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div id="mobileGrupoVeiculoTerceiro" class="mobile-envolvimento-grupo hidden">
+              <h4>Veiculo de terceiros</h4>
+              <div class="form-grid-mobile">
+                <div class="form-group">
+                  <label for="mobileTerceiroPlaca">Placa</label>
+                  <input type="text" id="mobileTerceiroPlaca" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileTerceiroModelo">Modelo</label>
+                  <input type="text" id="mobileTerceiroModelo" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileTerceiroCor">Cor</label>
+                  <input type="text" id="mobileTerceiroCor" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileTerceiroCondutor">Condutor</label>
+                  <input type="text" id="mobileTerceiroCondutor" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileTerceiroContato">Contato</label>
+                  <input type="text" id="mobileTerceiroContato" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobileTerceiroDanos">Danos Causados</label>
+                  <textarea id="mobileTerceiroDanos" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div id="mobileGrupoOutroPatrimonio" class="mobile-envolvimento-grupo hidden">
+              <h4>Outro patrimonio</h4>
+              <div class="form-grid-mobile">
+                <div class="form-group">
+                  <label for="mobilePatrimonioTipo">Tipo Patrimonio</label>
+                  <input type="text" id="mobilePatrimonioTipo" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobilePatrimonioResponsavel">Responsavel</label>
+                  <input type="text" id="mobilePatrimonioResponsavel" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobilePatrimonioContato">Contato</label>
+                  <input type="text" id="mobilePatrimonioContato" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="mobilePatrimonioDano">Dano Causado</label>
+                  <textarea id="mobilePatrimonioDano" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Relatorio Ocorrido</legend>
             <div class="form-grid-mobile">
               <div class="form-group">
                 <label for="mobileRelatorio">Ocorrencia</label>
-                <textarea id="mobileRelatorio" rows="5" required placeholder="Descreva a ocorrencia com detalhes..."></textarea>
+                <textarea id="mobileRelatorio" rows="8" required placeholder="Descreva a ocorrencia com detalhes..."></textarea>
               </div>
             </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Anexos</legend>
+            <div class="form-grid-mobile">
+              <div class="form-group">
+                <label for="mobileAnexos">Boletim, fotos, videos e outros arquivos</label>
+                <input type="file" id="mobileAnexos" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+              </div>
+            </div>
+            <div id="listaAnexosMobile" class="lista-anexos-mobile"></div>
           </fieldset>
 
           <div class="form-actions mobile-actions">

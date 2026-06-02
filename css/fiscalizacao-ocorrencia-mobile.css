@@ -357,6 +357,10 @@ body {
     resize: vertical;
 }
 
+#mobileRelatorio {
+    min-height: 210px;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -385,6 +389,95 @@ body {
 .btn-primary:disabled {
     opacity: 0.75;
     cursor: wait;
+}
+
+.mobile-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.mobile-checkbox-line {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    color: #333;
+    font-weight: 600;
+}
+
+.mobile-checkbox-line input {
+    height: 18px;
+    width: 18px;
+}
+
+.mobile-envolvimento-grupo {
+    background: #fbfdfc;
+    border: 1px solid #d9e2dc;
+    border-left: 4px solid #006937;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.mobile-envolvimento-grupo h4 {
+    margin: 0 0 12px;
+    color: #333;
+    font-size: 0.98rem;
+}
+
+.lista-anexos-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.anexo-mobile-item {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+.anexo-mobile-nome {
+    align-items: center;
+    color: #334155;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+}
+
+.anexo-mobile-nome span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.anexo-mobile-acoes {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-anexo-mobile {
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    height: 34px;
+    width: 36px;
+}
+
+.btn-anexo-download {
+    background: #007bff;
+}
+
+.btn-anexo-remove {
+    background: #dc3545;
 }
 
 .btn-block {
