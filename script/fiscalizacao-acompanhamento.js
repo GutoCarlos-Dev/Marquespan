@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function bindEvents() {
   document.getElementById('btnIncluirAcompanhamento').addEventListener('click', abrirModal);
   document.getElementById('btnBuscarAcompanhamentos').addEventListener('click', buscarAcompanhamentos);
+  document.getElementById('btnFormularioImpresso').addEventListener('click', gerarFormularioImpresso);
   document.getElementById('btnExportarXLS').addEventListener('click', exportarExcel);
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
   document.getElementById('filtroLocal').addEventListener('input', renderizarTabela);
@@ -707,6 +708,166 @@ async function getLogoBase64() {
     };
     img.onerror = () => resolve(null);
   });
+}
+
+async function gerarFormularioImpresso() {
+  if (!window.jspdf) return alert('Biblioteca jsPDF nao carregada.');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const logo = await getLogoBase64();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
+  let y = 12;
+
+  const addFooter = () => {
+    doc.setFontSize(7);
+    doc.setTextColor(130);
+    doc.text('GTSYSTEM - Marquespan', margin, pageHeight - 8);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  };
+
+  const ensureSpace = (needed = 20) => {
+    if (y + needed <= pageHeight - 14) return;
+    addFooter();
+    doc.addPage();
+    y = 12;
+  };
+
+  const sectionTitle = (title) => {
+    ensureSpace(12);
+    doc.setFillColor(0, 106, 45);
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.rect(margin, y, pageWidth - margin * 2, 7, 'F');
+    doc.text(title, margin + 2, y + 5);
+    y += 10;
+    doc.setTextColor(0);
+    doc.setFont(undefined, 'normal');
+  };
+
+  const lineField = (label, x, width, lineY = y) => {
+    doc.setFontSize(7);
+    doc.setTextColor(80);
+    doc.text(label, x, lineY);
+    doc.setDrawColor(80);
+    doc.setLineWidth(0.15);
+    doc.line(x, lineY + 5, x + width, lineY + 5);
+  };
+
+  const checkbox = (label, x, lineY = y) => {
+    doc.rect(x, lineY - 3, 3, 3);
+    doc.setFontSize(8);
+    doc.setTextColor(40);
+    doc.text(label, x + 5, lineY);
+  };
+
+  const header = () => {
+    if (logo) {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, y, 40, 12, 'F');
+      doc.addImage(logo, 'JPEG', margin, y, 38, 11);
+    }
+    doc.setTextColor(0, 106, 45);
+    doc.setFontSize(15);
+    doc.setFont(undefined, 'bold');
+    doc.text('FORMULARIO DE ACOMPANHAMENTO', pageWidth / 2, y + 6, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(90);
+    doc.setFont(undefined, 'normal');
+    doc.text('Preenchimento manual para posterior lancamento no sistema', pageWidth / 2, y + 11, { align: 'center' });
+    y += 18;
+  };
+
+  const drawClienteTable = (title, rows, sugestao = false) => {
+    sectionTitle(title);
+    const head = sugestao
+      ? [['#', 'Cliente', 'Mercado horario', 'Recebimento ate']]
+      : [['#', 'Cliente', 'Mercado horario', 'Receb. ate', 'Chegada', 'Chamou descarga', 'Termino descarga', 'Liberou canhoto']];
+    const body = Array.from({ length: rows }, (_, index) => sugestao
+      ? [index + 1, '', 'Sim ( )  Nao ( )', '']
+      : [index + 1, '', 'Sim ( )  Nao ( )', '', '', '', '', '']);
+
+    doc.autoTable({
+      startY: y,
+      head,
+      body,
+      theme: 'grid',
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 1.4, minCellHeight: 8, textColor: [30, 30, 30] },
+      headStyles: { fillColor: [230, 240, 234], textColor: [0, 80, 35], fontStyle: 'bold' },
+      columnStyles: sugestao
+        ? { 0: { cellWidth: 9 }, 1: { cellWidth: 84 }, 2: { cellWidth: 42 }, 3: { cellWidth: 36 } }
+        : { 0: { cellWidth: 7 }, 1: { cellWidth: 39 }, 2: { cellWidth: 24 }, 3: { cellWidth: 19 }, 4: { cellWidth: 18 }, 5: { cellWidth: 25 }, 6: { cellWidth: 27 }, 7: { cellWidth: 21 } }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  };
+
+  header();
+
+  sectionTitle('Dados da Rota');
+  lineField('Data', margin, 28);
+  lineField('Rota', margin + 34, 28);
+  lineField('QTD de Entregas', margin + 68, 32);
+  lineField('Placa', margin + 106, 28);
+  lineField('Tipo de Rota', margin + 140, 42);
+  y += 13;
+  lineField('Motorista', margin, 58);
+  lineField('Auxiliar', margin + 64, 58);
+  lineField('Terceiro Motorista/Auxiliar', margin + 128, 54);
+  y += 13;
+  checkbox('Bate e Volta', margin);
+  checkbox('Rota Viagem', margin + 40);
+  y += 7;
+
+  drawClienteTable('Quantidades de Entrega (Roteiro Atual)', 20, false);
+
+  sectionTitle('Horario - Bate e Volta');
+  lineField('Saida da empresa', margin, 34);
+  lineField('Cafe de', margin + 40, 24);
+  lineField('Cafe ate', margin + 70, 24);
+  lineField('Almoco de', margin + 100, 24);
+  lineField('Almoco ate', margin + 130, 24);
+  y += 13;
+  lineField('Finalizacao das Entregas', margin, 46);
+  lineField('Chegada na empresa', margin + 54, 44);
+  y += 13;
+
+  sectionTitle('Horario - Rota Viagem');
+  doc.setFontSize(8);
+  doc.setTextColor(40);
+  ['1 Dia', '2 Dia', '3 Dia', '4 Dia', '5 Dia'].forEach((diaLabel) => {
+    ensureSpace(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(diaLabel, margin, y);
+    doc.setFont(undefined, 'normal');
+    lineField('Saida empresa/hotel', margin + 17, 34, y);
+    lineField('Cafe de', margin + 56, 22, y);
+    lineField('Cafe ate', margin + 83, 22, y);
+    lineField('Almoco de', margin + 110, 22, y);
+    lineField('Almoco ate', margin + 137, 22, y);
+    y += 10;
+    lineField('Finalizacao Entregas', margin + 17, 42, y);
+    lineField('Chegada hotel/empresa', margin + 66, 46, y);
+    y += 12;
+  });
+
+  sectionTitle('Observacoes');
+  ensureSpace(44);
+  doc.setDrawColor(90);
+  doc.setLineWidth(0.15);
+  Array.from({ length: 6 }).forEach((_, index) => {
+    const lineY = y + index * 6;
+    doc.line(margin, lineY, pageWidth - margin, lineY);
+  });
+  y += 43;
+
+  drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 20, true);
+
+  addFooter();
+  doc.save(`formulario_acompanhamento_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 async function exportarPDF() {
