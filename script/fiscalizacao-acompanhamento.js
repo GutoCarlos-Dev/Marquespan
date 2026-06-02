@@ -864,7 +864,7 @@ async function gerarFormularioImpresso() {
   });
   y += 103;
 
-  drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 20, true);
+  drawClienteTable('Sugestao de Roteiro - Clientes da Sugestao', 23, true);
 
   addFooter();
   doc.save(`formulario_acompanhamento_${new Date().toISOString().slice(0, 10)}.pdf`);
