@@ -56,6 +56,7 @@ const RotasUI = {
         // Botão e input de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
         this.importFileInput = document.getElementById('importFile');
+        this.btnExportarXLSX = document.getElementById('btnExportarXLSX');
     },
 
     bind() {
@@ -78,6 +79,10 @@ const RotasUI = {
             this.importFileInput.addEventListener('change', (e) => this.handleFileImport(e));
         }
 
+        if (this.btnExportarXLSX) {
+            this.btnExportarXLSX.addEventListener('click', () => this.exportToExcel());
+        }
+
         // Adiciona listeners para ordenação dos cabeçalhos da tabela
         const ths = this.section?.querySelectorAll('.data-grid thead th[data-field]');
         ths?.forEach(th => {
@@ -88,6 +93,7 @@ const RotasUI = {
 
     setupInitialState() {
         this._sort = { field: 'numero', ascending: true };
+        this.displayedRotas = []; // Armazena os dados filtrados para exportação
     },
 
     async carregarSupervisores() {
@@ -326,6 +332,9 @@ const RotasUI = {
                 queryOptions.or = searchConditions.join(',');
             }
             rotas = await this.SupabaseService.list('rotas', '*', queryOptions);
+            
+            // Armazena no estado para permitir exportação do que está visível
+            this.displayedRotas = rotas;
 
             const dayClassMap = {
                 'SEGUNDA': 'semana-segunda',
@@ -360,6 +369,35 @@ const RotasUI = {
 
         // Renderiza o resumo após carregar o grid
         this.renderSummary(rotas);
+    },
+
+    exportToExcel() {
+        if (!this.displayedRotas || this.displayedRotas.length === 0) {
+            return alert('Não há dados filtrados para exportar. Realize uma busca primeiro.');
+        }
+
+        // Mapeia para colunas amigáveis em português
+        const dataToExport = this.displayedRotas.map(r => ({
+            'FILIAL': r.filial || '-',
+            'NÚMERO DA ROTA': r.numero || '-',
+            'SEMANA': r.semana || '-',
+            'SUPERVISOR': r.supervisor || '-',
+            'CIDADES ATENDIDAS': r.cidades || '-',
+            'QTD DIAS': r.dias || 0,
+            'STATUS': r.status || 'ATIVA'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Rotas_Cadastradas");
+
+        // Define larguras automáticas básicas para as colunas
+        ws['!cols'] = [
+            { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 40 }, { wch: 10 }, { wch: 12 }
+        ];
+
+        const dataAtual = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Marquespan_Cadastro_Rotas_${dataAtual}.xlsx`);
     },
 
     renderSummary(rotas) {
