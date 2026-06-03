@@ -1994,19 +1994,23 @@ async function abrirCadastroFaltantes(){
     if(!drop) return;
     const funcsAll = window._funcsVinculo || [];
     const t = norm(termo);
-    const matches = t.length < 1
-      ? funcsAll.slice(0, 30)
-      : funcsAll.filter(f =>
-          norm(f.nome).includes(t) ||
-          norm(f.nome_completo||'').includes(t)
-        ).slice(0, 40);
 
-    if(!matches.length){
-      drop.style.display = 'none';
-      return;
+    // Mantém índice global para não serializar objetos no onclick
+    let matches = [];
+    if(t.length < 1){
+      matches = funcsAll.slice(0, 30).map((f, fi) => ({f, fi}));
+    } else {
+      funcsAll.forEach((f, fi) => {
+        if(norm(f.nome).includes(t) || norm(f.nome_completo||'').includes(t))
+          matches.push({f, fi});
+      });
+      matches = matches.slice(0, 40);
     }
-    drop.innerHTML = matches.map(f => `
-      <div onclick="window._vincularSelecionar(${i}, ${JSON.stringify(JSON.stringify(f))})"
+
+    if(!matches.length){ drop.style.display = 'none'; return; }
+
+    drop.innerHTML = matches.map(({f, fi}) => `
+      <div data-fi="${fi}"
         style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f3f5;transition:background .1s"
         onmouseover="this.style.background='rgba(0,105,55,.07)'"
         onmouseout="this.style.background=''"
@@ -2017,11 +2021,21 @@ async function abrirCadastroFaltantes(){
         </div>
       </div>
     `).join('');
+
+    // Eventos via addEventListener para evitar problemas com aspas/acentos no onclick
+    drop.querySelectorAll('[data-fi]').forEach(el => {
+      el.addEventListener('mousedown', function(e){
+        e.preventDefault(); // impede que o input perca foco antes do clique processar
+        window._vincularSelecionar(i, parseInt(this.dataset.fi));
+      });
+    });
+
     drop.style.display = 'block';
   };
 
-  window._vincularSelecionar = function(i, jsonStr){
-    const f = JSON.parse(jsonStr);
+  window._vincularSelecionar = function(i, funcIdx){
+    const f = (window._funcsVinculo || [])[funcIdx];
+    if(!f) return;
     window._linksVinculo = window._linksVinculo || {};
     window._linksVinculo[i] = f;
 
@@ -8717,6 +8731,7 @@ initDB().then(()=>updateActionsBadge()).catch(()=>{});
   (function(){
     const panel = document.getElementById('tweaks-panel');
     const head = document.getElementById('tweaks-drag');
+    if(!panel || !head) return; // elementos removidos com o novo layout
     let drag = null;
     head.addEventListener('mousedown', e=>{
       if(e.target.closest('button')) return;
@@ -8736,12 +8751,15 @@ initDB().then(()=>updateActionsBadge()).catch(()=>{});
 
   // Show/hide + parent protocol
   const panel = document.getElementById('tweaks-panel');
-  function show(){ panel.classList.add('open'); }
-  function hide(){ panel.classList.remove('open'); }
-  document.getElementById('tweaks-close').addEventListener('click', ()=>{
-    hide();
-    try{ window.parent.postMessage({type:'__edit_mode_dismissed'}, '*'); }catch(e){}
-  });
+  function show(){ if(panel) panel.classList.add('open'); }
+  function hide(){ if(panel) panel.classList.remove('open'); }
+  const tweaksClose = document.getElementById('tweaks-close');
+  if(tweaksClose){
+    tweaksClose.addEventListener('click', ()=>{
+      hide();
+      try{ window.parent.postMessage({type:'__edit_mode_dismissed'}, '*'); }catch(e){}
+    });
+  }
 
   window.addEventListener('message', e=>{
     const d = e.data || {};
