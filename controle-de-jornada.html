@@ -1,203 +1,1314 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <title>Controle Jornada</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="Controle Jornada Marquespan — V6 PDFpro FINAL">
-  <link rel="stylesheet" href="css/index.css" />
-  <link rel="stylesheet" href="css/controle-de-jornada.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-  <style>
-    .table-scroll {
-      max-height: 65vh; /* Altura máxima para ativar a rolagem */
-      overflow-y: auto;
-    }
-    th.sortable {
-      cursor: pointer;
-      user-select: none;
-    }
-    th.sortable:hover {
-      background-color: #f1f5f9;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Jornada - Marquespan</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/controle-de-jornada.css">
 </head>
 <body>
-  <div class="container">
-    <div id="menu-container"></div>
-    <div class="main-content">
-      <div class="jornada-layout">
-        <!-- CONTROL SIDEBAR -->
-        <aside class="control-sidebar">
-          <div class="card">
-            <div class="card-title">Importar / Selecionar Aba</div>
-            <input id="fileInput" type="file" accept=".xlsx,.xls" />
-            <div style="height:8px"></div>
-            <select id="sheetSelect" class="form"></select>
-            <div style="height:8px"></div>
-            <button id="btnLoad" class="btn btn-primary">Carregar Aba</button>
+  <div id="menu-container"></div>
+
+  <main class="main-content fade-in">
+    <header class="header glass-header">
+      <h1><i class="fas fa-clock-rotate-left"></i> <span id="top-title">Controle de Jornada</span></h1>
+      <p>
+        <span class="db-dot" id="db-dot"></span>
+        <span id="db-label">Inicializando...</span>
+      </p>
+    </header>
+
+    <!-- Navegação Interna por Abas -->
+    <div class="painel-navegacao" id="jornada-nav-bar">
+      <button class="painel-btn nav-item active" onclick="goPage('dashboard')" data-page="dashboard">
+        <i class="fas fa-th-large"></i> Visão Geral
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('step1')" data-page="step1">
+        <span class="step-circle" id="sc1">1</span> Importar Ponto
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('step2')" data-page="step2">
+        <span class="step-circle" id="sc2">2</span> Preencher Controle
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('step3')" data-page="step3">
+        <span class="step-circle" id="sc3">3</span> Gerar Resumos
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('step4')" data-page="step4">
+        <span class="step-circle" id="sc4">4</span> Analisar Infrações
+        <span class="jornada-badge" id="nb-actions"></span>
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('historico')" data-page="historico">
+        <i class="fas fa-clock"></i> Histórico
+      </button>
+      <button class="painel-btn nav-item" onclick="goPage('relatorios')" data-page="relatorios">
+        <i class="fas fa-file-alt"></i> Relatórios
+      </button>
+    </div>
+
+    <!-- Conteúdo das Páginas -->
+    <div class="jornada-content">
+
+  <!-- ════════ PAGE: DASHBOARD ════════ -->
+  <div class="page active" id="pg-dashboard">
+    <div class="page-header">
+      <h2>Dashboard</h2>
+      <p>Visão geral do pipeline e status do processamento</p>
+    </div>
+
+    <!-- Pipeline visual -->
+    <div class="pipeline">
+      <div class="pipeline-step" id="pip1" onclick="goPage('step1')">
+        <div class="ps-num a" id="pn1">1</div>
+        <div class="ps-title">Ponto Diário</div>
+        <div class="ps-desc">Importar PONTO_DIARIO.xlsx do Secullum e processar interjornada</div>
+        <div class="ps-status pend" id="ps1-st">Aguardando arquivo</div>
+      </div>
+      <div class="pipeline-step" id="pip2" onclick="goPage('step2')">
+        <div class="ps-num p" id="pn2">2</div>
+        <div class="ps-title">Preencher Controle</div>
+        <div class="ps-desc">Copiar SAÍDA/ENTRADA para abas de datas do CONTROLE_DE_JORNADA</div>
+        <div class="ps-status pend" id="ps2-st">Aguardando passo 1</div>
+      </div>
+      <div class="pipeline-step" id="pip3" onclick="goPage('step3')">
+        <div class="ps-num p" id="pn3">3</div>
+        <div class="ps-title">Gerar Resumos</div>
+        <div class="ps-desc">Cruzar Controle com Roteiro SP → gerar RESUMO por dia da semana</div>
+        <div class="ps-status pend" id="ps3-st">Aguardando passo 2</div>
+      </div>
+      <div class="pipeline-step" id="pip4" onclick="goPage('step4')">
+        <div class="ps-num p" id="pn4">4</div>
+        <div class="ps-title">Analisar Infrações</div>
+        <div class="ps-desc">Visualizar, filtrar e registrar ações para cada colaborador</div>
+        <div class="ps-status pend" id="ps4-st">Aguardando passo 3</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-val" id="d-func">—</div>
+        <div class="stat-label">Funcionários</div>
+        <div class="stat-sub" id="d-func-sub">no período</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-val" id="d-inf">—</div>
+        <div class="stat-label">Infrações</div>
+        <div class="stat-sub" id="d-inf-sub">registros irregulares</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-val" id="d-ij">—</div>
+        <div class="stat-label">Interj. &lt; 11h</div>
+        <div class="stat-sub">risco trabalhista</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-val" id="d-acoes">—</div>
+        <div class="stat-label">Ações registradas</div>
+        <div class="stat-sub">histórico total</div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Status do pipeline</div></div>
+        <div class="card-body">
+          <div id="dash-pipeline-detail" style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:13px;color:var(--text3);text-align:center;padding:20px">Inicie o 1º passo para ver o progresso</div>
           </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Últimas ações registradas</div></div>
+        <div class="card-body" id="dash-recent-actions">
+          <div style="font-size:13px;color:var(--text3);text-align:center;padding:20px">Nenhuma ação registrada ainda</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          <div class="card filters">
-            <div class="card-title">Filtros</div>
-            <div class="form-group">
-              <label class="muted">Tipo de Serviço</label>
-              <select id="filterStat" class="form">
-                <option value="all">Todos</option>
-                <option value="viagem">Somente Viagem</option>
-                <option value="bateevolta">Somente Bate e Volta</option>
-              </select>
-            </div>
+  <!-- ════════ PAGE: PASSO 1 ════════ -->
+  <div class="page" id="pg-step1">
+    <div class="page-header">
+      <h2>1º Passo · Importar e Processar Ponto Diário</h2>
+      <p>Exporte o PONTO_DIARIO.xlsx do Secullum e carregue aqui. O sistema processa automaticamente.</p>
+    </div>
 
-            <div class="form-group">
-              <label class="muted">Status</label>
-              <select id="filterIrregular" class="form">
-                <option value="all">Todos</option>
-                <option value="only">Apenas irregularidades</option>
-                <option value="ok">Apenas conformes</option>
-                <option value="semregistro">Apenas Sem Registro</option>
-              </select>
-            </div>
+    <div class="alert alert-info">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Acesse <strong>pontoweb.secullum.com.br</strong> → selecione o período → Departamento: Logística → exporte como <strong>PontoDiarioExcelSimplificado</strong>. O sistema aceita o arquivo com o nome original.
+    </div>
 
-            <div class="form-group">
-              <label class="muted">Irregularidade específica</label>
-              <select id="filterSpecific" class="form">
-                <option value="all">Todas</option>
-                <option value="saidaTardia">Saída após 19:20</option>
-                <option value="entradaPrecoce">Entrada antes de 06:45</option>
-                <option value="interjCurta">Interjornada &lt; 11h</option>
-                <option value="semRegistro">Sem Registro</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="muted">Pesquisar</label>
-              <input id="searchBox" class="form" placeholder="placa, nome, rota..." />
-            </div>
+    <div class="row2" style="margin-bottom:16px">
+      <div class="upload-zone" id="dz-ponto">
+        <input type="file" accept=".xlsx,.xls" id="inp-ponto" onchange="handlePontoFile(this.files[0])">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+        </div>
+        <div class="upload-title" id="ponto-title">PONTO_DIARIO.xlsx</div>
+        <div class="upload-hint" id="ponto-hint">Arraste ou clique para selecionar</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header"><div class="card-title">Resultado do processamento</div></div>
+          <div class="card-body" id="step1-result">
+            <div style="font-size:13px;color:var(--text3)">Carregue o arquivo para ver o resultado</div>
           </div>
+        </div>
+      </div>
+    </div>
 
-          <div class="card">
-            <div class="card-title">Export / Import Histórico</div>
-            <div style="display:flex; gap:8px; margin-bottom:8px">
-              <button id="btnExportJSON" class="btn btn-ghost btn-small">Exportar JSON</button>
-              <button id="btnImportJSON" class="btn btn-ghost btn-small">Importar JSON</button>
-            </div>
-            <div style="display:flex; gap:8px; margin-bottom:8px">
-              <button id="btnExportPDF" class="btn btn-primary btn-small" title="Exportar PDF (misto)">Exportar PDF (Misto)</button>
-              <button id="btnExportExcel" class="btn btn-ghost btn-small">Exportar Excel</button>
-            </div>
-            <div class="muted" style="font-size:12px">Histórico salvo localmente (localStorage). Use export/import JSON para sincronizar entre máquinas.</div>
+    <div class="card" id="s1-proc-card" style="display:none">
+      <div class="card-header"><div class="card-title">Log de processamento</div><button class="btn btn-ghost btn-sm" onclick="document.getElementById('s1-term').innerHTML=''">Limpar</button></div>
+      <div style="padding:12px">
+        <div class="term" id="s1-term"></div>
+        <div class="prog-wrap">
+          <div class="prog-label-row"><span id="s1-pl">Aguardando...</span><span id="s1-pp">0%</span></div>
+          <div class="prog-bar"><div class="prog-fill" id="s1-pf" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s1-table-section" style="display:none">
+      <div class="section-title">Prévia da interjornada calculada</div>
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar funcionário..." id="s1-search" oninput="filterS1Table()">
           </div>
-        </aside>
+          <div class="chips" id="s1-chips">
+            <div class="chip active" data-f="all" onclick="setS1Filter('all',this)">Todos</div>
+            <div class="chip" data-f="ST" onclick="setS1Filter('ST',this)">Saída &gt;19:20</div>
+            <div class="chip" data-f="EA" onclick="setS1Filter('EA',this)">Entrada &lt;06:45</div>
+            <div class="chip" data-f="IJ" onclick="setS1Filter('IJ',this)">Interj. &lt;11h</div>
+            <div class="chip" data-f="ok" onclick="setS1Filter('ok',this)">Conforme</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Nome</th><th style="width:60px;text-align:center">Função</th><th>Data</th><th>Saída</th><th>Entrada</th><th>Descanso</th><th>Status</th></tr></thead>
+            <tbody id="s1-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span style="font-size:12px;color:var(--text3)" id="s1-count"></span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="exportS1CSV()">↓ CSV</button>
+            <button class="btn btn-ghost btn-sm" onclick="downloadS1XLSX()">↓ Baixar XLSX</button>
+            <button class="btn btn-brand btn-sm" onclick="usarS1NoPasso2()" title="Envia o resultado direto para o Passo 2 — sem baixar e re-importar" style="font-weight:700">Usar no Passo 2 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        <!-- CONTENT -->
-        <div class="jornada-content">
-          <header class="header">
-            <div class="jornada-header-wrapper">
-              <div class="jornada-title-group">
-                <i class="fas fa-user-clock"></i>
-                <div>
-                  <div class="jornada-title-text">Controle de Jornada</div>
-                  <div class="jornada-subtitle">Resumo unificado | PDF Misto</div>
+  <!-- ════════ PAGE: PASSO 2 ════════ -->
+  <div class="page" id="pg-step2">
+    <div class="page-header">
+      <h2>2º Passo · Preencher Controle de Jornada</h2>
+      <p>Copia SAÍDA e ENTRADA para as abas de datas do CONTROLE_DE_JORNADA por nome de funcionário.</p>
+    </div>
+
+    <div class="row2" style="margin-bottom:16px">
+      <div class="upload-zone" id="dz-ij">
+        <input type="file" accept=".xlsx,.xls" id="inp-ij" onchange="handleIJFile(this.files[0])">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="upload-title" id="ij-title">interjornada_formatada.xlsx</div>
+        <div class="upload-hint" id="ij-hint">Gerado no 1º passo <span style="color:var(--red);font-weight:700">· obrigatório</span></div>
+      </div>
+      <div class="upload-zone" id="dz-ctrl">
+        <input type="file" accept=".xlsx,.xls" id="inp-ctrl" onchange="handleCtrlFile(this.files[0])">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="upload-title" id="ctrl-title">CONTROLE_DE_JORNADA.xlsx</div>
+        <div class="upload-hint" id="ctrl-hint">
+          <span style="color:var(--green);font-weight:700">· opcional</span> — se vazio, o sistema gera a partir dos cadastros
+        </div>
+      </div>
+    </div>
+
+    <div id="s2-map-section" style="display:none;margin-bottom:16px">
+      <div class="section-title">Mapeamento de abas</div>
+      <div id="s2-map-rows"></div>
+      <button class="btn btn-brand btn-lg" id="btn-s2-run" onclick="runStep2()">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Executar cópia
+      </button>
+    </div>
+
+    <div class="card" id="s2-proc-card" style="display:none">
+      <div class="card-header"><div class="card-title">Log</div></div>
+      <div style="padding:12px">
+        <div class="term" id="s2-term"></div>
+        <div class="prog-wrap">
+          <div class="prog-label-row"><span id="s2-pl">Aguardando...</span><span id="s2-pp">0%</span></div>
+          <div class="prog-bar"><div class="prog-fill" id="s2-pf" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s2-chain-info" style="display:none;margin-bottom:10px;font-size:13px;color:var(--green);font-weight:600;background:var(--green-l);border:1px solid var(--green-b);border-radius:8px;padding:9px 13px"></div>
+
+    <div id="s2-dl-section" style="display:none">
+      <div class="dl-box">
+        <div class="dl-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+        <div class="dl-info">
+          <h3 id="s2-dl-name">CONTROLE_DE_JORNADA_atualizado.xlsx</h3>
+          <p id="s2-dl-desc">Arquivo com SAÍDA e ENTRADA preenchidos · fórmulas DESCANSO preservadas</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-lg" onclick="downloadS2XLSX()">↓ Baixar</button>
+          <button class="btn btn-brand btn-lg" onclick="usarS2NoPasso3()" title="Envia o controle direto para o Passo 3 — sem baixar e re-importar" style="font-weight:700">Usar no Passo 3 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ PAGE: PASSO 3 ════════ -->
+  <div class="page" id="pg-step3">
+    <div class="page-header">
+      <h2>3º Passo · Gerar Resumos por Dia da Semana</h2>
+      <p>Cruza Controle com o Roteiro SP — gera abas RESUMO SEGUNDA … RESUMO SEXTA.</p>
+    </div>
+
+    <div class="alert alert-info">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Carregue <strong>1 a 53 roteiros</strong> de uma vez. O sistema detecta automaticamente a qual semana cada arquivo pertence pelo período das datas (ex: ROTEIRO SP 16 – 13.04.26 Á 18.04.26).
+    </div>
+
+    <div class="row2" style="margin-bottom:16px">
+      <div class="upload-zone" id="dz-ctrl2">
+        <input type="file" accept=".xlsx,.xls" id="inp-ctrl2" onchange="handleCtrl2File(this.files[0])">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="upload-title" id="ctrl2-title">CONTROLE_DE_JORNADA.xlsx</div>
+        <div class="upload-hint" id="ctrl2-hint">Com SAÍDA/ENTRADA preenchidos (passo 2)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <!-- Drop zone multi-roteiro -->
+        <div class="upload-zone" id="dz-rot" style="padding:20px 16px">
+          <input type="file" accept=".xlsx,.xls" id="inp-rot" multiple onchange="handleRotFiles(this.files)">
+          <div class="upload-icon" id="rot-icon">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </div>
+          <div class="upload-title" id="rot-title">Roteiros SP (até 53 semanas)</div>
+          <div class="upload-hint" id="rot-hint">Selecione um ou mais arquivos ROTEIRO SP *.xlsx de uma vez</div>
+        </div>
+        <!-- Lista de roteiros carregados -->
+        <div id="rot-list" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg3)">
+            <span style="font-size:12px;font-weight:600;color:var(--text)" id="rot-list-title">0 roteiros carregados</span>
+            <button class="btn btn-ghost btn-sm" onclick="clearRoteiros()" style="color:var(--red);border-color:var(--red-b)">✕ Limpar</button>
+          </div>
+          <div id="rot-list-items" style="max-height:200px;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s3-map-section" style="display:none;margin-bottom:16px">
+      <div class="section-title">Mapeamento detectado</div>
+      <div id="s3-map-rows" style="margin-bottom:12px"></div>
+      <button class="btn btn-brand btn-lg" id="btn-s3-run" onclick="runStep3()" disabled>
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Gerar Controle de Jornada
+      </button>
+    </div>
+
+    <div class="card" id="s3-proc-card" style="display:none">
+      <div class="card-header"><div class="card-title">Log</div></div>
+      <div style="padding:12px">
+        <div class="term" id="s3-term"></div>
+        <div class="prog-wrap">
+          <div class="prog-label-row"><span id="s3-pl">Aguardando...</span><span id="s3-pp">0%</span></div>
+          <div class="prog-bar"><div class="prog-fill" id="s3-pf" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s3-preview-section" style="display:none">
+      <div class="section-title">Prévia — <span id="s3-preview-day">SEGUNDA</span></div>
+      <div class="chips" id="s3-day-chips" style="margin-bottom:12px"></div>
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar motorista ou auxiliar..." id="s3-search" oninput="filterS3Table()">
+          </div>
+          <select class="filter-sel" id="s3-filter" onchange="filterS3Table()">
+            <option value="all">Todos</option>
+            <option value="inf">Com infração</option>
+            <option value="ok">Somente OK</option>
+            <option value="sem">Sem registro</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table style="min-width:1400px">
+            <thead><tr><th>#</th><th>Placa</th><th>Cidade</th><th>Rota</th><th>Stat</th>
+              <th>Motorista</th><th>Saída</th><th>Entrada</th><th>Interj.</th><th>Obs.</th>
+              <th>Auxiliar</th><th>Saída</th><th>Entrada</th><th>Interj.</th><th>Obs.</th>
+            </tr></thead>
+            <tbody id="s3-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span style="font-size:12px;color:var(--text3)" id="s3-count"></span>
+          <button class="btn btn-ghost btn-sm" onclick="exportS3CSV()">↓ CSV</button>
+        </div>
+      </div>
+
+      <div id="s3-chain-info" style="display:none;margin-bottom:10px;font-size:13px;color:var(--green);font-weight:600;background:var(--green-l);border:1px solid var(--green-b);border-radius:8px;padding:9px 13px"></div>
+      <div class="dl-box">
+        <div class="dl-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+        <div class="dl-info">
+          <h3 id="s3-dl-name">CONTROLE_DE_JORNADA_FINAL.xlsx</h3>
+          <p id="s3-dl-desc">Com abas RESUMO SEGUNDA … RESUMO SEXTA geradas e formatadas</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-lg" onclick="downloadS3XLSX()">↓ Baixar</button>
+          <button class="btn btn-brand btn-lg" onclick="usarS3NoPasso4()" title="Envia os RESUMOS direto para o Passo 4 — sem baixar e re-importar" style="font-weight:700">Analisar no Passo 4 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ PAGE: PASSO 4 (ANÁLISE) ════════ -->
+  <div class="page" id="pg-step4">
+    <div class="page-header">
+      <h2>4º Passo · Analisar Infrações</h2>
+      <p>Carregue o arquivo final, visualize infrações e registre ações por colaborador.</p>
+    </div>
+
+    <div class="row2" style="margin-bottom:16px">
+      <div class="upload-zone" id="dz-final">
+        <input type="file" accept=".xlsx,.xls" id="inp-final" onchange="handleFinalFile(this.files[0])">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="upload-title" id="final-title">CONTROLE_DE_JORNADA_FINAL.xlsx</div>
+        <div class="upload-hint" id="final-hint">Arquivo com abas RESUMO geradas</div>
+        <div id="s4-dedup-info" style="display:none;margin-top:8px;font-size:12px;color:var(--orange);font-weight:600;background:var(--orange-l);border:1px solid var(--orange-b);border-radius:6px;padding:6px 10px"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Aba do resumo</label>
+            <select class="filter-sel" id="s4-sheet-sel" onchange="loadS4Sheet()"><option>Selecione a aba...</option></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em" for="s4-base-date">Data Saída</label>
+            <input type="date" id="s4-base-date" title="Data da saída — referência principal da interjornada (a entrada é no dia seguinte)" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;width:155px;font-family:inherit;color:var(--text)" onchange="syncS4EndDate();loadS4Sheet()">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em" for="s4-end-date">Data Entrada</label>
+            <input type="date" id="s4-end-date" title="Data da entrada (dia seguinte à saída) — preenchida automaticamente, pode editar se preciso" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;width:155px;font-family:inherit;color:var(--text)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Tipo</label>
+            <select class="filter-sel" id="s4-stat-filter" onchange="renderS4Table()">
+              <option value="all">Todos os tipos</option>
+              <option value="viagem">Conjunto Viagem</option>
+              <option value="bv">Somente Conjunto Bate e Volta</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Status</label>
+            <select class="filter-sel" id="s4-irr-filter" onchange="renderS4Table()">
+              <option value="all">Todos os status</option>
+              <option value="inf">Apenas irregulares</option>
+              <option value="ok">Apenas conformes</option>
+              <option value="sem">Apenas sem registro</option>
+            </select>
+          </div>
+        </div>
+        <div class="stats-grid" style="margin-bottom:0;grid-template-columns:1fr 1fr">
+          <div class="stat-card red" style="padding:12px">
+            <div class="stat-val" style="font-size:20px" id="s4-st-inf">—</div>
+            <div class="stat-label">Irregulares</div>
+          </div>
+          <div class="stat-card green" style="padding:12px">
+            <div class="stat-val" style="font-size:20px" id="s4-st-ok">—</div>
+            <div class="stat-label">Conformes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <!-- BARRA SUPERIOR: chips rápidos + exports -->
+      <div class="table-toolbar" style="justify-content:space-between;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="chips">
+            <div class="chip active" data-f4="all"  onclick="setS4Filter('all',this)">Todos</div>
+            <div class="chip" data-f4="st"  onclick="setS4Filter('st',this)"  style="color:var(--orange)">⚠ Saída tard.</div>
+            <div class="chip" data-f4="ea"  onclick="setS4Filter('ea',this)"  style="color:var(--blue)">⟵ Entrada antec.</div>
+            <div class="chip" data-f4="ij"  onclick="setS4Filter('ij',this)"  style="color:var(--red)">⏱ Interj. &lt;11h</div>
+            <div class="chip" data-f4="sem" onclick="setS4Filter('sem',this)" style="color:var(--text3)">∅ Sem reg.</div>
+          </div>
+          <button id="btn-clear-cf" onclick="clearColFilters()" style="display:none;padding:4px 10px;border-radius:20px;border:1.5px solid var(--red-b);background:var(--red-l);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">✕ Limpar filtros</button>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="exportS4PDF()">↓ PDF</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportS4Excel()">↓ Excel</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <!-- ROW 1 — TÍTULOS -->
+            <tr>
+              <th style="width:36px;padding:9px 8px"><input type="checkbox" id="selAll" onchange="toggleSelAll()"></th>
+              <th>Placa</th>
+              <th>Cidade</th>
+              <th>Rota</th>
+              <th>Tipo</th>
+              <th>Colaborador</th>
+              <th>Saída<div id="s4-th-data-saida" style="font-size:9.5px;font-weight:500;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace;letter-spacing:0;text-transform:none"></div></th>
+              <th>Entrada<div id="s4-th-data-entrada" style="font-size:9.5px;font-weight:500;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace;letter-spacing:0;text-transform:none"></div></th>
+              <th>Interjornada</th>
+              <th>Status</th>
+              <th>Última Ação</th>
+              <th>Ação</th>
+            </tr>
+
+            <!-- ROW 2 — FILTROS POR COLUNA -->
+            <tr style="background:linear-gradient(to bottom,var(--bg4),var(--bg3))">
+              <!-- checkbox col -->
+              <td style="padding:5px 8px;border-bottom:2px solid var(--brand)">
+                <svg style="width:13px;height:13px;stroke:var(--brand);fill:none;stroke-width:2;opacity:.6" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="9" y2="18"/></svg>
+              </td>
+
+              <!-- PLACA -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+<div style="position:relative">
+                  <svg style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:10px;height:10px;stroke:var(--text3);fill:none;stroke-width:2.5;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="cf-placa" autocomplete="off" placeholder="Placa..." oninput="applyColFilters();showAC(this,'ac-placa')" onkeydown="navAC(event,'ac-placa')" onblur="hideAC('ac-placa',300)" style="width:100%;padding:5px 6px 5px 22px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)';showAC(this,'ac-placa')" onblur="this.style.borderColor=this.value?'var(--brand)':'var(--border)';hideAC('ac-placa',300)">
+                  <div id="ac-placa" class="autocomplete-list" style="display:none"></div>
                 </div>
-              </div>
-              <div class="jornada-meta" id="metaInfo"></div>
-            </div>
-          </header>
+              </td>
 
-          <div class="grid-cards" id="summaryCards" style="margin-bottom:14px">
-            <div class="summary">
-              <h4>Totais</h4>
-              <p id="sumTotals">Colaboradores: 0</p>
-            </div>
-            <div class="summary">
-              <h4>Irregularidades (hoje)</h4>
-              <p id="sumIrreg">Motoristas: 0 — Auxiliares: 0</p>
-            </div>
-            <div class="summary">
-              <h4>Infrações principais</h4>
-              <p id="sumInfra">Saída &gt;19:20: 0 — Entrada &lt;06:45: 0 — Interj &lt;11h: 0</p>
-            </div>
-            <div class="summary">
-              <h4>Ações (histórico)</h4>
-              <p id="sumActions">Total ações: 0</p>
-            </div>
+              <!-- CIDADE -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+<div style="position:relative">
+                  <svg style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:10px;height:10px;stroke:var(--text3);fill:none;stroke-width:2.5;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="cf-cidade" autocomplete="off" placeholder="Cidade..." oninput="applyColFilters();showAC(this,'ac-cidade')" onkeydown="navAC(event,'ac-cidade')" onblur="hideAC('ac-cidade',300)" style="width:100%;padding:5px 6px 5px 22px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)';showAC(this,'ac-cidade')" onblur="this.style.borderColor=this.value?'var(--brand)':'var(--border)';hideAC('ac-cidade',300)">
+                  <div id="ac-cidade" class="autocomplete-list" style="display:none"></div>
+                </div>
+              </td>
+
+              <!-- ROTA -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+<div style="position:relative">
+                  <svg style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:10px;height:10px;stroke:var(--text3);fill:none;stroke-width:2.5;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="cf-rota" autocomplete="off" placeholder="Rota..." oninput="applyColFilters();showAC(this,'ac-rota')" onkeydown="navAC(event,'ac-rota')" onblur="hideAC('ac-rota',300)" style="width:100%;padding:5px 6px 5px 22px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)';showAC(this,'ac-rota')" onblur="this.style.borderColor=this.value?'var(--brand)':'var(--border)';hideAC('ac-rota',300)">
+                  <div id="ac-rota" class="autocomplete-list" style="display:none"></div>
+                </div>
+              </td>
+
+              <!-- TIPO / STAT — dropdown com seleção múltipla + categorias -->
+              <td style="padding:4px 5px;border-bottom:2px solid var(--brand);position:relative">
+                <!-- Trigger button -->
+                <button id="stat-filter-btn" onclick="toggleStatDropdown(event)"
+                  style="width:100%;padding:4px 24px 4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;text-align:left;position:relative;font-family:inherit;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  <span id="stat-filter-label">Todos</span>
+                  <svg style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:10px;height:10px;stroke:var(--text3);fill:none;stroke-width:2.5;pointer-events:none" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <!-- Dropdown panel (hidden by default) -->
+                <div id="stat-filter-panel"
+                  style="display:none;position:fixed;z-index:999;background:var(--bg2);border:1.5px solid var(--brand);border-radius:var(--r2);padding:10px;min-width:220px;box-shadow:0 8px 24px rgba(15,23,42,.15)">
+                  <!-- Header -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+                    <span style="font-size:11px;font-weight:700;color:var(--text)">Filtrar por STAT / Tipo</span>
+                    <button onclick="clearStatFilter()" style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer">Limpar</button>
+                  </div>
+                  <!-- Grupo Viagem -->
+                  <div style="margin-bottom:8px">
+                    <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);margin-bottom:5px;display:flex;align-items:center;gap:6px">
+                      <span>Conjunto Viagem</span>
+                      <button onclick="selectStatGroup('viagem',event)" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--orange-b);background:var(--orange-l);color:var(--orange);cursor:pointer;font-weight:600">Todos</button>
+                    </div>
+                    <div id="stat-group-viagem" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+                  </div>
+                  <!-- Grupo Conjunto Bate e Volta -->
+                  <div>
+                    <div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;display:flex;align-items:center;gap:6px">
+                      <span>Conjunto Bate e Volta</span>
+                      <button onclick="selectStatGroup('bv',event)" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:var(--bg4);color:var(--text3);cursor:pointer;font-weight:600">Todos</button>
+                    </div>
+                    <div id="stat-group-bv" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+                  </div>
+                  <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span style="font-size:10px;color:var(--text3)">Selecione um ou mais STATs. Clique fora ou pressione ESC para fechar.</span>
+                    <button onclick="closeStatDropdown(event)" style="font-size:10px;padding:4px 10px;border-radius:7px;border:1px solid var(--brand);background:var(--green-l);color:var(--brand);cursor:pointer;font-weight:700">Fechar</button>
+                  </div>
+                </div>
+              </td>
+
+              <!-- COLABORADOR -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+<div style="position:relative">
+                  <svg style="position:absolute;left:7px;top:50%;transform:translateY(-50%);width:10px;height:10px;stroke:var(--text3);fill:none;stroke-width:2.5;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="cf-nome" autocomplete="off" placeholder="Nome..." oninput="applyColFilters();showAC(this,'ac-nome')" onkeydown="navAC(event,'ac-nome')" onblur="hideAC('ac-nome',300)" style="width:100%;padding:5px 6px 5px 22px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)';showAC(this,'ac-nome')" onblur="this.style.borderColor=this.value?'var(--brand)':'var(--border)';hideAC('ac-nome',300)">
+                  <div id="ac-nome" class="autocomplete-list" style="display:none"></div>
+                </div>
+              </td>
+
+              <!-- SAÍDA -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+                <select id="cf-saida" onchange="applyColFilters()" style="width:100%;padding:5px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)'" onblur="checkCFBorder(this)">
+                  <option value="">Todas</option>
+                  <option value="tardia">⚠ Após 19:20</option>
+                  <option value="normal">✓ Até 19:20</option>
+                  <option value="sem">∅ Sem registro</option>
+                </select>
+              </td>
+
+              <!-- ENTRADA -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+                <select id="cf-entrada" onchange="applyColFilters()" style="width:100%;padding:5px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)'" onblur="checkCFBorder(this)">
+                  <option value="">Todas</option>
+                  <option value="antecipada">⚠ Antes 06:45</option>
+                  <option value="normal">✓ Após 06:45</option>
+                  <option value="sem">∅ Sem registro</option>
+                </select>
+              </td>
+
+              <!-- INTERJORNADA -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+                <select id="cf-interj" onchange="applyColFilters()" style="width:100%;padding:5px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)'" onblur="checkCFBorder(this)">
+                  <option value="">Todas</option>
+                  <option value="curta">🔴 Menor 11h</option>
+                  <option value="ok">✓ 11h ou mais</option>
+                  <option value="sem">∅ Sem registro</option>
+                </select>
+              </td>
+
+              <!-- STATUS -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+                <select id="cf-status" onchange="applyColFilters()" style="width:100%;padding:5px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)'" onblur="checkCFBorder(this)">
+                  <option value="">Todos</option>
+                  <option value="ok">✓ OK</option>
+                  <option value="inf">⚠ Com infração</option>
+                  <option value="sem">∅ Sem registro</option>
+                </select>
+              </td>
+
+              <!-- ÚLTIMA AÇÃO -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)">
+                <select id="cf-acao" onchange="applyColFilters()" style="width:100%;padding:5px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;font-family:inherit" onfocus="this.style.borderColor='var(--brand)'" onblur="checkCFBorder(this)">
+                  <option value="">Todas</option>
+                  <option value="sem_acao">∅ Sem ação</option>
+                  <option value="LIGAÇÃO">📞 Ligação</option>
+                  <option value="1ª ADVERTENCIA VERBAL">1ª Adv. Verbal</option>
+                  <option value="2ª ADVERTENCIA VERBAL">2ª Adv. Verbal</option>
+                  <option value="3ª ADVERTENCIA VERBAL">3ª Adv. Verbal</option>
+                  <option value="1ª ADVERTENCIA ESCRITA">1ª Adv. Escrita</option>
+                  <option value="2ª ADVERTENCIA ESCRITA">2ª Adv. Escrita</option>
+                  <option value="3ª ADVERTENCIA ESCRITA">3ª Adv. Escrita</option>
+                  <option value="SUSPENSÃO">🚫 Suspensão</option>
+                  <option value="A/C GERENCIA">A/C Gerência</option>
+                </select>
+              </td>
+
+              <!-- AÇÃO col — sem filtro -->
+              <td style="padding:5px 6px;border-bottom:2px solid var(--brand)"></td>
+            </tr>
+          </thead>
+          <tbody id="s4-tbody">
+            <tr><td colspan="12" style="padding:40px;text-align:center;color:var(--text3)">Carregue o arquivo final para analisar</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <span style="font-size:12px;color:var(--text3)" id="s4-count">0 registros</span>
+        <span id="s4-filter-info" style="font-size:12px;color:var(--brand);font-weight:600;display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ PAGE: HISTÓRICO ════════ -->
+  <!-- ══════════════ CADASTROS ══════════════ -->
+  <div class="page" id="pg-cadastros">
+    <div class="page-header">
+      <h2>Cadastros</h2>
+      <p>Gerencie motoristas, auxiliares, veículos e cidades por rota.</p>
+    </div>
+
+    <!-- DB STATUS BANNER -->
+    <div id="cad-db-banner" style="display:flex;align-items:center;gap:12px;padding:11px 16px;margin-bottom:14px;background:linear-gradient(90deg,rgba(11,110,70,.06),rgba(11,110,70,.02));border:1px solid var(--green-b);border-radius:var(--r2)">
+      <div style="width:32px;height:32px;border-radius:8px;background:var(--green-l);border:1px solid var(--green-b);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--green);fill:none;stroke-width:2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.3">
+          Cadastros salvos <span style="font-weight:500;color:var(--text3);font-size:11px">· local (IndexedDB) + nuvem (Supabase)</span>
+        </div>
+        <div id="cad-db-summary" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">Carregando...</div>
+        <!-- 🔗 Indicador de sincronização com a nuvem -->
+        <div id="cad-sync-indicator" style="font-size:11px;color:var(--text3);margin-top:4px;padding:3px 8px;border-radius:6px;background:var(--bg3);display:inline-block;transition:opacity .4s;opacity:.55">⚪ Aguardando alterações — cada save vai pra nuvem automaticamente</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="exportCadastrosBackup()" title="Baixar JSON com todos os cadastros (backup)">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Backup
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="importCadastrosBackup()" title="Restaurar cadastros a partir de um JSON de backup">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Restaurar
+      </button>
+      <button class="btn btn-sm" onclick="cadPullAllFromCloud()" title="Baixar agora as últimas atualizações de cadastros da nuvem" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;font-weight:600">
+        <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Atualizar nuvem
+      </button>
+      <button class="btn btn-sm" id="cad-cloud-btn" onclick="openCloudSyncModal()" title="Painel avançado de sincronização" style="background:linear-gradient(135deg,#0ea5e9,#2563eb);border:none;color:#fff;font-weight:600">
+        <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        Nuvem
+      </button>
+      <button class="btn btn-sm" onclick="openWhatsAppTestModal()" title="Testar mensagens de WhatsApp" style="background:#25D366;border:none;color:#fff;font-weight:600">
+        <svg viewBox="0 0 24 24" style="fill:#fff;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        Testar WhatsApp
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0">
+      <button class="cad-tab active" data-tab="motoristas" onclick="setCadTab('motoristas',this)">Motoristas</button>
+      <button class="cad-tab" data-tab="auxiliares" onclick="setCadTab('auxiliares',this)">Auxiliares</button>
+      <button class="cad-tab" data-tab="veiculos" onclick="setCadTab('veiculos',this)">Veículos</button>
+      <button class="cad-tab" data-tab="cidades" onclick="setCadTab('cidades',this)">Cidades / Rotas</button>
+    </div>
+
+    <!-- MOTORISTAS -->
+    <div id="cad-tab-motoristas" class="cad-panel">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Motoristas Cadastrados <span id="cnt-motoristas" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="text" placeholder="Buscar..." id="srch-motoristas" class="form-control" style="max-width:180px;padding:6px 10px;font-size:12px" oninput="renderCadTable('motoristas')">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);cursor:pointer;user-select:none" title="Inclui funcionários desligados/inativos na lista">
+              <input type="checkbox" id="show-inactive-motoristas" onchange="renderCadTable('motoristas')" style="cursor:pointer">
+              Mostrar inativos
+            </label>
+            <button class="btn btn-green btn-sm" onclick="openCadModal('motoristas')">+ Novo</button>
+            <button class="btn btn-brand btn-sm" onclick="importFromXLSX('motoristas')" title="Aceita: Quadro_Funcionarios.xlsx · ROTEIRO_SP_XX.xlsx · CONTROLE_DE_JORNADA.xlsx">↑ Importar XLSX</button>
+            <button class="btn btn-ghost btn-sm" style="border-color:var(--red-b);color:var(--red)" onclick="if(confirm('Limpar todos os motoristas cadastrados?')){cadData.motoristas={};cadSave('motoristas');renderCadTable('motoristas');}">✕ Limpar</button>
           </div>
+        </div>
+        <div id="cad-table-motoristas" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
 
-          <div class="table-wrap">
-            <div style="margin-bottom:8px; color:#6b7280" id="detailedSummary">Carregue a planilha para ver o resumo detalhado</div>
-            <div class="table-scroll">
-              <table id="mainTable">
-                <thead>
-                  <tr>
-                    <th class="checkbox-cell"><input id="selectAll" type="checkbox" /></th>
-                    <th class="sortable" data-key="placa">Placa <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="rota">Rota <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="stat">Tipo <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="nome">Colaborador <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="saida">Saída <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="entrada">Entrada <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="interj">Interjornada <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="status">Status <i class="fas fa-sort"></i></th>
-                    <th class="sortable" data-key="last">Última Ação <i class="fas fa-sort"></i></th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="tbody">
-                  <tr><td colspan="11" style="padding:40px; color:#6b7280; text-align:center">Nenhum dado carregado. Importe a planilha.</td></tr>
-                </tbody>
-              </table>
-            </div>
+    <!-- AUXILIARES -->
+    <div id="cad-tab-auxiliares" class="cad-panel" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Auxiliares Cadastrados <span id="cnt-auxiliares" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="text" placeholder="Buscar..." id="srch-auxiliares" class="form-control" style="max-width:180px;padding:6px 10px;font-size:12px" oninput="renderCadTable('auxiliares')">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);cursor:pointer;user-select:none" title="Inclui funcionários desligados/inativos na lista">
+              <input type="checkbox" id="show-inactive-auxiliares" onchange="renderCadTable('auxiliares')" style="cursor:pointer">
+              Mostrar inativos
+            </label>
+            <button class="btn btn-green btn-sm" onclick="openCadModal('auxiliares')">+ Novo</button>
+            <button class="btn btn-brand btn-sm" onclick="importFromXLSX('auxiliares')" title="Aceita: Quadro_Funcionarios.xlsx · ROTEIRO_SP_XX.xlsx · CONTROLE_DE_JORNADA.xlsx">↑ Importar XLSX</button>
+            <button class="btn btn-ghost btn-sm" style="border-color:var(--red-b);color:var(--red)" onclick="if(confirm('Limpar todos os auxiliares cadastrados?')){cadData.auxiliares={};cadSave('auxiliares');renderCadTable('auxiliares');}">✕ Limpar</button>
+          </div>
+        </div>
+        <div id="cad-table-auxiliares" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- VEÍCULOS -->
+    <div id="cad-tab-veiculos" class="cad-panel" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Veículos Cadastrados <span id="cnt-veiculos" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" placeholder="Buscar placa..." id="srch-veiculos" class="form-control" style="max-width:200px;padding:6px 10px;font-size:12px" oninput="renderCadTable('veiculos')">
+            <button class="btn btn-green btn-sm" onclick="openCadModal('veiculos')">+ Novo</button>
+            <button class="btn btn-ghost btn-sm" onclick="importFromXLSX('veiculos')">↑ Importar XLSX</button>
+          </div>
+        </div>
+        <div id="cad-table-veiculos" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- CIDADES / ROTAS -->
+    <div id="cad-tab-cidades" class="cad-panel" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Cidades por Rota <span id="cnt-cidades" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" placeholder="Buscar cidade/rota..." id="srch-cidades" class="form-control" style="max-width:200px;padding:6px 10px;font-size:12px" oninput="renderCadTable('cidades')">
+            <button class="btn btn-green btn-sm" onclick="openCadModal('cidades')">+ Nova</button>
+            <button class="btn btn-ghost btn-sm" onclick="importFromXLSX('cidades')">↑ Importar XLSX</button>
+          </div>
+        </div>
+        <div id="cad-table-cidades" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="pg-historico">
+    <div class="page-header">
+      <h2>Histórico de Ações</h2>
+      <p>Todas as ações registradas — salvas no banco de dados local (IndexedDB).</p>
+    </div>
+
+    <!-- Gestão de Telefones / WhatsApp -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#25D366;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Cadastro de WhatsApp
+          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px" id="phones-count"></span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportPhonesJSON()">↓ Exportar</button>
+          <button class="btn btn-ghost btn-sm" onclick="importPhonesJSON()">↑ Importar JSON</button>
+          <button class="btn btn-brand btn-sm" onclick="importPhonesXLSX()" title="Importar planilha com colunas Nome + Telefone">↑ Importar XLSX / CSV</button>
+        </div>
+      </div>
+      <div style="padding:14px">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="text" placeholder="Buscar colaborador..." id="phones-search" class="form-control" style="max-width:280px;padding:7px 12px;font-size:13px" oninput="renderPhonesTable()">
+          <button class="btn btn-green btn-sm" onclick="openAddPhoneModal()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar
+          </button>
+        </div>
+        <div id="phones-table-wrap" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r)">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead style="position:sticky;top:0;background:var(--bg4)">
+              <tr>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Nome</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">WhatsApp</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)">Obs.</th>
+                <th style="padding:8px 12px;border-bottom:1px solid var(--border);width:80px"></th>
+              </tr>
+            </thead>
+            <tbody id="phones-tbody">
+              <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">Nenhum telefone cadastrado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="search-input-wrap" style="max-width:280px">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Buscar nome ou placa..." id="hist-search" oninput="renderHistorico()">
+      </div>
+      <select class="filter-sel" id="hist-filter-action" onchange="renderHistorico()">
+        <option value="all">Todas as ações</option>
+        <option value="LIGAÇÃO">Ligação</option>
+        <option value="1ª ADVERTENCIA VERBAL">1ª Adv. Verbal</option>
+        <option value="2ª ADVERTENCIA VERBAL">2ª Adv. Verbal</option>
+        <option value="1ª ADVERTENCIA ESCRITA">1ª Adv. Escrita</option>
+        <option value="2ª ADVERTENCIA ESCRITA">2ª Adv. Escrita</option>
+        <option value="SUSPENSÃO">Suspensão</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="exportActionsJSON()">↓ Exportar JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="importActionsJSON()">↑ Importar JSON</button>
+      <button class="btn btn-red btn-sm" onclick="clearAllActions()">Limpar tudo</button>
+    </div>
+    <div id="hist-list">
+      <div style="font-size:13px;color:var(--text3);text-align:center;padding:40px">Nenhuma ação registrada</div>
+    </div>
+  </div>
+
+  <!-- ════════ PAGE: RELATÓRIOS ════════ -->
+  <div class="page" id="pg-relatorios">
+    <div class="page-header">
+      <h2>Relatórios</h2>
+      <p>Exporte análises, dados filtrados e backups do sistema.</p>
+    </div>
+
+    <!-- Cards de métricas rápidas -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--brand);border-radius:var(--r2);padding:16px 18px">
+        <div style="font-size:26px;font-weight:800;color:var(--brand);line-height:1" id="rel-total">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">Analisados</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:var(--r2);padding:16px 18px">
+        <div style="font-size:26px;font-weight:800;color:var(--red);line-height:1" id="rel-inf">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">Com infração</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:var(--r2);padding:16px 18px">
+        <div style="font-size:26px;font-weight:800;color:var(--orange);line-height:1" id="rel-acoes">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">Ações registradas</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:var(--r2);padding:16px 18px">
+        <div style="font-size:26px;font-weight:800;color:var(--green);line-height:1" id="rel-ok">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">Conformes</div>
+      </div>
+    </div>
+
+    <!-- Histórico Diário + Semanal -->
+    <div class="card" style="margin-bottom:16px;padding:16px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">📁 Histórico — Dias & Semanas</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Salve a análise do dia ou da semana — depois carregue de volta sem reimportar planilha</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="hist-week-name" placeholder="Nome (opcional, ex: Semana 22)" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;width:180px">
+          <button onclick="salvarHistoricoDia()" title="Salva apenas o snapshot do dia detectado nos registros" style="padding:7px 12px;background:#1F71B8;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Dia</button>
+          <button onclick="salvarHistoricoSemana()" title="Fecha e salva a semana ISO inteira (sobrescreve se já existe)" style="padding:7px 12px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Semana</button>
+          <button onclick="abrirHistoricoSemanas()" style="padding:7px 12px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer">📂 Ver Histórico</button>
+          <button onclick="abrirConsolidadoSemanal()" title="Análises agregadas por semana ISO (tipos, ocorrências, top colaboradores)" style="padding:7px 12px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">📊 Semanal</button>
+          <button onclick="abrirConsolidadoMensal()" title="Análises agregadas por mês" style="padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">📅 Mensal</button>
+          <button onclick="abrirConsolidadoAnual()" title="Análises agregadas por ano" style="padding:7px 12px;background:#059669;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🏆 Anual</button>
+        </div>
+      </div>
+      <div id="hist-summary" style="font-size:11px;color:var(--text3);padding:8px 10px;background:var(--bg3);border-radius:var(--r);display:none"></div>
+    </div>
+
+    <!-- Cards de exportação -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+
+      <!-- PDF -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:var(--red)"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:var(--red-l);border:2px solid var(--red-b);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--red);fill:none;stroke-width:1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Relatório PDF</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Tabela completa com infrações e ações — A4 landscape, pronto para imprimir ou enviar</div>
+          <button onclick="exportS4PDF()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:var(--red);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Excel -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:var(--brand)"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:var(--green-l);border:2px solid var(--green-b);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--brand);fill:none;stroke-width:1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Relatório Excel</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Exporta todos os dados filtrados da tabela de análise com colunas completas em XLSX</div>
+          <button onclick="exportS4Excel()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:var(--brand);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Rotas OK -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:var(--green)"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:var(--green-l);border:2px solid var(--green-b);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--green);fill:none;stroke-width:1.8"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Rotas OK</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Lista apenas registros conformes, sem infração real. Ausências justificadas não entram como interjornada.</div>
+          <button onclick="exportRelatorioRotasOK()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Relatório
+          </button>
+        </div>
+      </div>
+
+      <!-- Interjornadas (unificado — com filtro de STAT) -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#C5160A"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#fadbd8;border:2px solid #e59866;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#C5160A;fill:none;stroke-width:1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Interjornadas &lt; 11h</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Descansos abaixo de 11h — com filtro por STAT (V, P, R, V-REST, BV, etc.) e quebra por tipo de viagem</div>
+          <button onclick="exportRelatorioInterjornadas()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#C5160A;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Relatório
+          </button>
+        </div>
+      </div>
+
+      <!-- Sem Registros (agora com filtro de STAT) -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#0B6E46"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#d5f4e6;border:2px solid #52b788;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#0B6E46;fill:none;stroke-width:1.8"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Sem Registros</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Pontos faltantes (entrada/saída) — com filtro por STAT e quebra por tipo (Sem saída / Sem entrada / Ambos)</div>
+          <button onclick="exportRelatorioSemRegistros()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#0B6E46;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Relatório
+          </button>
+        </div>
+      </div>
+
+      <!-- Boleta (somente para colaboradores SEM REGISTRO) -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#C5160A"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#fadbd8;border:2px solid #e59866;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#C5160A;fill:none;stroke-width:1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 11h6M9 15h6"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Boleta de Justificativa</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Apenas para colaboradores <strong>sem registro de ponto</strong> — pronta para impressão e assinatura</div>
+          <button onclick="exportBoletaResume()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#C5160A;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Boleta
+          </button>
+        </div>
+      </div>
+
+      <!-- Tratativas (agora com filtro de STAT) -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#d97706"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#fff3e0;border:2px solid #fbbf6b;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#d97706;fill:none;stroke-width:1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Tratativas</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Status das tratativas (Ligação, Advertência, Suspensão) — com filtro por STAT e sumário visual</div>
+          <button onclick="exportRelatorioTratativas()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#d97706;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Gerar Relatório</button>
+        </div>
+      </div>
+
+      <!-- Individual -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#7c3aed"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#f3e8ff;border:2px solid #c4b5fd;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#7c3aed;fill:none;stroke-width:1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Relatório Individual</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Histórico completo de um colaborador específico: jornadas e tratativas</div>
+          <button onclick="exportRelatorioIndividual()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#7c3aed;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Gerar Relatório</button>
+        </div>
+      </div>
+
+      <!-- Backup -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:var(--blue)"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:var(--blue-l);border:2px solid var(--blue-b);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Backup de Ações</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Salve e restaure o histórico completo de ações registradas — útil para migrar entre dispositivos</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="exportActionsJSON()" style="flex:1;padding:10px;border-radius:var(--r);border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">↓ Exportar</button>
+            <button onclick="importActionsJSON()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg2)'">↑ Importar</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Tooltip -->
-  <div id="tooltip" class="tooltip"></div>
 
-  <!-- Modal -->
-  <div id="modalAcao" class="modal-overlay" style="display:none">
-    <div class="modal">
-      <h3>Registrar Ação</h3>
-      <div class="sub" id="modalRowInfo"></div>
+    </div><!-- /jornada-content -->
+  </main>
 
-      <div style="margin-top:8px">
-        <label class="muted">Próxima ação recomendada</label>
-        <div id="recommendedAction" style="background:#ecfdf3;border-radius:6px;padding:8px;margin-top:6px;color:#065f46;font-weight:700"></div>
+<div class="overlay" id="wa-test-overlay">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#25D366;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+      Testar Mensagens de WhatsApp
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.55">
+      Visualize como cada tipo de mensagem chega ao colaborador. Use seu próprio número para receber o teste real.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-group">
+        <label class="form-label">Tipo de ocorrência</label>
+        <select class="form-control" id="wa-test-ocorrencia" onchange="updateWaTestPreview()">
+          <option value="INTERJORNADA">Interjornada &lt; 11h</option>
+          <option value="SEM REGISTRO SAIDA">Sem registro — saída</option>
+          <option value="SEM REGISTRO ENTRADA">Sem registro — entrada</option>
+          <option value="SEM REGISTRO SAIDA E ENTRADA">Sem registro — saída + entrada (cruza meia-noite)</option>
+          <option value="SEM REGISTRO">Sem registro (genérico)</option>
+          <option value="OUTRO">Ocorrência genérica</option>
+        </select>
       </div>
-
-      <div style="margin-top:10px">
-        <label class="muted">Selecionar Ação</label>
-        <select id="actionSelect" class="form"></select>
+      <div class="form-group">
+        <label class="form-label">Data da ocorrência</label>
+        <input type="text" class="form-control" id="wa-test-date" placeholder="DD/MM/AAAA" oninput="updateWaTestPreview()">
       </div>
+    </div>
 
-      <div style="margin-top:10px">
-        <label class="muted">Observação (opcional)</label>
-        <textarea id="actionNote" class="form" rows="3" placeholder="Observação..."></textarea>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Nome do colaborador (para saudação)</label>
+      <input type="text" class="form-control" id="wa-test-nome" placeholder="Ex: VALDEIR DE OLIVEIRA SOUZA" oninput="updateWaTestPreview()">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">
+        Sugestões:
+        <button type="button" class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 8px" onclick="waTestUseSample('motorista')">Motorista aleatório</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 8px" onclick="waTestUseSample('auxiliar')">Auxiliar aleatório</button>
       </div>
+    </div>
 
-      <div class="controls">
-        <div>
-          <button id="btnRemoveAction" class="btn btn-ghost">Remover ação</button>
-          <button id="btnCloseModal" class="btn btn-ghost">Fechar</button>
-        </div>
-        <div>
-          <button id="btnSaveAction" class="btn btn-primary">Salvar ação</button>
+    <!-- Preview do chat -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Pré-visualização</div>
+    <div style="background:#e5ddd5;border-radius:var(--r2);padding:18px;min-height:140px;position:relative;background-image:linear-gradient(rgba(229,221,213,.95),rgba(229,221,213,.95)),url('data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 60 60&quot;><circle cx=&quot;15&quot; cy=&quot;15&quot; r=&quot;1&quot; fill=&quot;%23ccc&quot;/></svg>')">
+      <div id="wa-test-bubble" style="background:#dcf8c6;border-radius:12px;padding:10px 14px;max-width:80%;font-size:14px;line-height:1.5;color:#0f172a;white-space:pre-wrap;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative">
+        <span id="wa-test-msg">Carregando...</span>
+        <div style="font-size:10px;color:#7a9e7a;text-align:right;margin-top:4px">
+          <span id="wa-test-time">12:34</span> <span style="color:#34b7f1">✓✓</span>
         </div>
       </div>
     </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
+      <strong style="color:var(--text2)">Caracteres:</strong> <span id="wa-test-chars">0</span> ·
+      <strong style="color:var(--text2)">Encoded URL:</strong> <span id="wa-test-urlsize">0</span> chars
+    </div>
+
+    <!-- Envio real -->
+    <div style="margin-top:18px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Enviar teste real para um número:</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="tel" class="form-control" id="wa-test-tel" placeholder="(15) 99712-3456 ou 15997123456" style="flex:1">
+        <button class="btn" onclick="sendWaTestReal()" style="background:#25D366;border:none;color:#fff;font-weight:600">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;stroke:none"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Enviar
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text2)">
+        <strong>Método:</strong>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="radio" name="waProv" value="web" onchange="setWaProvider(this.value)" style="margin:0">
+          WhatsApp Web
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="radio" name="waProv" value="wame" onchange="setWaProvider(this.value)" style="margin:0">
+          wa.me (link curto)
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="radio" name="waProv" value="copy" onchange="setWaProvider(this.value)" style="margin:0">
+          Copiar (rede bloqueada)
+        </label>
+      </div>
+      <div style="font-size:10.5px;color:var(--text3);margin-top:8px;line-height:1.5">
+        Se a rede bloqueia <code>api.whatsapp.com</code>, escolha <strong>WhatsApp Web</strong> ou <strong>Copiar</strong>.
+        A opção escolhida fica salva para todos os envios futuros.
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeWaTestModal()">Fechar</button>
+    </div>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<!-- MODAL CLOUD SYNC -->
+<div class="overlay" id="cloud-sync-overlay">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#2563eb;fill:none;stroke-width:2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+      Sincronizar com Banco em Nuvem
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.55">
+      Os cadastros locais (IndexedDB) são enviados ao banco Supabase. Outros usuários veem as mesmas pessoas/veículos.
+      <strong style="color:var(--text2)">Somente admins podem gravar; operadores podem ler.</strong>
+    </div>
 
-  <script type="module" src="./script/auth-guard.js"></script>
-  <script type="module" src="script/menu.js" defer></script>
-  <script type="module" src="script/controle-de-jornada.js"></script>
-  <footer class="footer">
-    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
-  </footer>
+    <!-- Status banner -->
+    <div id="cloud-status" style="padding:10px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);font-size:12px;color:var(--text2);margin-bottom:14px">
+      Pressione "Testar Conexão" para verificar.
+    </div>
+
+    <!-- Tabela de status por tabela -->
+    <div id="cloud-table-status" style="display:none;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:0">
+        <thead>
+          <tr style="background:var(--bg4)">
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px">Tabela</th>
+            <th style="text-align:right;padding:8px 12px;font-size:10.5px">Local</th>
+            <th style="text-align:right;padding:8px 12px;font-size:10.5px">Nuvem</th>
+            <th style="text-align:center;padding:8px 12px;font-size:10.5px">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="cloud-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm" onclick="cloudTestConnection()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Testar
+      </button>
+      <button class="btn btn-sm" id="cloud-push-btn" onclick="cloudPushAll()" style="background:#16a34a;border:none;color:#fff">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        Enviar p/ Nuvem
+      </button>
+      <button class="btn btn-sm" id="cloud-pull-btn" onclick="cloudPullAll()" style="background:#2563eb;border:none;color:#fff">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        Baixar da Nuvem
+      </button>
+    </div>
+
+    <!-- SQL hint -->
+    <details style="margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+      <summary style="padding:10px 12px;background:var(--bg3);font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);user-select:none">
+        ⚙ Tabelas ainda não existem? Clique aqui para o SQL
+      </summary>
+      <div style="padding:12px;font-size:11.5px;line-height:1.6;color:var(--text2);background:var(--bg2)">
+        Abra o <strong>SQL Editor do Supabase</strong> → New Query → cole o arquivo
+        <code style="background:var(--bg4);padding:1px 6px;border-radius:4px;font-size:11px">supabase-schema.sql</code>
+        (no diretório do projeto) → Run. Cria 4 tabelas + RLS automaticamente.
+        <div style="margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="abrirSchemaSQL()" style="width:100%">
+            <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Ver / copiar SQL
+          </button>
+        </div>
+      </div>
+    </details>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost" onclick="closeCloudSyncModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CADASTRO (Motoristas/Auxiliares/Veículos/Cidades) -->
+<div class="overlay" id="cad-modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="cad-modal-title">Novo registro</div>
+    <div id="cad-modal-fields" style="margin-top:14px;display:flex;flex-direction:column;gap:10px"></div>
+    <div class="modal-footer" style="margin-top:18px">
+      <button class="btn btn-ghost" onclick="closeCadModal()">Cancelar</button>
+      <button class="btn btn-brand" onclick="saveCadRecord()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TELEFONE -->
+<div class="overlay" id="phone-modal-overlay">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="phone-modal-title">📱 WhatsApp</div>
+    <div id="phone-modal-sub" style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:16px">Informe o número para contato</div>
+    <!-- Nome exibido (readonly) -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Colaborador</div>
+      <div id="phone-nome-display" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+      <input type="hidden" id="phone-nome-inp">
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="font-weight:700">WhatsApp com DDD <span style="color:var(--red)">*</span></label>
+      <input type="tel" class="form-control" id="phone-tel-inp" 
+        placeholder="Ex: 15997123456" maxlength="15"
+        style="font-size:16px;letter-spacing:.05em"
+        onkeydown="if(event.key==='Enter')savePhone()">
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">Apenas números com DDD · sem espaços ou traços</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observação (opcional)</label>
+      <input type="text" class="form-control" id="phone-obs-inp" placeholder="Ex: número pessoal, corporativo...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePhoneModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="savePhone()" style="gap:8px">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#fff;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Salvar e abrir WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AÇÃO -->
+<div class="overlay" id="modal-overlay">
+  <div class="modal modal-action-pro">
+    <div class="modal-action-head">
+      <div>
+        <div class="title">Tratar infração</div>
+        <div class="sub" id="modal-info"></div>
+      </div>
+      <button class="modal-close-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-action-body">
+      <div class="action-block">
+        <div class="action-block-title">Resumo da ocorrência</div>
+        <div class="status-chip-grid" id="modal-status-badges"></div>
+        <div class="recommended-box" id="modal-rec" style="margin-top:12px"></div>
+
+        <div class="action-block-title" style="margin-top:14px">Ação a registrar</div>
+        <div class="action-quick-grid" id="modal-action-chips"></div>
+        <div class="action-form-grid" style="margin-top:12px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Ação</label>
+            <select class="form-control" id="modal-action-sel"></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Data da infração</label>
+            <input type="text" class="form-control" id="modal-date-inf" placeholder="DD/MM/AAAA">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">Observação / justificativa</label>
+          <textarea class="form-control" id="modal-obs" rows="4" placeholder="Ex.: Caminhão quebrou, colaborador justificou ausência de registro, ajuste manual autorizado..."></textarea>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">Campo obrigatório. Esse texto aparecerá no relatório individual e no histórico da tratativa.</div>
+        </div>
+      </div>
+      <div class="action-block">
+        <div class="action-block-title">Histórico recente</div>
+        <div id="modal-action-history"></div>
+      </div>
+    </div>
+    <div class="modal-action-foot">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="modalRemoveLast()">Remover última</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+      </div>
+      <button class="btn btn-brand" onclick="saveAction()">Salvar ação</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip" class="tooltip"></div>
+
+<!-- TOOLTIP -->
+<div id="tooltip" class="tooltip"></div>
+
+<!-- ═══════════ 📱 MOBILE BOTTOM NAV ═══════════ -->
+<!-- Visível apenas em telas ≤ 768px (controlado por CSS) -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" data-mob-page="dashboard" onclick="goPageMobile('dashboard')">
+    <svg viewBox="0 0 24 24"><path d="M3 12 12 3l9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+    Início
+  </button>
+  <button class="mobile-nav-item" data-mob-page="step4" onclick="goPageMobile('step4')">
+    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 2 5-6"/></svg>
+    Análise
+  </button>
+  <button class="mobile-nav-item" data-mob-page="historico" onclick="goPageMobile('historico')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+    Histórico
+  </button>
+  <button class="mobile-nav-item" data-mob-page="relatorios" onclick="goPageMobile('relatorios')">
+    <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+    Relatórios
+  </button>
+  <button class="mobile-nav-item" data-mob-page="cadastros" onclick="goPageMobile('cadastros')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Cadastros
+  </button>
+</nav>
+
+
+<!-- Bibliotecas Externas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script src="./script/controle-de-jornada.js"></script>
+<script type="module" src="./script/auth-guard.js"></script>
+<script type="module" src="./script/menu.js" defer></script>
 </body>
 </html>
