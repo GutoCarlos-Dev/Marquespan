@@ -60,20 +60,81 @@
 }
 
 .item-list li.route-group-title {
-    background: transparent;
-    border: 0;
+    background: #eef7f2;
+    border: 1px solid rgba(0, 105, 55, 0.12);
     color: var(--primary-color);
-    cursor: default;
+    cursor: pointer;
     font-size: 0.85rem;
     font-weight: 700;
-    justify-content: flex-start;
+    justify-content: space-between;
     margin: 14px 0 6px;
-    padding: 0 4px;
+    padding: 8px 10px;
     text-transform: uppercase;
 }
 
 .item-list li.route-group-title:hover {
+    background: #e2f0e8;
+}
+
+.route-group-name {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+}
+
+.route-group-toggle {
+    font-size: 0.72rem;
+    transition: transform 0.2s ease;
+}
+
+.route-group-title.collapsed .route-group-toggle {
+    transform: rotate(-90deg);
+}
+
+.route-group-actions {
+    align-items: center;
+    display: inline-flex;
+    gap: 8px;
+}
+
+.route-count {
+    align-items: center;
+    background: var(--primary-color);
+    border-radius: 999px;
+    color: #fff;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 24px;
+    padding: 2px 7px;
+}
+
+.supervisor-color-input {
+    appearance: none;
     background: transparent;
+    border: 0;
+    cursor: pointer;
+    height: 22px;
+    padding: 0;
+    width: 22px;
+}
+
+.supervisor-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.supervisor-color-input::-webkit-color-swatch {
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.supervisor-color-input::-moz-color-swatch {
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .item-list .item-name {
