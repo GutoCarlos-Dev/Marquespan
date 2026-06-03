@@ -7,6 +7,7 @@ function formatAuditoriaRows(rows, formatLitros) {
         estoqueAnterior: formatLitros(item.estoqueAnterior),
         estoqueAtual: formatLitros(item.estoqueAtual),
         diferenca: `${item.diferenca > 0 ? '+' : ''}${formatLitros(item.diferenca)}`,
+        correcaoRegistrada: `${item.correcaoRegistrada > 0 ? '+' : ''}${formatLitros(item.correcaoRegistrada || item.diferenca || 0)}`,
         totalSaidasDia: formatLitros(item.totalSaidasDia || 0)
     }));
 }
@@ -39,13 +40,14 @@ export function exportarAuditoriaEstoqueXLSX({ rows, dataInicial, dataFinal, for
         'Estoque Anterior (Litros)': item.estoqueAnterior,
         'Estoque Atual (Litros)': item.estoqueAtual,
         'Diferenca (Litros)': item.diferenca,
+        'Correcao Registrada (Litros)': item.correcaoRegistrada,
         'Total de Saidas do Dia': item.totalSaidasDia
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
     ws['!cols'] = [
         { wch: 20 }, { wch: 24 }, { wch: 22 }, { wch: 18 },
-        { wch: 24 }, { wch: 22 }, { wch: 18 }, { wch: 22 }
+        { wch: 24 }, { wch: 22 }, { wch: 18 }, { wch: 24 }, { wch: 22 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -87,6 +89,7 @@ export async function exportarAuditoriaEstoquePDF({ rows, dataInicial, dataFinal
             'Estoque Anterior',
             'Estoque Atual',
             'Diferenca',
+            'Correcao Registrada',
             'Saidas do Dia'
         ]],
         body: tableRows.map(item => [
@@ -97,6 +100,7 @@ export async function exportarAuditoriaEstoquePDF({ rows, dataInicial, dataFinal
             `${item.estoqueAnterior} L`,
             `${item.estoqueAtual} L`,
             `${item.diferenca} L`,
+            `${item.correcaoRegistrada} L`,
             `${item.totalSaidasDia} L`
         ]),
         theme: 'grid',

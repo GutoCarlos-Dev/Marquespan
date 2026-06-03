@@ -946,16 +946,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const saidasPorTanqueDia = this.agruparSaidasPorTanqueDia(saidasResult.data);
                 const rows = await Promise.all(data.map(async ajuste => {
-                    const diferenca = parseFloat(ajuste.qtd_litros) || 0;
+                    const correcaoRegistrada = parseFloat(ajuste.qtd_litros) || 0;
                     const estoqueAnterior = await this.calcularEstoqueAntes(ajuste.tanque_id, ajuste.data);
                     const estoqueInformado = parseFloat(ajuste.valor_litro) || parseFloat(ajuste.valor_total) || 0;
-                    const estoqueAtual = estoqueInformado > 0 ? estoqueInformado : estoqueAnterior + diferenca;
+                    const estoqueAtual = estoqueInformado > 0 ? estoqueInformado : estoqueAnterior + correcaoRegistrada;
+                    const diferenca = estoqueAtual - estoqueAnterior;
                     const dataAjuste = this.getDataSaoPaulo(ajuste.data);
                     const totalSaidasDia = saidasPorTanqueDia.get(`${ajuste.tanque_id}|${dataAjuste}`) || 0;
 
                     return {
                         ...ajuste,
                         diferenca,
+                        correcaoRegistrada,
                         estoqueAnterior,
                         estoqueAtual,
                         totalSaidasDia

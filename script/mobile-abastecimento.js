@@ -82,6 +82,14 @@ function getEstoqueInformadoAjusteMobile(entrada) {
     return diferencaLegada !== 0 ? Math.abs(diferencaLegada) : null;
 }
 
+function formatarLitrosDisplay(valor, casas = 2) {
+    const numero = parseFloat(valor) || 0;
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: casas,
+        maximumFractionDigits: casas
+    });
+}
+
 function aplicarMascaraLitrosMobile(input) {
     if (!input) return;
 
@@ -866,7 +874,7 @@ async function carregarHistoricoMovimentacao() {
         // 1. Buscar Entradas e Ajustes (Tabela abastecimentos)
         const { data: entradas, error: errEntradas } = await supabaseClient
             .from('abastecimentos')
-            .select('id, data, numero_nota, qtd_litros, usuario, tanques(nome)')
+            .select('id, data, numero_nota, qtd_litros, valor_litro, valor_total, usuario, tanques(nome)')
             .order('data', { ascending: false })
             .limit(20);
         
@@ -885,12 +893,14 @@ async function carregarHistoricoMovimentacao() {
         const historico = [];
 
         entradas.forEach(e => {
+            const isAjuste = e.numero_nota === 'AJUSTE DE ESTOQUE';
             historico.push({
-                tipo: 'ENTRADA', // Pode ser AJUSTE ou TRANSFERENCIA também
+                tipo: isAjuste ? 'AJUSTE' : 'ENTRADA',
                 data: e.data,
-                detalhe: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'Ajuste Manual' : (e.numero_nota === 'TRANSFERENCIA' ? 'Transferência' : `NF: ${e.numero_nota}`),
+                detalhe: isAjuste ? 'Ajuste Manual' : (e.numero_nota === 'TRANSFERENCIA' ? 'Transferencia' : 'NF: ' + e.numero_nota),
                 tanque: e.tanques?.nome || 'N/A',
                 qtd: e.qtd_litros,
+                estoqueInformado: isAjuste ? getEstoqueInformadoAjusteMobile(e) : null,
                 usuario: e.usuario
             });
         });
@@ -933,9 +943,16 @@ async function carregarHistoricoMovimentacao() {
             const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
-            const qtdFormatted = parseFloat(item.qtd).toFixed(2);
-            const sinal = item.tipo === 'SAIDA' || (item.tipo === 'ENTRADA' && item.qtd < 0) ? '-' : '+';
-            const corQtd = item.tipo === 'SAIDA' || item.qtd < 0 ? '#dc3545' : '#28a745';
+            const qtd = parseFloat(item.qtd) || 0;
+            const isAjuste = item.tipo === 'AJUSTE';
+            const sinal = item.tipo === 'SAIDA' || qtd < 0 ? '-' : '+';
+            const corQtd = isAjuste ? '#0d6efd' : (item.tipo === 'SAIDA' || qtd < 0 ? '#dc3545' : '#28a745');
+            const valorPrincipal = isAjuste && item.estoqueInformado !== null
+                ? `${formatarLitrosDisplay(item.estoqueInformado)} L`
+                : `${sinal}${formatarLitrosDisplay(Math.abs(qtd))} L`;
+            const detalheAjuste = isAjuste
+                ? `<small>Correcao: ${qtd > 0 ? '+' : ''}${formatarLitrosDisplay(qtd)} L</small>`
+                : '';
 
             div.innerHTML = `
                 <div class="historico-info">
@@ -945,7 +962,8 @@ async function carregarHistoricoMovimentacao() {
                     <p><i class="far fa-user"></i> ${item.usuario || 'N/I'}</p>
                 </div>
                 <div class="historico-litros" style="color: ${corQtd}">
-                    ${sinal}${Math.abs(qtdFormatted)} L
+                    ${valorPrincipal}
+                    ${detalheAjuste}
                 </div>
             `;
             lista.appendChild(div);
