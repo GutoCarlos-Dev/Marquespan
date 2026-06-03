@@ -61,10 +61,16 @@
 
         <!-- Painel para Pontos da Rota Selecionada -->
         <div id="painelPontos" class="glass-panel hidden">
-          <h3 id="tituloPainelPontos"><i class="fas fa-map-marker-alt"></i> Pontos da Rota</h3>
-          <div id="rotaInfo" class="glass-panel-inner" style="margin-bottom: 10px; padding: 10px; text-align: center; display: none; background-color: rgba(0, 105, 55, 0.1); border: 1px solid #006937; border-radius: 8px;">
-             <i class="fas fa-road"></i> <strong>Total:</strong> <span id="distanciaRota" style="font-size: 1.1em; font-weight: bold;">0 km</span> 
-             <span style="margin: 0 5px;">•</span> <i class="fas fa-clock"></i> <span id="tempoRota">0 min</span>
+          <div class="route-detail-header">
+            <div>
+              <h3 id="tituloPainelPontos"><i class="fas fa-route"></i> Rota selecionada</h3>
+              <div id="subtituloPainelPontos" class="route-detail-subtitle"></div>
+            </div>
+            <span id="contadorPontosRota" class="route-detail-count">0 pontos</span>
+          </div>
+          <div id="rotaInfo" class="route-info-compact" style="display: none;">
+             <span><i class="fas fa-road"></i> <strong id="distanciaRota">0 km</strong></span>
+             <span><i class="fas fa-clock"></i> <strong id="tempoRota">0 min</strong></span>
           </div>
           <p class="instrucao-mapa">Adicione clientes pelo formulario abaixo ou clique no mapa para marcar uma parada manual.</p>
 

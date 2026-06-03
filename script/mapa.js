@@ -19,7 +19,10 @@ const MapaUI = {
     routingLineColor: '#006937',
     rotasOperacionais: [],
     rotasMapa: [],
+    routePointSummaries: {},
+    routeMetrics: {},
     viewingAllRoutes: false,
+    activeSupervisorView: null,
     collapsedRouteGroups: new Set(),
 
     init() {
@@ -42,6 +45,8 @@ const MapaUI = {
         this.listaRotas = document.getElementById('listaRotas');
         this.painelPontos = document.getElementById('painelPontos');
         this.tituloPainelPontos = document.getElementById('tituloPainelPontos');
+        this.subtituloPainelPontos = document.getElementById('subtituloPainelPontos');
+        this.contadorPontosRota = document.getElementById('contadorPontosRota');
         this.listaPontos = document.getElementById('listaPontos');
         this.rotaInfo = document.getElementById('rotaInfo');
         this.distanciaRota = document.getElementById('distanciaRota');
@@ -118,6 +123,10 @@ const MapaUI = {
             if (this.distanciaRota) this.distanciaRota.innerText = `${km} km`;
             if (this.tempoRota) this.tempoRota.innerText = `${tempo} min`;
             if (this.rotaInfo) this.rotaInfo.style.display = 'block';
+            if (this.activeRouteId) {
+                this.routeMetrics[this.activeRouteId] = { km, tempo };
+                this.updateRouteCardMetric(this.activeRouteId);
+            }
             this.aplicarCorNoTracado();
         });
 
@@ -287,10 +296,39 @@ const MapaUI = {
             if (error) throw error;
 
             this.rotasMapa = rotas || [];
-            this.renderRouteList(rotas);
+            await this.loadRoutePointSummaries(this.rotasMapa);
+            this.renderRouteList(this.rotasMapa);
         } catch (err) {
             console.error("Erro ao carregar rotas:", err);
             this.listaRotas.innerHTML = '<li>Erro ao carregar rotas.</li>';
+        }
+    },
+
+    async loadRoutePointSummaries(rotas = []) {
+        this.routePointSummaries = {};
+        const routeIds = rotas.map(rota => rota.id);
+        if (!routeIds.length) return;
+
+        try {
+            const { data: pontos, error } = await supabaseClient
+                .from('mapa_pontos')
+                .select('rota_id, cliente_nome, endereco')
+                .in('rota_id', routeIds);
+
+            if (error) throw error;
+
+            (pontos || []).forEach(ponto => {
+                if (!this.routePointSummaries[ponto.rota_id]) {
+                    this.routePointSummaries[ponto.rota_id] = { total: 0, paradas: 0 };
+                }
+
+                this.routePointSummaries[ponto.rota_id].total += 1;
+                if (!this.ehPontoOrigemOuRetorno(ponto)) {
+                    this.routePointSummaries[ponto.rota_id].paradas += 1;
+                }
+            });
+        } catch (err) {
+            console.error('Erro ao carregar resumo dos pontos das rotas:', err);
         }
     },
 
@@ -316,7 +354,7 @@ const MapaUI = {
             grupoLi.dataset.supervisor = supervisor;
             grupoLi.innerHTML = `
                 <span class="route-group-name">
-                    <i class="fas fa-chevron-down route-group-toggle"></i>
+                    <i class="fas fa-chevron-down route-group-toggle" title="Minimizar ou expandir"></i>
                     <i class="fas fa-user-tie"></i>
                     ${this.escapeHtml(supervisor)}
                 </span>
@@ -325,7 +363,13 @@ const MapaUI = {
                     <input type="color" class="supervisor-color-input" value="${this.escapeHtml(corSupervisor)}" title="Alterar cor das rotas deste supervisor">
                 </span>
             `;
-            grupoLi.addEventListener('click', () => this.toggleRouteGroup(supervisor));
+            const routeGroupName = grupoLi.querySelector('.route-group-name');
+            const routeGroupToggle = grupoLi.querySelector('.route-group-toggle');
+            routeGroupName.addEventListener('click', () => this.visualizarRotasSupervisor(supervisor));
+            routeGroupToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleRouteGroup(supervisor);
+            });
             const supervisorColorInput = grupoLi.querySelector('.supervisor-color-input');
             supervisorColorInput.addEventListener('click', (e) => e.stopPropagation());
             supervisorColorInput.addEventListener('input', (e) => e.stopPropagation());
@@ -336,6 +380,8 @@ const MapaUI = {
             this.listaRotas.appendChild(grupoLi);
 
             grupos[supervisor].forEach(rota => {
+                const resumoPontos = this.formatarResumoPontosRota(rota.id);
+                const resumoMetrica = this.formatarMetricaRota(rota.id);
                 const li = document.createElement('li');
                 li.className = `route-item${grupoRecolhido ? ' hidden' : ''}`;
                 li.dataset.routeId = rota.id;
@@ -347,7 +393,8 @@ const MapaUI = {
                             <strong>${this.escapeHtml(rota.nome_rota)}</strong>
                         </div>
                         ${rota.supervisor ? `<small style="color: #006937; font-weight: bold; font-size: 0.85em; margin-left: 25px;">Sup: ${this.escapeHtml(rota.supervisor)}</small>` : ''}
-                        ${rota.endereco ? `<small style="color: #666; font-size: 0.85em; margin-left: 25px;">${this.escapeHtml(rota.endereco)}</small>` : ''}
+                        <small class="route-card-summary">${this.escapeHtml(resumoPontos)}</small>
+                        <small class="route-card-metric${resumoMetrica ? '' : ' hidden'}" data-route-metric="${this.escapeHtml(rota.id)}">${this.escapeHtml(resumoMetrica)}</small>
                     </span>
                     <span class="item-actions">
                         <button class="btn-delete-route" title="Excluir Rota"><i class="fas fa-trash"></i></button>
@@ -370,6 +417,31 @@ const MapaUI = {
         return rotasSupervisor.find(rota => rota.cor_rgb)?.cor_rgb || '#3388ff';
     },
 
+    formatarResumoPontosRota(routeId) {
+        const resumo = this.routePointSummaries[routeId] || { paradas: 0, total: 0 };
+        return `${resumo.paradas} paradas | ${resumo.total} pontos`;
+    },
+
+    formatarMetricaRota(routeId) {
+        const metrica = this.routeMetrics[routeId];
+        return metrica ? `${metrica.km} km | ${metrica.tempo} min` : '';
+    },
+
+    ehPontoOrigemOuRetorno(ponto = {}) {
+        const nome = String(ponto.cliente_nome || ponto.endereco || '').toUpperCase();
+        return nome.includes('MARQUESPAN') || nome.includes('INICIO') || nome.includes('RETORNO');
+    },
+
+    updateRouteCardMetric(routeId) {
+        const metricEl = [...(this.listaRotas?.querySelectorAll('[data-route-metric]') || [])]
+            .find(item => item.dataset.routeMetric === String(routeId));
+        if (!metricEl) return;
+
+        const resumoMetrica = this.formatarMetricaRota(routeId);
+        metricEl.textContent = resumoMetrica;
+        metricEl.classList.toggle('hidden', !resumoMetrica);
+    },
+
     toggleRouteGroup(supervisor) {
         if (this.collapsedRouteGroups.has(supervisor)) {
             this.collapsedRouteGroups.delete(supervisor);
@@ -385,6 +457,48 @@ const MapaUI = {
         [...this.listaRotas.querySelectorAll('li.route-item')]
             .filter(item => item.dataset.supervisor === supervisor)
             .forEach(item => item.classList.toggle('hidden', recolhido));
+    },
+
+    async visualizarRotasSupervisor(supervisor) {
+        const rotasSupervisor = (this.rotasMapa || [])
+            .filter(rota => (rota.supervisor || 'Sem supervisor') === supervisor);
+
+        if (!rotasSupervisor.length) {
+            alert('Nenhuma rota cadastrada para este supervisor.');
+            return;
+        }
+
+        this.viewingAllRoutes = false;
+        this.activeSupervisorView = supervisor;
+        this.activeRouteId = null;
+        this.activeRouteOrigin = '';
+        this.activeRouteOriginCoords = null;
+        this.activeRouteLabel = '';
+        this.atualizarBotaoVisualizarTodas(false);
+        this.painelPontos.classList.add('hidden');
+        document.querySelectorAll('#listaRotas li.route-item').forEach(li => li.classList.remove('active'));
+        this.routeLayers.clearLayers();
+
+        if (this.routingControl) {
+            this.routingControl.setWaypoints([]);
+            if (this.rotaInfo) this.rotaInfo.style.display = 'none';
+        }
+
+        try {
+            const routeIds = rotasSupervisor.map(rota => rota.id);
+            const { data: pontos, error } = await supabaseClient
+                .from('mapa_pontos')
+                .select('*')
+                .in('rota_id', routeIds)
+                .order('ordem', { ascending: true });
+
+            if (error) throw error;
+
+            this.drawAllRoutesOnMap(rotasSupervisor, pontos || []);
+        } catch (err) {
+            console.error('Erro ao visualizar rotas do supervisor:', err);
+            alert('Erro ao carregar as rotas deste supervisor no mapa.');
+        }
     },
 
     async atualizarCorSupervisor(supervisor, cor) {
@@ -409,6 +523,11 @@ const MapaUI = {
 
             if (estavaVisualizandoTodas) {
                 await this.visualizarTodasRotas();
+                return;
+            }
+
+            if (this.activeSupervisorView === supervisor) {
+                await this.visualizarRotasSupervisor(supervisor);
                 return;
             }
 
@@ -624,6 +743,7 @@ const MapaUI = {
     async selectRoute(rota) {
         const routeId = rota.id;
         this.viewingAllRoutes = false;
+        this.activeSupervisorView = null;
         this.atualizarBotaoVisualizarTodas(false);
         this.activeRouteId = routeId;
         this.activeRouteColor = rota.cor_rgb || '#3388ff';
@@ -639,7 +759,13 @@ const MapaUI = {
         });
 
         // Mostra e atualiza o painel de pontos
-        this.tituloPainelPontos.innerHTML = `<i class="fas fa-map-marker-alt"></i> Pontos da Rota: <strong>${this.escapeHtml(rota.nome_rota)}</strong>`;
+        this.tituloPainelPontos.innerHTML = `<i class="fas fa-route"></i> ${this.escapeHtml(rota.nome_rota || 'Rota')}`;
+        if (this.subtituloPainelPontos) {
+            this.subtituloPainelPontos.innerHTML = [
+                rota.supervisor ? `<span><i class="fas fa-user-tie"></i> ${this.escapeHtml(rota.supervisor)}</span>` : '',
+                rota.endereco ? `<span><i class="fas fa-map-pin"></i> ${this.escapeHtml(rota.endereco)}</span>` : ''
+            ].filter(Boolean).join('');
+        }
         this.painelPontos.classList.remove('hidden');
 
         await this.loadAndDrawPoints(routeId, this.activeRouteColor);
@@ -655,6 +781,7 @@ const MapaUI = {
         }
 
         this.viewingAllRoutes = true;
+        this.activeSupervisorView = null;
         this.activeRouteId = null;
         this.activeRouteOrigin = '';
         this.activeRouteOriginCoords = null;
@@ -1136,6 +1263,7 @@ const MapaUI = {
 
     renderPointList(pontos) {
         this.listaPontos.innerHTML = '';
+        this.atualizarResumoPontos(pontos);
         if (pontos.length === 0) {
             this.listaPontos.innerHTML = '<li>Nenhum ponto nesta rota.</li>';
             return;
@@ -1166,6 +1294,17 @@ const MapaUI = {
 
             this.listaPontos.appendChild(li);
         });
+    },
+
+    atualizarResumoPontos(pontos = []) {
+        if (!this.contadorPontosRota) return;
+
+        const total = pontos.length;
+        const paradas = pontos.filter(ponto => !this.ehPontoOrigemOuRetorno(ponto)).length;
+
+        this.contadorPontosRota.textContent = total
+            ? `${paradas} paradas | ${total} pontos`
+            : '0 pontos';
     },
 
     async drawPointsOnMap(pontos, routeColor) {
