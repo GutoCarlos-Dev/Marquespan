@@ -1727,6 +1727,19 @@ async function runStep3(){
   Object.assign(mapaM, cadMapM); // cadData entries override xlsx
   Object.assign(mapaA, cadMapA);
 
+  // Enrich maps with Supabase funcionario — campo "Nome Curto (Exibição)" = nome
+  tlog('s3-term','info','↓ Carregando funcionários do banco de dados...');
+  const funcsDb = await loadFuncionariosSupabase();
+  funcsDb.forEach(f => {
+    const short = norm(f.nome);
+    const full  = norm(f.nome_completo || f.nome);
+    if (!short) return;
+    if (!mapaM[short]) mapaM[short] = full;
+    if (!mapaA[short]) mapaA[short] = full;
+  });
+  if (funcsDb.length) tlog('s3-term','ok',`✓ ${funcsDb.length} funcionário(s) carregado(s) do banco`);
+  else tlog('s3-term','warn','⚠ Sem retorno do banco — verifique a conexão');
+
   // City map: from xlsx CIDADE sheet + cadData.cidades
   const mapaCid={};
   {const ws=wb_ctrl2?wb_ctrl2.Sheets['CIDADE']:null;
@@ -2024,6 +2037,24 @@ function buildMapFromCad(tipo){
   }
   return map;
 }
+
+// Busca funcionários no Supabase usando o campo "Nome Curto (Exibição)" como shortname
+async function loadFuncionariosSupabase(){
+  try {
+    const resp = await sbFetch(
+      '/rest/v1/funcionario?select=nome,nome_completo,funcao,status&status=not.eq.Desligado&order=nome.asc'
+    );
+    if (!resp.ok) {
+      console.warn('[loadFuncionariosSupabase] HTTP', resp.status);
+      return [];
+    }
+    return await resp.json();
+  } catch(e) {
+    console.warn('[loadFuncionariosSupabase]', e);
+    return [];
+  }
+}
+
 function getDateData(wb,sheetName){
   const map={};const ws=(wb&&wb.Sheets)?wb.Sheets[sheetName]:null;if(!ws&&typeof s1Rows==='undefined')return map;if(ws){
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
