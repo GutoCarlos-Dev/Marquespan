@@ -59,7 +59,7 @@ const MapaUI = {
         L.Control.geocoder({
             // Trocando para Photon para ter sugestões enquanto digita (autocomplete)
             geocoder: L.Control.Geocoder.photon({
-                geocodingQueryParams: { lang: 'pt', countrycodes: 'BR' } // Prioriza resultados em português e no Brasil
+                geocodingQueryParams: { lang: 'pt' } // Photon retorna 400 quando recebe countrycodes.
             }),
             defaultMarkGeocode: true,
             showResultIcons: false,
@@ -73,7 +73,7 @@ const MapaUI = {
         this.routingControl = L.Routing.control({
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
-            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt', countrycodes: 'BR' } }), // Autocomplete também na rota
+            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt' } }), // Autocomplete também na rota
             showAlternatives: true, // Permite mostrar rotas alternativas
             language: 'pt-BR',
             createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
@@ -427,20 +427,41 @@ const MapaUI = {
         if (fallbackError) throw fallbackError;
     },
 
-    geocodeAddress(endereco) {
-        const geocoder = L.Control.Geocoder.photon({
-            geocodingQueryParams: { lang: 'pt', countrycodes: 'BR' }
+    async geocodeAddress(endereco) {
+        const query = this.normalizarEnderecoBusca(endereco);
+        if (query.length < 5) {
+            throw new Error('Informe um endereco mais completo para localizar a parada.');
+        }
+
+        const photon = L.Control.Geocoder.photon({
+            geocodingQueryParams: { lang: 'pt' }
         });
 
+        try {
+            return await this.executarGeocode(photon, query);
+        } catch (photonError) {
+            const nominatim = L.Control.Geocoder.nominatim();
+            return this.executarGeocode(nominatim, `${query}, Brasil`);
+        }
+    },
+
+    executarGeocode(geocoder, query) {
         return new Promise((resolve, reject) => {
-            geocoder.geocode(endereco, (results) => {
+            geocoder.geocode(query, (results) => {
                 if (results && results.length > 0) {
                     resolve(results[0].center);
                     return;
                 }
-                reject(new Error(`Endereco nao encontrado: ${endereco}`));
+                reject(new Error(`Endereco nao encontrado: ${query}`));
             });
         });
+    },
+
+    normalizarEnderecoBusca(endereco) {
+        return String(endereco || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/[,\s]+$/g, '');
     },
 
     renderPointList(pontos) {
