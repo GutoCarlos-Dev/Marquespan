@@ -223,6 +223,22 @@ const DespesasUI = {
         }
     },
 
+    getCurrentUser() {
+        try {
+            return JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+        } catch (e) {
+            return {};
+        }
+    },
+
+    getCurrentUserLevel() {
+        return String(this.getCurrentUser().nivel || '').toLowerCase();
+    },
+
+    usuarioPodeExcluir() {
+        return ['administrador', 'gerencia'].includes(this.getCurrentUserLevel());
+    },
+
     formatDateTime(value) {
         if (!value) return '-';
         const date = new Date(value);
@@ -380,6 +396,11 @@ const DespesasUI = {
         if (!id) return;
 
         if (target.closest('.btn-delete')) {
+            if (!this.usuarioPodeExcluir()) {
+                alert('Seu nivel de acesso nao permite excluir despesas.');
+                return;
+            }
+
             if (confirm('Tem certeza que deseja excluir esta despesa?')) {
                 try {
                     await supabaseClient.from('despesas').delete().eq('id', id);
@@ -411,23 +432,26 @@ const DespesasUI = {
             if (searchTerm) {
                 const [
                     { data: rotaData, error: rotaError },
+                    { data: quartoData, error: quartoError },
                     { data: hotelData, error: hotelError },
                     { data: func1Data, error: func1Error },
                     { data: func2Data, error: func2Error }
                 ] = await Promise.all([
                     supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${searchTerm}%`),
+                    supabaseClient.from('despesas').select('id').ilike('tipo_quarto', `%${searchTerm}%`),
                     supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${searchTerm}%`),
                     supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${searchTerm}%`),
                     supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${searchTerm}%`)
                 ]);
 
-                if (rotaError || hotelError || func1Error || func2Error) {
-                    console.error('Erro em uma das buscas parciais:', { rotaError, hotelError, func1Error, func2Error });
+                if (rotaError || quartoError || hotelError || func1Error || func2Error) {
+                    console.error('Erro em uma das buscas parciais:', { rotaError, quartoError, hotelError, func1Error, func2Error });
                     throw new Error('Ocorreu um erro durante a busca.');
                 }
 
                 const ids = new Set([
                     ...(rotaData || []).map(d => d.id),
+                    ...(quartoData || []).map(d => d.id),
                     ...(hotelData || []).map(d => d.id),
                     ...(func1Data || []).map(d => d.id),
                     ...(func2Data || []).map(d => d.id)
@@ -436,19 +460,19 @@ const DespesasUI = {
                 const matchingIds = Array.from(ids);
 
                 if (matchingIds.length === 0) {
-                    this.tableBody.innerHTML = `<tr><td colspan="7">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
+                    this.tableBody.innerHTML = `<tr><td colspan="8">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
                     return;
                 }
 
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, usuario, created_at, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
+                    .select('id, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                     .in('id', matchingIds);
 
             } else {
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, usuario, created_at, numero_rota, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
+                    .select('id, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
             if (this.sortField === 'hotel.nome') {
@@ -465,6 +489,7 @@ const DespesasUI = {
 
             if (error) throw error;
 
+            const podeExcluir = this.usuarioPodeExcluir();
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
                     <td>
@@ -473,6 +498,7 @@ const DespesasUI = {
                     </td>
                     <td>${d.numero_rota}</td>
                     <td>${d.hoteis?.nome || 'N/A'}</td>
+                    <td>${d.tipo_quarto || '-'}</td>
                     <td>
                         ${d.funcionario1?.nome_completo || 'N/A'}
                         ${d.funcionario2?.nome_completo ? `<br><small>${d.funcionario2.nome_completo}</small>` : ''}
@@ -481,13 +507,13 @@ const DespesasUI = {
                     <td>${new Date(d.data_checkin + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                     <td>
                         <button class="btn-icon edit btn-edit" data-id="${d.id}" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon delete btn-delete" data-id="${d.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        ${podeExcluir ? `<button class="btn-icon delete btn-delete" data-id="${d.id}" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
                     </td>
                 </tr>
             `).join('');
         } catch (err) {
             console.error('Erro ao renderizar grid de despesas:', err);
-            this.tableBody.innerHTML = `<tr><td colspan="7">Erro ao carregar dados.</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar dados.</td></tr>`;
         }
     },
 
