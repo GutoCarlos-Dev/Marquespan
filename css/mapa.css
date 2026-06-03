@@ -147,6 +147,20 @@
     width: 44px;
 }
 
+.btn-view-all-routes {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.btn-view-all-routes.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
 .point-text {
     display: flex;
     flex-direction: column;

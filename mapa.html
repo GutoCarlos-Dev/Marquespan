@@ -38,21 +38,20 @@
         <div class="glass-panel">
           <h3><i class="fas fa-route"></i> Rotas</h3>
           <form id="formNovaRota" class="form-grid" style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="supervisorNovaRota" list="listaSupervisoresMapa" placeholder="Supervisor da Rota" class="glass-input">
+            <input type="text" id="rotaCadastradaMapa" list="listaRotasCadastradasMapa" placeholder="Rota cadastrada" class="glass-input" required>
+            <input type="text" id="supervisorNovaRota" list="listaSupervisoresMapa" placeholder="Supervisor da Rota" class="glass-input" readonly>
             <div style="display: flex; gap: 10px; width: 100%;">
-                <input type="text" id="nomeNovaRota" placeholder="Nome da Rota" class="glass-input" style="flex: 1;" required>
+                <input type="text" id="nomeNovaRota" placeholder="Nome da Rota" class="glass-input" style="flex: 1;" readonly required>
                 <input type="color" id="corNovaRota" value="#3388ff" title="Cor da Rota" style="height: 40px; width: 50px; padding: 0; border: none; background: none; cursor: pointer;">
                 <button type="submit" class="btn-glass btn-green compact-btn" title="Salvar Rota" style="width: 50px;"><i class="fas fa-plus"></i></button>
             </div>
-            <div class="cep-row">
-              <input type="text" id="cepNovaRota" placeholder="CEP da origem/localidade" class="glass-input" inputmode="numeric" maxlength="9">
-              <button type="button" id="btnBuscarCepRota" class="btn-glass btn-blue compact-btn" title="Buscar endereco pelo CEP">
-                <i class="fas fa-search"></i>
-              </button>
-            </div>
-            <input type="text" id="enderecoNovaRota" placeholder="Endereço / Localidade (Opcional)" class="glass-input">
+            <input type="text" id="enderecoNovaRota" value="Marquespan - CEP 18280-005" class="glass-input" readonly>
+            <textarea id="cidadesNovaRota" class="glass-input" rows="2" placeholder="Cidades da rota" readonly></textarea>
           </form>
           <hr>
+          <button id="btnVisualizarTodasRotas" type="button" class="btn-glass btn-blue compact-btn btn-view-all-routes">
+            <i class="fas fa-layer-group"></i> Ver todas as rotas
+          </button>
           <ul id="listaRotas" class="item-list">
             <!-- Rotas serão carregadas aqui via JS -->
             <li>Carregando rotas...</li>
@@ -114,6 +113,7 @@
   </main>
 
   <datalist id="listaSupervisoresMapa"></datalist>
+  <datalist id="listaRotasCadastradasMapa"></datalist>
 
   <!-- Scripts -->
   <script type="module" src="./script/menu.js"></script>

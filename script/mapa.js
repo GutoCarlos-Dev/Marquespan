@@ -1,6 +1,10 @@
 import { supabaseClient } from './supabase.js';
 
 const GEOAPIFY_API_KEY = '0f54f744cbbb4620b9eb08a407a2a40f';
+const MARQUESPAN_ORIGEM = {
+    label: 'Empresa Marquespan',
+    endereco: 'CEP 18280-005, Tatui, SP, Brasil'
+};
 
 const MapaUI = {
     map: null,
@@ -11,6 +15,9 @@ const MapaUI = {
     routeLayers: L.layerGroup(), // Camada para marcadores e linhas da rota ativa
     routingControl: null, // Controle de roteamento
     routingLineColor: '#006937',
+    rotasOperacionais: [],
+    rotasMapa: [],
+    viewingAllRoutes: false,
 
     init() {
         // Proteção de Rota
@@ -22,6 +29,7 @@ const MapaUI = {
         this.initMap();
         this.bindEvents();
         this.loadSupervisores();
+        this.loadRotasOperacionais();
         this.loadRoutes();
     },
 
@@ -39,10 +47,12 @@ const MapaUI = {
         this.inputOrigem = document.getElementById('inputOrigem');
         this.inputDestino = document.getElementById('inputDestino');
         this.btnTracarRotaInteligente = document.getElementById('btnTracarRotaInteligente');
+        this.btnVisualizarTodasRotas = document.getElementById('btnVisualizarTodasRotas');
+        this.rotaCadastradaMapa = document.getElementById('rotaCadastradaMapa');
+        this.listaRotasCadastradasMapa = document.getElementById('listaRotasCadastradasMapa');
         this.supervisorNovaRota = document.getElementById('supervisorNovaRota');
-        this.cepNovaRota = document.getElementById('cepNovaRota');
         this.enderecoNovaRota = document.getElementById('enderecoNovaRota');
-        this.btnBuscarCepRota = document.getElementById('btnBuscarCepRota');
+        this.cidadesNovaRota = document.getElementById('cidadesNovaRota');
         this.listaSupervisoresMapa = document.getElementById('listaSupervisoresMapa');
         this.formNovaParada = document.getElementById('formNovaParada');
         this.clienteNovaParada = document.getElementById('clienteNovaParada');
@@ -110,13 +120,8 @@ const MapaUI = {
 
     bindEvents() {
         this.formNovaRota.addEventListener('submit', (e) => this.handleNewRoute(e));
-        if (this.btnBuscarCepRota) this.btnBuscarCepRota.addEventListener('click', () => this.buscarCepRota());
-        if (this.cepNovaRota) {
-            this.cepNovaRota.addEventListener('input', () => this.formatarCepInput(this.cepNovaRota));
-            this.cepNovaRota.addEventListener('blur', () => {
-                if (this.normalizarCep(this.cepNovaRota.value).length === 8) this.buscarCepRota();
-            });
-        }
+        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('change', () => this.preencherRotaOperacionalSelecionada());
+        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('blur', () => this.preencherRotaOperacionalSelecionada());
         if (this.formNovaParada) this.formNovaParada.addEventListener('submit', (e) => this.handleNewStop(e));
         if (this.btnBuscarCepParada) this.btnBuscarCepParada.addEventListener('click', () => this.buscarCepParada());
         if (this.cepNovaParada) {
@@ -127,6 +132,7 @@ const MapaUI = {
         }
         if (this.btnFecharRota) this.btnFecharRota.addEventListener('click', () => this.closeRouteLoop());
         if (this.btnTracarRotaInteligente) this.btnTracarRotaInteligente.addEventListener('click', () => this.tracarRotaInteligente());
+        if (this.btnVisualizarTodasRotas) this.btnVisualizarTodasRotas.addEventListener('click', () => this.visualizarTodasRotas());
     },
 
     // --- LÓGICA DE ROTAS ---
@@ -156,6 +162,51 @@ const MapaUI = {
         }
     },
 
+    async loadRotasOperacionais() {
+        if (!this.listaRotasCadastradasMapa) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('rotas')
+                .select('id, numero, supervisor, cidades, filial, status')
+                .order('numero', { ascending: true });
+
+            if (error) throw error;
+
+            this.rotasOperacionais = (data || []).filter(rota => String(rota.status || 'ATIVA').toUpperCase() !== 'INATIVA');
+            this.listaRotasCadastradasMapa.innerHTML = this.rotasOperacionais
+                .map(rota => `<option value="${this.escapeHtml(rota.numero)}">${this.escapeHtml(this.descreverRotaOperacional(rota))}</option>`)
+                .join('');
+        } catch (err) {
+            console.error('Erro ao carregar rotas cadastradas:', err);
+        }
+    },
+
+    descreverRotaOperacional(rota) {
+        return [
+            `Rota ${rota.numero || ''}`.trim(),
+            rota.supervisor ? `Sup: ${rota.supervisor}` : '',
+            rota.cidades || ''
+        ].filter(Boolean).join(' - ');
+    },
+
+    getRotaOperacionalSelecionada() {
+        const numero = String(this.rotaCadastradaMapa?.value || '').trim();
+        if (!numero) return null;
+        return this.rotasOperacionais.find(rota => String(rota.numero || '').trim().toUpperCase() === numero.toUpperCase()) || null;
+    },
+
+    preencherRotaOperacionalSelecionada() {
+        const rota = this.getRotaOperacionalSelecionada();
+        if (!rota) return;
+
+        this.nomeNovaRotaValue = `Rota ${rota.numero}`;
+        document.getElementById('nomeNovaRota').value = this.nomeNovaRotaValue;
+        this.supervisorNovaRota.value = rota.supervisor || '';
+        this.enderecoNovaRota.value = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
+        this.cidadesNovaRota.value = rota.cidades || '';
+    },
+
     async loadRoutes() {
         this.listaRotas.innerHTML = '<li>Carregando...</li>';
         try {
@@ -166,6 +217,7 @@ const MapaUI = {
 
             if (error) throw error;
 
+            this.rotasMapa = rotas || [];
             this.renderRouteList(rotas);
         } catch (err) {
             console.error("Erro ao carregar rotas:", err);
@@ -225,36 +277,41 @@ const MapaUI = {
 
     async handleNewRoute(e) {
         e.preventDefault();
-        const nomeInput = document.getElementById('nomeNovaRota');
         const corInput = document.getElementById('corNovaRota');
-        const enderecoInput = document.getElementById('enderecoNovaRota');
-        const supervisorInput = document.getElementById('supervisorNovaRota');
-        const nome = nomeInput.value.trim();
+        const rotaOperacional = this.getRotaOperacionalSelecionada();
+        const nome = rotaOperacional ? `Rota ${rotaOperacional.numero}` : '';
         const cor = corInput.value;
-        const endereco = enderecoInput ? enderecoInput.value.trim() : null;
-        const supervisor = supervisorInput ? supervisorInput.value.trim() : null;
+        const endereco = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
+        const supervisor = rotaOperacional?.supervisor || null;
 
-        if (!nome) {
-            alert('O nome da rota é obrigatório.');
+        if (!rotaOperacional) {
+            alert('Selecione uma rota cadastrada antes de salvar no mapa.');
+            return;
+        }
+
+        if (!this.extrairCidadesRota(rotaOperacional.cidades).length) {
+            alert('A rota selecionada nao possui cidades cadastradas.');
             return;
         }
 
         try {
-            const { error } = await supabaseClient
+            const { data: rotaMapa, error } = await supabaseClient
                 .from('mapa_rotas')
-                .insert({ nome_rota: nome, cor_rgb: cor, endereco: endereco, supervisor: supervisor });
+                .insert({ nome_rota: nome, cor_rgb: cor, endereco, supervisor })
+                .select('*')
+                .single();
 
             if (error) throw error;
 
-            alert('Rota criada com sucesso!');
-            nomeInput.value = '';
-            if(enderecoInput) enderecoInput.value = '';
-            if(supervisorInput) supervisorInput.value = '';
-            this.loadRoutes();
+            const resultado = await this.criarPontosDaRotaOperacional(rotaMapa.id, rotaOperacional);
+            alert(`Rota criada com sucesso! Pontos gerados: ${resultado.criados}. ${resultado.falhas.length ? `Nao localizados: ${resultado.falhas.join(', ')}` : ''}`);
+            this.limparFormularioNovaRota();
+            await this.loadRoutes();
+            await this.selectRoute(rotaMapa);
 
         } catch (err) {
             console.error('Erro ao criar rota:', err);
-            alert('Erro ao criar rota.');
+            alert(err.message || 'Erro ao criar rota.');
         }
     },
 
@@ -290,8 +347,103 @@ const MapaUI = {
         }
     },
 
+    limparFormularioNovaRota() {
+        this.rotaCadastradaMapa.value = '';
+        document.getElementById('nomeNovaRota').value = '';
+        this.supervisorNovaRota.value = '';
+        this.enderecoNovaRota.value = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
+        this.cidadesNovaRota.value = '';
+    },
+
+    extrairCidadesRota(cidades) {
+        return [...new Set(String(cidades || '')
+            .split(/[\/;,|\n]+|\s+-\s+/)
+            .map(cidade => cidade.trim())
+            .filter(Boolean))];
+    },
+
+    async criarPontosDaRotaOperacional(rotaMapaId, rotaOperacional) {
+        const pontos = [];
+        const falhas = [];
+        const cidades = this.extrairCidadesRota(rotaOperacional.cidades);
+
+        const origemCoords = await this.geocodeAddress(MARQUESPAN_ORIGEM.endereco);
+        pontos.push({
+            rota_id: rotaMapaId,
+            cliente_nome: `${MARQUESPAN_ORIGEM.label} (Inicio)`,
+            endereco: MARQUESPAN_ORIGEM.endereco,
+            latitude: origemCoords.lat,
+            longitude: origemCoords.lng,
+            ordem: 1,
+            observacao: 'Ponto inicial da rota'
+        });
+
+        for (const cidade of cidades) {
+            try {
+                const coords = await this.geocodeAddress(this.montarEnderecoCidade(cidade, rotaOperacional));
+                pontos.push({
+                    rota_id: rotaMapaId,
+                    cliente_nome: cidade,
+                    endereco: this.montarEnderecoCidade(cidade, rotaOperacional),
+                    latitude: coords.lat,
+                    longitude: coords.lng,
+                    ordem: pontos.length + 1,
+                    observacao: 'Cidade cadastrada na rota'
+                });
+            } catch (err) {
+                console.warn('Cidade nao localizada:', cidade, err);
+                falhas.push(cidade);
+            }
+        }
+
+        pontos.push({
+            rota_id: rotaMapaId,
+            cliente_nome: `${MARQUESPAN_ORIGEM.label} (Retorno)`,
+            endereco: MARQUESPAN_ORIGEM.endereco,
+            latitude: origemCoords.lat,
+            longitude: origemCoords.lng,
+            ordem: pontos.length + 1,
+            observacao: 'Retorno ao ponto inicial'
+        });
+
+        const { error } = await supabaseClient
+            .from('mapa_pontos')
+            .insert(pontos);
+
+        if (!error) return { criados: pontos.length, falhas };
+
+        const mensagem = String(error.message || '');
+        if (!mensagem.includes('cliente_nome')) throw error;
+
+        const pontosSemClienteNome = pontos.map(({ cliente_nome, ...ponto }) => ({
+            ...ponto,
+            endereco: cliente_nome ? `${cliente_nome} - ${ponto.endereco}` : ponto.endereco
+        }));
+
+        const { error: fallbackError } = await supabaseClient
+            .from('mapa_pontos')
+            .insert(pontosSemClienteNome);
+
+        if (fallbackError) throw fallbackError;
+        return { criados: pontos.length, falhas };
+    },
+
+    montarEnderecoCidade(cidade, rotaOperacional = {}) {
+        const cidadeNormalizada = String(cidade || '').trim();
+        if (/\b[A-Z]{2}\b/i.test(cidadeNormalizada) || cidadeNormalizada.includes(',')) {
+            return `${cidadeNormalizada}, Brasil`;
+        }
+
+        const ufPadrao = String(rotaOperacional.filial || '').trim().length === 2
+            ? rotaOperacional.filial
+            : 'SP';
+        return `${cidadeNormalizada}, ${ufPadrao}, Brasil`;
+    },
+
     async selectRoute(rota) {
         const routeId = rota.id;
+        this.viewingAllRoutes = false;
+        this.atualizarBotaoVisualizarTodas(false);
         this.activeRouteId = routeId;
         this.activeRouteColor = rota.cor_rgb || '#3388ff';
         this.activeRouteOrigin = rota.endereco || '';
@@ -311,6 +463,117 @@ const MapaUI = {
     },
 
     // --- LÓGICA DE PONTOS/MARCADORES ---
+
+    async visualizarTodasRotas() {
+        const rotas = this.rotasMapa || [];
+        if (!rotas.length) {
+            alert('Nenhuma rota cadastrada para visualizar.');
+            return;
+        }
+
+        this.viewingAllRoutes = true;
+        this.activeRouteId = null;
+        this.activeRouteOrigin = '';
+        this.activeRouteOriginCoords = null;
+        this.atualizarBotaoVisualizarTodas(true);
+        this.painelPontos.classList.add('hidden');
+        document.querySelectorAll('#listaRotas li.route-item').forEach(li => li.classList.remove('active'));
+        this.routeLayers.clearLayers();
+
+        if (this.routingControl) {
+            this.routingControl.setWaypoints([]);
+            if (this.rotaInfo) this.rotaInfo.style.display = 'none';
+        }
+
+        const originalText = this.btnVisualizarTodasRotas?.innerHTML;
+        if (this.btnVisualizarTodasRotas) {
+            this.btnVisualizarTodasRotas.disabled = true;
+            this.btnVisualizarTodasRotas.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+        }
+
+        try {
+            const routeIds = rotas.map(rota => rota.id);
+            const { data: pontos, error } = await supabaseClient
+                .from('mapa_pontos')
+                .select('*')
+                .in('rota_id', routeIds)
+                .order('ordem', { ascending: true });
+
+            if (error) throw error;
+
+            this.drawAllRoutesOnMap(rotas, pontos || []);
+        } catch (err) {
+            console.error('Erro ao visualizar todas as rotas:', err);
+            alert('Erro ao carregar todas as rotas no mapa.');
+        } finally {
+            if (this.btnVisualizarTodasRotas) {
+                this.btnVisualizarTodasRotas.disabled = false;
+                this.btnVisualizarTodasRotas.innerHTML = originalText;
+                this.atualizarBotaoVisualizarTodas(this.viewingAllRoutes);
+            }
+        }
+    },
+
+    drawAllRoutesOnMap(rotas, pontos) {
+        const bounds = [];
+        const pontosPorRota = pontos.reduce((acc, ponto) => {
+            if (!acc[ponto.rota_id]) acc[ponto.rota_id] = [];
+            acc[ponto.rota_id].push(ponto);
+            return acc;
+        }, {});
+
+        rotas.forEach(rota => {
+            const routeColor = rota.cor_rgb || '#3388ff';
+            const pontosRota = pontosPorRota[rota.id] || [];
+            const latLngs = pontosRota
+                .filter(ponto => ponto.latitude && ponto.longitude)
+                .map(ponto => [Number(ponto.latitude), Number(ponto.longitude)]);
+
+            if (!latLngs.length) return;
+
+            if (latLngs.length > 1) {
+                L.polyline(latLngs, {
+                    color: routeColor,
+                    opacity: 0.8,
+                    weight: 5
+                }).addTo(this.routeLayers).bindPopup(`<b>${this.escapeHtml(rota.nome_rota || 'Rota')}</b>`);
+            }
+
+            pontosRota.forEach(ponto => {
+                if (!ponto.latitude || !ponto.longitude) return;
+                const latLng = [Number(ponto.latitude), Number(ponto.longitude)];
+                bounds.push(latLng);
+                const nomePonto = ponto.cliente_nome || ponto.endereco || 'Ponto da rota';
+                L.circleMarker(latLng, {
+                    radius: 7,
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: routeColor,
+                    fillOpacity: 0.95
+                }).addTo(this.routeLayers).bindPopup(`
+                    <b>${this.escapeHtml(rota.nome_rota || 'Rota')}</b><br>
+                    ${this.escapeHtml(ponto.ordem || '')}. ${this.escapeHtml(nomePonto)}
+                    ${ponto.endereco && ponto.cliente_nome ? `<br><small>${this.escapeHtml(ponto.endereco)}</small>` : ''}
+                `);
+            });
+        });
+
+        if (bounds.length === 1) {
+            this.map.setView(bounds[0], 13);
+        } else if (bounds.length > 1) {
+            this.map.fitBounds(L.latLngBounds(bounds), { padding: [35, 35] });
+        } else {
+            alert('As rotas cadastradas ainda nao possuem pontos para exibir.');
+        }
+    },
+
+    atualizarBotaoVisualizarTodas(ativo) {
+        if (!this.btnVisualizarTodasRotas) return;
+        this.btnVisualizarTodasRotas.classList.toggle('active', ativo);
+        this.btnVisualizarTodasRotas.innerHTML = ativo
+            ? '<i class="fas fa-layer-group"></i> Todas as rotas no mapa'
+            : '<i class="fas fa-layer-group"></i> Ver todas as rotas';
+    },
 
     async handleMapClick(e) {
         if (!this.activeRouteId) {
@@ -692,7 +955,9 @@ const MapaUI = {
         if (pontos.length === 0 && !this.activeRouteOrigin) return;
 
         const latLngs = [];
-        const origem = await this.obterOrigemAtiva();
+        const origem = this.deveAdicionarOrigemSeparada(pontos)
+            ? await this.obterOrigemAtiva()
+            : null;
         if (origem) {
             const origemLatLng = [origem.lat, origem.lng];
             latLngs.push(origemLatLng);
@@ -722,6 +987,13 @@ const MapaUI = {
         } else if (latLngs.length > 1) {
             this.map.fitBounds(L.latLngBounds(latLngs), { padding: [30, 30] });
         }
+    },
+
+    deveAdicionarOrigemSeparada(pontos) {
+        if (!this.activeRouteOrigin || !pontos.length) return Boolean(this.activeRouteOrigin);
+        const primeiro = pontos[0];
+        const nome = String(primeiro.cliente_nome || primeiro.endereco || '').toUpperCase();
+        return !nome.includes('MARQUESPAN') && !nome.includes('INICIO');
     },
 
     async deletePoint(pointId) {
