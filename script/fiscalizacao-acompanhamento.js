@@ -32,6 +32,7 @@ function bindEvents() {
   document.getElementById('btnAdicionarSugestaoCliente').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesContainer'));
   document.getElementById('btnAdicionarDia').addEventListener('click', () => adicionarDia());
   document.getElementById('btnCompartilharSugestaoWhatsapp').addEventListener('click', compartilharSugestaoWhatsapp);
+  document.getElementById('btnCompartilharAcompanhamentoWhatsapp').addEventListener('click', () => compartilharAcompanhamentoWhatsapp());
   document.getElementById('habilitarSugestaoRoteiro').addEventListener('change', atualizarSugestaoRoteiro);
   document.getElementById('acompanhamentoTipoRota').addEventListener('change', atualizarTipoRota);
   document.getElementById('acompanhamentoRota').addEventListener('change', preencherSupervisorDaRota);
@@ -109,6 +110,7 @@ function abrirModal(item = null) {
   acompanhamentoEditandoId = item?.id || null;
   document.querySelector('#modalAcompanhamento .modal-header h3').textContent = acompanhamentoEditandoId ? 'Editar Acompanhamento' : 'Acompanhamento';
   document.getElementById('btnSalvarAcompanhamento').textContent = acompanhamentoEditandoId ? 'Salvar Alteracoes' : 'Salvar';
+  atualizarBotaoCompartilharModal();
 
   document.getElementById('acompanhamentoData').value = item?.data_acompanhamento || new Date().toISOString().split('T')[0];
   document.getElementById('acompanhamentoRota').value = item?.rota || '';
@@ -139,6 +141,13 @@ function abrirModal(item = null) {
 function fecharModal() {
   acompanhamentoEditandoId = null;
   document.getElementById('modalAcompanhamento').classList.add('hidden');
+}
+
+function atualizarBotaoCompartilharModal() {
+  const btn = document.getElementById('btnCompartilharAcompanhamentoWhatsapp');
+  const podeCompartilhar = Boolean(acompanhamentoEditandoId);
+  btn.classList.toggle('hidden', !podeCompartilhar);
+  btn.disabled = !podeCompartilhar;
 }
 
 function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
@@ -359,6 +368,11 @@ async function handleTabelaClick(event) {
       return;
     }
     await excluirAcompanhamento(item);
+    return;
+  }
+
+  if (button.dataset.action === 'whatsapp') {
+    compartilharAcompanhamentoWhatsapp(item);
   }
 }
 
@@ -395,21 +409,31 @@ async function salvarAcompanhamento(event) {
       payload.usuario_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
     }
 
-    const { error } = estavaEditando
-      ? await supabaseClient.from('fiscalizacao_acompanhamentos').update(payload).eq('id', acompanhamentoEditandoId)
-      : await supabaseClient.from('fiscalizacao_acompanhamentos').insert([payload]);
+    let idAcompanhamento = acompanhamentoEditandoId;
+    let error = null;
+
+    if (estavaEditando) {
+      ({ error } = await supabaseClient.from('fiscalizacao_acompanhamentos').update(payload).eq('id', acompanhamentoEditandoId));
+    } else {
+      const result = await supabaseClient.from('fiscalizacao_acompanhamentos').insert([payload]).select('id').single();
+      error = result.error;
+      idAcompanhamento = result.data?.id || null;
+    }
 
     if (error) throw error;
 
-    fecharModal();
+    acompanhamentoEditandoId = idAcompanhamento;
+    document.querySelector('#modalAcompanhamento .modal-header h3').textContent = 'Editar Acompanhamento';
+    btn.textContent = 'Salvar Alteracoes';
+    atualizarBotaoCompartilharModal();
     await buscarAcompanhamentos();
-    alert(estavaEditando ? 'Acompanhamento atualizado com sucesso!' : 'Acompanhamento registrado com sucesso!');
+    alert(estavaEditando ? 'Acompanhamento atualizado com sucesso! Botao de compartilhamento habilitado.' : 'Acompanhamento registrado com sucesso! Botao de compartilhamento habilitado.');
   } catch (error) {
     console.error('Erro ao salvar acompanhamento:', error);
     alert(`Erro ao salvar acompanhamento: ${error.message}`);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Salvar';
+    btn.textContent = acompanhamentoEditandoId ? 'Salvar Alteracoes' : 'Salvar';
   }
 }
 
@@ -571,6 +595,9 @@ function renderizarTabela() {
         <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
           <i class="fas fa-pen"></i>
         </button>
+        <button type="button" class="btn-grid-action btn-share" data-action="whatsapp" data-id="${escapeHtml(item.id)}" title="Compartilhar via WhatsApp">
+          <i class="fab fa-whatsapp"></i>
+        </button>
         ${usuarioPodeExcluir() ? `
           <button type="button" class="btn-grid-action btn-delete" data-action="excluir" data-id="${escapeHtml(item.id)}" title="Excluir">
             <i class="fas fa-trash"></i>
@@ -665,6 +692,89 @@ function compartilharSugestaoWhatsapp() {
   ];
 
   window.open(`https://wa.me/?text=${encodeURIComponent(linhas.join('\n'))}`, '_blank');
+}
+
+function obterAcompanhamentoDoFormulario() {
+  return {
+    id: acompanhamentoEditandoId,
+    data_acompanhamento: document.getElementById('acompanhamentoData').value,
+    rota: document.getElementById('acompanhamentoRota').value.trim(),
+    qtd_entregas: getNumeroOuNull('acompanhamentoQtdEntregas'),
+    supervisor: document.getElementById('acompanhamentoSupervisor').value.trim() || null,
+    tipo_rota: document.getElementById('acompanhamentoTipoRota').value,
+    placa: document.getElementById('acompanhamentoPlaca').value.trim().toUpperCase(),
+    motorista: document.getElementById('acompanhamentoMotorista').value.trim(),
+    auxiliar: document.getElementById('acompanhamentoAuxiliar').value.trim() || null,
+    terceiro: document.getElementById('acompanhamentoTerceiro').value.trim() || null,
+    clientes: coletarClientes(),
+    sugestao_roteiro: coletarSugestaoRoteiro(),
+    horarios: coletarHorarios(),
+    observacoes: document.getElementById('acompanhamentoObservacoes').value.trim() || null
+  };
+}
+
+function compartilharAcompanhamentoWhatsapp(acompanhamento = null) {
+  const dados = acompanhamento || obterAcompanhamentoDoFormulario();
+  if (!dados?.id && !acompanhamentoEditandoId) {
+    alert('Salve o acompanhamento antes de compartilhar.');
+    return;
+  }
+
+  const clientes = normalizarArray(dados.clientes);
+  const horarios = normalizarArray(dados.horarios);
+  const sugestao = normalizarArray(dados.sugestao_roteiro);
+  const linhas = [
+    '*Fiscalizacao - Acompanhamento de Rota*',
+    `Data: ${formatarData(dados.data_acompanhamento)}`,
+    `Rota: ${dados.rota || '-'}`,
+    `Supervisor: ${dados.supervisor || '-'}`,
+    `QTD de Entregas: ${dados.qtd_entregas ?? '-'}`,
+    `Tipo: ${formatarTipoRota(dados.tipo_rota)}`,
+    `Placa: ${dados.placa || '-'}`,
+    `Motorista: ${dados.motorista || '-'}`,
+    `Auxiliar: ${dados.auxiliar || '-'}`,
+    `Terceiro: ${dados.terceiro || '-'}`,
+    '',
+    '*Clientes:*',
+    ...(clientes.length ? clientes.map(formatarClienteWhatsapp) : ['-']),
+    '',
+    '*Horarios:*',
+    ...(horarios.length ? horarios.map(formatarHorarioWhatsapp) : ['-'])
+  ];
+
+  if (dados.observacoes) {
+    linhas.push('', '*Observacoes:*', dados.observacoes);
+  }
+
+  if (sugestao.length) {
+    linhas.push('', '*Sugestao de Roteiro:*', ...sugestao.map(formatarClienteWhatsapp));
+  }
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(linhas.join('\n'))}`, '_blank');
+}
+
+function formatarClienteWhatsapp(cliente, index) {
+  const partes = [`${index + 1}. ${cliente.nome || '-'}`];
+  if (cliente.mercado_horario) partes.push('mercado de horario');
+  if (cliente.horario_recebimento_ate) partes.push(`recebimento ate ${cliente.horario_recebimento_ate}`);
+  if (cliente.horario_chegada) partes.push(`chegada ${cliente.horario_chegada}`);
+  if (cliente.chamou_descarga) partes.push(`chamou descarga ${cliente.chamou_descarga}`);
+  if (cliente.termino_descarga) partes.push(`termino descarga ${cliente.termino_descarga}`);
+  if (cliente.liberou_canhoto) partes.push(`liberou canhoto ${cliente.liberou_canhoto}`);
+  return partes.join(' - ');
+}
+
+function formatarHorarioWhatsapp(dia) {
+  const cafeTotal = dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de, dia.cafe_ate);
+  const almocoTotal = dia.almoco_total_minutos ?? calcularMinutos(dia.almoco_de, dia.almoco_ate);
+  return [
+    `Dia ${dia.dia || 1}:`,
+    `saida ${dia.saida_empresa || dia.saida_viagem || '-'}`,
+    `cafe ${dia.cafe_de || '-'} ate ${dia.cafe_ate || '-'} (${formatarDuracao(cafeTotal)})`,
+    `almoco ${dia.almoco_de || '-'} ate ${dia.almoco_ate || '-'} (${formatarDuracao(almocoTotal)})`,
+    `finalizacao ${dia.finalizacao_entregas || '-'}`,
+    `chegada ${dia.chegada_empresa || dia.chegada_viagem || '-'}`
+  ].join(' ');
 }
 
 function escapeHtml(value) {
