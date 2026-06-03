@@ -341,7 +341,7 @@ body.pedagio-loading .footer {
 /* Tabela de lançamentos */
 .pedagio-table-container {
     max-height: 500px; /* Altura máxima para rolagem */
-    overflow-y: auto;
+    overflow: auto;
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
