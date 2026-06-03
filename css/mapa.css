@@ -59,6 +59,23 @@
     box-shadow: 0 2px 5px rgba(0, 105, 55, 0.3);
 }
 
+.item-list li.route-group-title {
+    background: transparent;
+    border: 0;
+    color: var(--primary-color);
+    cursor: default;
+    font-size: 0.85rem;
+    font-weight: 700;
+    justify-content: flex-start;
+    margin: 14px 0 6px;
+    padding: 0 4px;
+    text-transform: uppercase;
+}
+
+.item-list li.route-group-title:hover {
+    background: transparent;
+}
+
 .item-list .item-name {
     display: flex;
     align-items: center;
@@ -101,6 +118,37 @@
     padding: 8px;
     border-radius: 8px;
     border: 1px dashed #b8daff;
+}
+
+.mapa-parada-form {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 12px 0 16px;
+    padding: 12px;
+}
+
+.mapa-parada-form button {
+    width: 100%;
+}
+
+.point-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.point-text small {
+    color: #666;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.item-list li.active .point-text small {
+    color: rgba(255, 255, 255, 0.85);
 }
 
 /* Responsividade */

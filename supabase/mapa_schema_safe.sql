@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS public.mapa_rotas (
   CONSTRAINT mapa_rotas_pkey PRIMARY KEY (id)
 );
 
+ALTER TABLE public.mapa_rotas
+  ADD COLUMN IF NOT EXISTS supervisor text;
+
 -- Habilita RLS (é seguro executar múltiplas vezes)
 ALTER TABLE public.mapa_rotas ENABLE ROW LEVEL SECURITY;
 
@@ -29,6 +32,7 @@ $$;
 CREATE TABLE IF NOT EXISTS public.mapa_pontos (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   rota_id uuid NOT NULL,
+  cliente_nome text NULL,
   endereco text NULL,
   latitude numeric NOT NULL,
   longitude numeric NOT NULL,
@@ -38,6 +42,9 @@ CREATE TABLE IF NOT EXISTS public.mapa_pontos (
   CONSTRAINT mapa_pontos_pkey PRIMARY KEY (id),
   CONSTRAINT mapa_pontos_rota_id_fkey FOREIGN KEY (rota_id) REFERENCES public.mapa_rotas(id) ON DELETE CASCADE
 );
+
+ALTER TABLE public.mapa_pontos
+  ADD COLUMN IF NOT EXISTS cliente_nome text;
 
 -- Habilita RLS para 'pontos_rota'
 ALTER TABLE public.mapa_pontos ENABLE ROW LEVEL SECURITY;

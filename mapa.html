@@ -38,7 +38,7 @@
         <div class="glass-panel">
           <h3><i class="fas fa-route"></i> Rotas</h3>
           <form id="formNovaRota" class="form-grid" style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="supervisorNovaRota" placeholder="Supervisor da Rota" class="glass-input">
+            <input type="text" id="supervisorNovaRota" list="listaSupervisoresMapa" placeholder="Supervisor da Rota" class="glass-input">
             <div style="display: flex; gap: 10px; width: 100%;">
                 <input type="text" id="nomeNovaRota" placeholder="Nome da Rota" class="glass-input" style="flex: 1;" required>
                 <input type="color" id="corNovaRota" value="#3388ff" title="Cor da Rota" style="height: 40px; width: 50px; padding: 0; border: none; background: none; cursor: pointer;">
@@ -60,7 +60,16 @@
              <i class="fas fa-road"></i> <strong>Total:</strong> <span id="distanciaRota" style="font-size: 1.1em; font-weight: bold;">0 km</span> 
              <span style="margin: 0 5px;">•</span> <i class="fas fa-clock"></i> <span id="tempoRota">0 min</span>
           </div>
-          <p class="instrucao-mapa">Clique no mapa para adicionar um novo ponto.</p>
+          <p class="instrucao-mapa">Adicione clientes pelo formulario abaixo ou clique no mapa para marcar uma parada manual.</p>
+
+          <form id="formNovaParada" class="form-grid mapa-parada-form">
+            <input type="text" id="clienteNovaParada" placeholder="Cliente / Parada" class="glass-input" required>
+            <input type="text" id="enderecoNovaParada" placeholder="Endereco do cliente" class="glass-input" required>
+            <textarea id="observacaoNovaParada" placeholder="Observacao (opcional)" class="glass-input" rows="2"></textarea>
+            <button type="submit" class="btn-glass btn-green compact-btn">
+              <i class="fas fa-map-marker-alt"></i> Adicionar Parada
+            </button>
+          </form>
 
           <!-- Painel de Roteirização Inteligente (Movido para cá) -->
           <div class="glass-panel-inner" style="margin-top: 15px; margin-bottom: 15px; padding: 15px; background-color: rgba(0,0,0,0.05);">
@@ -90,6 +99,8 @@
       </div>
     </div>
   </main>
+
+  <datalist id="listaSupervisoresMapa"></datalist>
 
   <!-- Scripts -->
   <script type="module" src="./script/menu.js"></script>
