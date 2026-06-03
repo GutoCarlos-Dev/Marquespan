@@ -1,9 +1,13 @@
 import { supabaseClient } from './supabase.js';
 
+const GEOAPIFY_API_KEY = '0f54f744cbbb4620b9eb08a407a2a40f';
+
 const MapaUI = {
     map: null,
     activeRouteId: null,
     activeRouteColor: '#3388ff',
+    activeRouteOrigin: '',
+    activeRouteOriginCoords: null,
     routeLayers: L.layerGroup(), // Camada para marcadores e linhas da rota ativa
     routingControl: null, // Controle de roteamento
     routingLineColor: '#006937',
@@ -207,7 +211,7 @@ const MapaUI = {
                     </span>
                 `;
 
-                li.querySelector('.item-name').addEventListener('click', () => this.selectRoute(rota.id, rota.nome_rota, rota.cor_rgb));
+                li.querySelector('.item-name').addEventListener('click', () => this.selectRoute(rota));
 
                 li.querySelector('.btn-delete-route').addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -286,9 +290,12 @@ const MapaUI = {
         }
     },
 
-    async selectRoute(routeId, routeName, routeColor) {
+    async selectRoute(rota) {
+        const routeId = rota.id;
         this.activeRouteId = routeId;
-        this.activeRouteColor = routeColor || '#3388ff';
+        this.activeRouteColor = rota.cor_rgb || '#3388ff';
+        this.activeRouteOrigin = rota.endereco || '';
+        this.activeRouteOriginCoords = null;
         this.setRoutingColor(this.activeRouteColor);
 
         // Destaca a rota ativa na lista
@@ -297,10 +304,10 @@ const MapaUI = {
         });
 
         // Mostra e atualiza o painel de pontos
-        this.tituloPainelPontos.innerHTML = `<i class="fas fa-map-marker-alt"></i> Pontos da Rota: <strong>${routeName}</strong>`;
+        this.tituloPainelPontos.innerHTML = `<i class="fas fa-map-marker-alt"></i> Pontos da Rota: <strong>${this.escapeHtml(rota.nome_rota)}</strong>`;
         this.painelPontos.classList.remove('hidden');
 
-        await this.loadAndDrawPoints(routeId, routeColor);
+        await this.loadAndDrawPoints(routeId, this.activeRouteColor);
     },
 
     // --- LÓGICA DE PONTOS/MARCADORES ---
@@ -393,7 +400,7 @@ const MapaUI = {
             if (error) throw error;
 
             this.renderPointList(pontos);
-            this.drawPointsOnMap(pontos, routeColor);
+            await this.drawPointsOnMap(pontos, routeColor);
 
         } catch (err) {
             console.error('Erro ao carregar pontos:', err);
@@ -453,6 +460,12 @@ const MapaUI = {
 
         const tentativas = this.criarTentativasEndereco(query);
 
+        try {
+            return await this.executarGeocodeGeoapify(tentativas);
+        } catch (geoapifyError) {
+            console.warn('Geoapify nao localizou o endereco, usando fallback:', geoapifyError);
+        }
+
         for (const tentativa of tentativas) {
             try {
                 return await this.executarGeocodeNominatim(tentativa);
@@ -462,6 +475,19 @@ const MapaUI = {
         }
 
         throw new Error(`Endereco nao encontrado: ${query}. Confira numero, cidade e UF, ou marque a parada clicando no mapa.`);
+    },
+
+    async obterOrigemAtiva() {
+        if (!this.activeRouteOrigin) return null;
+        if (this.activeRouteOriginCoords) return this.activeRouteOriginCoords;
+
+        try {
+            this.activeRouteOriginCoords = await this.geocodeAddress(this.activeRouteOrigin);
+            return this.activeRouteOriginCoords;
+        } catch (err) {
+            console.warn('Origem da rota nao localizada para tracado:', err);
+            return null;
+        }
     },
 
     async executarGeocodeNominatim(query) {
@@ -493,6 +519,44 @@ const MapaUI = {
         } finally {
             clearTimeout(timeoutId);
         }
+    },
+
+    async executarGeocodeGeoapify(tentativas) {
+        if (!GEOAPIFY_API_KEY) throw new Error('Chave Geoapify nao configurada.');
+
+        for (const tentativa of tentativas) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const params = new URLSearchParams({
+                text: tentativa,
+                lang: 'pt',
+                filter: 'countrycode:br',
+                limit: '1',
+                apiKey: GEOAPIFY_API_KEY
+            });
+
+            try {
+                const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params.toString()}`, {
+                    signal: controller.signal
+                });
+
+                if (!response.ok) throw new Error(`Falha Geoapify (${response.status}).`);
+
+                const data = await response.json();
+                const feature = data?.features?.[0];
+                const coordinates = feature?.geometry?.coordinates;
+                if (Array.isArray(coordinates) && coordinates.length >= 2) {
+                    return {
+                        lat: Number(coordinates[1]),
+                        lng: Number(coordinates[0])
+                    };
+                }
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        throw new Error('Endereco nao encontrado no Geoapify.');
     },
 
     criarTentativasEndereco(query) {
@@ -624,10 +688,18 @@ const MapaUI = {
         });
     },
 
-    drawPointsOnMap(pontos, routeColor) {
-        if (pontos.length === 0) return;
+    async drawPointsOnMap(pontos, routeColor) {
+        if (pontos.length === 0 && !this.activeRouteOrigin) return;
 
         const latLngs = [];
+        const origem = await this.obterOrigemAtiva();
+        if (origem) {
+            const origemLatLng = [origem.lat, origem.lng];
+            latLngs.push(origemLatLng);
+            L.marker(origemLatLng, {
+                title: 'Origem da rota'
+            }).addTo(this.routeLayers).bindPopup(`<b>Origem da Rota</b><br>${this.escapeHtml(this.activeRouteOrigin)}`);
+        }
 
         pontos.forEach(ponto => {
             const latLng = [ponto.latitude, ponto.longitude];
@@ -646,8 +718,9 @@ const MapaUI = {
         }
 
         if (latLngs.length === 1) {
-            // Se houver apenas um ponto, centraliza nele
             this.map.setView(latLngs[0], 13);
+        } else if (latLngs.length > 1) {
+            this.map.fitBounds(L.latLngBounds(latLngs), { padding: [30, 30] });
         }
     },
 
