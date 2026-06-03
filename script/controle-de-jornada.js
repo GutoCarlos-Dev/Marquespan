@@ -1868,10 +1868,10 @@ function renderAusentesBanner(){
           ⚠ ${arr.length} cadastro(s) pendente(s)
         </div>
         <div style="font-size:11px;color:#78350f;margin-top:3px">
-          Estes nomes aparecem no Roteiro mas NÃO foram encontrados nas abas MOTORISTA/AUXILIAR do CONTROLE nem nos Cadastros do sistema.
+          Estes nomes aparecem no Roteiro mas não foram encontrados no banco. Vincule-os a um funcionário existente ou cadastre manualmente.
         </div>
       </div>
-      <button onclick="abrirCadastroFaltantes()" style="padding:8px 16px;background:#d97706;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">📝 Cadastrar todos agora</button>
+      <button onclick="abrirCadastroFaltantes()" style="padding:8px 16px;background:#006937;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">🔗 Vincular / Cadastrar</button>
     </div>
     <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
       ${arr.slice(0,40).map(a => `<span style="background:#fff;border:1px solid #f59e0b;padding:3px 8px;border-radius:4px;font-size:10px;color:#78350f"><strong>${esc(a.shortname)}</strong> <span style="opacity:.7">(${a.tipo})</span></span>`).join('')}
@@ -1881,8 +1881,8 @@ function renderAusentesBanner(){
   sec.parentNode.insertBefore(banner, sec);
 }
 
-// Modal para cadastrar nomes faltantes em lote
-function abrirCadastroFaltantes(){
+// Modal para vincular / cadastrar nomes faltantes em lote
+async function abrirCadastroFaltantes(){
   const lista = window._s3Ausentes || [];
   const unicos = {};
   lista.forEach(a => {
@@ -1892,95 +1892,203 @@ function abrirCadastroFaltantes(){
   const arr = Object.values(unicos);
   if(!arr.length) return alert('Nenhum cadastro pendente.');
 
+  // Carrega lista de funcionários para vinculação
+  const funcs = await loadFuncionariosSupabase();
+  window._funcsVinculo  = funcs;   // lista completa disponível
+  window._linksVinculo  = {};      // { rowIndex: funcionarioObj }
+
   const overlay = document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
   const modal = document.createElement('div');
-  modal.className='pending-cad-modal';
-  modal.style.cssText='background:#fff;border-radius:16px;max-width:1120px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.22)';
+  modal.className = 'pending-cad-modal';
+  modal.style.cssText = 'background:#fff;border-radius:16px;max-width:1200px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.25)';
+
   modal.innerHTML = `
-    <div style="padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:linear-gradient(180deg,#fff,#f8fbf9)">
+    <div style="padding:18px 24px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:linear-gradient(180deg,#fff,#f8fbf9)">
       <div>
-        <h2 style="margin:0;font-size:18px">Cadastrar nomes faltantes</h2>
-        <p style="margin:4px 0 0;font-size:12px;color:#666;line-height:1.5">Esses nomes apareceram no roteiro e ainda não existem nos cadastros. Cadastre aqui e o sistema salva localmente e tenta sincronizar com a nuvem.</p>
+        <h2 style="margin:0;font-size:18px;color:#1a2332">Vincular / Cadastrar nomes pendentes</h2>
+        <p style="margin:5px 0 0;font-size:12px;color:#666;line-height:1.5">
+          Para cada nome do Roteiro, <strong>vincule a um funcionário</strong> já cadastrado (busca pelo Nome Curto)
+          ou preencha o Nome Completo manualmente.
+          ${funcs.length ? `<span style="color:#006937;font-weight:600">✓ ${funcs.length} funcionário(s) disponíveis para vinculação.</span>` : '<span style="color:#d97706">⚠ Sem funcionários carregados — use preenchimento manual.</span>'}
+        </p>
       </div>
-      <button class="modal-close" style="background:#f3f4f6;border:none;width:34px;height:34px;border-radius:10px;font-size:22px;cursor:pointer;color:#666">×</button>
+      <button class="modal-close" style="background:#f3f4f6;border:none;width:34px;height:34px;border-radius:10px;font-size:22px;cursor:pointer;color:#666;flex-shrink:0">×</button>
     </div>
-    <div style="padding:14px 22px;border-bottom:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap">
-      ${arr.map(a => `<span class="pending-cad-tag">${esc(a.shortname)} <span style="opacity:.7">${esc(a.tipo)}</span></span>`).join('')}
-    </div>
-    <div style="overflow:auto;flex:1;padding:14px 22px">
-      <table class="cad-grid">
+
+    <div style="overflow:auto;flex:1;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px">
         <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Nome na Escala</th>
-            <th>Nome completo (Ponto)</th>
-            <th>Telefone (WA)</th>
-            <th>Telefone corporativo</th>
-            <th>Observação</th>
+          <tr style="background:#f2f2f2;position:sticky;top:0;z-index:5">
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6;white-space:nowrap;width:90px">Tipo</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6;white-space:nowrap">Nome no Roteiro</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6">Vincular a Funcionário <span style="font-weight:400;color:#999;text-transform:none">(busca pelo Nome Curto)</span></th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6">Nome Completo (Ponto)</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6;white-space:nowrap">Telefone (WA)</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #dee2e6">Observação</th>
           </tr>
         </thead>
         <tbody id="faltantes-tbody">
           ${arr.map((a,i) => `
-            <tr>
-              <td><input data-i="${i}" data-f="tipo" value="${esc(a.tipo)}" readonly style="background:#f9fafb;font-weight:700"></td>
-              <td><input data-i="${i}" data-f="escala" value="${esc(a.shortname)}" readonly style="background:#f9fafb;font-weight:700"></td>
-              <td><input data-i="${i}" data-f="nome_ponto" placeholder="Digite o nome completo"></td>
-              <td><input data-i="${i}" data-f="telefone" placeholder="15999999999"></td>
-              <td><input data-i="${i}" data-f="tel_corp" placeholder="opcional"></td>
-              <td><input data-i="${i}" data-f="obs" placeholder="opcional"></td>
+            <tr data-row="${i}" style="border-bottom:1px solid #f1f3f5">
+              <td style="padding:10px 14px">
+                <span style="background:${a.tipo==='MOTORISTA'?'#dbeafe':'#d1fae5'};color:${a.tipo==='MOTORISTA'?'#1d4ed8':'#059669'};padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(a.tipo)}</span>
+              </td>
+              <td style="padding:10px 14px;font-weight:700;color:#1a2332">${esc(a.shortname)}</td>
+              <td style="padding:8px 14px;min-width:220px">
+                <div id="vcell-${i}" style="position:relative">
+                  <input
+                    id="vsearch-${i}"
+                    oninput="window._vincularFiltrar(${i},this.value)"
+                    onfocus="window._vincularFiltrar(${i},this.value)"
+                    placeholder="Buscar funcionário..."
+                    autocomplete="off"
+                    style="width:100%;padding:7px 10px;border:1px solid #ced4da;border-radius:8px;font-size:13px;outline:none;font-family:inherit"
+                  >
+                  <div id="vdrop-${i}" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1.5px solid #006937;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:180px;overflow-y:auto;z-index:100"></div>
+                </div>
+              </td>
+              <td style="padding:8px 14px;min-width:200px">
+                <input data-i="${i}" data-f="nome_ponto" placeholder="Auto-preenchido ou manual" autocomplete="off"
+                  style="width:100%;padding:7px 10px;border:1px solid #ced4da;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+              </td>
+              <td style="padding:8px 14px">
+                <input data-i="${i}" data-f="telefone" placeholder="15999999999"
+                  style="width:100%;padding:7px 10px;border:1px solid #ced4da;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+              </td>
+              <td style="padding:8px 14px">
+                <input data-i="${i}" data-f="obs" placeholder="opcional"
+                  style="width:100%;padding:7px 10px;border:1px solid #ced4da;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+              </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
-    <div style="padding:14px 22px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:12px;color:#666">${arr.length} pendente(s) — após salvar, reprocesse o Passo 3 para refletir na etapa seguinte.</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="modal-close" style="padding:10px 14px;background:#888;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px">Cancelar</button>
-        <button id="btn-salvar-faltantes" style="padding:10px 18px;background:#0B6E46;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-size:12px">Salvar cadastros</button>
+
+    <div style="padding:14px 24px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:#f8f9fa">
+      <span style="font-size:12px;color:#666">${arr.length} pendente(s) — após salvar, reprocesse o Passo 3.</span>
+      <div style="display:flex;gap:8px">
+        <button class="modal-close" style="padding:10px 18px;background:#6c757d;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">Cancelar</button>
+        <button id="btn-salvar-faltantes" style="padding:10px 20px;background:#006937;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px">
+          ✓ Salvar vínculos
+        </button>
       </div>
     </div>
   `;
+
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-  overlay.querySelectorAll('.modal-close').forEach(b => b.onclick = ()=> overlay.remove());
+  overlay.querySelectorAll('.modal-close').forEach(b => b.onclick = () => overlay.remove());
 
-  document.getElementById('btn-salvar-faltantes').onclick = ()=>{
+  // Fecha dropdowns ao clicar fora
+  document.addEventListener('click', function _closeDrops(e){
+    if(!e.target.closest('[id^="vcell-"]')){
+      document.querySelectorAll('[id^="vdrop-"]').forEach(d => d.style.display='none');
+    }
+  }, { capture: true, once: false });
+
+  // ── Funções de vinculação ────────────────────────────────────
+  window._vincularFiltrar = function(i, termo){
+    const drop = document.getElementById(`vdrop-${i}`);
+    if(!drop) return;
+    const funcsAll = window._funcsVinculo || [];
+    const t = norm(termo);
+    const matches = t.length < 1
+      ? funcsAll.slice(0, 30)
+      : funcsAll.filter(f =>
+          norm(f.nome).includes(t) ||
+          norm(f.nome_completo||'').includes(t)
+        ).slice(0, 40);
+
+    if(!matches.length){
+      drop.style.display = 'none';
+      return;
+    }
+    drop.innerHTML = matches.map(f => `
+      <div onclick="window._vincularSelecionar(${i}, ${JSON.stringify(JSON.stringify(f))})"
+        style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f3f5;transition:background .1s"
+        onmouseover="this.style.background='rgba(0,105,55,.07)'"
+        onmouseout="this.style.background=''"
+      >
+        <div style="font-weight:700;font-size:13px;color:#1a2332">${esc(f.nome)}</div>
+        <div style="font-size:11px;color:#6c757d;margin-top:1px">
+          ${esc(f.nome_completo||'')}${f.funcao ? ' · '+esc(f.funcao) : ''}
+        </div>
+      </div>
+    `).join('');
+    drop.style.display = 'block';
+  };
+
+  window._vincularSelecionar = function(i, jsonStr){
+    const f = JSON.parse(jsonStr);
+    window._linksVinculo = window._linksVinculo || {};
+    window._linksVinculo[i] = f;
+
+    // Atualiza campo de busca com badge do vinculado
+    const search = document.getElementById(`vsearch-${i}`);
+    const drop   = document.getElementById(`vdrop-${i}`);
+    if(search){
+      search.value = f.nome;
+      search.style.borderColor = '#006937';
+      search.style.background  = '#f0faf4';
+    }
+    if(drop) drop.style.display = 'none';
+
+    // Preenche nome_ponto automaticamente
+    const nomePontoInput = document.querySelector(`input[data-i="${i}"][data-f="nome_ponto"]`);
+    if(nomePontoInput){
+      nomePontoInput.value = f.nome_completo || f.nome;
+      nomePontoInput.style.borderColor = '#006937';
+      nomePontoInput.style.background  = '#f0faf4';
+      nomePontoInput.title = 'Preenchido automaticamente pelo vínculo';
+    }
+
+    // Preenche telefone se disponível e campo estiver vazio
+    const telInput = document.querySelector(`input[data-i="${i}"][data-f="telefone"]`);
+    if(telInput && !telInput.value && f.contato_corp) telInput.value = f.contato_corp;
+  };
+
+  // ── Salvar ──────────────────────────────────────────────────
+  document.getElementById('btn-salvar-faltantes').onclick = () => {
     let salvos = 0;
-    arr.forEach((a,i) => {
+    arr.forEach((a, i) => {
       const nomePonto = (document.querySelector(`input[data-i="${i}"][data-f="nome_ponto"]`)?.value||'').trim();
       const tel       = (document.querySelector(`input[data-i="${i}"][data-f="telefone"]`)?.value||'').trim();
-      const telCorp   = (document.querySelector(`input[data-i="${i}"][data-f="tel_corp"]`)?.value||'').trim();
       const obs       = (document.querySelector(`input[data-i="${i}"][data-f="obs"]`)?.value||'').trim();
       if(!nomePonto) return;
-      const type = a.tipo === 'MOTORISTA' ? 'motoristas' : 'auxiliares';
+
+      const linked = window._linksVinculo?.[i];
+      const type   = a.tipo === 'MOTORISTA' ? 'motoristas' : 'auxiliares';
       if(!cadData[type]) cadData[type] = {};
       const pk = a.shortname.trim().toUpperCase();
+
       cadData[type][pk] = {
-        nome_escala: a.shortname.trim().toUpperCase(),
-        nome_ponto: nomePonto,
-        funcao: a.tipo === 'MOTORISTA' ? 'MOTORISTA' : 'AUXILIAR',
-        telefone: tel,
-        tel_corp: telCorp,
-        cpf: cadData[type][pk]?.cpf || '',
-        obs: obs
+        nome_escala: pk,
+        nome_ponto:  nomePonto,
+        funcao:      linked?.funcao || (a.tipo === 'MOTORISTA' ? 'MOTORISTA' : 'AUXILIAR'),
+        telefone:    tel || linked?.contato_corp || '',
+        tel_corp:    linked?.contato_corp || '',
+        cpf:         linked?.cpf || cadData[type][pk]?.cpf || '',
+        obs:         obs
       };
+
       cadSave(type, pk, false);
       if(tel){
-        dbSavePhone(nomePonto, tel, obs||a.tipo).catch(()=>{});
-        dbSavePhone(a.shortname, tel, obs||a.tipo).catch(()=>{});
+        dbSavePhone(nomePonto, tel, obs || a.tipo).catch(()=>{});
+        dbSavePhone(a.shortname, tel, obs || a.tipo).catch(()=>{});
       }
       salvos++;
     });
+
     if(salvos){
-      alert(`✓ ${salvos} cadastro(s) salvo(s). Reprocesse o Passo 3 para refletir.`);
+      alert(`✓ ${salvos} vínculo(s) salvo(s). Reprocesse o Passo 3 para refletir.`);
       overlay.remove();
       try{ renderCadTable('motoristas'); renderCadTable('auxiliares'); }catch(e){}
       try{ refreshCadDbBanner(); }catch(e){}
       try{ cloudTestConnection(); }catch(e){}
     } else {
-      alert('Preencha pelo menos o nome completo de um cadastro.');
+      alert('Vincule ou preencha o Nome Completo de pelo menos um cadastro.');
     }
   };
 }
