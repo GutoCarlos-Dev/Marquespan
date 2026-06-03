@@ -56,9 +56,7 @@ async function abrirModal(item = null) {
   document.getElementById('mobileAnexos').value = '';
 
   ocorrenciaEditandoId = item?.id || null;
-  document.querySelector('#modalOcorrenciaMobile .panel-header h3').innerHTML = ocorrenciaEditandoId
-    ? '<i class="fas fa-pen"></i> Editar Ocorrencia'
-    : '<i class="fas fa-clipboard-check"></i> Nova Ocorrencia';
+  atualizarTituloModalOcorrenciaMobile();
 
   document.getElementById('mobileData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
   document.getElementById('mobileHorario').value = item?.hora_ocorrencia || '';
@@ -77,6 +75,15 @@ async function abrirModal(item = null) {
 
   document.getElementById('modalOcorrenciaMobile').classList.remove('hidden');
   if (ocorrenciaEditandoId) await carregarAnexosExistentes(ocorrenciaEditandoId);
+}
+
+function atualizarTituloModalOcorrenciaMobile() {
+  const titulo = document.querySelector('#modalOcorrenciaMobile .panel-header h3');
+  if (!titulo) return;
+
+  titulo.innerHTML = ocorrenciaEditandoId
+    ? '<i class="fas fa-pen"></i> Editar Ocorr\u00eancia'
+    : '<i class="fas fa-clipboard-check"></i> Incluir Ocorr\u00eancia';
 }
 
 function fecharModal() {

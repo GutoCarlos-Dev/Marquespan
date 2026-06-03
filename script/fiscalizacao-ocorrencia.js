@@ -200,6 +200,18 @@ function aplicarRestricoesNivelOcorrencia() {
   });
 }
 
+function atualizarTituloModalOcorrencia() {
+  const titulo = document.querySelector('#modalOcorrencia .modal-header h3');
+  if (!titulo) return;
+
+  if (visualizandoOcorrencia) {
+    titulo.textContent = 'Visualizar Ocorr\u00eancia';
+    return;
+  }
+
+  titulo.textContent = ocorrenciaEditandoId ? 'Editar Ocorr\u00eancia' : 'Incluir Ocorr\u00eancia';
+}
+
 async function abrirModal(item = null, modo = 'editar') {
   if (item && usuarioRestritoPorFilial() && normalizarFilial(item.filial) !== getFilialUsuario()) {
     alert('Esta ocorrencia pertence a outra filial e nao pode ser acessada por este usuario.');
@@ -213,10 +225,8 @@ async function abrirModal(item = null, modo = 'editar') {
   visualizandoOcorrencia = modo === 'visualizar' || usuarioSomenteLeitura();
   document.getElementById('ocorrenciaAnexos').value = '';
   ocorrenciaEditandoId = item?.id || null;
-  document.querySelector('#modalOcorrencia .modal-header h3').textContent = visualizandoOcorrencia
-    ? 'Visualizar Ocorrencia'
-    : (ocorrenciaEditandoId ? 'Editar Ocorrencia' : 'Ocorrencia');
-  document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alteracoes' : 'Salvar';
+  document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alterações' : 'Salvar';
+  atualizarTituloModalOcorrencia();
   atualizarBotaoCompartilharModal();
   document.getElementById('ocorrenciaData').value = item?.data_ocorrencia || new Date().toISOString().split('T')[0];
   document.getElementById('ocorrenciaHorario').value = item?.hora_ocorrencia || '';
@@ -357,7 +367,7 @@ async function salvarOcorrencia(event) {
 
     ocorrenciaEditandoId = idOcorrencia;
     visualizandoOcorrencia = false;
-    document.querySelector('#modalOcorrencia .modal-header h3').textContent = 'Editar Ocorrencia';
+    atualizarTituloModalOcorrencia();
     document.getElementById('btnSalvarOcorrencia').textContent = 'Salvar Alteracoes';
     atualizarBotaoCompartilharModal();
     await carregarAnexosExistentes(idOcorrencia);

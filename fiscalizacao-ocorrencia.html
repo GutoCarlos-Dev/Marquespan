@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fiscalização - Lançar Ocorrência</title>
+  <title>Fiscalização - Ocorrências</title>
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/buscar-manutencao.css" />
   <link rel="stylesheet" href="css/fiscalizacao-ocorrencia.css" />
@@ -18,7 +18,7 @@
 
   <main class="main-content">
     <header class="header glass-header fiscalizacao-header">
-      <h1><i class="fas fa-clipboard-check"></i> Fiscalização - Lançar Ocorrência</h1>
+      <h1><i class="fas fa-clipboard-check"></i> Fiscalização - Ocorrências</h1>
       <button type="button" onclick="window.location.href='fiscalizacao-ocorrencia-mobile.html'" class="btn-glass btn-blue">
         <i class="fas fa-mobile-alt"></i> MODO APP
       </button>
@@ -58,7 +58,7 @@
       </section>
 
       <section class="glass-panel acoes-panel">
-        <h3><i class="fas fa-cogs"></i> Acoes</h3>
+        <h3><i class="fas fa-cogs"></i> Ações</h3>
         <div class="acoes-grid">
           <button type="button" id="btnIncluirOcorrencia" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Incluir</button>
           <button type="button" id="btnBuscarOcorrencias" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
@@ -70,7 +70,7 @@
 
     <section class="glass-panel">
       <div class="resumo-header">
-        <h3><i class="fas fa-list"></i> Lancamentos</h3>
+        <h3><i class="fas fa-list"></i> Lançamentos</h3>
         <div class="resumo-valores">
           <input type="text" id="filtroLocal" placeholder="Filtrar na grade..." class="glass-input">
           <strong>Registros:</strong> <span id="totalRegistros">0</span>
@@ -104,7 +104,7 @@
   <div id="modalOcorrencia" class="modal-overlay hidden">
     <div class="modal-content fiscalizacao-modal">
       <div class="modal-header">
-        <h3>Ocorrência</h3>
+        <h3>Incluir Ocorr&ecirc;ncia</h3>
         <button type="button" id="btnFecharModal" class="close-button">&times;</button>
       </div>
       <form id="formOcorrencia">
@@ -143,7 +143,7 @@
                 <input type="text" id="ocorrenciaAuxiliar" list="listaAuxiliares" class="glass-input">
               </div>
               <div class="form-group form-group-full">
-                <label for="ocorrenciaLocal">Local da Ocorrencia</label>
+                <label for="ocorrenciaLocal">Local da Ocorrência</label>
                 <input type="text" id="ocorrenciaLocal" class="glass-input">
               </div>
             </div>
