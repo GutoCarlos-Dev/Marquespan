@@ -59,12 +59,24 @@ function bindEvents() {
 
 async function carregarListas() {
   try {
+    const filialUsuario = getFilialUsuario();
+    const filtrarPorFilial = usuarioRestritoPorFilial();
+    let veiculosQuery = supabaseClient.from('veiculos').select('placa, filial').eq('situacao', 'ativo').order('placa');
+    let rotasQuery = supabaseClient.from('rotas').select('numero, filial').order('numero', { ascending: true });
+    let filiaisQuery = supabaseClient.from('filiais').select('nome, sigla').order('nome');
+
+    if (filtrarPorFilial) {
+      veiculosQuery = veiculosQuery.eq('filial', filialUsuario);
+      rotasQuery = rotasQuery.eq('filial', filialUsuario);
+      filiaisQuery = filiaisQuery.or(`sigla.eq.${filialUsuario},nome.eq.${filialUsuario}`);
+    }
+
     const [veiculosRes, motoristasRes, auxiliaresRes, rotasRes, filiaisRes] = await Promise.all([
-      supabaseClient.from('veiculos').select('placa, filial').eq('situacao', 'ativo').order('placa'),
+      veiculosQuery,
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Motorista%').order('nome'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Auxiliar%').order('nome'),
-      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true }),
-      supabaseClient.from('filiais').select('nome, sigla').order('nome')
+      rotasQuery,
+      filiaisQuery
     ]);
 
     veiculosPorPlaca = new Map((veiculosRes.data || []).map(v => [normalizarBusca(v.placa), v]));
@@ -74,6 +86,7 @@ async function carregarListas() {
     preencherDatalist('listaRotas', rotasRes.data?.map(r => r.numero));
     preencherSelectFiliais('filtroFilial', filiaisRes.data, 'Todas');
     preencherSelectFiliais('ocorrenciaFilial', filiaisRes.data, 'Selecione a filial');
+    configurarCamposFilialUsuario();
   } catch (error) {
     console.error('Erro ao carregar listas:', error);
   }
@@ -91,6 +104,20 @@ function preencherSelectFiliais(id, filiais = [], textoInicial = 'Todas') {
   select.value = valorAtual;
 }
 
+function configurarCamposFilialUsuario() {
+  if (!usuarioRestritoPorFilial()) return;
+  const filialUsuario = getFilialUsuario();
+
+  ['filtroFilial', 'ocorrenciaFilial'].forEach(id => {
+    definirValorSelect(id, filialUsuario);
+    const select = document.getElementById(id);
+    if (select) {
+      select.disabled = true;
+      select.title = 'Filial definida pelo usuario logado.';
+    }
+  });
+}
+
 function preencherDatalist(id, valores = []) {
   const datalist = document.getElementById(id);
   datalist.innerHTML = '';
@@ -105,6 +132,22 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
+function getUsuarioAtual() {
+  return JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+}
+
+function normalizarFilial(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function getFilialUsuario() {
+  return normalizarFilial(getUsuarioAtual().filial);
+}
+
+function usuarioRestritoPorFilial() {
+  return Boolean(getFilialUsuario());
+}
+
 function normalizarBusca(value) {
   return String(value || '').trim().toUpperCase();
 }
@@ -112,6 +155,15 @@ function normalizarBusca(value) {
 function preencherFilialPorPlaca() {
   const placa = normalizarBusca(document.getElementById('ocorrenciaPlaca').value);
   const veiculo = veiculosPorPlaca.get(placa);
+  const filialUsuario = getFilialUsuario();
+  if (usuarioRestritoPorFilial()) {
+    if (veiculo?.filial && normalizarFilial(veiculo.filial) !== filialUsuario) {
+      alert('Esta placa pertence a outra filial e nao pode ser lancada por este usuario.');
+      document.getElementById('ocorrenciaPlaca').value = '';
+    }
+    definirValorSelect('ocorrenciaFilial', filialUsuario);
+    return;
+  }
   if (veiculo?.filial) definirValorSelect('ocorrenciaFilial', veiculo.filial);
 }
 
@@ -129,7 +181,7 @@ function definirValorSelect(id, valor) {
 }
 
 function getNivelUsuario() {
-  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+  const usuario = getUsuarioAtual();
   return String(usuario.nivel || '').toLowerCase();
 }
 
@@ -149,6 +201,11 @@ function aplicarRestricoesNivelOcorrencia() {
 }
 
 async function abrirModal(item = null, modo = 'editar') {
+  if (item && usuarioRestritoPorFilial() && normalizarFilial(item.filial) !== getFilialUsuario()) {
+    alert('Esta ocorrencia pertence a outra filial e nao pode ser acessada por este usuario.');
+    return;
+  }
+
   document.getElementById('formOcorrencia').reset();
   anexosNovos = [];
   anexosExistentes = [];
@@ -170,6 +227,7 @@ async function abrirModal(item = null, modo = 'editar') {
   document.getElementById('ocorrenciaAuxiliar').value = item?.auxiliar || '';
   document.getElementById('ocorrenciaLocal').value = item?.local_ocorrencia || '';
   document.getElementById('ocorrenciaRelatorio').value = item?.relatorio || '';
+  if (usuarioRestritoPorFilial()) definirValorSelect('ocorrenciaFilial', getFilialUsuario());
   preencherEnvolvimento(item?.envolvimento);
   atualizarGruposEnvolvimento();
   renderizarAnexos();
@@ -248,7 +306,8 @@ async function salvarOcorrencia(event) {
   btn.textContent = 'Salvando...';
 
   try {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+    const usuario = getUsuarioAtual();
+    const filialUsuario = getFilialUsuario();
     const estavaEditando = Boolean(ocorrenciaEditandoId);
     const payload = {
       data_ocorrencia: document.getElementById('ocorrenciaData').value,
@@ -263,6 +322,14 @@ async function salvarOcorrencia(event) {
       relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
     };
 
+    if (usuarioRestritoPorFilial()) {
+      payload.filial = filialUsuario;
+    }
+
+    if (!payload.filial) {
+      throw new Error('Filial obrigatoria para lancar ocorrencia.');
+    }
+
     if (!estavaEditando) {
       payload.usuario_id = usuario.id || null;
       payload.usuario_nome = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
@@ -276,7 +343,9 @@ async function salvarOcorrencia(event) {
     let idOcorrencia = ocorrenciaEditandoId;
 
     if (estavaEditando) {
-      const { error } = await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
+      let query = supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
+      if (usuarioRestritoPorFilial()) query = query.eq('filial', filialUsuario);
+      const { error } = await query;
       if (error) throw error;
     } else {
       const { data, error } = await supabaseClient.from('fiscalizacao_ocorrencias').insert([payload]).select('id').single();
@@ -312,10 +381,13 @@ async function excluirOcorrencia(item) {
   if (!confirmar) return;
 
   try {
-    const { error } = await supabaseClient
+    let query = supabaseClient
       .from('fiscalizacao_ocorrencias')
       .delete()
       .eq('id', item.id);
+    if (usuarioRestritoPorFilial()) query = query.eq('filial', getFilialUsuario());
+
+    const { error } = await query;
 
     if (error) throw error;
 
@@ -338,7 +410,7 @@ async function buscarOcorrencias() {
     const placa = document.getElementById('filtroPlaca').value.trim().toUpperCase();
     const motorista = document.getElementById('filtroMotorista').value.trim();
     const rota = document.getElementById('filtroRota').value.trim();
-    const filial = document.getElementById('filtroFilial').value;
+    const filial = usuarioRestritoPorFilial() ? getFilialUsuario() : document.getElementById('filtroFilial').value;
 
     let query = supabaseClient.from('fiscalizacao_ocorrencias').select('*');
     if (dataDe) query = query.gte('data_ocorrencia', dataDe);

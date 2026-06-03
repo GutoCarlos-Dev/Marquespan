@@ -6,6 +6,7 @@ const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
 let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
+let veiculosPorPlaca = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date().toISOString().split('T')[0];
@@ -28,6 +29,7 @@ function bindEvents() {
   document.getElementById('mobileFiltroDataDe').addEventListener('change', carregarOcorrencias);
   document.getElementById('mobileFiltroDataAte').addEventListener('change', carregarOcorrencias);
   document.getElementById('mobileBusca').addEventListener('input', renderCards);
+  document.getElementById('mobilePlaca').addEventListener('change', validarPlacaFilial);
   document.getElementById('mobileAnexos').addEventListener('change', handleAnexosChange);
   document.getElementById('listaAnexosMobile').addEventListener('click', handleAnexoClick);
   ['mobileEnvolveVeiculoEmpresa', 'mobileEnvolveVeiculoTerceiro', 'mobileEnvolveOutroPatrimonio'].forEach(id => {
@@ -42,6 +44,11 @@ function bindEvents() {
 }
 
 async function abrirModal(item = null) {
+  if (item && usuarioRestritoPorFilial() && normalizarFilial(item.filial) !== getFilialUsuario()) {
+    alert('Esta ocorrencia pertence a outra filial e nao pode ser acessada por este usuario.');
+    return;
+  }
+
   document.getElementById('formOcorrenciaMobile').reset();
   anexosNovos = [];
   anexosExistentes = [];
@@ -79,13 +86,24 @@ function fecharModal() {
 
 async function carregarListas() {
   try {
+    const filialUsuario = getFilialUsuario();
+    const filtrarPorFilial = usuarioRestritoPorFilial();
+    let veiculosQuery = supabaseClient.from('veiculos').select('placa, filial').eq('situacao', 'ativo').order('placa');
+    let rotasQuery = supabaseClient.from('rotas').select('numero, filial').order('numero', { ascending: true });
+
+    if (filtrarPorFilial) {
+      veiculosQuery = veiculosQuery.eq('filial', filialUsuario);
+      rotasQuery = rotasQuery.eq('filial', filialUsuario);
+    }
+
     const [veiculosRes, motoristasRes, auxiliaresRes, rotasRes] = await Promise.all([
-      supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa'),
+      veiculosQuery,
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Motorista%').order('nome'),
       supabaseClient.from('funcionario').select('nome, nome_completo').ilike('funcao', '%Auxiliar%').order('nome'),
-      supabaseClient.from('rotas').select('numero').order('numero', { ascending: true })
+      rotasQuery
     ]);
 
+    veiculosPorPlaca = new Map((veiculosRes.data || []).map(v => [normalizarBusca(v.placa), v]));
     preencherDatalist('listaPlacasMobile', veiculosRes.data?.map(v => v.placa));
     preencherDatalist('listaMotoristasMobile', motoristasRes.data?.map(nomeFuncionario));
     preencherDatalist('listaAuxiliaresMobile', auxiliaresRes.data?.map(nomeFuncionario));
@@ -109,6 +127,36 @@ function nomeFuncionario(funcionario) {
   return funcionario?.nome_completo || funcionario?.nome || '';
 }
 
+function getUsuarioAtual() {
+  return JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+}
+
+function normalizarFilial(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function getFilialUsuario() {
+  return normalizarFilial(getUsuarioAtual().filial);
+}
+
+function usuarioRestritoPorFilial() {
+  return Boolean(getFilialUsuario());
+}
+
+function normalizarBusca(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function validarPlacaFilial() {
+  if (!usuarioRestritoPorFilial()) return;
+  const placaInput = document.getElementById('mobilePlaca');
+  const veiculo = veiculosPorPlaca.get(normalizarBusca(placaInput.value));
+  if (veiculo?.filial && normalizarFilial(veiculo.filial) !== getFilialUsuario()) {
+    alert('Esta placa pertence a outra filial e nao pode ser lancada por este usuario.');
+    placaInput.value = '';
+  }
+}
+
 async function salvarOcorrencia(event) {
   event.preventDefault();
   const btn = document.getElementById('btnSalvarMobile');
@@ -117,13 +165,17 @@ async function salvarOcorrencia(event) {
   let estavaEditando = Boolean(ocorrenciaEditandoId);
 
   try {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+    const usuario = getUsuarioAtual();
     const nomeUsuario = usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema';
+    const filialUsuario = getFilialUsuario();
+    const placa = document.getElementById('mobilePlaca').value.trim().toUpperCase();
+    const filialDaPlaca = normalizarFilial(veiculosPorPlaca.get(normalizarBusca(placa))?.filial);
     const payload = {
       data_ocorrencia: document.getElementById('mobileData').value,
       hora_ocorrencia: document.getElementById('mobileHorario').value || null,
+      filial: filialUsuario || filialDaPlaca || null,
       rota: document.getElementById('mobileRota').value.trim(),
-      placa: document.getElementById('mobilePlaca').value.trim().toUpperCase(),
+      placa,
       motorista: document.getElementById('mobileMotorista').value.trim(),
       auxiliar: document.getElementById('mobileAuxiliar').value.trim() || null,
       local_ocorrencia: document.getElementById('mobileLocalOcorrencia').value.trim() || null,
@@ -131,11 +183,21 @@ async function salvarOcorrencia(event) {
       relatorio: document.getElementById('mobileRelatorio').value.trim()
     };
 
+    if (usuarioRestritoPorFilial()) {
+      payload.filial = filialUsuario;
+    }
+
+    if (!payload.filial) {
+      throw new Error('Filial obrigatoria para lancar ocorrencia.');
+    }
+
     let idOcorrencia = ocorrenciaEditandoId;
     if (estavaEditando) {
       payload.usuario_edicao_id = usuario.id || null;
       payload.usuario_edicao_nome = nomeUsuario;
-      const { error } = await supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
+      let query = supabaseClient.from('fiscalizacao_ocorrencias').update(payload).eq('id', ocorrenciaEditandoId);
+      if (usuarioRestritoPorFilial()) query = query.eq('filial', filialUsuario);
+      const { error } = await query;
       if (error) throw error;
     } else {
       payload.usuario_id = usuario.id || null;
@@ -181,6 +243,7 @@ async function carregarOcorrencias() {
 
     if (dataDe) query = query.gte('data_ocorrencia', dataDe);
     if (dataAte) query = query.lte('data_ocorrencia', dataAte);
+    if (usuarioRestritoPorFilial()) query = query.eq('filial', getFilialUsuario());
 
     const { data: rows, error } = await query;
     if (error) throw error;
@@ -203,6 +266,7 @@ function renderCards() {
     item.usuario_inclusao_nome,
     item.usuario_edicao_nome,
     item.rota,
+    item.filial,
     item.placa,
     item.motorista,
     item.auxiliar,
@@ -226,6 +290,7 @@ function renderCards() {
       </div>
       <div class="card-info">
         <span><i class="fas fa-route"></i><strong>Rota:</strong> ${escapeHtml(item.rota || '-')}</span>
+        <span><i class="fas fa-building"></i><strong>Filial:</strong> ${escapeHtml(item.filial || '-')}</span>
         <span><i class="fas fa-clock"></i><strong>Horario:</strong> ${escapeHtml(item.hora_ocorrencia || '-')}</span>
         <span><i class="fas fa-user-tie"></i><strong>Motorista:</strong> ${escapeHtml(item.motorista || '-')}</span>
         <span><i class="fas fa-user"></i><strong>Auxiliar:</strong> ${escapeHtml(item.auxiliar || '-')}</span>
