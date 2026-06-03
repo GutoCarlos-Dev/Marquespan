@@ -502,6 +502,13 @@ function goPage(id){
   document.getElementById('top-title').textContent=PAGES[id]||id;
   if(id==='historico'){renderHistorico();renderPhonesTable();}
   if(id==='relatorios'){updateRelStats();}
+  if(id==='step3'){
+    // Auto-carrega semanas na primeira visita ao passo 3
+    const sel = document.getElementById('sel-semana-escala');
+    if(sel && (sel.options.length <= 1 || sel.options[0].value === '')) {
+      inicializarSemanasEscala();
+    }
+  }
   if(id==='cadastros'){
     cadCurrentType='motoristas';
     cadLoadAll();
@@ -1430,7 +1437,7 @@ function usarS2NoPasso3(){
   wb_ctrl2 = XLSX.read(s2Bin, {type:'array', cellFormula:true});
   setUZ('dz-ctrl2', '✓ Recebido do Passo 2 (em memória)', `${wb_ctrl2.SheetNames.length} abas`, true);
   goPage('step3');
-  if(wb_ctrl2 && (rotList.length || wb_rot)) buildS3Mapping();
+  if(wb_ctrl2 && (rotList.length || wb_rot || window._s3EscalaSupabase)) buildS3Mapping();
   setTimeout(()=>{
     const el = document.getElementById('s3-chain-info');
     if(el){ el.style.display=''; el.textContent='✓ Controle recebido do Passo 2 automaticamente. Agora carregue o(s) Roteiro(s) SP.'; setTimeout(()=>el.style.display='none', 9000); }
@@ -1444,7 +1451,7 @@ function handleCtrl2File(file){
   file.arrayBuffer().then(buf=>{
     wb_ctrl2=XLSX.read(buf,{type:'array',cellFormula:true});
     setUZ('dz-ctrl2',file.name,`${wb_ctrl2.SheetNames.length} abas`,true);
-    if(wb_ctrl2&&(rotList.length||wb_rot))buildS3Mapping();
+    if(wb_ctrl2&&(rotList.length||wb_rot||window._s3EscalaSupabase))buildS3Mapping();
   });
 }
 // ── ROTEIROS: array de {wb, filename, semana, dateRange} ──────
@@ -1538,7 +1545,7 @@ function finishRotLoad(){
         <button onclick="removeRoteiro(${i})" style="padding:3px 8px;border-radius:6px;border:1px solid var(--red-b);background:var(--red-l);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">✕</button>
       </div>`).join('');
   }
-  if(wb_ctrl2&&rotList.length)buildS3Mapping();
+  if(wb_ctrl2&&(rotList.length||window._s3EscalaSupabase))buildS3Mapping();
 }
 
 function removeRoteiro(idx){
@@ -1618,34 +1625,35 @@ function buildS3Mapping(){
     // Find which roteiro covers this date
     const rotWb=rotList.length?findWbForDate(dt):null;
     const rotSheets=new Set((rotWb?.SheetNames||[]).map(s=>s.trim().toUpperCase()));
-    const inRot=rotList.length>0&&rotSheets.has(dayName);
+    const inRot =rotList.length>0&&rotSheets.has(dayName);
+    const inSupa=!!(window._s3EscalaSupabase?.[dayName]?.length);
     const inCtrl=ctrlEscalas.has(dayName);
-    const src=inRot?'rot':inCtrl?'ctrl':'none';
+    const src=inRot?'rot':inSupa?'supa':inCtrl?'ctrl':'none';
     // Find which semana covers this date
     const semEntry=rotList.find(r=>{
-      // Use refDateMap for exact match
       if(r.refDateMap&&r.refDateMap[dayName]){
         const refDt=r.refDateMap[dayName];
         return refDt.getFullYear()===dt.getFullYear()&&refDt.getMonth()===dt.getMonth()&&refDt.getDate()===dt.getDate();
       }
-      // Fallback: dateRange
       if(r.dateRange){
         const endPlus=new Date(r.dateRange.end.getTime()+86400000);
         return dt>=r.dateRange.start&&dt<=endPlus;
       }
       return false;
     });
-    items.push({ds,d,mo,y,dt,dayName,src,resumo:'RESUMO '+dayName,rotWb,semLabel:semEntry?`S${semEntry.semana||'?'}`:''});
+    const semLabel=inSupa?(window._s3SemanaNome||'Escala SP'):semEntry?`S${semEntry.semana||'?'}`:'';
+    items.push({ds,d,mo,y,dt,dayName,src,resumo:'RESUMO '+dayName,rotWb,semLabel});
   }
 
   const ok=items.filter(m=>m.src!=='none').length;
-  const sem=items.filter(m=>m.src==='rot').length;
+  const semRot=items.filter(m=>m.src==='rot').length;
+  const semSupa=items.filter(m=>m.src==='supa').length;
   const cont=document.getElementById('s3-map-rows');
 
   // Group by week for display
   const weekGroups={};
   items.forEach(m=>{
-    const wk=m.semLabel||'sem roteiro';
+    const wk=m.semLabel||'sem escala';
     if(!weekGroups[wk])weekGroups[wk]=[];
     weekGroups[wk].push(m);
   });
@@ -1654,7 +1662,8 @@ function buildS3Mapping(){
   // Summary
   html+=`<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
     <div style="padding:8px 14px;border-radius:var(--r);background:var(--green-l);border:1px solid var(--green-b);font-size:12px;font-weight:600;color:var(--green)">${ok} datas mapeadas</div>
-    <div style="padding:8px 14px;border-radius:var(--r);background:var(--blue-l);border:1px solid var(--blue-b);font-size:12px;font-weight:600;color:var(--blue)">${sem} via Roteiro SP</div>
+    ${semSupa?`<div style="padding:8px 14px;border-radius:var(--r);background:#d1fae5;border:1px solid #6ee7b7;font-size:12px;font-weight:600;color:#065f46">${semSupa} via Escala SP (banco)</div>`:''}
+    ${semRot?`<div style="padding:8px 14px;border-radius:var(--r);background:var(--blue-l);border:1px solid var(--blue-b);font-size:12px;font-weight:600;color:var(--blue)">${semRot} via Roteiro SP (xlsx)</div>`:''}
     <div style="padding:8px 14px;border-radius:var(--r);background:${items.filter(m=>m.src==='none').length?'var(--red-l)':'var(--bg4)'};border:1px solid ${items.filter(m=>m.src==='none').length?'var(--red-b)':'var(--border)'};font-size:12px;font-weight:600;color:${items.filter(m=>m.src==='none').length?'var(--red)':'var(--text3)'}">
       ${items.filter(m=>m.src==='none').length} sem escala</div>
   </div>`;
@@ -1665,13 +1674,13 @@ function buildS3Mapping(){
     html+=`<details style="margin-bottom:6px" ${wkItems.length<=7?'open':''}>
       <summary style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${allOk?'var(--green-l)':'var(--orange-l)'};border:1px solid ${allOk?'var(--green-b)':'var(--orange-b)'};border-radius:var(--r);cursor:pointer;list-style:none;font-size:12.5px;font-weight:600;color:${allOk?'var(--green)':'var(--orange)'}">
         <span>${allOk?'✓':'⚠'}</span>
-        <span style="color:var(--text)">${wk!=='sem roteiro'?wk:'Sem roteiro vinculado'}</span>
+        <span style="color:var(--text)">${wk!=='sem escala'?wk:'Sem escala vinculada'}</span>
         <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:400">${wkItems.length} dias</span>
       </summary>
       <div style="padding:6px 6px 0;display:flex;flex-direction:column;gap:3px">
         ${wkItems.map(m=>{
           const okM=m.src!=='none';
-          const srcBadge=m.src==='rot'?'<span class="badge badge-ok" style="font-size:10px">Roteiro SP</span>':m.src==='ctrl'?'<span class="badge badge-blue" style="font-size:10px">Controle</span>':'<span class="badge badge-err" style="font-size:10px">Sem escala</span>';
+          const srcBadge=m.src==='rot'?'<span class="badge badge-ok" style="font-size:10px">Roteiro SP (xlsx)</span>':m.src==='supa'?'<span class="badge badge-brand" style="font-size:10px">Escala SP (banco)</span>':m.src==='ctrl'?'<span class="badge badge-blue" style="font-size:10px">Controle</span>':'<span class="badge badge-err" style="font-size:10px">Sem escala</span>';
           return`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;font-size:12px">
             <span class="mono" style="color:var(--text3);width:60px">${m.ds}</span>
             <span style="color:var(--text3)">→</span>
@@ -1696,9 +1705,9 @@ async function runStep3(){
   document.getElementById('s3-proc-card').style.display='';
   document.getElementById('s3-preview-section').style.display='none';
 
-  // Guard: need at least the roteiro (escala) to generate resumos
-  if(!rotList.length&&!wb_rot){
-    alert('Carregue pelo menos um Roteiro SP (arquivo da escala semanal).');
+  // Guard: precisa de ao menos uma fonte de escala (banco ou xlsx)
+  if(!rotList.length && !wb_rot && !window._s3EscalaSupabase){
+    alert('Selecione uma semana da Escala SP (banco) ou carregue um arquivo Roteiro SP (xlsx).');
     document.getElementById('btn-s3-run').disabled=false;
     return;
   }
@@ -1764,7 +1773,8 @@ async function runStep3(){
     await sleep(50);
 
     const dateData=wb_ctrl2?getDateData(wb_ctrl2,m.ds):getDateData(null,m.ds);
-    const rotWbToUse=m.src==='rot'?(m.rotWb||wb_rot||rotList[0]?.wb):wb_ctrl2;
+    // supa → getEscala usa cache interno; rot → xlsx; ctrl/none → ctrl2
+    const rotWbToUse=m.src==='rot'?(m.rotWb||wb_rot||rotList[0]?.wb):m.src==='supa'?null:wb_ctrl2;
     const escala=getEscala(rotWbToUse,m.dayName);
     tlog('s3-term','ok',`  ✓ Horários: ${Object.keys(dateData).length} · Escala: ${escala.length} veículos`);
 
@@ -2177,6 +2187,116 @@ async function loadFuncionariosSupabase(){
   }
 }
 
+// ── Escala SP via Supabase ──────────────────────────────────────
+
+// Carrega semanas disponíveis na tabela escala e preenche o select
+async function inicializarSemanasEscala(){
+  const sel = document.getElementById('sel-semana-escala');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Carregando semanas...</option>';
+  try {
+    const resp = await sbFetch(
+      '/rest/v1/escala?select=semana_nome&semana_nome=not.eq.SEMANA PADRÃO - MODELO&order=semana_nome.desc&limit=500'
+    );
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = await resp.json();
+    const semanas = [...new Set(rows.map(r => r.semana_nome).filter(Boolean))];
+    // Ordena: "SEMANA 53 - 2026" desc, mais recentes primeiro
+    semanas.sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+      const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+      const yrA  = parseInt(a.match(/\d{4}/)?.[0] || 0);
+      const yrB  = parseInt(b.match(/\d{4}/)?.[0] || 0);
+      return yrB !== yrA ? yrB - yrA : numB - numA;
+    });
+    if(!semanas.length){
+      sel.innerHTML = '<option value="">Nenhuma semana encontrada</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Selecione a semana...</option>' +
+      semanas.map(s => `<option value="${s}">${s}</option>`).join('');
+    // Seleciona a primeira (mais recente) automaticamente
+    sel.value = semanas[0];
+    document.getElementById('btn-usar-semana').disabled = false;
+    document.getElementById('btn-usar-semana').style.opacity = '1';
+  } catch(e) {
+    sel.innerHTML = '<option value="">Erro ao carregar — tente novamente</option>';
+    console.warn('[inicializarSemanasEscala]', e);
+  }
+}
+
+// Carrega as linhas da escala para a semana selecionada e monta o cache _s3EscalaSupabase
+async function confirmarEscalaSupabase(){
+  const sel        = document.getElementById('sel-semana-escala');
+  const semanaNome = sel?.value;
+  if(!semanaNome){ alert('Selecione uma semana.'); return; }
+
+  const statusEl = document.getElementById('escala-sp-status');
+  const btnUsar  = document.getElementById('btn-usar-semana');
+  if(statusEl){ statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8'; statusEl.innerHTML='⏳ Carregando escala...'; }
+  if(btnUsar)  btnUsar.disabled = true;
+
+  try {
+    const resp = await sbFetch(
+      `/rest/v1/escala?select=data_escala,placa,rota,motorista,auxiliar,status,tipo_escala&semana_nome=eq.${encodeURIComponent(semanaNome)}&order=data_escala.asc,placa.asc&limit=2000`
+    );
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = await resp.json();
+
+    if(!rows.length){
+      if(statusEl){ statusEl.style.background='#fef3c7'; statusEl.style.color='#92400e'; statusEl.innerHTML='⚠ Nenhum dado encontrado para esta semana.'; }
+      if(btnUsar){ btnUsar.disabled=false; btnUsar.style.opacity='1'; }
+      return;
+    }
+
+    // Mapa JS de dia da semana (getDay()) → nome da aba
+    const DOW_DIAS = ['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO'];
+    const cache = {};
+    for(const row of rows){
+      if(!row.placa || !row.data_escala) continue;
+      // Usar horário meio-dia para evitar problemas de timezone
+      const dt      = new Date(row.data_escala + 'T12:00:00');
+      const dayName = DOW_DIAS[dt.getDay()];
+      if(!dayName || dayName === 'DOMINGO') continue;
+      if(!cache[dayName]) cache[dayName] = [];
+      const rotaRaw = row.rota;
+      cache[dayName].push({
+        placa: String(row.placa  || '').trim().toUpperCase(),
+        mot:   String(row.motorista || '').trim(),
+        aux:   String(row.auxiliar  || '').trim(),
+        rota:  rotaRaw !== null && rotaRaw !== undefined && rotaRaw !== ''
+               ? (isNaN(Number(rotaRaw)) ? String(rotaRaw).trim() : Number(rotaRaw))
+               : null,
+        stat:  String(row.status || '').trim()
+      });
+    }
+
+    window._s3EscalaSupabase = cache;
+    window._s3SemanaNome     = semanaNome;
+    // Limpa roteiros xlsx para evitar conflito
+    rotList = [];
+    wb_rot  = null;
+
+    const totalVeiculos = Object.values(cache).reduce((s, a) => s + a.length, 0);
+    const dias = Object.keys(cache);
+
+    if(statusEl){
+      statusEl.style.background = '#d1fae5';
+      statusEl.style.color      = '#065f46';
+      statusEl.innerHTML = `✓ <strong>${semanaNome}</strong> carregada — ${totalVeiculos} veículo(s) em ${dias.length} dia(s): ${dias.join(', ')}`;
+    }
+    if(btnUsar){ btnUsar.disabled=false; btnUsar.style.opacity='1'; }
+
+    // Dispara remapeamento se o CONTROLE já estiver carregado
+    if(wb_ctrl2) buildS3Mapping();
+
+  } catch(e) {
+    console.error('[confirmarEscalaSupabase]', e);
+    if(statusEl){ statusEl.style.background='#fde8ec'; statusEl.style.color='#9b1c1c'; statusEl.innerHTML='✕ Erro ao carregar escala: ' + e.message; }
+    if(btnUsar){ btnUsar.disabled=false; btnUsar.style.opacity='1'; }
+  }
+}
+
 function getDateData(wb,sheetName){
   const map={};const ws=(wb&&wb.Sheets)?wb.Sheets[sheetName]:null;if(!ws&&typeof s1Rows==='undefined')return map;if(ws){
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
@@ -2218,7 +2338,13 @@ function getDateData(wb,sheetName){
   return map;
 }
 function getEscala(wb,dayName){
+  // ── Fonte prioritária: escala carregada do Supabase ──
+  const supa = window._s3EscalaSupabase;
+  if(supa && supa[dayName] && supa[dayName].length) return supa[dayName];
+
+  // ── Fallback: xlsx ──
   const result=[];
+  if(!wb) return result;
   let ws=wb.Sheets[dayName];
   if(!ws){const found=wb.SheetNames.find(s=>s.trim().toUpperCase()===dayName);if(found)ws=wb.Sheets[found];}
   if(!ws)return result;
