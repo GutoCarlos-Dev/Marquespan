@@ -7,6 +7,7 @@ const DespesasUI = {
         this.sortField = 'data_checkin'; // Campo padrão
         this.sortAsc = false; // Ordem padrão (descendente)
         this.editingQuartoId = null;
+        this.usuarioDespesaEditando = '';
         this.bind();
         this.loadInitialData();
     },
@@ -297,9 +298,9 @@ const DespesasUI = {
                 forma_pagamento: this.formaPagamentoSelect.value
             };
 
-            if (!this.editingIdInput.value) {
-                payload.usuario = this.getCurrentUserName();
-            }
+            payload.usuario = this.editingIdInput.value && this.usuarioDespesaEditando
+                ? this.usuarioDespesaEditando
+                : this.getCurrentUserName();
 
             const { error } = await supabaseClient.from('despesas').upsert(payload);
             if (error) throw error;
@@ -331,6 +332,7 @@ const DespesasUI = {
         this.btnClearForm.innerHTML = '<i class="fas fa-eraser"></i> Limpar';
         this.btnSubmit.disabled = false;
         this.valorTotalInput.value = '';
+        this.usuarioDespesaEditando = '';
         this.tipoQuartoSelect.innerHTML = '<option value="">-- Selecione um hotel primeiro --</option>';
         this.tipoQuartoSelect.disabled = true;
         this.btnGerenciarQuartos.disabled = true;
@@ -352,6 +354,7 @@ const DespesasUI = {
             if (error) throw error;
 
             this.editingIdInput.value = despesa.id;
+            this.usuarioDespesaEditando = despesa.usuario || '';
             
             const rotas = (despesa.numero_rota || '').split(',').map(s => s.trim());
             this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => {
