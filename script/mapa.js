@@ -12,6 +12,7 @@ const MapaUI = {
     activeRouteColor: '#3388ff',
     activeRouteOrigin: '',
     activeRouteOriginCoords: null,
+    editingRouteId: null,
     routeLayers: L.layerGroup(), // Camada para marcadores e linhas da rota ativa
     routingControl: null, // Controle de roteamento
     routingLineColor: '#006937',
@@ -48,8 +49,12 @@ const MapaUI = {
         this.inputDestino = document.getElementById('inputDestino');
         this.btnTracarRotaInteligente = document.getElementById('btnTracarRotaInteligente');
         this.btnVisualizarTodasRotas = document.getElementById('btnVisualizarTodasRotas');
+        this.btnSalvarRotaMapa = document.getElementById('btnSalvarRotaMapa');
+        this.btnCancelarEdicaoRota = document.getElementById('btnCancelarEdicaoRota');
         this.rotaCadastradaMapa = document.getElementById('rotaCadastradaMapa');
         this.listaRotasCadastradasMapa = document.getElementById('listaRotasCadastradasMapa');
+        this.nomeNovaRota = document.getElementById('nomeNovaRota');
+        this.corNovaRota = document.getElementById('corNovaRota');
         this.supervisorNovaRota = document.getElementById('supervisorNovaRota');
         this.enderecoNovaRota = document.getElementById('enderecoNovaRota');
         this.cidadesNovaRota = document.getElementById('cidadesNovaRota');
@@ -120,8 +125,8 @@ const MapaUI = {
 
     bindEvents() {
         this.formNovaRota.addEventListener('submit', (e) => this.handleNewRoute(e));
-        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('change', () => this.preencherRotaOperacionalSelecionada());
-        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('blur', () => this.preencherRotaOperacionalSelecionada());
+        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('change', () => this.prepararNovaRotaSelecionada());
+        if (this.rotaCadastradaMapa) this.rotaCadastradaMapa.addEventListener('blur', () => this.prepararNovaRotaSelecionada());
         if (this.formNovaParada) this.formNovaParada.addEventListener('submit', (e) => this.handleNewStop(e));
         if (this.btnBuscarCepParada) this.btnBuscarCepParada.addEventListener('click', () => this.buscarCepParada());
         if (this.cepNovaParada) {
@@ -133,6 +138,7 @@ const MapaUI = {
         if (this.btnFecharRota) this.btnFecharRota.addEventListener('click', () => this.closeRouteLoop());
         if (this.btnTracarRotaInteligente) this.btnTracarRotaInteligente.addEventListener('click', () => this.tracarRotaInteligente());
         if (this.btnVisualizarTodasRotas) this.btnVisualizarTodasRotas.addEventListener('click', () => this.visualizarTodasRotas());
+        if (this.btnCancelarEdicaoRota) this.btnCancelarEdicaoRota.addEventListener('click', () => this.limparFormularioNovaRota());
     },
 
     // --- LÓGICA DE ROTAS ---
@@ -201,10 +207,47 @@ const MapaUI = {
         if (!rota) return;
 
         this.nomeNovaRotaValue = `Rota ${rota.numero}`;
-        document.getElementById('nomeNovaRota').value = this.nomeNovaRotaValue;
+        this.nomeNovaRota.value = this.nomeNovaRotaValue;
         this.supervisorNovaRota.value = rota.supervisor || '';
         this.enderecoNovaRota.value = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
         this.cidadesNovaRota.value = rota.cidades || '';
+    },
+
+    prepararNovaRotaSelecionada() {
+        this.editingRouteId = null;
+        this.atualizarModoFormularioRota(false);
+        this.preencherRotaOperacionalSelecionada();
+    },
+
+    preencherFormularioEdicaoRota(rota) {
+        this.editingRouteId = rota.id;
+        const numeroRota = this.extrairNumeroRotaMapa(rota);
+        const rotaOperacional = numeroRota
+            ? this.rotasOperacionais.find(item => String(item.numero || '').trim() === numeroRota)
+            : null;
+
+        this.rotaCadastradaMapa.value = numeroRota || rota.nome_rota || '';
+        this.nomeNovaRota.value = rota.nome_rota || '';
+        this.supervisorNovaRota.value = rota.supervisor || rotaOperacional?.supervisor || '';
+        this.enderecoNovaRota.value = rota.endereco || `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
+        this.cidadesNovaRota.value = rotaOperacional?.cidades || '';
+        this.corNovaRota.value = rota.cor_rgb || '#3388ff';
+        this.atualizarModoFormularioRota(true);
+    },
+
+    extrairNumeroRotaMapa(rota) {
+        const match = String(rota.nome_rota || '').match(/\d+/);
+        return match ? match[0] : '';
+    },
+
+    atualizarModoFormularioRota(editando) {
+        if (this.btnSalvarRotaMapa) {
+            this.btnSalvarRotaMapa.title = editando ? 'Salvar cor da rota' : 'Salvar Rota';
+            this.btnSalvarRotaMapa.innerHTML = editando ? '<i class="fas fa-save"></i>' : '<i class="fas fa-plus"></i>';
+        }
+        if (this.btnCancelarEdicaoRota) {
+            this.btnCancelarEdicaoRota.classList.toggle('hidden', !editando);
+        }
     },
 
     async loadRoutes() {
@@ -277,10 +320,16 @@ const MapaUI = {
 
     async handleNewRoute(e) {
         e.preventDefault();
-        const corInput = document.getElementById('corNovaRota');
+        const corInput = this.corNovaRota || document.getElementById('corNovaRota');
+        const cor = corInput.value;
+
+        if (this.editingRouteId) {
+            await this.atualizarCorRotaEditada(cor);
+            return;
+        }
+
         const rotaOperacional = this.getRotaOperacionalSelecionada();
         const nome = rotaOperacional ? `Rota ${rotaOperacional.numero}` : '';
-        const cor = corInput.value;
         const endereco = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
         const supervisor = rotaOperacional?.supervisor || null;
 
@@ -315,6 +364,26 @@ const MapaUI = {
         }
     },
 
+    async atualizarCorRotaEditada(cor) {
+        try {
+            const { data: rotaAtualizada, error } = await supabaseClient
+                .from('mapa_rotas')
+                .update({ cor_rgb: cor })
+                .eq('id', this.editingRouteId)
+                .select('*')
+                .single();
+
+            if (error) throw error;
+
+            alert('Cor da rota atualizada com sucesso.');
+            await this.loadRoutes();
+            await this.selectRoute(rotaAtualizada);
+        } catch (err) {
+            console.error('Erro ao atualizar cor da rota:', err);
+            alert(err.message || 'Erro ao atualizar cor da rota.');
+        }
+    },
+
     async deleteRoute(routeId, routeName) {
         if (!confirm(`Tem certeza que deseja excluir a rota "${routeName}" e todos os seus pontos?`)) {
             return;
@@ -338,6 +407,10 @@ const MapaUI = {
                 if (this.routingControl) this.routingControl.setWaypoints([]);
                 if (this.rotaInfo) this.rotaInfo.style.display = 'none';
             }
+
+            if (this.editingRouteId === routeId) {
+                this.limparFormularioNovaRota();
+            }
             
             this.loadRoutes();
 
@@ -348,11 +421,14 @@ const MapaUI = {
     },
 
     limparFormularioNovaRota() {
+        this.editingRouteId = null;
         this.rotaCadastradaMapa.value = '';
-        document.getElementById('nomeNovaRota').value = '';
+        this.nomeNovaRota.value = '';
+        this.corNovaRota.value = '#3388ff';
         this.supervisorNovaRota.value = '';
         this.enderecoNovaRota.value = `${MARQUESPAN_ORIGEM.label} - ${MARQUESPAN_ORIGEM.endereco}`;
         this.cidadesNovaRota.value = '';
+        this.atualizarModoFormularioRota(false);
     },
 
     extrairCidadesRota(cidades) {
@@ -449,6 +525,7 @@ const MapaUI = {
         this.activeRouteOrigin = rota.endereco || '';
         this.activeRouteOriginCoords = null;
         this.setRoutingColor(this.activeRouteColor);
+        this.preencherFormularioEdicaoRota(rota);
 
         // Destaca a rota ativa na lista
         document.querySelectorAll('#listaRotas li.route-item').forEach(li => {

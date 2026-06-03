@@ -43,7 +43,8 @@
             <div style="display: flex; gap: 10px; width: 100%;">
                 <input type="text" id="nomeNovaRota" placeholder="Nome da Rota" class="glass-input" style="flex: 1;" readonly required>
                 <input type="color" id="corNovaRota" value="#3388ff" title="Cor da Rota" style="height: 40px; width: 50px; padding: 0; border: none; background: none; cursor: pointer;">
-                <button type="submit" class="btn-glass btn-green compact-btn" title="Salvar Rota" style="width: 50px;"><i class="fas fa-plus"></i></button>
+                <button id="btnSalvarRotaMapa" type="submit" class="btn-glass btn-green compact-btn" title="Salvar Rota" style="width: 50px;"><i class="fas fa-plus"></i></button>
+                <button id="btnCancelarEdicaoRota" type="button" class="btn-glass compact-btn btn-cancel-route-edit hidden" title="Cancelar edição" style="width: 50px;"><i class="fas fa-times"></i></button>
             </div>
             <input type="text" id="enderecoNovaRota" value="Marquespan - CEP 18280-005" class="glass-input" readonly>
             <textarea id="cidadesNovaRota" class="glass-input" rows="2" placeholder="Cidades da rota" readonly></textarea>
