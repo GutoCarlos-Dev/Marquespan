@@ -36,10 +36,16 @@ const MapaUI = {
         this.inputDestino = document.getElementById('inputDestino');
         this.btnTracarRotaInteligente = document.getElementById('btnTracarRotaInteligente');
         this.supervisorNovaRota = document.getElementById('supervisorNovaRota');
+        this.cepNovaRota = document.getElementById('cepNovaRota');
+        this.enderecoNovaRota = document.getElementById('enderecoNovaRota');
+        this.btnBuscarCepRota = document.getElementById('btnBuscarCepRota');
         this.listaSupervisoresMapa = document.getElementById('listaSupervisoresMapa');
         this.formNovaParada = document.getElementById('formNovaParada');
         this.clienteNovaParada = document.getElementById('clienteNovaParada');
+        this.cepNovaParada = document.getElementById('cepNovaParada');
+        this.numeroNovaParada = document.getElementById('numeroNovaParada');
         this.enderecoNovaParada = document.getElementById('enderecoNovaParada');
+        this.btnBuscarCepParada = document.getElementById('btnBuscarCepParada');
         this.observacaoNovaParada = document.getElementById('observacaoNovaParada');
     },
 
@@ -58,9 +64,7 @@ const MapaUI = {
         // Adiciona controle de busca de endereços (Lupa)
         L.Control.geocoder({
             // Trocando para Photon para ter sugestões enquanto digita (autocomplete)
-            geocoder: L.Control.Geocoder.photon({
-                geocodingQueryParams: { lang: 'pt' } // Photon retorna 400 quando recebe countrycodes.
-            }),
+            geocoder: L.Control.Geocoder.nominatim(),
             defaultMarkGeocode: true,
             showResultIcons: false,
             usemapBounds: false,
@@ -73,7 +77,7 @@ const MapaUI = {
         this.routingControl = L.Routing.control({
             waypoints: [], // Inicia vazio
             routeWhileDragging: true,
-            geocoder: L.Control.Geocoder.photon({ geocodingQueryParams: { lang: 'pt' } }), // Autocomplete também na rota
+            geocoder: L.Control.Geocoder.nominatim(),
             showAlternatives: true, // Permite mostrar rotas alternativas
             language: 'pt-BR',
             createMarker: function() { return null; }, // Não cria marcadores padrão (usamos os nossos personalizados)
@@ -102,7 +106,21 @@ const MapaUI = {
 
     bindEvents() {
         this.formNovaRota.addEventListener('submit', (e) => this.handleNewRoute(e));
+        if (this.btnBuscarCepRota) this.btnBuscarCepRota.addEventListener('click', () => this.buscarCepRota());
+        if (this.cepNovaRota) {
+            this.cepNovaRota.addEventListener('input', () => this.formatarCepInput(this.cepNovaRota));
+            this.cepNovaRota.addEventListener('blur', () => {
+                if (this.normalizarCep(this.cepNovaRota.value).length === 8) this.buscarCepRota();
+            });
+        }
         if (this.formNovaParada) this.formNovaParada.addEventListener('submit', (e) => this.handleNewStop(e));
+        if (this.btnBuscarCepParada) this.btnBuscarCepParada.addEventListener('click', () => this.buscarCepParada());
+        if (this.cepNovaParada) {
+            this.cepNovaParada.addEventListener('input', () => this.formatarCepInput(this.cepNovaParada));
+            this.cepNovaParada.addEventListener('blur', () => {
+                if (this.normalizarCep(this.cepNovaParada.value).length === 8) this.buscarCepParada();
+            });
+        }
         if (this.btnFecharRota) this.btnFecharRota.addEventListener('click', () => this.closeRouteLoop());
         if (this.btnTracarRotaInteligente) this.btnTracarRotaInteligente.addEventListener('click', () => this.tracarRotaInteligente());
     },
@@ -321,7 +339,7 @@ const MapaUI = {
         }
 
         const cliente = this.clienteNovaParada.value.trim();
-        const endereco = this.enderecoNovaParada.value.trim();
+        const endereco = this.montarEnderecoParada();
         const observacao = this.observacaoNovaParada.value.trim();
 
         if (!cliente || !endereco) {
@@ -433,28 +451,58 @@ const MapaUI = {
             throw new Error('Informe um endereco mais completo para localizar a parada.');
         }
 
-        const photon = L.Control.Geocoder.photon({
-            geocodingQueryParams: { lang: 'pt' }
+        const tentativas = this.criarTentativasEndereco(query);
+
+        for (const tentativa of tentativas) {
+            try {
+                return await this.executarGeocodeNominatim(tentativa);
+            } catch (err) {
+                console.warn('Endereco nao localizado nesta tentativa:', tentativa, err);
+            }
+        }
+
+        throw new Error(`Endereco nao encontrado: ${query}. Confira numero, cidade e UF, ou marque a parada clicando no mapa.`);
+    },
+
+    async executarGeocodeNominatim(query) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const params = new URLSearchParams({
+            format: 'jsonv2',
+            limit: '1',
+            countrycodes: 'br',
+            q: query
         });
 
         try {
-            return await this.executarGeocode(photon, query);
-        } catch (photonError) {
-            const nominatim = L.Control.Geocoder.nominatim();
-            return this.executarGeocode(nominatim, `${query}, Brasil`);
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+                signal: controller.signal
+            });
+
+            if (!response.ok) throw new Error(`Falha na busca do endereco (${response.status}).`);
+
+            const results = await response.json();
+            if (!Array.isArray(results) || !results.length) {
+                throw new Error(`Endereco nao encontrado: ${query}`);
+            }
+
+            return {
+                lat: Number(results[0].lat),
+                lng: Number(results[0].lon)
+            };
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
 
-    executarGeocode(geocoder, query) {
-        return new Promise((resolve, reject) => {
-            geocoder.geocode(query, (results) => {
-                if (results && results.length > 0) {
-                    resolve(results[0].center);
-                    return;
-                }
-                reject(new Error(`Endereco nao encontrado: ${query}`));
-            });
-        });
+    criarTentativasEndereco(query) {
+        const tentativas = [`${query}, Brasil`, query];
+        const semNumeroFinal = query.replace(/,\s*\d+[a-zA-Z]?\s*$/i, '').trim();
+        if (semNumeroFinal && semNumeroFinal !== query) {
+            tentativas.push(`${semNumeroFinal}, Brasil`, semNumeroFinal);
+        }
+
+        return [...new Set(tentativas)];
     },
 
     normalizarEnderecoBusca(endereco) {
@@ -462,6 +510,84 @@ const MapaUI = {
             .trim()
             .replace(/\s+/g, ' ')
             .replace(/[,\s]+$/g, '');
+    },
+
+    async buscarCepParada() {
+        await this.buscarCep({
+            cepInput: this.cepNovaParada,
+            enderecoInput: this.enderecoNovaParada,
+            btn: this.btnBuscarCepParada,
+            focusAfter: this.numeroNovaParada
+        });
+    },
+
+    async buscarCepRota() {
+        await this.buscarCep({
+            cepInput: this.cepNovaRota,
+            enderecoInput: this.enderecoNovaRota,
+            btn: this.btnBuscarCepRota
+        });
+    },
+
+    async buscarCep({ cepInput, enderecoInput, btn, focusAfter = null }) {
+        const cep = this.normalizarCep(cepInput?.value);
+        if (cep.length !== 8) {
+            alert('Informe um CEP com 8 digitos.');
+            return;
+        }
+
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+        }
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            if (!response.ok) throw new Error('Nao foi possivel consultar o CEP.');
+
+            const data = await response.json();
+            if (data.erro) throw new Error('CEP nao encontrado.');
+
+            const endereco = [
+                data.logradouro,
+                data.bairro,
+                data.localidade,
+                data.uf
+            ].filter(Boolean).join(', ');
+
+            if (!endereco) throw new Error('CEP encontrado, mas sem endereco completo.');
+
+            enderecoInput.value = endereco;
+            focusAfter?.focus();
+        } catch (err) {
+            console.error('Erro ao buscar CEP:', err);
+            alert(err.message || 'Erro ao buscar CEP.');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    },
+
+    formatarCepInput(input = this.cepNovaParada) {
+        if (!input) return;
+        const cep = this.normalizarCep(input.value).slice(0, 8);
+        input.value = cep.length > 5
+            ? `${cep.slice(0, 5)}-${cep.slice(5)}`
+            : cep;
+    },
+
+    normalizarCep(value) {
+        return String(value || '').replace(/\D/g, '');
+    },
+
+    montarEnderecoParada() {
+        const endereco = this.enderecoNovaParada.value.trim();
+        const numero = this.numeroNovaParada?.value.trim();
+        if (!numero) return endereco;
+        return `${endereco}, ${numero}`;
     },
 
     renderPointList(pontos) {

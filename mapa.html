@@ -44,6 +44,12 @@
                 <input type="color" id="corNovaRota" value="#3388ff" title="Cor da Rota" style="height: 40px; width: 50px; padding: 0; border: none; background: none; cursor: pointer;">
                 <button type="submit" class="btn-glass btn-green compact-btn" title="Salvar Rota" style="width: 50px;"><i class="fas fa-plus"></i></button>
             </div>
+            <div class="cep-row">
+              <input type="text" id="cepNovaRota" placeholder="CEP da origem/localidade" class="glass-input" inputmode="numeric" maxlength="9">
+              <button type="button" id="btnBuscarCepRota" class="btn-glass btn-blue compact-btn" title="Buscar endereco pelo CEP">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
             <input type="text" id="enderecoNovaRota" placeholder="Endereço / Localidade (Opcional)" class="glass-input">
           </form>
           <hr>
@@ -64,6 +70,13 @@
 
           <form id="formNovaParada" class="form-grid mapa-parada-form">
             <input type="text" id="clienteNovaParada" placeholder="Cliente / Parada" class="glass-input" required>
+            <div class="cep-row">
+              <input type="text" id="cepNovaParada" placeholder="CEP" class="glass-input" inputmode="numeric" maxlength="9">
+              <button type="button" id="btnBuscarCepParada" class="btn-glass btn-blue compact-btn" title="Buscar endereco pelo CEP">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+            <input type="text" id="numeroNovaParada" placeholder="Numero / Complemento (opcional)" class="glass-input">
             <input type="text" id="enderecoNovaParada" placeholder="Endereco do cliente" class="glass-input" required>
             <textarea id="observacaoNovaParada" placeholder="Observacao (opcional)" class="glass-input" rows="2"></textarea>
             <button type="submit" class="btn-glass btn-green compact-btn">

@@ -135,6 +135,18 @@
     width: 100%;
 }
 
+.cep-row {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr 44px;
+}
+
+.cep-row .btn-glass {
+    min-width: 44px;
+    padding: 0;
+    width: 44px;
+}
+
 .point-text {
     display: flex;
     flex-direction: column;
