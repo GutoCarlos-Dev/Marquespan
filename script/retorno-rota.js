@@ -70,7 +70,7 @@ function canDelete() {
 function applyGridPermissionUI() {
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnImportarRoteiro'].forEach(id => {
+    ['btnAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnImportarRoteiro', 'btnImportarEscalaOnline'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
@@ -317,6 +317,33 @@ function getDevolucoesExtrasPayload(rowData) {
     return extras.length ? JSON.stringify(extras) : null;
 }
 
+async function carregarFiliais() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+        if (error) throw error;
+
+        const select = document.getElementById('filialRetorno');
+        if (!select) return;
+
+        (data || []).forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.sigla || f.nome;
+            opt.textContent = f.nome;
+            select.appendChild(opt);
+        });
+
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (usuario?.filial) {
+            select.value = usuario.filial;
+        }
+    } catch (err) {
+        console.error('Erro ao carregar filiais:', err);
+    }
+}
+
 async function carregarSupervisores() {
     try {
         const { data, error } = await supabaseClient
@@ -327,6 +354,68 @@ async function carregarSupervisores() {
         supervisoresCache = [...new Set(data.map(item => item.supervisor).filter(Boolean))].sort();
     } catch (err) {
         console.error('Erro ao carregar supervisores:', err);
+    }
+}
+
+async function importarEscalaOnline() {
+    if (!canManageGrid()) {
+        alert('Você não tem permissão para importar lançamentos no grid.');
+        return;
+    }
+
+    const dataSelecionada = document.getElementById('dataRetorno').value;
+    const filialSelecionada = document.getElementById('filialRetorno').value;
+
+    if (!dataSelecionada) {
+        alert('⚠️ Informe a Data do Retorno antes de importar.');
+        return;
+    }
+
+    if (!filialSelecionada) {
+        alert('⚠️ Selecione a Filial antes de importar a escala.');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('placa, rota, status, motorista, auxiliar, terceiro, tipo_escala')
+            .eq('data_escala', dataSelecionada)
+            .eq('filial', filialSelecionada)
+            .order('id');
+
+        if (error) throw error;
+
+        const registros = (data || []).filter(r => r.placa || r.rota || r.motorista);
+
+        if (registros.length === 0) {
+            alert(`⚠️ Nenhum registro encontrado na escala para a filial "${filialSelecionada}" na data ${dataSelecionada}.`);
+            return;
+        }
+
+        if (!confirm(`Importar ${registros.length} linha(s) da escala online? Isso vai substituir a grade atual da tela.`)) {
+            return;
+        }
+
+        gridData = registros.map(r => {
+            const linha = {};
+            COLUMN_MAP.forEach(key => linha[key] = null);
+            linha.data_retorno = dataSelecionada;
+            linha.filial = filialSelecionada;
+            linha.placa = r.placa ? String(r.placa).trim().toUpperCase() : '';
+            linha.rota = r.rota || '';
+            linha.status_rota = r.status || '';
+            linha.nome_mot = r.motorista || '';
+            linha.nome_aux = r.auxiliar || '';
+            linha.nome_terceiro = r.terceiro || '';
+            return linha;
+        });
+
+        renderGrid();
+        alert(`✅ ${registros.length} linha(s) importada(s) da escala online com sucesso!`);
+    } catch (err) {
+        console.error('Erro ao importar escala online:', err);
+        alert('❌ Erro ao importar escala: ' + (err.message || JSON.stringify(err)));
     }
 }
 
@@ -352,11 +441,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExcluirSelecionados').addEventListener('click', deleteSelectedRows);
 
 
-    //nova documentação
     document.getElementById('btnImportarRoteiro').addEventListener('click', () => {
-    document.getElementById('inputImportarRoteiro').click();
+        document.getElementById('inputImportarRoteiro').click();
     });
     document.getElementById('inputImportarRoteiro').addEventListener('change', importarRoteiroExcel);
+    document.getElementById('btnImportarEscalaOnline').addEventListener('click', importarEscalaOnline);
 
 
     // Listener para o novo campo de busca
@@ -380,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Carrega dados auxiliares
+    await carregarFiliais();
     await carregarSupervisores();
 
     // Listener para o modal de materiais (paletes)
@@ -1093,6 +1183,7 @@ function mapRowToPayload(rowData, dataRetorno) {
 
     const item = {
         data_retorno: dataRetorno,
+        filial: rowData.filial || null,
         placa: rowData.placa ? rowData.placa.trim().toUpperCase() : null,
         rota: rowData.rota,
         status_rota: rowData.status_rota || null,

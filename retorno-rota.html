@@ -30,6 +30,12 @@
                     <h3><i class="fas fa-filter"></i> Filtros de Pesquisa</h3>
                     <div class="filters-container">
                         <div class="form-group-filter">
+                            <label for="filialRetorno">Filial</label>
+                            <select id="filialRetorno" class="glass-input">
+                                <option value="">Selecione a Filial</option>
+                            </select>
+                        </div>
+                        <div class="form-group-filter">
                             <label for="dataRetorno">Data do Retorno</label>
                             <input type="date" id="dataRetorno" class="glass-input">
                         </div>
@@ -47,6 +53,7 @@
                         <button id="btnExcluirSelecionados" class="btn-glass btn-red"><i class="fas fa-trash-alt"></i> Excluir Selecionados</button>
                         <button id="btnImportarRoteiro" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Roteiro</button>
                         <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
+                        <button id="btnImportarEscalaOnline" class="btn-glass btn-blue"><i class="fas fa-cloud-download-alt"></i> Importar Escala Online</button>
                     </div>
                 </div>
             </div>

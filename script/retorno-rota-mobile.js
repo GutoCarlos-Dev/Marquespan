@@ -265,6 +265,11 @@ function getCurrentUserName() {
     return usuario ? usuario.nome : null;
 }
 
+function getCurrentUserFilial() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    return usuario ? (usuario.filial || null) : null;
+}
+
 function escapeHtml(value) {
     return String(value || '')
         .replace(/&/g, '&amp;')
@@ -759,6 +764,7 @@ function openNewModal() {
     currentItem = {
         id: null,
         data_retorno: dataRetorno,
+        filial: getCurrentUserFilial(),
         placa: '',
         rota: '',
         nome_mot: '',
@@ -934,6 +940,7 @@ async function saveRetorno() {
 
     const updateData = {
         data_retorno: currentItem.data_retorno || document.getElementById('dataRetornoMobile').value,
+        filial: currentItem.filial || getCurrentUserFilial() || null,
         placa,
         rota: rota || null,
         nome_mot: motorista || null,
