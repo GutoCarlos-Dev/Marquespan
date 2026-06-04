@@ -1450,7 +1450,17 @@ function usarS2NoPasso3(){
 function handleCtrl2File(file){
   file.arrayBuffer().then(buf=>{
     wb_ctrl2=XLSX.read(buf,{type:'array',cellFormula:true});
-    setUZ('dz-ctrl2',file.name,`${wb_ctrl2.SheetNames.length} abas`,true);
+    const dateSheets=(wb_ctrl2.SheetNames||[]).filter(s=>/^\d{2}\.\d{2}\.\d{2}$/.test(s));
+    setUZ('dz-ctrl2',file.name,`${dateSheets.length} abas de datas`,true);
+
+    // Habilita o botão "Carregar escala automaticamente"
+    const btnAuto = document.getElementById('btn-escala-auto');
+    const hint    = document.getElementById('escala-auto-hint');
+    if(btnAuto){ btnAuto.disabled=false; btnAuto.style.opacity='1'; }
+    if(hint && dateSheets.length){
+      hint.textContent = `${dateSheets.length} data(s) encontrada(s): ${dateSheets.slice(0,3).join(', ')}${dateSheets.length>3?'…':''}`;
+    }
+
     if(wb_ctrl2&&(rotList.length||wb_rot||window._s3EscalaSupabase))buildS3Mapping();
   });
 }
@@ -2239,6 +2249,117 @@ async function inicializarSemanasEscala(){
   if(btnUsar){ btnUsar.disabled = false; btnUsar.style.opacity = '1'; }
 }
 
+// ── Carrega escala pelas datas exatas do CONTROLE ──────────────────
+// Usa a função RPC get_escala_por_datas — bypassa semana_nome
+async function carregarEscalaPorDatasControle(){
+  const filial = (document.getElementById('sel-filial-escala')?.value || '').trim()
+              || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim();
+  if(!filial){ alert('Selecione a filial antes de carregar a escala.'); return; }
+  if(!wb_ctrl2){ alert('Carregue o CONTROLE (lado esquerdo) primeiro.'); return; }
+
+  // Extrai datas únicas das abas do CONTROLE (formato DD.MM.YY → YYYY-MM-DD)
+  const dateSheets = (wb_ctrl2.SheetNames || []).filter(s => /^\d{2}\.\d{2}\.\d{2}$/.test(s));
+  if(!dateSheets.length){ alert('O CONTROLE não tem abas de datas (DD.MM.YY).'); return; }
+
+  const isoDateArr = dateSheets.map(ds => {
+    const [dd, mm, yy] = ds.split('.');
+    return `20${yy}-${mm}-${dd}`;
+  });
+
+  const statusEl = document.getElementById('escala-sp-status');
+  const btnAuto  = document.getElementById('btn-escala-auto');
+  if(statusEl){ statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8'; statusEl.innerHTML=`⏳ Buscando escala para ${isoDateArr.length} data(s) — filial ${filial}...`; }
+  if(btnAuto) btnAuto.disabled = true;
+
+  try {
+    let rows;
+    if(!window._supa) throw new Error('supabaseClient não disponível');
+
+    const { data, error } = await window._supa.rpc('get_escala_por_datas', {
+      p_datas:  isoDateArr,
+      p_filial: filial
+    });
+
+    if(error){
+      // Fallback: query direta
+      console.warn('[carregarEscalaPorDatasControle] RPC indisponível:', error.message);
+      const { data: d2, error: e2 } = await window._supa
+        .from('escala')
+        .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
+        .in('data_escala', isoDateArr)
+        .eq('filial', filial)
+        .order('data_escala', { ascending: true })
+        .order('placa',       { ascending: true })
+        .limit(5000);
+      if(e2) throw new Error(e2.message);
+      rows = d2 || [];
+    } else {
+      rows = data || [];
+    }
+
+    if(!rows.length){
+      if(statusEl){ statusEl.style.background='#fef3c7'; statusEl.style.color='#92400e'; statusEl.innerHTML=`⚠ Nenhum dado de escala encontrado para as datas do CONTROLE (filial: ${filial}).`; }
+      if(btnAuto){ btnAuto.disabled=false; }
+      return;
+    }
+
+    // Monta cache usando MESMAS strings de DIAS (sem risco de encoding)
+    const GET_DAY_TO_DIAS = { 1:DIAS[0],2:DIAS[1],3:DIAS[2],4:DIAS[3],5:DIAS[4],6:DIAS[5] };
+    const cacheByDay  = {};
+    const cacheByDate = {};
+
+    for(const row of rows){
+      if(!row.placa || !row.data_escala) continue;
+      const dt      = new Date(String(row.data_escala).substring(0,10) + 'T12:00:00');
+      const dow     = dt.getDay();
+      const dayName = GET_DAY_TO_DIAS[dow];
+      if(!dayName) continue;
+
+      const dd = String(dt.getDate()).padStart(2,'0');
+      const mm = String(dt.getMonth()+1).padStart(2,'0');
+      const yy = String(dt.getFullYear()).slice(-2);
+      const ds = `${dd}.${mm}.${yy}`;
+
+      const rotaRaw = row.rota;
+      const entry   = {
+        placa: String(row.placa     || '').trim().toUpperCase(),
+        mot:   String(row.motorista || '').trim(),
+        aux:   String(row.auxiliar  || '').trim(),
+        rota:  rotaRaw !== null && rotaRaw !== undefined && rotaRaw !== ''
+               ? (isNaN(Number(rotaRaw)) ? String(rotaRaw).trim() : Number(rotaRaw)) : null,
+        stat:  String(row.status || '').trim()
+      };
+      if(!cacheByDay[dayName])  cacheByDay[dayName]  = [];
+      cacheByDay[dayName].push(entry);
+      if(!cacheByDate[ds]) cacheByDate[ds] = { dayName, rows:[] };
+      cacheByDate[ds].rows.push(entry);
+    }
+
+    window._s3EscalaSupabase = cacheByDay;
+    window._s3EscalaByDate   = cacheByDate;
+    window._s3SemanaNome     = `Escala SP (${isoDateArr[0]} → ${isoDateArr[isoDateArr.length-1]})`;
+    window._s3EscalaFilial   = filial;
+    rotList = []; wb_rot = null;
+
+    const total = rows.length;
+    const datas = Object.keys(cacheByDate).sort();
+    const dias  = [...new Set(datas.map(d => cacheByDate[d].dayName))];
+
+    if(statusEl){
+      statusEl.style.background = '#d1fae5';
+      statusEl.style.color      = '#065f46';
+      statusEl.innerHTML = `✓ Escala carregada — filial <strong>${filial}</strong> · ${total} linha(s) em ${datas.length} dia(s): ${dias.join(', ')}`;
+    }
+    if(btnAuto) btnAuto.disabled = false;
+    if(wb_ctrl2) buildS3Mapping();
+
+  } catch(e) {
+    console.error('[carregarEscalaPorDatasControle]', e);
+    if(statusEl){ statusEl.style.background='#fde8ec'; statusEl.style.color='#9b1c1c'; statusEl.innerHTML='✕ Erro: ' + e.message; }
+    if(btnAuto) btnAuto.disabled = false;
+  }
+}
+
 // Carrega as linhas da escala para a semana selecionada e monta o cache _s3EscalaSupabase
 async function confirmarEscalaSupabase(){
   const sel        = document.getElementById('sel-semana-escala');
@@ -2258,18 +2379,28 @@ async function confirmarEscalaSupabase(){
   try {
     let rows;
 
-    // Usa supabaseClient do sistema se disponível (auth correta + RLS correto)
+    // Usa RPC get_escala_semana (SECURITY DEFINER — bypass RLS, só exige autenticação)
     if(window._supa) {
-      const { data, error } = await window._supa
-        .from('escala')
-        .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
-        .eq('semana_nome', semanaNome)
-        .eq('filial', filial)
-        .order('data_escala', { ascending: true })
-        .order('placa',       { ascending: true })
-        .limit(2000);
-      if(error) throw new Error(error.message);
-      rows = data || [];
+      const { data, error } = await window._supa.rpc('get_escala_semana', {
+        p_semana: semanaNome,
+        p_filial: filial
+      });
+      if(error){
+        // Fallback para query direta caso o RPC não exista ainda no banco
+        console.warn('[confirmarEscalaSupabase] RPC indisponível, tentando query direta:', error.message);
+        const { data: data2, error: err2 } = await window._supa
+          .from('escala')
+          .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
+          .eq('semana_nome', semanaNome)
+          .eq('filial', filial)
+          .order('data_escala', { ascending: true })
+          .order('placa',       { ascending: true })
+          .limit(2000);
+        if(err2) throw new Error(err2.message);
+        rows = data2 || [];
+      } else {
+        rows = data || [];
+      }
     } else {
       // Fallback: sbFetch (sessão pode estar desatualizada)
       const resp = await sbFetch(

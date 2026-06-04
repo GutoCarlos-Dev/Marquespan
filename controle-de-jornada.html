@@ -292,31 +292,51 @@
           <i class="fas fa-calendar-week"></i> Roteiro SP — Escala Semanal
         </div>
 
-        <!-- Filial + Semana + Botão -->
+        <!-- Filial -->
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-          <div style="min-width:140px">
+          <div style="min-width:160px">
             <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Filial</label>
             <select id="sel-filial-escala"
               style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;cursor:pointer">
               <option value="">Carregando...</option>
             </select>
           </div>
-          <div style="flex:1;min-width:180px">
-            <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Semana</label>
-            <select id="sel-semana-escala" onchange="document.getElementById('btn-usar-semana').disabled=!this.value;document.getElementById('btn-usar-semana').style.opacity=this.value?'1':'.5'"
-              style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;cursor:pointer">
-              <option value="">Carregando semanas...</option>
-            </select>
+
+          <!-- Botão principal: carrega pelas datas do CONTROLE (automático) -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:1px">Carregar pela data do CONTROLE</label>
+            <button id="btn-escala-auto" onclick="carregarEscalaPorDatasControle()" disabled
+              style="padding:9px 18px;background:#006937;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;opacity:.5;transition:filter .2s;width:fit-content"
+              onmouseover="if(!this.disabled)this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+              <i class="fas fa-bolt"></i> Carregar escala automaticamente
+            </button>
+            <span style="font-size:11px;color:#6c757d" id="escala-auto-hint">Carregue o CONTROLE (esquerda) para habilitar</span>
           </div>
-          <button id="btn-usar-semana" onclick="confirmarEscalaSupabase()" disabled
-            style="padding:9px 18px;background:#006937;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;opacity:.5;transition:filter .2s"
-            onmouseover="if(!this.disabled)this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
-            <i class="fas fa-check"></i> Usar semana
-          </button>
         </div>
 
         <!-- Status do carregamento -->
         <div id="escala-sp-status" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600"></div>
+
+        <!-- Seleção manual por semana -->
+        <details style="border-top:1px solid rgba(0,0,0,.07);padding-top:10px;margin-top:2px">
+          <summary style="cursor:pointer;font-size:12px;color:#6c757d;user-select:none;display:flex;align-items:center;gap:6px">
+            <i class="fas fa-calendar-alt"></i> Selecionar por semana manualmente
+          </summary>
+          <div style="margin-top:10px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:180px">
+              <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Semana</label>
+              <select id="sel-semana-escala" onchange="document.getElementById('btn-usar-semana').disabled=!this.value;document.getElementById('btn-usar-semana').style.opacity=this.value?'1':'.5'"
+                style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;cursor:pointer">
+                <option value="">Carregando semanas...</option>
+              </select>
+            </div>
+            <button id="btn-usar-semana" onclick="confirmarEscalaSupabase()" disabled
+              style="padding:9px 18px;background:#1F71B8;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;opacity:.5;transition:filter .2s"
+              onmouseover="if(!this.disabled)this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+              <i class="fas fa-check"></i> Usar semana
+            </button>
+          </div>
+        </details>
 
         <!-- Fallback: arquivo XLSX -->
         <details id="dz-rot-details" style="border-top:1px solid rgba(0,0,0,.07);padding-top:10px;margin-top:2px">
