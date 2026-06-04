@@ -129,6 +129,47 @@ function sbSignIn(email, password){
 function sbGetSession(){ return lsGet('sb_session', null); }
 function sbSignOut(){ lsSet('sb_session', null); }
 
+async function cdjEnsureSupabaseSession(){
+  let session = sbGetSession();
+  if(session?.user?.id && session?.access_token) return session;
+
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+  const sysSess = JSON.parse(localStorage.getItem('sb-hlzcycvlcuhgnnjkmslt-auth-token') || 'null');
+  if(sysSess?.access_token){
+    session = {
+      access_token: sysSess.access_token,
+      refresh_token: sysSess.refresh_token || '',
+      user: sysSess.user || { id: usuarioLogado?.auth_user_id || usuarioLogado?.id },
+      expires_at: sysSess.expires_at ? Number(sysSess.expires_at) * 1000 : 0
+    };
+    if(session.user?.id){
+      lsSet('sb_session', session);
+      return session;
+    }
+  }
+
+  if(window._supa?.auth?.getSession){
+    try{
+      const { data } = await window._supa.auth.getSession();
+      const supaSession = data?.session;
+      if(supaSession?.access_token && supaSession?.user?.id){
+        session = {
+          access_token: supaSession.access_token,
+          refresh_token: supaSession.refresh_token || '',
+          user: supaSession.user,
+          expires_at: (supaSession.expires_at || 0) * 1000
+        };
+        lsSet('sb_session', session);
+        return session;
+      }
+    }catch(e){
+      console.warn('[cdjEnsureSupabaseSession]', e);
+    }
+  }
+
+  return null;
+}
+
 // Buscar profile (nome + papel/perfil + ativo) — chama RPC ou SELECT direto
 async function fetchProfile(userId){
   const resp = await sbFetch(`/rest/v1/profiles?id=eq.${userId}&select=id,nome,papel,perfil,ativo`);
@@ -247,6 +288,7 @@ function doLogout(){
 }
 
 async function bootAuth(){
+  await cdjEnsureSupabaseSession();
   // Restaurar sessão se houver
   const session = sbGetSession();
   if(session?.user && session?.access_token){
@@ -4108,7 +4150,7 @@ async function ensureSupabaseAnaliseForRow(row){
 }
 
 async function saveActionSupabase(actionObj, row){
-  const session = sbGetSession ? sbGetSession() : null;
+  const session = await cdjEnsureSupabaseSession();
   if(!session?.user?.id || !session?.access_token) throw new Error('Sessão Supabase não encontrada. Faça login novamente.');
   let linhaId = await findSupabaseLinhaIdForRow(row);
 
@@ -9336,6 +9378,7 @@ initDB().then(()=>updateActionsBadge()).catch(()=>{});
       snap.actions = actsDoDia;
     }catch(e){ console.warn('[cloud-first actions cache]', e); }
 
+    await cdjEnsureSupabaseSession();
     if(!cfIsOnline()){
       const salvarCache = confirm('Nuvem indisponível.\n\nEste dia NÃO será considerado salvo oficialmente.\nDeseja guardar apenas como cache temporário nesta máquina?');
       if(salvarCache){

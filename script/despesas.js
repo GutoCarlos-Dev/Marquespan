@@ -237,7 +237,7 @@ const DespesasUI = {
     },
 
     usuarioPodeExcluir() {
-        return ['administrador', 'gerencia'].includes(this.getCurrentUserLevel());
+        return ['administrador', 'gerencia', 'adm_logistica'].includes(this.getCurrentUserLevel());
     },
 
     formatDateTime(value) {
