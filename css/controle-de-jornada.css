@@ -649,6 +649,168 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .mobile-nav-item.active svg { transform: translateY(-1px); }
 .mobile-nav-item.active::before { content: ''; position: absolute; top: -6px; left: 30%; right: 30%; height: 3px; background: var(--jor-accent); border-radius: 0 0 3px 3px; }
 
+/* ── Modal de Ação (Step 4 — Tratar Infração) ────────── */
+
+/* sobrescreve o .modal genérico para o modal de ação */
+.modal.modal-action-pro {
+  width: 860px;
+  max-width: 96vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-action-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  flex-shrink: 0;
+}
+
+.modal-action-head .title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--jor-text);
+  margin-bottom: 3px;
+}
+
+.modal-action-head .sub {
+  font-size: 13px;
+  color: var(--jor-text3);
+}
+
+.modal-close-x {
+  background: #f1f3f5;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background .15s;
+}
+.modal-close-x:hover { background: #dee2e6; }
+
+.modal-action-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-action-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Blocos internos do modal */
+.action-block { display: flex; flex-direction: column; gap: 10px; }
+
+.action-block-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--jor-text3);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.action-quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.action-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #dee2e6;
+  background: #fff;
+  color: #495057;
+  transition: all .15s;
+  font-family: inherit;
+}
+.action-chip:hover { border-color: var(--jor-primary); color: var(--jor-primary); }
+.action-chip.selected { background: var(--jor-primary); border-color: var(--jor-primary); color: #fff; }
+
+.action-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Status chips (badges de ocorrência) */
+.status-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f3f5;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+.status-chip.red    { background: var(--jor-red-l);    color: var(--jor-red);    border-color: var(--jor-red-b); }
+.status-chip.orange { background: var(--jor-orange-l); color: var(--jor-orange); border-color: var(--jor-orange-b); }
+.status-chip.blue   { background: var(--jor-blue-l);   color: var(--jor-blue);   border-color: var(--jor-blue-b); }
+.status-chip.purple { background: var(--jor-purple-l); color: var(--jor-purple); border-color: var(--jor-purple-b); }
+.status-chip.green  { background: var(--jor-green-l);  color: var(--jor-green);  border-color: var(--jor-green-b); }
+
+/* Histórico de ações no modal */
+#modal-action-history .hist-item { margin-bottom: 6px; }
+
+/* Responsivo: modal de ação em coluna única no mobile */
+@media (max-width: 768px) {
+  .modal.modal-action-pro { max-height: 95vh; }
+  .modal-action-body { grid-template-columns: 1fr; }
+  .action-form-grid  { grid-template-columns: 1fr; }
+}
+
+/* ── Pending cad modal (vincular faltantes) ──────────── */
+.pending-cad-modal { max-width: 1100px; }
+.pending-cad-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; background: #f1f3f5; border: 1px solid #dee2e6;
+  border-radius: 20px; font-size: 11px; color: #495057;
+}
+.cad-grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cad-grid th { padding: 8px 10px; background: #f2f2f2; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #dee2e6; text-align: left; }
+.cad-grid td { padding: 5px 6px; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+.cad-grid input, .cad-grid select {
+  width: 100%; padding: 6px 8px;
+  border: 1px solid rgba(0,0,0,.1); border-radius: 8px;
+  font-size: 12px; font-family: inherit; outline: none;
+  transition: border-color .15s;
+}
+.cad-grid input:focus, .cad-grid select:focus { border-color: var(--jor-primary); }
+.cad-grid input[readonly] { background: #f8f9fa; color: #495057; }
+
 /* ── Download box (resultado dos passos) ─────────────── */
 .dl-box {
   background: linear-gradient(135deg, var(--jor-green-l), rgba(255,255,255,0));
