@@ -4802,7 +4802,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     function isStatusOficinaTrocaVeiculo(status) {
         const normalized = normalizeString(status);
         const compact = normalized.replace(/[\s.-]+/g, '');
-        return normalized === 'INTERNADO' || compact === 'CHECKINOFICINA';
+        return normalized === 'INTERNADO'
+            || compact === 'CHECKINOFICINA'
+            || compact === 'CHECKININOFICINA';
+    }
+
+    function getStatusPlanejadoTrocaClass(status) {
+        const normalized = normalizeString(status);
+        const compact = normalized.replace(/[\s.-]+/g, '');
+
+        if (normalized === 'INTERNADO') return 'troca-status-internado';
+        if (compact === 'CHECKINOFICINA' || compact === 'CHECKININOFICINA') return 'troca-status-checkin-oficina';
+        if (compact === 'CHECKINROTA') return 'troca-status-checkin-rota';
+        if (normalized === 'FINALIZADO ROTA') return 'troca-status-finalizado-rota';
+        if (normalized === 'FINALIZADO' || normalized === 'OK') return 'troca-status-finalizado';
+        if (normalized === 'PENDENTE' || normalized === 'NAO REALIZADO' || normalized === 'NÃO REALIZADO') return 'troca-status-pendente';
+
+        return '';
     }
 
     function getOficinaTrocaVeiculo(item) {
@@ -5089,7 +5105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${escapeAttribute(item.placa)}</td>
                 <td>${escapeAttribute(item.modelo || '')}</td>
                 <td>${escapeAttribute(item.rotaPlanejada || '-')}</td>
-                <td>${escapeAttribute(item.statusPlanejado || '-')}</td>
+                <td><span class="troca-status-planejado ${getStatusPlanejadoTrocaClass(item.statusPlanejado)}">${escapeAttribute(item.statusPlanejado || '-')}</span></td>
                 <td class="actions-cell">
                     <button type="button" class="btn-icon edit btn-selecionar-troca-veiculo" data-placa="${escapeAttribute(item.placa)}" title="${escapeAttribute(item.bloqueadoTroca ? `Veiculo em oficina: ${item.oficina || 'Oficina nao informada'}` : 'Selecionar placa')}" ${item.bloqueadoTroca ? 'disabled' : ''}>
                         <i class="fas fa-check"></i>

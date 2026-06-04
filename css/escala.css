@@ -780,6 +780,34 @@ body.escala-menu-oculto .menu-floating-toggle i {
     font-size: 11px;
 }
 
+.troca-status-planejado {
+    font-weight: 800;
+}
+
+.troca-status-pendente {
+    color: #721c24;
+}
+
+.troca-status-finalizado {
+    color: #155724;
+}
+
+.troca-status-finalizado-rota {
+    color: #0b3314;
+}
+
+.troca-status-internado {
+    color: #004085;
+}
+
+.troca-status-checkin-oficina {
+    color: #856404;
+}
+
+.troca-status-checkin-rota {
+    color: #d35400;
+}
+
 .pdf-expedicao-modelo-content {
     width: min(560px, 94vw);
     border-radius: 12px;
