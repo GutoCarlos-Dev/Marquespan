@@ -33,6 +33,7 @@ function bindEvents() {
   document.getElementById('btnAdicionarSugestaoCliente').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesContainer'));
   document.getElementById('btnAdicionarDia').addEventListener('click', () => adicionarDia());
   document.getElementById('btnCompartilharSugestaoWhatsapp').addEventListener('click', compartilharSugestaoWhatsapp);
+  document.getElementById('btnCompartilharRoteiroAtualWhatsapp').addEventListener('click', compartilharRoteiroAtualWhatsapp);
   document.getElementById('btnCompartilharAcompanhamentoWhatsapp').addEventListener('click', () => compartilharAcompanhamentoWhatsapp());
   document.getElementById('habilitarSugestaoRoteiro').addEventListener('change', atualizarSugestaoRoteiro);
   document.getElementById('acompanhamentoTipoRota').addEventListener('change', atualizarTipoRota);
@@ -168,6 +169,7 @@ function aplicarModoVisualizacaoAcompanhamento() {
     'btnAdicionarCliente',
     'btnAdicionarSugestaoCliente',
     'btnCompartilharSugestaoWhatsapp',
+    'btnCompartilharRoteiroAtualWhatsapp',
     'btnSalvarAcompanhamento'
   ];
 
@@ -730,6 +732,30 @@ function compartilharSugestaoWhatsapp() {
     `Motorista: ${motorista}`,
     '',
     ...sugestao.map((cliente, index) => {
+      const horario = cliente.mercado_horario && cliente.horario_recebimento_ate
+        ? ` - recebimento ate ${cliente.horario_recebimento_ate}`
+        : '';
+      return `${index + 1}. ${cliente.nome}${cliente.mercado_horario ? ' (mercado de horario)' : ''}${horario}`;
+    })
+  ];
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(linhas.join('\n'))}`, '_blank');
+}
+
+function compartilharRoteiroAtualWhatsapp() {
+  const clientes = coletarClientes();
+  if (!clientes.length) return alert('Informe pelo menos um cliente no Roteiro Atual.');
+
+  const rota = document.getElementById('acompanhamentoRota').value.trim() || '-';
+  const placa = document.getElementById('acompanhamentoPlaca').value.trim().toUpperCase() || '-';
+  const motorista = document.getElementById('acompanhamentoMotorista').value.trim() || '-';
+  const linhas = [
+    '*Roteiro Atual*',
+    `Rota: ${rota}`,
+    `Placa: ${placa}`,
+    `Motorista: ${motorista}`,
+    '',
+    ...clientes.map((cliente, index) => {
       const horario = cliente.mercado_horario && cliente.horario_recebimento_ate
         ? ` - recebimento ate ${cliente.horario_recebimento_ate}`
         : '';
