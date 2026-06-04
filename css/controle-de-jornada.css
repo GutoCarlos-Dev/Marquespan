@@ -404,6 +404,21 @@
   padding: 10px 13px; border-bottom: 1px solid #f1f3f5; vertical-align: middle;
 }
 
+.jornada-content td.t-err {
+  color: var(--jor-red);
+  font-weight: 800;
+}
+
+.jornada-content td.t-sem {
+  color: var(--jor-orange);
+  font-weight: 800;
+}
+
+.jornada-content td.t-ok {
+  color: var(--jor-green);
+  font-weight: 800;
+}
+
 .jornada-content tr:last-child td { border-bottom: none; }
 .jornada-content tr:hover td { background: rgba(0, 105, 55, 0.03); }
 .jornada-content .table-footer {

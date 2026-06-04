@@ -3196,6 +3196,76 @@ function setS4Filter(f,el){s4IssueFilter=f;document.querySelectorAll('[data-f4]'
 // ── COLUMN FILTERS ─────────────────────────────────
 const CF={placa:'',cidade:'',rota:'',stat:[],nome:'',saida:'',entrada:'',interj:'',status:'',acao:''};
 
+let s4RotasCidadeCache = null;
+let s4RotasCidadeCacheAt = 0;
+
+function s4RotaKey(value){
+  const raw = String(value || '').trim().toUpperCase();
+  const digits = raw.match(/\d+/)?.[0] || '';
+  return { raw, digits };
+}
+
+async function getS4RotasCidadeMap(){
+  const now = Date.now();
+  if(s4RotasCidadeCache && now - s4RotasCidadeCacheAt < 5 * 60 * 1000) return s4RotasCidadeCache;
+
+  const map = new Map();
+  try{
+    let data = [];
+    let attempted = false;
+    if(typeof sbFetch === 'function' && supabaseAvailable()){
+      attempted = true;
+      const resp = await sbFetch('/rest/v1/rotas?select=numero,cidades,status,filial&order=numero.asc');
+      if(resp.ok) data = await resp.json();
+      else console.warn('[rotas cidades]', await resp.text());
+    }else if(window._supa){
+      attempted = true;
+      const r = await window._supa.from('rotas').select('numero,cidades,status,filial').order('numero', { ascending:true });
+      if(r.error) throw r.error;
+      data = r.data || [];
+    }
+    if(!attempted) return map;
+
+    const usuarioFilial = String(JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim().toUpperCase();
+    const ordered = (data || []).slice().sort((a,b)=>{
+      const aFilial = String(a.filial || '').trim().toUpperCase() === usuarioFilial ? 0 : 1;
+      const bFilial = String(b.filial || '').trim().toUpperCase() === usuarioFilial ? 0 : 1;
+      const aAtiva = String(a.status || '').toUpperCase() === 'ATIVA' ? 0 : 1;
+      const bAtiva = String(b.status || '').toUpperCase() === 'ATIVA' ? 0 : 1;
+      return aFilial - bFilial || aAtiva - bAtiva;
+    });
+
+    for(const rota of ordered){
+      const cidade = String(rota.cidades || '').trim();
+      if(!cidade) continue;
+      const keys = s4RotaKey(rota.numero);
+      if(keys.raw && !map.has(keys.raw)) map.set(keys.raw, cidade);
+      if(keys.digits && !map.has(keys.digits)) map.set(keys.digits, cidade);
+    }
+  }catch(e){
+    console.warn('[getS4RotasCidadeMap]', e);
+  }
+
+  s4RotasCidadeCache = map;
+  s4RotasCidadeCacheAt = now;
+  return map;
+}
+
+async function preencherS4CidadesPorRota(){
+  const map = await getS4RotasCidadeMap();
+  if(!map?.size) return;
+  let changed = false;
+  for(const row of s4Rows || []){
+    const keys = s4RotaKey(row.rota);
+    const cidade = map.get(keys.raw) || map.get(keys.digits) || '';
+    if(cidade && row.cidade !== cidade){
+      row.cidade = cidade;
+      changed = true;
+    }
+  }
+  if(changed && typeof buildACData === 'function') buildACData();
+}
+
 function applyColFilters(){
   CF.placa  =(document.getElementById('cf-placa')?.value||'').toLowerCase().trim();
   CF.cidade =(document.getElementById('cf-cidade')?.value||'').toLowerCase().trim();
@@ -3216,6 +3286,7 @@ function applyColFilters(){
 async function renderS4Table(){
   const irrFilter=(document.getElementById('s4-irr-filter')||{value:'all'}).value;
   const statFilter=(document.getElementById('s4-stat-filter')||{value:'all'}).value;
+  await preencherS4CidadesPorRota();
   // Atualiza datas dos cabeçalhos SAÍDA / ENTRADA dinamicamente
   updateS4HeaderDates();
   // 🆕 Normaliza linhas onde o STAT é FOLGA/FÉRIAS/etc mas saída/entrada
