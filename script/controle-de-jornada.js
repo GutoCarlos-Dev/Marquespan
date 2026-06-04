@@ -4406,6 +4406,95 @@ function toggleSelAll(){const c=document.getElementById('selAll').checked;docume
 // ── Phone / WhatsApp ───────────────────────────────────────
 let phoneModalRow=null;
 
+function waNameVariants(row){
+  const nomeCompleto = (row?.nomePonto && row.nomePonto !== row.nome) ? row.nomePonto : '';
+  const nomeAbrev = row?.nome || '';
+  return [...new Set([nomeCompleto, nomeAbrev].filter(Boolean))];
+}
+
+function waContactChoices(func){
+  const choices = [];
+  const corp = String(func?.contato_corp || '').trim();
+  const pessoal = String(func?.contato_pessoal || '').trim();
+  if(formatPhone(corp)) choices.push({label:'Corporativo', field:'contato_corp', tel:corp});
+  if(formatPhone(pessoal) && formatPhone(pessoal) !== formatPhone(corp)) choices.push({label:'Pessoal', field:'contato_pessoal', tel:pessoal});
+  return choices;
+}
+
+async function findFuncionarioForWhatsApp(row){
+  const variants = waNameVariants(row);
+  if(!variants.length) return null;
+  try{
+    let data = [];
+    if(typeof sbFetch === 'function' && supabaseAvailable()){
+      const or = variants.flatMap(v => [
+        `nome.ilike.*${v.replace(/[,*()]/g,' ')}*`,
+        `nome_completo.ilike.*${v.replace(/[,*()]/g,' ')}*`
+      ]).join(',');
+      const resp = await sbFetch(`/rest/v1/funcionario?select=id,nome,nome_completo,contato_corp,contato_pessoal,status&or=(${encodeURIComponent(or)})&limit=20`);
+      if(resp.ok) data = await resp.json();
+      else console.warn('[funcionario whatsapp]', await resp.text());
+    }else if(window._supa){
+      let q = window._supa.from('funcionario').select('id,nome,nome_completo,contato_corp,contato_pessoal,status').limit(200);
+      const r = await q;
+      if(r.error) throw r.error;
+      data = r.data || [];
+    }
+
+    const wanted = variants.map(norm);
+    const activeFirst = (data || []).slice().sort((a,b)=>{
+      const aAtivo = String(a.status || '').toUpperCase() === 'ATIVO' ? 0 : 1;
+      const bAtivo = String(b.status || '').toUpperCase() === 'ATIVO' ? 0 : 1;
+      return aAtivo - bAtivo;
+    });
+    return activeFirst.find(f => wanted.includes(norm(f.nome)) || wanted.includes(norm(f.nome_completo)))
+      || activeFirst.find(f => wanted.some(w => norm(f.nome).startsWith(w) || norm(f.nome_completo).startsWith(w) || w.startsWith(norm(f.nome))))
+      || null;
+  }catch(e){
+    console.warn('[findFuncionarioForWhatsApp]', e);
+    return null;
+  }
+}
+
+async function updateFuncionarioWhatsApp(funcId, field, tel){
+  if(!funcId || !field || !tel) return false;
+  const payload = {[field]: tel};
+  try{
+    if(typeof sbFetch === 'function' && supabaseAvailable()){
+      const resp = await sbFetch(`/rest/v1/funcionario?id=eq.${encodeURIComponent(funcId)}`, {
+        method:'PATCH',
+        headers:{'Prefer':'return=minimal'},
+        body: JSON.stringify(payload)
+      });
+      if(!resp.ok) throw new Error(await resp.text());
+      return true;
+    }
+    if(window._supa){
+      const { error } = await window._supa.from('funcionario').update(payload).eq('id', funcId);
+      if(error) throw error;
+      return true;
+    }
+  }catch(e){
+    console.warn('[updateFuncionarioWhatsApp]', e);
+    alert('NÃ£o foi possÃ­vel atualizar o contato no cadastro do funcionÃ¡rio.\n' + (e.message || e));
+  }
+  return false;
+}
+
+function chooseWhatsAppContact(func){
+  const choices = waContactChoices(func);
+  if(!choices.length) return null;
+  if(choices.length === 1) return choices[0];
+  const corp = choices.find(c => c.field === 'contato_corp');
+  const pessoal = choices.find(c => c.field === 'contato_pessoal');
+  const usarCorp = confirm(
+    `Foram encontrados dois contatos para ${func.nome_completo || func.nome}.\n\n` +
+    `OK = Corporativo: ${corp?.tel || '-'}\n` +
+    `Cancelar = Pessoal: ${pessoal?.tel || '-'}`
+  );
+  return usarCorp ? corp : pessoal;
+}
+
 async function openPhoneModal(row){
   phoneModalRow=row;
   // Use nome completo (nomePonto) as primary — fallback to nome abreviado
@@ -4483,6 +4572,103 @@ async function handleWaClick(row){
 }
 
 // Converte "ABNER CARRIEL TELES" → "Abner" (primeiro nome capitalizado)
+async function openPhoneModal(row){
+  phoneModalRow=row;
+  const nomeDisplay=row.nomePonto&&row.nomePonto!==row.nome ? row.nomePonto : row.nome||'';
+  const nomeAbrev=row.nome||'';
+  document.getElementById('phone-nome-inp').value=nomeDisplay;
+  const dispEl=document.getElementById('phone-nome-display');
+  if(dispEl) dispEl.textContent=nomeDisplay;
+  document.getElementById('phone-modal-title').textContent=`WhatsApp - ${nomeDisplay}`;
+  const funcao=row.role||'';
+  const rota=row.rota?` - Rota ${row.rota}`:'';
+  const placa=row.placa?` - ${row.placa}`:'';
+  const func = row._wa_funcionario || await findFuncionarioForWhatsApp(row);
+  if(func) row._wa_funcionario = func;
+  document.getElementById('phone-modal-sub').textContent=`${funcao}${rota}${placa}${func?' - cadastro de funcionario':' - cadastro local'}`;
+  document.getElementById('phone-obs-inp').value='';
+  const existing = await dbGetPhone(nomeDisplay) || await dbGetPhone(nomeAbrev);
+  document.getElementById('phone-tel-inp').value=existing?existing.tel:'';
+  if(existing&&existing.obs) document.getElementById('phone-obs-inp').value=existing.obs;
+  document.getElementById('phone-modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('phone-tel-inp').focus(),100);
+}
+
+async function savePhone(){
+  const nomeDisplay=document.getElementById('phone-nome-inp').value.trim();
+  const tel=document.getElementById('phone-tel-inp').value.trim();
+  const obs=document.getElementById('phone-obs-inp').value.trim();
+  if(!tel){alert('Informe o numero de WhatsApp.');return;}
+
+  let funcionarioUpdated=false;
+  if(phoneModalRow){
+    const func = phoneModalRow._wa_funcionario || await findFuncionarioForWhatsApp(phoneModalRow);
+    if(func){
+      phoneModalRow._wa_funcionario = func;
+      const field = phoneModalRow._wa_phone_field || (confirm(
+        `Salvar este numero no cadastro de ${func.nome_completo || func.nome}?\n\nOK = Contato Corporativo\nCancelar = Contato Pessoal`
+      ) ? 'contato_corp' : 'contato_pessoal');
+      funcionarioUpdated = await updateFuncionarioWhatsApp(func.id, field, tel);
+      if(funcionarioUpdated){
+        func[field] = tel;
+        phoneModalRow.telefone = tel;
+      }
+    }else if(confirm('Nao encontrei este colaborador na tabela de funcionarios.\n\nDeseja abrir o cadastro de funcionarios para cadastrar o contato?')){
+      window.open('funcionario.html', '_blank');
+    }
+  }
+
+  await dbSavePhone(nomeDisplay,tel,obs);
+  if(phoneModalRow){
+    const nomeAbrev=(phoneModalRow.nome||'').trim();
+    if(nomeAbrev && norm(nomeAbrev)!==norm(nomeDisplay)){
+      await dbSavePhone(nomeAbrev,tel,obs);
+    }
+  }
+  const rowForWhatsApp = phoneModalRow;
+  closePhoneModal();
+  renderS4Table();
+  if(funcionarioUpdated) alert('Contato salvo no cadastro do funcionario.');
+  openWhatsApp(nomeDisplay,tel,rowForWhatsApp);
+}
+
+async function handleWaClick(row){
+  const variants = waNameVariants(row);
+  const nomeDisplay = variants[0] || row.nome || '';
+
+  const func = await findFuncionarioForWhatsApp(row);
+  if(func){
+    row._wa_funcionario = func;
+    const chosen = chooseWhatsAppContact(func);
+    if(chosen?.tel){
+      row.telefone = chosen.tel;
+      await dbSavePhone(nomeDisplay, chosen.tel, `Funcionario: ${chosen.label}`).catch(()=>{});
+      openWhatsApp(nomeDisplay, chosen.tel, row);
+      return;
+    }
+    row._wa_phone_field = confirm(
+      `${func.nome_completo || func.nome} nao possui contato corporativo nem pessoal preenchido.\n\n` +
+      `Deseja cadastrar agora como Contato Corporativo?\n\nOK = Corporativo\nCancelar = Pessoal`
+    ) ? 'contato_corp' : 'contato_pessoal';
+    openPhoneModal(row);
+    return;
+  }
+
+  if(row.telefone){
+    openWhatsApp(nomeDisplay,row.telefone,row);
+    return;
+  }
+  for(const v of variants){
+    const t=getTelFromCad(v);
+    if(t){openWhatsApp(nomeDisplay,t,row);return;}
+  }
+  for(const v of variants){
+    const rec=await dbGetPhone(v);
+    if(rec&&rec.tel){openWhatsApp(nomeDisplay,rec.tel,row);return;}
+  }
+  openPhoneModal(row);
+}
+
 function toProperFirstName(nomeCompleto){
   if(!nomeCompleto) return '';
   const first = String(nomeCompleto).trim().split(/\s+/)[0] || '';
