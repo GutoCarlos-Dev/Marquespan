@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
+let acompanhamentoVisualizando = false;
 let sortState = { field: 'data_acompanhamento', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
 let rotasCadastradas = [];
@@ -105,10 +106,13 @@ function preencherSupervisorDaRota() {
   document.getElementById('acompanhamentoSupervisor').value = supervisor;
 }
 
-function abrirModal(item = null) {
+function abrirModal(item = null, somenteVisualizacao = false) {
   document.getElementById('formAcompanhamento').reset();
   acompanhamentoEditandoId = item?.id || null;
-  document.querySelector('#modalAcompanhamento .modal-header h3').textContent = acompanhamentoEditandoId ? 'Editar Acompanhamento' : 'Acompanhamento';
+  acompanhamentoVisualizando = Boolean(somenteVisualizacao);
+  document.querySelector('#modalAcompanhamento .modal-header h3').textContent = acompanhamentoVisualizando
+    ? 'Visualizar Acompanhamento'
+    : (acompanhamentoEditandoId ? 'Editar Acompanhamento' : 'Acompanhamento');
   document.getElementById('btnSalvarAcompanhamento').textContent = acompanhamentoEditandoId ? 'Salvar Alteracoes' : 'Salvar';
   atualizarBotaoCompartilharModal();
 
@@ -135,19 +139,53 @@ function abrirModal(item = null) {
   atualizarSugestaoRoteiro();
   (horarios.length ? horarios : [{}]).forEach((dia, index) => adicionarDia(dia, index + 1));
   atualizarTipoRota();
+  aplicarModoVisualizacaoAcompanhamento();
   document.getElementById('modalAcompanhamento').classList.remove('hidden');
 }
 
 function fecharModal() {
   acompanhamentoEditandoId = null;
+  acompanhamentoVisualizando = false;
   document.getElementById('modalAcompanhamento').classList.add('hidden');
 }
 
 function atualizarBotaoCompartilharModal() {
   const btn = document.getElementById('btnCompartilharAcompanhamentoWhatsapp');
-  const podeCompartilhar = Boolean(acompanhamentoEditandoId);
+  const podeCompartilhar = Boolean(acompanhamentoEditandoId) && !acompanhamentoVisualizando;
   btn.classList.toggle('hidden', !podeCompartilhar);
   btn.disabled = !podeCompartilhar;
+}
+
+function aplicarModoVisualizacaoAcompanhamento() {
+  const modal = document.getElementById('modalAcompanhamento');
+  if (!modal) return;
+
+  modal.querySelectorAll('input, select, textarea').forEach(campo => {
+    campo.disabled = acompanhamentoVisualizando;
+  });
+
+  const botoesSempreBloqueadosNaVisualizacao = [
+    'btnAdicionarCliente',
+    'btnAdicionarSugestaoCliente',
+    'btnCompartilharSugestaoWhatsapp',
+    'btnSalvarAcompanhamento'
+  ];
+
+  botoesSempreBloqueadosNaVisualizacao.forEach(id => {
+    document.getElementById(id)?.classList.toggle('hidden', acompanhamentoVisualizando);
+  });
+  if (acompanhamentoVisualizando) {
+    document.getElementById('btnAdicionarDia')?.classList.add('hidden');
+  }
+
+  modal.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.classList.toggle('hidden', acompanhamentoVisualizando);
+  });
+
+  const btnCancelar = document.getElementById('btnCancelarAcompanhamento');
+  if (btnCancelar) btnCancelar.textContent = acompanhamentoVisualizando ? 'Fechar' : 'Cancelar';
+
+  atualizarBotaoCompartilharModal();
 }
 
 function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
@@ -356,6 +394,11 @@ async function handleTabelaClick(event) {
 
   const item = acompanhamentos.find(acompanhamento => acompanhamento.id === button.dataset.id);
   if (!item) return;
+
+  if (button.dataset.action === 'visualizar') {
+    abrirModal(item, true);
+    return;
+  }
 
   if (button.dataset.action === 'editar') {
     abrirModal(item);
@@ -592,6 +635,9 @@ function renderizarTabela() {
       <td class="clientes-resumo">${escapeHtml(resumoClientes(item.clientes))}</td>
       <td class="dias-resumo">${escapeHtml(resumoHorarios(item.horarios))}</td>
       <td class="acoes-cell">
+        <button type="button" class="btn-grid-action btn-view" data-action="visualizar" data-id="${escapeHtml(item.id)}" title="Visualizar">
+          <i class="fas fa-eye"></i>
+        </button>
         <button type="button" class="btn-grid-action btn-edit" data-action="editar" data-id="${escapeHtml(item.id)}" title="Editar">
           <i class="fas fa-pen"></i>
         </button>
