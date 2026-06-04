@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listeners
     dataInput.addEventListener('change', loadDataFromSupabase);
+    document.getElementById('filialRetorno').addEventListener('change', loadDataFromSupabase);
     document.getElementById('btnAdicionarLinha').addEventListener('click', () => {
         addEmptyRow();
         renderGrid();
@@ -675,13 +676,20 @@ function updateSelectAllState() {
  */
 async function loadDataFromSupabase() {
     const dataSelecionada = document.getElementById('dataRetorno').value;
+    const filialSelecionada = document.getElementById('filialRetorno').value;
     if (!dataSelecionada) return;
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('retorno_rota')
             .select('*')
             .eq('data_retorno', dataSelecionada);
+
+        if (filialSelecionada) {
+            query = query.eq('filial', filialSelecionada);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
