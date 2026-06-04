@@ -528,6 +528,86 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     background: linear-gradient(135deg, #007bff 0%, #004c99 100%);
 }
 
+/* ── Toggle Menu Lateral ── */
+.menu-floating-toggle {
+    position: fixed;
+    top: 92px;
+    left: 278px;
+    z-index: 2100;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: #006937;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.3s, background 0.2s, transform 0.2s;
+}
+
+.menu-floating-toggle:hover {
+    background: #004c26;
+    transform: scale(1.05);
+}
+
+body.retorno-rota-menu-oculto #sidebar {
+    transform: translateX(-110%);
+}
+
+body.retorno-rota-menu-oculto .main-content {
+    margin-left: 30px !important;
+}
+
+body.retorno-rota-menu-oculto .menu-floating-toggle {
+    left: 14px;
+}
+
+body.retorno-rota-menu-oculto .menu-floating-toggle i {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+    .menu-floating-toggle {
+        display: none;
+    }
+}
+
+/* ── FAB Flutuante ── */
+.fab-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 9999;
+}
+
+.fab-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fab-btn:hover {
+    transform: scale(1.15) translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.fab-remove { background: linear-gradient(135deg, #dc3545, #a71d2a); }
+
 @media (max-width: 768px) {
     .panel-header {
         align-items: stretch;

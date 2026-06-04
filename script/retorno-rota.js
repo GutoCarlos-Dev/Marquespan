@@ -317,6 +317,17 @@ function getDevolucoesExtrasPayload(rowData) {
     return extras.length ? JSON.stringify(extras) : null;
 }
 
+function toggleMenuLateralRetornoRota() {
+    document.body.classList.toggle('retorno-rota-menu-oculto');
+    const oculto = document.body.classList.contains('retorno-rota-menu-oculto');
+    const btn = document.getElementById('btnToggleMenuLateralRetornoRota');
+    if (btn) {
+        const title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+        btn.title = title;
+        btn.setAttribute('aria-label', title);
+    }
+}
+
 async function carregarFiliais() {
     try {
         const { data, error } = await supabaseClient
@@ -428,6 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadDataFromSupabase();
 
     // Listeners
+    document.getElementById('btnToggleMenuLateralRetornoRota')?.addEventListener('click', toggleMenuLateralRetornoRota);
     dataInput.addEventListener('change', loadDataFromSupabase);
     document.getElementById('filialRetorno').addEventListener('change', loadDataFromSupabase);
     document.getElementById('btnAdicionarLinha').addEventListener('click', () => {
@@ -440,6 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExportarPao').addEventListener('click', () => exportToPDF('pao'));
     document.getElementById('btnExportarPecas').addEventListener('click', () => exportToPDF('pecas'));
     document.getElementById('btnExcluirSelecionados').addEventListener('click', deleteSelectedRows);
+    document.getElementById('btnFabExcluirSelecionados')?.addEventListener('click', deleteSelectedRows);
 
 
     document.getElementById('btnImportarRoteiro').addEventListener('click', () => {
@@ -506,6 +519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!canDelete()) {
         const btnExcluir = document.getElementById('btnExcluirSelecionados');
         if (btnExcluir) btnExcluir.style.display = 'none';
+        const fabExcluir = document.getElementById('btnFabExcluirSelecionados');
+        if (fabExcluir) fabExcluir.style.display = 'none';
         
         const table = document.getElementById('gridRetornoRota') || document.getElementById('tableRetornoRota');
         const headers = table?.querySelectorAll('thead th');
