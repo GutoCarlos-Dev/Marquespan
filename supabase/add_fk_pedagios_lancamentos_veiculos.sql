@@ -4,6 +4,9 @@
 -- e execute corretamente as consultas com joins implícitos.
 
 ALTER TABLE public.pedagios_lancamentos
+DROP CONSTRAINT IF EXISTS fk_pedagios_lancamentos_placa;
+
+ALTER TABLE public.pedagios_lancamentos
 ADD CONSTRAINT fk_pedagios_lancamentos_placa
 FOREIGN KEY (placa)
 REFERENCES public.veiculos (placa)

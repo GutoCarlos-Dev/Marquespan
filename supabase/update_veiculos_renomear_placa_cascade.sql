@@ -53,6 +53,31 @@ begin
     get diagnostics v_total = row_count;
     v_resultado := v_resultado || jsonb_build_object('veiculos', v_total);
 
+    if to_regclass('public.retorno_rota') is not null then
+        delete from public.retorno_rota antiga
+         where upper(regexp_replace(coalesce(antiga.placa::text, ''), '[^A-Za-z0-9]', '', 'g')) = v_placa_antiga
+           and exists (
+                select 1
+                  from public.retorno_rota nova
+                 where upper(regexp_replace(coalesce(nova.placa::text, ''), '[^A-Za-z0-9]', '', 'g')) = v_placa_nova
+                   and nova.data_retorno = antiga.data_retorno
+           );
+
+        get diagnostics v_total = row_count;
+        if v_total > 0 then
+            v_resultado := v_resultado || jsonb_build_object('retorno_rota_duplicados_removidos', v_total);
+        end if;
+
+        update public.retorno_rota
+           set placa = v_placa_nova
+         where upper(regexp_replace(coalesce(placa::text, ''), '[^A-Za-z0-9]', '', 'g')) = v_placa_antiga;
+
+        get diagnostics v_total = row_count;
+        if v_total > 0 then
+            v_resultado := v_resultado || jsonb_build_object('retorno_rota', v_total);
+        end if;
+    end if;
+
     for v_tabela in
         select n.nspname as schema_name, c.relname as table_name
           from pg_catalog.pg_class c
@@ -62,6 +87,7 @@ begin
          where n.nspname = 'public'
            and c.relkind in ('r', 'p')
            and c.relname <> 'veiculos'
+           and c.relname <> 'retorno_rota'
            and a.attname = 'placa'
            and not a.attisdropped
            and t.typname in ('text', 'varchar', 'bpchar')
