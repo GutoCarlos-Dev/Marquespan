@@ -4,105 +4,47 @@
   <meta charset="UTF-8">
   <title>Dashboard - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Ícones Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- ✅ CSS Principal (Carrega base, layout e dashboard) -->
   <link rel="stylesheet" href="css/index.css">
   <link rel="stylesheet" href="css/menu.css">
+  <link rel="icon" href="logo.png" type="image/png">
 </head>
 <body>
 
-  <!-- Container para injeção do Menu Lateral -->
   <div id="menu-container"></div>
 
-  <!-- 🧱 Conteúdo principal -->
   <div class="main-content">
-    <header class="header glass-header">
-      <h1>📊 MANUTENÇÃO MATRIZ SP</h1>
-      <p>Segurança, Eficiência e Produtividade.</p>
+
+    <header class="header glass-header dash-header">
+      <div class="dash-header-left">
+        <h1><span id="dash-saudacao">Bem-vindo</span>, <span id="dash-nome-usuario">...</span></h1>
+        <p id="dash-data-hora"></p>
+      </div>
+      <img src="logo.png" alt="Marquespan" class="dash-logo">
     </header>
 
-    <!-- Banner estilo Carrossel -->
     <div class="banner-container glass-panel">
-      <div class="banner-slide active">
-        <img src="img/Marquespan_banners-caminhao.jpeg" alt="Banner Marquespan 1">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao2.jpeg" alt="Banner Marquespan 2">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao3.jpeg" alt="Banner Marquespan 3">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao4.jpeg" alt="Banner Marquespan 4">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao5.jpeg" alt="Banner Marquespan 5">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao6.jpeg" alt="Banner Marquespan 6">
-      </div>
-      <div class="banner-slide">
-        <img src="img/Marquespan_banners-caminhao7.jpeg" alt="Banner Marquespan 7">
-      </div>
+      <div class="banner-slide active"><img src="img/Marquespan_banners-caminhao.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao2.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao3.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao4.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao5.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao6.jpeg" alt="Marquespan"></div>
+      <div class="banner-slide"><img src="img/Marquespan_banners-caminhao7.jpeg" alt="Marquespan"></div>
     </div>
 
-    <section class="kpi-grid">
-        <div class="kpi-card glass-card blue">
-            <div class="kpi-icon"><i class="fas fa-gas-pump"></i></div>
-            <div class="kpi-info">
-                <h3>Litros Abastecidos</h3>
-                <p id="litros-abastecidos">Carregando...</p>
-            </div>
-        </div>
-        <div class="kpi-card glass-card green">
-            <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
-            <div class="kpi-info">
-                <h3>Custo Total Manutenções</h3>
-                <p id="custo-total">Carregando...</p>
-            </div>
-        </div>
-        <div class="kpi-card glass-card orange">
-            <div class="kpi-icon"><i class="fas fa-truck"></i></div>
-            <div class="kpi-info">
-                <h3>Veículos Cadastrados</h3>
-                <p id="total-veiculos">Carregando...</p>
-            </div>
-        </div>
-        <div class="kpi-card glass-card cyan">
-            <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
-            <div class="kpi-info">
-                <h3>Manutenções Finalizadas</h3>
-                <p id="total-manutencoes">Carregando...</p>
-            </div>
-        </div>
-        <div class="kpi-card glass-card red">
-            <div class="kpi-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-            <div class="kpi-info">
-                <h3>Multas</h3>
-                <p>R$ 0,00</p>
-            </div>
-        </div>
-        <div class="kpi-card glass-card purple">
-            <div class="kpi-icon"><i class="fas fa-road"></i></div>
-            <div class="kpi-info">
-                <h3>Pedágios</h3>
-                <p>R$ 0,00</p>
-            </div>
-        </div>
+    <section class="dash-modules-section">
+      <h2 class="dash-section-title"><i class="fas fa-th-large"></i> Acesso Rápido</h2>
+      <div id="dashModulosContainer"></div>
     </section>
 
-    <!-- 🦶 Rodapé -->
     <footer class="footer">
       &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>
   </div>
 
-  <!-- 🚀 Scripts Modularizados -->
-   <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/dashboard.js" defer></script>
+  <script type="module" src="./script/dashboard.js?v=20260604-3" defer></script>
 </body>
 </html>

@@ -1,6 +1,5 @@
 /* css/dashboard.css */
 
-/* Variáveis para o tema Glassmorphism */
 :root {
     --glass-bg-light: rgba(255, 255, 255, 0.7);
     --glass-border: 1px solid rgba(255, 255, 255, 0.5);
@@ -9,7 +8,7 @@
     --card-radius: 20px;
 }
 
-/* Header com estilo Glass */
+/* ─── Header ─── */
 .glass-header {
     background: linear-gradient(135deg, rgba(0, 105, 55, 0.9), rgba(0, 77, 41, 0.95));
     backdrop-filter: var(--glass-blur);
@@ -31,16 +30,36 @@
 
 .glass-header p {
     margin: 5px 0 0 0;
-    opacity: 0.9;
+    opacity: 0.85;
     font-size: 0.95rem;
 }
 
-/* Banner Carrossel */
+/* Welcome header layout */
+.dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.dash-header-left h1 {
+    font-size: 1.55rem;
+}
+
+.dash-logo {
+    height: 56px;
+    opacity: 0.92;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 6px rgb(255, 255, 255));
+}
+
+/* ─── Banner Carrossel ─── */
 .banner-container {
     position: relative;
     width: 100%;
-    height: 320px;
-    margin-bottom: 30px;
+    height: 400px;
+    margin-bottom: 36px;
     border-radius: var(--card-radius);
     overflow: hidden;
     box-shadow: var(--glass-shadow);
@@ -54,7 +73,7 @@
     width: 100%;
     height: 100%;
     opacity: 0;
-    transition: opacity 1s ease-in-out;
+    transition: opacity 1.2s ease-in-out;
 }
 
 .banner-slide.active {
@@ -68,96 +87,140 @@
     display: block;
 }
 
-/* Grid de KPIs */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 25px;
+/* ─── Módulos de Acesso Rápido ─── */
+.dash-modules-section {
     margin-bottom: 30px;
 }
 
-/* Cards KPI com Glassmorphism */
-.glass-card {
-    background: var(--glass-bg-light);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: var(--glass-border);
-    border-radius: var(--card-radius);
-    padding: 25px;
+.dash-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2d4a38;
+    margin: 0 0 24px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
     display: flex;
     align-items: center;
-    gap: 20px;
-    box-shadow: var(--glass-shadow);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    gap: 8px;
 }
 
-.glass-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
-    background: rgba(255, 255, 255, 0.85);
-    z-index: 100;
+.dash-modules-group {
+    margin-bottom: 28px;
 }
 
-/* Ícones KPI */
-.kpi-icon {
-    font-size: 2rem;
-    width: 65px;
-    height: 65px;
+.dash-group-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin: 0 0 12px 4px;
+}
+
+.dash-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.dash-module-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.08);
+    text-decoration: none;
+    color: #222;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.dash-module-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(31, 38, 135, 0.18);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.dash-module-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 18px;
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    font-size: 1.3rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
-/* Cores dos Cards (Gradientes Suaves) */
-.glass-card.blue .kpi-icon { background: linear-gradient(135deg, #007bff, #0056b3); }
-.glass-card.green .kpi-icon { background: linear-gradient(135deg, #28a745, #1e7e34); }
-.glass-card.orange .kpi-icon { background: linear-gradient(135deg, #fd7e14, #d65b00); }
-.glass-card.cyan .kpi-icon { background: linear-gradient(135deg, #17a2b8, #117a8b); }
-.glass-card.red .kpi-icon { background: linear-gradient(135deg, #dc3545, #bd2130); }
-.glass-card.purple .kpi-icon { background: linear-gradient(135deg, #6f42c1, #553098); }
+.dash-module-icon.green  { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.dash-module-icon.blue   { background: linear-gradient(135deg, #007bff, #0056b3); }
+.dash-module-icon.orange { background: linear-gradient(135deg, #fd7e14, #d65b00); }
+.dash-module-icon.red    { background: linear-gradient(135deg, #dc3545, #bd2130); }
+.dash-module-icon.purple { background: linear-gradient(135deg, #6f42c1, #553098); }
+.dash-module-icon.cyan   { background: linear-gradient(135deg, #17a2b8, #117a8b); }
+.dash-module-icon.teal   { background: linear-gradient(135deg, #20c997, #0f8c6c); }
+.dash-module-icon.dark   { background: linear-gradient(135deg, #495057, #343a40); }
+.dash-module-icon.indigo { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+.dash-module-icon.pink   { background: linear-gradient(135deg, #e83e8c, #c2165b); }
+.dash-module-icon.brown  { background: linear-gradient(135deg, #a0522d, #7a3b1e); }
+.dash-module-icon.gray   { background: linear-gradient(135deg, #6c757d, #495057); }
 
-/* Texto KPI */
-.kpi-info h3 {
-    margin: 0 0 8px 0;
-    font-size: 0.85rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
+.dash-module-info {
+    flex: 1;
+    min-width: 0;
 }
 
-.kpi-info p {
+.dash-module-info h3 {
+    margin: 0 0 2px 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dash-module-info p {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #222;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    font-size: 0.75rem;
+    color: #777;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Referência de Layout (Baseado no index.css / layout.css) */
+.dash-module-arrow {
+    color: #bbb;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.dash-module-card:hover .dash-module-arrow {
+    color: #28a745;
+    transform: translateX(3px);
+}
+
+/* ─── Layout ─── */
 .main-content {
-    margin-left: 290px; /* 270px do menu + 20px de espaço */
+    margin-left: 290px;
     padding: 30px;
     min-height: 100vh;
     transition: margin-left 0.3s ease;
 }
 
-@media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
-        padding: 20px 10px;
-    }
-}
-
-/* Rodapé com estilo Glass */
+/* ─── Rodapé ─── */
 .footer {
     margin-top: 30px;
     text-align: center;
     font-size: 0.85rem;
-    color: #333;
+    color: #555;
     padding: 15px;
     background: var(--glass-bg-light);
     backdrop-filter: var(--glass-blur);
@@ -165,4 +228,54 @@
     border: var(--glass-border);
     border-radius: var(--card-radius);
     box-shadow: var(--glass-shadow);
+}
+
+/* ─── Responsivo ─── */
+@media (max-width: 1100px) {
+    .dash-modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px 12px;
+    }
+
+    .dash-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .dash-logo {
+        height: 44px;
+    }
+
+    .banner-container {
+        height: 220px;
+    }
+
+    .dash-modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .dash-module-card {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
+    .dash-module-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .dash-modules-grid {
+        grid-template-columns: 1fr;
+    }
 }
