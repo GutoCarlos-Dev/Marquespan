@@ -503,11 +503,15 @@ function goPage(id){
   if(id==='historico'){renderHistorico();renderPhonesTable();}
   if(id==='relatorios'){updateRelStats();}
   if(id==='step3'){
-    // Auto-carrega semanas na primeira visita ao passo 3
+    // Auto-carrega semanas e vínculos na primeira visita ao passo 3
     const sel = document.getElementById('sel-semana-escala');
     if(sel && (sel.options.length <= 1 || sel.options[0].value === '')) {
       inicializarSemanasEscala();
     }
+    // Carrega vínculos persistidos para a filial do usuário
+    const filialVinc = (document.getElementById('sel-filial-escala')?.value || '').trim()
+                    || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim();
+    if(filialVinc) carregarVinculos(filialVinc);
   }
   if(id==='cadastros'){
     cadCurrentType='motoristas';
@@ -2087,8 +2091,17 @@ async function abrirCadastroFaltantes(){
   };
 
   // ── Salvar ──────────────────────────────────────────────────
-  document.getElementById('btn-salvar-faltantes').onclick = () => {
+  document.getElementById('btn-salvar-faltantes').onclick = async () => {
+    const btnSalvar = document.getElementById('btn-salvar-faltantes');
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = '⏳ Salvando...';
+
+    const filial = (document.getElementById('sel-filial-escala')?.value || '').trim()
+                || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim();
+
     let salvos = 0;
+    const vinculosParaSalvar = [];
+
     arr.forEach((a, i) => {
       const nomePonto = (document.querySelector(`input[data-i="${i}"][data-f="nome_ponto"]`)?.value||'').trim();
       const tel       = (document.querySelector(`input[data-i="${i}"][data-f="telefone"]`)?.value||'').trim();
@@ -2103,12 +2116,19 @@ async function abrirCadastroFaltantes(){
       cadData[type][pk] = {
         nome_escala: pk,
         nome_ponto:  nomePonto,
-        funcao:      linked?.funcao || (a.tipo === 'MOTORISTA' ? 'MOTORISTA' : 'AUXILIAR'),
+        funcao:      linked?.funcao || a.tipo,
         telefone:    tel || linked?.contato_corp || '',
         tel_corp:    linked?.contato_corp || '',
         cpf:         linked?.cpf || cadData[type][pk]?.cpf || '',
         obs:         obs
       };
+
+      // Adiciona na fila para salvar no Supabase
+      vinculosParaSalvar.push({
+        nome_roteiro: pk,
+        nome_ponto:   nomePonto,
+        tipo:         a.tipo
+      });
 
       cadSave(type, pk, false);
       if(tel){
@@ -2118,16 +2138,151 @@ async function abrirCadastroFaltantes(){
       salvos++;
     });
 
-    if(salvos){
-      alert(`✓ ${salvos} vínculo(s) salvo(s). Reprocesse o Passo 3 para refletir.`);
-      overlay.remove();
-      try{ renderCadTable('motoristas'); renderCadTable('auxiliares'); }catch(e){}
-      try{ refreshCadDbBanner(); }catch(e){}
-      try{ cloudTestConnection(); }catch(e){}
-    } else {
+    if(!salvos){
       alert('Vincule ou preencha o Nome Completo de pelo menos um cadastro.');
+      btnSalvar.disabled = false;
+      btnSalvar.innerHTML = '✓ Salvar vínculos';
+      return;
     }
+
+    // Persiste no Supabase
+    if(filial && vinculosParaSalvar.length){
+      await salvarVinculosSupabase(vinculosParaSalvar, filial);
+    }
+
+    overlay.remove();
+    renderPainelVinculos();
   };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VÍNCULOS DE NOMES (jornada_vinculos)
+// Persistem o mapeamento nome_roteiro → nome_ponto entre sessões
+// ══════════════════════════════════════════════════════════════════
+
+// Cache em memória: { 'MOTORISTA::NOME': { id, nome_roteiro, nome_ponto, tipo, filial } }
+window._vinculosCache = {};
+
+// Carrega todos os vínculos da filial e popula cadData automaticamente
+async function carregarVinculos(filial){
+  if(!filial || !window._supa) return;
+  try {
+    const { data, error } = await window._supa.rpc('get_jornada_vinculos', { p_filial: filial });
+    if(error){ console.warn('[carregarVinculos]', error.message); return; }
+    const rows = data || [];
+    window._vinculosCache = {};
+    rows.forEach(v => {
+      window._vinculosCache[`${v.tipo}::${v.nome_roteiro}`] = v;
+      // Injeta no cadData para que buildMap os reconheça
+      const store = v.tipo === 'MOTORISTA' ? 'motoristas' : 'auxiliares';
+      if(!cadData[store]) cadData[store] = {};
+      cadData[store][v.nome_roteiro] = {
+        nome_escala: v.nome_roteiro,
+        nome_ponto:  v.nome_ponto,
+        funcao:      v.tipo,
+        telefone:    '',
+        tel_corp:    '',
+        cpf:         '',
+        obs:         '_vinculo'
+      };
+    });
+    renderPainelVinculos();
+    console.log(`[vínculos] ${rows.length} carregado(s) para filial ${filial}`);
+  } catch(e){ console.warn('[carregarVinculos]', e); }
+}
+
+// Salva um array de vínculos novos/atualizados no Supabase
+async function salvarVinculosSupabase(vinculos, filial){
+  if(!vinculos.length || !window._supa) return;
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+  const payload = vinculos.map(v => ({
+    nome_roteiro: v.nome_roteiro.trim().toUpperCase(),
+    nome_ponto:   v.nome_ponto.trim(),
+    tipo:         v.tipo,
+    filial:       filial,
+    criado_por:   usuarioLogado.auth_user_id || null
+  }));
+  const { error } = await window._supa
+    .from('jornada_vinculos')
+    .upsert(payload, { onConflict: 'nome_roteiro,filial,tipo', ignoreDuplicates: false });
+  if(error) console.warn('[salvarVinculos]', error.message);
+  else await carregarVinculos(filial); // recarrega para atualizar cache + painel
+}
+
+// Remove um vínculo pelo id
+async function removerVinculo(id){
+  if(!window._supa) return;
+  const filial = window._s3EscalaFilial
+    || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '');
+  const { error } = await window._supa.from('jornada_vinculos').delete().eq('id', id);
+  if(error){ alert('Erro ao remover vínculo: ' + error.message); return; }
+  // Remove do cadData
+  Object.values(window._vinculosCache).forEach(v => {
+    if(v.id === id){
+      const store = v.tipo === 'MOTORISTA' ? 'motoristas' : 'auxiliares';
+      if(cadData[store]) delete cadData[store][v.nome_roteiro];
+    }
+  });
+  await carregarVinculos(filial);
+}
+window.removerVinculo = removerVinculo;
+
+// Renderiza o painel de vínculos no Passo 3
+function renderPainelVinculos(){
+  const painel = document.getElementById('painel-vinculos');
+  if(!painel) return;
+  const vinculos = Object.values(window._vinculosCache || {});
+  if(!vinculos.length){
+    painel.style.display = 'none';
+    return;
+  }
+  painel.style.display = '';
+  const total = vinculos.length;
+  const mots  = vinculos.filter(v => v.tipo === 'MOTORISTA').length;
+  const auxs  = vinculos.filter(v => v.tipo === 'AUXILIAR').length;
+
+  painel.innerHTML = `
+    <details style="background:#fff;border-radius:var(--r2);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden">
+      <summary style="cursor:pointer;padding:12px 16px;font-size:13px;font-weight:700;color:var(--brand);display:flex;align-items:center;gap:8px;list-style:none;background:#f8faf8">
+        <i class="fas fa-link" style="font-size:12px"></i>
+        Vínculos salvos
+        <span style="margin-left:4px;background:var(--brand);color:#fff;padding:1px 8px;border-radius:20px;font-size:11px">${total}</span>
+        <span style="margin-left:4px;font-size:11px;color:var(--text3);font-weight:400">${mots} motorista(s) · ${auxs} auxiliar(es)</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:400">clique para expandir</span>
+      </summary>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#f2f2f2">
+              <th style="padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #dee2e6">Tipo</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #dee2e6">Nome no Roteiro</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #dee2e6">Nome no Ponto (Secullum)</th>
+              <th style="padding:8px 12px;border-bottom:1px solid #dee2e6;width:90px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${vinculos.map(v => `
+              <tr style="border-bottom:1px solid #f1f3f5">
+                <td style="padding:8px 12px">
+                  <span style="background:${v.tipo==='MOTORISTA'?'#dbeafe':'#d1fae5'};color:${v.tipo==='MOTORISTA'?'#1d4ed8':'#065f46'};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">${v.tipo}</span>
+                </td>
+                <td style="padding:8px 12px;font-weight:700;color:#1a2332">${esc(v.nome_roteiro)}</td>
+                <td style="padding:8px 12px;color:#495057">${esc(v.nome_ponto)}</td>
+                <td style="padding:8px 12px;text-align:right">
+                  <button onclick="removerVinculo('${v.id}')"
+                    style="padding:4px 10px;background:#fde8ec;color:#c8102e;border:1px solid #f5aab8;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer"
+                    onmouseover="this.style.background='#c8102e';this.style.color='#fff'"
+                    onmouseout="this.style.background='#fde8ec';this.style.color='#c8102e'">
+                    Desvincular
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  `;
 }
 
 function buildMap(wb,sheet,colShort,colFull){
@@ -2361,6 +2516,22 @@ async function carregarEscalaPorDatasControle(){
 }
 
 // Carrega as linhas da escala para a semana selecionada e monta o cache _s3EscalaSupabase
+// Calcula as 7 datas ISO de uma semana usando a MESMA fórmula do escala.js
+// Base: 28/12/2025 UTC (semana 1 = 29/12 seg a 04/01 dom... na verdade dom 28/12 a sab 03/01)
+function calcDatasSemana(semanaNome){
+  const match = semanaNome.match(/SEMANA\s+0*(\d+)/i);
+  if(!match) return [];
+  const weekNum  = parseInt(match[1]);
+  const baseUTC  = Date.UTC(2025, 11, 28);           // 28 dez 2025 UTC (igual escala.js)
+  const startUTC = baseUTC + (weekNum - 1) * 7 * 86400000;
+  const dates    = [];
+  for(let d = 0; d < 7; d++){
+    const dt = new Date(startUTC + d * 86400000);
+    dates.push(dt.toISOString().split('T')[0]);        // YYYY-MM-DD
+  }
+  return dates;
+}
+
 async function confirmarEscalaSupabase(){
   const sel        = document.getElementById('sel-semana-escala');
   const semanaNome = sel?.value;
@@ -2371,47 +2542,46 @@ async function confirmarEscalaSupabase(){
   const filial    = filialSel || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim();
   if(!filial){ alert('Selecione a Filial para carregar a escala.'); return; }
 
+  // Calcula as datas reais da semana (mesma fórmula do escala.js)
+  const isoDateArr = calcDatasSemana(semanaNome);
+  if(!isoDateArr.length){ alert('Semana inválida: ' + semanaNome); return; }
+
   const statusEl = document.getElementById('escala-sp-status');
   const btnUsar  = document.getElementById('btn-usar-semana');
-  if(statusEl){ statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8'; statusEl.innerHTML=`⏳ Carregando escala de ${filial}...`; }
-  if(btnUsar)  btnUsar.disabled = true;
+  if(statusEl){
+    statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8';
+    statusEl.innerHTML=`⏳ Buscando escala — ${semanaNome} · filial ${filial} · datas ${isoDateArr[1]} → ${isoDateArr[6]}...`;
+  }
+  if(btnUsar) btnUsar.disabled = true;
 
   try {
     let rows;
+    if(!window._supa) throw new Error('supabaseClient não disponível');
 
-    // Usa RPC get_escala_semana (SECURITY DEFINER — bypass RLS, só exige autenticação)
-    if(window._supa) {
-      const { data, error } = await window._supa.rpc('get_escala_semana', {
-        p_semana: semanaNome,
-        p_filial: filial
-      });
-      if(error){
-        // Fallback para query direta caso o RPC não exista ainda no banco
-        console.warn('[confirmarEscalaSupabase] RPC indisponível, tentando query direta:', error.message);
-        const { data: data2, error: err2 } = await window._supa
-          .from('escala')
-          .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
-          .eq('semana_nome', semanaNome)
-          .eq('filial', filial)
-          .order('data_escala', { ascending: true })
-          .order('placa',       { ascending: true })
-          .limit(2000);
-        if(err2) throw new Error(err2.message);
-        rows = data2 || [];
-      } else {
-        rows = data || [];
-      }
+    // Busca pelas datas calculadas (não pelo semana_nome — ignora label do banco)
+    const { data, error } = await window._supa.rpc('get_escala_por_datas', {
+      p_datas:  isoDateArr,
+      p_filial: filial
+    });
+
+    if(error){
+      console.warn('[confirmarEscalaSupabase] RPC indisponível, tentando query direta:', error.message);
+      const { data: d2, error: e2 } = await window._supa
+        .from('escala')
+        .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
+        .in('data_escala', isoDateArr)
+        .eq('filial', filial)
+        .order('data_escala', { ascending: true })
+        .order('placa',       { ascending: true })
+        .limit(2000);
+      if(e2) throw new Error(e2.message);
+      rows = d2 || [];
     } else {
-      // Fallback: sbFetch (sessão pode estar desatualizada)
-      const resp = await sbFetch(
-        `/rest/v1/escala?select=data_escala,placa,rota,motorista,auxiliar,status,tipo_escala&semana_nome=eq.${encodeURIComponent(semanaNome)}&filial=eq.${encodeURIComponent(filial)}&order=data_escala.asc,placa.asc&limit=2000`
-      );
-      if(!resp.ok) throw new Error('HTTP ' + resp.status);
-      rows = await resp.json();
+      rows = data || [];
     }
 
     if(!rows.length){
-      if(statusEl){ statusEl.style.background='#fef3c7'; statusEl.style.color='#92400e'; statusEl.innerHTML='⚠ Nenhum dado encontrado para esta semana.'; }
+      if(statusEl){ statusEl.style.background='#fef3c7'; statusEl.style.color='#92400e'; statusEl.innerHTML=`⚠ Sem dados de escala para ${semanaNome} (${isoDateArr[1]} → ${isoDateArr[6]}) · filial ${filial}.`; }
       if(btnUsar){ btnUsar.disabled=false; btnUsar.style.opacity='1'; }
       return;
     }
@@ -2458,17 +2628,18 @@ async function confirmarEscalaSupabase(){
     }
 
     window._s3EscalaSupabase  = cacheByDay;
-    window._s3EscalaByDate    = cacheByDate;   // lookup primário por data exata
+    window._s3EscalaByDate    = cacheByDate;
     window._s3SemanaNome      = semanaNome;
     window._s3EscalaFilial    = filial;
-    // Limpa roteiros xlsx para evitar conflito
-    rotList = [];
-    wb_rot  = null;
+    rotList = []; wb_rot = null;
 
     const totalVeiculos = Object.values(cacheByDay).reduce((s, a) => s + a.length, 0);
     const datas = Object.keys(cacheByDate).sort();
     const dias  = [...new Set(datas.map(d => cacheByDate[d].dayName))];
-    const rangeStr = datas.length ? ` (${datas[0]} → ${datas[datas.length-1]})` : '';
+    // Mostra datas calculadas (SEGUNDA a SABADO) para o usuário confirmar
+    const seg = isoDateArr[1], sab = isoDateArr[6];
+    const fmt = iso => { const [y,m,d]=iso.split('-'); return `${d}.${m}.${y.slice(-2)}`; };
+    const rangeStr = ` (${fmt(seg)} → ${fmt(sab)})`;
 
     if(statusEl){
       statusEl.style.background = '#d1fae5';
