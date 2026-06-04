@@ -7,4 +7,5 @@ ALTER TABLE public.pedagios_lancamentos
 ADD CONSTRAINT fk_pedagios_lancamentos_placa
 FOREIGN KEY (placa)
 REFERENCES public.veiculos (placa)
+ON UPDATE CASCADE
 ON DELETE RESTRICT; -- 'ON DELETE RESTRICT' impede a exclusão de um veículo se houver lançamentos de pedágio associados.

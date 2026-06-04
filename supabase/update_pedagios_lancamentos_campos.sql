@@ -135,6 +135,7 @@ BEGIN
             ADD CONSTRAINT fk_pedagios_lancamentos_placa
             FOREIGN KEY (placa)
             REFERENCES public.veiculos (placa)
+            ON UPDATE CASCADE
             ON DELETE RESTRICT;
     END IF;
 END $$;

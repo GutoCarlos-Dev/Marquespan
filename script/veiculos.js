@@ -395,6 +395,7 @@ function abrirModalVeiculo(veiculo = null) {
     if (veiculo) {
         title.textContent = 'Editar Veículo';
         setInputValue('veiculoId', veiculo.id);
+        setInputValue('veiculoPlacaOriginal', veiculo.placa);
         setInputValue('veiculoFilial', veiculo.filial);
         setInputValue('veiculoPlaca', veiculo.placa);
         setInputValue('veiculoModelo', veiculo.modelo);
@@ -445,6 +446,7 @@ function abrirModalVeiculo(veiculo = null) {
     } else {
         title.textContent = 'Novo Veículo';
         setInputValue('veiculoId', '');
+        setInputValue('veiculoPlacaOriginal', '');
         setInputValue('veiculoSituacao', 'ativo');
         setSelectBoolean('veiculoVuc', false);
         setSelectBoolean('veiculoVideoMonitoramento', false);
@@ -480,6 +482,7 @@ async function salvarVeiculo(e) {
     e.preventDefault();
 
     const id = document.getElementById('veiculoId').value;
+    const placaOriginal = normalizarPlacaVeiculo(document.getElementById('veiculoPlacaOriginal')?.value);
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? (el.value || null) : null;
@@ -549,8 +552,23 @@ async function salvarVeiculo(e) {
     try {
         let savedId = id;
         let error;
+        const placaNova = normalizarPlacaVeiculo(payload.placa);
+        const placaFoiAlterada = Boolean(id && placaOriginal && placaNova && placaOriginal !== placaNova);
 
-        if (id) {
+        if (placaFoiAlterada) {
+            const confirmar = confirm(`Alterar a placa de ${placaOriginal} para ${placaNova}?\n\nEssa alteracao tambem sera aplicada nos registros vinculados a esta placa.`);
+            if (!confirmar) return;
+
+            const { error: rpcError } = await supabaseClient.rpc('renomear_placa_veiculo', {
+                p_placa_antiga: placaOriginal,
+                p_placa_nova: placaNova
+            });
+            if (rpcError) {
+                error = rpcError;
+            } else {
+                ({ error } = await supabaseClient.from('veiculos').update(payload).eq('id', id));
+            }
+        } else if (id) {
             ({ error } = await supabaseClient.from('veiculos').update(payload).eq('id', id));
         } else {
             const result = await supabaseClient.from('veiculos').insert([payload]).select('id').single();
@@ -574,6 +592,10 @@ async function salvarVeiculo(e) {
         console.error('Erro ao salvar:', err);
         alert('Erro ao salvar veículo: ' + err.message);
     }
+}
+
+function normalizarPlacaVeiculo(value) {
+    return String(value || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 }
 
 async function uploadFotosVeiculo(veiculoId, placa) {
