@@ -123,6 +123,20 @@ function bindEvents() {
     tbody?.addEventListener('change', handleGridChange);
     tbody?.addEventListener('click', handleGridClick);
     tbody?.addEventListener('paste', handlePaste);
+
+    document.addEventListener('keydown', handleSalvarTudoShortcut);
+}
+
+function handleSalvarTudoShortcut(event) {
+    const key = String(event.key || '').toLowerCase();
+    if (key !== 's' || (!event.ctrlKey && !event.metaKey) || event.altKey) return;
+
+    event.preventDefault();
+
+    const btn = document.getElementById('btnSalvarTudo');
+    if (btn?.disabled) return;
+
+    salvarTudo();
 }
 
 function toggleMenuLateralPesoRota() {
