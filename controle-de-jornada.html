@@ -292,24 +292,25 @@
           <i class="fas fa-calendar-week"></i> Roteiro SP — Escala Semanal
         </div>
 
-        <!-- Seletor de semana -->
+        <!-- Filial + Semana + Botão -->
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-          <div style="flex:1;min-width:180px">
-            <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Semana</label>
-            <select id="sel-semana-escala" onchange="document.getElementById('btn-usar-semana').disabled=!this.value"
-              style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;transition:border-color .3s;cursor:pointer">
-              <option value="">Clique em Buscar para carregar semanas...</option>
+          <div style="min-width:140px">
+            <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Filial</label>
+            <select id="sel-filial-escala"
+              style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;cursor:pointer">
+              <option value="">Carregando...</option>
             </select>
           </div>
-          <button onclick="inicializarSemanasEscala()"
-            style="padding:9px 16px;background:#1F71B8;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:filter .2s"
-            onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
-            <i class="fas fa-sync-alt"></i> Buscar semanas
-          </button>
+          <div style="flex:1;min-width:180px">
+            <label style="font-size:12px;font-weight:600;color:#495057;display:block;margin-bottom:5px">Semana</label>
+            <select id="sel-semana-escala" onchange="document.getElementById('btn-usar-semana').disabled=!this.value;document.getElementById('btn-usar-semana').style.opacity=this.value?'1':'.5'"
+              style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;background:rgba(255,255,255,.5);outline:none;font-family:inherit;cursor:pointer">
+              <option value="">Carregando semanas...</option>
+            </select>
+          </div>
           <button id="btn-usar-semana" onclick="confirmarEscalaSupabase()" disabled
-            style="padding:9px 18px;background:#006937;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:filter .2s;opacity:.5"
-            onmouseover="if(!this.disabled)this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''"
-            onfocus="this.style.opacity=this.disabled?'.5':'1'" onblur="">
+            style="padding:9px 18px;background:#006937;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;opacity:.5;transition:filter .2s"
+            onmouseover="if(!this.disabled)this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
             <i class="fas fa-check"></i> Usar semana
           </button>
         </div>
@@ -1343,6 +1344,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 <script src="./script/controle-de-jornada.js"></script>
+<!-- Expõe o supabaseClient do sistema para os scripts regulares -->
+<script type="module">
+  import { supabaseClient } from './script/supabase.js';
+  window._supa = supabaseClient;
+</script>
 <script type="module" src="./script/auth-guard.js"></script>
 <script type="module" src="./script/menu.js" defer></script>
 </body>

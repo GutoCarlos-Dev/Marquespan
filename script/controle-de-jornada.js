@@ -1626,7 +1626,10 @@ function buildS3Mapping(){
     const rotWb=rotList.length?findWbForDate(dt):null;
     const rotSheets=new Set((rotWb?.SheetNames||[]).map(s=>s.trim().toUpperCase()));
     const inRot =rotList.length>0&&rotSheets.has(dayName);
-    const inSupa=!!(window._s3EscalaSupabase?.[dayName]?.length);
+    // Lookup por data exata primeiro (evita problema de encoding e semana errada)
+    const supaByDate = window._s3EscalaByDate?.[ds];
+    const inSupa = !!(supaByDate?.rows?.length) ||
+                   !!(window._s3EscalaSupabase?.[dayName]?.length);
     const inCtrl=ctrlEscalas.has(dayName);
     const src=inRot?'rot':inSupa?'supa':inCtrl?'ctrl':'none';
     // Find which semana covers this date
@@ -1775,7 +1778,7 @@ async function runStep3(){
     const dateData=wb_ctrl2?getDateData(wb_ctrl2,m.ds):getDateData(null,m.ds);
     // supa → getEscala usa cache interno; rot → xlsx; ctrl/none → ctrl2
     const rotWbToUse=m.src==='rot'?(m.rotWb||wb_rot||rotList[0]?.wb):m.src==='supa'?null:wb_ctrl2;
-    const escala=getEscala(rotWbToUse,m.dayName);
+    const escala=getEscala(rotWbToUse,m.dayName,m.ds);
     tlog('s3-term','ok',`  ✓ Horários: ${Object.keys(dateData).length} · Escala: ${escala.length} veículos`);
 
     const result=escala.map(e=>{
@@ -2191,38 +2194,49 @@ async function loadFuncionariosSupabase(){
 
 // Carrega semanas disponíveis na tabela escala e preenche o select
 async function inicializarSemanasEscala(){
-  const sel = document.getElementById('sel-semana-escala');
-  if(!sel) return;
-  sel.innerHTML = '<option value="">Carregando semanas...</option>';
-  try {
-    const resp = await sbFetch(
-      '/rest/v1/escala?select=semana_nome&semana_nome=not.eq.SEMANA PADRÃO - MODELO&order=semana_nome.desc&limit=500'
-    );
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
-    const semanas = [...new Set(rows.map(r => r.semana_nome).filter(Boolean))];
-    // Ordena: "SEMANA 53 - 2026" desc, mais recentes primeiro
-    semanas.sort((a, b) => {
-      const numA = parseInt(a.match(/\d+/)?.[0] || 0);
-      const numB = parseInt(b.match(/\d+/)?.[0] || 0);
-      const yrA  = parseInt(a.match(/\d{4}/)?.[0] || 0);
-      const yrB  = parseInt(b.match(/\d{4}/)?.[0] || 0);
-      return yrB !== yrA ? yrB - yrA : numB - numA;
-    });
-    if(!semanas.length){
-      sel.innerHTML = '<option value="">Nenhuma semana encontrada</option>';
-      return;
-    }
-    sel.innerHTML = '<option value="">Selecione a semana...</option>' +
-      semanas.map(s => `<option value="${s}">${s}</option>`).join('');
-    // Seleciona a primeira (mais recente) automaticamente
-    sel.value = semanas[0];
-    document.getElementById('btn-usar-semana').disabled = false;
-    document.getElementById('btn-usar-semana').style.opacity = '1';
-  } catch(e) {
-    sel.innerHTML = '<option value="">Erro ao carregar — tente novamente</option>';
-    console.warn('[inicializarSemanasEscala]', e);
+  const selSemana = document.getElementById('sel-semana-escala');
+  const selFilial = document.getElementById('sel-filial-escala');
+  if(!selSemana) return;
+
+  // ── 1. Carrega filiais (igual escala.js) ──────────────────
+  if(selFilial){
+    try {
+      const resp = await sbFetch('/rest/v1/filiais?select=nome,sigla&order=nome.asc');
+      if(resp.ok){
+        const filiais = await resp.json();
+        const usuFilial = JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '';
+        selFilial.innerHTML = '<option value="">Selecione a filial...</option>' +
+          (filiais || []).map(f => {
+            const val = f.sigla || f.nome || '';
+            const lbl = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+            return `<option value="${val}" ${val === usuFilial ? 'selected' : ''}>${lbl}</option>`;
+          }).join('');
+        // Se não selecionou nenhuma, tenta usar a do usuário logado diretamente
+        if(!selFilial.value && usuFilial) selFilial.value = usuFilial;
+      }
+    } catch(e){ console.warn('[inicializarSemanasEscala] filiais', e); }
   }
+
+  // ── 2. Gera semanas programaticamente (igual escala.js) ──
+  // Base: 28/12/2025 = semana 1 de 2026
+  const baseDate   = new Date(Date.UTC(2025, 11, 28));
+  const hoje       = new Date();
+  const diffDays   = Math.floor((hoje - baseDate) / (1000 * 60 * 60 * 24));
+  let semanaAtual  = Math.floor(diffDays / 7) + 1;
+  if(semanaAtual < 1)  semanaAtual = 1;
+  if(semanaAtual > 53) semanaAtual = 53;
+
+  // Lista de SEMANA 01 - 2026 até SEMANA 53 - 2026
+  const semanas = [];
+  for(let i = 1; i <= 53; i++){
+    semanas.push(`SEMANA ${String(i).padStart(2,'0')} - 2026`);
+  }
+
+  selSemana.innerHTML = semanas.map(s => `<option value="${s}">${s}</option>`).join('');
+  selSemana.value = `SEMANA ${String(semanaAtual).padStart(2,'0')} - 2026`;
+
+  const btnUsar = document.getElementById('btn-usar-semana');
+  if(btnUsar){ btnUsar.disabled = false; btnUsar.style.opacity = '1'; }
 }
 
 // Carrega as linhas da escala para a semana selecionada e monta o cache _s3EscalaSupabase
@@ -2231,17 +2245,39 @@ async function confirmarEscalaSupabase(){
   const semanaNome = sel?.value;
   if(!semanaNome){ alert('Selecione uma semana.'); return; }
 
+  // Filial: usa o select se disponível, senão cai para o usuário logado
+  const filialSel = document.getElementById('sel-filial-escala')?.value?.trim();
+  const filial    = filialSel || (JSON.parse(localStorage.getItem('usuarioLogado') || '{}').filial || '').trim();
+  if(!filial){ alert('Selecione a Filial para carregar a escala.'); return; }
+
   const statusEl = document.getElementById('escala-sp-status');
   const btnUsar  = document.getElementById('btn-usar-semana');
-  if(statusEl){ statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8'; statusEl.innerHTML='⏳ Carregando escala...'; }
+  if(statusEl){ statusEl.style.display=''; statusEl.style.background='#dbeafe'; statusEl.style.color='#1d4ed8'; statusEl.innerHTML=`⏳ Carregando escala de ${filial}...`; }
   if(btnUsar)  btnUsar.disabled = true;
 
   try {
-    const resp = await sbFetch(
-      `/rest/v1/escala?select=data_escala,placa,rota,motorista,auxiliar,status,tipo_escala&semana_nome=eq.${encodeURIComponent(semanaNome)}&order=data_escala.asc,placa.asc&limit=2000`
-    );
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
+    let rows;
+
+    // Usa supabaseClient do sistema se disponível (auth correta + RLS correto)
+    if(window._supa) {
+      const { data, error } = await window._supa
+        .from('escala')
+        .select('data_escala,placa,rota,motorista,auxiliar,status,tipo_escala')
+        .eq('semana_nome', semanaNome)
+        .eq('filial', filial)
+        .order('data_escala', { ascending: true })
+        .order('placa',       { ascending: true })
+        .limit(2000);
+      if(error) throw new Error(error.message);
+      rows = data || [];
+    } else {
+      // Fallback: sbFetch (sessão pode estar desatualizada)
+      const resp = await sbFetch(
+        `/rest/v1/escala?select=data_escala,placa,rota,motorista,auxiliar,status,tipo_escala&semana_nome=eq.${encodeURIComponent(semanaNome)}&filial=eq.${encodeURIComponent(filial)}&order=data_escala.asc,placa.asc&limit=2000`
+      );
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      rows = await resp.json();
+    }
 
     if(!rows.length){
       if(statusEl){ statusEl.style.background='#fef3c7'; statusEl.style.color='#92400e'; statusEl.innerHTML='⚠ Nenhum dado encontrado para esta semana.'; }
@@ -2249,41 +2285,64 @@ async function confirmarEscalaSupabase(){
       return;
     }
 
-    // Mapa JS de dia da semana (getDay()) → nome da aba
-    const DOW_DIAS = ['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO'];
-    const cache = {};
+    // Usa os mesmos nomes de DIAS definidos globalmente (garantia de encoding idêntico)
+    // DIAS = ['SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO']
+    // getDay(): 0=Dom,1=Seg,2=Ter,3=Qua,4=Qui,5=Sex,6=Sáb
+    const GET_DAY_TO_DIAS = { 1:DIAS[0],2:DIAS[1],3:DIAS[2],4:DIAS[3],5:DIAS[4],6:DIAS[5] };
+
+    const cacheByDay  = {};   // { 'SEGUNDA': [...], 'TERÇA': [...], ... }
+    const cacheByDate = {};   // { 'DD.MM.YY': [...] }  ← lookup por data exata do CONTROLE
+
     for(const row of rows){
       if(!row.placa || !row.data_escala) continue;
-      // Usar horário meio-dia para evitar problemas de timezone
-      const dt      = new Date(row.data_escala + 'T12:00:00');
-      const dayName = DOW_DIAS[dt.getDay()];
-      if(!dayName || dayName === 'DOMINGO') continue;
-      if(!cache[dayName]) cache[dayName] = [];
+
+      // Usa T12:00:00 para evitar problemas de timezone
+      const dt  = new Date(row.data_escala + 'T12:00:00');
+      const dow = dt.getDay();                       // 0=Dom…6=Sáb
+      const dayName = GET_DAY_TO_DIAS[dow];
+      if(!dayName) continue;                          // ignora domingo e inválidos
+
+      // Chave formato DD.MM.YY (mesma que o CONTROLE usa nas abas)
+      const dd  = String(dt.getDate()).padStart(2,'0');
+      const mm  = String(dt.getMonth()+1).padStart(2,'0');
+      const yy  = String(dt.getFullYear()).slice(-2);
+      const dsMM = `${dd}.${mm}.${yy}`;
+
       const rotaRaw = row.rota;
-      cache[dayName].push({
-        placa: String(row.placa  || '').trim().toUpperCase(),
-        mot:   String(row.motorista || '').trim(),
-        aux:   String(row.auxiliar  || '').trim(),
+      const entry   = {
+        placa: String(row.placa       || '').trim().toUpperCase(),
+        mot:   String(row.motorista   || '').trim(),
+        aux:   String(row.auxiliar    || '').trim(),
         rota:  rotaRaw !== null && rotaRaw !== undefined && rotaRaw !== ''
                ? (isNaN(Number(rotaRaw)) ? String(rotaRaw).trim() : Number(rotaRaw))
                : null,
         stat:  String(row.status || '').trim()
-      });
+      };
+
+      if(!cacheByDay[dayName]) cacheByDay[dayName] = [];
+      cacheByDay[dayName].push(entry);
+
+      if(!cacheByDate[dsMM]) cacheByDate[dsMM] = { dayName, rows:[] };
+      cacheByDate[dsMM].rows.push(entry);
     }
 
-    window._s3EscalaSupabase = cache;
-    window._s3SemanaNome     = semanaNome;
+    window._s3EscalaSupabase  = cacheByDay;
+    window._s3EscalaByDate    = cacheByDate;   // lookup primário por data exata
+    window._s3SemanaNome      = semanaNome;
+    window._s3EscalaFilial    = filial;
     // Limpa roteiros xlsx para evitar conflito
     rotList = [];
     wb_rot  = null;
 
-    const totalVeiculos = Object.values(cache).reduce((s, a) => s + a.length, 0);
-    const dias = Object.keys(cache);
+    const totalVeiculos = Object.values(cacheByDay).reduce((s, a) => s + a.length, 0);
+    const datas = Object.keys(cacheByDate).sort();
+    const dias  = [...new Set(datas.map(d => cacheByDate[d].dayName))];
+    const rangeStr = datas.length ? ` (${datas[0]} → ${datas[datas.length-1]})` : '';
 
     if(statusEl){
       statusEl.style.background = '#d1fae5';
       statusEl.style.color      = '#065f46';
-      statusEl.innerHTML = `✓ <strong>${semanaNome}</strong> carregada — ${totalVeiculos} veículo(s) em ${dias.length} dia(s): ${dias.join(', ')}`;
+      statusEl.innerHTML = `✓ <strong>${semanaNome}</strong> · filial <strong>${filial}</strong>${rangeStr} — ${totalVeiculos} veículo(s) em ${dias.length} dia(s): ${dias.join(', ')}`;
     }
     if(btnUsar){ btnUsar.disabled=false; btnUsar.style.opacity='1'; }
 
@@ -2337,8 +2396,12 @@ function getDateData(wb,sheetName){
 
   return map;
 }
-function getEscala(wb,dayName){
-  // ── Fonte prioritária: escala carregada do Supabase ──
+function getEscala(wb,dayName,ds){
+  // ── Fonte prioritária 1: lookup por data exata (evita problema de semana/encoding) ──
+  if(ds && window._s3EscalaByDate?.[ds]?.rows?.length) {
+    return window._s3EscalaByDate[ds].rows;
+  }
+  // ── Fonte prioritária 2: lookup por nome do dia ──
   const supa = window._s3EscalaSupabase;
   if(supa && supa[dayName] && supa[dayName].length) return supa[dayName];
 
