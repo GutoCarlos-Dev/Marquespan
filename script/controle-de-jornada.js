@@ -4088,7 +4088,7 @@ async function findLatestAnaliseIdForDate(dateISO){
 async function findSupabaseLinhaIdForRow(row){
   if(row?._supabase_linha_id) return row._supabase_linha_id;
   if(!supabaseAvailable()) return null;
-  const dateISO = cdjToISODateBR(row?._date || row?.data_ref || row?.data || '');
+  const dateISO = cdjToISODateBR(cdjRowDateBR(row));
   const analiseId = row?._supabase_analise_id || window.cdjAnaliseSupabaseAtualId || await findLatestAnaliseIdForDate(dateISO);
   if(!analiseId) return null;
   const placa = String(row?.placa||'').trim();
@@ -4110,7 +4110,7 @@ async function findSupabaseLinhaIdForRow(row){
 // faz apenas merge (upsert) das linhas.
 async function ensureSupabaseAnaliseForRow(row){
   if(!supabaseAvailable()) return null;
-  const dateBR = row?._date || row?.data_ref || row?.data || '';
+  const dateBR = cdjRowDateBR(row);
   if(!dateBR || !/^\d{2}\/\d{2}\/\d{4}$/.test(dateBR)){
     throw new Error('Data do registro inválida — não foi possível subir para nuvem.');
   }
@@ -4152,6 +4152,7 @@ async function ensureSupabaseAnaliseForRow(row){
 async function saveActionSupabase(actionObj, row){
   const session = await cdjEnsureSupabaseSession();
   if(!session?.user?.id || !session?.access_token) throw new Error('Sessão Supabase não encontrada. Faça login novamente.');
+  if(row && !row._date && actionObj?.data_infracao) row._date = cdjDateBRFromAny(actionObj.data_infracao);
   let linhaId = await findSupabaseLinhaIdForRow(row);
 
   // ☁ AUTO-UPLOAD: se a linha ainda não existe na nuvem, construímos um
@@ -4788,6 +4789,35 @@ function parseDateBR(s){
   return new Date(+m[3], +m[2]-1, +m[1]);
 }
 // Retorna {year, week} no padrão ISO 8601 (semana 1 = a que contém 4 de janeiro)
+function cdjDateBRFromAny(value){
+  const s = String(value || '').trim();
+  if(!s) return '';
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m) return s;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){
+    const y = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${String(m[1]).padStart(2,'0')}/${String(m[2]).padStart(2,'0')}/${y}`;
+  }
+  return '';
+}
+function cdjFallbackS4DateBR(){
+  return cdjDateBRFromAny(document.getElementById('s4-base-date')?.value)
+    || cdjDateBRFromAny(document.getElementById('modal-date-inf')?.value);
+}
+function cdjRowDateBR(row){
+  return cdjDateBRFromAny(row?._date || row?.data_ref || row?.data || row?.Data || row?.DATA)
+    || cdjFallbackS4DateBR();
+}
+function cdjNormalizeS4Dates(){
+  const fallback = cdjFallbackS4DateBR();
+  for(const r of (s4Rows || [])){
+    const d = cdjDateBRFromAny(r?._date || r?.data_ref || r?.data || r?.Data || r?.DATA) || fallback;
+    if(d) r._date = d;
+  }
+}
 function isoWeek(date){
   if(!(date instanceof Date) || isNaN(date)) return null;
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -4818,9 +4848,10 @@ function fmtBR(d){
 
 // Detecta a "data principal" do s4Rows atual (a mais comum)
 function s4MainDate(){
+  cdjNormalizeS4Dates();
   const cnt = {};
   for(const r of s4Rows){
-    const d = r._date;
+    const d = cdjRowDateBR(r);
     if(!d) continue;
     cnt[d] = (cnt[d]||0) + 1;
   }
@@ -4828,7 +4859,8 @@ function s4MainDate(){
   return entries.length ? entries[0][0] : '';
 }
 function s4AllDates(){
-  return Array.from(new Set(s4Rows.map(r=>r._date).filter(Boolean))).sort();
+  cdjNormalizeS4Dates();
+  return Array.from(new Set(s4Rows.map(r=>cdjRowDateBR(r)).filter(Boolean))).sort();
 }
 
 // ── Salvar DIA ─────────────────────────────────────────────────
@@ -4836,6 +4868,7 @@ function s4AllDates(){
 //   • Tenta replicar para Supabase se configurado (graceful degradation)
 async function salvarHistoricoDia(){
   if(!s4Rows.length) return alert('Carregue um RESUMO antes de salvar.');
+  cdjNormalizeS4Dates();
   const dates = s4AllDates();
   if(!dates.length) return alert('Não foi possível detectar a data dos registros.');
   // Se houver várias datas, deixa o usuário escolher
@@ -4850,7 +4883,7 @@ async function salvarHistoricoDia(){
   if(!dtObj) return alert('Data inválida: '+alvo);
   const iso = isoWeek(dtObj);
   const id = `day_${alvo.replace(/\//g,'-')}`;
-  const rowsDoDia = s4Rows.filter(r => r._date === alvo);
+  const rowsDoDia = s4Rows.filter(r => cdjRowDateBR(r) === alvo);
 
   // Confirma sobreescrita se já existir
   const existente = await dbGet('daily_analyses', id);
@@ -4864,7 +4897,7 @@ async function salvarHistoricoDia(){
   const allActs = await dbGetAll('actions');
   const actsDoDia = allActs.filter(a =>
     rowsDoDia.some(r => r.placa === a.placa && r.nome === a.nome &&
-      (!a.data_infracao || a.data_infracao === r._date))
+      (!a.data_infracao || cdjDateBRFromAny(a.data_infracao) === cdjRowDateBR(r)))
   );
 
   const snap = {
@@ -5037,7 +5070,7 @@ async function supabaseUpsertAnaliseDia(item){
   const linhas = rows.map((r, i) => ({
     analise_id: saved.id,
     linha_origem: i,
-    data_ref: toISODate(r._date),
+    data_ref: toISODate(cdjRowDateBR(r)),
     placa: r.placa || null,
     cidade: r.cidade || null,
     rota: r.rota || null,
@@ -9349,15 +9382,17 @@ initDB().then(()=>updateActionsBadge()).catch(()=>{});
   };
 
   function cfBuildDiaSnapshot(alvo){
+    cdjNormalizeS4Dates();
     const dtObj = parseDateBR(alvo);
     const iso = isoWeek(dtObj);
-    const rowsDoDia = (window.s4Rows || s4Rows || []).filter(r => r._date === alvo);
+    const rowsDoDia = (window.s4Rows || s4Rows || []).filter(r => cdjRowDateBR(r) === alvo);
     const id = `day_${alvo.replace(/\//g,'-')}`;
     return {id, tipo:'DIA', kind:'day', nome:`Análise do dia ${alvo}`, data_ref:alvo, datas:[alvo], iso_year:iso?.year||null, iso_week:iso?.week||null, iso_key:iso?isoWeekKey(iso.year, iso.week):null, sheet:document.getElementById('s4-sheet-sel')?.value||'', salvo_em:new Date().toISOString(), rows:rowsDoDia, actions:[], salvo_nuvem:false};
   }
 
   window.salvarHistoricoDia = async function(){
     if(!s4Rows.length) return alert('Carregue um RESUMO antes de salvar.');
+    cdjNormalizeS4Dates();
     const dates = s4AllDates();
     if(!dates.length) return alert('Não foi possível detectar a data dos registros.');
     let alvo = dates[0];
@@ -9374,7 +9409,7 @@ initDB().then(()=>updateActionsBadge()).catch(()=>{});
     let actsDoDia = [];
     try{
       const allActs = await dbGetAll('actions');
-      actsDoDia = allActs.filter(a => snap.rows.some(r => r.placa === a.placa && r.nome === a.nome && (!a.data_infracao || a.data_infracao === r._date)));
+      actsDoDia = allActs.filter(a => snap.rows.some(r => r.placa === a.placa && r.nome === a.nome && (!a.data_infracao || cdjDateBRFromAny(a.data_infracao) === cdjRowDateBR(r))));
       snap.actions = actsDoDia;
     }catch(e){ console.warn('[cloud-first actions cache]', e); }
 
