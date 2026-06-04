@@ -76,6 +76,57 @@
 }
 
 /* ── Navegação interna por abas (padrão global do sistema) ── */
+.menu-floating-toggle {
+  position: fixed;
+  top: 92px;
+  left: 278px;
+  z-index: 2100;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--jor-primary);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.25s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.menu-floating-toggle:hover {
+  background: var(--jor-primary-dk);
+  transform: scale(1.05);
+}
+
+body.controle-jornada-menu-oculto #sidebar {
+  transform: translateX(-110%);
+}
+
+body.controle-jornada-menu-oculto .main-content {
+  margin-left: 30px !important;
+}
+
+body.controle-jornada-menu-oculto .menu-floating-toggle {
+  left: 14px;
+}
+
+body.controle-jornada-menu-oculto .menu-floating-toggle i {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+  .menu-floating-toggle {
+    top: 58px;
+    left: 14px;
+  }
+
+  body.controle-jornada-menu-oculto .main-content {
+    margin-left: 0 !important;
+  }
+}
+
 .painel-navegacao {
   display: flex;
   gap: 10px;

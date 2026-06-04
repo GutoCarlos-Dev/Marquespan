@@ -3,6 +3,16 @@
 // ═══════════════════════════════════════════════════════
 
 'use strict';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnToggleMenuLateralJornada');
+  btn?.addEventListener('click', () => {
+    document.body.classList.toggle('controle-jornada-menu-oculto');
+    const oculto = document.body.classList.contains('controle-jornada-menu-oculto');
+    btn.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+    btn.setAttribute('aria-label', btn.title);
+  });
+});
 // ═══════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════
