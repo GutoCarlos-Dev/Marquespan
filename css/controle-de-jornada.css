@@ -648,3 +648,39 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .mobile-nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.15); }
 .mobile-nav-item.active svg { transform: translateY(-1px); }
 .mobile-nav-item.active::before { content: ''; position: absolute; top: -6px; left: 30%; right: 30%; height: 3px; background: var(--jor-accent); border-radius: 0 0 3px 3px; }
+
+/* ── Download box (resultado dos passos) ─────────────── */
+.dl-box {
+  background: linear-gradient(135deg, var(--jor-green-l), rgba(255,255,255,0));
+  border: 2px solid var(--jor-green-b);
+  border-radius: var(--jor-radius-sm);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.dl-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--jor-green-l);
+  border: 1.5px solid var(--jor-green-b);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dl-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--jor-green);
+  fill: none;
+  stroke-width: 2;
+}
+
+.dl-info h3 { font-size: 14px; font-weight: 700; color: var(--jor-text); margin-bottom: 3px; }
+.dl-info p  { font-size: 12px; color: var(--jor-text3); }
