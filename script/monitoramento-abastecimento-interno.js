@@ -484,7 +484,7 @@ function renderListaFaltamAbastecer(itens) {
 
     container.innerHTML = itens.map(item => `
         <article class="fuel-card pendente">
-            <div class="fuel-icon"><i class="fas fa-truck-clock"></i></div>
+            <div class="fuel-icon"><i class="fas fa-truck"></i></div>
             <div class="fuel-main">
                 <div class="fuel-title">
                     <span class="fuel-placa">${escapeHtml(item.placa)}</span>
