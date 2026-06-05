@@ -124,6 +124,10 @@ body {
 .btn-danger { background-color: var(--danger-color); }
 .btn-danger:hover { background-color: #bd2130; transform: translateY(-2px); }
 
+.btn-fullscreen-active {
+    background-color: #343a40;
+}
+
 /* Cards de Resumo */
 .resumo-container {
     display: flex;
@@ -328,4 +332,56 @@ tr:hover .acoes-cell {
     gap: 10px;
     justify-content: flex-end;
     margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+#cardResultados:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+#cardResultados:fullscreen .resumo-container {
+    margin-bottom: 12px;
+}
+
+#cardResultados:fullscreen .acoes-exportacao {
+    margin-bottom: 12px;
+}
+
+#cardResultados:fullscreen .table-responsive {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+}
+
+#cardResultados.relatorio-fullscreen-fallback {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+#cardResultados.relatorio-fullscreen-fallback .table-responsive {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+}
+
+body.relatorio-fullscreen-lock {
+    overflow: hidden;
 }

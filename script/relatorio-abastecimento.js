@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
+            this.btnFullscreenGrid = document.getElementById('btnFullscreenGrid');
             this.modalLancamento = document.getElementById('modalVisualizarLancamento');
             this.detalhesLancamentoGrid = document.getElementById('detalhesLancamentoGrid');
             this.btnFecharModalLancamento = document.getElementById('btnFecharModalLancamento');
@@ -88,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar.addEventListener('click', this.clearFilters.bind(this));
             this.btnExportarXLS.addEventListener('click', this.exportXLS.bind(this));
             this.btnExportarPDF.addEventListener('click', this.exportPDF.bind(this));
+            this.btnFullscreenGrid?.addEventListener('click', this.toggleFullscreenGrid.bind(this));
+            document.addEventListener('fullscreenchange', this.handleFullscreenChange.bind(this));
+            document.addEventListener('keydown', this.handleFullscreenKeydown.bind(this));
 
             this.tableBody.addEventListener('click', (e) => {
                 const btnVisualizar = e.target.closest('.btn-visualizar-lancamento');
@@ -117,6 +121,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.handleSort(th.dataset.sort);
                 });
             });
+        },
+
+        isGridFullscreen() {
+            return document.fullscreenElement === this.cardResultados
+                || this.cardResultados?.classList.contains('relatorio-fullscreen-fallback');
+        },
+
+        async toggleFullscreenGrid() {
+            if (!this.cardResultados || this.cardResultados.classList.contains('hidden')) return;
+
+            if (this.isGridFullscreen()) {
+                await this.exitFullscreenGrid();
+                return;
+            }
+
+            try {
+                if (this.cardResultados.requestFullscreen) {
+                    await this.cardResultados.requestFullscreen();
+                } else {
+                    this.cardResultados.classList.add('relatorio-fullscreen-fallback');
+                    document.body.classList.add('relatorio-fullscreen-lock');
+                }
+            } catch (error) {
+                console.warn('Fullscreen API indisponivel, usando fallback:', error);
+                this.cardResultados.classList.add('relatorio-fullscreen-fallback');
+                document.body.classList.add('relatorio-fullscreen-lock');
+            }
+
+            this.updateFullscreenButton();
+        },
+
+        async exitFullscreenGrid() {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+            }
+            this.cardResultados?.classList.remove('relatorio-fullscreen-fallback');
+            document.body.classList.remove('relatorio-fullscreen-lock');
+            this.updateFullscreenButton();
+        },
+
+        handleFullscreenChange() {
+            if (document.fullscreenElement !== this.cardResultados) {
+                this.cardResultados?.classList.remove('relatorio-fullscreen-fallback');
+                document.body.classList.remove('relatorio-fullscreen-lock');
+            }
+            this.updateFullscreenButton();
+        },
+
+        handleFullscreenKeydown(e) {
+            if (e.key === 'Escape' && this.cardResultados?.classList.contains('relatorio-fullscreen-fallback')) {
+                this.exitFullscreenGrid();
+            }
+        },
+
+        updateFullscreenButton() {
+            if (!this.btnFullscreenGrid) return;
+            const fullscreen = this.isGridFullscreen();
+            this.btnFullscreenGrid.classList.toggle('btn-fullscreen-active', fullscreen);
+            this.btnFullscreenGrid.innerHTML = fullscreen
+                ? '<i class="fas fa-compress"></i> Sair FullScreen'
+                : '<i class="fas fa-expand"></i> FullScreen';
         },
 
         async loadTanques() {
