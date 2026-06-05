@@ -1,6 +1,28 @@
 import { supabaseClient } from './supabase.js';
 
 const FUNCIONARIO_PAGE_ID = 'funcionario.html';
+const FUNCOES_FALLBACK = [
+    'Jovem Aprendiz',
+    'Auxiliar de Expedição',
+    'Auxiliar de Expedição Noturno',
+    'Auxiliar de Transporte',
+    'Auxiliar de Logistica',
+    'Auxiliar de Logistica ADM',
+    'Conferente Noturno',
+    'Encarregado Operacional',
+    'Encarregado Operacional Noturno',
+    'Gerente Operacional',
+    'Líder Logística',
+    'Líder Logística Noturno',
+    'Líder Expedição Noturno',
+    'Motorista',
+    'Motorista Patio',
+    'Motorista Patio Noturno',
+    'Motorista Carreta',
+    'Motorista Carreta Noturno',
+    'Motorista Bitrem',
+    'Motorista Munck'
+];
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -31,6 +53,7 @@ const FuncionarioUI = {
         if (!acessoPermitido) return;
         this.bind();
         await this.carregarFiliais();
+        await this.carregarFuncoes();
         this.renderGrid();
     },
 
@@ -39,6 +62,17 @@ const FuncionarioUI = {
         this.modalFuncionario = document.getElementById('modalFuncionario');
         this.btnOpenFuncionarioModal = document.getElementById('btnOpenFuncionarioModal');
         this.btnCloseFuncionarioModal = document.getElementById('btnCloseFuncionarioModal');
+        this.btnAbrirCadastroFuncao = document.getElementById('btnAbrirCadastroFuncao');
+        this.modalCadastroFuncao = document.getElementById('modalCadastroFuncao');
+        this.formCadastroFuncao = document.getElementById('formCadastroFuncao');
+        this.cadFuncaoId = document.getElementById('cadFuncaoId');
+        this.btnSalvarCadastroFuncao = document.getElementById('btnSalvarCadastroFuncao');
+        this.btnCloseCadastroFuncao = document.getElementById('btnCloseCadastroFuncao');
+        this.btnCancelarCadastroFuncao = document.getElementById('btnCancelarCadastroFuncao');
+        this.cadFuncaoTipo = document.getElementById('cadFuncaoTipo');
+        this.cadFuncaoEquipeGroup = document.getElementById('cadFuncaoEquipeGroup');
+        this.cadFuncaoEquipe = document.getElementById('cadFuncaoEquipe');
+        this.tbodyFuncoesCadastradas = document.getElementById('tbodyFuncoesCadastradas');
         this.tableBody = document.getElementById('funcTableBody');
         this.btnSubmit = document.getElementById('btnSubmitFunc');
         this.btnClearForm = document.getElementById('btnClearFuncForm');
@@ -56,6 +90,7 @@ const FuncionarioUI = {
         this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
         this.filialSelect = document.getElementById('funcFilial');
         this.filialFilter = document.getElementById('filialFilter');
+        this.funcaoSelect = document.getElementById('funcFuncao');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
@@ -84,6 +119,36 @@ const FuncionarioUI = {
         }
         if (this.btnClearForm) {
             this.btnClearForm.addEventListener('click', () => this.clearForm());
+        }
+        if (this.btnAbrirCadastroFuncao) {
+            this.btnAbrirCadastroFuncao.addEventListener('click', () => this.openCadastroFuncaoModal());
+        }
+        if (this.formCadastroFuncao) {
+            this.formCadastroFuncao.addEventListener('submit', (e) => this.handleCadastroFuncaoSubmit(e));
+        }
+        if (this.btnCloseCadastroFuncao) {
+            this.btnCloseCadastroFuncao.addEventListener('click', () => this.closeCadastroFuncaoModal());
+        }
+        if (this.btnCancelarCadastroFuncao) {
+            this.btnCancelarCadastroFuncao.addEventListener('click', () => {
+                this.resetCadastroFuncaoForm();
+                this.closeCadastroFuncaoModal();
+            });
+        }
+        if (this.modalCadastroFuncao) {
+            this.modalCadastroFuncao.addEventListener('click', (event) => {
+                if (event.target === this.modalCadastroFuncao) this.closeCadastroFuncaoModal();
+            });
+        }
+        if (this.cadFuncaoTipo) {
+            this.cadFuncaoTipo.addEventListener('change', () => this.toggleEquipeFuncao());
+        }
+        if (this.tbodyFuncoesCadastradas) {
+            this.tbodyFuncoesCadastradas.addEventListener('click', (event) => {
+                const btn = event.target.closest('.btn-edit-funcao');
+                if (!btn) return;
+                this.prepararEdicaoFuncao(btn.dataset);
+            });
         }
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.renderGrid());
@@ -203,7 +268,185 @@ const FuncionarioUI = {
     closeFuncionarioModal() {
         if (!this.modalFuncionario) return;
         this.modalFuncionario.classList.add('hidden');
-        document.body.classList.remove('funcionario-modal-open');
+        if (this.modalCadastroFuncao?.classList.contains('hidden')) {
+            document.body.classList.remove('funcionario-modal-open');
+        }
+    },
+
+    async openCadastroFuncaoModal() {
+        if (!this.modalCadastroFuncao) return;
+        this.resetCadastroFuncaoForm();
+        await this.carregarFuncoes(this.funcaoSelect?.value || '');
+        this.modalCadastroFuncao.classList.remove('hidden');
+        document.body.classList.add('funcionario-modal-open');
+        setTimeout(() => document.getElementById('cadFuncaoNome')?.focus(), 0);
+    },
+
+    closeCadastroFuncaoModal() {
+        if (!this.modalCadastroFuncao) return;
+        this.modalCadastroFuncao.classList.add('hidden');
+        if (this.modalFuncionario?.classList.contains('hidden')) {
+            document.body.classList.remove('funcionario-modal-open');
+        }
+    },
+
+    toggleEquipeFuncao() {
+        const is12x36 = this.cadFuncaoTipo?.value === '12X36';
+        this.cadFuncaoEquipeGroup?.classList.toggle('hidden', !is12x36);
+        if (this.cadFuncaoEquipe) {
+            this.cadFuncaoEquipe.required = is12x36;
+            if (!is12x36) this.cadFuncaoEquipe.value = '';
+        }
+    },
+
+    resetCadastroFuncaoForm() {
+        this.formCadastroFuncao?.reset();
+        if (this.cadFuncaoId) this.cadFuncaoId.value = '';
+        if (this.btnSalvarCadastroFuncao) {
+            this.btnSalvarCadastroFuncao.innerHTML = '<i class="fas fa-save"></i> Salvar Função';
+        }
+        this.toggleEquipeFuncao();
+    },
+
+    async carregarFuncoes(selectedValue = '') {
+        const atual = selectedValue || this.funcaoSelect?.value || '';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario_funcoes')
+                .select('id, nome, tipo, equipe, ativo')
+                .order('nome');
+
+            if (error) throw error;
+
+            const funcoes = data || [];
+            const nomes = funcoes.map(funcao => funcao.nome).filter(Boolean);
+            this.preencherSelectFuncoes(nomes.length ? nomes : FUNCOES_FALLBACK, atual);
+            this.renderFuncoesGrid(funcoes);
+        } catch (error) {
+            console.warn('Erro ao carregar cadastro de funcoes:', error);
+            this.preencherSelectFuncoes(FUNCOES_FALLBACK, atual);
+            this.renderFuncoesGrid(FUNCOES_FALLBACK.map(nome => ({ nome, tipo: 'Normal', equipe: null })));
+        }
+    },
+
+    renderFuncoesGrid(funcoes) {
+        if (!this.tbodyFuncoesCadastradas) return;
+
+        if (!funcoes || funcoes.length === 0) {
+            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhuma função cadastrada.</td></tr>';
+            return;
+        }
+
+        this.tbodyFuncoesCadastradas.innerHTML = funcoes
+            .slice()
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+            .map(funcao => {
+                const equipeLabel = this.getEquipeLabel(funcao.equipe);
+                return `
+                    <tr>
+                        <td>${escapeHtml(funcao.nome)}</td>
+                        <td>${escapeHtml(funcao.tipo || 'Normal')}</td>
+                        <td>${escapeHtml(equipeLabel || '-')}</td>
+                        <td>
+                            <button type="button"
+                                class="btn-icon edit btn-edit-funcao"
+                                title="Editar função"
+                                data-id="${escapeHtml(funcao.id || '')}"
+                                data-nome="${escapeHtml(funcao.nome || '')}"
+                                data-tipo="${escapeHtml(funcao.tipo || 'Normal')}"
+                                data-equipe="${escapeHtml(funcao.equipe || '')}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join('');
+    },
+
+    getEquipeLabel(equipe) {
+        const labels = {
+            AD: 'AD (Equipe Diurna)',
+            BD: 'BD (Equipe Diurna)',
+            AN: 'AN (Equipe Noturna)',
+            BN: 'BN (Equipe Noturna)'
+        };
+        return labels[equipe] || equipe || '';
+    },
+
+    prepararEdicaoFuncao(dataset) {
+        if (this.cadFuncaoId) this.cadFuncaoId.value = dataset.id || '';
+        const nomeInput = document.getElementById('cadFuncaoNome');
+        if (nomeInput) nomeInput.value = dataset.nome || '';
+        if (this.cadFuncaoTipo) this.cadFuncaoTipo.value = dataset.tipo || 'Normal';
+        this.toggleEquipeFuncao();
+        if (this.cadFuncaoEquipe) this.cadFuncaoEquipe.value = dataset.equipe || '';
+        if (this.btnSalvarCadastroFuncao) {
+            this.btnSalvarCadastroFuncao.innerHTML = '<i class="fas fa-save"></i> Atualizar Função';
+        }
+        nomeInput?.focus();
+    },
+
+    preencherSelectFuncoes(funcoes, selectedValue = '') {
+        if (!this.funcaoSelect) return;
+
+        const nomes = [];
+        const vistos = new Set();
+        funcoes.forEach(funcao => {
+            const nome = String(funcao || '').trim();
+            const key = nome.toUpperCase();
+            if (!nome || vistos.has(key)) return;
+            vistos.add(key);
+            nomes.push(nome);
+        });
+
+        if (selectedValue && !vistos.has(String(selectedValue).toUpperCase())) {
+            nomes.push(selectedValue);
+        }
+
+        this.funcaoSelect.innerHTML = '<option value="" disabled>-- Selecione --</option>' + nomes
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+            .map(nome => `<option value="${escapeHtml(nome)}">${escapeHtml(nome)}</option>`)
+            .join('');
+
+        this.funcaoSelect.value = selectedValue || '';
+    },
+
+    async handleCadastroFuncaoSubmit(e) {
+        e.preventDefault();
+
+        const nome = document.getElementById('cadFuncaoNome')?.value.trim();
+        const tipo = this.cadFuncaoTipo?.value || 'Normal';
+        const equipe = tipo === '12X36' ? this.cadFuncaoEquipe?.value : null;
+        const id = this.cadFuncaoId?.value || '';
+
+        if (!nome) return alert('Informe o nome da função.');
+        if (tipo === '12X36' && !equipe) return alert('Selecione a equipe da escala 12X36.');
+
+        try {
+            const payload = {
+                nome,
+                tipo,
+                equipe,
+                ativo: true
+            };
+
+            const request = id
+                ? supabaseClient.from('funcionario_funcoes').update(payload).eq('id', id)
+                : supabaseClient.from('funcionario_funcoes').upsert(payload, { onConflict: 'nome' });
+
+            const { error } = await request;
+
+            if (error) throw error;
+
+            await this.carregarFuncoes(nome);
+            this.resetCadastroFuncaoForm();
+            alert(id ? 'Função atualizada com sucesso!' : 'Função cadastrada com sucesso!');
+        } catch (error) {
+            console.error('Erro ao cadastrar função:', error);
+            alert('Erro ao cadastrar função: ' + (error.message || error));
+        }
     },
 
     async carregarFiliais() {

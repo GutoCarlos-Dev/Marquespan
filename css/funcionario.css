@@ -96,6 +96,16 @@
     padding: 22px;
 }
 
+.funcao-modal {
+    width: min(760px, 94vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    padding: 22px;
+}
+
 .funcionario-modal-header {
     display: flex;
     align-items: center;
@@ -130,6 +140,55 @@
 
 body.funcionario-modal-open {
     overflow: hidden;
+}
+
+.funcao-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-add-inline {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.btn-add-inline:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.modal-actions {
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.funcao-grid-section {
+    margin-top: 22px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 16px;
+}
+
+.funcao-grid-section h4 {
+    margin: 0 0 10px;
+    color: var(--primary-color);
+    font-size: 0.95rem;
+}
+
+.funcao-table-container {
+    max-height: 270px;
+    overflow-y: auto;
 }
 
 .funcionario-layout {

@@ -2,7 +2,10 @@ import { supabaseClient } from './supabase.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
-const DONE_STATUSES = ['REALIZADO', 'OK', 'DISPENSADO', 'NAO_ENGRAXAR'];
+const DONE_STATUSES_BY_TYPE = {
+    lavagem: ['REALIZADO', 'OK'],
+    engraxe: ['REALIZADO', 'OK', 'NAO_ENGRAXAR']
+};
 const PENDING_STATUSES = ['', 'PENDENTE', 'NAO REALIZADO', 'NAO_REALIZADO'];
 
 let listasLavagem = [];
@@ -56,6 +59,18 @@ function setDateValue(id, date) {
     const localDate = new Date(date);
     localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
     el.value = localDate.toISOString().split('T')[0];
+}
+
+function buildDateRangeFilter(dateStr, endOfDay = false) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    if (endOfDay) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+    return date.toISOString();
 }
 
 async function carregarFiliais() {
@@ -116,8 +131,10 @@ function montarQueryListas(tabela, itensSelect) {
         .eq('status', 'ABERTA')
         .order('created_at', { ascending: false });
 
-    if (dataInicial) query = query.gte('data_lista', dataInicial);
-    if (dataFinal) query = query.lte('data_lista', dataFinal);
+    const dataInicialFilter = buildDateRangeFilter(dataInicial, false);
+    const dataFinalFilter = buildDateRangeFilter(dataFinal, true);
+    if (dataInicialFilter) query = query.gte('data_lista', dataInicialFilter);
+    if (dataFinalFilter) query = query.lte('data_lista', dataFinalFilter);
 
     return query;
 }
@@ -255,7 +272,7 @@ function montarTextoLista(lista) {
 function calcularStats(listas) {
     return listas.reduce((acc, lista) => {
         const itens = lista.itensFiltrados || lista.itens || [];
-        const resumo = resumirItens(itens);
+        const resumo = resumirItens(itens, lista.tipo);
         acc.total += resumo.total;
         acc.concluidos += resumo.concluidos;
         acc.pendentes += resumo.pendentes;
@@ -263,12 +280,13 @@ function calcularStats(listas) {
     }, { total: 0, concluidos: 0, pendentes: 0 });
 }
 
-function resumirItens(itens) {
+function resumirItens(itens, tipo = 'lavagem') {
+    const doneStatuses = DONE_STATUSES_BY_TYPE[tipo] || DONE_STATUSES_BY_TYPE.lavagem;
     return (itens || []).reduce((acc, item) => {
         const status = normalizarStatus(item.status);
         acc.total++;
 
-        if (DONE_STATUSES.includes(status)) {
+        if (doneStatuses.includes(status)) {
             acc.concluidos++;
         } else if (PENDING_STATUSES.includes(status)) {
             acc.pendentes++;
@@ -296,7 +314,7 @@ function renderLista(containerId, listas, tipo) {
 
 function montarCard(lista, tipo) {
     const itens = lista.itensFiltrados || lista.itens || [];
-    const resumo = resumirItens(itens);
+    const resumo = resumirItens(itens, tipo);
     const percentual = resumo.total ? Math.round((resumo.concluidos / resumo.total) * 100) : 0;
     const destino = tipo === 'lavagem' ? `lavagem.html?id=${encodeURIComponent(lista.id)}` : `engraxe.html?id=${encodeURIComponent(lista.id)}`;
     const icone = tipo === 'lavagem' ? 'fa-shower' : 'fa-oil-can';
@@ -343,8 +361,8 @@ function montarCard(lista, tipo) {
 
 function ordenarListas(listas) {
     return [...listas].sort((a, b) => {
-        const statsA = resumirItens(a.itensFiltrados || a.itens || []);
-        const statsB = resumirItens(b.itensFiltrados || b.itens || []);
+        const statsA = resumirItens(a.itensFiltrados || a.itens || [], a.tipo);
+        const statsB = resumirItens(b.itensFiltrados || b.itens || [], b.tipo);
         const pendentesDiff = statsB.pendentes - statsA.pendentes;
         if (pendentesDiff !== 0) return pendentesDiff;
         return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { numeric: true });
