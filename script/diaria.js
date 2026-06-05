@@ -274,7 +274,7 @@ async function carregarDiaria() {
             supabaseClient
                 .from('funcionario')
                 .select('nome, nome_completo, cpf, funcao, status, filial, recebe_diaria')
-                .eq('recebe_diaria', true)
+                .neq('recebe_diaria', false)
                 .order('nome'),
             aplicarFiltroFilial(supabaseClient
                 .from('faltas_afastamentos')
@@ -416,7 +416,7 @@ function recalcularItemDiaria(item, valorSemana) {
     } else {
         item.status = 'APTO';
         item.descricaoStatus = item.datasFalta.length
-            ? `Desconto por falta/afastamento: ${item.datasFalta.join(', ')}`
+            ? `Desconto por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : 'ausencia'}: ${item.datasFalta.join(', ')}`
             : 'Apto para receber diaria.';
     }
 
@@ -769,7 +769,8 @@ function isStatusAusenciaDiaria(value) {
     return status.includes('FALTA')
         || status.includes('FERIAS')
         || status.includes('AFAST')
-        || status.includes('AUSENTE');
+        || status.includes('AUSENTE')
+        || status.includes('INSS');
 }
 
 function parseMoedaBR(value) {
