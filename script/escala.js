@@ -944,9 +944,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data, error } = await aplicarFiltroFilial(
             supabaseClient
                 .from('escala')
-                .select('data_escala')
+                .select('id, data_escala, ultima_alteracao_em')
                 .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
-        );
+        )
+            .order('ultima_alteracao_em', { ascending: false, nullsFirst: false })
+            .order('id', { ascending: false });
 
         if (error) {
             console.warn('Datas da semana modelo nao carregadas do banco:', error);
@@ -964,6 +966,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (Object.keys(datasPorDia).length === 0) return carregarDatasSemanaModeloLocal();
         salvarDatasSemanaModelo(datasPorDia);
         return true;
+    }
+
+    async function limparDatasAntigasDiaSemanaModelo(dia, dataISOAtual) {
+        if (!dia || !dataISOAtual || !isSemanaModeloPlanejamento(selectSemana?.value)) return;
+
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .select('data_escala')
+                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+        );
+
+        if (error) throw error;
+
+        const datasAntigas = [...new Set((data || [])
+            .map(row => String(row.data_escala || '').slice(0, 10))
+            .filter(dataISO => {
+                if (!dataISO || dataISO === dataISOAtual) return false;
+                const dataObj = dateFromISO(dataISO);
+                return dataObj && IMPORT_DAYS[dataObj.getUTCDay()] === dia;
+            }))];
+
+        if (datasAntigas.length === 0) return;
+
+        const { error: deleteEscalaError } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('escala')
+                .delete()
+                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                .in('data_escala', datasAntigas)
+        );
+        if (deleteEscalaError) throw deleteEscalaError;
+
+        const { error: deleteFaltasError } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('faltas_afastamentos')
+                .delete()
+                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                .in('data_escala', datasAntigas)
+        );
+        if (deleteFaltasError) throw deleteFaltasError;
     }
 
     function preencherCacheDatas() {
@@ -2211,6 +2254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ...(CACHE_DATAS[semana] || {}),
                 [dia]: dateFromISO(dataISO)
             });
+            await limparDatasAntigasDiaSemanaModelo(dia, dataISO);
         }
 
         const diaDaData = getDiaByDataEscala(semana, parsed.dataISO);
