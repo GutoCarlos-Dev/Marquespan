@@ -93,6 +93,7 @@ const FuncionarioUI = {
         this.funcaoSelect = document.getElementById('funcFuncao');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
+        this.diariaSelect = document.getElementById('funcDiaria');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
         this.filterCount = document.getElementById('funcFilterCount');
@@ -556,6 +557,7 @@ const FuncionarioUI = {
             contato_corp: document.getElementById('funcContatoCorp').value,
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
             status: document.getElementById('funcStatus').value,
+            recebe_diaria: document.getElementById('funcDiaria').value !== 'false',
             data_desligamento: document.getElementById('funcDesligamento').value || null,
             funcao_anterior: document.getElementById('funcPromocao').value || null,
             data_alteracao_funcao: document.getElementById('funcDataPromocao').value || null,
@@ -610,7 +612,7 @@ const FuncionarioUI = {
         try {
             let query = supabaseClient
                 .from('funcionario')
-                .select('id, rh_registro, filial, nome, nome_completo, cpf, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, data_desligamento, funcao_anterior, data_alteracao_funcao');
+                .select('id, rh_registro, filial, nome, nome_completo, cpf, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, recebe_diaria, data_desligamento, funcao_anterior, data_alteracao_funcao');
             
             if (selectedStatuses.length > 0) {
                 query = query.in('status', selectedStatuses);
@@ -899,6 +901,7 @@ const FuncionarioUI = {
         document.getElementById('funcContatoCorp').value = f.contato_corp || '';
         document.getElementById('funcContatoPessoal').value = f.contato_pessoal || '';
         document.getElementById('funcStatus').value = f.status;
+        document.getElementById('funcDiaria').value = f.recebe_diaria !== false ? 'true' : 'false';
         document.getElementById('funcDesligamento').value = f.data_desligamento || '';
         document.getElementById('funcPromocao').value = f.funcao_anterior || '';
         document.getElementById('funcDataPromocao').value = f.data_alteracao_funcao || '';
@@ -933,6 +936,7 @@ const FuncionarioUI = {
             'Contato Corp': f.contato_corp || '-',
             'Contato Pessoal': f.contato_pessoal || '-',
             'Status': f.status,
+            'Diária': f.recebe_diaria !== false ? 'SIM' : 'NÃO',
             'Data Desligamento': f.data_desligamento ? new Date(f.data_desligamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             'Função Anterior': f.funcao_anterior || '-',
             'Data Alt. Função': f.data_alteracao_funcao ? new Date(f.data_alteracao_funcao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'

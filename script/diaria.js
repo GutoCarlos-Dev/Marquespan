@@ -273,7 +273,8 @@ async function carregarDiaria() {
             carregarFuncoesCadastroDiaria(),
             supabaseClient
                 .from('funcionario')
-                .select('nome, nome_completo, cpf, funcao, status, filial')
+                .select('nome, nome_completo, cpf, funcao, status, filial, recebe_diaria')
+                .eq('recebe_diaria', true)
                 .order('nome'),
             aplicarFiltroFilial(supabaseClient
                 .from('faltas_afastamentos')
