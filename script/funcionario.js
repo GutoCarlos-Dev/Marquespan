@@ -276,9 +276,12 @@ const FuncionarioUI = {
     async openCadastroFuncaoModal() {
         if (!this.modalCadastroFuncao) return;
         this.resetCadastroFuncaoForm();
-        await this.carregarFuncoes(this.funcaoSelect?.value || '');
         this.modalCadastroFuncao.classList.remove('hidden');
         document.body.classList.add('funcionario-modal-open');
+        if (this.tbodyFuncoesCadastradas) {
+            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando funções...</td></tr>';
+        }
+        await this.carregarFuncoes(this.funcaoSelect?.value || '');
         setTimeout(() => document.getElementById('cadFuncaoNome')?.focus(), 0);
     },
 
@@ -319,15 +322,23 @@ const FuncionarioUI = {
 
             if (error) throw error;
 
-            const funcoes = data || [];
+            const funcoes = (data || []).filter(funcao => funcao.ativo !== false);
             const nomes = funcoes.map(funcao => funcao.nome).filter(Boolean);
             this.preencherSelectFuncoes(nomes.length ? nomes : FUNCOES_FALLBACK, atual);
-            this.renderFuncoesGrid(funcoes);
+            this.renderFuncoesGrid(funcoes.length ? funcoes : this.getFuncoesFallbackGrid());
         } catch (error) {
             console.warn('Erro ao carregar cadastro de funcoes:', error);
             this.preencherSelectFuncoes(FUNCOES_FALLBACK, atual);
-            this.renderFuncoesGrid(FUNCOES_FALLBACK.map(nome => ({ nome, tipo: 'Normal', equipe: null })));
+            this.renderFuncoesGrid(this.getFuncoesFallbackGrid());
         }
+    },
+
+    getFuncoesFallbackGrid() {
+        const opcoesSelect = Array.from(this.funcaoSelect?.options || [])
+            .map(option => option.value)
+            .filter(Boolean);
+        const nomes = opcoesSelect.length ? opcoesSelect : FUNCOES_FALLBACK;
+        return nomes.map(nome => ({ nome, tipo: 'Normal', equipe: null }));
     },
 
     renderFuncoesGrid(funcoes) {

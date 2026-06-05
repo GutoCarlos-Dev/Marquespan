@@ -187,6 +187,7 @@ body.funcionario-modal-open {
 }
 
 .funcao-table-container {
+    min-height: 120px;
     max-height: 270px;
     overflow-y: auto;
 }
