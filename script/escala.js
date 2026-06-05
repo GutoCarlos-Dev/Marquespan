@@ -7524,9 +7524,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnSalvarPesoRota = document.getElementById('btnSalvarPesoRota');
 
     function resetarModoCalculoPeso() {
-        const radioAuto = document.getElementById('modoTransferir21kg');
-        if (radioAuto) {
-            radioAuto.checked = true;
+        const radioManual = document.getElementById('modoInformarPeso');
+        if (radioManual) {
+            radioManual.checked = true;
             atualizarModoCalculoPeso();
         }
     }
