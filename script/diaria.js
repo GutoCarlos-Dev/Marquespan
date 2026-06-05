@@ -392,32 +392,62 @@ async function carregarDiaria() {
     }
 }
 
+function getPrimaryMotivoAusencia(motivosAusencia, diasDesconto) {
+    if (!motivosAusencia || motivosAusencia.length === 0) {
+        return diasDesconto > 0 ? 'FALTA' : '';
+    }
+    const priority = ['FERIAS', 'AFAST', 'INSS', 'AUSENTE'];
+    for (const p of priority) {
+        const found = motivosAusencia.find(m => normalizeString(m).includes(p));
+        if (found) return normalizeString(found);
+    }
+    return normalizeString(motivosAusencia[0]) || 'FALTA';
+}
+
 function recalcularItemDiaria(item, valorSemana) {
     const valorDia = valorSemana / 5;
     const statusCadastro = cleanImportValue(item.statusCadastro);
     const temStatusCadastroAusencia = statusCadastro && isStatusAusenciaDiaria(statusCadastro);
     const diasDesconto = Number(item.diasDesconto || 0);
     const descontoAnterior = Number(item.descontoAnterior || 0);
-    const bloqueioStatus = temStatusCadastroAusencia || item.foraEscala || diasDesconto >= 5;
+    // Bloqueio HARD: cadastro com ausencia ou 5+ dias de falta — checkbox desabilitado, nao pode pagar
+    // Bloqueio SOFT: fora da escala — checkbox habilitado, usuario pode autorizar manualmente
+    const bloqueioHard = temStatusCadastroAusencia || diasDesconto >= 5;
     const pagarManual = item.pagarManual !== false;
+    const temAusenciaFaltas = (item.motivosAusencia && item.motivosAusencia.length > 0) || diasDesconto > 0;
 
-    item.bloqueioStatus = bloqueioStatus;
-    item.recebe = !bloqueioStatus && pagarManual;
+    item.bloqueioStatus = bloqueioHard;
+    item.recebe = !bloqueioHard && pagarManual;
     item.valorDesconto = Math.max(0, diasDesconto * valorDia);
     item.valorPagar = item.recebe ? Math.max(0, valorSemana - item.valorDesconto - descontoAnterior) : 0;
 
-    if (bloqueioStatus || !pagarManual) {
-        item.status = temStatusCadastroAusencia
-            ? statusCadastro
-            : (item.foraEscala ? 'FORA DA ESCALA' : (diasDesconto >= 5 ? 'BLOQUEADO' : 'NAO PAGAR'));
-        item.descricaoStatus = item.foraEscala
-            ? 'Funcionario nao localizado na escala da semana selecionada.'
-            : (temStatusCadastroAusencia ? statusCadastro : 'Pagamento de diaria desmarcado ou bloqueado.');
+    if (bloqueioHard || !pagarManual) {
+        if (temStatusCadastroAusencia) {
+            item.status = statusCadastro;
+            item.descricaoStatus = statusCadastro;
+        } else if (temAusenciaFaltas) {
+            item.status = getPrimaryMotivoAusencia(item.motivosAusencia, diasDesconto);
+            item.descricaoStatus = item.datasFalta.length
+                ? `${item.status}: ${item.datasFalta.join(', ')}`
+                : `Ausencia registrada: ${item.status}`;
+        } else if (item.foraEscala) {
+            item.status = 'FORA DA ESCALA';
+            item.descricaoStatus = 'Funcionario nao localizado na escala. Marque o checkbox para autorizar pagamento manual.';
+        } else {
+            item.status = 'NAO PAGAR';
+            item.descricaoStatus = 'Pagamento de diaria desmarcado.';
+        }
     } else {
-        item.status = 'APTO';
-        item.descricaoStatus = item.datasFalta.length
-            ? `Desconto por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : 'ausencia'}: ${item.datasFalta.join(', ')}`
-            : 'Apto para receber diaria.';
+        if (diasDesconto > 0) {
+            item.status = getPrimaryMotivoAusencia(item.motivosAusencia, diasDesconto);
+            item.descricaoStatus = `Desconto por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : 'ausencia'}: ${item.datasFalta.join(', ')}`;
+        } else if (item.foraEscala) {
+            item.status = 'FORA DA ESCALA';
+            item.descricaoStatus = 'Pagamento manual autorizado para funcionario fora da escala.';
+        } else {
+            item.status = 'APTO';
+            item.descricaoStatus = 'Apto para receber diaria.';
+        }
     }
 
     return item;
@@ -468,7 +498,7 @@ function renderDiariaTabela() {
             <td>${escapeAttribute(item.nomeCompleto)}</td>
             <td>${escapeAttribute(item.cpf)}</td>
             <td>${escapeAttribute(item.funcao)}</td>
-            <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento, ferias ou fora da escala' : 'Marcar para pagar diaria'}"></td>
+            <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento ou ferias' : (item.foraEscala && !item.recebe ? 'Fora da escala - marque para autorizar pagamento manual' : 'Marcar para pagar diaria')}"></td>
             <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
             <td>${item.diasDesconto}</td>
             <td>${formatMoedaBR(item.descontoAnterior)}</td>
