@@ -7543,7 +7543,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ];
         campos.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.value = '';
+            if (el) { el.value = ''; el.dataset.rawDigits = ''; }
         });
         if (calculoPesoTransferir) calculoPesoTransferir.style.color = '';
         const secaoExcedente = document.getElementById('secaoExcedente');
@@ -7648,8 +7648,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    if (calculoPesoCapacidade) calculoPesoCapacidade.addEventListener('input', realizarCalculoPeso);
-    if (calculoPesoCargaTotal) calculoPesoCargaTotal.addEventListener('input', realizarCalculoPeso);
+    if (calculoPesoCapacidade) {
+        aplicarMascaraDecimalBR(calculoPesoCapacidade);
+        calculoPesoCapacidade.addEventListener('input', realizarCalculoPeso);
+    }
+    if (calculoPesoCargaTotal) {
+        aplicarMascaraDecimalBR(calculoPesoCargaTotal);
+        calculoPesoCargaTotal.addEventListener('input', realizarCalculoPeso);
+    }
     if (btnCalcularPeso) btnCalcularPeso.addEventListener('click', realizarCalculoPeso);
 
     document.querySelectorAll('input[name="modoCalculoPeso"]').forEach(radio => {
@@ -7683,16 +7689,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (v.capacidade_carga && v.capacidade_carga > 0) {
                 calculoPesoCapacidade.value = formatDecimalBR(v.capacidade_carga);
+                calculoPesoCapacidade.dataset.rawDigits = String(Math.round(v.capacidade_carga * 100));
                 calculoPesoCapacidade.readOnly = true;
                 calculoPesoCapacidade.style.backgroundColor = '#f0f0f0';
             } else {
                 calculoPesoCapacidade.value = '';
+                calculoPesoCapacidade.dataset.rawDigits = '';
                 calculoPesoCapacidade.readOnly = false;
                 calculoPesoCapacidade.style.backgroundColor = '';
             }
             
             realizarCalculoPeso();
         } catch (err) { console.error('Erro ao buscar dados do veículo:', err); }
+    }
+
+    function aplicarMascaraDecimalBR(el) {
+        // Inicializa rawDigits ao focar
+        el.addEventListener('focus', function () {
+            this.dataset.rawDigits = this.value.replace(/\D/g, '');
+        });
+
+        el.addEventListener('keydown', function (e) {
+            if (e.ctrlKey || e.metaKey || e.key === 'Tab' || e.key === 'Enter' ||
+                e.key === 'Escape' || e.key.startsWith('Arrow') || e.key === 'F') return;
+
+            const isDigit   = e.key >= '0' && e.key <= '9';
+            const isBack    = e.key === 'Backspace';
+            const isDelete  = e.key === 'Delete';
+            if (!isDigit && !isBack && !isDelete) return;
+
+            e.preventDefault();
+            let raw = this.dataset.rawDigits || '';
+            if (isDigit)  raw += e.key;
+            else if (isBack)   raw = raw.slice(0, -1);
+            else if (isDelete) raw = '';
+
+            this.dataset.rawDigits = raw;
+            this.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        el.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const raw = ((e.clipboardData || window.clipboardData).getData('text')).replace(/\D/g, '');
+            this.dataset.rawDigits = raw;
+            this.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+        });
     }
 
     function parseBR(value) {

@@ -119,10 +119,13 @@ function bindEvents() {
     document.addEventListener('mouseup', stopColumnResize);
 
     const tbody = document.getElementById('tbodyPesoRota');
-    tbody?.addEventListener('input', handleGridInput);
-    tbody?.addEventListener('change', handleGridChange);
-    tbody?.addEventListener('click', handleGridClick);
-    tbody?.addEventListener('paste', handlePaste);
+    tbody?.addEventListener('focus',   handleGridFocusDecimal,   true);
+    tbody?.addEventListener('keydown', handleGridKeydownDecimal);
+    tbody?.addEventListener('paste',   handleGridPasteDecimal);
+    tbody?.addEventListener('input',   handleGridInput);
+    tbody?.addEventListener('change',  handleGridChange);
+    tbody?.addEventListener('click',   handleGridClick);
+    tbody?.addEventListener('paste',   handlePaste);
 
     document.addEventListener('keydown', handleSalvarTudoShortcut);
 }
@@ -945,6 +948,51 @@ function formatPercent(value) {
     });
 }
 
+const CAMPOS_DECIMAL_GRID = ['pbt', 'peso_carga'];
+
+function _isDecimalField(field) { return CAMPOS_DECIMAL_GRID.includes(field); }
+
+function _formatDecimalInput(el, raw) {
+    el.dataset.rawDigits = raw;
+    el.value = raw ? (parseInt(raw, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+}
+
+function handleGridFocusDecimal(e) {
+    const target = e.target;
+    if (!_isDecimalField(target?.dataset?.field)) return;
+    target.dataset.rawDigits = target.value.replace(/\D/g, '');
+}
+
+function handleGridKeydownDecimal(e) {
+    const target = e.target;
+    if (!_isDecimalField(target?.dataset?.field)) return;
+    if (e.ctrlKey || e.metaKey || e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape' || e.key.startsWith('Arrow')) return;
+
+    const isDigit  = e.key >= '0' && e.key <= '9';
+    const isBack   = e.key === 'Backspace';
+    const isDel    = e.key === 'Delete';
+    if (!isDigit && !isBack && !isDel) return;
+
+    e.preventDefault();
+    let raw = target.dataset.rawDigits || '';
+    if (isDigit) raw += e.key;
+    else if (isBack)  raw = raw.slice(0, -1);
+    else if (isDel)   raw = '';
+
+    _formatDecimalInput(target, raw);
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function handleGridPasteDecimal(e) {
+    const target = e.target;
+    if (!_isDecimalField(target?.dataset?.field)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation(); // evita que handlePaste genérico também processe
+    const raw = ((e.clipboardData || window.clipboardData).getData('text')).replace(/\D/g, '');
+    _formatDecimalInput(target, raw);
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function handleGridInput(event) {
     const field = event.target?.dataset?.field;
     if (!field) return;
@@ -959,8 +1007,8 @@ function handleGridInput(event) {
         event.target.value = value;
     }
 
-    if (['pbt', 'peso_carga'].includes(field)) {
-        row[field] = parseNumero(value);
+    if (_isDecimalField(field)) {
+        row[field] = parseNumero(event.target.value);
         row.status_percentual = calcularPercentual(row);
         atualizarStatusLinha(rowIndex);
     } else if (['qtd_caixas', 'qtd_clientes'].includes(field)) {
