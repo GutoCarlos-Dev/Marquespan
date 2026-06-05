@@ -603,7 +603,6 @@ async function salvarDiariaSemana() {
             total_funcionarios: itens.length,
             total_pagar: itens.reduce((sum, item) => sum + Number(item.valor_pagar || 0), 0),
             total_desconto: itens.reduce((sum, item) => sum + Number(item.valor_desconto || 0), 0),
-            total_desconto_anterior: itens.reduce((sum, item) => sum + Number(item.desconto_anterior || 0), 0),
             total_aptos: itens.filter(item => item.recebe_diaria).length,
             total_bloqueados: itens.filter(item => !item.recebe_diaria).length
         });
