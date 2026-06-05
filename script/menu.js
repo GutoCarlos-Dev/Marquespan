@@ -139,9 +139,12 @@ async function controlarMenuPorNivel() {
       const href = link.getAttribute('href');
       if (paginasPermitidas.includes(href)) {
         link.style.display = 'block';
-        // Mostra o grupo pai do link, se houver
-        const parentGroup = link.closest('.menu-group');
-        if (parentGroup) parentGroup.style.display = 'block';
+        // Mostra todos os grupos pais do link, incluindo menus aninhados.
+        let parent = link.parentElement;
+        while (parent && parent !== nav) {
+          if (parent.classList?.contains('menu-group')) parent.style.display = 'block';
+          parent = parent.parentElement;
+        }
       }
     });
   } catch (error) {

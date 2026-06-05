@@ -129,13 +129,13 @@
     width: auto;
 }
 
-.menu-group.active .menu-toggle .fa-caret-down {
+.menu-group.active > .menu-toggle .fa-caret-down {
     transform: rotate(180deg);
     opacity: 1;
 }
 
 /* Fundo ativo para o grupo aberto */
-.menu-group.active .menu-toggle {
+.menu-group.active > .menu-toggle {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     font-weight: 600;
@@ -151,10 +151,29 @@
     margin: 0 8px 8px 8px; /* Margem interna */
 }
 
-.menu-group.active .submenu {
+.menu-group.active > .submenu {
     max-height: 1000px;
     opacity: 1;
     padding: 5px 0;
+}
+
+.submenu .submenu-group {
+    margin: 4px 8px;
+}
+
+.submenu .submenu-group > .menu-toggle {
+    padding-left: 16px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.submenu .submenu-group > .submenu {
+    margin: 0 0 8px 0;
+    border-radius: 0 0 10px 10px;
+}
+
+.submenu .submenu-group .submenu a {
+    padding-left: 28px;
 }
 
 .submenu a {
