@@ -7740,7 +7740,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function parseBR(value) {
         if (!value && value !== 0) return 0;
-        return parseFloat(String(value).replace(/\./g, '').replace(',', '.')) || 0;
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+
+        const texto = String(value).trim().replace(/\s/g, '');
+        if (!texto) return 0;
+
+        const normalizado = texto.replace(/[^\d,.-]/g, '');
+        const ultimoPonto = normalizado.lastIndexOf('.');
+        const ultimaVirgula = normalizado.lastIndexOf(',');
+        let numeroTexto = normalizado;
+
+        if (ultimoPonto >= 0 && ultimaVirgula >= 0) {
+            const separadorDecimal = ultimoPonto > ultimaVirgula ? '.' : ',';
+            const separadorMilhar = separadorDecimal === '.' ? ',' : '.';
+            numeroTexto = normalizado
+                .replace(new RegExp(`\\${separadorMilhar}`, 'g'), '')
+                .replace(separadorDecimal, '.');
+        } else if (ultimaVirgula >= 0) {
+            numeroTexto = normalizado.replace(/\./g, '').replace(',', '.');
+        } else if (ultimoPonto >= 0) {
+            const casasDepoisDoPonto = normalizado.length - ultimoPonto - 1;
+            numeroTexto = casasDepoisDoPonto === 3
+                ? normalizado.replace(/\./g, '')
+                : normalizado;
+        }
+
+        const numero = Number(numeroTexto);
+        return Number.isFinite(numero) ? numero : 0;
     }
 
     function formatDecimalBR(value) {

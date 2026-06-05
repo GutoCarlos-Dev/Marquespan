@@ -471,7 +471,32 @@ function limparPlacaImportada(value) {
 
 function parseNumero(value) {
     if (value === null || value === undefined || value === '') return null;
-    const numero = Number(String(value).replace(/\./g, '').replace(',', '.'));
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+    const texto = String(value).trim().replace(/\s/g, '');
+    if (!texto) return null;
+
+    const normalizado = texto.replace(/[^\d,.-]/g, '');
+    const ultimoPonto = normalizado.lastIndexOf('.');
+    const ultimaVirgula = normalizado.lastIndexOf(',');
+    let numeroTexto = normalizado;
+
+    if (ultimoPonto >= 0 && ultimaVirgula >= 0) {
+        const separadorDecimal = ultimoPonto > ultimaVirgula ? '.' : ',';
+        const separadorMilhar = separadorDecimal === '.' ? ',' : '.';
+        numeroTexto = normalizado
+            .replace(new RegExp(`\\${separadorMilhar}`, 'g'), '')
+            .replace(separadorDecimal, '.');
+    } else if (ultimaVirgula >= 0) {
+        numeroTexto = normalizado.replace(/\./g, '').replace(',', '.');
+    } else if (ultimoPonto >= 0) {
+        const casasDepoisDoPonto = normalizado.length - ultimoPonto - 1;
+        numeroTexto = casasDepoisDoPonto === 3
+            ? normalizado.replace(/\./g, '')
+            : normalizado;
+    }
+
+    const numero = Number(numeroTexto);
     return Number.isFinite(numero) ? numero : null;
 }
 
