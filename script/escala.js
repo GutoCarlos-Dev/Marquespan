@@ -860,6 +860,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return semana === SEMANA_MODELO_PLANEJAMENTO;
     }
 
+    function getSemanaModeloDatasStorageKey() {
+        const filial = normalizeString(getFilialEscala()).replace(/[^A-Z0-9]+/g, '_') || 'SEM_FILIAL';
+        return `${SEMANA_MODELO_DATAS_KEY}_${filial}`;
+    }
+
+    function aplicarFiltroSemanaModelo(query, semana) {
+        return isSemanaModeloPlanejamento(semana)
+            ? query.eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+            : query;
+    }
+
     function dateFromISO(dataISO) {
         const value = String(dataISO || '').slice(0, 10);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -881,12 +892,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         Object.entries(datas).forEach(([dia, dataISO]) => {
             CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO][dia] = dateFromISO(dataISO);
         });
-        localStorage.setItem(SEMANA_MODELO_DATAS_KEY, JSON.stringify(datas));
+        localStorage.setItem(getSemanaModeloDatasStorageKey(), JSON.stringify(datas));
     }
 
     function carregarDatasSemanaModeloLocal() {
         try {
-            const raw = localStorage.getItem(SEMANA_MODELO_DATAS_KEY);
+            const raw = localStorage.getItem(getSemanaModeloDatasStorageKey());
             if (!raw) return false;
             const datas = JSON.parse(raw);
             const cache = {};
@@ -1207,8 +1218,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // Busca dados das duas tabelas em paralelo
             const [resEscala, resFaltas] = await Promise.all([
-                aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO)).order('id'),
-                aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO)).order('id')
+                aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO)),
+                    semana
+                ).order('id'),
+                aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO)),
+                    semana
+                ).order('id')
             ]);
 
             if (resEscala.error) throw resEscala.error;
@@ -1631,8 +1648,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 1. Busca dados origem
             const [resEscala, resFaltas] = await Promise.all([
-                aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
-                aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem))
+                aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
+                    semanaAtual
+                ),
+                aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)),
+                    semanaAtual
+                )
             ]);
 
             if (resEscala.error) throw resEscala.error;
@@ -2267,8 +2290,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error('Nenhum registro valido encontrado para atualizar este dia.');
         }
 
-        await aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO));
-        await aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO));
+        await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO)),
+            semana
+        );
+        await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO)),
+            semana
+        );
 
         if (parsed.insertsEscala.length > 0) {
             const { error } = await supabaseClient.from('escala').insert(parsed.insertsEscala);
@@ -2419,7 +2448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const diasImportados = [...new Set(sheetsDias.map(item => item.dia))];
                 if (isSemanaModeloPlanejamento(semana)) {
                     delete CACHE_DATAS[SEMANA_MODELO_PLANEJAMENTO];
-                    localStorage.removeItem(SEMANA_MODELO_DATAS_KEY);
+                    localStorage.removeItem(getSemanaModeloDatasStorageKey());
                 }
 
                 const resumo = sheetsDias.map(({ sheetName }) => {
@@ -2444,10 +2473,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const parsed = parseRoteiroSheet(workbook, sheetName, semana);
                         const dataObj = dateFromISO(parsed?.dataISO);
                         if (dataObj) datasModelo[dia] = dataObj;
+                        totalImportado += await substituirRoteiroDia(parsed, semana, dia, parsed?.dataISO || '');
+                        continue;
                     }
-                    const dataAlvo = isSemanaModeloPlanejamento(semana)
-                        ? ''
-                        : getDataSemanaDia(semana, dia).toISOString().split('T')[0];
+                    const dataAlvo = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
                     totalImportado += await importarRoteiroDiario(workbook, sheetName, semana, null, dataAlvo);
                 }
 
@@ -3232,8 +3261,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Busca dados do dia de origem
                 const [resEscala, resFaltas] = await Promise.all([
-                    aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
-                    aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem))
+                    aplicarFiltroSemanaModelo(
+                        aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataOrigem)),
+                        semana
+                    ),
+                    aplicarFiltroSemanaModelo(
+                        aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataOrigem)),
+                        semana
+                    )
                 ]);
 
                 if (resEscala.error || resFaltas.error) {
@@ -3324,8 +3359,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
 
         // Busca dados apenas do dia selecionado
-        const { data: dadosEscala, error: escalaError } = await aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO));
-        const { data: dadosFaltas, error: faltasError } = await aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO));
+        const { data: dadosEscala, error: escalaError } = await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO)),
+            semana
+        );
+        const { data: dadosFaltas, error: faltasError } = await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').select('*').eq('data_escala', dataISO)),
+            semana
+        );
 
         if (escalaError || faltasError) {
             console.error('Erro ao buscar dados do dia:', escalaError || faltasError);
@@ -4657,11 +4698,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
-        const { data, error } = await aplicarFiltroFilial(
-            supabaseClient
-                .from('escala')
-                .select('id, placa, modelo, rota, motorista, auxiliar, terceiro')
-                .eq('data_escala', contexto.dataISO)
+        const { data, error } = await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(
+                supabaseClient
+                    .from('escala')
+                    .select('id, placa, modelo, rota, motorista, auxiliar, terceiro')
+                    .eq('data_escala', contexto.dataISO)
+            ),
+            contexto.semana
         )
             .not('terceiro', 'is', null)
             .neq('terceiro', '')
@@ -4706,13 +4750,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!funcionario) return alert('Selecione o funcionario.');
         if (!rota) return alert('Informe a rota.');
 
-        const { data, error } = await supabaseClient
-            .from('escala')
-            .update(comAuditoria({ terceiro: funcionario }))
-            .eq('data_escala', contexto.dataISO)
-            .eq('filial', getFilialEscala())
-            .eq('rota', rota)
-            .select('id');
+        const { data, error } = await aplicarFiltroSemanaModelo(
+            supabaseClient
+                .from('escala')
+                .update(comAuditoria({ terceiro: funcionario }))
+                .eq('data_escala', contexto.dataISO)
+                .eq('filial', getFilialEscala())
+                .eq('rota', rota),
+            contexto.semana
+        ).select('id');
 
         if (error) {
             console.error('Erro ao aplicar terceiro por rota:', error);
@@ -5861,6 +5907,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectFilial.addEventListener('change', async () => {
             await carregarListasAuxiliares();
             if (!painelEscala || painelEscala.classList.contains('hidden')) return;
+            if (isSemanaModeloPlanejamento(selectSemana.value)) {
+                await carregarDatasSemanaModeloBanco();
+                atualizarDatasAbasEscala(selectSemana.value);
+            }
 
             const activeTab = document.querySelector('.tab-btn.active');
             if (activeTab?.dataset.tab === 'planejamento') {
@@ -5925,8 +5975,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const formattedDate = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
             if (confirm(`ATENÇÃO: Apagar TODOS os dados do dia ${formattedDate}?`)) {
-                await aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO));
-                await aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO));
+                await aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('escala').delete().eq('data_escala', dataISO)),
+                    semana
+                );
+                await aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(supabaseClient.from('faltas_afastamentos').delete().eq('data_escala', dataISO)),
+                    semana
+                );
                 alert(`Dados do dia ${formattedDate} foram limpos.`);
                 if(dia) carregarDadosDia(dia, semana);
             }
