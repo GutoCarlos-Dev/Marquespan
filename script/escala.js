@@ -4846,6 +4846,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `<option value="${escapeAttribute(nome)}" title="${escapeAttribute(title)}" data-note="${escapeAttribute(textoAnotacao)}">${escapeAttribute(label)}</option>`;
     }
 
+    function registrarOrigemFuncionarioReserva(map, nome, origem) {
+        const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+        if (chave && origem?.id && !map[chave]) map[chave] = origem;
+    }
+
+    function getOrigemFuncionarioReserva(map, nome) {
+        return map[normalizeString(getNomeFuncionarioExibicao(nome))] || null;
+    }
+
     function atualizarIndicadorAnotacaoTerceiroRota(selectId, hintId) {
         const select = document.getElementById(selectId);
         const hint = document.getElementById(hintId);
@@ -4875,12 +4884,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function atualizarListaTerceirosReservas() {
         const selectMotorista = document.getElementById('terceiroRotaMotorista');
         const selectAuxiliar = document.getElementById('terceiroRotaAuxiliar');
-        if (!selectMotorista || !selectAuxiliar) return { motoristas: [], auxiliares: [], notasMotoristas: {}, notasAuxiliares: {} };
+        if (!selectMotorista || !selectAuxiliar) {
+            return { motoristas: [], auxiliares: [], notasMotoristas: {}, notasAuxiliares: {}, origensMotoristas: {}, origensAuxiliares: {} };
+        }
 
         const motoristas = new Set();
         const auxiliares = new Set();
         const notasMotoristas = {};
         const notasAuxiliares = {};
+        const origensMotoristas = {};
+        const origensAuxiliares = {};
         const adicionarNome = (set, nome) => {
             const exibicao = getNomeFuncionarioExibicao(nome);
             const chave = normalizeString(exibicao);
@@ -4892,6 +4905,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             adicionarNome(auxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value);
             registrarAnotacaoFuncionarioReserva(notasMotoristas, tr.querySelector('input[data-key="motorista"]')?.value, getCellNote(tr.dataset.tabela, tr.dataset.id, 'motorista'));
             registrarAnotacaoFuncionarioReserva(notasAuxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value, getCellNote(tr.dataset.tabela, tr.dataset.id, 'auxiliar'));
+            registrarOrigemFuncionarioReserva(origensMotoristas, tr.querySelector('input[data-key="motorista"]')?.value, { tabela: tr.dataset.tabela, id: tr.dataset.id, key: 'motorista' });
+            registrarOrigemFuncionarioReserva(origensAuxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value, { tabela: tr.dataset.tabela, id: tr.dataset.id, key: 'auxiliar' });
         });
 
         if (motoristas.size === 0 && auxiliares.size === 0) {
@@ -4916,6 +4931,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         adicionarNome(auxiliares, row.auxiliar);
                         registrarAnotacaoFuncionarioReserva(notasMotoristas, row.motorista, getCellNote('escala', row.id, 'motorista'));
                         registrarAnotacaoFuncionarioReserva(notasAuxiliares, row.auxiliar, getCellNote('escala', row.id, 'auxiliar'));
+                        registrarOrigemFuncionarioReserva(origensMotoristas, row.motorista, { tabela: 'escala', id: row.id, key: 'motorista' });
+                        registrarOrigemFuncionarioReserva(origensAuxiliares, row.auxiliar, { tabela: 'escala', id: row.id, key: 'auxiliar' });
                     });
                 }
             }
@@ -4933,7 +4950,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .join('');
         atualizarIndicadoresAnotacaoTerceiroRota();
 
-        return { motoristas: listaMotoristas, auxiliares: listaAuxiliares, notasMotoristas, notasAuxiliares };
+        return { motoristas: listaMotoristas, auxiliares: listaAuxiliares, notasMotoristas, notasAuxiliares, origensMotoristas, origensAuxiliares };
     }
 
     async function abrirModalTerceiroRota() {
@@ -5045,7 +5062,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert(`Nenhuma linha encontrada para a rota ${rota} nesta data.`);
         }
 
+        const origemFuncionario = motoristaSelecionado
+            ? getOrigemFuncionarioReserva(terceirosReservas.origensMotoristas, funcionario)
+            : getOrigemFuncionarioReserva(terceirosReservas.origensAuxiliares, funcionario);
+        const anotacaoOrigem = origemFuncionario
+            ? getCellNote(origemFuncionario.tabela, origemFuncionario.id, origemFuncionario.key)
+            : '';
+
+        if (origemFuncionario) {
+            const { error: limparOrigemError } = await supabaseClient
+                .from(origemFuncionario.tabela)
+                .update(comAuditoria({ [origemFuncionario.key]: null, rota: null }))
+                .eq('id', origemFuncionario.id);
+
+            if (limparOrigemError) {
+                console.error('Erro ao remover funcionario da reserva:', limparOrigemError);
+                return alert('Terceiro aplicado, mas nao foi possivel remover o funcionario da reserva: ' + limparOrigemError.message);
+            }
+
+            if (anotacaoOrigem) {
+                setCellNote(origemFuncionario.tabela, origemFuncionario.id, origemFuncionario.key, '');
+                data.forEach(item => setCellNote('escala', item.id, 'terceiro', anotacaoOrigem));
+            }
+
+            const inputOrigem = document.querySelector(`#tbodyReservas tr[data-id="${CSS.escape(String(origemFuncionario.id))}"] input[data-key="${origemFuncionario.key}"]`);
+            if (inputOrigem) {
+                inputOrigem.value = '';
+                inputOrigem.classList.remove('cell-has-note', 'cell-duplicate');
+                inputOrigem.removeAttribute('title');
+                inputOrigem.style.cssText = getCellStyle(origemFuncionario.tabela, origemFuncionario.id, origemFuncionario.key);
+            }
+
+            const inputRotaOrigem = document.querySelector(`#tbodyReservas tr[data-id="${CSS.escape(String(origemFuncionario.id))}"] input[data-key="rota"]`);
+            if (inputRotaOrigem) {
+                inputRotaOrigem.value = '';
+                inputRotaOrigem.classList.remove('cell-duplicate');
+                if (inputRotaOrigem.title === 'Registro repetido') inputRotaOrigem.removeAttribute('title');
+                inputRotaOrigem.style.cssText = getCellStyle(origemFuncionario.tabela, origemFuncionario.id, 'rota');
+            }
+        }
+
         alert(`Terceiro aplicado em ${data.length} linha(s) da rota ${rota}.`);
+        const inputRotaModal = document.getElementById('terceiroRotaNumero');
+        if (inputRotaModal) inputRotaModal.value = '';
+        await atualizarListaTerceirosReservas();
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
     }
