@@ -2608,11 +2608,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const datasSemana = getDatasDiasISO(semana, diasSync);
         if (datasSemana.length === 0) return 0;
 
-        const { data, error } = await supabaseClient
+        const query = supabaseClient
             .from('escala')
             .select('*')
-            .in('data_escala', datasSemana)
-            .eq('filial', getFilialEscala())
+            .eq('filial', getFilialEscala());
+
+        const { data, error } = await (isSemanaModeloPlanejamento(semana)
+            ? query.eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+            : query.in('data_escala', datasSemana))
             .order('data_escala')
             .order('id');
 
