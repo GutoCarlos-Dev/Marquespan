@@ -9,7 +9,22 @@ let arquivosExistentes = [];
 let arquivosParaDeletar = [];
 let idManutencaoAnexo = null;
 let arquivosAnexoSelecionados = [];
+let arrastandoColunaResultado = false;
 const BUSCA_MANUTENCAO_STATE_KEY = 'buscar_manutencao_estado_edicao';
+const RESULTADOS_COLUNAS_KEY = 'buscar_manutencao_colunas_resultados';
+const COLUNAS_RESULTADOS_PADRAO = [
+  { key: 'data', label: 'Data', sort: 'data', value: (m) => formatarData(m.data) },
+  { key: 'usuario', label: 'Usuário', sort: 'usuario', value: (m) => escapeHTML(m.usuario) },
+  { key: 'numeroOS', label: 'OS', sort: 'numeroOS', value: (m) => escapeHTML(m.numeroOS) },
+  { key: 'notaFiscal', label: 'NFE', sort: 'notaFiscal', value: (m) => escapeHTML(m.notaFiscal) },
+  { key: 'notaServico', label: 'NFSE', sort: 'notaServico', value: (m) => escapeHTML(m.notaServico) },
+  { key: 'veiculo', label: 'Placa', sort: 'veiculo', value: (m) => escapeHTML(m.veiculo) },
+  { key: 'titulo', label: 'Título', sort: 'titulo', value: (m) => escapeHTML(m.titulo) },
+  { key: 'descricao', label: 'Descrição', sort: 'descricao', value: (m) => escapeHTML(m.descricao) },
+  { key: 'fornecedor', label: 'Fornecedor', sort: 'fornecedor', value: (m) => escapeHTML(m.fornecedor) },
+  { key: 'valor', label: 'Valor', sort: 'valor', value: (m) => `R$ ${formatarValor(m.valor || 0)}`, className: 'col-valor' }
+];
+let ordemColunasResultados = carregarOrdemColunasResultados();
 
 // Função utilitária para escapar HTML e prevenir XSS
 function escapeHTML(str) {
@@ -62,6 +77,104 @@ function mapearArquivoBanco(arquivo) {
         isZipped: arquivo.is_zipped,
         originalNames: arquivo.original_names
     };
+}
+
+function carregarOrdemColunasResultados() {
+  const padrao = COLUNAS_RESULTADOS_PADRAO.map(col => col.key);
+
+  try {
+    const salva = JSON.parse(localStorage.getItem(RESULTADOS_COLUNAS_KEY) || '[]');
+    const validas = salva.filter(key => padrao.includes(key));
+    const novas = padrao.filter(key => !validas.includes(key));
+    return validas.length ? [...validas, ...novas] : padrao;
+  } catch {
+    return padrao;
+  }
+}
+
+function getColunasResultadosOrdenadas() {
+  return ordemColunasResultados
+    .map(key => COLUNAS_RESULTADOS_PADRAO.find(col => col.key === key))
+    .filter(Boolean);
+}
+
+function salvarOrdemColunasResultados() {
+  localStorage.setItem(RESULTADOS_COLUNAS_KEY, JSON.stringify(ordemColunasResultados));
+}
+
+function renderCabecalhoResultados() {
+  const cabecalho = document.getElementById('cabecalhoResultados');
+  if (!cabecalho) return;
+
+  const colunasHtml = getColunasResultadosOrdenadas().map(col => `
+    <th class="sortable draggable-column ${col.className || ''}"
+        data-column-key="${col.key}"
+        data-sort="${col.sort}"
+        draggable="true">
+      <span class="column-drag-handle" title="Arraste para mover a coluna"><i class="fas fa-grip-vertical"></i></span>
+      <span>${col.label}</span>
+      <i class="fas fa-sort sort-icon"></i>
+    </th>
+  `).join('');
+
+  cabecalho.innerHTML = `${colunasHtml}<th class="col-acoes-fixed">Ações</th>`;
+  bindResultadoHeaderEvents();
+  updateSortIcons();
+  if (typeof setupColumnResizing === 'function') setupColumnResizing();
+}
+
+function bindResultadoHeaderEvents() {
+  document.querySelectorAll('#cabecalhoResultados th.sortable').forEach(th => {
+    th.addEventListener('click', (event) => {
+      if (arrastandoColunaResultado) return;
+      if (event.target.closest('.resizer')) return;
+      handleSort(th.dataset.sort);
+    });
+
+    th.addEventListener('dragstart', handleColumnDragStart);
+    th.addEventListener('dragover', handleColumnDragOver);
+    th.addEventListener('drop', handleColumnDrop);
+    th.addEventListener('dragleave', () => th.classList.remove('drag-over-column'));
+    th.addEventListener('dragend', handleColumnDragEnd);
+  });
+}
+
+function handleColumnDragStart(event) {
+  const th = event.currentTarget;
+  arrastandoColunaResultado = true;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', th.dataset.columnKey);
+  th.classList.add('dragging-column');
+}
+
+function handleColumnDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  event.currentTarget.classList.add('drag-over-column');
+}
+
+function handleColumnDrop(event) {
+  event.preventDefault();
+  const origem = event.dataTransfer.getData('text/plain');
+  const destino = event.currentTarget.dataset.columnKey;
+  if (!origem || !destino || origem === destino) return;
+
+  const proximaOrdem = ordemColunasResultados.filter(key => key !== origem);
+  const destinoIndex = proximaOrdem.indexOf(destino);
+  proximaOrdem.splice(destinoIndex, 0, origem);
+  ordemColunasResultados = proximaOrdem;
+  salvarOrdemColunasResultados();
+  renderCabecalhoResultados();
+  filtrarERenderizarTabela();
+}
+
+function handleColumnDragEnd() {
+  document.querySelectorAll('#cabecalhoResultados th').forEach(th => {
+    th.classList.remove('dragging-column', 'drag-over-column');
+  });
+  setTimeout(() => {
+    arrastandoColunaResultado = false;
+  }, 0);
 }
 
 // Paginação removida para exibir todos os resultados
@@ -333,10 +446,14 @@ function filtrarERenderizarTabela() {
     
     // 1. Filtragem Local (Placa, Fornecedor, Descrição e OS)
     let filtrados = todosRegistros.filter(m => 
+        (m.usuario || '').toLowerCase().includes(searchTerm) ||
         (m.veiculo || '').toLowerCase().includes(searchTerm) ||
+        (m.titulo || '').toLowerCase().includes(searchTerm) ||
         (m.fornecedor || '').toLowerCase().includes(searchTerm) || 
         (m.descricao || '').toLowerCase().includes(searchTerm) ||
-        (m.numeroOS || '').toLowerCase().includes(searchTerm)
+        (m.numeroOS || '').toLowerCase().includes(searchTerm) ||
+        (m.notaFiscal || '').toLowerCase().includes(searchTerm) ||
+        (m.notaServico || '').toLowerCase().includes(searchTerm)
     );
 
     // 2. Ordenação
@@ -416,28 +533,27 @@ function preencherTabela(registros) {
   tabela.innerHTML = '';
 
   const userCanDelete = canDelete();
+  const colunas = getColunasResultadosOrdenadas();
 
   registros.forEach(m => {
     const btnExcluirHtml = userCanDelete 
       ? `<button class="btn-icon delete btn-excluir" data-id="${m.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>`
       : '';
 
+    const celulasHtml = colunas.map(col => {
+      const classe = col.className ? ` class="${col.className}"` : '';
+      return `<td${classe}>${col.value(m)}</td>`;
+    }).join('');
+
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td style="display: flex; gap: 5px; white-space: nowrap;">
+      ${celulasHtml}
+      <td class="col-acoes-fixed">
         <button class="btn-icon view btn-visualizar" data-id="${m.id}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button class="btn-icon view btn-anexar" data-id="${m.id}" title="Anexar Arquivo"><i class="fas fa-paperclip"></i></button>
         <button class="btn-icon edit btn-editar" data-id="${m.id}" title="Abrir/Editar"><i class="fas fa-edit"></i></button>
         ${btnExcluirHtml}
       </td>
-      <td>${escapeHTML(m.usuario)}</td>
-      <td>${escapeHTML(m.titulo)}</td>
-      <td>${escapeHTML(m.veiculo)}</td>
-      <td>${escapeHTML(m.fornecedor)}</td>
-      <td>${escapeHTML(m.descricao)}</td>
-      <td>${escapeHTML(m.numeroOS)}</td>
-      <td>${formatarData(m.data)}</td>
-      <td>R$ ${formatarValor(m.valor || 0)}</td>
     `;
     tabela.appendChild(linha);
   });
@@ -473,7 +589,7 @@ function handleSort(column) {
 }
 
 function updateSortIcons() {
-    document.querySelectorAll('th.sortable i').forEach(icon => {
+    document.querySelectorAll('th.sortable .sort-icon').forEach(icon => {
         icon.className = 'fas fa-sort';
         const th = icon.closest('th');
         if (th.dataset.sort === currentSort.column) {
@@ -886,7 +1002,7 @@ async function exportarPDF() {
 }
 
 function setupColumnResizing() {
-    const headers = document.querySelectorAll('.table-responsive th');
+    const headers = document.querySelectorAll('.table-responsive th:not(.col-acoes-fixed)');
     
     headers.forEach(th => {
         // Adiciona o elemento resizer se não existir
@@ -904,6 +1020,8 @@ function createResizableColumn(col, resizer) {
     let w = 0;
 
     const mouseDownHandler = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         x = e.clientX;
         const styles = window.getComputedStyle(col);
         w = parseInt(styles.width, 10);
@@ -930,6 +1048,7 @@ function createResizableColumn(col, resizer) {
 document.addEventListener('DOMContentLoaded', async () => {
   preencherUsuarioLogado();
   await carregarFiltros();
+  renderCabecalhoResultados();
 
   document.getElementById('btnIncluirManutencao')?.addEventListener('click', () => {
     window.location.href = 'incluir-manutencao.html';
@@ -956,15 +1075,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listener para busca local
   document.getElementById('searchResultadosLocal')?.addEventListener('input', filtrarERenderizarTabela);
-
-  // Listeners para ordenação
-  document.querySelectorAll('th.sortable').forEach(th => {
-      th.addEventListener('click', () => {
-          handleSort(th.dataset.sort);
-      });
-  });
-
-  if (typeof setupColumnResizing === 'function') setupColumnResizing();
 
   // ✅ Delegação de Eventos para a Tabela de Resultados
   const tabelaResultados = document.getElementById('tabelaResultados');

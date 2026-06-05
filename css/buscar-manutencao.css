@@ -409,6 +409,59 @@ td {
 }
 
 /* Botões de Ação na Tabela */
+.data-grid th.sortable {
+    cursor: pointer;
+}
+
+.data-grid th.draggable-column {
+    user-select: none;
+}
+
+.column-drag-handle {
+    color: #8a8f98;
+    cursor: grab;
+    display: inline-flex;
+    margin-right: 6px;
+}
+
+.dragging-column {
+    opacity: 0.55;
+}
+
+.drag-over-column {
+    box-shadow: inset 3px 0 0 #007bff;
+}
+
+.col-valor {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.col-acoes-fixed {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    width: 170px;
+    min-width: 170px;
+    background: #fff;
+    box-shadow: -6px 0 10px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+}
+
+th.col-acoes-fixed {
+    z-index: 4;
+    background: #f8f9fa;
+}
+
+td.col-acoes-fixed {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
 .btn-icon {
     background: none;
     border: none;
@@ -507,3 +560,15 @@ td {
         padding: 5px 10px;
         color: #333;
     }
+
+.data-grid thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 2;
+}
+
+.data-grid thead th.col-acoes-fixed {
+    right: 0;
+    z-index: 5;
+}

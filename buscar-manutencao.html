@@ -115,18 +115,9 @@
         </div>
 
         <div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;">
-            <table class="data-grid">
+            <table class="data-grid" id="gridResultadosManutencao">
                 <thead>
-                    <tr>
-                        <th style="width: 100px; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Ações</th>
-                        <th class="sortable" data-sort="usuario" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Usuário <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="titulo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Título <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="veiculo" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Placa <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="fornecedor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Fornecedor <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="descricao" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Descrição <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="numeroOS" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">OS <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="data" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Data <i class="fas fa-sort"></i></th>
-                        <th class="sortable" data-sort="valor" style="cursor:pointer; position: sticky; top: 0; background: #f8f9fa; z-index: 2;">Valor (R$) <i class="fas fa-sort"></i></th>
+                    <tr id="cabecalhoResultados">
                     </tr>
                 </thead>
                 <tbody id="tabelaResultados"></tbody>
@@ -224,7 +215,7 @@
   
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
-  <script type="module" src="./script/buscar-manutencao.js" defer></script>
+  <script type="module" src="./script/buscar-manutencao.js?v=20260605-1" defer></script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
 </html>
