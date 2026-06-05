@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function bindEvents() {
-  document.getElementById('btnIncluirOcorrencia').addEventListener('click', abrirModal);
+  document.getElementById('btnIncluirOcorrencia').addEventListener('click', () => abrirModal());
   document.getElementById('btnBuscarOcorrencias').addEventListener('click', buscarOcorrencias);
   document.getElementById('btnExportarXLS').addEventListener('click', exportarExcel);
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
@@ -213,6 +213,8 @@ function atualizarTituloModalOcorrencia() {
 }
 
 async function abrirModal(item = null, modo = 'editar') {
+  if (item instanceof Event) item = null;
+
   if (item && usuarioRestritoPorFilial() && normalizarFilial(item.filial) !== getFilialUsuario()) {
     alert('Esta ocorrencia pertence a outra filial e nao pode ser acessada por este usuario.');
     return;
