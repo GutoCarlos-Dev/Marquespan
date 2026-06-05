@@ -7676,7 +7676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             calculoPesoTipo.value = v.tipo || '';
             
             if (v.capacidade_carga && v.capacidade_carga > 0) {
-                calculoPesoCapacidade.value = v.capacidade_carga;
+                calculoPesoCapacidade.value = formatDecimalBR(v.capacidade_carga);
                 calculoPesoCapacidade.readOnly = true;
                 calculoPesoCapacidade.style.backgroundColor = '#f0f0f0';
             } else {
@@ -7687,6 +7687,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             realizarCalculoPeso();
         } catch (err) { console.error('Erro ao buscar dados do veículo:', err); }
+    }
+
+    function parseBR(value) {
+        if (!value && value !== 0) return 0;
+        return parseFloat(String(value).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function formatDecimalBR(value) {
+        if (value === null || value === undefined || value === '') return '';
+        const num = Number(value);
+        if (!Number.isFinite(num)) return '';
+        return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function getModoCalculoPeso() {
@@ -7737,8 +7749,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function realizarCalculoPeso() {
-        const cap = parseFloat(calculoPesoCapacidade.value) || 0;
-        const total = parseFloat(calculoPesoCargaTotal.value) || 0;
+        const cap = parseBR(calculoPesoCapacidade.value);
+        const total = parseBR(calculoPesoCargaTotal.value);
         const modo = getModoCalculoPeso();
 
         const inputTotalCaixas = document.getElementById('calculoPesoTotalCaixas');
@@ -7878,8 +7890,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     placa: placa,
                     filial: getFilialEscala(),
                     tipo_veiculo: (calculoPesoModelo.value || '').trim().toUpperCase(),
-                    pbt: parseFloat(calculoPesoCapacidade.value) || 0,
-                    peso_carga: parseFloat(calculoPesoCargaTotal.value) || 0,
+                    pbt: parseBR(calculoPesoCapacidade.value),
+                    peso_carga: parseBR(calculoPesoCargaTotal.value),
                     qtd_caixas: parseInt(document.getElementById('calculoPesoTotalCaixas').value) || 0,
                     qtd_clientes: parseInt(calculoPesoQtdClientes.value) || 0,
                     dia_retorno: diaRetorno, // Campo crucial para aparecer na lista de Peso de Rota

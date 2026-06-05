@@ -472,6 +472,13 @@ function parseNumero(value) {
     return Number.isFinite(numero) ? numero : null;
 }
 
+function formatarDecimalBR(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '';
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function parseInteiro(value) {
     const numero = parseNumero(value);
     return numero === null ? null : Math.trunc(numero);
@@ -796,8 +803,8 @@ function renderLinha(row, index) {
             <td class="col-auxiliar">${inputText(index, 'auxiliar', row.auxiliar)}</td>
             <td class="col-placa">${inputText(index, 'placa', row.placa, 'input-uppercase')}</td>
             <td class="col-tipo">${inputText(index, 'tipo_veiculo', row.tipo_veiculo, '', true)}</td>
-            <td class="col-pbt">${inputNumber(index, 'pbt', row.pbt)}</td>
-            <td class="col-peso">${inputNumber(index, 'peso_carga', row.peso_carga)}</td>
+            <td class="col-pbt">${inputDecimal(index, 'pbt', row.pbt)}</td>
+            <td class="col-peso">${inputDecimal(index, 'peso_carga', row.peso_carga)}</td>
             <td class="col-qtd">${inputNumber(index, 'qtd_caixas', row.qtd_caixas, false, '1')}</td>
             <td class="col-qtd">${inputNumber(index, 'qtd_clientes', row.qtd_clientes, false, '1')}</td>
             <td class="col-status"><span class="peso-status ${status.classe}" data-status-row="${index}">${status.texto}</span></td>
@@ -856,6 +863,12 @@ function inputText(index, field, value, extraClass = '', readonly = false) {
 
 function inputNumber(index, field, value, readonly = false, step = '0.01') {
     return `<input type="number" data-row-index="${index}" data-field="${field}" value="${value ?? ''}" step="${step}" min="0" ${readonly ? 'readonly' : ''}>`;
+}
+
+function inputDecimal(index, field, value, readonly = false) {
+    const displayValue = formatarDecimalBR(value);
+    const readonlyAttr = readonly ? 'readonly style="background:#f0f0f0; cursor:not-allowed;"' : '';
+    return `<input type="text" inputmode="decimal" data-row-index="${index}" data-field="${field}" value="${displayValue}" ${readonlyAttr}>`;
 }
 
 function inputDate(index, field, value) {
