@@ -93,16 +93,24 @@
 .kpi-card.red { border-left-color: #ff0019;}
 
 .kpi-icon {
-    font-size: 2rem;
-    opacity: 0.7;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    opacity: 0.9;
 }
 
-.kpi-card.blue .kpi-icon { color: #ffffff; }
-.kpi-card.blue1 .kpi-icon { color: #ffffff; }
-.kpi-card.green .kpi-icon { color: #ffffff; }
-.kpi-card.orange .kpi-icon { color: #ffffff; }
-.kpi-card.yellow .kpi-icon { color: #ffc107; }
-.kpi-card.red .kpi-icon { color: #ffffff; }
+.kpi-card.blue   .kpi-icon { color: #ffffff; background-color: #007bff; }
+.kpi-card.blue1  .kpi-icon { color: #ffffff; background-color: #0cabf5; }
+.kpi-card.green  .kpi-icon { color: #ffffff; background-color: #28a745; }
+.kpi-card.orange .kpi-icon { color: #ffffff; background-color: #fd7e14; }
+.kpi-card.yellow .kpi-icon { color: #333333; background-color: #ffc107; }
+.kpi-card.red    .kpi-icon { color: #ffffff; background-color: #ff0019; }
+.kpi-card.purple .kpi-icon { color: #ffffff; background-color: #6f42c1; }
 
 .kpi-info h3 {
     margin: 0;
