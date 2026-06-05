@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             'btnCopiarPlanejamento',
             'btnCopiarModeloPlanejamento',
             'btnRecalcularPlanejamento',
+            'btnAtualizarAbasPeloPlanejamento',
             'btnAdicionarLinhaPlanejamento',
             'btnFabAdd',
             'btnFabRemove',
@@ -871,6 +872,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             : query;
     }
 
+    function getDataTecnicaSemanaModelo(dia) {
+        const index = IMPORT_DAYS.indexOf(dia);
+        if (index < 0) return null;
+        const base = new Date(Date.UTC(2025, 11, 28)); // domingo tecnico da semana modelo
+        return addDays(base, index);
+    }
+
     function dateFromISO(dataISO) {
         const value = String(dataISO || '').slice(0, 10);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -916,12 +924,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function getDataSemanaDia(semana, dia) {
         if (isSemanaModeloPlanejamento(semana)) {
-            return getDataSemanaDiaOuNulo(semana, dia) || new Date();
+            return getDataSemanaDiaOuNulo(semana, dia) || getDataTecnicaSemanaModelo(dia) || new Date();
         }
         return CACHE_DATAS[semana]?.[dia] || new Date();
     }
 
     function getDataSemanaDiaOuNulo(semana, dia) {
+        if (isSemanaModeloPlanejamento(semana)) {
+            return CACHE_DATAS[semana]?.[dia] || getDataTecnicaSemanaModelo(dia) || null;
+        }
         return CACHE_DATAS[semana]?.[dia] || null;
     }
 
@@ -2041,19 +2052,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getDiaByDataEscala(semana, dataISO) {
+        if (!dataISO) return null;
+        if (isSemanaModeloPlanejamento(semana)) {
+            const dataObj = dateFromISO(dataISO);
+            return dataObj ? IMPORT_DAYS[dataObj.getUTCDay()] : null;
+        }
         const datas = CACHE_DATAS[semana];
-        if (!datas || !dataISO) return null;
+        if (!datas) return null;
         const dataNormalizada = String(dataISO).slice(0, 10);
         return IMPORT_DAYS.find(dia => datas[dia]?.toISOString().split('T')[0] === dataNormalizada) || null;
     }
 
     function getDatasSemanaISO(semana) {
+        if (isSemanaModeloPlanejamento(semana)) {
+            return IMPORT_DAYS.map(dia => getDataSemanaDia(semana, dia)?.toISOString().split('T')[0]).filter(Boolean);
+        }
         const datas = CACHE_DATAS[semana];
         if (!datas) return [];
         return IMPORT_DAYS.map(dia => datas[dia]?.toISOString().split('T')[0]).filter(Boolean);
     }
 
     function getDatasDiasISO(semana, dias) {
+        if (isSemanaModeloPlanejamento(semana)) {
+            return dias.map(dia => getDataSemanaDia(semana, dia)?.toISOString().split('T')[0]).filter(Boolean);
+        }
         const datas = CACHE_DATAS[semana];
         if (!datas) return [];
         return dias.map(dia => datas[dia]?.toISOString().split('T')[0]).filter(Boolean);
@@ -2674,6 +2696,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    async function atualizarAbasDiariasPeloPlanejamento() {
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana antes de atualizar as abas diarias.');
+        if (!exigirFilialEscala()) return;
+
+        if (isSemanaModeloPlanejamento(semana)) {
+            await carregarDatasSemanaModeloBanco();
+        }
+
+        if (!isSemanaModeloPlanejamento(semana) && !CACHE_DATAS[semana]) {
+            return alert('Nao foi possivel identificar as datas da semana para atualizar as abas diarias.');
+        }
+
+        if (!confirm(`Atualizar as abas diarias da ${semana} usando o planejamento atual?\n\nA secao PADRAO dos dias sera substituida. Transferencia, Equipamento, Reservas e Faltas nao serao alterados.`)) {
+            return;
+        }
+
+        try {
+            const { data, error } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .eq('semana_nome', semana)
+            ).order('id');
+
+            if (error) throw error;
+
+            const rows = (data || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa));
+            const inserts = [];
+
+            rows.forEach(row => {
+                const placa = normalizeVehiclePlate(row.placa);
+                if (!placa) return;
+
+                IMPORT_DAYS.forEach(dia => {
+                    const diaKey = DIA_KEY_MAP[dia];
+                    const rota = cleanImportValue(row[`${diaKey}_rota`], { keepZero: true });
+                    const status = cleanImportValue(row[`${diaKey}_status`], { keepZero: true });
+                    if (!rota && !status) return;
+
+                    const dataObj = getDataSemanaDia(semana, dia);
+
+                    inserts.push(comAuditoria({
+                        semana_nome: semana,
+                        data_escala: dataObj.toISOString().split('T')[0],
+                        filial: row.filial || getFilialEscala(),
+                        tipo_escala: 'PADRAO',
+                        placa,
+                        modelo: getModeloVisualByPlaca(placa) || row.modelo || '',
+                        rota,
+                        status,
+                        motorista: row.motorista || '',
+                        auxiliar: row.auxiliar || '',
+                        terceiro: row.terceiro || ''
+                    }));
+                });
+            });
+
+            const datasAtualizar = getDatasSemanaISO(semana);
+            if (datasAtualizar.length === 0) {
+                return alert('Nao ha datas definidas para atualizar as abas diarias.');
+            }
+
+            const deleteQuery = aplicarFiltroSemanaModelo(
+                supabaseClient
+                    .from('escala')
+                    .delete()
+                    .eq('filial', getFilialEscala())
+                    .eq('tipo_escala', 'PADRAO')
+                    .in('data_escala', datasAtualizar),
+                semana
+            );
+            const { error: deleteError } = await deleteQuery;
+            if (deleteError) throw deleteError;
+
+            const chunkSize = 500;
+            for (let i = 0; i < inserts.length; i += chunkSize) {
+                const { error: insertError } = await supabaseClient
+                    .from('escala')
+                    .insert(inserts.slice(i, i + chunkSize));
+                if (insertError) throw insertError;
+            }
+
+            const activeDia = document.querySelector('.tab-btn.active')?.dataset.dia;
+            if (activeDia) carregarDadosDia(activeDia, semana);
+            alert(`Abas diarias atualizadas com sucesso. ${inserts.length} registro(s) PADRAO gerado(s).`);
+        } catch (err) {
+            console.error('Erro ao atualizar abas diarias pelo planejamento:', err);
+            alert('Erro ao atualizar abas diarias: ' + err.message);
+        }
+    }
+
     async function limparDiasAusentesDoPlanejamento(semana, diasPresentes) {
         const diasAusentes = IMPORT_DAYS.filter(dia => !diasPresentes.includes(dia));
         if (!semana || diasAusentes.length === 0) return;
@@ -2742,12 +2856,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rota = row[`${diaKey}_rota`] || '';
         const status = row[`${diaKey}_status`] || '';
 
-        const { data: existentes, error: selectError } = await supabaseClient
-            .from('escala')
-            .select('id')
-            .eq('data_escala', dataISO)
-            .eq('filial', row.filial || getFilialEscala())
-            .eq('placa', placaBusca);
+        const { data: existentes, error: selectError } = await aplicarFiltroSemanaModelo(
+            supabaseClient
+                .from('escala')
+                .select('id')
+                .eq('data_escala', dataISO)
+                .eq('filial', row.filial || getFilialEscala())
+                .eq('placa', placaBusca),
+            row.semana_nome
+        );
 
         if (selectError) throw selectError;
 
@@ -5817,6 +5934,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnRecalcularPlanejamento = document.getElementById('btnRecalcularPlanejamento');
     if (btnRecalcularPlanejamento) {
         btnRecalcularPlanejamento.addEventListener('click', recalcularPlanejamentoPelasAbas);
+    }
+
+    const btnAtualizarAbasPeloPlanejamento = document.getElementById('btnAtualizarAbasPeloPlanejamento');
+    if (btnAtualizarAbasPeloPlanejamento) {
+        btnAtualizarAbasPeloPlanejamento.addEventListener('click', atualizarAbasDiariasPeloPlanejamento);
     }
 
     if (btnToggleMenuLateral) {
