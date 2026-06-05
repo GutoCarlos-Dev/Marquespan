@@ -5391,7 +5391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span>${escapeAttribute(item.atividade)} - ${escapeAttribute(item.funcaoLabel)}${item.rota ? ` - Rota ${escapeAttribute(item.rota)}` : ''}</span>
             </button>
         `).join('');
-        sugestoes.classList.toggle('hidden', !inputFuncionario.value || funcionarios.length === 0);
+        sugestoes.classList.toggle('hidden', Boolean(origemSelecionada) || !inputFuncionario.value || funcionarios.length === 0);
 
         tbodyDisponiveis.innerHTML = funcionarios.length
             ? funcionarios.map(item => `
