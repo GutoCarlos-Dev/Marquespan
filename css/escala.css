@@ -718,6 +718,48 @@ body.escala-menu-oculto .menu-floating-toggle i {
     padding: 14px 18px;
 }
 
+.terceiro-rota-form-grid {
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(120px, 170px) auto;
+    align-items: stretch;
+    padding: 16px 18px;
+    margin: 12px 18px 14px;
+    border: 1px solid #e8edf2;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.terceiro-field-card {
+    gap: 6px;
+    min-width: 0;
+}
+
+.terceiro-field-card label {
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.terceiro-field-card .glass-input {
+    width: 100%;
+    min-height: 40px;
+    border-color: #cbd5e1;
+    background: #fff;
+}
+
+.terceiro-rota-field {
+    max-width: 180px;
+}
+
+.terceiro-aplicar-btn {
+    min-height: 40px;
+    padding: 0 20px;
+    align-self: end;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(0, 105, 55, 0.18);
+}
+
 .terceiro-table-wrap {
     overflow: auto;
     padding: 0 18px 18px;
@@ -1216,6 +1258,19 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
     .terceiro-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .terceiro-rota-form-grid {
+        margin: 12px;
+        padding: 14px;
+    }
+
+    .terceiro-rota-field {
+        max-width: none;
+    }
+
+    .terceiro-aplicar-btn {
+        width: 100%;
     }
 
     .diaria-toolbar {

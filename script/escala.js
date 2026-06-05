@@ -4765,16 +4765,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" id="btnFecharTerceiroRota" class="terceiro-modal-close" title="Fechar">&times;</button>
                 </div>
                 <div class="terceiro-modal-subtitle" id="terceiroRotaContexto"></div>
-                <div class="terceiro-form-grid">
-                    <div class="form-group">
-                        <label for="terceiroRotaFuncionario">Funcionario</label>
-                        <input type="text" id="terceiroRotaFuncionario" list="listaTerceiros" class="glass-input" placeholder="Selecione o funcionario">
+                <div class="terceiro-form-grid terceiro-rota-form-grid">
+                    <div class="form-group terceiro-field-card">
+                        <label for="terceiroRotaMotorista">Motorista</label>
+                        <select id="terceiroRotaMotorista" class="glass-input">
+                            <option value="">Selecione motorista da reserva</option>
+                        </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group terceiro-field-card">
+                        <label for="terceiroRotaAuxiliar">Auxiliar</label>
+                        <select id="terceiroRotaAuxiliar" class="glass-input">
+                            <option value="">Selecione auxiliar da reserva</option>
+                        </select>
+                    </div>
+                    <div class="form-group terceiro-field-card terceiro-rota-field">
                         <label for="terceiroRotaNumero">Rota</label>
                         <input type="text" id="terceiroRotaNumero" list="listaRotas" class="glass-input" placeholder="Informe a rota">
                     </div>
-                    <button type="button" id="btnAplicarTerceiroRota" class="btn-glass btn-blue">
+                    <button type="button" id="btnAplicarTerceiroRota" class="btn-glass btn-blue terceiro-aplicar-btn">
                         <i class="fa-solid fa-check"></i> Aplicar
                     </button>
                 </div>
@@ -4806,8 +4814,71 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         modal.querySelector('#btnAplicarTerceiroRota').addEventListener('click', aplicarTerceiroPorRota);
         modal.querySelector('#tbodyTerceiroRota').addEventListener('click', limparTerceiroDaLinha);
+        modal.querySelector('#terceiroRotaMotorista').addEventListener('change', (event) => {
+            if (event.target.value) modal.querySelector('#terceiroRotaAuxiliar').value = '';
+        });
+        modal.querySelector('#terceiroRotaAuxiliar').addEventListener('change', (event) => {
+            if (event.target.value) modal.querySelector('#terceiroRotaMotorista').value = '';
+        });
 
         return modal;
+    }
+
+    async function atualizarListaTerceirosReservas() {
+        const selectMotorista = document.getElementById('terceiroRotaMotorista');
+        const selectAuxiliar = document.getElementById('terceiroRotaAuxiliar');
+        if (!selectMotorista || !selectAuxiliar) return { motoristas: [], auxiliares: [] };
+
+        const motoristas = new Set();
+        const auxiliares = new Set();
+        const adicionarNome = (set, nome) => {
+            const exibicao = getNomeFuncionarioExibicao(nome);
+            const chave = normalizeString(exibicao);
+            if (chave) set.add(exibicao);
+        };
+
+        document.querySelectorAll('#tbodyReservas tr').forEach(tr => {
+            adicionarNome(motoristas, tr.querySelector('input[data-key="motorista"]')?.value);
+            adicionarNome(auxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value);
+        });
+
+        if (motoristas.size === 0 && auxiliares.size === 0) {
+            const contexto = getDataEscalaAberta();
+            if (contexto) {
+                const { data, error } = await aplicarFiltroSemanaModelo(
+                    aplicarFiltroFilial(
+                        supabaseClient
+                            .from('escala')
+                            .select('motorista, auxiliar')
+                            .eq('data_escala', contexto.dataISO)
+                            .eq('tipo_escala', 'RESERVA')
+                    ),
+                    contexto.semana
+                );
+
+                if (error) {
+                    console.warn('Reservas para terceiro nao carregadas:', error);
+                } else {
+                    (data || []).forEach(row => {
+                        adicionarNome(motoristas, row.motorista);
+                        adicionarNome(auxiliares, row.auxiliar);
+                    });
+                }
+            }
+        }
+
+        const listaMotoristas = Array.from(motoristas).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const listaAuxiliares = Array.from(auxiliares).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        selectMotorista.innerHTML = '<option value="">Selecione motorista da reserva</option>'
+            + listaMotoristas
+                .map(nome => `<option value="${escapeAttribute(nome)}">${escapeAttribute(nome)}</option>`)
+                .join('');
+        selectAuxiliar.innerHTML = '<option value="">Selecione auxiliar da reserva</option>'
+            + listaAuxiliares
+                .map(nome => `<option value="${escapeAttribute(nome)}">${escapeAttribute(nome)}</option>`)
+                .join('');
+
+        return { motoristas: listaMotoristas, auxiliares: listaAuxiliares };
     }
 
     async function abrirModalTerceiroRota() {
@@ -4816,9 +4887,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const modal = ensureModalTerceiroRota();
         modal.querySelector('#terceiroRotaContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
-        modal.querySelector('#terceiroRotaFuncionario').value = '';
+        modal.querySelector('#terceiroRotaMotorista').value = '';
+        modal.querySelector('#terceiroRotaAuxiliar').value = '';
         modal.querySelector('#terceiroRotaNumero').value = '';
         modal.classList.remove('hidden');
+        const terceirosReservas = await atualizarListaTerceirosReservas();
+        if (terceirosReservas.motoristas.length === 0) {
+            modal.querySelector('#terceiroRotaMotorista').innerHTML = '<option value="">Nenhum motorista disponivel</option>';
+        }
+        if (terceirosReservas.auxiliares.length === 0) {
+            modal.querySelector('#terceiroRotaAuxiliar').innerHTML = '<option value="">Nenhum auxiliar disponivel</option>';
+        }
         await carregarTerceiroRotaModal();
     }
 
@@ -4875,11 +4954,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const contexto = getDataEscalaAberta();
         if (!contexto) return;
 
-        const funcionario = cleanImportValue(document.getElementById('terceiroRotaFuncionario')?.value);
+        const motoristaSelecionado = cleanImportValue(document.getElementById('terceiroRotaMotorista')?.value);
+        const auxiliarSelecionado = cleanImportValue(document.getElementById('terceiroRotaAuxiliar')?.value);
+        const funcionario = motoristaSelecionado || auxiliarSelecionado;
         const rota = cleanImportValue(document.getElementById('terceiroRotaNumero')?.value, { keepZero: true });
 
-        if (!funcionario) return alert('Selecione o funcionario.');
+        if (motoristaSelecionado && auxiliarSelecionado) return alert('Selecione apenas motorista ou auxiliar.');
+        if (!funcionario) return alert('Selecione um motorista ou auxiliar.');
         if (!rota) return alert('Informe a rota.');
+
+        const terceirosReservas = await atualizarListaTerceirosReservas();
+        const listaValida = motoristaSelecionado ? terceirosReservas.motoristas : terceirosReservas.auxiliares;
+        if (!listaValida.some(nome => normalizeString(nome) === normalizeString(funcionario))) {
+            return alert('Selecione um motorista ou auxiliar disponivel na secao RESERVAS.');
+        }
 
         const { data, error } = await aplicarFiltroSemanaModelo(
             supabaseClient
@@ -7764,6 +7852,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Adiciona listener global para checkboxes "selecionar todos" nas tabelas diárias
+    const lastRowSelectorByScope = new WeakMap();
+
+    function handleShiftRangeSelection(event, selector, scope) {
+        const checkbox = event.target;
+        if (!checkbox || !scope) return;
+
+        const checkboxes = Array.from(scope.querySelectorAll(selector))
+            .filter(item => !item.disabled && item.closest('tr')?.style.display !== 'none');
+        const last = lastRowSelectorByScope.get(scope);
+
+        if (event.shiftKey && last && last !== checkbox && checkboxes.includes(last)) {
+            const start = checkboxes.indexOf(last);
+            const end = checkboxes.indexOf(checkbox);
+            const [from, to] = start < end ? [start, end] : [end, start];
+            for (let i = from; i <= to; i++) {
+                checkboxes[i].checked = checkbox.checked;
+            }
+        }
+
+        lastRowSelectorByScope.set(scope, checkbox);
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('row-selector-dia')) {
+            handleShiftRangeSelection(e, '.row-selector-dia', e.target.closest('tbody'));
+        }
+
+        if (e.target.classList.contains('row-selector-plan')) {
+            handleShiftRangeSelection(e, '.row-selector-plan', document.getElementById('tbodyPlanejamento'));
+        }
+    });
+
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('select-all-dia')) {
             const isChecked = e.target.checked;
