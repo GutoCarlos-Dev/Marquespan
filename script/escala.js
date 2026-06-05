@@ -269,8 +269,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ).order('ultima_alteracao_em', { ascending: false }).limit(1);
                 if (error) throw error;
                 registros = data || [];
-            } else if (dia && CACHE_DATAS[semana]?.[dia]) {
-                const dataISO = CACHE_DATAS[semana][dia].toISOString().split('T')[0];
+            } else if (dia && getDataSemanaDiaOuNulo(semana, dia)) {
+                const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
                 const [resEscala, resFaltas] = await Promise.all([
                     aplicarFiltroFilial(
                         supabaseClient
@@ -924,14 +924,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function getDataSemanaDia(semana, dia) {
         if (isSemanaModeloPlanejamento(semana)) {
-            return getDataSemanaDiaOuNulo(semana, dia) || getDataTecnicaSemanaModelo(dia) || new Date();
+            return getDataTecnicaSemanaModelo(dia) || new Date();
         }
         return CACHE_DATAS[semana]?.[dia] || new Date();
     }
 
     function getDataSemanaDiaOuNulo(semana, dia) {
         if (isSemanaModeloPlanejamento(semana)) {
-            return CACHE_DATAS[semana]?.[dia] || getDataTecnicaSemanaModelo(dia) || null;
+            return getDataTecnicaSemanaModelo(dia) || null;
         }
         return CACHE_DATAS[semana]?.[dia] || null;
     }
@@ -954,7 +954,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dia = btn.dataset.dia;
             if (!dia) return;
 
-            const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(semana, dia);
+            const date = isSemanaModeloPlanejamento(semana)
+                ? getDataSemanaDiaOuNulo(semana, dia)
+                : dadosSemana?.[dia] || getDataSemanaDiaOuNulo(semana, dia);
             const dateText = date ? date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '';
             btn.innerHTML = `${getDiaNomeAba(dia)}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
         });
@@ -2288,10 +2290,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function substituirRoteiroDia(parsed, semana, dia, dataISOOverride = '') {
-        const dataISO = dataISOOverride || CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+        const dataISO = isSemanaModeloPlanejamento(semana)
+            ? getDataSemanaDia(semana, dia).toISOString().split('T')[0]
+            : dataISOOverride || CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
         if (!dataISO) throw new Error('Nao foi possivel identificar a data do dia aberto.');
-        if (parsed.dataISO !== dataISO) {
+        if (!isSemanaModeloPlanejamento(semana) && parsed.dataISO !== dataISO) {
             throw new Error(`A data da planilha (${parsed.dataISO || 'nao identificada'}) nao confere com o dia aberto (${dataISO}).`);
+        }
+        if (isSemanaModeloPlanejamento(semana)) {
+            aplicarDataRoteiroParsed(parsed, semana, dataISO);
         }
 
         if (isSemanaModeloPlanejamento(semana)) {
@@ -2350,10 +2357,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        let dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+        let dataISO = isSemanaModeloPlanejamento(semana)
+            ? getDataSemanaDia(semana, dia).toISOString().split('T')[0]
+            : CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
         if (!dataISO && isSemanaModeloPlanejamento(semana)) {
             await carregarDatasSemanaModeloBanco();
-            dataISO = CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+            dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
         }
 
         const reader = new FileReader();
@@ -2385,25 +2394,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .filter(Boolean);
 
                 if (isSemanaModeloPlanejamento(semana)) {
-                    const datasModelo = {};
-                    abasParseadas.forEach(item => {
-                        const dataObj = dateFromISO(item.parsed.dataISO);
-                        if (item.dia && dataObj) datasModelo[item.dia] = dataObj;
-                    });
-                    salvarDatasSemanaModelo(datasModelo);
-                    const abaDoDia = abasParseadas.find(item => item.dia === dia && item.parsed.dataISO);
-                    dataISO = abaDoDia?.parsed.dataISO || CACHE_DATAS[semana]?.[dia]?.toISOString().split('T')[0];
+                    dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
                 }
 
                 if (!dataISO) {
                     throw new Error('Nao foi possivel identificar a data do dia aberto.');
                 }
 
-                const candidatos = abasParseadas
-                    .filter(item => item.parsed.dataISO === dataISO);
+                const candidatos = isSemanaModeloPlanejamento(semana)
+                    ? abasParseadas.filter(item => item.dia === dia)
+                    : abasParseadas.filter(item => item.parsed.dataISO === dataISO);
 
                 if (candidatos.length === 0) {
-                    throw new Error(`Nenhuma aba da planilha possui a data ${dataISO} em G4.`);
+                    throw new Error(isSemanaModeloPlanejamento(semana)
+                        ? `Nenhuma aba da planilha corresponde ao dia ${dia}.`
+                        : `Nenhuma aba da planilha possui a data ${dataISO} em G4.`);
                 }
 
                 const candidatoDoDia = candidatos.find(item => getDiaFromSheetName(item.sheetName) === dia) || candidatos[0];
@@ -2484,7 +2489,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 importModal.classList.remove('hidden');
                 let totalImportado = 0;
-                const datasModelo = {};
                 for (let i = 0; i < sheetsDias.length; i++) {
                     const { sheetName, dia } = sheetsDias[i];
                     const progress = 20 + Math.round((i / sheetsDias.length) * 70);
@@ -2493,9 +2497,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     progressDetails.textContent = `Importando ${sheetName}...`;
                     if (isSemanaModeloPlanejamento(semana)) {
                         const parsed = parseRoteiroSheet(workbook, sheetName, semana);
-                        const dataObj = dateFromISO(parsed?.dataISO);
-                        if (dataObj) datasModelo[dia] = dataObj;
-                        totalImportado += await substituirRoteiroDia(parsed, semana, dia, parsed?.dataISO || '');
+                        const dataAlvoModelo = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
+                        totalImportado += await substituirRoteiroDia(parsed, semana, dia, dataAlvoModelo);
                         continue;
                     }
                     const dataAlvo = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
@@ -2504,9 +2507,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 progressDetails.textContent = 'Finalizando importacao...';
                 if (isSemanaModeloPlanejamento(semana)) {
-                    salvarDatasSemanaModelo(datasModelo);
                     atualizarDatasAbasEscala(semana);
-                    await sincronizarPlanejamentoDaSemana(semana, Object.keys(datasModelo));
+                    await sincronizarPlanejamentoDaSemana(semana, diasImportados);
                     carregarPlanejamento(semana);
                 }
 
@@ -2850,7 +2852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const diaKey = dayMatch[1];
         const campo = dayMatch[2];
         const dia = Object.keys(DIA_KEY_MAP).find(d => DIA_KEY_MAP[d] === diaKey);
-        const dataISO = CACHE_DATAS[row.semana_nome]?.[dia]?.toISOString().split('T')[0];
+        const dataISO = getDataSemanaDia(row.semana_nome, dia)?.toISOString().split('T')[0];
         if (!dataISO) return;
 
         const rota = row[`${diaKey}_rota`] || '';
@@ -5975,7 +5977,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const dia = btn.dataset.dia; // Pode ser undefined para a aba 'PLANEJAMENTO'
                 // Apenas processa botões que representam um dia da semana
                 if (dia) {
-                    const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
+                    const date = isSemanaModeloPlanejamento(selectSemana.value)
+                        ? getDataSemanaDiaOuNulo(selectSemana.value, dia)
+                        : dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
                     const diaNome = btn.textContent.split(' ')[0].trim();
                     const dateText = date ? date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'}) : '';
                     btn.innerHTML = `${diaNome}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
@@ -6007,7 +6011,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tabButtons.forEach(btn => {
                 const dia = btn.dataset.dia;
                 if (!dia) return;
-                const date = dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
+                const date = isSemanaModeloPlanejamento(selectSemana.value)
+                    ? getDataSemanaDiaOuNulo(selectSemana.value, dia)
+                    : dadosSemana?.[dia] || getDataSemanaDiaOuNulo(selectSemana.value, dia);
                 const diaNome = btn.textContent.split(' ')[0].trim();
                 const dateText = date ? date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone:'UTC'}) : '';
                 btn.innerHTML = `${diaNome}${dateText ? ` <span class="tab-date">${dateText}</span>` : ''}`;
