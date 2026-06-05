@@ -7539,12 +7539,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             'calculoPesoPaletes',
             'calculoPesoCaixas',
             'calculoPesoQtdClientes',
+            'calculoPesoRotaDestino',
         ];
         campos.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
         if (calculoPesoTransferir) calculoPesoTransferir.style.color = '';
+        const secaoExcedente = document.getElementById('secaoExcedente');
+        if (secaoExcedente) secaoExcedente.style.display = 'none';
+        if (calculoPesoAnularTransferencia) calculoPesoAnularTransferencia.checked = false;
+        const containerRotaDestino = document.getElementById('containerRotaDestino');
+        if (containerRotaDestino) containerRotaDestino.style.display = 'block';
     }
 
     if (btnCalculoPeso) {
@@ -7762,21 +7768,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const excedente = Math.max(0, total - cap);
+        const secaoExcedente = document.getElementById('secaoExcedente');
 
-        calculoPesoTransferir.value = excedente.toFixed(2);
-        calculoPesoTransferir.style.color = excedente > 0 ? '#dc3545' : '#28a745';
+        if (excedente > 0) {
+            if (secaoExcedente) secaoExcedente.style.display = 'block';
 
-        // Cálculo de Paletes e Caixas avulsas a partir do excedente (apenas modo auto)
-        if (modo === 'auto') {
-            const totalCaixasNecessarias = Math.ceil(excedente / 21);
-            const qtdPaletes = Math.floor(totalCaixasNecessarias / 42);
-            const qtdCaixasAvulsas = totalCaixasNecessarias % 42;
+            calculoPesoTransferir.value = excedente.toFixed(2);
+            calculoPesoTransferir.style.color = '#dc3545';
 
-            const inputPaletes = document.getElementById('calculoPesoPaletes');
-            const inputCaixas = document.getElementById('calculoPesoCaixas');
+            if (modo === 'auto') {
+                const totalCaixasNecessarias = Math.ceil(excedente / 21);
+                const qtdPaletes = Math.floor(totalCaixasNecessarias / 42);
+                const qtdCaixasAvulsas = totalCaixasNecessarias % 42;
 
-            if (inputPaletes) inputPaletes.value = excedente > 0 ? qtdPaletes : 0;
-            if (inputCaixas) inputCaixas.value = excedente > 0 ? qtdCaixasAvulsas : 0;
+                const inputPaletes = document.getElementById('calculoPesoPaletes');
+                const inputCaixas = document.getElementById('calculoPesoCaixas');
+
+                if (inputPaletes) inputPaletes.value = qtdPaletes;
+                if (inputCaixas) inputCaixas.value = qtdCaixasAvulsas;
+            }
+        } else {
+            if (secaoExcedente) secaoExcedente.style.display = 'none';
+            calculoPesoTransferir.value = '';
         }
     }
 
