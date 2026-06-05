@@ -7523,6 +7523,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnCalcularPeso = document.getElementById('btnCalcularPeso');
     const btnSalvarPesoRota = document.getElementById('btnSalvarPesoRota');
 
+    function resetarModoCalculoPeso() {
+        const radioAuto = document.getElementById('modoTransferir21kg');
+        if (radioAuto) {
+            radioAuto.checked = true;
+            atualizarModoCalculoPeso();
+        }
+    }
+
+    function limparCamposCalculoPeso() {
+        const campos = [
+            'calculoPesoCargaTotal',
+            'calculoPesoTotalCaixas',
+            'calculoPesoTransferir',
+            'calculoPesoPaletes',
+            'calculoPesoCaixas',
+            'calculoPesoQtdClientes',
+        ];
+        campos.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        if (calculoPesoTransferir) calculoPesoTransferir.style.color = '';
+    }
+
     if (btnCalculoPeso) {
         btnCalculoPeso.addEventListener('click', () => {
             modalCalculoPeso.classList.remove('hidden');
@@ -7532,16 +7556,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const containerRotaDestino = document.getElementById('containerRotaDestino');
                 if (containerRotaDestino) containerRotaDestino.style.display = 'block';
             }
+            limparCamposCalculoPeso();
+            resetarModoCalculoPeso();
             carregarVeiculosCalculoPeso();
         });
     }
 
     async function abrirModalPesoRotaComDados(rota, placa, modelo, motorista, auxiliar) {
         if (!modalCalculoPeso) return;
-        
+
         modalCalculoPeso.classList.remove('hidden');
         modalCalculoPeso.style.display = 'flex';
-        
+
+        limparCamposCalculoPeso();
+        resetarModoCalculoPeso();
+
         // Preenche os campos do modal com os dados vindos da linha da escala
         if (calculoPesoRotaOrigem) calculoPesoRotaOrigem.value = rota;
         if (calculoPesoPlaca) calculoPesoPlaca.value = placa;
@@ -7561,12 +7590,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.addEventListener('click', (e) => {
-        if (e.target === modalCalculoPeso) {
-            modalCalculoPeso.classList.add('hidden');
-            modalCalculoPeso.style.display = 'none';
-        }
-    });
 
     if (calculoPesoRotaOrigem) {
         calculoPesoRotaOrigem.addEventListener('change', () => {
@@ -7623,6 +7646,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (calculoPesoCargaTotal) calculoPesoCargaTotal.addEventListener('input', realizarCalculoPeso);
     if (btnCalcularPeso) btnCalcularPeso.addEventListener('click', realizarCalculoPeso);
 
+    document.querySelectorAll('input[name="modoCalculoPeso"]').forEach(radio => {
+        radio.addEventListener('change', atualizarModoCalculoPeso);
+    });
+
     async function carregarVeiculosCalculoPeso() {
         if (!listaVeiculosCalculoPeso) return;
         try {
@@ -7662,32 +7689,83 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) { console.error('Erro ao buscar dados do veículo:', err); }
     }
 
+    function getModoCalculoPeso() {
+        const radio = document.querySelector('input[name="modoCalculoPeso"]:checked');
+        return radio ? radio.value : 'auto';
+    }
+
+    function atualizarModoCalculoPeso() {
+        const modo = getModoCalculoPeso();
+        const inputTotalCaixas = document.getElementById('calculoPesoTotalCaixas');
+        const labelAuto = document.getElementById('labelModo21kg');
+        const labelManual = document.getElementById('labelModoManual');
+
+        if (modo === 'manual') {
+            if (inputTotalCaixas) {
+                inputTotalCaixas.readOnly = false;
+                inputTotalCaixas.style.backgroundColor = '';
+                inputTotalCaixas.placeholder = 'Informe a qtd.';
+            }
+            if (labelAuto) {
+                labelAuto.style.borderColor = '#ccc';
+                labelAuto.style.background = '#fff';
+                labelAuto.style.color = '#666';
+            }
+            if (labelManual) {
+                labelManual.style.borderColor = '#0d6efd';
+                labelManual.style.background = '#e7f1ff';
+                labelManual.style.color = '#0d6efd';
+            }
+        } else {
+            if (inputTotalCaixas) {
+                inputTotalCaixas.readOnly = true;
+                inputTotalCaixas.style.backgroundColor = '#f0f0f0';
+                inputTotalCaixas.removeAttribute('placeholder');
+            }
+            if (labelAuto) {
+                labelAuto.style.borderColor = '#006937';
+                labelAuto.style.background = '#f0fff4';
+                labelAuto.style.color = '#006937';
+            }
+            if (labelManual) {
+                labelManual.style.borderColor = '#ccc';
+                labelManual.style.background = '#fff';
+                labelManual.style.color = '#666';
+            }
+            realizarCalculoPeso();
+        }
+    }
+
     function realizarCalculoPeso() {
         const cap = parseFloat(calculoPesoCapacidade.value) || 0;
         const total = parseFloat(calculoPesoCargaTotal.value) || 0;
-        
-        // Cálculo de total de caixas (1 caixa = 21kg)
-        const totalCaixas = Math.ceil(total / 21);
+        const modo = getModoCalculoPeso();
+
         const inputTotalCaixas = document.getElementById('calculoPesoTotalCaixas');
-        if (inputTotalCaixas) inputTotalCaixas.value = totalCaixas;
+
+        // Modo automático: calcula QTD TOTAL CAIXAS a partir do peso (1 caixa = 21kg)
+        if (modo === 'auto') {
+            const totalCaixas = Math.ceil(total / 21);
+            if (inputTotalCaixas) inputTotalCaixas.value = totalCaixas || '';
+        }
 
         const excedente = Math.max(0, total - cap);
-        
+
         calculoPesoTransferir.value = excedente.toFixed(2);
         calculoPesoTransferir.style.color = excedente > 0 ? '#dc3545' : '#28a745';
 
-        // Cálculo de Caixas e Paletes
-        // 1 Caixa = 21kg
-        // 1 Palete = 42 caixas
-        const totalCaixasNecessarias = Math.ceil(excedente / 21);
-        const qtdPaletes = Math.floor(totalCaixasNecessarias / 42);
-        const qtdCaixasAvulsas = totalCaixasNecessarias % 42;
+        // Cálculo de Paletes e Caixas avulsas a partir do excedente (apenas modo auto)
+        if (modo === 'auto') {
+            const totalCaixasNecessarias = Math.ceil(excedente / 21);
+            const qtdPaletes = Math.floor(totalCaixasNecessarias / 42);
+            const qtdCaixasAvulsas = totalCaixasNecessarias % 42;
 
-        const inputPaletes = document.getElementById('calculoPesoPaletes');
-        const inputCaixas = document.getElementById('calculoPesoCaixas');
-        
-        if (inputPaletes) inputPaletes.value = excedente > 0 ? qtdPaletes : 0;
-        if (inputCaixas) inputCaixas.value = excedente > 0 ? qtdCaixasAvulsas : 0;
+            const inputPaletes = document.getElementById('calculoPesoPaletes');
+            const inputCaixas = document.getElementById('calculoPesoCaixas');
+
+            if (inputPaletes) inputPaletes.value = excedente > 0 ? qtdPaletes : 0;
+            if (inputCaixas) inputCaixas.value = excedente > 0 ? qtdCaixasAvulsas : 0;
+        }
     }
 
     // Botão Transferência de Carga
