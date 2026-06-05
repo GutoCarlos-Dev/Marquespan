@@ -36,6 +36,9 @@ const FuncionarioUI = {
 
     cache() {
         this.form = document.getElementById('formCadastrarFuncionario');
+        this.modalFuncionario = document.getElementById('modalFuncionario');
+        this.btnOpenFuncionarioModal = document.getElementById('btnOpenFuncionarioModal');
+        this.btnCloseFuncionarioModal = document.getElementById('btnCloseFuncionarioModal');
         this.tableBody = document.getElementById('funcTableBody');
         this.btnSubmit = document.getElementById('btnSubmitFunc');
         this.btnClearForm = document.getElementById('btnClearFuncForm');
@@ -64,6 +67,20 @@ const FuncionarioUI = {
     bind() {
         if (this.form) {
             this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
+        if (this.btnOpenFuncionarioModal) {
+            this.btnOpenFuncionarioModal.addEventListener('click', () => {
+                this.clearForm({ fecharModal: false });
+                this.openFuncionarioModal();
+            });
+        }
+        if (this.btnCloseFuncionarioModal) {
+            this.btnCloseFuncionarioModal.addEventListener('click', () => this.clearForm());
+        }
+        if (this.modalFuncionario) {
+            this.modalFuncionario.addEventListener('click', (event) => {
+                if (event.target === this.modalFuncionario) this.clearForm();
+            });
         }
         if (this.btnClearForm) {
             this.btnClearForm.addEventListener('click', () => this.clearForm());
@@ -174,6 +191,19 @@ const FuncionarioUI = {
         } else {
             this.statusFilterText.textContent = `${checked.length} selecionados`;
         }
+    },
+
+    openFuncionarioModal() {
+        if (!this.modalFuncionario) return;
+        this.modalFuncionario.classList.remove('hidden');
+        document.body.classList.add('funcionario-modal-open');
+        setTimeout(() => document.getElementById('funcRH')?.focus(), 0);
+    },
+
+    closeFuncionarioModal() {
+        if (!this.modalFuncionario) return;
+        this.modalFuncionario.classList.add('hidden');
+        document.body.classList.remove('funcionario-modal-open');
     },
 
     async carregarFiliais() {
@@ -289,6 +319,7 @@ const FuncionarioUI = {
             await this.renderSummary();
             alert('✅ Colaborador salvo com sucesso!');
             this.clearForm();
+            this.closeFuncionarioModal();
             this.renderGrid();
         } catch (err) {
             console.error('Erro ao salvar funcionário:', err);
@@ -296,12 +327,12 @@ const FuncionarioUI = {
         }
     },
 
-    clearForm() {
+    clearForm(options = {}) {
+        const { fecharModal = true } = options;
         this.form?.reset();
         this.editingIdInput.value = '';
         this.currentFuncaoBeforeEdit = null;
         this.btnSubmit.textContent = 'Salvar Registro';
-        this.btnClearForm.classList.add('hidden');
         this.toggleDesligamentoField();
         if (this.filialSelect) {
             const filialPadrao = this.usuarioAtual?.filial || 'SP';
@@ -311,6 +342,7 @@ const FuncionarioUI = {
         }
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
+        if (fecharModal) this.closeFuncionarioModal();
     },
 
     async renderGrid() {
@@ -619,8 +651,7 @@ const FuncionarioUI = {
         this.toggleDesligamentoField();
         await this.carregarHistoricoFuncao(f.rh_registro);
         this.btnSubmit.textContent = 'Atualizar Registro';
-        this.btnClearForm.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        this.openFuncionarioModal();
     },
 
     async deleteFuncionario(id) {
