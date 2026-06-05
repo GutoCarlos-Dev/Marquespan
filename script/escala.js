@@ -168,7 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             'btnExcluirSelecionadosPlan',
             'btnLimparEscala',
             'btnTerceiroRotaSuspenso',
-            'btnTrocaVeiculoSuspenso'
+            'btnTrocaVeiculoSuspenso',
+            'btnFaltasSuspenso'
         ];
 
         if (isAdmPedidoEscala) {
@@ -510,6 +511,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!btnTrocaVeiculoSuspenso.disabled) abrirModalTrocaVeiculo();
     });
 
+    const btnFaltasSuspenso = document.createElement('button');
+    btnFaltasSuspenso.id = 'btnFaltasSuspenso';
+    btnFaltasSuspenso.className = 'floating-terceiro-btn floating-faltas-btn hidden';
+    btnFaltasSuspenso.type = 'button';
+    btnFaltasSuspenso.disabled = true;
+    btnFaltasSuspenso.innerHTML = '<i class="fa-solid fa-user-slash"></i><span>Faltas</span>';
+    document.body.appendChild(btnFaltasSuspenso);
+
+    btnFaltasSuspenso.addEventListener('click', () => {
+        if (!btnFaltasSuspenso.disabled) abrirModalFaltasFuncionarios();
+    });
+
     function atualizarBotaoTerceiroSuspenso() {
         const contexto = getDataEscalaAberta();
         const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
@@ -543,6 +556,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             btnTrocaVeiculoSuspenso.title = 'Abra uma escala e selecione uma data.';
             btnTrocaVeiculoSuspenso.querySelector('span').textContent = 'Troca Veiculo';
+        }
+
+        atualizarBotaoFaltasSuspenso();
+    }
+
+    function atualizarBotaoFaltasSuspenso() {
+        const contexto = getDataEscalaAberta();
+        const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
+        const ativo = !!contexto && escalaAberta && podeGerenciarEscala;
+
+        btnFaltasSuspenso.disabled = !ativo;
+        btnFaltasSuspenso.classList.toggle('hidden', !ativo);
+
+        if (ativo) {
+            btnFaltasSuspenso.title = `Aplicar faltas, ferias e afastamentos - ${contexto.dia} ${contexto.dataBR}`;
+            btnFaltasSuspenso.querySelector('span').textContent = `Faltas ${contexto.dia}`;
+        } else {
+            btnFaltasSuspenso.title = 'Abra uma escala e selecione uma data.';
+            btnFaltasSuspenso.querySelector('span').textContent = 'Faltas';
         }
     }
 
@@ -5131,6 +5163,347 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await carregarTerceiroRotaModal();
         carregarDadosDia(contexto.dia, contexto.semana);
+    }
+
+    const FALTAS_MOTIVOS_PADRAO = ['FALTA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'OUTROS'];
+
+    function ensureModalFaltasFuncionarios() {
+        let modal = document.getElementById('modalFaltasFuncionarios');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalFaltasFuncionarios';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content faltas-modal-content">
+                <div class="terceiro-modal-header faltas-modal-header">
+                    <h3><i class="fa-solid fa-user-slash"></i> Faltas / Ferias / Afastados</h3>
+                    <button type="button" id="btnFecharFaltasFuncionarios" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="terceiro-modal-subtitle" id="faltasFuncionariosContexto"></div>
+                <div class="terceiro-form-grid faltas-form-grid">
+                    <div class="form-group">
+                        <label for="faltasTipoFuncionario">Atividade</label>
+                        <select id="faltasTipoFuncionario" class="glass-input">
+                            <option value="TODOS">Todos</option>
+                            <option value="motorista">Motoristas</option>
+                            <option value="auxiliar">Auxiliares</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasFuncionario">Funcionario</label>
+                        <input type="text" id="faltasFuncionario" class="glass-input" placeholder="Digite para buscar">
+                        <input type="hidden" id="faltasFuncionarioOrigem">
+                        <div id="faltasFuncionarioSugestoes" class="faltas-suggestions hidden"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasMotivo">Motivo</label>
+                        <select id="faltasMotivo" class="glass-input">
+                            ${FALTAS_MOTIVOS_PADRAO.map(motivo => `<option value="${motivo}">${motivo}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasComplemento">Detalhe</label>
+                        <input type="text" id="faltasComplemento" class="glass-input" placeholder="Opcional">
+                    </div>
+                    <button type="button" id="btnAplicarFaltasFuncionario" class="btn-glass btn-red faltas-aplicar-btn">
+                        <i class="fa-solid fa-check"></i> Aplicar
+                    </button>
+                </div>
+                <div class="faltas-modal-grid">
+                    <div class="faltas-modal-panel">
+                        <h4>Funcionarios disponiveis</h4>
+                        <div class="terceiro-table-wrap">
+                            <table class="data-grid faltas-table">
+                                <thead>
+                                    <tr>
+                                        <th>ATIVIDADE</th>
+                                        <th>FUNCAO</th>
+                                        <th>FUNCIONARIO</th>
+                                        <th>ROTA</th>
+                                        <th>PLACA</th>
+                                        <th>ACAO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyFaltasDisponiveis"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="faltas-modal-panel">
+                        <h4>Faltas lancadas</h4>
+                        <div class="terceiro-table-wrap">
+                            <table class="data-grid faltas-table">
+                                <thead>
+                                    <tr>
+                                        <th>MOTORISTA</th>
+                                        <th>MOTIVO MOTORISTA</th>
+                                        <th>AUXILIAR</th>
+                                        <th>MOTIVO AUXILIAR</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyFaltasLancadasModal"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('#btnFecharFaltasFuncionarios')) {
+                modal.classList.add('hidden');
+                return;
+            }
+
+            const btnSelecionar = e.target.closest('.btn-selecionar-falta');
+            if (btnSelecionar) {
+                selecionarFuncionarioFalta(btnSelecionar.dataset.origem || '');
+                return;
+            }
+
+            const sugestao = e.target.closest('.faltas-suggestion-item');
+            if (sugestao) {
+                selecionarFuncionarioFalta(sugestao.dataset.origem || '');
+            }
+        });
+
+        modal.querySelector('#faltasTipoFuncionario').addEventListener('change', () => carregarFaltasFuncionariosModal());
+        modal.querySelector('#faltasFuncionario').addEventListener('input', () => carregarFaltasFuncionariosModal());
+        modal.querySelector('#btnAplicarFaltasFuncionario').addEventListener('click', aplicarFaltaFuncionario);
+
+        return modal;
+    }
+
+    function getFaltasLancadasNomes() {
+        const nomes = new Set();
+        document.querySelectorAll('#tbodyFaltas input[data-key="motorista_ausente"], #tbodyFaltas input[data-key="auxiliar_ausente"]').forEach(input => {
+            const chave = normalizeString(input.value);
+            if (chave) nomes.add(chave);
+        });
+        return nomes;
+    }
+
+    function coletarFuncionariosDisponiveisFaltas() {
+        const lancados = getFaltasLancadasNomes();
+        const secoes = [
+            { id: 'tbodyPadrao', label: 'PADRAO' },
+            { id: 'tbodyTransferencia', label: 'TRANSFERENCIA CD' },
+            { id: 'tbodyEquipamento', label: 'EQUIPAMENTO' },
+            { id: 'tbodyReservas', label: 'RESERVAS' }
+        ];
+        const funcionarios = [];
+
+        secoes.forEach(secao => {
+            document.querySelectorAll(`#${secao.id} tr[data-id][data-tabela]`).forEach(tr => {
+                ['motorista', 'auxiliar'].forEach(funcao => {
+                    const input = tr.querySelector(`input[data-key="${funcao}"]`);
+                    const nome = getNomeFuncionarioExibicao(input?.value);
+                    const chave = normalizeString(nome);
+                    if (!chave || lancados.has(chave)) return;
+
+                    const origem = `${tr.dataset.tabela}:${tr.dataset.id}:${funcao}`;
+                    funcionarios.push({
+                        origem,
+                        tabela: tr.dataset.tabela,
+                        id: tr.dataset.id,
+                        funcao,
+                        funcaoLabel: funcao === 'motorista' ? 'MOTORISTA' : 'AUXILIAR',
+                        nome,
+                        atividade: secao.label,
+                        rota: cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true }),
+                        placa: tr.querySelector('input[data-key="placa"]')?.value || '',
+                        modelo: tr.querySelector('input[data-key="modelo"]')?.value || ''
+                    });
+                });
+            });
+        });
+
+        return funcionarios.sort((a, b) => {
+            const atividade = a.atividade.localeCompare(b.atividade, 'pt-BR');
+            if (atividade !== 0) return atividade;
+            const funcao = a.funcaoLabel.localeCompare(b.funcaoLabel, 'pt-BR');
+            if (funcao !== 0) return funcao;
+            return a.nome.localeCompare(b.nome, 'pt-BR');
+        });
+    }
+
+    async function abrirModalFaltasFuncionarios() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return alert('Abra uma semana e um dia antes de aplicar faltas.');
+
+        const modal = ensureModalFaltasFuncionarios();
+        modal.querySelector('#faltasFuncionariosContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
+        modal.querySelector('#faltasTipoFuncionario').value = 'TODOS';
+        modal.querySelector('#faltasFuncionario').value = '';
+        modal.querySelector('#faltasFuncionarioOrigem').value = '';
+        modal.querySelector('#faltasFuncionarioSugestoes').classList.add('hidden');
+        modal.querySelector('#faltasMotivo').value = 'FALTA';
+        modal.querySelector('#faltasComplemento').value = '';
+        modal.classList.remove('hidden');
+        await carregarFaltasFuncionariosModal();
+    }
+
+    function getFuncionariosFaltasFiltrados({ ignorarTermo = false } = {}) {
+        const modal = ensureModalFaltasFuncionarios();
+        const filtroFuncao = modal.querySelector('#faltasTipoFuncionario')?.value || 'TODOS';
+        const termo = ignorarTermo ? '' : normalizeString(modal.querySelector('#faltasFuncionario')?.value);
+        return coletarFuncionariosDisponiveisFaltas()
+            .filter(item => filtroFuncao === 'TODOS' || item.funcao === filtroFuncao)
+            .filter(item => !termo
+                || normalizeString(item.nome).includes(termo)
+                || normalizeString(item.atividade).includes(termo)
+                || normalizeString(item.rota).includes(termo)
+                || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo)));
+    }
+
+    function selecionarFuncionarioFalta(origemSelecionada) {
+        const modal = ensureModalFaltasFuncionarios();
+        const funcionario = coletarFuncionariosDisponiveisFaltas().find(item => item.origem === origemSelecionada);
+        if (!funcionario) return;
+
+        modal.querySelector('#faltasFuncionario').value = `${funcionario.nome}${funcionario.rota ? ` - Rota ${funcionario.rota}` : ''}`;
+        modal.querySelector('#faltasFuncionarioOrigem').value = funcionario.origem;
+        modal.querySelector('#faltasTipoFuncionario').value = funcionario.funcao;
+        modal.querySelector('#faltasFuncionarioSugestoes').classList.add('hidden');
+        carregarFaltasFuncionariosModal(funcionario.origem);
+    }
+
+    async function carregarFaltasFuncionariosModal(origemSelecionada = '') {
+        const modal = ensureModalFaltasFuncionarios();
+        const inputFuncionario = modal.querySelector('#faltasFuncionario');
+        const inputOrigem = modal.querySelector('#faltasFuncionarioOrigem');
+        const sugestoes = modal.querySelector('#faltasFuncionarioSugestoes');
+        const tbodyDisponiveis = modal.querySelector('#tbodyFaltasDisponiveis');
+        const tbodyLancadas = modal.querySelector('#tbodyFaltasLancadasModal');
+        if (!inputFuncionario || !inputOrigem || !sugestoes || !tbodyDisponiveis || !tbodyLancadas) return;
+
+        if (inputFuncionario.value && !origemSelecionada) inputOrigem.value = '';
+        if (origemSelecionada) inputOrigem.value = origemSelecionada;
+        else if (inputOrigem.value && !inputFuncionario.value) inputOrigem.value = '';
+
+        const origemAtual = inputOrigem.value;
+        const funcionarios = getFuncionariosFaltasFiltrados({ ignorarTermo: Boolean(origemSelecionada) });
+
+        sugestoes.innerHTML = funcionarios.slice(0, 30).map(item => `
+            <button type="button" class="faltas-suggestion-item ${item.origem === origemAtual ? 'selected' : ''}" data-origem="${escapeAttribute(item.origem)}">
+                <strong>${escapeAttribute(item.nome)}</strong>
+                <span>${escapeAttribute(item.atividade)} - ${escapeAttribute(item.funcaoLabel)}${item.rota ? ` - Rota ${escapeAttribute(item.rota)}` : ''}</span>
+            </button>
+        `).join('');
+        sugestoes.classList.toggle('hidden', !inputFuncionario.value || funcionarios.length === 0);
+
+        tbodyDisponiveis.innerHTML = funcionarios.length
+            ? funcionarios.map(item => `
+                <tr>
+                    <td>${escapeAttribute(item.atividade)}</td>
+                    <td>${escapeAttribute(item.funcaoLabel)}</td>
+                    <td>${escapeAttribute(item.nome)}</td>
+                    <td>${escapeAttribute(item.rota || '')}</td>
+                    <td>${escapeAttribute(item.placa || '')}</td>
+                    <td class="actions-cell">
+                        <button type="button" class="btn-icon edit btn-selecionar-falta" data-origem="${escapeAttribute(item.origem)}" data-funcao="${item.funcao}" title="Selecionar funcionario">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="6" style="text-align:center;">Nenhum funcionario disponivel para este filtro.</td></tr>';
+
+        const linhasFaltas = Array.from(document.querySelectorAll('#tbodyFaltas tr[data-id]'));
+        tbodyLancadas.innerHTML = linhasFaltas.length
+            ? linhasFaltas.map(tr => `
+                <tr>
+                    <td>${escapeAttribute(tr.querySelector('input[data-key="motorista_ausente"]')?.value || '')}</td>
+                    <td>${escapeAttribute(tr.querySelector('[data-key="motivo_motorista"]')?.textContent || '')}</td>
+                    <td>${escapeAttribute(tr.querySelector('input[data-key="auxiliar_ausente"]')?.value || '')}</td>
+                    <td>${escapeAttribute(tr.querySelector('[data-key="motivo_auxiliar"]')?.textContent || '')}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="4" style="text-align:center;">Nenhuma falta lancada para esta data.</td></tr>';
+    }
+
+    async function aplicarFaltaFuncionario() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return;
+
+        const modal = ensureModalFaltasFuncionarios();
+        const origemSelecionada = modal.querySelector('#faltasFuncionarioOrigem')?.value;
+        if (!origemSelecionada) return alert('Selecione um funcionario da lista.');
+
+        const funcionarioSelecionado = coletarFuncionariosDisponiveisFaltas().find(item => item.origem === origemSelecionada);
+        if (!funcionarioSelecionado) return alert('Funcionario nao esta mais disponivel para lancamento.');
+
+        const origem = origemSelecionada.split(':');
+        const [tabelaOrigem, idOrigem, keyOrigem] = origem;
+        const nome = funcionarioSelecionado.nome;
+        const motivoBase = cleanImportValue(modal.querySelector('#faltasMotivo')?.value) || 'FALTA';
+        const complemento = cleanImportValue(modal.querySelector('#faltasComplemento')?.value);
+        const motivo = complemento ? `${motivoBase} - ${complemento}` : motivoBase;
+
+        if (!tabelaOrigem || !idOrigem || !['motorista', 'auxiliar'].includes(keyOrigem)) {
+            return alert('Origem do funcionario invalida.');
+        }
+
+        const payload = comAuditoria({
+            semana_nome: contexto.semana,
+            data_escala: contexto.dataISO,
+            filial: getFilialEscala()
+        });
+        const campoFalta = keyOrigem === 'motorista' ? 'motorista_ausente' : 'auxiliar_ausente';
+        const campoMotivo = keyOrigem === 'motorista' ? 'motivo_motorista' : 'motivo_auxiliar';
+        payload[campoFalta] = nome;
+        payload[campoMotivo] = motivo;
+
+        const anotacaoOrigem = getCellNote(tabelaOrigem, idOrigem, keyOrigem);
+
+        const { data: faltaInserida, error: insertError } = await supabaseClient
+            .from('faltas_afastamentos')
+            .insert([payload])
+            .select('id')
+            .single();
+
+        if (insertError) {
+            console.error('Erro ao lancar falta:', insertError);
+            return alert('Erro ao lancar falta: ' + insertError.message);
+        }
+
+        const { error: limparOrigemError } = await supabaseClient
+            .from(tabelaOrigem)
+            .update(comAuditoria({ [keyOrigem]: null }))
+            .eq('id', idOrigem);
+
+        if (limparOrigemError) {
+            console.error('Erro ao remover funcionario da origem:', limparOrigemError);
+            if (faltaInserida?.id) {
+                await supabaseClient
+                    .from('faltas_afastamentos')
+                    .delete()
+                    .eq('id', faltaInserida.id);
+            }
+            return alert('Falta lancada, mas nao foi possivel remover o funcionario da linha anterior: ' + limparOrigemError.message);
+        }
+
+        if (anotacaoOrigem) {
+            setCellNote(tabelaOrigem, idOrigem, keyOrigem, '');
+            if (faltaInserida?.id) setCellNote('faltas_afastamentos', faltaInserida.id, campoFalta, anotacaoOrigem);
+        }
+
+        const inputOrigem = document.querySelector(`#painelEscala tr[data-tabela="${tabelaOrigem}"][data-id="${CSS.escape(String(idOrigem))}"] input[data-key="${keyOrigem}"]`);
+        if (inputOrigem) {
+            inputOrigem.value = '';
+            inputOrigem.classList.remove('cell-has-note', 'cell-duplicate');
+            inputOrigem.removeAttribute('title');
+            inputOrigem.style.cssText = getCellStyle(tabelaOrigem, idOrigem, keyOrigem);
+        }
+
+        modal.querySelector('#faltasFuncionario').value = '';
+        modal.querySelector('#faltasFuncionarioOrigem').value = '';
+        modal.querySelector('#faltasFuncionarioSugestoes').classList.add('hidden');
+        modal.querySelector('#faltasComplemento').value = '';
+        await carregarDadosDia(contexto.dia, contexto.semana);
+        await carregarFaltasFuncionariosModal();
+        alert(`${nome} lancado em ${motivo}.`);
     }
 
     const trocaVeiculoSortState = { key: 'placa', direction: 'asc' };
