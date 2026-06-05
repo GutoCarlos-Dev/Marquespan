@@ -4771,12 +4771,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <select id="terceiroRotaMotorista" class="glass-input">
                             <option value="">Selecione motorista da reserva</option>
                         </select>
+                        <div id="terceiroRotaMotoristaNota" class="terceiro-note-hint hidden"></div>
                     </div>
                     <div class="form-group terceiro-field-card">
                         <label for="terceiroRotaAuxiliar">Auxiliar</label>
                         <select id="terceiroRotaAuxiliar" class="glass-input">
                             <option value="">Selecione auxiliar da reserva</option>
                         </select>
+                        <div id="terceiroRotaAuxiliarNota" class="terceiro-note-hint hidden"></div>
                     </div>
                     <div class="form-group terceiro-field-card terceiro-rota-field">
                         <label for="terceiroRotaNumero">Rota</label>
@@ -4805,6 +4807,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
         document.body.appendChild(modal);
+        setupTerceiroRotaGridTools();
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal || e.target.closest('#btnFecharTerceiroRota')) {
@@ -4816,21 +4819,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.querySelector('#tbodyTerceiroRota').addEventListener('click', limparTerceiroDaLinha);
         modal.querySelector('#terceiroRotaMotorista').addEventListener('change', (event) => {
             if (event.target.value) modal.querySelector('#terceiroRotaAuxiliar').value = '';
+            atualizarIndicadoresAnotacaoTerceiroRota();
         });
         modal.querySelector('#terceiroRotaAuxiliar').addEventListener('change', (event) => {
             if (event.target.value) modal.querySelector('#terceiroRotaMotorista').value = '';
+            atualizarIndicadoresAnotacaoTerceiroRota();
         });
 
         return modal;
     }
 
+    function registrarAnotacaoFuncionarioReserva(map, nome, anotacao) {
+        const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+        const texto = (anotacao || '').trim();
+        if (chave && texto && !map[chave]) map[chave] = texto;
+    }
+
+    function getAnotacaoFuncionarioReserva(map, nome) {
+        return map[normalizeString(getNomeFuncionarioExibicao(nome))] || '';
+    }
+
+    function criarOptionFuncionarioReserva(nome, anotacao, tipo) {
+        const textoAnotacao = (anotacao || '').trim();
+        const label = textoAnotacao ? `${nome} [ANOTACAO]` : nome;
+        const title = textoAnotacao ? `Anotacao ${tipo}: ${textoAnotacao}` : nome;
+        return `<option value="${escapeAttribute(nome)}" title="${escapeAttribute(title)}" data-note="${escapeAttribute(textoAnotacao)}">${escapeAttribute(label)}</option>`;
+    }
+
+    function atualizarIndicadorAnotacaoTerceiroRota(selectId, hintId) {
+        const select = document.getElementById(selectId);
+        const hint = document.getElementById(hintId);
+        if (!select || !hint) return;
+
+        const option = select.selectedOptions?.[0];
+        const anotacao = (option?.dataset.note || '').trim();
+        select.classList.toggle('terceiro-select-has-note', Boolean(anotacao));
+        if (anotacao) {
+            select.title = anotacao;
+            hint.textContent = anotacao;
+            hint.title = anotacao;
+            hint.classList.remove('hidden');
+        } else {
+            select.removeAttribute('title');
+            hint.textContent = '';
+            hint.removeAttribute('title');
+            hint.classList.add('hidden');
+        }
+    }
+
+    function atualizarIndicadoresAnotacaoTerceiroRota() {
+        atualizarIndicadorAnotacaoTerceiroRota('terceiroRotaMotorista', 'terceiroRotaMotoristaNota');
+        atualizarIndicadorAnotacaoTerceiroRota('terceiroRotaAuxiliar', 'terceiroRotaAuxiliarNota');
+    }
+
     async function atualizarListaTerceirosReservas() {
         const selectMotorista = document.getElementById('terceiroRotaMotorista');
         const selectAuxiliar = document.getElementById('terceiroRotaAuxiliar');
-        if (!selectMotorista || !selectAuxiliar) return { motoristas: [], auxiliares: [] };
+        if (!selectMotorista || !selectAuxiliar) return { motoristas: [], auxiliares: [], notasMotoristas: {}, notasAuxiliares: {} };
 
         const motoristas = new Set();
         const auxiliares = new Set();
+        const notasMotoristas = {};
+        const notasAuxiliares = {};
         const adicionarNome = (set, nome) => {
             const exibicao = getNomeFuncionarioExibicao(nome);
             const chave = normalizeString(exibicao);
@@ -4840,6 +4890,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('#tbodyReservas tr').forEach(tr => {
             adicionarNome(motoristas, tr.querySelector('input[data-key="motorista"]')?.value);
             adicionarNome(auxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value);
+            registrarAnotacaoFuncionarioReserva(notasMotoristas, tr.querySelector('input[data-key="motorista"]')?.value, getCellNote(tr.dataset.tabela, tr.dataset.id, 'motorista'));
+            registrarAnotacaoFuncionarioReserva(notasAuxiliares, tr.querySelector('input[data-key="auxiliar"]')?.value, getCellNote(tr.dataset.tabela, tr.dataset.id, 'auxiliar'));
         });
 
         if (motoristas.size === 0 && auxiliares.size === 0) {
@@ -4849,7 +4901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     aplicarFiltroFilial(
                         supabaseClient
                             .from('escala')
-                            .select('motorista, auxiliar')
+                            .select('id, motorista, auxiliar')
                             .eq('data_escala', contexto.dataISO)
                             .eq('tipo_escala', 'RESERVA')
                     ),
@@ -4862,6 +4914,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     (data || []).forEach(row => {
                         adicionarNome(motoristas, row.motorista);
                         adicionarNome(auxiliares, row.auxiliar);
+                        registrarAnotacaoFuncionarioReserva(notasMotoristas, row.motorista, getCellNote('escala', row.id, 'motorista'));
+                        registrarAnotacaoFuncionarioReserva(notasAuxiliares, row.auxiliar, getCellNote('escala', row.id, 'auxiliar'));
                     });
                 }
             }
@@ -4871,14 +4925,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const listaAuxiliares = Array.from(auxiliares).sort((a, b) => a.localeCompare(b, 'pt-BR'));
         selectMotorista.innerHTML = '<option value="">Selecione motorista da reserva</option>'
             + listaMotoristas
-                .map(nome => `<option value="${escapeAttribute(nome)}">${escapeAttribute(nome)}</option>`)
+                .map(nome => criarOptionFuncionarioReserva(nome, getAnotacaoFuncionarioReserva(notasMotoristas, nome), 'motorista'))
                 .join('');
         selectAuxiliar.innerHTML = '<option value="">Selecione auxiliar da reserva</option>'
             + listaAuxiliares
-                .map(nome => `<option value="${escapeAttribute(nome)}">${escapeAttribute(nome)}</option>`)
+                .map(nome => criarOptionFuncionarioReserva(nome, getAnotacaoFuncionarioReserva(notasAuxiliares, nome), 'auxiliar'))
                 .join('');
+        atualizarIndicadoresAnotacaoTerceiroRota();
 
-        return { motoristas: listaMotoristas, auxiliares: listaAuxiliares };
+        return { motoristas: listaMotoristas, auxiliares: listaAuxiliares, notasMotoristas, notasAuxiliares };
     }
 
     async function abrirModalTerceiroRota() {
@@ -4898,6 +4953,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (terceirosReservas.auxiliares.length === 0) {
             modal.querySelector('#terceiroRotaAuxiliar').innerHTML = '<option value="">Nenhum auxiliar disponivel</option>';
         }
+        atualizarIndicadoresAnotacaoTerceiroRota();
         await carregarTerceiroRotaModal();
     }
 
@@ -4948,6 +5004,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             </tr>
         `).join('');
+        setupTerceiroRotaGridTools();
     }
 
     async function aplicarTerceiroPorRota() {
@@ -7000,7 +7057,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         Transferencia: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
         Equipamento: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
         Reservas: ['select', 'placa', 'modelo', 'rota', 'status', 'motorista', 'auxiliar', 'terceiro', 'acoes'],
-        Faltas: ['select', 'motorista_ausente', 'motivo_motorista', 'auxiliar_ausente', 'motivo_auxiliar', 'acoes']
+        Faltas: ['select', 'motorista_ausente', 'motivo_motorista', 'auxiliar_ausente', 'motivo_auxiliar', 'acoes'],
+        TerceiroRota: ['rota', 'placa', 'modelo', 'motorista', 'auxiliar', 'terceiro', 'acoes']
     };
 
     const COLUMN_LABELS = {
@@ -7049,6 +7107,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             setupColumnHeaderControls(table, section);
             applySavedColumnWidths(table, section);
         });
+    }
+
+    function setupTerceiroRotaGridTools() {
+        const table = document.getElementById('tbodyTerceiroRota')?.closest('table');
+        if (!table) return;
+
+        assignColumnKeys(table, 'TerceiroRota');
+        applySavedColumnOrder(table, 'TerceiroRota');
+        setupColumnHeaderControls(table, 'TerceiroRota');
     }
 
     function assignColumnKeys(table, section) {

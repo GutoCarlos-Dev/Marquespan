@@ -748,6 +748,31 @@ body.escala-menu-oculto .menu-floating-toggle i {
     background: #fff;
 }
 
+.terceiro-select-has-note {
+    border-color: #198754 !important;
+    background-color: #eefaf3 !important;
+    color: #0f5132 !important;
+    font-weight: 700;
+}
+
+.terceiro-note-hint {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-left: 3px solid #198754;
+    border-radius: 4px;
+    background: #eefaf3;
+    color: #0f5132;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    max-height: 44px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.terceiro-note-hint.hidden {
+    display: none;
+}
+
 .terceiro-rota-field {
     max-width: 180px;
 }
