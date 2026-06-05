@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diaria - Marquespan</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/escala.css?v=20260605-4">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="menu-container"></div>
+    <button type="button" id="btnToggleMenuLateralEscala" class="menu-floating-toggle escala-menu-toggle" title="Ocultar menu lateral" aria-label="Ocultar menu lateral">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <main class="main-content fade-in">
+        <header class="header glass-header">
+            <h1><i class="fa-solid fa-money-bill-wave"></i> Diaria</h1>
+        </header>
+
+        <section class="content-section diaria-page">
+            <div class="filters-actions-container">
+                <div class="filter-card">
+                    <h3><i class="fas fa-filter"></i> Selecao da Diaria</h3>
+                    <div class="form-grid diaria-page-selection">
+                        <div class="form-group">
+                            <label for="escalaSemana">Selecione a Semana</label>
+                            <select id="escalaSemana" class="glass-input"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="escalaFilial">Filial</label>
+                            <select id="escalaFilial" class="glass-input">
+                                <option value="">Selecione a Filial</option>
+                            </select>
+                        </div>
+                        <div class="form-group diaria-selection-actions">
+                            <button type="button" id="btnCalcularDiaria" class="btn-glass btn-blue">
+                                <i class="fas fa-calculator"></i> Calcular
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel diaria-page-panel">
+                <div class="diaria-toolbar diaria-page-toolbar">
+                    <div class="diaria-controls diaria-card-grid">
+                        <div class="diaria-card">
+                            <h4><i class="fa-solid fa-coins"></i> Base da diaria</h4>
+                            <div class="form-group">
+                                <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
+                                <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                            </div>
+                        </div>
+                        <div class="diaria-card diaria-card-resumo">
+                            <h4><i class="fa-solid fa-chart-simple"></i> Resumo financeiro</h4>
+                            <div class="diaria-summary-grid">
+                                <div class="diaria-metric">
+                                    <span>Valor por dia</span>
+                                    <strong id="diariaValorDia">R$ 0,00</strong>
+                                </div>
+                                <div class="diaria-metric">
+                                    <span>Desconto prox. semana</span>
+                                    <strong id="diariaTotalDesconto">R$ 0,00</strong>
+                                </div>
+                                <div class="diaria-metric">
+                                    <span>Total a pagar</span>
+                                    <strong id="diariaTotalPagar">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="diaria-card diaria-card-filtros">
+                            <h4><i class="fa-solid fa-filter"></i> Filtros</h4>
+                            <div class="diaria-filter-grid">
+                                <div class="form-group">
+                                    <label for="diariaFiltroStatus">Status</label>
+                                    <select id="diariaFiltroStatus" class="glass-input">
+                                        <option value="">Todos</option>
+                                        <option value="APTO">Apto</option>
+                                        <option value="BLOQUEADO">Bloqueado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="diariaFiltroFuncao">Funcoes</label>
+                                    <select id="diariaFiltroFuncao" class="glass-input diaria-multi-select" multiple size="4"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="diaria-actions-card">
+                        <span>Acoes</span>
+                        <div class="diaria-actions-buttons">
+                            <button type="button" id="btnSalvarDiaria" class="pdf-expedicao-btn primary">
+                                <i class="fas fa-save"></i> Salvar
+                            </button>
+                            <button type="button" id="btnXLSXDiaria" class="pdf-expedicao-btn excel">
+                                <i class="fas fa-file-excel"></i> XLSX
+                            </button>
+                            <button type="button" id="btnPDFDiaria" class="pdf-expedicao-btn primary">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="diaria-meta" id="diariaContexto">Selecione a semana e a filial para calcular.</div>
+                <div class="terceiro-table-wrap diaria-table-wrap">
+                    <table class="data-grid diaria-table">
+                        <thead>
+                            <tr>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nome">FUNCIONARIO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="nomeCompleto">NOME COMPLETO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="cpf">CPF <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
+                                <th>PAGAR</th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="diasDesconto">DIAS DESC. <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="descontoAnterior">DESC. ANTERIOR <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorPagar">VALOR A PAGAR <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorDesconto">DESC. PROX. SEMANA <i class="fas fa-sort"></i></button></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDiaria">
+                            <tr><td colspan="10" style="text-align:center;">Nenhum calculo carregado.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="script/supabase.js"></script>
+    <script type="module" src="script/menu.js" defer></script>
+    <script type="module" src="script/diaria.js?v=20260605-1"></script>
+    <footer class="footer">
+        &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+    </footer>
+</body>
+</html>

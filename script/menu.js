@@ -134,6 +134,9 @@ async function controlarMenuPorNivel() {
     const paginasPermitidas = data ? data.paginas_permitidas || [] : [];
     // Adiciona dashboard e index como páginas sempre permitidas
     paginasPermitidas.push('dashboard.html', 'index.html');
+    if (paginasPermitidas.includes('escala.html') && !paginasPermitidas.includes('diaria.html')) {
+      paginasPermitidas.push('diaria.html');
+    }
 
     nav.querySelectorAll('a').forEach(link => {
       const href = link.getAttribute('href');

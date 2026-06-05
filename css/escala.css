@@ -983,15 +983,56 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .diaria-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
-    gap: 10px;
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+    gap: 12px;
+    align-items: stretch;
     padding: 14px 18px 8px;
 }
 
 .diaria-controls {
     display: grid;
-    grid-template-columns: minmax(170px, 220px) minmax(110px, 1fr) minmax(140px, 1fr) minmax(130px, 1fr) minmax(115px, 155px) minmax(140px, 190px);
+    gap: 12px;
+}
+
+.diaria-card-grid {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(340px, 1.15fr) minmax(380px, 1.45fr);
+    align-items: stretch;
+}
+
+.diaria-card {
+    border: 1px solid #dfe8e2;
+    border-radius: 8px;
+    background: #f7fbf8;
+    padding: 12px;
+    min-width: 0;
+}
+
+.diaria-card h4 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dfe8e2;
+    color: #006937;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.diaria-card .form-group {
+    margin-bottom: 0;
+}
+
+.diaria-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.diaria-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, 135px) minmax(260px, 1fr);
     gap: 10px;
     align-items: end;
 }
@@ -1000,7 +1041,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
     border: 1px solid #dfe8e2;
     border-radius: 8px;
     background: #f7fbf8;
-    padding: 9px 10px 10px;
+    padding: 9px;
 }
 
 .diaria-actions-card > span {
@@ -1015,22 +1056,22 @@ body.escala-menu-oculto .menu-floating-toggle i {
 .diaria-actions-buttons {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .diaria-actions-buttons .pdf-expedicao-btn {
     min-width: 0;
-    padding: 0 10px;
+    padding: 0 8px;
 }
 
-.diaria-summary-card {
+.diaria-metric {
     border: 1px solid #dfe8e2;
     border-radius: 8px;
-    background: #f7fbf8;
+    background: #ffffff;
     padding: 9px 10px;
 }
 
-.diaria-summary-card span {
+.diaria-metric span {
     display: block;
     color: #66736b;
     font-size: 10px;
@@ -1038,7 +1079,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
     text-transform: uppercase;
 }
 
-.diaria-summary-card strong {
+.diaria-metric strong {
     display: block;
     margin-top: 3px;
     color: #1f3328;
@@ -1129,6 +1170,44 @@ body.escala-menu-oculto .menu-floating-toggle i {
     color: #a71d2a;
 }
 
+.diaria-page-selection {
+    grid-template-columns: minmax(180px, 1fr) minmax(160px, 240px) auto;
+    align-items: end;
+    gap: 15px;
+}
+
+.diaria-selection-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.diaria-page-panel {
+    padding: 0 0 16px;
+    overflow: hidden;
+}
+
+.diaria-page-toolbar {
+    padding-top: 18px;
+}
+
+.diaria-page .diaria-table-wrap {
+    margin: 0 18px;
+}
+
+@media (max-width: 1180px) {
+    .diaria-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .diaria-card-grid {
+        grid-template-columns: minmax(180px, 0.7fr) minmax(340px, 1.2fr);
+    }
+
+    .diaria-card-filtros {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 700px) {
     .floating-troca-veiculo-btn {
         right: 100px;
@@ -1139,11 +1218,18 @@ body.escala-menu-oculto .menu-floating-toggle i {
         grid-template-columns: 1fr;
     }
 
-    .diaria-controls {
+    .diaria-toolbar {
         grid-template-columns: 1fr;
     }
 
-    .diaria-toolbar {
+    .diaria-card-grid,
+    .diaria-summary-grid,
+    .diaria-filter-grid,
+    .diaria-page-selection {
         grid-template-columns: 1fr;
+    }
+
+    .diaria-selection-actions {
+        flex-direction: column;
     }
 }

@@ -3754,6 +3754,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const diariaSortState = { key: 'nome', direction: 'asc' };
     let diariaDadosAtual = [];
+    let diariaFuncoesCadastroCache = [];
+
+    async function carregarFuncoesCadastroDiaria() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario_funcoes')
+                .select('nome, ativo')
+                .eq('ativo', true)
+                .order('nome');
+
+            if (error) throw error;
+
+            diariaFuncoesCadastroCache = (data || [])
+                .map(item => cleanImportValue(item.nome))
+                .filter(Boolean);
+        } catch (error) {
+            diariaFuncoesCadastroCache = [];
+            console.warn('Cadastro de funcoes da diaria nao carregado:', error);
+        }
+    }
+
+    function getFuncoesFiltroDiaria() {
+        const funcoesCadastro = diariaFuncoesCadastroCache.length ? diariaFuncoesCadastroCache : [];
+        const funcoesDados = diariaDadosAtual
+            .map(item => cleanImportValue(item.funcao))
+            .filter(Boolean);
+
+        return [...new Set([...funcoesCadastro, ...funcoesDados])]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    }
 
     function ensureModalDiaria() {
         let modal = document.getElementById('modalDiaria');
@@ -3769,35 +3799,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" id="btnFecharDiaria" class="terceiro-modal-close" title="Fechar">&times;</button>
                 </div>
                 <div class="diaria-toolbar">
-                    <div class="diaria-controls">
-                        <div class="form-group">
-                            <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
-                            <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                    <div class="diaria-controls diaria-card-grid">
+                        <div class="diaria-card">
+                            <h4><i class="fa-solid fa-coins"></i> Base da diaria</h4>
+                            <div class="form-group">
+                                <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
+                                <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                            </div>
                         </div>
-                        <div class="diaria-summary-card">
-                            <span>Valor por dia</span>
-                            <strong id="diariaValorDia">R$ 0,00</strong>
+                        <div class="diaria-card diaria-card-resumo">
+                            <h4><i class="fa-solid fa-chart-simple"></i> Resumo financeiro</h4>
+                            <div class="diaria-summary-grid">
+                                <div class="diaria-metric">
+                                    <span>Valor por dia</span>
+                                    <strong id="diariaValorDia">R$ 0,00</strong>
+                                </div>
+                                <div class="diaria-metric">
+                                    <span>Desconto prox. semana</span>
+                                    <strong id="diariaTotalDesconto">R$ 0,00</strong>
+                                </div>
+                                <div class="diaria-metric">
+                                    <span>Total a pagar</span>
+                                    <strong id="diariaTotalPagar">R$ 0,00</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="diaria-summary-card">
-                            <span>Desconto prox. semana</span>
-                            <strong id="diariaTotalDesconto">R$ 0,00</strong>
-                        </div>
-                        <div class="diaria-summary-card">
-                            <span>Total a pagar</span>
-                            <strong id="diariaTotalPagar">R$ 0,00</strong>
-                        </div>
-                        <div class="form-group">
-                            <label for="diariaFiltroStatus">Status</label>
-                            <select id="diariaFiltroStatus" class="glass-input">
-                                <option value="">Todos</option>
-                                <option value="APTO">Apto</option>
-                                <option value="BLOQUEADO">Bloqueado</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="diariaFiltroFuncao">Funcoes</label>
-                            <select id="diariaFiltroFuncao" class="glass-input diaria-multi-select" multiple size="4">
-                            </select>
+                        <div class="diaria-card diaria-card-filtros">
+                            <h4><i class="fa-solid fa-filter"></i> Filtros</h4>
+                            <div class="diaria-filter-grid">
+                                <div class="form-group">
+                                    <label for="diariaFiltroStatus">Status</label>
+                                    <select id="diariaFiltroStatus" class="glass-input">
+                                        <option value="">Todos</option>
+                                        <option value="APTO">Apto</option>
+                                        <option value="BLOQUEADO">Bloqueado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="diariaFiltroFuncao">Funcoes</label>
+                                    <select id="diariaFiltroFuncao" class="glass-input diaria-multi-select" multiple size="4">
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="diaria-actions-card">
@@ -4071,8 +4114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!select) return;
 
         const valoresAtuais = new Set(Array.from(select.selectedOptions).map(opt => opt.value));
-        const funcoes = [...new Set(diariaDadosAtual.map(item => cleanImportValue(item.funcao)).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+        const funcoes = getFuncoesFiltroDiaria();
 
         select.innerHTML = funcoes
             .map(funcao => `<option value="${escapeAttribute(funcao)}">${escapeAttribute(funcao)}</option>`)
@@ -4314,7 +4356,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
             const datasSemana = getDatasSemanaISO(semana);
 
-            const [resFuncionarios, resFaltas, resEscala] = await Promise.all([
+            const [, resFuncionarios, resFaltas, resEscala] = await Promise.all([
+                carregarFuncoesCadastroDiaria(),
                 supabaseClient
                     .from('funcionario')
                     .select('nome, nome_completo, cpf, funcao, status')
@@ -5946,7 +5989,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (btnDiaria) {
-        btnDiaria.addEventListener('click', abrirModalDiaria);
+        btnDiaria.addEventListener('click', () => {
+            window.location.href = 'diaria.html';
+        });
     }
     if (fileImportarDia) fileImportarDia.addEventListener('change', importarExcel);
     if (btnXLSX) {
