@@ -30,6 +30,7 @@ const FuncionarioUI = {
         const acessoPermitido = await this.verificarPermissaoPagina();
         if (!acessoPermitido) return;
         this.bind();
+        await this.carregarFiliais();
         this.renderGrid();
     },
 
@@ -50,6 +51,8 @@ const FuncionarioUI = {
         this.monthFilter = document.getElementById('monthFilter');
         this.admissaoMonthYearFilter = document.getElementById('admissaoMonthYearFilter');
         this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
+        this.filialSelect = document.getElementById('funcFilial');
+        this.filialFilter = document.getElementById('filialFilter');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
@@ -76,6 +79,9 @@ const FuncionarioUI = {
         }
         if (this.demissaoMonthYearFilter) {
             this.demissaoMonthYearFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.filialFilter) {
+            this.filialFilter.addEventListener('change', () => this.renderGrid());
         }
         if (this.statusSelect) {
             this.statusSelect.addEventListener('change', () => this.toggleDesligamentoField());
@@ -170,6 +176,60 @@ const FuncionarioUI = {
         }
     },
 
+    async carregarFiliais() {
+        const opcoesPadrao = [{ value: 'SP', label: 'SP' }];
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('filiais')
+                .select('nome, sigla')
+                .order('nome');
+
+            if (error) throw error;
+
+            const opcoes = (data || [])
+                .map(filial => ({
+                    value: (filial.sigla || filial.nome || '').trim(),
+                    label: filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome
+                }))
+                .filter(filial => filial.value);
+
+            this.preencherSelectFiliais(opcoes.length ? opcoes : opcoesPadrao);
+        } catch (error) {
+            console.warn('Erro ao carregar filiais para funcionarios:', error);
+            this.preencherSelectFiliais(opcoesPadrao);
+        }
+    },
+
+    preencherSelectFiliais(opcoes) {
+        const filialPadrao = this.usuarioAtual?.filial || 'SP';
+        const unicas = [];
+        const vistos = new Set();
+
+        opcoes.forEach(opcao => {
+            const value = String(opcao.value || '').trim();
+            if (!value || vistos.has(value)) return;
+            vistos.add(value);
+            unicas.push({ value, label: opcao.label || value });
+        });
+
+        if (!vistos.has('SP')) unicas.unshift({ value: 'SP', label: 'SP' });
+
+        if (this.filialSelect) {
+            this.filialSelect.innerHTML = unicas
+                .map(opcao => `<option value="${escapeHtml(opcao.value)}">${escapeHtml(opcao.label)}</option>`)
+                .join('');
+            this.filialSelect.value = vistos.has(filialPadrao) ? filialPadrao : 'SP';
+        }
+
+        if (this.filialFilter) {
+            this.filialFilter.innerHTML = '<option value="">Todas</option>' + unicas
+                .map(opcao => `<option value="${escapeHtml(opcao.value)}">${escapeHtml(opcao.label)}</option>`)
+                .join('');
+            this.filialFilter.value = vistos.has(filialPadrao) ? filialPadrao : 'SP';
+        }
+    },
+
     toggleDesligamentoField() {
         if (this.statusSelect.value === 'Desligado' || this.statusSelect.value === 'Transferido') {
             this.groupDesligamento.classList.remove('hidden');
@@ -207,6 +267,7 @@ const FuncionarioUI = {
             data_nascimento: document.getElementById('funcDataNascimento').value || null, // Adiciona data de nascimento
             cpf: document.getElementById('funcCPF').value,
             data_admissao: document.getElementById('funcAdmissao').value,
+            filial: document.getElementById('funcFilial').value || 'SP',
             funcao: novaFuncao,
             contato_corp: document.getElementById('funcContatoCorp').value,
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
@@ -242,6 +303,12 @@ const FuncionarioUI = {
         this.btnSubmit.textContent = 'Salvar Registro';
         this.btnClearForm.classList.add('hidden');
         this.toggleDesligamentoField();
+        if (this.filialSelect) {
+            const filialPadrao = this.usuarioAtual?.filial || 'SP';
+            this.filialSelect.value = Array.from(this.filialSelect.options).some(opt => opt.value === filialPadrao)
+                ? filialPadrao
+                : 'SP';
+        }
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
     },
@@ -252,11 +319,12 @@ const FuncionarioUI = {
         const selectedMonth = this.monthFilter?.value || '';
         const selectedAdmissaoMonthYear = this.admissaoMonthYearFilter?.value || '';
         const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
+        const selectedFilial = this.filialFilter?.value || '';
 
         try {
             let query = supabaseClient
                 .from('funcionario')
-                .select('id, rh_registro, nome, nome_completo, data_nascimento, funcao, data_admissao, contato_corp, status, data_desligamento, funcao_anterior, data_alteracao_funcao');
+                .select('id, rh_registro, filial, nome, nome_completo, cpf, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, data_desligamento, funcao_anterior, data_alteracao_funcao');
             
             if (selectedStatuses.length > 0) {
                 query = query.in('status', selectedStatuses);
@@ -266,6 +334,10 @@ const FuncionarioUI = {
 
             if (searchTerm) {
                 query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`);
+            }
+
+            if (selectedFilial) {
+                query = query.eq('filial', selectedFilial);
             }
             
             // Aplica a ordenação configurada
@@ -310,6 +382,7 @@ const FuncionarioUI = {
             this.tableBody.innerHTML = list.map(f => `
                 <tr>
                     <td><strong>${escapeHtml(f.rh_registro)}</strong></td>
+                    <td>${escapeHtml(f.filial || 'SP')}</td>
                     <td title="${escapeHtml(f.nome_completo || '')}">${escapeHtml(f.nome)}</td>
                     <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td>${escapeHtml(f.funcao)}</td>
@@ -467,7 +540,10 @@ const FuncionarioUI = {
         try {
             let list = sourceList;
             if (!Array.isArray(list)) {
-                const { data, error } = await supabaseClient.from('funcionario').select('funcao, status');
+                let query = supabaseClient.from('funcionario').select('funcao, status, filial');
+                if (this.filialFilter?.value) query = query.eq('filial', this.filialFilter.value);
+
+                const { data, error } = await query;
                 if (error) throw error;
                 list = data || [];
             }
@@ -532,6 +608,7 @@ const FuncionarioUI = {
         document.getElementById('funcDataNascimento').value = f.data_nascimento || ''; // Preenche data de nascimento
         document.getElementById('funcCPF').value = f.cpf || '';
         document.getElementById('funcAdmissao').value = f.data_admissao;
+        document.getElementById('funcFilial').value = f.filial || 'SP';
         document.getElementById('funcFuncao').value = f.funcao;
         document.getElementById('funcContatoCorp').value = f.contato_corp || '';
         document.getElementById('funcContatoPessoal').value = f.contato_pessoal || '';
@@ -561,6 +638,7 @@ const FuncionarioUI = {
 
         const dataToExport = this.listData.map(f => ({
             'RH Registro': f.rh_registro,
+            'Filial': f.filial || 'SP',
             'Nome': f.nome,
             'Nome Completo': f.nome_completo,
             'CPF': f.cpf || '-',
@@ -620,16 +698,16 @@ const FuncionarioUI = {
         doc.setTextColor(100);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 196, 18, { align: 'right' }); // Ajustado para margem da folha vertical
 
-        const headers = [['RH', 'Nome', 'Nasc.', 'Admissão', 'Função', 'Status', 'Contato', 'Alt. Função']];
+        const headers = [['RH', 'Filial', 'Nome', 'Nasc.', 'Admissão', 'Função', 'Status', 'Contato']];
         const rows = this.listData.map(f => [
             f.rh_registro,
+            f.filial || 'SP',
             f.nome,
             f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '-',
             f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
             f.funcao,
             f.status,
-            f.contato_corp || f.contato_pessoal || '-',
-            f.data_alteracao_funcao ? new Date(f.data_alteracao_funcao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'
+            f.contato_corp || f.contato_pessoal || '-'
         ]);
 
         doc.autoTable({

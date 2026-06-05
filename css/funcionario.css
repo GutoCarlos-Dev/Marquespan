@@ -289,7 +289,7 @@
 
 .funcionario-filters-grid {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) 180px 180px 180px 250px;
+    grid-template-columns: 140px minmax(220px, 1fr) 180px 180px 180px 250px;
     gap: 15px;
     margin-bottom: 8px;
     align-items: end;
