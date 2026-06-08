@@ -274,7 +274,7 @@ async function carregarDiaria() {
         const datasConsultaAtual = datasSemanaAtual.length ? datasSemanaAtual : ['0001-01-01'];
         const datasConsultaAnterior = datasSemanaAnterior.length ? datasSemanaAnterior : ['0001-01-01'];
 
-        const [, resFuncionarios, resFaltasSemanaAtual, resFaltasSemanaAnterior, resEscala] = await Promise.all([
+        const [, resFuncionarios, resFaltasSemanaAtual, resFaltasSemanaAnterior, resEscala, resEscalaReserva] = await Promise.all([
             carregarFuncoesCadastroDiaria(),
             supabaseClient
                 .from('funcionario')
@@ -293,13 +293,19 @@ async function carregarDiaria() {
                 .from('escala')
                 .select('motorista, auxiliar, data_escala')
                 .in('data_escala', datasConsultaAtual)
-                .not('tipo_escala', 'eq', 'RESERVA'))
+                .not('tipo_escala', 'eq', 'RESERVA')),
+            aplicarFiltroFilial(supabaseClient
+                .from('escala')
+                .select('motorista, auxiliar, data_escala')
+                .in('data_escala', datasConsultaAtual)
+                .eq('tipo_escala', 'RESERVA'))
         ]);
 
         if (resFuncionarios.error) throw resFuncionarios.error;
         if (resFaltasSemanaAtual.error) throw resFaltasSemanaAtual.error;
         if (resFaltasSemanaAnterior.error) throw resFaltasSemanaAnterior.error;
         if (resEscala.error) throw resEscala.error;
+        if (resEscalaReserva.error) throw resEscalaReserva.error;
 
         const nomeDiariaMap = new Map();
         const funcionarioKeysMap = new Map();
@@ -324,6 +330,7 @@ async function carregarDiaria() {
             return funcionarioKeysMap.get(keyPrincipal) || getPessoaDiariaKeys(nome);
         };
         const funcionariosEscalados = new Set();
+        const funcionariosReserva = new Set();
 
         (resEscala.data || []).forEach(row => {
             [row.motorista, row.auxiliar].forEach(nome => {
@@ -331,9 +338,28 @@ async function carregarDiaria() {
             });
         });
 
+        (resEscalaReserva.data || []).forEach(row => {
+            [row.motorista, row.auxiliar].forEach(nome => {
+                getKeysDiaria(nome).forEach(key => funcionariosReserva.add(key));
+            });
+        });
+
         const ausencias = new Map();
         registrarAusenciasDiaria(resFaltasSemanaAtual.data, ausencias, getNomeDiaria, getKeysDiaria, isStatusAtualDiaria);
         registrarAusenciasDiaria(resFaltasSemanaAnterior.data, ausencias, getNomeDiaria, getKeysDiaria, isFaltaSemanaAnteriorDiaria);
+
+        const funcionariosRestricao = new Set();
+        (resFaltasSemanaAtual.data || []).forEach(row => {
+            [
+                { nome: row.motorista_ausente, motivo: row.motivo_motorista },
+                { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar }
+            ].forEach(item => {
+                if (!isRestricaoDiaria(item.motivo)) return;
+                const nome = getNomeDiaria(item.nome);
+                if (!nome) return;
+                getKeysDiaria(nome).forEach(key => funcionariosRestricao.add(key));
+            });
+        });
 
         const filialSelecionada = normalizeString(getFilial());
         const funcionarios = funcionariosAtivos
@@ -365,7 +391,9 @@ async function carregarDiaria() {
             const ausencia = mergeAusenciasDiaria(keysFuncionario, ausencias);
             const temAusenciaReferencia = Boolean(ausencia);
             const estaEscalado = keysFuncionario.some(keyItem => funcionariosEscalados.has(keyItem));
-            const foraEscala = !temAusenciaReferencia && datasSemanaAtual.length > 0 && !estaEscalado;
+            const estaEmReserva = !estaEscalado && keysFuncionario.some(keyItem => funcionariosReserva.has(keyItem));
+            const estaEmRestricao = !estaEscalado && !estaEmReserva && keysFuncionario.some(keyItem => funcionariosRestricao.has(keyItem));
+            const foraEscala = !temAusenciaReferencia && datasSemanaAtual.length > 0 && !estaEscalado && !estaEmReserva && !estaEmRestricao;
             const diasDesconto = foraEscala ? 5 : (ausencia ? Math.min(5, ausencia.dias.size) : 0);
             const descontoAnterior = 0;
             const datasFalta = ausencia ? [...ausencia.dias].sort().map(formatDataISOBR) : [];
@@ -389,6 +417,8 @@ async function carregarDiaria() {
                 valorDesconto: 0,
                 recebe: true,
                 foraEscala,
+                estaEmReserva,
+                estaEmRestricao,
                 pagarManual: true,
                 semanaReferencia
             }, valorSemana);
@@ -443,6 +473,10 @@ function isFaltaSemanaAnteriorDiaria(value) {
     return normalizeString(value).includes('FALTA');
 }
 
+function isRestricaoDiaria(value) {
+    return normalizeString(value).includes('RESTR');
+}
+
 function getFuncionarioDiariaKeys(funcionario) {
     return getPessoaDiariaKeys(funcionario?.nome, funcionario?.nome_completo, funcionario?.cpf);
 }
@@ -495,6 +529,12 @@ function recalcularItemDiaria(item, valorSemana) {
         } else if (item.foraEscala) {
             item.status = 'FORA DA ESCALA';
             item.descricaoStatus = 'Funcionario nao localizado na escala da semana anterior.';
+        } else if (item.estaEmReserva) {
+            item.status = 'RESERVA';
+            item.descricaoStatus = 'Pagamento de diaria desmarcado (em reserva na escala).';
+        } else if (item.estaEmRestricao) {
+            item.status = 'RESTRICAO';
+            item.descricaoStatus = 'Pagamento de diaria desmarcado (restricao na escala).';
         } else {
             item.status = 'NAO PAGAR';
             item.descricaoStatus = 'Pagamento de diaria desmarcado.';
@@ -506,6 +546,12 @@ function recalcularItemDiaria(item, valorSemana) {
         } else if (item.foraEscala) {
             item.status = 'FORA DA ESCALA';
             item.descricaoStatus = 'Funcionario nao localizado na escala da semana anterior.';
+        } else if (item.estaEmReserva) {
+            item.status = 'RESERVA';
+            item.descricaoStatus = 'Apto para receber diaria (em reserva na escala).';
+        } else if (item.estaEmRestricao) {
+            item.status = 'RESTRICAO';
+            item.descricaoStatus = 'Apto para receber diaria (restricao na escala).';
         } else {
             item.status = 'APTO';
             item.descricaoStatus = 'Apto para receber diaria.';
