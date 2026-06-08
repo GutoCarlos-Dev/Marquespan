@@ -1511,9 +1511,21 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .diaria-page-selection {
-    grid-template-columns: minmax(180px, 1fr) minmax(160px, 240px) auto;
+    grid-template-columns: minmax(110px, 160px) minmax(180px, 1fr) auto;
     align-items: end;
     gap: 15px;
+}
+
+.diaria-filial-field {
+    order: 1;
+}
+
+.diaria-semana-field {
+    order: 2;
+}
+
+.diaria-selection-actions {
+    order: 3;
 }
 
 .diaria-selection-actions {
