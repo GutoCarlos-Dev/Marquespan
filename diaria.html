@@ -53,7 +53,7 @@
                             <h4><i class="fa-solid fa-coins"></i> Base da diaria</h4>
                             <div class="form-group">
                                 <label for="diariaValorSemana">Valor da diaria semanal (5 dias)</label>
-                                <input type="text" id="diariaValorSemana" class="glass-input" placeholder="Ex: 150,00">
+                                <input type="text" id="diariaValorSemana" class="glass-input" value="195,00" placeholder="Ex: 150,00">
                             </div>
                         </div>
                         <div class="diaria-card diaria-card-resumo">
@@ -64,7 +64,7 @@
                                     <strong id="diariaValorDia">R$ 0,00</strong>
                                 </div>
                                 <div class="diaria-metric">
-                                    <span>Desconto prox. semana</span>
+                                    <span>Desconto sem. anterior</span>
                                     <strong id="diariaTotalDesconto">R$ 0,00</strong>
                                 </div>
                                 <div class="diaria-metric">
@@ -78,10 +78,13 @@
                             <div class="diaria-filter-grid">
                                 <div class="form-group">
                                     <label for="diariaFiltroStatus">Status</label>
-                                    <select id="diariaFiltroStatus" class="glass-input">
-                                        <option value="">Todos</option>
-                                        <option value="APTO">Apto</option>
-                                        <option value="BLOQUEADO">Bloqueado</option>
+                                    <select id="diariaFiltroStatus" class="glass-input diaria-multi-select" multiple size="6">
+                                        <option value="APTO">APTO</option>
+                                        <option value="FALTA">FALTA</option>
+                                        <option value="AFAST">AFASTADO</option>
+                                        <option value="FERIAS">FERIAS</option>
+                                        <option value="FORA DA ESCALA">FORA DA ESCALA</option>
+                                        <option value="NAO PAGAR">NAO PAGAR</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -119,13 +122,12 @@
                                 <th>PAGAR</th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="diasDesconto">DIAS DESC. <i class="fas fa-sort"></i></button></th>
-                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="descontoAnterior">DESC. ANTERIOR <i class="fas fa-sort"></i></button></th>
                                 <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorPagar">VALOR A PAGAR <i class="fas fa-sort"></i></button></th>
-                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorDesconto">DESC. PROX. SEMANA <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="diaria-sort-btn" data-diaria-sort="valorDesconto">DESC. SEM. ANTERIOR <i class="fas fa-sort"></i></button></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyDiaria">
-                            <tr><td colspan="10" style="text-align:center;">Nenhum calculo carregado.</td></tr>
+                            <tr><td colspan="9" style="text-align:center;">Nenhum calculo carregado.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -137,7 +139,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js" defer></script>
-    <script type="module" src="script/diaria.js?v=20260605-4"></script>
+    <script type="module" src="script/diaria.js?v=20260608-1"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

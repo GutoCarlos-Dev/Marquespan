@@ -210,10 +210,11 @@ async function carregarFiliais() {
 function atualizarContextoDiaria() {
     const semana = document.getElementById('escalaSemana')?.value || '';
     const filial = getFilial();
+    const semanaReferencia = getSemanaAnteriorNome(semana);
     const contexto = document.getElementById('diariaContexto');
     if (contexto) {
         contexto.textContent = semana && filial
-            ? `${semana} - ${filial}`
+            ? `${semana} - ${filial}${semanaReferencia ? ` | Ref.: ferias/afast. semana atual; faltas ${semanaReferencia}` : ''}`
             : 'Selecione a semana e a filial para calcular.';
     }
 }
@@ -263,13 +264,17 @@ async function carregarDiaria() {
     if (!exigirFilial()) return;
 
     atualizarContextoDiaria();
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
 
     try {
         const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
-        const datasSemana = getDatasSemanaISO(semana);
+        const semanaReferencia = getSemanaAnteriorNome(semana);
+        const datasSemanaAtual = getDatasSemanaISO(semana);
+        const datasSemanaAnterior = getDatasSemanaISO(semanaReferencia);
+        const datasConsultaAtual = datasSemanaAtual.length ? datasSemanaAtual : ['0001-01-01'];
+        const datasConsultaAnterior = datasSemanaAnterior.length ? datasSemanaAnterior : ['0001-01-01'];
 
-        const [, resFuncionarios, resFaltas, resEscala] = await Promise.all([
+        const [, resFuncionarios, resFaltasSemanaAtual, resFaltasSemanaAnterior, resEscala] = await Promise.all([
             carregarFuncoesCadastroDiaria(),
             supabaseClient
                 .from('funcionario')
@@ -279,24 +284,33 @@ async function carregarDiaria() {
             aplicarFiltroFilial(supabaseClient
                 .from('faltas_afastamentos')
                 .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
-                .in('data_escala', datasSemana)),
+                .in('data_escala', datasConsultaAtual)),
+            aplicarFiltroFilial(supabaseClient
+                .from('faltas_afastamentos')
+                .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
+                .in('data_escala', datasConsultaAnterior)),
             aplicarFiltroFilial(supabaseClient
                 .from('escala')
-                .select('motorista, auxiliar')
-                .in('data_escala', datasSemana)
+                .select('motorista, auxiliar, data_escala')
+                .in('data_escala', datasConsultaAtual)
                 .not('tipo_escala', 'eq', 'RESERVA'))
         ]);
 
         if (resFuncionarios.error) throw resFuncionarios.error;
-        if (resFaltas.error) throw resFaltas.error;
+        if (resFaltasSemanaAtual.error) throw resFaltasSemanaAtual.error;
+        if (resFaltasSemanaAnterior.error) throw resFaltasSemanaAnterior.error;
         if (resEscala.error) throw resEscala.error;
 
-        const descontosAnteriores = await carregarDescontosDiariaAnterior(semana);
         const nomeDiariaMap = new Map();
+        const funcionarioKeysMap = new Map();
+        const funcionariosAtivos = (resFuncionarios.data || []).filter(funcionario => isFuncionarioAtivoDiaria(funcionario.status));
 
-        (resFuncionarios.data || []).forEach(funcionario => {
+        funcionariosAtivos.forEach(funcionario => {
             const nomeCurto = cleanImportValue(funcionario.nome) || cleanImportValue(funcionario.nome_completo);
             if (!nomeCurto) return;
+            const keysFuncionario = getFuncionarioDiariaKeys(funcionario);
+            const keyPrincipal = normalizeString(nomeCurto);
+            if (keyPrincipal) funcionarioKeysMap.set(keyPrincipal, keysFuncionario);
             [funcionario.nome, funcionario.nome_completo].forEach(nome => {
                 const key = normalizeString(nome);
                 if (key) nomeDiariaMap.set(key, nomeCurto);
@@ -304,35 +318,25 @@ async function carregarDiaria() {
         });
 
         const getNomeDiaria = (nome) => nomeDiariaMap.get(normalizeString(nome)) || cleanImportValue(nome);
+        const getKeysDiaria = (nome) => {
+            const nomeDiaria = getNomeDiaria(nome);
+            const keyPrincipal = normalizeString(nomeDiaria);
+            return funcionarioKeysMap.get(keyPrincipal) || getPessoaDiariaKeys(nome);
+        };
         const funcionariosEscalados = new Set();
 
         (resEscala.data || []).forEach(row => {
             [row.motorista, row.auxiliar].forEach(nome => {
-                const nomeDiaria = getNomeDiaria(nome);
-                const key = normalizeString(nomeDiaria);
-                if (key) funcionariosEscalados.add(key);
+                getKeysDiaria(nome).forEach(key => funcionariosEscalados.add(key));
             });
         });
 
         const ausencias = new Map();
-        (resFaltas.data || []).forEach(row => {
-            [
-                { nome: row.motorista_ausente, motivo: row.motivo_motorista },
-                { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar }
-            ].forEach(item => {
-                const nome = getNomeDiaria(item.nome);
-                if (!nome) return;
-                const key = normalizeString(nome);
-                const motivo = cleanImportValue(item.motivo) || 'FALTA';
-                if (!isStatusAusenciaDiaria(motivo) && cleanImportValue(item.motivo)) return;
-                if (!ausencias.has(key)) ausencias.set(key, { dias: new Set(), motivos: new Set() });
-                ausencias.get(key).dias.add(String(row.data_escala || '').slice(0, 10));
-                ausencias.get(key).motivos.add(motivo);
-            });
-        });
+        registrarAusenciasDiaria(resFaltasSemanaAtual.data, ausencias, getNomeDiaria, getKeysDiaria, isStatusAtualDiaria);
+        registrarAusenciasDiaria(resFaltasSemanaAnterior.data, ausencias, getNomeDiaria, getKeysDiaria, isFaltaSemanaAnteriorDiaria);
 
         const filialSelecionada = normalizeString(getFilial());
-        const funcionarios = (resFuncionarios.data || [])
+        const funcionarios = funcionariosAtivos
             .filter(funcionario => !filialSelecionada || normalizeString(funcionario.filial || getFilial()) === filialSelecionada)
             .map(funcionario => {
                 const nome = getNomeDiaria(funcionario.nome || funcionario.nome_completo);
@@ -349,7 +353,7 @@ async function carregarDiaria() {
 
         if (funcionarios.length === 0) {
             diariaDadosAtual = [];
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionario encontrado para a filial.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para a filial.</td></tr>';
             atualizarFiltroFuncaoDiaria();
             atualizarResumoDiaria();
             return;
@@ -357,11 +361,16 @@ async function carregarDiaria() {
 
         diariaDadosAtual = funcionarios.map(funcionario => {
             const key = normalizeString(funcionario.nome);
-            const ausencia = ausencias.get(key);
-            const diasDesconto = ausencia ? ausencia.dias.size : 0;
-            const descontoAnterior = descontosAnteriores.get(key) || 0;
+            const keysFuncionario = getPessoaDiariaKeys(funcionario.nome, funcionario.nomeCompleto, funcionario.cpf);
+            const ausencia = mergeAusenciasDiaria(keysFuncionario, ausencias);
+            const temAusenciaReferencia = Boolean(ausencia);
+            const estaEscalado = keysFuncionario.some(keyItem => funcionariosEscalados.has(keyItem));
+            const foraEscala = !temAusenciaReferencia && datasSemanaAtual.length > 0 && !estaEscalado;
+            const diasDesconto = foraEscala ? 5 : (ausencia ? Math.min(5, ausencia.dias.size) : 0);
+            const descontoAnterior = 0;
             const datasFalta = ausencia ? [...ausencia.dias].sort().map(formatDataISOBR) : [];
-            const foraEscala = !funcionariosEscalados.has(key);
+            const motivosAusencia = ausencia ? [...ausencia.motivos] : [];
+            if (foraEscala) motivosAusencia.unshift('FORA DA ESCALA');
 
             return recalcularItemDiaria({
                 key,
@@ -373,14 +382,15 @@ async function carregarDiaria() {
                 status: 'APTO',
                 descricaoStatus: '',
                 datasFalta,
-                motivosAusencia: ausencia ? [...ausencia.motivos] : [],
+                motivosAusencia,
                 diasDesconto,
                 descontoAnterior,
                 valorPagar: 0,
                 valorDesconto: 0,
                 recebe: true,
                 foraEscala,
-                pagarManual: !foraEscala
+                pagarManual: true,
+                semanaReferencia
             }, valorSemana);
         });
 
@@ -388,20 +398,71 @@ async function carregarDiaria() {
         renderDiariaTabela();
     } catch (error) {
         console.error('Erro ao carregar diaria:', error);
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
     }
+}
+
+function registrarAusenciasDiaria(rows, ausencias, getNomeDiaria, getKeysDiaria, deveRegistrarMotivo) {
+    (rows || []).forEach(row => {
+            [
+                { nome: row.motorista_ausente, motivo: row.motivo_motorista },
+                { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar }
+            ].forEach(item => {
+                const nome = getNomeDiaria(item.nome);
+                if (!nome) return;
+                const keys = getKeysDiaria(nome);
+                const motivo = cleanImportValue(item.motivo) || 'FALTA';
+                if (!deveRegistrarMotivo(motivo)) return;
+                keys.forEach(key => {
+                    if (!ausencias.has(key)) ausencias.set(key, { dias: new Set(), motivos: new Set() });
+                    ausencias.get(key).dias.add(String(row.data_escala || '').slice(0, 10));
+                    ausencias.get(key).motivos.add(motivo);
+                });
+            });
+        });
 }
 
 function getPrimaryMotivoAusencia(motivosAusencia, diasDesconto) {
     if (!motivosAusencia || motivosAusencia.length === 0) {
         return diasDesconto > 0 ? 'FALTA' : '';
     }
-    const priority = ['FERIAS', 'AFAST', 'INSS', 'AUSENTE'];
+    const priority = ['FERIAS', 'AFAST', 'INSS', 'AUSENTE', 'FALTA', 'FORA DA ESCALA'];
     for (const p of priority) {
         const found = motivosAusencia.find(m => normalizeString(m).includes(p));
         if (found) return normalizeString(found);
     }
     return normalizeString(motivosAusencia[0]) || 'FALTA';
+}
+
+function isStatusAtualDiaria(value) {
+    const status = normalizeString(value);
+    return status.includes('FERIAS') || status.includes('AFAST');
+}
+
+function isFaltaSemanaAnteriorDiaria(value) {
+    return normalizeString(value).includes('FALTA');
+}
+
+function getFuncionarioDiariaKeys(funcionario) {
+    return getPessoaDiariaKeys(funcionario?.nome, funcionario?.nome_completo, funcionario?.cpf);
+}
+
+function getPessoaDiariaKeys(...values) {
+    return [...new Set(values
+        .map(value => normalizeString(value))
+        .filter(Boolean))];
+}
+
+function mergeAusenciasDiaria(keys, ausenciasMap) {
+    const matches = keys.map(key => ausenciasMap.get(key)).filter(Boolean);
+    if (matches.length === 0) return null;
+
+    const merged = { dias: new Set(), motivos: new Set() };
+    matches.forEach(ausencia => {
+        ausencia.dias.forEach(dia => merged.dias.add(dia));
+        ausencia.motivos.forEach(motivo => merged.motivos.add(motivo));
+    });
+    return merged;
 }
 
 function recalcularItemDiaria(item, valorSemana) {
@@ -427,12 +488,13 @@ function recalcularItemDiaria(item, valorSemana) {
             item.descricaoStatus = statusCadastro;
         } else if (temAusenciaFaltas) {
             item.status = getPrimaryMotivoAusencia(item.motivosAusencia, diasDesconto);
+            const referencia = getReferenciaStatusDiaria(item.status);
             item.descricaoStatus = item.datasFalta.length
-                ? `${item.status}: ${item.datasFalta.join(', ')}`
-                : `Ausencia registrada: ${item.status}`;
+                ? `${item.status} ${referencia}: ${item.datasFalta.join(', ')}`
+                : `Ausencia registrada ${referencia}: ${item.status}`;
         } else if (item.foraEscala) {
             item.status = 'FORA DA ESCALA';
-            item.descricaoStatus = 'Funcionario nao localizado na escala. Marque o checkbox para autorizar pagamento manual.';
+            item.descricaoStatus = 'Funcionario nao localizado na escala da semana anterior.';
         } else {
             item.status = 'NAO PAGAR';
             item.descricaoStatus = 'Pagamento de diaria desmarcado.';
@@ -440,10 +502,10 @@ function recalcularItemDiaria(item, valorSemana) {
     } else {
         if (diasDesconto > 0) {
             item.status = getPrimaryMotivoAusencia(item.motivosAusencia, diasDesconto);
-            item.descricaoStatus = `Desconto por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : 'ausencia'}: ${item.datasFalta.join(', ')}`;
+            item.descricaoStatus = `Desconto ${getReferenciaStatusDiaria(item.status)} por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : 'ausencia'}: ${item.datasFalta.join(', ')}`;
         } else if (item.foraEscala) {
             item.status = 'FORA DA ESCALA';
-            item.descricaoStatus = 'Pagamento manual autorizado para funcionario fora da escala.';
+            item.descricaoStatus = 'Funcionario nao localizado na escala da semana anterior.';
         } else {
             item.status = 'APTO';
             item.descricaoStatus = 'Apto para receber diaria.';
@@ -451,6 +513,14 @@ function recalcularItemDiaria(item, valorSemana) {
     }
 
     return item;
+}
+
+function getReferenciaStatusDiaria(status) {
+    const normalized = normalizeString(status);
+    if (normalized.includes('FALTA')) return 'da semana anterior';
+    if (normalized.includes('FERIAS') || normalized.includes('AFAST')) return 'da semana atual';
+    if (normalized.includes('FORA DA ESCALA')) return 'da semana atual';
+    return 'da referencia da escala';
 }
 
 function recalcularDiariaComValorAtual() {
@@ -487,25 +557,28 @@ function renderDiariaTabela() {
     });
 
     if (dadosOrdenados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionario encontrado para os filtros selecionados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para os filtros selecionados.</td></tr>';
         atualizarResumoDiaria();
         return;
     }
 
-    tbody.innerHTML = dadosOrdenados.map(item => `
+    tbody.innerHTML = dadosOrdenados.map(item => {
+        const temDescontoSemanaAnterior = Number(item.valorDesconto || 0) > 0 || Number(item.diasDesconto || 0) > 0;
+        const statusClass = temDescontoSemanaAnterior ? 'bloqueado' : (item.recebe ? 'apto' : 'bloqueado');
+        return `
         <tr data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}">
             <td>${escapeAttribute(item.nome)}</td>
             <td>${escapeAttribute(item.nomeCompleto)}</td>
             <td>${escapeAttribute(item.cpf)}</td>
             <td>${escapeAttribute(item.funcao)}</td>
-            <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento ou ferias' : (item.foraEscala && !item.recebe ? 'Fora da escala - marque para autorizar pagamento manual' : 'Marcar para pagar diaria')}"></td>
-            <td><span class="diaria-status ${item.recebe ? 'apto' : 'bloqueado'}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
+            <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento, ferias ou fora da escala na semana anterior' : 'Marcar para pagar diaria'}"></td>
+            <td><span class="diaria-status ${statusClass}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
             <td>${item.diasDesconto}</td>
-            <td>${formatMoedaBR(item.descontoAnterior)}</td>
             <td>${formatMoedaBR(item.valorPagar)}</td>
-            <td>${formatMoedaBR(item.valorDesconto)}</td>
+            <td class="${temDescontoSemanaAnterior ? 'diaria-desconto-alerta' : ''}">${formatMoedaBR(item.valorDesconto)}</td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     atualizarResumoDiaria();
 }
@@ -532,11 +605,18 @@ function getDiariaFuncoesSelecionadas() {
     return Array.from(select.selectedOptions).map(opt => normalizeString(opt.value)).filter(Boolean);
 }
 
+function getDiariaStatusSelecionados() {
+    const select = document.getElementById('diariaFiltroStatus');
+    if (!select) return [];
+    return Array.from(select.selectedOptions).map(opt => normalizeString(opt.value)).filter(Boolean);
+}
+
 function getDiariaDadosExportacao() {
-    const filtroStatus = document.getElementById('diariaFiltroStatus')?.value || '';
+    const statusSelecionados = getDiariaStatusSelecionados();
     const funcoesSelecionadas = getDiariaFuncoesSelecionadas();
     const dadosFiltrados = diariaDadosAtual.filter(item => {
-        const statusOk = !filtroStatus || (filtroStatus === 'APTO' ? item.recebe : !item.recebe);
+        const statusItem = normalizeString(item.status);
+        const statusOk = statusSelecionados.length === 0 || statusSelecionados.some(status => statusItem.includes(status));
         const funcaoOk = funcoesSelecionadas.length === 0 || funcoesSelecionadas.includes(normalizeString(item.funcao));
         return statusOk && funcaoOk;
     });
@@ -699,9 +779,9 @@ function gerarXLSXDiaria() {
     const filial = getFilial();
     const wsData = [
         [`DIARIA - ${semana} - ${filial}`],
-        [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto prox. semana: ${formatMoedaBR(resumo.totalDesconto)}`],
+        [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)}`],
         [],
-        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA'],
+        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'VALOR A PAGAR', 'DESC. SEM. ANTERIOR'],
         ...dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -711,7 +791,6 @@ function gerarXLSXDiaria() {
             item.status,
             item.descricaoStatus,
             item.diasDesconto,
-            item.descontoAnterior,
             item.valorPagar,
             item.valorDesconto
         ])
@@ -721,7 +800,7 @@ function gerarXLSXDiaria() {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [
         { wch: 24 }, { wch: 34 }, { wch: 16 }, { wch: 30 }, { wch: 10 },
-        { wch: 18 }, { wch: 42 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 18 }
+        { wch: 18 }, { wch: 42 }, { wch: 12 }, { wch: 16 }, { wch: 18 }
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Diaria');
     XLSX.writeFile(wb, getDiariaNomeArquivo('xlsx'));
@@ -741,11 +820,11 @@ function gerarPDFDiaria() {
     doc.setFontSize(15);
     doc.text(`Diaria - ${semana} - ${filial}`, 14, 14);
     doc.setFontSize(9);
-    doc.text(`Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Desconto prox. semana: ${formatMoedaBR(resumo.totalDesconto)}`, 14, 21);
+    doc.text(`Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)}`, 14, 21);
 
     doc.autoTable({
         startY: 27,
-        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DIAS DESC.', 'DESC. ANTERIOR', 'VALOR A PAGAR', 'DESC. PROX. SEMANA']],
+        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'VALOR A PAGAR', 'DESC. SEM. ANTERIOR']],
         body: dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -753,8 +832,8 @@ function gerarPDFDiaria() {
             item.funcao,
             item.recebe ? 'SIM' : 'NAO',
             item.status,
+            item.descricaoStatus,
             item.diasDesconto,
-            formatMoedaBR(item.descontoAnterior),
             formatMoedaBR(item.valorPagar),
             formatMoedaBR(item.valorDesconto)
         ]),
@@ -764,7 +843,8 @@ function gerarPDFDiaria() {
             0: { cellWidth: 25 },
             1: { cellWidth: 36 },
             3: { cellWidth: 34 },
-            5: { cellWidth: 23 }
+            5: { cellWidth: 23 },
+            6: { cellWidth: 48 }
         }
     });
 
@@ -797,10 +877,15 @@ function getDatasSemanaISO(semana) {
 function isStatusAusenciaDiaria(value) {
     const status = normalizeString(value);
     return status.includes('FALTA')
+        || status.includes('FORA DA ESCALA')
         || status.includes('FERIAS')
         || status.includes('AFAST')
         || status.includes('AUSENTE')
         || status.includes('INSS');
+}
+
+function isFuncionarioAtivoDiaria(status) {
+    return normalizeString(status) === 'ATIVO';
 }
 
 function parseMoedaBR(value) {

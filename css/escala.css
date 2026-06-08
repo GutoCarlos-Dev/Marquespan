@@ -1360,6 +1360,11 @@ body.escala-menu-oculto .menu-floating-toggle i {
     color: #a71d2a;
 }
 
+.diaria-desconto-alerta {
+    color: #a71d2a;
+    font-weight: 800;
+}
+
 .diaria-page-selection {
     grid-template-columns: minmax(180px, 1fr) minmax(160px, 240px) auto;
     align-items: end;
