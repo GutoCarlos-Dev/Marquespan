@@ -2,48 +2,61 @@ import { supabaseClient } from './supabase.js';
 
 let html5QrCode = null;
 let isScanning = false;
+let scanContext = 'veiculo'; // 'veiculo' | 'bico1' | 'bico2'
+
+const TITULOS = {
+    veiculo: '<i class="fas fa-qrcode"></i> Escanear Veículo',
+    bico1:   '<i class="fas fa-qrcode"></i> Escanear Bico de Origem',
+    bico2:   '<i class="fas fa-qrcode"></i> Escanear Bico 2',
+};
 
 document.addEventListener('DOMContentLoaded', () => {
-    const btnScanQR = document.getElementById('btnScanQR');
-    const btnCloseScanner = document.getElementById('btnCloseScanner');
-    const modalScanner = document.getElementById('modalScanner');
-    
-    // Elementos do Modal Vincular
-    const modalVincular = document.getElementById('modalVincular');
-    const btnCloseVincular = document.getElementById('btnCloseVincular');
+    const modalScanner      = document.getElementById('modalScanner');
+    const btnCloseScanner   = document.getElementById('btnCloseScanner');
+    const modalVincular     = document.getElementById('modalVincular');
+    const btnCloseVincular  = document.getElementById('btnCloseVincular');
     const btnConfirmarVinculo = document.getElementById('btnConfirmarVinculo');
 
-    if (btnScanQR) {
-        btnScanQR.addEventListener('click', () => {
-            if (modalScanner) {
-                modalScanner.classList.remove('hidden');
-                startScanner();
-            }
-        });
-    }
+    // ── Botão Veículo (Placa) ──
+    document.getElementById('btnScanQR')?.addEventListener('click', () => {
+        abrirScanner('veiculo', modalScanner);
+    });
 
-    if (btnCloseScanner) {
-        btnCloseScanner.addEventListener('click', () => {
-            stopScanner();
-            if (modalScanner) modalScanner.classList.add('hidden');
-        });
-    }
+    // ── Botão Bico de Origem ──
+    document.getElementById('btnScanQRBico1')?.addEventListener('click', () => {
+        abrirScanner('bico1', modalScanner);
+    });
 
-    if (btnCloseVincular && modalVincular) {
-        btnCloseVincular.addEventListener('click', () => {
-            modalVincular.classList.add('hidden');
-        });
-    }
+    // ── Botão Bico 2 ──
+    document.getElementById('btnScanQRBico2')?.addEventListener('click', () => {
+        abrirScanner('bico2', modalScanner);
+    });
 
-    if (btnConfirmarVinculo) {
-        btnConfirmarVinculo.addEventListener('click', realizarVinculo);
-    }
+    // ── Fechar scanner ──
+    btnCloseScanner?.addEventListener('click', () => {
+        stopScanner();
+        modalScanner?.classList.add('hidden');
+    });
+
+    // ── Modal Vincular (apenas para veículo) ──
+    btnCloseVincular?.addEventListener('click', () => {
+        modalVincular?.classList.add('hidden');
+    });
+
+    btnConfirmarVinculo?.addEventListener('click', realizarVinculo);
 });
+
+function abrirScanner(contexto, modalScanner) {
+    scanContext = contexto;
+    const titulo = document.getElementById('scannerModalTitulo');
+    if (titulo) titulo.innerHTML = TITULOS[contexto] || TITULOS.veiculo;
+    modalScanner?.classList.remove('hidden');
+    startScanner();
+}
 
 async function startScanner() {
     if (isScanning) return;
 
-    // Verificação de Segurança (HTTPS)
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         alert('A câmera requer uma conexão segura (HTTPS).');
         return;
@@ -56,31 +69,25 @@ async function startScanner() {
     }
 
     try {
-        // Instancia a biblioteca se não existir
         if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode = new Html5Qrcode('reader');
         }
 
-        // Configuração da câmera
-        const config = { 
-            fps: 10, 
+        const config = {
+            fps: 10,
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0
         };
-        
-        // Prefere a câmera traseira
-        const cameraIdOrConfig = { facingMode: "environment" };
 
         await html5QrCode.start(
-            cameraIdOrConfig, 
-            config, 
-            onScanSuccess, 
-            onScanFailure
+            { facingMode: 'environment' },
+            config,
+            onScanSuccess,
+            () => {}
         );
-        
+
         isScanning = true;
-        
-        // Ajuste visual para garantir que o vídeo ocupe o espaço
+
         setTimeout(() => {
             const video = document.querySelector('#reader video');
             if (video) {
@@ -91,13 +98,11 @@ async function startScanner() {
         }, 500);
 
     } catch (err) {
-        console.error("Erro ao iniciar câmera:", err);
+        console.error('Erro ao iniciar câmera:', err);
         let msg = 'Não foi possível acessar a câmera.';
         if (err.name === 'NotAllowedError') msg = 'Permissão de câmera negada.';
-        if (err.name === 'NotFoundError') msg = 'Nenhuma câmera encontrada.';
+        if (err.name === 'NotFoundError')   msg = 'Nenhuma câmera encontrada.';
         alert(msg);
-        
-        // Fecha o modal em caso de erro crítico
         document.getElementById('modalScanner')?.classList.add('hidden');
     }
 }
@@ -108,41 +113,44 @@ async function stopScanner() {
             await html5QrCode.stop();
             isScanning = false;
         } catch (err) {
-            console.warn("Erro ao parar câmera:", err);
+            console.warn('Erro ao parar câmera:', err);
         }
     }
 }
 
-async function onScanSuccess(decodedText, decodedResult) {
-    // Para o scanner imediatamente após leitura
+async function onScanSuccess(decodedText) {
     stopScanner();
     document.getElementById('modalScanner')?.classList.add('hidden');
 
     const qrCode = decodedText.trim();
-    console.log(`QR Code lido: ${qrCode}`);
 
+    if (scanContext === 'bico1') {
+        await preencherBico(qrCode, 'saidaBico');
+        return;
+    }
+
+    if (scanContext === 'bico2') {
+        await preencherBico(qrCode, 'saidaBico2');
+        return;
+    }
+
+    // contexto padrão: veículo
     try {
-        // 1. Tenta buscar veículo pelo QR Code
-        const { data: veiculo, error } = await supabaseClient
+        const { data: veiculo } = await supabaseClient
             .from('veiculos')
             .select('placa')
             .eq('qrcode', qrCode)
             .single();
 
         if (veiculo) {
-            // Veículo encontrado
             preencherVeiculo(veiculo.placa);
         } else {
-            // Não encontrado
-            // Verifica se o texto lido parece uma placa (formato Mercosul ou antigo)
             const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
-            const cleanText = qrCode.replace(/[^A-Z0-9]/g, '');
-            
+            const cleanText  = qrCode.replace(/[^A-Z0-9]/g, '');
+
             if (cleanText.length === 7 && placaRegex.test(cleanText)) {
-                // É uma placa, preenche direto
                 preencherVeiculo(cleanText);
             } else {
-                // Não é placa e não tem vínculo -> Abrir modal de vínculo
                 abrirModalVinculo(qrCode);
             }
         }
@@ -152,30 +160,59 @@ async function onScanSuccess(decodedText, decodedResult) {
     }
 }
 
-function onScanFailure(error) {
-    // console.warn(`Code scan error = ${error}`);
+// ── Preenche campo de bico pelo QR Code ──
+async function preencherBico(qrCode, selectId) {
+    try {
+        const { data: bico } = await supabaseClient
+            .from('bicos')
+            .select('id, nome, bombas(nome)')
+            .eq('qrcode', qrCode)
+            .single();
+
+        if (!bico) {
+            alert(`Nenhum bico cadastrado para este QR Code.\nCadastre o QR Code em "Cadastro de Bombas e Bicos".`);
+            return;
+        }
+
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        // Verifica se a opção existe no select (bicos já carregados)
+        const optionExiste = Array.from(select.options).some(o => String(o.value) === String(bico.id));
+
+        if (optionExiste) {
+            select.value = bico.id;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            alert(`Bico identificado: ${bico.nome}${bico.bombas ? ` (${bico.bombas.nome})` : ''}`);
+        } else {
+            alert(`Bico "${bico.nome}" identificado, mas não está disponível na lista atual.`);
+        }
+
+    } catch (err) {
+        console.error('Erro ao verificar QR Code do bico:', err);
+        alert('Erro ao verificar dados do bico.');
+    }
 }
 
 function preencherVeiculo(placa) {
     const inputPlaca = document.getElementById('saidaVeiculo');
     if (inputPlaca) {
-        const placaNormalizada = placa ? placa.toUpperCase().trim() : '';
-        inputPlaca.value = placaNormalizada;
-        inputPlaca.dispatchEvent(new Event('input', { bubbles: true }));
+        inputPlaca.value = placa ? placa.toUpperCase().trim() : '';
+        inputPlaca.dispatchEvent(new Event('input',  { bubbles: true }));
         inputPlaca.dispatchEvent(new Event('change', { bubbles: true }));
         alert(`Veículo identificado: ${placa}`);
     }
 }
 
 function abrirModalVinculo(qrCode) {
-    document.getElementById('qrCodeLido').value = qrCode;
+    document.getElementById('qrCodeLido').value   = qrCode;
     document.getElementById('placaVinculo').value = '';
     document.getElementById('modalVincular').classList.remove('hidden');
 }
 
 async function realizarVinculo() {
     const qrCode = document.getElementById('qrCodeLido').value;
-    const placa = document.getElementById('placaVinculo').value.toUpperCase().trim();
+    const placa  = document.getElementById('placaVinculo').value.toUpperCase().trim();
 
     if (!placa) return alert('Informe a placa do veículo.');
 

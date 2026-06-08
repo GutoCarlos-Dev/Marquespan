@@ -102,6 +102,7 @@ const BicoManager = {
         this.editingId = document.getElementById('bicoEditingId');
         this.bombaSelect = document.getElementById('bicoBomba');
         this.nomeInput = document.getElementById('bicoNome');
+        this.qrcodeInput = document.getElementById('bicoQrcode');
         this.tableBody = document.getElementById('tableBodyBicos');
         document.getElementById('btnLimparBico').addEventListener('click', () => this.clearForm());
     },
@@ -116,10 +117,10 @@ const BicoManager = {
         data.forEach(b => this.bombaSelect.add(new Option(`${b.nome} (Tanque: ${b.tanques.nome})`, b.id)));
     },
     async renderBicos() {
-        this.tableBody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
+        this.tableBody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
         const { data, error } = await supabaseClient.from('bicos').select('*, bombas(nome, tanques(nome))').order('nome');
         if (error) {
-            this.tableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar.</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="4">Erro ao carregar.</td></tr>';
             return;
         }
 
@@ -129,10 +130,14 @@ const BicoManager = {
 
         this.tableBody.innerHTML = '';
         data.forEach(bico => {
+            const qrcodeCelula = bico.qrcode
+                ? `<span class="qrcode-badge"><i class="fas fa-qrcode"></i>${bico.qrcode}</span>`
+                : `<span class="qrcode-empty">Não cadastrado</span>`;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${bico.nome}</td>
                 <td>${bico.bombas.nome} (Tanque: ${bico.bombas.tanques.nome})</td>
+                <td>${qrcodeCelula}</td>
                 <td class="actions-cell">
                     <button class="btn-icon edit" data-id="${bico.id}" title="Editar"><i class="fas fa-edit"></i></button>
                     <button class="btn-icon delete" data-id="${bico.id}" title="Excluir"><i class="fas fa-trash-alt"></i></button>
@@ -145,7 +150,8 @@ const BicoManager = {
         e.preventDefault();
         const payload = {
             nome: this.nomeInput.value,
-            bomba_id: this.bombaSelect.value
+            bomba_id: this.bombaSelect.value,
+            qrcode: this.qrcodeInput.value.trim() || null
         };
         if (this.editingId.value) payload.id = this.editingId.value;
 
@@ -170,6 +176,7 @@ const BicoManager = {
         this.editingId.value = data.id;
         this.nomeInput.value = data.nome;
         this.bombaSelect.value = data.bomba_id;
+        this.qrcodeInput.value = data.qrcode || '';
         this.form.scrollIntoView({ behavior: 'smooth' });
     },
     async delete(id) {
