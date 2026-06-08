@@ -67,7 +67,8 @@ export function montarPayloadsSaida({
     litros1,
     bico2,
     litros2,
-    bico2Visivel
+    bico2Visivel,
+    dataReferencia
 }) {
     const placaInput = String(placa || '').toUpperCase();
     const veiculoObj = (veiculosDisponiveis || []).find(v => v.placa === placaInput);
@@ -83,7 +84,8 @@ export function montarPayloadsSaida({
         rota,
         motorista,
         km_atual: kmValue,
-        usuario
+        usuario,
+        data_referencia: dataReferencia || null
     };
 
     const payloads = [];

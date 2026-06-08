@@ -234,13 +234,13 @@ const RelatorioEstatistica = {
             return record ? Number(record.valor_litro) : 0;
         };
 
-        let querySaidas = supabaseClient.from('saidas_combustivel').select('*, bicos(nome, bombas(tanque_id, tanques(nome, filial, tipo_combustivel)))')
+        let querySaidas = supabaseClient.from('saidas_combustivel').select('*, data_referencia, bicos(nome, bombas(tanque_id, tanques(nome, filial, tipo_combustivel)))')
             .gte('data_hora', `${dtIni}T00:00:00`)
             .lte('data_hora', `${dtFim}T23:59:59`);
         if (placa) querySaidas = querySaidas.eq('veiculo_placa', placa);
         if (rota) querySaidas = querySaidas.eq('rota', rota);
 
-        let queryExt = supabaseClient.from('abastecimento_externo').select('*, postos(razao_social)')
+        let queryExt = supabaseClient.from('abastecimento_externo').select('*, data_referencia, postos(razao_social)')
             .gte('data_hora', `${dtIni}T00:00:00`)
             .lte('data_hora', `${dtFim}T23:59:59`);
         if (placa) queryExt = queryExt.eq('veiculo_placa', placa);
@@ -287,7 +287,7 @@ const RelatorioEstatistica = {
                 const precoCusto = tanqueId ? getInternalPrice(tanqueId, s.data_hora) : 0;
                 return {
                     tipo: 'INTERNO',
-                    data: s.data_hora.split('T')[0],
+                    data: s.data_referencia || s.data_hora.split('T')[0],
                     data_hora: s.data_hora,
                     rota: s.rota,
                     placa: s.veiculo_placa,
@@ -303,7 +303,7 @@ const RelatorioEstatistica = {
 
         const externos = (resExt.data || []).map(e => ({
             tipo: 'EXTERNO',
-            data: e.data_hora.split('T')[0],
+            data: e.data_referencia || e.data_hora.split('T')[0],
             data_hora: e.data_hora,
             rota: e.rota,
             placa: e.veiculo_placa,

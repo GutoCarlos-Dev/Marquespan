@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnSalvarSaida = document.getElementById('btnSalvarSaida');
             this.saidaBico2 = document.getElementById('saidaBico2');
             this.saidaLitros2 = document.getElementById('saidaLitros2');
+            this.saidaDataReferencia = document.getElementById('saidaDataReferencia');
             this.btnToggleBico2 = document.getElementById('btnToggleBico2');
             this.camposBico2 = document.getElementById('camposBico2');
             this.tableBodySaidas = document.getElementById('tableBodySaidas');
@@ -1368,6 +1369,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             this.saidaDataHora.value = now.toISOString().slice(0, 16);
+            if (this.saidaDataReferencia) this.saidaDataReferencia.value = '';
             if(this.saidaUsuario) this.saidaUsuario.value = this.getUsuarioLogado();
         },
 
@@ -1399,7 +1401,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     litros1: this.saidaLitros.value,
                     bico2: this.saidaBico2.value,
                     litros2: this.saidaLitros2.value,
-                    bico2Visivel: !this.camposBico2.classList.contains('hidden')
+                    bico2Visivel: !this.camposBico2.classList.contains('hidden'),
+                    dataReferencia: this.saidaDataReferencia?.value || null
                 }));
             } catch (error) {
                 alert(error.message);
@@ -1518,6 +1521,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.saidaMotorista) this.saidaMotorista.value = data.motorista || '';
                 this.saidaKm.value = data.km_atual;
                 this.saidaLitros.value = data.qtd_litros;
+                if (this.saidaDataReferencia) this.saidaDataReferencia.value = data.data_referencia || '';
 
                 this.btnSalvarSaida.innerHTML = '<i class="fas fa-save"></i> ATUALIZAR SAÍDA';
                 this.formSaida.scrollIntoView({ behavior: 'smooth' });

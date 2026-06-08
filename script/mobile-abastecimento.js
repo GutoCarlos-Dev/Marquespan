@@ -359,6 +359,7 @@ async function salvarAbastecimento(e) {
         // Dados do Bico 2 (opcional)
         const bicoId2 = document.getElementById('saidaBico2').value;
         const litros2 = parseLitrosMobile(document.getElementById('saidaLitros2').value);
+        const dataReferencia = document.getElementById('saidaDataReferencia')?.value || null;
 
         if (!placa || !km) {
             alert('Preencha a Placa e o KM.');
@@ -373,11 +374,12 @@ async function salvarAbastecimento(e) {
                 data_hora: dataHora,
                 bico_id: bicoId1,
                 veiculo_placa: placa,
-                rota: rota, 
+                rota: rota,
                 motorista: motorista,
                 km_atual: km,
                 qtd_litros: litros1,
-                usuario: usuario
+                usuario: usuario,
+                data_referencia: dataReferencia
             });
         } else {
             alert('Preencha os dados do Bico 1 (Bico e Litros).');
@@ -398,7 +400,8 @@ async function salvarAbastecimento(e) {
                 motorista: motorista,
                 km_atual: km,
                 qtd_litros: litros2,
-                usuario: usuario
+                usuario: usuario,
+                data_referencia: dataReferencia
             });
         }
 
@@ -432,6 +435,8 @@ async function salvarAbastecimento(e) {
         document.getElementById('saidaLitros').value = '';
         document.getElementById('saidaBico2').value = '';
         document.getElementById('saidaLitros2').value = '';
+        const inputDataRef = document.getElementById('saidaDataReferencia');
+        if (inputDataRef) inputDataRef.value = '';
         
         // Esconde campos do bico 2
         const camposBico2 = document.getElementById('camposBico2');
