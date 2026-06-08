@@ -120,6 +120,7 @@ function bindEvents() {
 
     const tbody = document.getElementById('tbodyPesoRota');
     tbody?.addEventListener('focus',   handleGridFocusDecimal,   true);
+    tbody?.addEventListener('keydown', handleGridArrowNavigation);
     tbody?.addEventListener('keydown', handleGridKeydownDecimal);
     tbody?.addEventListener('paste',   handleGridPasteDecimal);
     tbody?.addEventListener('input',   handleGridInput);
@@ -987,6 +988,84 @@ function handleGridFocusDecimal(e) {
     if (!_isDecimalField(target?.dataset?.field)) return;
     target.dataset.rawDigits = target.value.replace(/\D/g, '');
 }
+
+// ── Navegação por setas (estilo planilha) ──────────────────────────────────────
+function handleGridArrowNavigation(e) {
+    const target = e.target;
+    if (!target?.dataset?.field) return;
+
+    const key = e.key;
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(key)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const tag  = target.tagName;
+    const type = target.type || '';
+    const isSelect   = tag === 'SELECT';
+    const isDate     = tag === 'INPUT' && type === 'date';
+    const isTime     = tag === 'INPUT' && type === 'time';
+    const isTextLike = (tag === 'INPUT' && (type === 'text' || type === '')) ||
+                       (tag === 'INPUT' && target.inputMode === 'decimal') ||
+                       tag === 'TEXTAREA';
+
+    // Enter → confirma e desce uma linha
+    if (key === 'Enter') {
+        e.preventDefault();
+        _gridNavRow(target, 1);
+        return;
+    }
+
+    // ↑ ↓ → navegam entre linhas (mantém coluna)
+    // Para select/date/time, deixa o comportamento nativo alterar o valor
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+        if (isSelect || isDate || isTime) return;
+        e.preventDefault();
+        _gridNavRow(target, key === 'ArrowDown' ? 1 : -1);
+        return;
+    }
+
+    // ← → → navegam entre células da mesma linha
+    // Para inputs de texto: só navega quando o cursor está no limite do conteúdo
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        if (isTextLike) {
+            const pos = target.selectionStart ?? 0;
+            const len = target.value.length;
+            if (key === 'ArrowLeft'  && pos > 0)  return;
+            if (key === 'ArrowRight' && pos < len) return;
+        }
+        e.preventDefault();
+        _gridNavCell(target, key === 'ArrowRight' ? 1 : -1);
+    }
+}
+
+function _gridNavRow(el, direction) {
+    const field   = el.dataset.field;
+    const allRows = Array.from(document.querySelectorAll('#tbodyPesoRota tr[data-row-index]'));
+    const curTr   = el.closest('tr');
+    const curIdx  = allRows.indexOf(curTr);
+    const nextTr  = allRows[curIdx + direction];
+    if (!nextTr) return;
+    const next = nextTr.querySelector(`[data-field="${field}"]:not([readonly])`);
+    if (next) _gridFocusCell(next);
+}
+
+function _gridNavCell(el, direction) {
+    const tr = el.closest('tr');
+    if (!tr) return;
+    const cells = Array.from(tr.querySelectorAll('[data-field]'))
+        .filter(c => c.tagName !== 'SPAN' && !c.readOnly);
+    const idx = cells.indexOf(el);
+    if (idx === -1) return;
+    const next = cells[idx + direction];
+    if (next) _gridFocusCell(next);
+}
+
+function _gridFocusCell(el) {
+    el.focus();
+    if (el.tagName === 'INPUT' && el.type !== 'date' && el.type !== 'time') {
+        el.select();
+    }
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 function handleGridKeydownDecimal(e) {
     const target = e.target;
