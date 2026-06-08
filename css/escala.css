@@ -177,6 +177,17 @@
     font-weight: 700 !important;
 }
 
+.data-grid td input.table-input.cell-motorista-required {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    box-shadow: inset 0 0 0 2px #8f1722;
+}
+
+.data-grid td input.table-input.cell-motorista-required::placeholder {
+    color: rgba(255, 255, 255, 0.9);
+}
+
 .context-menu {
     position: absolute;
     display: none;

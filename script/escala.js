@@ -354,6 +354,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    function deveAlertarMotoristaAusente(tr) {
+        if (!tr || tr.dataset.tabela !== 'escala') return false;
+        const tipo = normalizeString(tr.dataset.tipoEscala);
+        if (!['PADRAO', 'TRANSFERENCIA', 'EQUIPAMENTO'].includes(tipo)) return false;
+
+        const placa = normalizeVehiclePlate(tr.querySelector('input[data-key="placa"]')?.value);
+        const rota = cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true });
+        const motorista = cleanImportValue(tr.querySelector('input[data-key="motorista"]')?.value);
+        return Boolean(placa && rota && !motorista);
+    }
+
+    function atualizarAlertaMotoristaAusente(scope = document) {
+        const linhas = scope.matches?.('tr[data-tabela="escala"]')
+            ? [scope]
+            : Array.from(scope.querySelectorAll('tr[data-tabela="escala"]'));
+
+        linhas.forEach(tr => {
+            const inputMotorista = tr.querySelector('input[data-key="motorista"]');
+            if (!inputMotorista) return;
+
+            const alertar = deveAlertarMotoristaAusente(tr);
+            inputMotorista.classList.toggle('cell-motorista-required', alertar);
+            if (alertar) {
+                inputMotorista.title = 'Informe o motorista: esta linha possui placa e rota.';
+            } else if (inputMotorista.title === 'Informe o motorista: esta linha possui placa e rota.') {
+                inputMotorista.removeAttribute('title');
+            }
+        });
+    }
+
     // Funções para Cores Salvas
     function getSavedColors() {
         return JSON.parse(localStorage.getItem(SAVED_COLORS_KEY) || '[]');
@@ -1337,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         tr.dataset.id = item.id; // ID do banco para updates
                         tr.dataset.tabela = sec === 'Faltas' ? 'faltas_afastamentos' : 'escala';
                         tr.dataset.placa = item.placa || '';
+                        if (sec !== 'Faltas') tr.dataset.tipoEscala = item.tipo_escala || SECAO_PARA_DB[sec]?.tipo || '';
 
                         if (sec === 'Faltas') {
                             tr.innerHTML = `
@@ -1369,9 +1400,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             verificarDuplicidades();
+            atualizarAlertaMotoristaAusente(painelEscala);
             setupEscalaGridTools();
             filtrarDiaEscala();
             applyCellAnnotations();
+            atualizarAlertaMotoristaAusente(painelEscala);
             aplicarModoVisualizacaoEscala();
             carregarUltimaAuditoriaEscala({ semana, dia });
 
@@ -1385,6 +1418,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (painelEscala) {
         // Delegação de eventos para inputs e contenteditable
         painelEscala.addEventListener('change', handleEdit); // Para inputs
+        painelEscala.addEventListener('focusin', (e) => {
+            const input = e.target.closest('input.table-input');
+            if (input) input.dataset.valorAnterior = input.value || '';
+        });
+        painelEscala.addEventListener('input', (e) => {
+            const input = e.target.closest('input.table-input');
+            if (!input || !['placa', 'rota', 'motorista'].includes(input.dataset.key)) return;
+            const tr = input.closest('tr');
+            atualizarAlertaMotoristaAusente(tr);
+        });
         painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
             if (e.target.isContentEditable) handleEdit(e);
         });
@@ -1638,6 +1681,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // Atualiza cor se for Status
         if (key === 'status') updateInputColor(target);
+        if (['placa', 'rota', 'motorista'].includes(key)) atualizarAlertaMotoristaAusente(tr);
 
         // Atualiza cor no Planejamento (se preenchido)
         if (tabela === 'planejamento_semanal' && (key.includes('_rota') || key.includes('_status'))) {
@@ -1646,6 +1690,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         verificarDuplicidades();
+        atualizarAlertaMotoristaAusente(tr);
 
         try {
             const auditPayload = comAuditoria({ [key]: valor, ...extraUpdates });
@@ -1661,9 +1706,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 verificarDuplicidades();
             }
 
+            if (tabela === 'escala' && key === 'motorista') {
+                await replicarMotoristaViagemSeNecessario(tr, valor, target.dataset.valorAnterior || '');
+            }
+
             if (key === 'placa') {
                 tr.dataset.placa = normalizeVehiclePlate(valor);
             }
+            if (target.dataset) target.dataset.valorAnterior = valor;
 
             if (statusIndicator) {
                 statusIndicator.innerHTML = '<span class="status-saved"><i class="fas fa-check"></i> Salvo</span>';
@@ -6216,6 +6266,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         return sequencia;
+    }
+
+    async function replicarMotoristaViagemSeNecessario(tr, novoMotorista, motoristaAnterior) {
+        if (!tr || tr.dataset.tabela !== 'escala') return;
+        const tipo = normalizeString(tr.dataset.tipoEscala);
+        if (!['PADRAO', 'TRANSFERENCIA', 'EQUIPAMENTO'].includes(tipo)) return;
+
+        const anteriorNormalizado = normalizeString(motoristaAnterior);
+
+        const contexto = getDataEscalaAberta();
+        const rota = cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true });
+        if (!contexto || !rota) return;
+
+        const sequenciaRota = await getSequenciaTrocaVeiculo(contexto, rota);
+        const idAtual = String(tr.dataset.id || '');
+        const idsReplicar = sequenciaRota
+            .filter(item => String(item.id) !== idAtual)
+            .filter(item => normalizeString(item.motorista) === anteriorNormalizado)
+            .map(item => item.id)
+            .filter(Boolean);
+
+        if (idsReplicar.length === 0) return;
+
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .update(comAuditoria({ motorista: novoMotorista }))
+            .in('id', idsReplicar)
+            .select('id');
+
+        if (error) throw error;
+
+        (data || []).forEach(item => {
+            const row = document.querySelector(`#painelEscala tr[data-tabela="escala"][data-id="${CSS.escape(String(item.id))}"]`);
+            const input = row?.querySelector('input[data-key="motorista"]');
+            if (input) {
+                input.value = novoMotorista;
+                input.dataset.valorAnterior = novoMotorista;
+                atualizarAlertaMotoristaAusente(row);
+            }
+        });
     }
 
     async function listarVeiculosDisponiveisTroca(contexto, datasAlvo = null, rotaAlvo = '') {
