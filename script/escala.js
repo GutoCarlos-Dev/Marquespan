@@ -840,6 +840,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label><input type="checkbox" class="pdf-section-chk" value="EQUIPAMENTO" checked> EQUIPAMENTO</label>
                     <label><input type="checkbox" class="pdf-section-chk" value="RESERVA" checked> RESERVAS</label>
                     <label><input type="checkbox" class="pdf-section-chk" value="FALTAS" checked> FALTAS</label>
+                    <label><input type="checkbox" class="pdf-section-chk" value="VEICULOS"> VEICULOS</label>
                 </div>
             </div>
 
@@ -3568,7 +3569,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert('Erro ao carregar dados para o PDF.');
         }
 
-        if ((!dadosEscala || dadosEscala.length === 0) && (!dadosFaltas || dadosFaltas.length === 0)) {
+        const incluirVeiculosDisponiveis = selectedSections ? selectedSections.includes('VEICULOS') : false;
+        if (!incluirVeiculosDisponiveis && (!dadosEscala || dadosEscala.length === 0) && (!dadosFaltas || dadosFaltas.length === 0)) {
             return alert('Nenhum dado encontrado para este dia.');
         }
 
@@ -3605,16 +3607,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             { id: 'TRANSFERENCIA', title: 'TRANSFERÊNCIA CD' },
             { id: 'EQUIPAMENTO', title: 'EQUIPAMENTO' },
             { id: 'RESERVA', title: 'RESERVAS' },
+            { id: 'VEICULOS', title: 'VEICULOS DISPONIVEIS' },
             { id: 'FALTAS', title: 'FALTAS / FÉRIAS / AFASTADOS' }
         ];
 
         const secoesFiltradas = selectedSections ? secoes.filter(s => selectedSections.includes(s.id)) : secoes;
+        let adicionouSecaoPDF = false;
 
         for (const sec of secoesFiltradas) {
             let itens = [];
             let columns, body;
 
-            if (sec.id === 'FALTAS') {
+            if (sec.id === 'VEICULOS') {
+                try {
+                    itens = await buscarVeiculosDisponiveisPDF(dadosEscala || []);
+                } catch (error) {
+                    console.error('Erro ao buscar veiculos disponiveis:', error);
+                    return alert('Erro ao carregar veiculos disponiveis para o PDF.');
+                }
+                columns = ['PLACA', 'MODELO', 'TIPO', 'ASSINATURA'];
+                body = itens.map(i => [normalizeVehiclePlate(i.placa) || i.placa || '', i.modelo || '', i.tipo || '', '']);
+            } else if (sec.id === 'FALTAS') {
                 itens = dadosFaltas || [];
                 columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
                 body = itens.map(i => [i.motorista_ausente || '', i.motivo_motorista || '', i.auxiliar_ausente || '', i.motivo_auxiliar || '', '']);
@@ -3625,6 +3638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (itens.length === 0) continue;
+            adicionouSecaoPDF = true;
 
             if (finalY > pageHeight - 40) { doc.addPage(); finalY = 15; }
 
@@ -3647,7 +3661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alternateRowStyles: { fillColor: [220, 220, 220] },
                 didDrawPage: (data) => { finalY = data.cursor.y; },
                 didParseCell: function(data) {
-                    if (data.section === 'body' && sec.id !== 'FALTAS' && data.column.index === 3) {
+                    if (data.section === 'body' && !['FALTAS', 'VEICULOS'].includes(sec.id) && data.column.index === 3) {
                         const status = data.cell.raw;
                         const config = STATUS_CONFIG[status] || STATUS_CONFIG[status?.toUpperCase()];
                         if (config) {
@@ -3660,6 +3674,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             finalY = doc.lastAutoTable.finalY + 4;
         }
 
+        if (!adicionouSecaoPDF) {
+            return alert('Nenhum dado encontrado para as seções selecionadas.');
+        }
+
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -3669,6 +3687,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         doc.save(`Escala_${semana}_${dia}.pdf`);
+    }
+
+    function isVeiculoDisponivelPDF(veiculo) {
+        const situacao = normalizeString(veiculo?.situacao || 'ativo');
+        return situacao === 'ATIVO' && !isTipoVeiculoOcultoEscala(veiculo?.tipo);
+    }
+
+    async function buscarVeiculosDisponiveisPDF(dadosEscala) {
+        const placasUsadas = new Set((dadosEscala || [])
+            .map(item => normalizeVehiclePlate(item.placa))
+            .filter(Boolean));
+
+        let query = supabaseClient
+            .from('veiculos')
+            .select('placa, modelo, tipo, situacao, filial')
+            .order('placa');
+
+        const filial = getFilialEscala();
+        if (filial) query = query.eq('filial', filial);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return (data || [])
+            .filter(isVeiculoDisponivelPDF)
+            .filter(veiculo => !placasUsadas.has(normalizeVehiclePlate(veiculo.placa)))
+            .sort((a, b) => normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR'));
     }
 
     // --- FUNÇÕES DO MODAL DE EXPEDIÇÃO ---
