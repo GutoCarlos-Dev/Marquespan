@@ -169,7 +169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             'btnLimparEscala',
             'btnTerceiroRotaSuspenso',
             'btnTrocaVeiculoSuspenso',
-            'btnFaltasSuspenso'
+            'btnFaltasSuspenso',
+            'btnTrocaFuncionarioSuspenso'
         ];
 
         if (isAdmPedidoEscala) {
@@ -523,6 +524,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!btnFaltasSuspenso.disabled) abrirModalFaltasFuncionarios();
     });
 
+    const btnTrocaFuncionarioSuspenso = document.createElement('button');
+    btnTrocaFuncionarioSuspenso.id = 'btnTrocaFuncionarioSuspenso';
+    btnTrocaFuncionarioSuspenso.className = 'floating-terceiro-btn floating-troca-funcionario-btn hidden';
+    btnTrocaFuncionarioSuspenso.type = 'button';
+    btnTrocaFuncionarioSuspenso.disabled = true;
+    btnTrocaFuncionarioSuspenso.innerHTML = '<i class="fa-solid fa-user-pen"></i><span>Troca Func.</span>';
+    document.body.appendChild(btnTrocaFuncionarioSuspenso);
+
+    btnTrocaFuncionarioSuspenso.addEventListener('click', () => {
+        if (!btnTrocaFuncionarioSuspenso.disabled) abrirModalTrocaFuncionario();
+    });
+
     function atualizarBotaoTerceiroSuspenso() {
         const contexto = getDataEscalaAberta();
         const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
@@ -575,6 +588,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             btnFaltasSuspenso.title = 'Abra uma escala e selecione uma data.';
             btnFaltasSuspenso.querySelector('span').textContent = 'Faltas';
+        }
+
+        atualizarBotaoTrocaFuncionarioSuspenso();
+    }
+
+    function atualizarBotaoTrocaFuncionarioSuspenso() {
+        const contexto = getDataEscalaAberta();
+        const escalaAberta = painelEscala && !painelEscala.classList.contains('hidden');
+        const ativo = !!contexto && escalaAberta && podeGerenciarEscala;
+
+        btnTrocaFuncionarioSuspenso.disabled = !ativo;
+        btnTrocaFuncionarioSuspenso.classList.toggle('hidden', !ativo);
+
+        if (ativo) {
+            btnTrocaFuncionarioSuspenso.title = `Trocar motorista ou auxiliar - ${contexto.dia} ${contexto.dataBR}`;
+            btnTrocaFuncionarioSuspenso.querySelector('span').textContent = `Troca Func. ${contexto.dia}`;
+        } else {
+            btnTrocaFuncionarioSuspenso.title = 'Abra uma escala e selecione uma data.';
+            btnTrocaFuncionarioSuspenso.querySelector('span').textContent = 'Troca Func.';
         }
     }
 
@@ -5166,6 +5198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const FALTAS_MOTIVOS_PADRAO = ['FALTA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'OUTROS'];
+    const TROCA_FUNCIONARIO_MOTIVOS = ['FALTA', 'RESERVA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'OUTROS'];
 
     function ensureModalFaltasFuncionarios() {
         let modal = document.getElementById('modalFaltasFuncionarios');
@@ -5506,6 +5539,413 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert(`${nome} lancado em ${motivo}.`);
     }
 
+    function ensureModalTrocaFuncionario() {
+        let modal = document.getElementById('modalTrocaFuncionario');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalTrocaFuncionario';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content faltas-modal-content troca-funcionario-modal-content">
+                <div class="terceiro-modal-header faltas-modal-header">
+                    <h3><i class="fa-solid fa-user-pen"></i> Troca de Motorista / Auxiliar</h3>
+                    <button type="button" id="btnFecharTrocaFuncionario" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="terceiro-modal-subtitle" id="trocaFuncionarioContexto"></div>
+                <div class="terceiro-form-grid troca-funcionario-form-grid">
+                    <div class="form-group">
+                        <label for="trocaFuncionarioTipo">Tipo</label>
+                        <select id="trocaFuncionarioTipo" class="glass-input">
+                            <option value="TODOS">Todos</option>
+                            <option value="motorista">Motorista</option>
+                            <option value="auxiliar">Auxiliar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="trocaFuncionarioMotivo">Motivo</label>
+                        <select id="trocaFuncionarioMotivo" class="glass-input">
+                            ${TROCA_FUNCIONARIO_MOTIVOS.map(motivo => `<option value="${motivo}">${motivo}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="trocaFuncionarioOrigemTexto">Funcionario que saiu</label>
+                        <input type="text" id="trocaFuncionarioOrigemTexto" class="glass-input" placeholder="Digite nome, rota ou placa">
+                        <input type="hidden" id="trocaFuncionarioOrigem">
+                        <div id="trocaFuncionarioOrigemSugestoes" class="faltas-suggestions hidden"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="trocaFuncionarioSubstitutoTexto">Substituto em RESERVAS</label>
+                        <input type="text" id="trocaFuncionarioSubstitutoTexto" class="glass-input" placeholder="Digite nome, rota ou placa">
+                        <input type="hidden" id="trocaFuncionarioSubstituto">
+                        <div id="trocaFuncionarioSubstitutoSugestoes" class="faltas-suggestions hidden"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="trocaFuncionarioComplemento">Detalhe</label>
+                        <input type="text" id="trocaFuncionarioComplemento" class="glass-input" placeholder="Opcional">
+                    </div>
+                    <button type="button" id="btnAplicarTrocaFuncionario" class="btn-glass btn-green faltas-aplicar-btn">
+                        <i class="fa-solid fa-check"></i> Aplicar troca
+                    </button>
+                </div>
+                <div class="faltas-modal-grid">
+                    <div class="faltas-modal-panel">
+                        <h4>Escala atual</h4>
+                        <div class="terceiro-table-wrap">
+                            <table class="data-grid faltas-table">
+                                <thead>
+                                    <tr>
+                                        <th>ATIVIDADE</th>
+                                        <th>FUNCAO</th>
+                                        <th>FUNCIONARIO</th>
+                                        <th>ROTA</th>
+                                        <th>PLACA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyTrocaFuncionarioOrigem"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="faltas-modal-panel">
+                        <h4>Reservas disponiveis</h4>
+                        <div class="terceiro-table-wrap">
+                            <table class="data-grid faltas-table">
+                                <thead>
+                                    <tr>
+                                        <th>FUNCAO</th>
+                                        <th>FUNCIONARIO</th>
+                                        <th>ROTA</th>
+                                        <th>PLACA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyTrocaFuncionarioReservas"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('#btnFecharTrocaFuncionario')) {
+                modal.classList.add('hidden');
+            }
+        });
+        modal.querySelector('#trocaFuncionarioTipo').addEventListener('change', () => {
+            modal.querySelector('#trocaFuncionarioOrigem').value = '';
+            modal.querySelector('#trocaFuncionarioOrigemTexto').value = '';
+            modal.querySelector('#trocaFuncionarioSubstituto').value = '';
+            modal.querySelector('#trocaFuncionarioSubstitutoTexto').value = '';
+            carregarTrocaFuncionarioModal();
+        });
+        modal.querySelector('#trocaFuncionarioOrigemTexto').addEventListener('input', () => {
+            modal.querySelector('#trocaFuncionarioOrigem').value = '';
+            modal.querySelector('#trocaFuncionarioSubstituto').value = '';
+            modal.querySelector('#trocaFuncionarioSubstitutoTexto').value = '';
+            carregarTrocaFuncionarioModal();
+        });
+        modal.querySelector('#trocaFuncionarioSubstitutoTexto').addEventListener('input', () => {
+            modal.querySelector('#trocaFuncionarioSubstituto').value = '';
+            carregarTrocaFuncionarioModal();
+        });
+        modal.querySelector('#btnAplicarTrocaFuncionario').addEventListener('click', aplicarTrocaFuncionario);
+
+        modal.addEventListener('click', (e) => {
+            const sugestao = e.target.closest('.troca-funcionario-origem-sugestao');
+            if (sugestao) selecionarOrigemTrocaFuncionario(sugestao.dataset.origem || '');
+
+            const sugestaoSubstituto = e.target.closest('.troca-funcionario-substituto-sugestao');
+            if (sugestaoSubstituto) selecionarSubstitutoTrocaFuncionario(sugestaoSubstituto.dataset.origem || '');
+        });
+
+        return modal;
+    }
+
+    async function abrirModalTrocaFuncionario() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return alert('Abra uma semana e um dia antes de trocar funcionario.');
+
+        const modal = ensureModalTrocaFuncionario();
+        modal.querySelector('#trocaFuncionarioContexto').textContent = `${contexto.dia} - ${contexto.dataBR}`;
+        modal.querySelector('#trocaFuncionarioTipo').value = 'TODOS';
+        modal.querySelector('#trocaFuncionarioOrigem').value = '';
+        modal.querySelector('#trocaFuncionarioOrigemTexto').value = '';
+        modal.querySelector('#trocaFuncionarioSubstituto').value = '';
+        modal.querySelector('#trocaFuncionarioSubstitutoTexto').value = '';
+        modal.querySelector('#trocaFuncionarioMotivo').value = 'FALTA';
+        modal.querySelector('#trocaFuncionarioComplemento').value = '';
+        modal.classList.remove('hidden');
+        carregarTrocaFuncionarioModal();
+    }
+
+    function coletarFuncionariosTrocaOrigem() {
+        const secoes = [
+            { id: 'tbodyPadrao', label: 'PADRAO' },
+            { id: 'tbodyTransferencia', label: 'TRANSFERENCIA CD' },
+            { id: 'tbodyEquipamento', label: 'EQUIPAMENTO' }
+        ];
+        const funcionarios = [];
+
+        secoes.forEach(secao => {
+            document.querySelectorAll(`#${secao.id} tr[data-id][data-tabela]`).forEach(tr => {
+                ['motorista', 'auxiliar'].forEach(funcao => {
+                    const input = tr.querySelector(`input[data-key="${funcao}"]`);
+                    const nome = getNomeFuncionarioExibicao(input?.value);
+                    if (!normalizeString(nome)) return;
+
+                    funcionarios.push({
+                        origem: `${tr.dataset.tabela}:${tr.dataset.id}:${funcao}`,
+                        tabela: tr.dataset.tabela,
+                        id: tr.dataset.id,
+                        funcao,
+                        funcaoLabel: funcao === 'motorista' ? 'MOTORISTA' : 'AUXILIAR',
+                        nome,
+                        atividade: secao.label,
+                        rota: cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true }),
+                        placa: tr.querySelector('input[data-key="placa"]')?.value || '',
+                        modelo: tr.querySelector('input[data-key="modelo"]')?.value || ''
+                    });
+                });
+            });
+        });
+
+        return funcionarios.sort((a, b) => {
+            const rota = String(a.rota || '').localeCompare(String(b.rota || ''), 'pt-BR', { numeric: true });
+            if (rota !== 0) return rota;
+            return a.nome.localeCompare(b.nome, 'pt-BR');
+        });
+    }
+
+    function coletarReservasTrocaFuncionario(funcaoFiltro = '') {
+        const reservas = [];
+        document.querySelectorAll('#tbodyReservas tr[data-id][data-tabela]').forEach(tr => {
+            ['motorista', 'auxiliar'].forEach(funcao => {
+                if (funcaoFiltro && funcao !== funcaoFiltro) return;
+                const input = tr.querySelector(`input[data-key="${funcao}"]`);
+                const nome = getNomeFuncionarioExibicao(input?.value);
+                if (!normalizeString(nome)) return;
+
+                reservas.push({
+                    origem: `${tr.dataset.tabela}:${tr.dataset.id}:${funcao}`,
+                    tabela: tr.dataset.tabela,
+                    id: tr.dataset.id,
+                    funcao,
+                    funcaoLabel: funcao === 'motorista' ? 'MOTORISTA' : 'AUXILIAR',
+                    nome,
+                    rota: cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true }),
+                    placa: tr.querySelector('input[data-key="placa"]')?.value || '',
+                    outroMotorista: getNomeFuncionarioExibicao(tr.querySelector('input[data-key="motorista"]')?.value),
+                    outroAuxiliar: getNomeFuncionarioExibicao(tr.querySelector('input[data-key="auxiliar"]')?.value)
+                });
+            });
+        });
+
+        return reservas.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    }
+
+    function carregarTrocaFuncionarioModal() {
+        const modal = ensureModalTrocaFuncionario();
+        const filtroTipo = modal.querySelector('#trocaFuncionarioTipo')?.value || 'TODOS';
+        const inputOrigemTexto = modal.querySelector('#trocaFuncionarioOrigemTexto');
+        const inputOrigem = modal.querySelector('#trocaFuncionarioOrigem');
+        const sugestoesOrigem = modal.querySelector('#trocaFuncionarioOrigemSugestoes');
+        const inputSubstitutoTexto = modal.querySelector('#trocaFuncionarioSubstitutoTexto');
+        const inputSubstituto = modal.querySelector('#trocaFuncionarioSubstituto');
+        const sugestoesSubstituto = modal.querySelector('#trocaFuncionarioSubstitutoSugestoes');
+        const tbodyOrigem = modal.querySelector('#tbodyTrocaFuncionarioOrigem');
+        const tbodyReservas = modal.querySelector('#tbodyTrocaFuncionarioReservas');
+        const origemSelecionadaAtual = inputOrigem?.value || '';
+        const termoOrigem = origemSelecionadaAtual ? '' : normalizeString(inputOrigemTexto?.value);
+        const origens = coletarFuncionariosTrocaOrigem()
+            .filter(item => filtroTipo === 'TODOS' || item.funcao === filtroTipo)
+            .filter(item => !termoOrigem
+                || normalizeString(item.nome).includes(termoOrigem)
+                || normalizeString(item.funcaoLabel).includes(termoOrigem)
+                || normalizeString(item.rota).includes(termoOrigem)
+                || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termoOrigem)));
+
+        if (inputOrigem.value && !origens.some(item => item.origem === inputOrigem.value)) {
+            inputOrigem.value = '';
+        }
+
+        const origemSelecionada = coletarFuncionariosTrocaOrigem().find(item => item.origem === inputOrigem.value);
+        const substitutoSelecionadoAtual = inputSubstituto?.value || '';
+        const termoSubstituto = substitutoSelecionadoAtual ? '' : normalizeString(inputSubstitutoTexto?.value);
+        const reservas = coletarReservasTrocaFuncionario(origemSelecionada?.funcao || '')
+            .filter(item => !termoSubstituto
+                || normalizeString(item.nome).includes(termoSubstituto)
+                || normalizeString(item.funcaoLabel).includes(termoSubstituto)
+                || normalizeString(item.rota).includes(termoSubstituto)
+                || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termoSubstituto)));
+
+        if (inputSubstituto.value && !reservas.some(item => item.origem === inputSubstituto.value)) {
+            inputSubstituto.value = '';
+        }
+
+        sugestoesOrigem.innerHTML = origens.slice(0, 35).map(item => `
+            <button type="button" class="faltas-suggestion-item troca-funcionario-origem-sugestao ${item.origem === inputOrigem.value ? 'selected' : ''}" data-origem="${escapeAttribute(item.origem)}">
+                <strong>${escapeAttribute(item.nome)}</strong>
+                <span>${escapeAttribute(item.funcaoLabel)}${item.rota ? ` - Rota ${escapeAttribute(item.rota)}` : ''}${item.placa ? ` - ${escapeAttribute(item.placa)}` : ''}</span>
+            </button>
+        `).join('');
+        sugestoesOrigem.classList.toggle('hidden', !inputOrigemTexto.value || origens.length === 0 || Boolean(inputOrigem.value));
+
+        sugestoesSubstituto.innerHTML = reservas.slice(0, 35).map(item => `
+            <button type="button" class="faltas-suggestion-item troca-funcionario-substituto-sugestao ${item.origem === inputSubstituto.value ? 'selected' : ''}" data-origem="${escapeAttribute(item.origem)}">
+                <strong>${escapeAttribute(item.nome)}</strong>
+                <span>${escapeAttribute(item.funcaoLabel)}${item.rota ? ` - Reserva rota ${escapeAttribute(item.rota)}` : ''}${item.placa ? ` - ${escapeAttribute(item.placa)}` : ''}</span>
+            </button>
+        `).join('');
+        sugestoesSubstituto.classList.toggle('hidden', !inputSubstitutoTexto.value || reservas.length === 0 || Boolean(inputSubstituto.value));
+
+        tbodyOrigem.innerHTML = origens.length
+            ? origens.map(item => `
+                <tr>
+                    <td>${escapeAttribute(item.atividade)}</td>
+                    <td>${escapeAttribute(item.funcaoLabel)}</td>
+                    <td>${escapeAttribute(item.nome)}</td>
+                    <td>${escapeAttribute(item.rota || '')}</td>
+                    <td>${escapeAttribute(item.placa || '')}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="5" style="text-align:center;">Nenhum motorista ou auxiliar na escala atual.</td></tr>';
+
+        tbodyReservas.innerHTML = reservas.length
+            ? reservas.map(item => `
+                <tr>
+                    <td>${escapeAttribute(item.funcaoLabel)}</td>
+                    <td>${escapeAttribute(item.nome)}</td>
+                    <td>${escapeAttribute(item.rota || '')}</td>
+                    <td>${escapeAttribute(item.placa || '')}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="4" style="text-align:center;">Nenhum substituto disponivel em RESERVAS para esta funcao.</td></tr>';
+    }
+
+    function selecionarOrigemTrocaFuncionario(origemSelecionada) {
+        const modal = ensureModalTrocaFuncionario();
+        const funcionario = coletarFuncionariosTrocaOrigem().find(item => item.origem === origemSelecionada);
+        if (!funcionario) return;
+
+        modal.querySelector('#trocaFuncionarioOrigem').value = funcionario.origem;
+        modal.querySelector('#trocaFuncionarioOrigemTexto').value = `${funcionario.nome}${funcionario.rota ? ` - Rota ${funcionario.rota}` : ''}${funcionario.placa ? ` - ${funcionario.placa}` : ''}`;
+        modal.querySelector('#trocaFuncionarioTipo').value = funcionario.funcao;
+        modal.querySelector('#trocaFuncionarioSubstituto').value = '';
+        modal.querySelector('#trocaFuncionarioSubstitutoTexto').value = '';
+        modal.querySelector('#trocaFuncionarioOrigemSugestoes').classList.add('hidden');
+        carregarTrocaFuncionarioModal();
+    }
+
+    function selecionarSubstitutoTrocaFuncionario(origemSelecionada) {
+        const modal = ensureModalTrocaFuncionario();
+        const origem = coletarFuncionariosTrocaOrigem().find(item => item.origem === (modal.querySelector('#trocaFuncionarioOrigem')?.value || ''));
+        const substituto = coletarReservasTrocaFuncionario(origem?.funcao || '').find(item => item.origem === origemSelecionada);
+        if (!substituto) return;
+
+        modal.querySelector('#trocaFuncionarioSubstituto').value = substituto.origem;
+        modal.querySelector('#trocaFuncionarioSubstitutoTexto').value = `${substituto.nome}${substituto.rota ? ` - Reserva rota ${substituto.rota}` : ''}${substituto.placa ? ` - ${substituto.placa}` : ''}`;
+        modal.querySelector('#trocaFuncionarioSubstitutoSugestoes').classList.add('hidden');
+        carregarTrocaFuncionarioModal();
+    }
+
+    async function aplicarTrocaFuncionario() {
+        const contexto = getDataEscalaAberta();
+        if (!contexto) return;
+
+        const modal = ensureModalTrocaFuncionario();
+        const origemSelecionada = modal.querySelector('#trocaFuncionarioOrigem')?.value || '';
+        const substitutoSelecionado = modal.querySelector('#trocaFuncionarioSubstituto')?.value || '';
+        const origem = coletarFuncionariosTrocaOrigem().find(item => item.origem === origemSelecionada);
+        const substituto = coletarReservasTrocaFuncionario(origem?.funcao || '').find(item => item.origem === substitutoSelecionado);
+
+        if (!origem) return alert('Selecione o motorista ou auxiliar que saiu.');
+        if (!substituto) return alert('Selecione um substituto disponivel na secao RESERVAS.');
+
+        const motivoBase = cleanImportValue(modal.querySelector('#trocaFuncionarioMotivo')?.value) || 'FALTA';
+        const complemento = cleanImportValue(modal.querySelector('#trocaFuncionarioComplemento')?.value);
+        const motivo = complemento ? `${motivoBase} - ${complemento}` : motivoBase;
+        const moverParaReserva = normalizeString(motivoBase) === 'RESERVA';
+        const campoFalta = origem.funcao === 'motorista' ? 'motorista_ausente' : 'auxiliar_ausente';
+        const campoMotivo = origem.funcao === 'motorista' ? 'motivo_motorista' : 'motivo_auxiliar';
+        const anotacaoOrigem = getCellNote(origem.tabela, origem.id, origem.funcao);
+        const anotacaoSubstituto = getCellNote(substituto.tabela, substituto.id, substituto.funcao);
+        const sequenciaRota = origem.rota ? await getSequenciaTrocaVeiculo(contexto, origem.rota) : [];
+        const idsTroca = sequenciaRota
+            .filter(item => normalizeString(item[origem.funcao]) === normalizeString(origem.nome))
+            .map(item => item.id);
+        if (!idsTroca.includes(origem.id)) idsTroca.unshift(origem.id);
+
+        let faltaInserida = null;
+
+        if (!moverParaReserva) {
+            const payloadFalta = comAuditoria({
+                semana_nome: contexto.semana,
+                data_escala: contexto.dataISO,
+                filial: getFilialEscala(),
+                [campoFalta]: origem.nome,
+                [campoMotivo]: motivo
+            });
+
+            const { data, error: insertError } = await supabaseClient
+                .from('faltas_afastamentos')
+                .insert([payloadFalta])
+                .select('id')
+                .single();
+
+            if (insertError) {
+                console.error('Erro ao lancar ausencia na troca:', insertError);
+                return alert('Erro ao lancar ausencia: ' + insertError.message);
+            }
+
+            faltaInserida = data;
+        }
+
+        const { error: updateOrigemError } = await supabaseClient
+            .from(origem.tabela)
+            .update(comAuditoria({ [origem.funcao]: substituto.nome }))
+            .in('id', idsTroca);
+
+        if (updateOrigemError) {
+            if (faltaInserida?.id) await supabaseClient.from('faltas_afastamentos').delete().eq('id', faltaInserida.id);
+            console.error('Erro ao substituir funcionario:', updateOrigemError);
+            return alert('Erro ao substituir funcionario: ' + updateOrigemError.message);
+        }
+
+        const reservaUpdate = { [substituto.funcao]: moverParaReserva ? origem.nome : null };
+        const reservaRow = document.querySelector(`#tbodyReservas tr[data-id="${CSS.escape(String(substituto.id))}"]`);
+        const outroCampo = substituto.funcao === 'motorista' ? 'auxiliar' : 'motorista';
+        const outroValor = getNomeFuncionarioExibicao(reservaRow?.querySelector(`input[data-key="${outroCampo}"]`)?.value);
+        if (!moverParaReserva && !normalizeString(outroValor)) reservaUpdate.rota = null;
+
+        const { error: limparReservaError } = await supabaseClient
+            .from(substituto.tabela)
+            .update(comAuditoria(reservaUpdate))
+            .eq('id', substituto.id);
+
+        if (limparReservaError) {
+            console.error('Erro ao remover substituto da reserva:', limparReservaError);
+            return alert('Troca aplicada, mas nao foi possivel atualizar a reserva: ' + limparReservaError.message);
+        }
+
+        if (anotacaoOrigem && moverParaReserva) {
+            setCellNote(origem.tabela, origem.id, origem.funcao, '');
+            setCellNote(substituto.tabela, substituto.id, substituto.funcao, anotacaoOrigem);
+        } else if (anotacaoOrigem && faltaInserida?.id) {
+            setCellNote(origem.tabela, origem.id, origem.funcao, '');
+            setCellNote('faltas_afastamentos', faltaInserida.id, campoFalta, anotacaoOrigem);
+        }
+        if (anotacaoSubstituto) {
+            setCellNote(substituto.tabela, substituto.id, substituto.funcao, '');
+            setCellNote(origem.tabela, origem.id, origem.funcao, anotacaoSubstituto);
+        }
+
+        await carregarDadosDia(contexto.dia, contexto.semana);
+        carregarTrocaFuncionarioModal();
+        const destinoOrigem = moverParaReserva ? 'movido para RESERVAS' : `lancado em ${motivo}`;
+        alert(`${origem.nome} ${destinoOrigem} e substituido por ${substituto.nome} em ${idsTroca.length} linha(s) futuras da rota.`);
+    }
+
     const trocaVeiculoSortState = { key: 'placa', direction: 'asc' };
     let trocaVeiculoReloadTimer = null;
 
@@ -5701,7 +6141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data, error } = await aplicarFiltroFilial(
             supabaseClient
                 .from('escala')
-                .select('id, data_escala, rota, status, placa, modelo')
+                .select('id, data_escala, rota, status, placa, modelo, motorista, auxiliar')
                 .in('data_escala', datasSemana)
         ).order('data_escala').order('id');
 

@@ -660,6 +660,13 @@ body.escala-menu-oculto .menu-floating-toggle i {
     background: linear-gradient(135deg, #dc3545, #8f1722);
 }
 
+.floating-troca-funcionario-btn {
+    right: 100px;
+    bottom: 204px;
+    min-width: 168px;
+    background: linear-gradient(135deg, #6f42c1, #45247a);
+}
+
 /* === MODAL TERCEIRO POR ROTA === */
 .terceiro-modal {
     position: fixed;
@@ -808,6 +815,21 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .faltas-form-grid {
     grid-template-columns: minmax(130px, 170px) minmax(260px, 1.3fr) minmax(140px, 180px) minmax(180px, 0.8fr) auto;
+    align-items: end;
+}
+
+.troca-funcionario-modal-content {
+    width: min(1480px, 98vw);
+}
+
+.troca-funcionario-form-grid {
+    grid-template-columns:
+        minmax(120px, 150px)
+        minmax(140px, 180px)
+        minmax(280px, 1.15fr)
+        minmax(280px, 1.15fr)
+        minmax(180px, 0.85fr)
+        auto;
     align-items: end;
 }
 
@@ -1414,7 +1436,13 @@ body.escala-menu-oculto .menu-floating-toggle i {
         bottom: 146px;
     }
 
-    .terceiro-form-grid {
+    .floating-troca-funcionario-btn {
+        right: 100px;
+        bottom: 204px;
+    }
+
+    .terceiro-form-grid,
+    .troca-funcionario-form-grid {
         grid-template-columns: 1fr;
     }
 
