@@ -38,6 +38,7 @@ const TacografoUI = {
         this.statusFilterOptions = document.getElementById('filterStatusOptions');
         this.statusFilterText = document.getElementById('filterStatusText');
 
+        this.guiaGruFilter = document.getElementById('filterGuiaGru');
         this.vencIniFilter = document.getElementById('filterVencIni');
         this.vencFimFilter = document.getElementById('filterVencFim');
         this.btnAtualizar = document.getElementById('btnAtualizar');
@@ -90,6 +91,7 @@ const TacografoUI = {
             this.renderGrid();
         });
 
+        this.guiaGruFilter?.addEventListener('change', () => this.renderGrid());
         this.vencIniFilter.addEventListener('change', () => this.renderGrid());
         this.vencFimFilter.addEventListener('change', () => this.renderGrid());
         
@@ -263,28 +265,35 @@ const TacografoUI = {
         const selectedFiliais = Array.from(this.filialFilterOptions.querySelectorAll('.filial-checkbox:checked')).map(cb => cb.value);
         const selectedStatuses = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked')).map(cb => cb.value);
 
-        const vencIni = this.vencIniFilter.value;
-        const vencFim = this.vencFimFilter.value;
+        const vencIni      = this.vencIniFilter.value;
+        const vencFim      = this.vencFimFilter.value;
+        const guiaGruFiltro = this.guiaGruFilter?.value || '';
 
         let filtered = this.data.filter(item => {
-            const matchSearch = item.placa.includes(term) || 
-                               item.modelo.toUpperCase().includes(term) || 
+            const matchSearch = item.placa.includes(term) ||
+                               item.modelo.toUpperCase().includes(term) ||
                                (item.renavan || '').toUpperCase().includes(term);
             const matchFilial = selectedFiliais.length === 0 || selectedFiliais.includes(item.filial);
             const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+
+            let matchGuiaGru = true;
+            if (guiaGruFiltro === 'PAGO') {
+                matchGuiaGru = item.guia_gru === 'PAGO';
+            } else if (guiaGruFiltro === 'NAO_INFORMADO') {
+                matchGuiaGru = !item.guia_gru || item.guia_gru === '';
+            }
 
             let matchVenc = true;
             if (vencIni || vencFim) {
                 if (!item.data_vencimento) {
                     matchVenc = false;
                 } else {
-                    // Compara strings YYYY-MM-DD diretamente
                     if (vencIni && item.data_vencimento < vencIni) matchVenc = false;
                     if (vencFim && item.data_vencimento > vencFim) matchVenc = false;
                 }
             }
 
-            return matchSearch && matchFilial && matchStatus && matchVenc;
+            return matchSearch && matchFilial && matchStatus && matchGuiaGru && matchVenc;
         });
 
         this.updateSortIcons();
