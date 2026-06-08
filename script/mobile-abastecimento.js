@@ -359,7 +359,7 @@ async function salvarAbastecimento(e) {
         // Dados do Bico 2 (opcional)
         const bicoId2 = document.getElementById('saidaBico2').value;
         const litros2 = parseLitrosMobile(document.getElementById('saidaLitros2').value);
-        const dataReferencia = document.getElementById('saidaDataReferencia')?.value || null;
+        const dataReferencia = null; // campo disponível apenas no modo desktop
 
         if (!placa || !km) {
             alert('Preencha a Placa e o KM.');
@@ -435,8 +435,6 @@ async function salvarAbastecimento(e) {
         document.getElementById('saidaLitros').value = '';
         document.getElementById('saidaBico2').value = '';
         document.getElementById('saidaLitros2').value = '';
-        const inputDataRef = document.getElementById('saidaDataReferencia');
-        if (inputDataRef) inputDataRef.value = '';
         
         // Esconde campos do bico 2
         const camposBico2 = document.getElementById('camposBico2');
