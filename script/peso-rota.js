@@ -1786,9 +1786,6 @@ function aplicarImportacaoRoteiro(importados) {
         row.placa = item.placa || row.placa;
         row.motorista = item.motorista || row.motorista;
         row.auxiliar = item.auxiliar || row.auxiliar;
-        row.peso_carga = null;
-        row.qtd_caixas = null;
-        row.qtd_clientes = null;
         row.status_percentual = calcularPercentual(row);
         aplicadas += 1;
     });
