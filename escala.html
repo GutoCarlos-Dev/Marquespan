@@ -331,45 +331,50 @@
     </div>
 
     <!-- Modal Gerar Boleta -->
-    <div id="modalBoleta" class="panel-backdrop hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-        <div class="panel" style="background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                <h3 style="margin: 0;"><i class="fas fa-file-invoice"></i> Gerar Boleta</h3>
-                <button class="close-button" id="btnCloseModalBoleta" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    <div id="modalBoleta" class="terceiro-modal hidden">
+        <div class="terceiro-modal-content boleta-modal-content">
+            <div class="terceiro-modal-header boleta-modal-header">
+                <h3><i class="fas fa-file-invoice"></i> Gerar Boleta</h3>
+                <button class="terceiro-modal-close" id="btnCloseModalBoleta" type="button" title="Fechar">&times;</button>
             </div>
-            <div class="panel-body">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="filtroBoletaTipo" style="display: block; margin-bottom: 5px; font-weight: bold;">Tipo de Boleta</label>
-                    <select id="filtroBoletaTipo" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="boleta-modal-body">
+                <div class="boleta-form-grid">
+                    <div class="terceiro-field-card">
+                        <label for="filtroBoletaTipo">Tipo de Boleta</label>
+                        <select id="filtroBoletaTipo" class="glass-input">
                         <option value="MOTORISTA">Motorista / Auxiliar</option>
                         <option value="ROTA">Rota</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="filtroBoletaValor" style="display: block; margin-bottom: 5px; font-weight: bold;">Selecionar:</label>
-                    <input type="text" id="filtroBoletaValor" list="listaBoletaOpcoes" placeholder="Digite para buscar..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <div class="terceiro-field-card boleta-field-wide">
+                        <label for="filtroBoletaValor">Selecionar</label>
+                        <input type="text" id="filtroBoletaValor" class="glass-input" list="listaBoletaOpcoes" placeholder="Digite para buscar...">
                     <datalist id="listaBoletaOpcoes"></datalist>
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="boletaData" style="display: block; margin-bottom: 5px; font-weight: bold;">Data de Referência</label>
-                    <input type="date" id="boletaData" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <div class="terceiro-field-card">
+                        <label for="boletaData">Data de Referência</label>
+                        <input type="date" id="boletaData" class="glass-input">
                 </div>
-                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div class="boleta-inline-grid">
                     <div>
-                        <label for="boletaPlaca" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em;">Placa</label>
-                        <input type="text" id="boletaPlaca" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <label for="boletaPlaca">Placa</label>
+                        <input type="text" id="boletaPlaca" class="glass-input">
                     </div>
                     <div>
-                        <label for="boletaModelo" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em;">Modelo</label>
-                        <input type="text" id="boletaModelo" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <label for="boletaModelo">Modelo</label>
+                        <input type="text" id="boletaModelo" class="glass-input">
                     </div>
                     <div>
-                        <label for="boletaRota" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em;">Rota</label>
-                        <input type="text" id="boletaRota" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <label for="boletaRota">Rota</label>
+                        <input type="text" id="boletaRota" class="glass-input">
                     </div>
                 </div>
-                <div class="form-actions" style="justify-content: flex-end; display: flex;">
-                    <button id="btnGerarBoletaPDF" class="btn-custom btn-pdf"><i class="fa-solid fa-file-pdf"></i> Gerar PDF</button>
+                </div>
+                <div class="boleta-modal-actions">
+                    <button id="btnGerarBoletaPDF" class="boleta-pdf-btn" type="button">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Gerar PDF</span>
+                    </button>
                 </div>
             </div>
         </div>
