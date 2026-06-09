@@ -67,6 +67,33 @@ CREATE INDEX IF NOT EXISTS idx_pedagios_importacoes_created_at
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.pedagios_importacoes TO authenticated, anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.pedagios_lancamentos TO authenticated, anon;
 
+ALTER TABLE public.pedagios_importacoes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "pedagios_importacoes_select_table" ON public.pedagios_importacoes;
+CREATE POLICY "pedagios_importacoes_select_table"
+ON public.pedagios_importacoes FOR SELECT
+TO authenticated, anon
+USING (true);
+
+DROP POLICY IF EXISTS "pedagios_importacoes_insert_table" ON public.pedagios_importacoes;
+CREATE POLICY "pedagios_importacoes_insert_table"
+ON public.pedagios_importacoes FOR INSERT
+TO authenticated, anon
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "pedagios_importacoes_update_table" ON public.pedagios_importacoes;
+CREATE POLICY "pedagios_importacoes_update_table"
+ON public.pedagios_importacoes FOR UPDATE
+TO authenticated, anon
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "pedagios_importacoes_delete_table" ON public.pedagios_importacoes;
+CREATE POLICY "pedagios_importacoes_delete_table"
+ON public.pedagios_importacoes FOR DELETE
+TO authenticated, anon
+USING (true);
+
 CREATE INDEX IF NOT EXISTS idx_pedagios_lancamentos_duplicidade
     ON public.pedagios_lancamentos (
         empresa_id,

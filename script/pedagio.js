@@ -1360,17 +1360,16 @@ const PedagioUI = {
                         const marcaVeiculo = veiculo?.tipo || veiculo?.marca || 'N/A';
                         const idxCateg = this.getIndiceColunaPlanilha(headers, layout, ['CATEGORIA', 'EIXOS_COBRADO', 'EIXOCOBRADO', 'CATEG']);
                         
-                        let categoriaEixosRaw = (idxCateg !== -1 && row[idxCateg]) ? parseInt(row[idxCateg]) : (veiculo.eixos || 2);
+                        const categoriaPlanilha = idxCateg !== -1 ? row[idxCateg] : null;
+                        const categoriaEixosRaw = categoriaPlanilha !== null
+                            && categoriaPlanilha !== undefined
+                            && String(categoriaPlanilha).trim() !== ''
+                            ? parseInt(categoriaPlanilha, 10)
+                            : (veiculo.eixos || 2);
                         let categoriaEixos = categoriaEixosRaw;
 
                         // Mapeamento de Categorias SEM PARAR para Número de Eixos
                         const mapaCategorias = {
-                            1: 2,  // Carro (2 eixos)
-                            2: 2,  // Caminhão 2 eixos
-                            3: 3,  // Caminhão 3 eixos
-                            4: 4,  // Caminhão 4 eixos
-                            5: 5,  // Caminhão 5 eixos
-                            6: 6,  // Caminhão 6 eixos
                             61: 7, // Caminhão 7 eixos
                             62: 8, // Caminhão 8 eixos
                             63: 9, // Caminhão 9 eixos
