@@ -376,12 +376,6 @@ function atualizarPbtPorTaraECapacidade() {
     pbt.value = (tara + capacidadeCarga).toFixed(2);
 }
 
-function configurarObrigatoriedadeFotos(isNovo) {
-    document.querySelectorAll('.veiculo-foto-input[data-required-new="true"]').forEach(input => {
-        input.required = isNovo;
-    });
-}
-
 function abrirModalVeiculo(veiculo = null) {
     const modal = document.getElementById('modalVeiculo');
     const form = document.getElementById('formVeiculo');
@@ -390,7 +384,6 @@ function abrirModalVeiculo(veiculo = null) {
     if (!modal || !form) return;
 
     form.reset();
-    configurarObrigatoriedadeFotos(!veiculo);
 
     if (veiculo) {
         title.textContent = 'Editar Veículo';
