@@ -2825,6 +2825,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function getTipoEscalaPlanejamento(row, rota) {
+        const tipoVeiculo = normalizeString(row?.tipo || getTipoVisualByPlaca(row?.placa));
+        const rotaNormalizada = normalizeString(rota);
+        if (tipoVeiculo.includes('EQUIP') || /^EQUIP\b/.test(rotaNormalizada)) return 'EQUIPAMENTO';
+        if (/^CD[\s-]*[A-Z]{2}\b/.test(rotaNormalizada)) return 'TRANSFERENCIA';
+
+        return 'PADRAO';
+    }
+
     async function atualizarAbasDiariasPeloPlanejamento() {
         const semana = selectSemana.value;
         if (!semana) return alert('Selecione uma semana antes de atualizar as abas diarias.');
@@ -2838,7 +2847,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert('Nao foi possivel identificar as datas da semana para atualizar as abas diarias.');
         }
 
-        if (!confirm(`Atualizar as abas diarias da ${semana} usando o planejamento atual?\n\nA secao PADRAO dos dias sera substituida. Transferencia, Equipamento, Reservas e Faltas nao serao alterados.`)) {
+        if (!confirm(`Atualizar as abas diarias da ${semana} usando o planejamento atual?\n\nAs secoes PADRAO, TRANSFERENCIA e EQUIPAMENTO serao substituidas. Reservas e Faltas nao serao alteradas.`)) {
             return;
         }
 
@@ -2871,7 +2880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         semana_nome: semana,
                         data_escala: dataObj.toISOString().split('T')[0],
                         filial: row.filial || getFilialEscala(),
-                        tipo_escala: 'PADRAO',
+                        tipo_escala: getTipoEscalaPlanejamento(row, rota),
                         placa,
                         modelo: getModeloVisualByPlaca(placa) || row.modelo || '',
                         rota,
@@ -2893,7 +2902,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .from('escala')
                     .delete()
                     .eq('filial', getFilialEscala())
-                    .eq('tipo_escala', 'PADRAO')
+                    .in('tipo_escala', ['PADRAO', 'TRANSFERENCIA', 'EQUIPAMENTO'])
                     .in('data_escala', datasAtualizar),
                 semana
             );
@@ -2910,7 +2919,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const activeDia = document.querySelector('.tab-btn.active')?.dataset.dia;
             if (activeDia) carregarDadosDia(activeDia, semana);
-            alert(`Abas diarias atualizadas com sucesso. ${inserts.length} registro(s) PADRAO gerado(s).`);
+            const totaisPorTipo = inserts.reduce((totais, item) => {
+                totais[item.tipo_escala] = (totais[item.tipo_escala] || 0) + 1;
+                return totais;
+            }, {});
+            alert(
+                `Abas diarias atualizadas com sucesso. ${inserts.length} registro(s) gerado(s): ` +
+                `${totaisPorTipo.PADRAO || 0} PADRAO, ` +
+                `${totaisPorTipo.TRANSFERENCIA || 0} TRANSFERENCIA e ` +
+                `${totaisPorTipo.EQUIPAMENTO || 0} EQUIPAMENTO.`
+            );
         } catch (err) {
             console.error('Erro ao atualizar abas diarias pelo planejamento:', err);
             alert('Erro ao atualizar abas diarias: ' + err.message);
