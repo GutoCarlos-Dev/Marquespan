@@ -1,5 +1,11 @@
 import { supabaseClient } from './supabase.js';
 
+const DIARIA_NIVEIS_PERMITIDOS = new Set([
+  'administrador',
+  'gerencia',
+  'lider_balanca'
+]);
+
 document.addEventListener('DOMContentLoaded', function() {
   // Carregar o menu
   fetch('menu.html')
@@ -111,7 +117,7 @@ async function controlarMenuPorNivel() {
     return;
   }
 
-  const nivel = usuario.nivel.toLowerCase();
+  const nivel = String(usuario.nivel || '').trim().toLowerCase();
   const allMenuItems = nav.querySelectorAll('a, .menu-group');
   allMenuItems.forEach(el => el.style.display = 'none'); // Esconde tudo por padrão
 
@@ -131,10 +137,13 @@ async function controlarMenuPorNivel() {
 
     if (error) throw error;
 
-    const paginasPermitidas = data ? data.paginas_permitidas || [] : [];
+    const paginasPermitidas = data ? [...(data.paginas_permitidas || [])] : [];
     // Adiciona dashboard e index como páginas sempre permitidas
     paginasPermitidas.push('dashboard.html', 'index.html');
-    if (paginasPermitidas.includes('escala.html') && !paginasPermitidas.includes('diaria.html')) {
+    const diariaIndex = paginasPermitidas.indexOf('diaria.html');
+    if (!DIARIA_NIVEIS_PERMITIDOS.has(nivel) && diariaIndex >= 0) {
+      paginasPermitidas.splice(diariaIndex, 1);
+    } else if (DIARIA_NIVEIS_PERMITIDOS.has(nivel) && diariaIndex < 0) {
       paginasPermitidas.push('diaria.html');
     }
 

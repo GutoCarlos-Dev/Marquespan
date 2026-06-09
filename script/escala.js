@@ -22,6 +22,11 @@ const ESCALA_NIVEIS_GERENCIAMENTO = new Set([
     'adm_logistica',
     'logistica'
 ]);
+const DIARIA_NIVEIS_PERMITIDOS = new Set([
+    'administrador',
+    'gerencia',
+    'lider_balanca'
+]);
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Página de Controle de Escala carregada.');
@@ -36,9 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Removido: Injeção de estilos via JavaScript (centralizado no escala.css)
 
-    const nivelUsuarioEscala = String(usuarioLogado.nivel || '').toLowerCase();
+    const nivelUsuarioEscala = String(usuarioLogado.nivel || '').trim().toLowerCase();
     const isAdministradorEscala = nivelUsuarioEscala === 'administrador';
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
+    const podeAcessarDiaria = DIARIA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
 
     const acessoPermitido = await verificarPermissaoPaginaEscala();
@@ -148,6 +154,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function aplicarRestricoesNivelEscala() {
+        if (btnDiaria) {
+            btnDiaria.classList.toggle('hidden', !podeAcessarDiaria);
+            btnDiaria.disabled = !podeAcessarDiaria;
+        }
+
         if (!isAdministradorEscala) {
             [btnImportarSemana, fileImportarSemana].forEach(element => {
                 if (!element) return;
@@ -7553,6 +7564,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnDiaria) {
         btnDiaria.addEventListener('click', () => {
+            if (!podeAcessarDiaria) {
+                alert('Seu nivel de acesso nao permite visualizar a Diaria.');
+                return;
+            }
             window.location.href = 'diaria.html';
         });
     }

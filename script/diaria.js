@@ -1,7 +1,5 @@
 import { supabaseClient } from './supabase.js';
 
-const DIARIA_PAGE_ID = 'diaria.html';
-const ESCALA_PAGE_ID = 'escala.html';
 const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
 const CACHE_DATAS = {};
 const diariaSortState = { key: 'nome', direction: 'asc' };
@@ -12,6 +10,11 @@ const NIVEIS_GERENCIAMENTO = new Set([
     'equipe_noturno',
     'adm_logistica',
     'logistica'
+]);
+const DIARIA_NIVEIS_PERMITIDOS = new Set([
+    'administrador',
+    'gerencia',
+    'lider_balanca'
 ]);
 
 let usuarioLogado = null;
@@ -41,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function getNivelUsuario() {
-    return String(usuarioLogado?.nivel || '').toLowerCase();
+    return String(usuarioLogado?.nivel || '').trim().toLowerCase();
 }
 
 function podeGerenciar() {
@@ -49,22 +52,7 @@ function podeGerenciar() {
 }
 
 async function verificarPermissaoPagina() {
-    if (getNivelUsuario() === 'administrador') return true;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('nivel_permissoes')
-            .select('paginas_permitidas')
-            .eq('nivel', getNivelUsuario())
-            .single();
-
-        if (error) throw error;
-        const paginas = data?.paginas_permitidas || [];
-        return paginas.includes(DIARIA_PAGE_ID) || paginas.includes(ESCALA_PAGE_ID);
-    } catch (error) {
-        console.error('Erro ao validar permissao da pagina diaria:', error);
-        return false;
-    }
+    return DIARIA_NIVEIS_PERMITIDOS.has(getNivelUsuario());
 }
 
 function configurarEventos() {
