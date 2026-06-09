@@ -171,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (podeGerenciarEscala) return;
 
         const idsSomenteGerencia = [
-            'btnDiaria',
             'btnImportarPlanejamento',
             'btnCopiarPlanejamento',
             'btnCopiarModeloPlanejamento',
