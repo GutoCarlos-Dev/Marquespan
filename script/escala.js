@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Removido: Injeção de estilos via JavaScript (centralizado no escala.css)
 
     const nivelUsuarioEscala = String(usuarioLogado.nivel || '').toLowerCase();
+    const isAdministradorEscala = nivelUsuarioEscala === 'administrador';
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
 
@@ -147,11 +148,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function aplicarRestricoesNivelEscala() {
+        if (!isAdministradorEscala) {
+            [btnImportarSemana, fileImportarSemana].forEach(element => {
+                if (!element) return;
+                element.disabled = true;
+                element.classList.add('hidden');
+                element.title = 'Disponivel apenas para administrador';
+            });
+        }
+
         if (podeGerenciarEscala) return;
 
         const idsSomenteGerencia = [
             'btnDiaria',
-            'btnImportarSemana',
             'btnImportarPlanejamento',
             'btnCopiarPlanejamento',
             'btnCopiarModeloPlanejamento',
@@ -2691,6 +2700,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function importarRoteiroSemana(e) {
+        if (!isAdministradorEscala) {
+            if (e?.target) e.target.value = '';
+            return alert('A importacao da semana esta disponivel apenas para o nivel administrador.');
+        }
+
         const file = e.target.files[0];
         if (!file) return;
 
@@ -7467,7 +7481,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         fileImportar.addEventListener('change', importarExcelPlanejamentoGlobal);
     }
     if (btnImportarSemana && fileImportarSemana) {
-        btnImportarSemana.addEventListener('click', () => fileImportarSemana.click());
+        btnImportarSemana.addEventListener('click', () => {
+            if (!isAdministradorEscala) {
+                return alert('A importacao da semana esta disponivel apenas para o nivel administrador.');
+            }
+            fileImportarSemana.click();
+        });
         fileImportarSemana.addEventListener('change', importarRoteiroSemana);
     }
 
