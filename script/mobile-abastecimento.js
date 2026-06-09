@@ -250,10 +250,16 @@ async function carregarMotoristas() {
 async function carregarDadosIniciais() {
     // Carregar Bicos e Bombas
     try {
-        const { data: bicos, error: errBicos } = await supabaseClient
+        let queryBicos = supabaseClient
             .from('bicos')
-            .select('id, nome, bomba_id, bombas(tanque_id, tanques(nome, tipo_combustivel))')
-            .order('nome');
+            .select('id, nome, bomba_id, bombas!inner(tanque_id, tanques!inner(nome, tipo_combustivel, filial))');
+
+        const filialUsuario = getUserFilial();
+        if (filialUsuario) {
+            queryBicos = queryBicos.eq('bombas.tanques.filial', filialUsuario);
+        }
+
+        const { data: bicos, error: errBicos } = await queryBicos.order('nome');
         
         if (errBicos) throw errBicos;
 
@@ -482,26 +488,10 @@ async function carregarHistoricoRecente() {
         const filialUsuario = getUserFilial();
         let queryHistorico = supabaseClient
             .from('saidas_combustivel')
-            .select('*');
+            .select('*, bicos!inner(bombas!inner(tanques!inner(filial)))');
 
         if (filialUsuario) {
-            const { data: veiculosFilial, error: erroVeiculos } = await supabaseClient
-                .from('veiculos')
-                .select('placa')
-                .eq('filial', filialUsuario);
-
-            if (erroVeiculos) throw erroVeiculos;
-
-            const placasPermitidas = (veiculosFilial || [])
-                .map(veiculo => veiculo.placa)
-                .filter(Boolean);
-
-            if (placasPermitidas.length === 0) {
-                lista.innerHTML = '<p style="text-align:center; color:#666;">Nenhum registro recente.</p>';
-                return;
-            }
-
-            queryHistorico = queryHistorico.in('veiculo_placa', placasPermitidas);
+            queryHistorico = queryHistorico.eq('bicos.bombas.tanques.filial', filialUsuario);
         }
 
         const { data, error } = await queryHistorico
@@ -553,36 +543,55 @@ async function carregarEstoque() {
 
     try {
         // 1. Buscar Tanques
-        const { data: tanques, error: errTanques } = await supabaseClient
+        let queryTanques = supabaseClient
             .from('tanques')
-            .select('id, nome, capacidade, tipo_combustivel')
-            .order('nome');
+            .select('id, nome, capacidade, tipo_combustivel, filial');
+
+        const filialUsuario = getUserFilial();
+        if (filialUsuario) {
+            queryTanques = queryTanques.eq('filial', filialUsuario);
+        }
+
+        const { data: tanques, error: errTanques } = await queryTanques.order('nome');
 
         if (errTanques) throw errTanques;
-        tanquesDisponiveis = tanques; // Salva para usar na distribuição
+        tanquesDisponiveis = tanques || []; // Salva para usar na distribuição
+        const tanqueIds = tanquesDisponiveis.map(tanque => tanque.id);
+
+        if (tanqueIds.length === 0) {
+            listaEstoque.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum tanque cadastrado para esta filial.</p>';
+            if (selectOrigem) selectOrigem.innerHTML = '<option value="">Nenhum tanque disponível</option>';
+            if (selectDestino) selectDestino.innerHTML = '<option value="">Nenhum tanque disponível</option>';
+            const distContainer = document.getElementById('distribuicao-container');
+            if (distContainer) distContainer.innerHTML = '';
+            await carregarHistoricoMovimentacao();
+            return;
+        }
 
         // 2. Buscar Entradas (Abastecimentos)
         const { data: entradas, error: errEntradas } = await supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total');
+            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
+            .in('tanque_id', tanqueIds);
         
         if (errEntradas) throw errEntradas;
 
         // 3. Buscar Saídas
         const { data: saidas, error: errSaidas } = await supabaseClient
             .from('saidas_combustivel')
-            .select('qtd_litros, data_hora, bicos(bombas(tanque_id))');
+            .select('qtd_litros, data_hora, bicos!inner(bombas!inner(tanque_id))')
+            .in('bicos.bombas.tanque_id', tanqueIds);
 
         if (errSaidas) throw errSaidas;
 
         // 4. Calcular Estoque
         const estoqueMap = new Map();
-        tanques.forEach(t => {
+        tanquesDisponiveis.forEach(t => {
             estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
         });
 
         const movimentosPorTanque = new Map();
-        tanques.forEach(t => movimentosPorTanque.set(Number(t.id), []));
+        tanquesDisponiveis.forEach(t => movimentosPorTanque.set(Number(t.id), []));
 
         entradas.forEach(e => {
             const tanqueId = Number(e.tanque_id);
@@ -913,19 +922,33 @@ async function carregarHistoricoMovimentacao() {
     lista.innerHTML = '<p style="text-align:center; color:#666;">Atualizando...</p>';
 
     try {
+        const filialUsuario = getUserFilial();
+
         // 1. Buscar Entradas e Ajustes (Tabela abastecimentos)
-        const { data: entradas, error: errEntradas } = await supabaseClient
+        let queryEntradas = supabaseClient
             .from('abastecimentos')
-            .select('id, data, numero_nota, qtd_litros, valor_litro, valor_total, usuario, tanques(nome)')
+            .select('id, data, numero_nota, qtd_litros, valor_litro, valor_total, usuario, tanques!inner(nome, filial)');
+
+        if (filialUsuario) {
+            queryEntradas = queryEntradas.eq('tanques.filial', filialUsuario);
+        }
+
+        const { data: entradas, error: errEntradas } = await queryEntradas
             .order('data', { ascending: false })
             .limit(20);
         
         if (errEntradas) throw errEntradas;
 
         // 2. Buscar Saídas (Tabela saidas_combustivel)
-        const { data: saidas, error: errSaidas } = await supabaseClient
+        let querySaidas = supabaseClient
             .from('saidas_combustivel')
-            .select('id, data_hora, veiculo_placa, qtd_litros, usuario, bicos(bombas(tanques(nome)))')
+            .select('id, data_hora, veiculo_placa, qtd_litros, usuario, bicos!inner(bombas!inner(tanques!inner(nome, filial)))');
+
+        if (filialUsuario) {
+            querySaidas = querySaidas.eq('bicos.bombas.tanques.filial', filialUsuario);
+        }
+
+        const { data: saidas, error: errSaidas } = await querySaidas
             .order('data_hora', { ascending: false })
             .limit(20);
 

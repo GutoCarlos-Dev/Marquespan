@@ -6996,20 +6996,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        filiaisCache = podeGerenciarEscala
+        const filialUsuario = usuarioLogado?.filial || '';
+        const podeVerTodasFiliais = isAdministradorEscala || (podeGerenciarEscala && filialUsuario === 'SP');
+
+        filiaisCache = podeVerTodasFiliais
             ? (data || [])
-            : (data || []).filter(filial => (filial.sigla || filial.nome || '') === (usuarioLogado?.filial || ''));
+            : (data || []).filter(filial => (filial.sigla || filial.nome || '') === filialUsuario);
         selectFilial.innerHTML = '<option value="">Selecione a Filial</option>' + filiaisCache.map(filial => {
             const value = filial.sigla || filial.nome || '';
             const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
             return `<option value="${escapeAttribute(value)}">${escapeAttribute(label)}</option>`;
         }).join('');
 
-        const filialUsuario = usuarioLogado?.filial || '';
         if (filialUsuario && Array.from(selectFilial.options).some(opt => opt.value === filialUsuario)) {
             selectFilial.value = filialUsuario;
         }
-        selectFilial.disabled = !podeGerenciarEscala && Boolean(filialUsuario);
+        selectFilial.disabled = !podeVerTodasFiliais && Boolean(filialUsuario);
     }
 
     const PLANNING_DAY_COLORS = {
