@@ -1277,6 +1277,138 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Mantem a secao RESERVAS alinhada ao cadastro e a escala do dia.
+    function getFuncaoReservaAutomatica(funcao) {
+        const funcaoNormalizada = normalizeString(funcao);
+        if (funcaoNormalizada.includes('MOTORISTA')) return 'motorista';
+        if (funcaoNormalizada.includes('AUXILIAR') || funcaoNormalizada.includes('AJUDANTE')) return 'auxiliar';
+        return '';
+    }
+
+    async function sincronizarReservasAutomaticas(semana, dataISO, dadosEscala, dadosFaltas) {
+        if (!podeGerenciarEscala || !semana || !dataISO || !getFilialEscala()) return dadosEscala;
+
+        const { data: funcionarios, error: funcionariosError } = await supabaseClient
+            .from('funcionario')
+            .select('nome, nome_completo, funcao, status')
+            .eq('filial', getFilialEscala())
+            .order('nome');
+
+        if (funcionariosError) throw funcionariosError;
+
+        const indisponiveis = new Set();
+        dadosEscala
+            .filter(item => item.tipo_escala !== 'RESERVA')
+            .forEach(item => {
+                [item.motorista, item.auxiliar, item.terceiro].forEach(nome => {
+                    const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+                    if (chave) indisponiveis.add(chave);
+                });
+            });
+
+        (dadosFaltas || []).forEach(item => {
+            [item.motorista_ausente, item.auxiliar_ausente].forEach(nome => {
+                const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+                if (chave) indisponiveis.add(chave);
+            });
+        });
+
+        const desejados = { motorista: new Map(), auxiliar: new Map() };
+        (funcionarios || [])
+            .filter(funcionario => normalizeString(funcionario.status) === 'ATIVO')
+            .forEach(funcionario => {
+                const campo = getFuncaoReservaAutomatica(funcionario.funcao);
+                const nome = getNomeFuncionarioExibicao(funcionario.nome || funcionario.nome_completo);
+                const chave = normalizeString(nome);
+                if (!campo || !chave || indisponiveis.has(chave)) return;
+                desejados[campo].set(chave, nome);
+            });
+
+        const reservas = dadosEscala.filter(item => item.tipo_escala === 'RESERVA');
+        const encontrados = { motorista: new Set(), auxiliar: new Set() };
+        const updates = [];
+        const deletes = [];
+
+        reservas.forEach(item => {
+            const payload = {};
+
+            ['motorista', 'auxiliar'].forEach(campo => {
+                const nome = getNomeFuncionarioExibicao(item[campo]);
+                const chave = normalizeString(nome);
+                if (!chave) return;
+
+                if (!desejados[campo].has(chave) || encontrados[campo].has(chave)) {
+                    payload[campo] = null;
+                    return;
+                }
+
+                encontrados[campo].add(chave);
+                if (nome !== item[campo]) payload[campo] = nome;
+            });
+
+            if (Object.keys(payload).length === 0) return;
+
+            const restante = {
+                placa: item.placa,
+                modelo: item.modelo,
+                rota: item.rota,
+                status: item.status,
+                motorista: Object.prototype.hasOwnProperty.call(payload, 'motorista') ? payload.motorista : item.motorista,
+                auxiliar: Object.prototype.hasOwnProperty.call(payload, 'auxiliar') ? payload.auxiliar : item.auxiliar,
+                terceiro: item.terceiro
+            };
+
+            if (Object.values(restante).every(valor => !cleanImportValue(valor))) {
+                deletes.push(item.id);
+            } else {
+                updates.push({ id: item.id, payload: comAuditoria(payload) });
+            }
+        });
+
+        const inserts = [];
+        ['motorista', 'auxiliar'].forEach(campo => {
+            desejados[campo].forEach((nome, chave) => {
+                if (encontrados[campo].has(chave)) return;
+                inserts.push(comAuditoria({
+                    semana_nome: semana,
+                    data_escala: dataISO,
+                    filial: getFilialEscala(),
+                    tipo_escala: 'RESERVA',
+                    [campo]: nome
+                }));
+            });
+        });
+
+        for (const update of updates) {
+            const { error } = await supabaseClient
+                .from('escala')
+                .update(update.payload)
+                .eq('id', update.id);
+            if (error) throw error;
+        }
+
+        if (deletes.length > 0) {
+            const { error } = await supabaseClient.from('escala').delete().in('id', deletes);
+            if (error) throw error;
+        }
+
+        const chunkSize = 500;
+        for (let i = 0; i < inserts.length; i += chunkSize) {
+            const { error } = await supabaseClient.from('escala').insert(inserts.slice(i, i + chunkSize));
+            if (error) throw error;
+        }
+
+        if (updates.length === 0 && deletes.length === 0 && inserts.length === 0) return dadosEscala;
+
+        const { data: dadosAtualizados, error: recarregarError } = await aplicarFiltroSemanaModelo(
+            aplicarFiltroFilial(supabaseClient.from('escala').select('*').eq('data_escala', dataISO)),
+            semana
+        ).order('id');
+
+        if (recarregarError) throw recarregarError;
+        return (dadosAtualizados || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa));
+    }
+
     // --- ATUALIZAR TÍTULO DA ABA DINAMICAMENTE ---
     function atualizarTituloDia(dia, semana) {
         const tituloDia = document.getElementById('tituloDia');
@@ -1339,8 +1471,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (resEscala.error) throw resEscala.error;
             if (resFaltas.error) throw resFaltas.error;
 
-            const dadosEscala = (resEscala.data || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa));
+            let dadosEscala = (resEscala.data || []).filter(item => !isPlacaVeiculoOcultaEscala(item.placa));
             const dadosFaltas = resFaltas.data;
+            dadosEscala = await sincronizarReservasAutomaticas(semana, dataISO, dadosEscala, dadosFaltas);
 
             // Renderiza cada seção
             sections.forEach(sec => {
