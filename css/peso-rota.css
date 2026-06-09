@@ -575,16 +575,11 @@ tr.saving td {
 }
 
 tr.saved-success td {
-    animation: pesoSaved 1.4s ease-out forwards;
+    background-color: transparent !important;
 }
 
 tr.saved-error td {
     animation: pesoError 2s ease-out forwards;
-}
-
-@keyframes pesoSaved {
-    from { background-color: #d1fadf; }
-    to { background-color: transparent; }
 }
 
 @keyframes pesoError {
