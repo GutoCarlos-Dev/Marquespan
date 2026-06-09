@@ -111,6 +111,33 @@
                   <i class="fas fa-check"></i> Iniciar Importação
               </button>
           </form>
+
+          <div class="panel-header-actions" style="margin-top: 24px;">
+            <h3><i class="fas fa-clock-rotate-left"></i> Histórico de Importações</h3>
+            <button type="button" id="btnExpurgarDuplicadosPedagio" class="btn-glass btn-red">
+              <i class="fas fa-filter-circle-xmark"></i> Expurgar Duplicados
+            </button>
+          </div>
+          <div id="expurgoPedagioStatus" style="margin-bottom: 12px;"></div>
+          <div class="table-responsive pedagio-table-container">
+            <table class="glass-table data-grid">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Arquivo</th>
+                  <th>Empresa</th>
+                  <th>Filial</th>
+                  <th>Usuário</th>
+                  <th>Registros</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodyImportacoesPedagio">
+                <tr><td colspan="8" class="text-center">Carregando importações...</td></tr>
+              </tbody>
+            </table>
+          </div>
       </section>
 
       <!-- SEÇÃO: EMPRESAS -->

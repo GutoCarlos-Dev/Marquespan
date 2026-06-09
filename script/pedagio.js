@@ -3,6 +3,7 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 
 const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
+const PEDAGIO_IMPORTACOES_BUCKET = 'pedagios_importacoes';
 
 const PedagioUI = {
     async init() {
@@ -14,6 +15,7 @@ const PedagioUI = {
         this.motoristasData = [];
         this.rotasData = [];
         this.filiaisData = [];
+        this.importacoesPedagio = [];
         this.editingLancamentoId = null; // Para edição de lançamentos
         this.editingEmpresaId = null; // Para edição de empresas
         this.sortState = { field: 'data_hora_passagem', ascending: false }; // Alinhado com outros módulos
@@ -30,7 +32,8 @@ const PedagioUI = {
         await this.carregarFiliais();
         this.carregarMotoristas();
         this.carregarRotas();
-        this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
+        await this.carregarEmpresasPedagio(); // Carrega empresas de pedágio
+        await this.carregarImportacoesPedagio();
         this.initTabs(); // 3. Ativa a aba padrão (isso chamará carregarLancamentos)
     },
 
@@ -71,6 +74,7 @@ const PedagioUI = {
         this.btnCloseModalLancamento = this.modalLancamento.querySelector('.close-button');
         this.formLancamentoPedagio = document.getElementById('formLancamentoPedagio');
         this.lancamentoPlaca = document.getElementById('lancamentoPlaca');
+        this.lancamentoEmpresa = document.getElementById('lancamentoEmpresa');
         this.veiculosList = document.getElementById('veiculosList');
         this.lancamentoFilial = document.getElementById('lancamentoFilial');
         this.lancamentoTipo = document.getElementById('lancamentoTipo');
@@ -95,6 +99,9 @@ const PedagioUI = {
         this.importProgressBar = document.getElementById('importProgressBar');
         this.importProgressPercent = document.getElementById('importProgressPercent');
         this.btnSubmitImport = this.formImportacaoPedagio?.querySelector('button[type="submit"]');
+        this.tableBodyImportacoesPedagio = document.getElementById('tableBodyImportacoesPedagio');
+        this.btnExpurgarDuplicadosPedagio = document.getElementById('btnExpurgarDuplicadosPedagio');
+        this.expurgoPedagioStatus = document.getElementById('expurgoPedagioStatus');
 
         // Seção Empresas de Pedágio
         this.formEmpresaPedagio = document.getElementById('formEmpresaPedagio');
@@ -137,6 +144,8 @@ const PedagioUI = {
 
         // Importação
         this.formImportacaoPedagio.addEventListener('submit', (e) => this.handleImportacao(e));
+        this.tableBodyImportacoesPedagio?.addEventListener('click', (e) => this.handleImportacaoPedagioTableClick(e));
+        this.btnExpurgarDuplicadosPedagio?.addEventListener('click', () => this.expurgarDuplicadosPedagio());
 
         // Empresas de Pedágio
         this.formEmpresaPedagio.addEventListener('submit', (e) => this.salvarEmpresaPedagio(e));
@@ -177,6 +186,7 @@ const PedagioUI = {
             this.carregarLancamentos();
         } else if (sectionId === 'sectionImportacao') {
             this.carregarEmpresasPedagioParaSelect();
+            this.carregarImportacoesPedagio();
         } else if (sectionId === 'sectionEmpresas') {
             this.carregarEmpresasPedagio();
         }
@@ -337,7 +347,11 @@ const PedagioUI = {
         }
     },
 
-    abrirModalLancamento() {
+    async abrirModalLancamento() {
+        if (this.empresasPedagio.length === 0) {
+            await this.carregarEmpresasPedagio();
+        }
+
         this.editingLancamentoId = null;
         if (this.formLancamentoPedagio) this.formLancamentoPedagio.reset();
         if (this.lancamentoTipo) this.lancamentoTipo.value = ''; 
@@ -351,16 +365,15 @@ const PedagioUI = {
         const now = new Date();
         if (this.lancamentoDataHora) this.lancamentoDataHora.value = this.formatarDateTimeLocalInput(now);
         
-        if (this.modalLancamento) this.modalLancamento.classList.remove('hidden');
-
         // Preenche o select de empresas no modal de lançamento
-        const selectEmpresa = document.getElementById('lancamentoEmpresa');
-        if (selectEmpresa) {
-            selectEmpresa.innerHTML = '<option value="">Selecione a Empresa</option>';
+        if (this.lancamentoEmpresa) {
+            this.lancamentoEmpresa.innerHTML = '<option value="">Selecione a Empresa</option>';
             this.empresasPedagio.forEach(empresa => {
-                selectEmpresa.add(new Option(empresa.nome, empresa.id));
+                this.lancamentoEmpresa.add(new Option(empresa.nome, empresa.id));
             });
         }
+
+        if (this.modalLancamento) this.modalLancamento.classList.remove('hidden');
     },
 
     fecharModalLancamento() {
@@ -682,7 +695,7 @@ const PedagioUI = {
         try {
             const { data, error } = await supabaseClient.from('pedagios_empresas').select('*').order('nome');
             if (error) throw error;
-            this.empresasPedagio = data;
+            this.empresasPedagio = data || [];
             this.renderEmpresasPedagioTable();
             this.carregarEmpresasPedagioParaSelect();
         } catch (error) {
@@ -712,12 +725,16 @@ const PedagioUI = {
     },
 
     carregarEmpresasPedagioParaSelect() {
-        this.empresaPedagioSelect.innerHTML = '<option value="">Selecione a Empresa</option>';
-        this.empresasPedagio.forEach(empresa => {
-            const option = document.createElement('option');
-            option.value = empresa.id;
-            option.textContent = empresa.nome;
-            this.empresaPedagioSelect.appendChild(option);
+        [this.empresaPedagioSelect, this.lancamentoEmpresa].forEach(select => {
+            if (!select) return;
+            const valorAtual = select.value;
+            select.innerHTML = '<option value="">Selecione a Empresa</option>';
+            this.empresasPedagio.forEach(empresa => {
+                select.add(new Option(empresa.nome, empresa.id));
+            });
+            if (valorAtual && this.empresasPedagio.some(empresa => String(empresa.id) === String(valorAtual))) {
+                select.value = valorAtual;
+            }
         });
     },
 
@@ -939,6 +956,254 @@ const PedagioUI = {
         }
     },
 
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    },
+
+    getEmpresaPedagioNome(empresaId) {
+        const empresa = this.empresasPedagio.find(item => String(item.id) === String(empresaId));
+        return empresa?.nome || empresaId || '';
+    },
+
+    async carregarImportacoesPedagio() {
+        if (!this.tableBodyImportacoesPedagio) return;
+        this.tableBodyImportacoesPedagio.innerHTML = '<tr><td colspan="8" class="text-center">Carregando importações...</td></tr>';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('pedagios_importacoes')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+            this.importacoesPedagio = data || [];
+
+            if (this.importacoesPedagio.length === 0) {
+                this.tableBodyImportacoesPedagio.innerHTML = '<tr><td colspan="8" class="text-center">Nenhum arquivo importado.</td></tr>';
+                return;
+            }
+
+            this.tableBodyImportacoesPedagio.innerHTML = this.importacoesPedagio.map(item => `
+                <tr>
+                    <td>${this.escapeHtml(this.formatarDataHoraBrasilia(item.created_at))}</td>
+                    <td title="${this.escapeHtml(item.arquivo_nome)}">${this.escapeHtml(item.arquivo_nome)}</td>
+                    <td>${this.escapeHtml(this.getEmpresaPedagioNome(item.empresa_id))}</td>
+                    <td>${this.escapeHtml(item.filial || '')}</td>
+                    <td>${this.escapeHtml(item.usuario_nome || '')}</td>
+                    <td>${Number(item.total_registros || 0)}</td>
+                    <td>${this.escapeHtml(item.status || '')}</td>
+                    <td style="white-space: nowrap;">
+                        <button type="button" class="btn-icon btn-download-importacao" data-id="${item.id}" title="Baixar arquivo">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button type="button" class="btn-icon delete btn-delete-importacao" data-id="${item.id}" title="Remover arquivo e lançamentos">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar histórico de importações:', error);
+            this.tableBodyImportacoesPedagio.innerHTML =
+                '<tr><td colspan="8" class="text-center">Histórico indisponível. Execute a migração SQL de importações.</td></tr>';
+        }
+    },
+
+    async handleImportacaoPedagioTableClick(event) {
+        const button = event.target.closest('button[data-id]');
+        if (!button) return;
+
+        if (button.classList.contains('btn-download-importacao')) {
+            await this.baixarArquivoImportacaoPedagio(button.dataset.id);
+        } else if (button.classList.contains('btn-delete-importacao')) {
+            await this.removerImportacaoPedagio(button.dataset.id);
+        }
+    },
+
+    async baixarArquivoImportacaoPedagio(id) {
+        const item = this.importacoesPedagio.find(importacao => String(importacao.id) === String(id));
+        if (!item?.arquivo_caminho) return alert('Arquivo da importação não encontrado.');
+
+        try {
+            const { data, error } = await supabaseClient.storage
+                .from(PEDAGIO_IMPORTACOES_BUCKET)
+                .createSignedUrl(item.arquivo_caminho, 60);
+            if (error) throw error;
+            window.open(data.signedUrl, '_blank', 'noopener');
+        } catch (error) {
+            console.error('Erro ao baixar arquivo de pedágio:', error);
+            alert('Erro ao baixar arquivo: ' + error.message);
+        }
+    },
+
+    async removerImportacaoPedagio(id) {
+        const item = this.importacoesPedagio.find(importacao => String(importacao.id) === String(id));
+        if (!item) return;
+
+        const total = Number(item.total_registros || 0);
+        if (!confirm(`Remover o arquivo "${item.arquivo_nome}" e os ${total} lançamento(s) vinculados a esta importação?`)) return;
+
+        try {
+            const { error: deleteError } = await supabaseClient
+                .from('pedagios_importacoes')
+                .delete()
+                .eq('id', id);
+            if (deleteError) throw deleteError;
+
+            if (item.arquivo_caminho) {
+                const { error: storageError } = await supabaseClient.storage
+                    .from(PEDAGIO_IMPORTACOES_BUCKET)
+                    .remove([item.arquivo_caminho]);
+                if (storageError) console.warn('Registro removido, mas o arquivo não foi excluído do storage:', storageError);
+            }
+
+            await this.carregarImportacoesPedagio();
+            await this.carregarLancamentos();
+            alert('Importação e lançamentos vinculados removidos com sucesso.');
+        } catch (error) {
+            console.error('Erro ao remover importação de pedágio:', error);
+            alert('Erro ao remover importação: ' + error.message);
+        }
+    },
+
+    async expurgarDuplicadosPedagio() {
+        if (!this.btnExpurgarDuplicadosPedagio) return;
+        this.btnExpurgarDuplicadosPedagio.disabled = true;
+        if (this.expurgoPedagioStatus) this.expurgoPedagioStatus.textContent = 'Analisando duplicidades...';
+
+        try {
+            const { data: quantidade, error: contarError } = await supabaseClient.rpc('pedagios_contar_duplicados');
+            if (contarError) throw contarError;
+
+            const total = Number(quantidade || 0);
+            if (total === 0) {
+                if (this.expurgoPedagioStatus) this.expurgoPedagioStatus.textContent = 'Nenhum lançamento duplicado encontrado.';
+                return;
+            }
+
+            if (!confirm(`Foram encontrados ${total} lançamento(s) duplicado(s).\n\nO registro mais antigo de cada grupo será mantido. Deseja continuar?`)) {
+                if (this.expurgoPedagioStatus) this.expurgoPedagioStatus.textContent = 'Expurgo cancelado.';
+                return;
+            }
+
+            const { data: removidos, error: expurgoError } = await supabaseClient.rpc('pedagios_expurgar_duplicados');
+            if (expurgoError) throw expurgoError;
+
+            const totalRemovido = Number(removidos || 0);
+            if (this.expurgoPedagioStatus) {
+                this.expurgoPedagioStatus.textContent = `${totalRemovido} lançamento(s) duplicado(s) removido(s).`;
+            }
+            await this.carregarLancamentos();
+        } catch (error) {
+            console.error('Erro no expurgo de pedágios:', error);
+            if (this.expurgoPedagioStatus) {
+                this.expurgoPedagioStatus.textContent = 'Erro no expurgo: ' + error.message;
+            }
+        } finally {
+            this.btnExpurgarDuplicadosPedagio.disabled = false;
+        }
+    },
+
+    normalizarChavePedagio(value) {
+        return String(value ?? '').trim().toUpperCase();
+    },
+
+    getChaveDuplicidadePedagio(item) {
+        const placa = this.normalizarChavePedagio(item.placa).replace(/[^A-Z0-9]/g, '');
+        const dataHora = item.data_hora_passagem ? new Date(item.data_hora_passagem).toISOString() : '';
+        const valor = Number(item.valor || 0).toFixed(2);
+        return [
+            this.normalizarChavePedagio(item.empresa_id),
+            placa,
+            dataHora,
+            valor,
+            this.normalizarChavePedagio(item.rodovia),
+            this.normalizarChavePedagio(item.praca),
+            this.normalizarChavePedagio(item.filial)
+        ].join('|');
+    },
+
+    async carregarChavesPedagioExistentes(lancamentos) {
+        const chaves = new Set();
+        if (!lancamentos.length) return chaves;
+
+        const datas = lancamentos.map(item => new Date(item.data_hora_passagem).getTime()).filter(Number.isFinite);
+        const inicio = new Date(Math.min(...datas)).toISOString();
+        const fim = new Date(Math.max(...datas)).toISOString();
+        const empresas = [...new Set(lancamentos.map(item => item.empresa_id).filter(Boolean))];
+        const pageSize = 1000;
+
+        for (let from = 0; ; from += pageSize) {
+            let query = supabaseClient
+                .from('pedagios_lancamentos')
+                .select('empresa_id, placa, data_hora_passagem, valor, rodovia, praca, filial')
+                .gte('data_hora_passagem', inicio)
+                .lte('data_hora_passagem', fim)
+                .order('data_hora_passagem')
+                .range(from, from + pageSize - 1);
+
+            if (empresas.length === 1) query = query.eq('empresa_id', empresas[0]);
+            else if (empresas.length > 1) query = query.in('empresa_id', empresas);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            (data || []).forEach(item => chaves.add(this.getChaveDuplicidadePedagio(item)));
+            if (!data || data.length < pageSize) break;
+        }
+
+        return chaves;
+    },
+
+    async criarImportacaoPedagio(arquivo, empresaId, filial, usuarioInfo) {
+        const id = crypto.randomUUID();
+        const nomeSeguro = arquivo.name.replace(/[^a-zA-Z0-9._-]+/g, '_');
+        const caminho = `${new Date().getFullYear()}/${id}/${nomeSeguro}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from(PEDAGIO_IMPORTACOES_BUCKET)
+            .upload(caminho, arquivo, {
+                contentType: arquivo.type || 'application/octet-stream',
+                upsert: false
+            });
+        if (uploadError) throw uploadError;
+
+        const payload = {
+            id,
+            empresa_id: empresaId,
+            filial: filial || null,
+            arquivo_nome: arquivo.name,
+            arquivo_caminho: caminho,
+            arquivo_tipo: arquivo.type || null,
+            arquivo_tamanho: arquivo.size,
+            usuario_id: usuarioInfo.id || null,
+            usuario_nome: usuarioInfo.nome || usuarioInfo.nomecompleto || 'Sistema',
+            status: 'PROCESSANDO'
+        };
+
+        const { error: insertError } = await supabaseClient.from('pedagios_importacoes').insert(payload);
+        if (insertError) {
+            await supabaseClient.storage.from(PEDAGIO_IMPORTACOES_BUCKET).remove([caminho]);
+            throw insertError;
+        }
+
+        return payload;
+    },
+
+    async atualizarImportacaoPedagio(id, payload) {
+        if (!id) return;
+        const { error } = await supabaseClient
+            .from('pedagios_importacoes')
+            .update({ ...payload, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) throw error;
+    },
+
     async handleImportacao(event) {
         event.preventDefault();
         const empresaId = this.empresaPedagioSelect.value;
@@ -971,6 +1236,7 @@ const PedagioUI = {
             this.updateProgress(0);
         }
 
+        let importacaoAtual = null;
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
@@ -990,10 +1256,16 @@ const PedagioUI = {
 
                 if (!usuarioId) throw new Error('Não foi possível identificar o usuário logado para a importação.');
 
+                importacaoAtual = await this.criarImportacaoPedagio(
+                    arquivo,
+                    empresaId,
+                    filialPadrao,
+                    usuarioInfo
+                );
+
                 const layout = empresa.layout_config;
                 const lancamentosParaInserir = [];
                 const rejeitados = [];
-                const importadosComSucesso = [];
                 let pulosPorVeiculo = 0;
                 let pulosPorDados = 0;
                 let index = 0;
@@ -1006,7 +1278,7 @@ const PedagioUI = {
                     if (this.importProgressContainer) this.importProgressContainer.classList.add('hidden');
                 };
 
-                const handleErroImportacao = (error) => {
+                const handleErroImportacao = async (error) => {
                     console.error('Erro na importação:', {
                         message: error.message,
                         details: error.details,
@@ -1014,6 +1286,17 @@ const PedagioUI = {
                         code: error.code,
                         error
                     });
+                    try {
+                        await this.atualizarImportacaoPedagio(importacaoAtual?.id, {
+                            status: 'FALHA',
+                            erro: error.message || 'Erro desconhecido',
+                            total_registros: 0,
+                            total_rejeitados: rejeitados.length
+                        });
+                        await this.carregarImportacoesPedagio();
+                    } catch (statusError) {
+                        console.warn('Não foi possível atualizar o status da importação:', statusError);
+                    }
                     this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message || 'Erro desconhecido'}</p>`;
                     liberarImportacao();
                 };
@@ -1114,8 +1397,8 @@ const PedagioUI = {
                             valor,
                             usuario_id: usuarioId,
                             usuario_nome: usuarioNome,
+                            importacao_id: importacaoAtual.id,
                         });
-                        importadosComSucesso.push({ placa, data_hora_passagem: dataHoraPassagem, valor });
                     }
 
                     // Atualiza Barra de Progresso
@@ -1130,21 +1413,62 @@ const PedagioUI = {
                 };
 
                 const finalizarImportacao = async () => {
-                    if (lancamentosParaInserir.length > 0) {
-                        const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosParaInserir);
+                    const chavesExistentes = await this.carregarChavesPedagioExistentes(lancamentosParaInserir);
+                    const chavesArquivo = new Set();
+                    const lancamentosSemDuplicidade = [];
+                    let duplicadosIgnorados = 0;
+
+                    lancamentosParaInserir.forEach(item => {
+                        const chave = this.getChaveDuplicidadePedagio(item);
+                        if (chavesExistentes.has(chave) || chavesArquivo.has(chave)) {
+                            duplicadosIgnorados++;
+                            rejeitados.push({
+                                motivo: 'Lançamento duplicado',
+                                dados: {
+                                    placa: item.placa,
+                                    data_hora_passagem: item.data_hora_passagem,
+                                    valor: item.valor,
+                                    praca: item.praca
+                                }
+                            });
+                            return;
+                        }
+                        chavesArquivo.add(chave);
+                        lancamentosSemDuplicidade.push(item);
+                    });
+
+                    if (lancamentosSemDuplicidade.length > 0) {
+                        const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosSemDuplicidade);
                         if (error) throw error;
-                        this.gerarRelatorioImportacao(importadosComSucesso, rejeitados);
+
+                        const importadosFinais = lancamentosSemDuplicidade.map(item => ({
+                            placa: item.placa,
+                            data_hora_passagem: item.data_hora_passagem,
+                            valor: item.valor
+                        }));
+                        this.gerarRelatorioImportacao(importadosFinais, rejeitados);
                     
-                        let msg = `<p style="color: green; font-weight: bold;"><i class="fas fa-check-circle"></i> Importação finalizada: ${lancamentosParaInserir.length} lançamentos registrados.</p>`;
+                        let msg = `<p style="color: green; font-weight: bold;"><i class="fas fa-check-circle"></i> Importação finalizada: ${lancamentosSemDuplicidade.length} lançamentos registrados.</p>`;
                         if (pulosPorVeiculo > 0) msg += `<p style="color: #d35400;"><i class="fas fa-exclamation-triangle"></i> ${pulosPorVeiculo} linhas ignoradas (Placas não cadastradas).</p>`;
                         if (pulosPorDados > 0) msg += `<p style="color: #666;"><i class="fas fa-info-circle"></i> ${pulosPorDados} linhas ignoradas (Dados incompletos).</p>`;
+                        if (duplicadosIgnorados > 0) msg += `<p style="color: #d35400;"><i class="fas fa-clone"></i> ${duplicadosIgnorados} linhas duplicadas ignoradas.</p>`;
                     
                         this.importStatus.innerHTML = msg;
                         this.carregarLancamentos();
                     } else {
-                        this.importStatus.innerHTML = '<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> Nenhum lançamento válido encontrado no arquivo.</p>';
+                        const motivo = duplicadosIgnorados > 0
+                            ? `Todos os ${duplicadosIgnorados} lançamento(s) válidos já estavam cadastrados.`
+                            : 'Nenhum lançamento válido encontrado no arquivo.';
+                        this.importStatus.innerHTML = `<p style="color: orange;"><i class="fas fa-exclamation-triangle"></i> ${motivo}</p>`;
                     }
 
+                    await this.atualizarImportacaoPedagio(importacaoAtual?.id, {
+                        total_registros: lancamentosSemDuplicidade.length,
+                        total_rejeitados: rejeitados.length,
+                        status: 'CONCLUIDA',
+                        erro: null
+                    });
+                    await this.carregarImportacoesPedagio();
                     liberarImportacao();
                 };
 
@@ -1158,6 +1482,15 @@ const PedagioUI = {
                     code: error.code,
                     error
                 });
+                try {
+                    await this.atualizarImportacaoPedagio(importacaoAtual?.id, {
+                        status: 'FALHA',
+                        erro: error.message || 'Erro desconhecido'
+                    });
+                    await this.carregarImportacoesPedagio();
+                } catch (statusError) {
+                    console.warn('Não foi possível atualizar o status da importação:', statusError);
+                }
                 this.importStatus.innerHTML = `<p style="color: red;"><i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message || 'Erro desconhecido'}</p>`;
                 if (this.btnSubmitImport) this.btnSubmitImport.disabled = false;
                 this.arquivoImportacao.disabled = false;
