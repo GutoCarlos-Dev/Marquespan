@@ -4,6 +4,25 @@ let html5QrCode = null;
 let isScanning = false;
 let scanContext = 'veiculo'; // 'veiculo' | 'bico1' | 'bico2'
 
+function getUserFilial() {
+    try {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        return usuarioLogado?.filial || '';
+    } catch (e) {
+        console.error('Erro ao identificar a filial do usuário:', e);
+        return '';
+    }
+}
+
+function placaDisponivelParaUsuario(placa) {
+    const placaNormalizada = String(placa || '').toUpperCase().trim();
+    const listaVeiculos = document.getElementById('listaVeiculos');
+
+    return Array.from(listaVeiculos?.options || []).some(option => (
+        option.value.toUpperCase().trim() === placaNormalizada
+    ));
+}
+
 const TITULOS = {
     veiculo: '<i class="fas fa-qrcode"></i> Escanear Veículo',
     bico1:   '<i class="fas fa-qrcode"></i> Escanear Bico de Origem',
@@ -136,11 +155,17 @@ async function onScanSuccess(decodedText) {
 
     // contexto padrão: veículo
     try {
-        const { data: veiculo } = await supabaseClient
+        let queryVeiculo = supabaseClient
             .from('veiculos')
             .select('placa')
-            .eq('qrcode', qrCode)
-            .single();
+            .eq('qrcode', qrCode);
+
+        const filialUsuario = getUserFilial();
+        if (filialUsuario) {
+            queryVeiculo = queryVeiculo.eq('filial', filialUsuario);
+        }
+
+        const { data: veiculo } = await queryVeiculo.single();
 
         if (veiculo) {
             preencherVeiculo(veiculo.placa);
@@ -149,7 +174,11 @@ async function onScanSuccess(decodedText) {
             const cleanText  = qrCode.replace(/[^A-Z0-9]/g, '');
 
             if (cleanText.length === 7 && placaRegex.test(cleanText)) {
-                preencherVeiculo(cleanText);
+                if (placaDisponivelParaUsuario(cleanText)) {
+                    preencherVeiculo(cleanText);
+                } else {
+                    alert('Esta placa não pertence à filial do usuário.');
+                }
             } else {
                 abrirModalVinculo(qrCode);
             }
@@ -215,12 +244,22 @@ async function realizarVinculo() {
     const placa  = document.getElementById('placaVinculo').value.toUpperCase().trim();
 
     if (!placa) return alert('Informe a placa do veículo.');
+    if (!placaDisponivelParaUsuario(placa)) {
+        return alert('Placa inválida ou não pertencente à filial do usuário.');
+    }
 
     try {
-        const { error } = await supabaseClient
+        let queryVinculo = supabaseClient
             .from('veiculos')
             .update({ qrcode: qrCode })
             .eq('placa', placa);
+
+        const filialUsuario = getUserFilial();
+        if (filialUsuario) {
+            queryVinculo = queryVinculo.eq('filial', filialUsuario);
+        }
+
+        const { error } = await queryVinculo;
 
         if (error) throw error;
 

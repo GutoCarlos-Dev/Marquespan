@@ -35,11 +35,14 @@ export async function buscarBicos(supabaseClient, filial) {
     ));
 }
 
-export async function buscarVeiculos(supabaseClient) {
-    const { data, error } = await supabaseClient
+export async function buscarVeiculos(supabaseClient, filial) {
+    let query = supabaseClient
         .from('veiculos')
-        .select('placa, modelo, tipo')
-        .order('placa');
+        .select('placa, modelo, tipo');
+
+    if (filial) query = query.eq('filial', filial);
+
+    const { data, error } = await query.order('placa');
 
     if (error) throw error;
     return data || [];

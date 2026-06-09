@@ -1102,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carregar Veiculos
             try {
-                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient);
+                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient, this.getUserFilial());
                 this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
             } catch (e) { console.error('Erro ao carregar veiculos', e); }
 

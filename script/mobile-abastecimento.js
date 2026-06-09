@@ -54,6 +54,16 @@ let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
 let veiculosDisponiveisCache = []; // Cache para validação de placa
 let saidaVeiculoLookupTimer = null;
 
+function getUserFilial() {
+    try {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        return usuarioLogado?.filial || '';
+    } catch (e) {
+        console.error('Erro ao identificar a filial do usuário:', e);
+        return '';
+    }
+}
+
 function formatarLitrosMobile(valor) {
     const digitos = String(valor || '').replace(/\D/g, '');
     if (!digitos) return '';
@@ -271,10 +281,16 @@ async function carregarDadosIniciais() {
 
     // Carregar Veículos
     try {
-        const { data: veiculos, error: errVeic } = await supabaseClient
+        let queryVeiculos = supabaseClient
             .from('veiculos')
-            .select('placa, modelo')
-            .order('placa');
+            .select('placa, modelo');
+
+        const filialUsuario = getUserFilial();
+        if (filialUsuario) {
+            queryVeiculos = queryVeiculos.eq('filial', filialUsuario);
+        }
+
+        const { data: veiculos, error: errVeic } = await queryVeiculos.order('placa');
         
         if (errVeic) throw errVeic;
 
@@ -463,9 +479,32 @@ async function carregarHistoricoRecente() {
     lista.innerHTML = '<p style="text-align:center; color:#666;">Atualizando...</p>';
 
     try {
-        const { data, error } = await supabaseClient
+        const filialUsuario = getUserFilial();
+        let queryHistorico = supabaseClient
             .from('saidas_combustivel')
-            .select('*')
+            .select('*');
+
+        if (filialUsuario) {
+            const { data: veiculosFilial, error: erroVeiculos } = await supabaseClient
+                .from('veiculos')
+                .select('placa')
+                .eq('filial', filialUsuario);
+
+            if (erroVeiculos) throw erroVeiculos;
+
+            const placasPermitidas = (veiculosFilial || [])
+                .map(veiculo => veiculo.placa)
+                .filter(Boolean);
+
+            if (placasPermitidas.length === 0) {
+                lista.innerHTML = '<p style="text-align:center; color:#666;">Nenhum registro recente.</p>';
+                return;
+            }
+
+            queryHistorico = queryHistorico.in('veiculo_placa', placasPermitidas);
+        }
+
+        const { data, error } = await queryHistorico
             .order('data_hora', { ascending: false })
             .limit(10);
 
