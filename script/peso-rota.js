@@ -89,6 +89,16 @@ let sortConfig = { key: 'rota', asc: true };
 let lastSelectedRowIndex = null;
 let resizingColumn = null;
 
+function getUserFilial() {
+    try {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        return normalizarTexto(usuarioLogado?.filial);
+    } catch (error) {
+        console.error('Erro ao identificar a filial do usuário:', error);
+        return '';
+    }
+}
+
 const ORDEM_DIAS_ROTA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
 const CLASSES_DIA_RETORNO = [
     'dia-retorno-segunda',
@@ -324,16 +334,29 @@ function getSemanaAnoSelecionada() {
 }
 
 function getFilialSelecionada() {
+    const filialUsuario = getUserFilial();
+    if (filialUsuario) return filialUsuario;
     return normalizarTexto(document.getElementById('filtroFilial')?.value);
 }
 
 function getFilialRegistro(row = {}) {
+    const filialUsuario = getUserFilial();
+    if (filialUsuario) return filialUsuario;
     return normalizarTexto(row.filial || getFilialSelecionada());
 }
 
 async function carregarFiliaisFiltro() {
     const select = document.getElementById('filtroFilial');
     if (!select) return;
+
+    const filialUsuario = getUserFilial();
+    if (filialUsuario) {
+        select.innerHTML = '';
+        select.add(new Option(filialUsuario, filialUsuario));
+        select.value = filialUsuario;
+        select.disabled = true;
+        return;
+    }
 
     try {
         const [filiaisResult, rotasResult] = await Promise.all([
@@ -588,6 +611,7 @@ async function carregarDados() {
     if (tbody) tbody.innerHTML = `<tr><td colspan="16" class="loading-cell">Carregando...</td></tr>`;
 
     try {
+        veiculosPorPlaca.clear();
         const semanaAno = getSemanaAnoSelecionada();
         const filial = getFilialSelecionada();
         const periodo = getPeriodoSemanaAno(semanaAno);
@@ -736,6 +760,7 @@ function criarLinha(data = {}) {
     const diaRetorno = data.dia_retorno || calcularDataRetornoPrevista(semanaAno, semana, diasRota);
     const row = {
         id: data.id || null,
+        filial: getUserFilial() || normalizarTexto(data.filial || getFilialSelecionada()),
         rota: normalizarTexto(data.rota),
         semana,
         semana_ano: semanaAno,
@@ -767,10 +792,15 @@ async function preencherVeiculosDasLinhas() {
     const placasNaoCarregadas = placas.filter(placa => !veiculosPorPlaca.has(placa));
     const placasConsulta = [...new Set(placasNaoCarregadas.flatMap(getVariantesPlaca))];
     if (placasConsulta.length > 0) {
-        const { data, error } = await supabaseClient
+        let queryVeiculos = supabaseClient
             .from('veiculos')
             .select('id, placa, modelo, tipo, capacidade_carga')
             .in('placa', placasConsulta);
+
+        const filial = getFilialSelecionada();
+        if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
+
+        const { data, error } = await queryVeiculos;
 
         if (error) {
             console.warn('Erro ao buscar veiculos:', error);
@@ -1217,10 +1247,15 @@ async function buscarEPreencherVeiculo(row, rowIndex) {
     if (!row.placa) return;
 
     if (!veiculosPorPlaca.has(row.placa)) {
-        const { data, error } = await supabaseClient
+        let queryVeiculo = supabaseClient
             .from('veiculos')
             .select('id, placa, modelo, tipo, capacidade_carga')
-            .in('placa', getVariantesPlaca(row.placa))
+            .in('placa', getVariantesPlaca(row.placa));
+
+        const filial = getFilialSelecionada();
+        if (filial) queryVeiculo = queryVeiculo.eq('filial', filial);
+
+        const { data, error } = await queryVeiculo
             .limit(1)
             .maybeSingle();
 
@@ -1450,10 +1485,15 @@ async function buscarVeiculoPorPlaca(placa) {
     const veiculoCache = veiculosPorPlaca.get(placaNormalizada);
     if (veiculoCache) return veiculoCache;
 
-    const { data, error } = await supabaseClient
+    let queryVeiculo = supabaseClient
         .from('veiculos')
         .select('id, placa, modelo, tipo, capacidade_carga')
-        .in('placa', getVariantesPlaca(placaNormalizada))
+        .in('placa', getVariantesPlaca(placaNormalizada));
+
+    const filial = getFilialSelecionada();
+    if (filial) queryVeiculo = queryVeiculo.eq('filial', filial);
+
+    const { data, error } = await queryVeiculo
         .limit(1)
         .maybeSingle();
 
@@ -1565,10 +1605,15 @@ async function excluirSelecionados() {
 
     try {
         if (idsParaExcluir.length > 0) {
-            const { error } = await supabaseClient
+            let queryExclusao = supabaseClient
                 .from('peso_rota')
                 .delete()
                 .in('id', idsParaExcluir);
+
+            const filial = getFilialSelecionada();
+            if (filial) queryExclusao = queryExclusao.eq('filial', filial);
+
+            const { error } = await queryExclusao;
 
             if (error) throw error;
         }
@@ -2047,8 +2092,13 @@ async function importarRetornoRota() {
 
         let query = supabaseClient
             .from('retorno_rota')
-            .select('rota, data_retorno, nome_mot, hora_mot, hora_aux, hora_terceiro')
+            .select('rota, data_retorno, nome_mot, hora_mot, hora_aux, hora_terceiro, filial')
             .order('data_retorno', { ascending: true });
+
+        const filial = getFilialSelecionada();
+        if (filial) {
+            query = query.eq('filial', filial);
+        }
 
         if (dataSaidaSelecionada) {
             query = query.gte('data_retorno', dataSaidaSelecionada).lte('data_retorno', somarDiasIso(dataSaidaSelecionada, 6));
