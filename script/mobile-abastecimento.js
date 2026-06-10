@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const OFFSET_SAO_PAULO = '-03:00';
@@ -542,20 +543,11 @@ async function carregarEstoque() {
     if(listaEstoque.children.length === 0) listaEstoque.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Atualizando...</p>';
 
     try {
-        // 1. Buscar Tanques
-        let queryTanques = supabaseClient
-            .from('tanques')
-            .select('id, nome, capacidade, tipo_combustivel, filial');
-
+        // 1. Calcular estoque usando o serviço compartilhado (com paginação completa)
         const filialUsuario = getUserFilial();
-        if (filialUsuario) {
-            queryTanques = queryTanques.eq('filial', filialUsuario);
-        }
+        const tanquesComEstoque = await calcularEstoqueAtual(supabaseClient, filialUsuario || null);
 
-        const { data: tanques, error: errTanques } = await queryTanques.order('nome');
-
-        if (errTanques) throw errTanques;
-        tanquesDisponiveis = tanques || []; // Salva para usar na distribuição
+        tanquesDisponiveis = tanquesComEstoque;
         const tanqueIds = tanquesDisponiveis.map(tanque => tanque.id);
 
         if (tanqueIds.length === 0) {
@@ -568,71 +560,8 @@ async function carregarEstoque() {
             return;
         }
 
-        // 2. Buscar Entradas (Abastecimentos)
-        const { data: entradas, error: errEntradas } = await supabaseClient
-            .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
-            .in('tanque_id', tanqueIds);
-        
-        if (errEntradas) throw errEntradas;
-
-        // 3. Buscar Saídas
-        const { data: saidas, error: errSaidas } = await supabaseClient
-            .from('saidas_combustivel')
-            .select('qtd_litros, data_hora, bicos!inner(bombas!inner(tanque_id))')
-            .in('bicos.bombas.tanque_id', tanqueIds);
-
-        if (errSaidas) throw errSaidas;
-
-        // 4. Calcular Estoque
         const estoqueMap = new Map();
-        tanquesDisponiveis.forEach(t => {
-            estoqueMap.set(t.id, { ...t, estoque_atual: 0 });
-        });
-
-        const movimentosPorTanque = new Map();
-        tanquesDisponiveis.forEach(t => movimentosPorTanque.set(Number(t.id), []));
-
-        entradas.forEach(e => {
-            const tanqueId = Number(e.tanque_id);
-            if (!movimentosPorTanque.has(tanqueId)) return;
-            movimentosPorTanque.get(tanqueId).push({
-                data: e.data,
-                tipo: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'AJUSTE' : 'ENTRADA',
-                litros: parseFloat(e.qtd_litros) || 0,
-                estoqueInformado: e.numero_nota === 'AJUSTE DE ESTOQUE' ? getEstoqueInformadoAjusteMobile(e) : null
-            });
-        });
-
-        saidas.forEach(s => {
-            const tanqueId = Number(s.bicos?.bombas?.tanque_id);
-            if (!movimentosPorTanque.has(tanqueId)) return;
-            movimentosPorTanque.get(tanqueId).push({
-                data: s.data_hora,
-                tipo: 'SAIDA',
-                litros: parseFloat(s.qtd_litros) || 0
-            });
-        });
-
-        movimentosPorTanque.forEach((movimentos, tanqueId) => {
-            const tanque = estoqueMap.get(tanqueId);
-            if (!tanque) return;
-
-            movimentos
-                .filter(movimento => movimento.data)
-                .sort((a, b) => new Date(a.data) - new Date(b.data))
-                .forEach(movimento => {
-                    if (movimento.tipo === 'SAIDA') {
-                        tanque.estoque_atual -= movimento.litros;
-                    } else if (movimento.tipo === 'AJUSTE') {
-                        tanque.estoque_atual = movimento.estoqueInformado !== null
-                            ? movimento.estoqueInformado
-                            : tanque.estoque_atual + movimento.litros;
-                    } else {
-                        tanque.estoque_atual += movimento.litros;
-                    }
-                });
-        });
+        tanquesDisponiveis.forEach(t => estoqueMap.set(t.id, t));
 
         // Popula Lista de Estoque (Aba 3)
         listaEstoque.innerHTML = '';
