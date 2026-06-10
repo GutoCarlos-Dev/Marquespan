@@ -143,6 +143,7 @@ function bindEvents() {
         document.querySelectorAll('#tbodyPesoRota .row-select').forEach(checkbox => {
             checkbox.checked = event.target.checked;
         });
+        atualizarContadorSelecionados();
     });
 
     document.querySelectorAll('#gridPesoRota thead th[data-sort]').forEach(th => {
@@ -841,6 +842,7 @@ function renderGrid() {
     tbody.innerHTML = linhas.map(({ row, index }) => renderLinha(row, index)).join('');
     aplicarLargurasSalvas();
     atualizarContadores();
+    atualizarContadorSelecionados();
 }
 
 function aplicarLargurasSalvas() {
@@ -1241,6 +1243,7 @@ function handleGridClick(event) {
     }
 
     lastSelectedRowIndex = rowIndex;
+    atualizarContadorSelecionados();
 }
 
 async function buscarEPreencherVeiculo(row, rowIndex) {
@@ -1352,6 +1355,19 @@ function atualizarContadores() {
     atualizarTooltipContador('count-excesso', 'Rotas em excesso', rotasPorStatus.excesso);
     atualizarTooltipContador('count-retorno-atrasado', 'Rotas com retorno atrasado', rotasPorStatus.retornoAtrasado);
     atualizarTooltipContador('count-retorno-antecipado', 'Rotas com retorno antecipado', rotasPorStatus.retornoAntecipado);
+}
+
+function atualizarContadorSelecionados() {
+    const total = document.querySelectorAll('#tbodyPesoRota .row-select:checked').length;
+    const badge = document.getElementById('countSelecionados');
+    const countSpan = document.getElementById('count-selecionados');
+    if (!badge || !countSpan) return;
+    if (total > 0) {
+        countSpan.textContent = total;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 function atualizarTooltipContador(counterId, titulo, rotas) {

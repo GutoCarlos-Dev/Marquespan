@@ -341,6 +341,11 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
     text-align: center;
 }
 
+.selected-count {
+    background: #3b82f6;
+    color: #fff;
+}
+
 .column-resizer {
     position: absolute;
     top: 0;
