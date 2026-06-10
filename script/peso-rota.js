@@ -788,7 +788,9 @@ function criarLinha(data = {}) {
         status_percentual: parseNumero(data.status_percentual),
         dia_retorno: diaRetorno,
         horario_chegada: normalizarTexto(data.horario_chegada).slice(0, 5),
-        descricao: normalizarTexto(data.descricao)
+        descricao: normalizarTexto(data.descricao),
+        ultima_alteracao_por: data.ultima_alteracao_por || null,
+        ultima_alteracao_em: data.ultima_alteracao_em || null
     };
 
     row.status_percentual = calcularPercentual(row);
@@ -1439,6 +1441,7 @@ async function salvarTudo() {
 
         let payload = gridData
             .filter(row => normalizarTexto(row.rota))
+            .filter(row => row.id || temDadosPreenchidos(row))
             .map(row => prepararPayload(row));
 
         payload = deduplicarPayloadPorRota(payload);
@@ -1462,7 +1465,7 @@ async function salvarTudo() {
 
         if (error && isErroColunaOpcional(error)) {
             console.warn('Coluna opcional ausente no Supabase. Salvando sem campos opcionais.', error);
-            payload = payload.map(({ semana_ano, dia_semana_retorno, ...item }) => item);
+            payload = payload.map(({ semana_ano, dia_semana_retorno, ultima_alteracao_por, ultima_alteracao_em, ...item }) => item);
             const retry = await supabaseClient
                 .from('peso_rota')
                 .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
@@ -1493,6 +1496,16 @@ async function salvarTudo() {
     }
 }
 
+function temDadosPreenchidos(row) {
+    return !!(
+        normalizarTexto(row.motorista) ||
+        normalizarTexto(row.auxiliar) ||
+        normalizarPlaca(row.placa) ||
+        parseNumero(row.peso_carga) ||
+        parseNumero(row.pbt)
+    );
+}
+
 function deduplicarPayloadPorRota(payload) {
     return Array.from((payload || []).reduce((mapa, item) => {
         const chaveRota = `${item.dia_retorno}|${getChaveRotaFilial(item.rota, item.filial)}`;
@@ -1503,7 +1516,7 @@ function deduplicarPayloadPorRota(payload) {
 
 function isErroColunaOpcional(error) {
     const message = String(error?.message || '').toLowerCase();
-    return message.includes('semana_ano') || message.includes('dia_semana_retorno');
+    return message.includes('semana_ano') || message.includes('dia_semana_retorno') || message.includes('ultima_alteracao');
 }
 
 function getCapacidadeCargaVeiculo(veiculo) {
