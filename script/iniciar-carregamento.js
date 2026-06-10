@@ -1248,15 +1248,61 @@ async function salvarCarregamentoCompleto() {
     }
 
     // 2. Insere o cabeçalho do carregamento
-    const { data: carregamentoData, error: carregamentoError } = await supabase
-        .from('carregamentos')
-        .insert([{ semana, data_hora: data, placa, motorista_nome: motoristaNome, conferente_nome: conferente, supervisor_nome: supervisor }])
-        .select('id')
-        .single();
+    const payloadCabecalho = { semana, data_hora: data, placa, motorista_nome: motoristaNome, conferente_nome: conferente, supervisor_nome: supervisor };
+    console.log('DEBUG: payload cabeçalho carregamento ->', payloadCabecalho);
+
+    // Função helper que tenta inserir e, caso o PostgREST reporte coluna inexistente,
+    // faz uma tentativa substituindo o nome da coluna por uma alternativa comum.
+    async function tryInsertWithColumnFallback(table, payload) {
+        const attempt = await supabase.from(table).insert([payload]).select('id').single();
+        if (!attempt.error) return attempt;
+
+        // Se o erro for PGRST204 (coluna não encontrada), tenta ajustar o payload
+        const err = attempt.error;
+        const msg = err.message || '';
+        const match = msg.match(/Could not find the '(.+?)' column/);
+        if (match && match[1]) {
+            const missingCol = match[1];
+            console.warn(`Coluna ausente detectada: ${missingCol}. Tentando fallback...`);
+
+            // Estratégias de fallback: remover sufixo _nome ou trocar por nome sem sufixo
+            const fallbacks = [];
+            if (missingCol.endsWith('_nome')) {
+                fallbacks.push(missingCol.replace(/_nome$/, ''));
+            }
+            // remover sufixos comuns
+            fallbacks.push(missingCol.replace(/_id$/, ''));
+            fallbacks.push(missingCol.replace(/nome$/, ''));
+
+            for (const alt of fallbacks) {
+                if (!alt || alt === missingCol) continue;
+                const newPayload = { ...payload };
+                if (Object.prototype.hasOwnProperty.call(newPayload, missingCol)) {
+                    newPayload[alt] = newPayload[missingCol];
+                    delete newPayload[missingCol];
+                }
+
+                console.log('DEBUG: tentando novo payload com coluna alternativa ->', alt, newPayload);
+                const retry = await supabase.from(table).insert([newPayload]).select('id').single();
+                if (!retry.error) return retry;
+                console.warn('Retry com alternativa', alt, 'falhou:', retry.error);
+            }
+        }
+
+        // Se chegou aqui, retorna o erro original
+        return attempt;
+    }
+
+    const { data: carregamentoData, error: carregamentoError } = await tryInsertWithColumnFallback('carregamentos', payloadCabecalho);
 
     if (carregamentoError) {
-        alert('❌ Erro ao salvar o cabeçalho do carregamento.');
-        console.error(carregamentoError);
+        alert('❌ Erro ao salvar o cabeçalho do carregamento. Verifique o console para detalhes.');
+        console.error('Erro ao salvar cabeçalho do carregamento:', carregamentoError);
+        try {
+            console.error('Detalhes do erro (stringify):', JSON.stringify(carregamentoError, Object.getOwnPropertyNames(carregamentoError)));
+        } catch (e) {
+            console.error('Falha ao serializar erro:', e);
+        }
         return;
     }
 

@@ -22,9 +22,8 @@ async function carregarCarregamentos() {
 
     const dataInicial = document.getElementById('dataInicial')?.value;
     const dataFinal = document.getElementById('dataFinal')?.value;
-    let query = supabaseClient
-        .from('carregamentos')
-        .select(`
+    // Consulta com fallback caso a coluna 'conferente_nome' não exista no schema
+    const baseSelect = `
             id, semana, data_hora, placa, motorista_nome, conferente_nome, supervisor_nome,
             requisicoes (
                 id, motivo,
@@ -34,14 +33,38 @@ async function carregarCarregamentos() {
                     itens (id, codigo, nome, tipo)
                 )
             )
-        `)
-        .order('data_hora', { ascending: false })
-        .limit(500);
+        `;
 
-    if (dataInicial) query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
-    if (dataFinal) query = query.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
+    const alternativeSelect = `
+            id, semana, data_hora, placa, motorista_nome, conferente, supervisor_nome,
+            requisicoes (
+                id, motivo,
+                clientes (id, codigo, nome, cidade, estado),
+                requisicao_itens (
+                    id, quantidade,
+                    itens (id, codigo, nome, tipo)
+                )
+            )
+        `;
 
-    const { data, error } = await query;
+    async function queryWithFallback(selectString) {
+        let q = supabaseClient.from('carregamentos').select(selectString).order('data_hora', { ascending: false }).limit(500);
+        if (dataInicial) q = q.gte('data_hora', `${dataInicial}T00:00:00-03:00`);
+        if (dataFinal) q = q.lte('data_hora', `${dataFinal}T23:59:59-03:00`);
+        return await q;
+    }
+
+    let result = await queryWithFallback(baseSelect);
+    if (result.error) {
+        // Se o erro indicar coluna ausente, tenta a versão alternativa
+        const msg = result.error.message || '';
+        if (msg.includes("Could not find the 'conferente_nome' column")) {
+            console.warn('coluna conferente_nome não encontrada, tentando selecionar como "conferente"');
+            result = await queryWithFallback(alternativeSelect);
+        }
+    }
+
+    const { data, error } = result;
     if (error) {
         console.error('Erro ao buscar carregamentos:', error);
         tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">Erro ao carregar os carregamentos.</td></tr>';
@@ -66,6 +89,7 @@ function renderizarCarregamentos() {
     tbody.innerHTML = carregamentos.map(item => {
         const requisicoes = item.requisicoes || [];
         const clientes = [...new Set(requisicoes.map(req => obterRelacionado(req.clientes)?.nome).filter(Boolean))];
+        const conferenteVal = item.conferente_nome || item.conferente || '-';
         return `
             <tr>
                 <td>${escapeHtml(formatarDataHora(item.data_hora))}</td>
@@ -74,7 +98,7 @@ function renderizarCarregamentos() {
                 <td>${escapeHtml(item.motorista_nome || '-')}</td>
                 <td>${escapeHtml(clientes.join(', ') || '-')}</td>
                 <td>${requisicoes.length}</td>
-                <td>${escapeHtml(item.conferente_nome || '-')}</td>
+                <td>${escapeHtml(conferenteVal)}</td>
                 <td>
                     <button type="button" class="btn-icon edit" data-carregamento-id="${escapeHtml(item.id)}" title="Ver detalhes">
                         <i class="fas fa-eye"></i>
@@ -94,13 +118,14 @@ function abrirDetalhes(id) {
     if (!carregamento) return;
 
     const requisicoes = carregamento.requisicoes || [];
+    const conferenteDetalhe = carregamento.conferente_nome || carregamento.conferente || '-';
     document.getElementById('conteudoDetalhesCarregamento').innerHTML = `
         <div class="details-summary">
             ${campoDetalhe('Data/Hora', formatarDataHora(carregamento.data_hora))}
             ${campoDetalhe('Semana', carregamento.semana)}
             ${campoDetalhe('Placa', carregamento.placa)}
             ${campoDetalhe('Motorista', carregamento.motorista_nome)}
-            ${campoDetalhe('Conferente', carregamento.conferente_nome)}
+            ${campoDetalhe('Conferente', conferenteDetalhe)}
             ${campoDetalhe('Supervisor', carregamento.supervisor_nome)}
         </div>
         ${requisicoes.length ? requisicoes.map(renderizarRequisicao).join('') : '<p>Nenhuma requisição vinculada.</p>'}
@@ -145,7 +170,7 @@ function montarTextoBusca(item) {
         item.data_hora,
         item.placa,
         item.motorista_nome,
-        item.conferente_nome,
+        item.conferente_nome || item.conferente,
         item.supervisor_nome,
         ...(item.requisicoes || []).flatMap(req => [
             req.motivo,
