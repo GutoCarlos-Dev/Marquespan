@@ -344,9 +344,47 @@ function obterTipoItemDaLinha(row) {
     return '';
 }
 
+function removerTipoDoNomeItem(value) {
+    return normalizarBusca(value)
+        .replace(/\b(?:NOVO|USADO)\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normalizarModeloEquipamento(value) {
+    const modelo = normalizarBusca(value);
+    if (!modelo || ['AUMENTO', 'TROCA', 'NOVO', 'USADO'].includes(modelo)) return '';
+    if (modelo.includes('ELETR')) return 'ELETRICO';
+    if (modelo.includes('GAS')) return 'GAS';
+    return modelo;
+}
+
+function obterNomeEsperadoItem(nomeEquipamento, modeloEquipamento) {
+    const equipamento = normalizarBusca(nomeEquipamento);
+    const modelo = normalizarModeloEquipamento(modeloEquipamento);
+
+    const aliases = {
+        'ARMARIO 40X60': 'ARMARIO 60X40',
+        'CAM FRIA': 'CAMARA FRIA',
+        'CLIMA 20': 'CLIMA DE 20',
+        'CLIMA 40': 'CLIMA DE 40',
+        'FORMA': 'FORMA LISA'
+    };
+
+    const forno = equipamento.match(/^FORNO\s+(5|8)$/);
+    if (forno) {
+        return modelo === 'ELETRICO'
+            ? `FORNO DE ${forno[1]} ELETRICO`
+            : `FORNO DE ${forno[1]} A GAS`;
+    }
+
+    return aliases[equipamento] || equipamento;
+}
+
 function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
     const equipamento = normalizarBusca(nomeEquipamento);
-    const modelo = normalizarBusca(modeloEquipamento);
+    const modelo = normalizarModeloEquipamento(modeloEquipamento);
+    const nomeEsperado = obterNomeEsperadoItem(nomeEquipamento, modeloEquipamento);
     const equipamentoModelo = normalizarBusca(`${equipamento} ${modelo}`);
     const equipamentoSemNumero = equipamento.replace(/\s+\d+(?:\s*[A-Z]+)?$/, '').trim();
     const singular = singularizarEquipamento(equipamento);
@@ -354,11 +392,12 @@ function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
 
     const candidatos = itensImportacao
         .map(item => {
-            const nome = normalizarBusca(item.nome);
+            const nome = removerTipoDoNomeItem(item.nome);
             const codigo = normalizarBusca(item.codigo);
             const codigoNome = normalizarBusca(`${item.codigo} ${item.nome}`);
             let pontuacao = 0;
 
+            if (nome === nomeEsperado) pontuacao = 140;
             if (codigoNome === equipamento || codigo === equipamento) pontuacao = 120;
             if (nome === equipamentoModelo && modelo) pontuacao = Math.max(pontuacao, 115);
             if (nome === equipamento) pontuacao = Math.max(pontuacao, 110);
@@ -376,8 +415,8 @@ function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
             }
 
             const tipo = normalizarTexto(item.tipo);
-            if (tipoEsperado && tipo === tipoEsperado) pontuacao += 20;
-            if (tipoEsperado && tipo && tipo !== tipoEsperado) pontuacao -= 30;
+            if (tipoEsperado && tipo === tipoEsperado) pontuacao += 30;
+            if (tipoEsperado && tipo && tipo !== tipoEsperado) pontuacao = 0;
 
             return { item, pontuacao };
         })
