@@ -889,6 +889,7 @@ function calcularResumoCarregamento() {
  */
 async function gerarPDF() {
     const botao = document.getElementById('btnGerarPDF');
+    let elementoPDF = null;
 
     try {
         // Verifica se há dados para gerar o PDF
@@ -940,19 +941,15 @@ async function gerarPDF() {
 
         // Cria o conteúdo HTML do PDF seguindo o layout especificado
         const conteudoPDF = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Relatório de Carregamento - Marquespan</title>
+            <div class="pdf-relatorio">
                 <style>
-                    body {
+                    .pdf-relatorio {
                         font-family: Arial, sans-serif;
-                        margin: 20px;
                         font-size: 12px;
                         line-height: 1.4;
+                        padding: 20px;
                     }
-                    .header {
+                    .pdf-relatorio .header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
@@ -960,75 +957,76 @@ async function gerarPDF() {
                         padding-bottom: 10px;
                         margin-bottom: 20px;
                     }
-                    .header-left {
+                    .pdf-relatorio .header-left {
                         flex: 1;
                     }
-                    .header-right {
+                    .pdf-relatorio .header-right {
                         flex: 1;
                         text-align: right;
                     }
-                    .header h1 {
+                    .pdf-relatorio .header h1 {
                         margin: 0;
                         font-size: 24px;
                         color: #333;
                         font-weight: bold;
                     }
-                    .header .subtitle {
+                    .pdf-relatorio .header .subtitle {
                         font-size: 14px;
                         color: #666;
                         margin: 5px 0;
                     }
-                    .info-section {
+                    .pdf-relatorio .info-section {
                         margin-bottom: 20px;
                     }
-                    .info-grid {
+                    .pdf-relatorio .info-grid {
                         display: grid;
                         grid-template-columns: 1fr 1fr;
                         gap: 20px;
                         margin-bottom: 15px;
                     }
-                    .info-item {
+                    .pdf-relatorio .info-item {
                         margin-bottom: 5px;
                     }
-                    .info-label {
+                    .pdf-relatorio .info-label {
                         font-weight: bold;
                         display: inline-block;
                         width: 80px;
                     }
-                    table {
+                    .pdf-relatorio table {
                         width: 100%;
                         border-collapse: collapse;
                         margin-bottom: 20px;
                         font-size: 12px;
                         page-break-inside: auto;
                     }
-                    tr {
+                    .pdf-relatorio tr {
                         page-break-inside: avoid;
                         page-break-after: auto;
                     }
-                    th, td {
+                    .pdf-relatorio th,
+                    .pdf-relatorio td {
                         border: 1px solid #333;
                         padding: 8px;
                         text-align: center;
                         vertical-align: middle;
                     }
-                    th {
+                    .pdf-relatorio th {
                         background-color: #f0f0f0;
                         font-weight: bold;
                     }
-                    .total-row {
+                    .pdf-relatorio .total-row {
                         background-color: #e8f4fd !important;
                         font-weight: bold;
                     }
-                    h2 {
+                    .pdf-relatorio h2 {
                         font-size: 16px;
                         margin: 20px 0 8px;
                     }
-                    .empty-row {
+                    .pdf-relatorio .empty-row {
                         color: #666;
                         font-style: italic;
                     }
-                    .logo-placeholder {
+                    .pdf-relatorio .logo-placeholder {
                         width: 100px;
                         height: 60px;
                         background-color: #f9f9f9;
@@ -1041,8 +1039,6 @@ async function gerarPDF() {
                         text-align: center;
                     }
                 </style>
-            </head>
-            <body>
                 <div class="header">
                     <div class="header-left">
                         <h1>🏢 MARQUESPAN</h1>
@@ -1081,9 +1077,21 @@ async function gerarPDF() {
                     <p>Relatório gerado em ${new Date().toLocaleString('pt-BR')}</p>
                     <p>Sistema de Gerenciamento de Carregamentos - Marquespan</p>
                 </div>
-            </body>
-            </html>
+            </div>
         `;
+
+        elementoPDF = document.createElement('div');
+        elementoPDF.innerHTML = conteudoPDF;
+        elementoPDF.style.position = 'fixed';
+        elementoPDF.style.left = '0';
+        elementoPDF.style.top = '0';
+        elementoPDF.style.width = '27.7cm';
+        elementoPDF.style.background = '#ffffff';
+        elementoPDF.style.pointerEvents = 'none';
+        elementoPDF.style.zIndex = '99999';
+        document.body.appendChild(elementoPDF);
+        await document.fonts?.ready;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
         // Configurações do PDF melhoradas
         const opcoes = {
@@ -1106,7 +1114,7 @@ async function gerarPDF() {
         };
 
         // Gera o PDF
-        await html2pdf().set(opcoes).from(conteudoPDF).save();
+        await html2pdf().set(opcoes).from(elementoPDF).save();
 
         alert('✅ PDF gerado com sucesso!');
 
@@ -1114,6 +1122,7 @@ async function gerarPDF() {
         console.error('Erro ao gerar PDF:', error);
         alert('❌ Erro ao gerar PDF. Tente novamente.');
     } finally {
+        elementoPDF?.remove();
         if (botao) {
             botao.disabled = false;
             botao.innerHTML = '📄 Gerar PDF';
