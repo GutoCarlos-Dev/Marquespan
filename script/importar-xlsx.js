@@ -470,6 +470,10 @@ document.getElementById('btnIniciarCarregamento').addEventListener('click', prep
 document.getElementById('formCadastroClienteImportacao').addEventListener('submit', salvarClienteImportacao);
 document.getElementById('btnFecharCadastroCliente').addEventListener('click', fecharCadastroCliente);
 document.getElementById('btnCancelarCadastroCliente').addEventListener('click', fecharCadastroCliente);
+document.getElementById('clienteCidadeImportacao').addEventListener('blur', e => {
+    const cidade = e.target.value.trim();
+    if (cidade) buscarEstadoPorCidade(cidade);
+});
 document.getElementById('modalCadastroCliente').addEventListener('click', event => {
     if (event.target.id === 'modalCadastroCliente') fecharCadastroCliente();
 });
@@ -500,10 +504,32 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             const isNovo = name.includes("(NOVO)");
 
             const cfg = isNovo
-              ? { sheet: "REQUERIMENTO", motivoCell: "K9", startRow: 13, endRow: 23, startCol: 2, endCol: 6,
-                  headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: true }
-              : { sheet: "REQUERIMENTO MANUAL", motivoCell: "K8", startRow: 11, endRow: 21, startCol: 1, endCol: 5,
-                  headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: false };
+              ? {
+                  sheet: "REQUERIMENTO",
+                  motivoCell: "K9",
+                  clienteCell: "D6",
+                  cidadeCell: "D7",
+                  estadoSheet: "CADASTRO NOVO",
+                  estadoCell: "N21",
+                  startRow: 13,
+                  endRow: 23,
+                  startCol: 2,
+                  endCol: 6,
+                  headers: ["QTD","EQUIP","MOD.","N","U"],
+                  filterQtd: true
+                }
+              : {
+                  sheet: "REQUERIMENTO MANUAL",
+                  motivoCell: "K8",
+                  clienteCell: "C4",
+                  cidadeCell: "C5",
+                  startRow: 11,
+                  endRow: 21,
+                  startCol: 1,
+                  endCol: 5,
+                  headers: ["QTD","EQUIP","MOD.","N","U"],
+                  filterQtd: false
+                };
 
             if (!workbook.SheetNames.includes(cfg.sheet)) {
                 tablesContainer.insertAdjacentHTML('beforeend', `<article class="arquivo-card">
@@ -516,7 +542,10 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             const sheet = workbook.Sheets[cfg.sheet];
             const motivoCell = sheet[cfg.motivoCell];
             const motivo = motivoCell ? motivoCell.v : "Não informado";
-            const dadosClientePlanilha = extrairClienteCelula(sheet.C4?.v);
+            const dadosClientePlanilha = extrairClienteCelula(sheet[cfg.clienteCell]?.v);
+            const cidadePlanilha = String(sheet[cfg.cidadeCell]?.v || '').trim();
+            const estadoSheet = cfg.estadoSheet ? workbook.Sheets[cfg.estadoSheet] : null;
+            const estadoPlanilha = String(estadoSheet?.[cfg.estadoCell]?.v || '').trim().toUpperCase();
 
             const rows = [];
             for (let r = cfg.startRow; r <= cfg.endRow; r++) {
@@ -557,11 +586,17 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 : dadosClientePlanilha.nome;
             grids.push({
                 type,
+                isNovo,
                 rows,
                 arquivo: file.name,
                 motivo: obterMotivoArquivo(file.name, motivo),
                 cliente: clienteSugeridoTexto || clientePendenteTexto,
-                clientePlanilha: dadosClientePlanilha,
+                clientePlanilha: {
+                    ...dadosClientePlanilha,
+                    cidade: cidadePlanilha,
+                    estado: estadoPlanilha,
+                    origemCliente: `${cfg.sheet}!${cfg.clienteCell}`
+                },
                 ordem: ''
             });
 
@@ -600,7 +635,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             if (!clienteSugerido) {
                 html += `<button type="button" class="btn-glass btn-green btn-cadastrar-cliente" data-grid="${gridIndex}"><i class="fas fa-user-plus"></i> Cadastrar</button>`;
             }
-            html += `<small class="cliente-origem">Origem: célula C4${dadosClientePlanilha.texto ? ` - ${escapeHtml(dadosClientePlanilha.texto)}` : ' não preenchida'}</small></label>`;
+            html += `<small class="cliente-origem">Origem: ${escapeHtml(cfg.sheet)}!${escapeHtml(cfg.clienteCell)}${dadosClientePlanilha.texto ? ` - ${escapeHtml(dadosClientePlanilha.texto)}` : ' não preenchida'}</small></label>`;
             html += `<label class="ordem-box"><strong>Ordem:</strong> <input type="text" class="ordem-importacao" data-grid="${gridIndex}" placeholder="0000" maxlength="4"></label></div>`;
             html += `<div class="data-table"><table data-index="${gridIndex}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
@@ -815,23 +850,76 @@ function gerarXLSResumo() {
     XLSX.writeFile(wb, `resumo_carregamento_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+async function buscarEstadoPorCidade(cidade) {
+    const inputEstado = document.getElementById('clienteEstadoImportacao');
+    if (!inputEstado || inputEstado.value.trim()) return;
+
+    inputEstado.placeholder = 'Buscando...';
+    inputEstado.disabled = true;
+
+    try {
+        const url = `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(cidade)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Erro na API');
+        const data = await res.json();
+
+        const municipio = (data || []).find(m =>
+            String(m.nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase() ===
+            cidade.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()
+        ) || data[0];
+
+        const uf = municipio?.microrregiao?.mesorregiao?.UF?.sigla || '';
+        if (uf) inputEstado.value = uf;
+    } catch {
+        // silencia erro de rede — usuário preenche manualmente
+    } finally {
+        inputEstado.placeholder = 'UF';
+        inputEstado.disabled = false;
+    }
+}
+
 function abrirCadastroCliente(gridIndex) {
     const grid = grids[gridIndex];
     if (!grid) return;
 
+    const codigoInput = document.getElementById('clienteCodigoImportacao');
+    const codigoLabel = codigoInput.closest('.form-group')?.querySelector('label');
+
     document.getElementById('clienteGridIndex').value = String(gridIndex);
-    document.getElementById('clienteCodigoImportacao').value = grid.clientePlanilha?.codigo || '';
+    document.getElementById('clienteGridIsNovo').value = grid.isNovo ? '1' : '';
+    codigoInput.value = grid.clientePlanilha?.codigo || '';
     document.getElementById('clienteNomeImportacao').value = grid.clientePlanilha?.nome || '';
-    document.getElementById('clienteCidadeImportacao').value = '';
-    document.getElementById('clienteEstadoImportacao').value = '';
+    document.getElementById('clienteCidadeImportacao').value = grid.clientePlanilha?.cidade || '';
+    document.getElementById('clienteEstadoImportacao').value = grid.clientePlanilha?.estado || '';
+
+    codigoInput.setAttribute('required', '');
+    codigoInput.placeholder = grid.isNovo ? 'Informe o código do novo cliente' : '';
+    if (codigoLabel) codigoLabel.textContent = 'Código:';
+
     document.getElementById('modalCadastroCliente').classList.remove('hidden');
-    document.getElementById('clienteCidadeImportacao').focus();
+
+    const cidadePreenchida = grid.clientePlanilha?.cidade || '';
+    const estadoPreenchido = grid.clientePlanilha?.estado || '';
+    if (cidadePreenchida && !estadoPreenchido) {
+        buscarEstadoPorCidade(cidadePreenchida);
+    }
+    if (cidadePreenchida) {
+        document.getElementById('clienteEstadoImportacao').focus();
+    } else {
+        document.getElementById('clienteCidadeImportacao').focus();
+    }
 }
 
 function fecharCadastroCliente() {
     document.getElementById('modalCadastroCliente').classList.add('hidden');
     document.getElementById('formCadastroClienteImportacao').reset();
     document.getElementById('clienteGridIndex').value = '';
+    document.getElementById('clienteGridIsNovo').value = '';
+    const codigoInput = document.getElementById('clienteCodigoImportacao');
+    codigoInput.setAttribute('required', '');
+    codigoInput.placeholder = '';
+    const codigoLabel = codigoInput.closest('.form-group')?.querySelector('label');
+    if (codigoLabel) codigoLabel.textContent = 'Código:';
 }
 
 async function salvarClienteImportacao(event) {
@@ -844,7 +932,7 @@ async function salvarClienteImportacao(event) {
     const estado = document.getElementById('clienteEstadoImportacao').value.trim().toUpperCase();
 
     if (!codigo || !nome || !cidade || !estado) {
-        alert('Preencha código, nome, cidade e estado.');
+        alert('Preencha código, nome, cidade e estado. O código é obrigatório no cadastro de clientes.');
         return;
     }
 

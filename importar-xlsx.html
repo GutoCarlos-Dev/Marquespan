@@ -94,6 +94,7 @@
       </div>
       <form id="formCadastroClienteImportacao">
         <input type="hidden" id="clienteGridIndex">
+        <input type="hidden" id="clienteGridIsNovo">
         <div class="form-grid">
           <div class="form-group">
             <label for="clienteCodigoImportacao">Código:</label>
@@ -113,7 +114,7 @@
           </div>
         </div>
         <div class="form-actions">
-          <button type="button" id="btnCancelarCadastroCliente" class="btn-glass">Cancelar</button>
+          <button type="button" id="btnCancelarCadastroCliente" class="btn-glass btn-red">Cancelar</button>
           <button type="submit" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Cliente</button>
         </div>
       </form>
@@ -122,6 +123,6 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/importar-xlsx.js?v=20260610-4"></script>
+  <script type="module" src="./script/importar-xlsx.js?v=20260610-7"></script>
 </body>
 </html>
