@@ -21,9 +21,6 @@ export function montarHtmlAuditoriaEstoque(rows, formatLitros) {
 
     return rows.map(item => {
         const diferencaClasse = getDiferencaClasse(item.diferenca);
-        const correcaoRegistrada = Number(item.correcaoRegistrada);
-        const mostrarCorrecaoRegistrada = Number.isFinite(correcaoRegistrada)
-            && Math.abs(correcaoRegistrada - item.diferenca) > 0.01;
 
         return `
             <tr>
@@ -35,7 +32,6 @@ export function montarHtmlAuditoriaEstoque(rows, formatLitros) {
                 <td class="estoque-anterior">${formatLitros(item.estoqueAtual)} L</td>
                 <td class="estoque-diferenca ${diferencaClasse}">
                     ${formatDiferenca(item.diferenca, formatLitros)}
-                    ${mostrarCorrecaoRegistrada ? `<small>Correcao registrada: ${formatDiferenca(correcaoRegistrada, formatLitros)}</small>` : ''}
                 </td>
                 <td>${formatLitros(item.totalSaidasDia || 0)} L</td>
                 <td style="display: flex; gap: 5px; justify-content: center;">
