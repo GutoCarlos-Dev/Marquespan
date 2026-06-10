@@ -9,7 +9,7 @@ function ordenarRelatorio(reportData, sortConfig) {
         if (col === 'data_hora') {
             valA = new Date(a.coletas_manutencao.data_hora);
             valB = new Date(b.coletas_manutencao.data_hora);
-        } else if (['semana', 'placa', 'modelo'].includes(col)) {
+        } else if (['semana', 'filial', 'placa', 'modelo'].includes(col)) {
             valA = a.coletas_manutencao[col];
             valB = b.coletas_manutencao[col];
         } else {
@@ -84,6 +84,7 @@ export function renderizarTabelaRelatorio({ tbody, reportData, sortConfig, nivel
         tr.innerHTML = `
             <td>${escapeHtml(new Date(coleta.data_hora).toLocaleString('pt-BR'))}</td>
             <td>${escapeHtml(coleta.semana)}</td>
+            <td>${escapeHtml(coleta.filial || '-')}</td>
             <td>${escapeHtml(coleta.usuario || '-')}</td>
             <td>${escapeHtml(coleta.placa)}</td>
             <td>${escapeHtml(coleta.modelo || '-')}</td>

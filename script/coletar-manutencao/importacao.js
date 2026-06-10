@@ -29,7 +29,15 @@ function montarColetaBase(row, dataHora, usuario, calcularSemana) {
         usuario,
         placa: String(row.PLACA || 'SEM PLACA').toUpperCase(),
         modelo: row.MODELO || '',
-        km: 0
+        km: 0,
+        filial: null
+    };
+}
+
+function aplicarFilialContexto(coleta, contexto) {
+    return {
+        ...coleta,
+        filial: coleta.filial || contexto.filial || null
     };
 }
 
@@ -62,7 +70,10 @@ export async function processarArquivoMoleiro(arquivo, contexto) {
     const coletasParaInserir = rows.map(row => {
         const dataHora = converterDataPlanilha(row.DATA);
         return {
-            ...montarColetaBase(row, dataHora, contexto.usuario, contexto.calcularSemana),
+            ...aplicarFilialContexto(
+                montarColetaBase(row, dataHora, contexto.usuario, contexto.calcularSemana),
+                contexto
+            ),
             _descricaoOriginal: String(row.DESCRICAO || '').toUpperCase()
         };
     });
@@ -87,7 +98,10 @@ export async function processarArquivoMecanicaExterna(arquivo, contexto) {
         const observacao = String(row.OBSERVACAO || '').toUpperCase();
 
         return {
-            ...montarColetaBase(row, dataHora, contexto.usuario, contexto.calcularSemana),
+            ...aplicarFilialContexto(
+                montarColetaBase(row, dataHora, contexto.usuario, contexto.calcularSemana),
+                contexto
+            ),
             _detalhesOriginais: observacao ? `${descricao}, ${observacao}` : descricao
         };
     });
@@ -122,7 +136,8 @@ export async function processarArquivoGeral(arquivo, contexto) {
                 usuario: contexto.usuario,
                 placa: String(row.PLACA || 'SEM PLACA').toUpperCase(),
                 modelo: row.MODELO || '',
-                km: parseInt(row.KM) || 0
+                km: parseInt(row.KM) || 0,
+                filial: contexto.filial || null
             }])
             .select()
             .single();
@@ -184,4 +199,3 @@ export async function processarImportacaoColetaManutencao(tipo, arquivo, context
 
     throw new Error(`A importacao para o tipo ${tipo} ainda nao esta implementada.`);
 }
-

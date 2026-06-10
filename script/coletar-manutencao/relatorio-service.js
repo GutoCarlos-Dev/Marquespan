@@ -1,5 +1,30 @@
 import { supabaseClient } from '../supabase.js';
 
+function normalizarFilial(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+async function buscarPerfilAtual(usuarioFallback) {
+    const {
+        data: { user },
+        error: authError
+    } = await supabaseClient.auth.getUser();
+
+    if (authError || !user?.id) {
+        if (usuarioFallback) return usuarioFallback;
+        throw authError || new Error('Usuario autenticado nao encontrado.');
+    }
+
+    const { data: perfil, error: perfilError } = await supabaseClient
+        .from('usuarios')
+        .select('nome, nivel, filial')
+        .eq('auth_user_id', user.id)
+        .single();
+
+    if (perfilError) throw perfilError;
+    return perfil;
+}
+
 function aplicarFiltros(query, filtros, { oficinasMap = {}, filtroOficinaPorDetalhes = false } = {}) {
     if (filtros.items.length > 0) {
         query = query.in('item', filtros.items);
@@ -36,21 +61,19 @@ export async function buscarDadosRelatorio({
     incluirOficinas = false,
     filtroOficinaPorDetalhes = false
 }) {
-    const nivel = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
-    const filialUsuario = usuarioLogado ? usuarioLogado.filial : '';
+    const perfilAtual = await buscarPerfilAtual(usuarioLogado);
+    const nivel = String(perfilAtual?.nivel || '').toLowerCase();
+    const filialUsuario = normalizarFilial(perfilAtual?.filial);
     const oficinaSelect = incluirOficinas ? ', oficinas(nome)' : '';
 
-    let selectQuery = `*, coletas_manutencao!inner(*)${oficinaSelect}`;
-    if (filialUsuario) {
-        selectQuery = `*, coletas_manutencao!inner(*, veiculos!inner(filial))${oficinaSelect}`;
-    }
+    const selectQuery = `*, coletas_manutencao!inner(*)${oficinaSelect}`;
 
     let query = supabaseClient
         .from('coletas_manutencao_checklist')
         .select(selectQuery);
 
     if (filialUsuario) {
-        query = query.eq('coletas_manutencao.veiculos.filial', filialUsuario);
+        query = query.ilike('coletas_manutencao.filial', filialUsuario);
     }
 
     if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
@@ -61,5 +84,10 @@ export async function buscarDadosRelatorio({
     const { data, error } = await query;
     if (error) throw error;
 
-    return data || [];
+    const resultados = data || [];
+    if (!filialUsuario) return resultados;
+
+    return resultados.filter(item =>
+        normalizarFilial(item.coletas_manutencao?.filial) === filialUsuario
+    );
 }

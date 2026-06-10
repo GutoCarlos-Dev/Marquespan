@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { configurarFiltroFilialUsuario, normalizarFilial } from './shared/filtro-filial-usuario.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -19,7 +20,10 @@ let chartGastoMensalEngraxe = null;
 let chartGastoAnualEngraxe = null;
 let wakeLock = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
+    if (!perfil) return;
+
     initServicosRealTime();
 });
 
@@ -30,7 +34,7 @@ function initServicosRealTime() {
     document.getElementById('btn-refresh')?.addEventListener('click', carregarDados);
     document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullScreen);
     document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => window.toggleSidebar && window.toggleSidebar());
-    document.getElementById('filtroFilial')?.addEventListener('change', renderDashboard);
+    document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
     document.getElementById('searchInput')?.addEventListener('input', renderDashboard);
 
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
@@ -38,7 +42,6 @@ function initServicosRealTime() {
         if (document.visibilityState === 'visible') ativarWakeLock();
     });
 
-    carregarFiliais();
     carregarDados();
     configurarRealtime();
     ativarWakeLock();
@@ -71,27 +74,6 @@ function buildDateRangeFilter(dateStr, endOfDay = false) {
         date.setHours(0, 0, 0, 0);
     }
     return date.toISOString();
-}
-
-async function carregarFiliais() {
-    const select = document.getElementById('filtroFilial');
-    if (!select) return;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('filiais')
-            .select('nome, sigla')
-            .order('nome');
-
-        if (error) throw error;
-
-        (data || []).forEach(filial => {
-            const valor = filial.sigla || filial.nome;
-            if (valor) select.appendChild(new Option(valor, valor));
-        });
-    } catch (error) {
-        console.error('Erro ao carregar filiais:', error);
-    }
 }
 
 async function carregarDados() {
@@ -213,7 +195,7 @@ function renderDashboard() {
 }
 
 function filtrarListas(listas) {
-    const filial = document.getElementById('filtroFilial')?.value || '';
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
     const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
 
     return listas
@@ -238,7 +220,7 @@ function filtrarItens(itens, filial, termo) {
         const placa = normalizarPlaca(item.placa);
         const veiculo = veiculosPorPlaca.get(placa);
 
-        if (filial && veiculo?.filial !== filial) return false;
+        if (filial && normalizarFilial(veiculo?.filial) !== filial) return false;
         if (!termo) return true;
 
         const texto = [
@@ -447,6 +429,25 @@ function carregarGraficosFinanceiros() {
     carregarGraficoGastoAnualEngraxe();
 }
 
+async function filtrarItensPorFilial(itens) {
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
+    if (!filial) return itens || [];
+
+    const placas = [...new Set((itens || []).map(item => normalizarPlaca(item.placa)).filter(Boolean))];
+    if (!placas.length) return [];
+
+    const { data, error } = await supabaseClient
+        .from('veiculos')
+        .select('placa')
+        .in('placa', placas)
+        .eq('filial', filial);
+
+    if (error) throw error;
+
+    const placasPermitidas = new Set((data || []).map(item => normalizarPlaca(item.placa)));
+    return (itens || []).filter(item => placasPermitidas.has(normalizarPlaca(item.placa)));
+}
+
 async function carregarGraficoGastoMensalLavagem() {
     const canvas = document.getElementById('chartGastoMensalLavagem');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -454,13 +455,14 @@ async function carregarGraficoGastoMensalLavagem() {
     try {
         const { data, error } = await supabaseClient
             .from('lavagem_itens')
-            .select('valor, fornecedor, status, lavagem_listas!inner(status)')
+            .select('placa, valor, fornecedor, status, lavagem_listas!inner(status)')
             .in('status', ['REALIZADO', 'OK'])
             .eq('lavagem_listas.status', 'FINALIZADA');
 
         if (error) throw error;
 
-        const resumo = (data || []).reduce((acc, item) => {
+        const itensFiltrados = await filtrarItensPorFilial(data);
+        const resumo = itensFiltrados.reduce((acc, item) => {
             const fornecedor = item.fornecedor || 'Nao informado';
             if (!acc[fornecedor]) acc[fornecedor] = { qtd: 0, valor: 0 };
             acc[fornecedor].qtd++;
@@ -512,7 +514,7 @@ async function carregarGraficoGastoAnualLavagem() {
         const anoAtual = new Date().getFullYear();
         const { data, error } = await supabaseClient
             .from('lavagem_listas')
-            .select('data_lista, status, lavagem_itens(valor, status)')
+            .select('data_lista, status, lavagem_itens(placa, valor, status)')
             .eq('status', 'FINALIZADA')
             .gte('data_lista', `${anoAtual}-01-01`)
             .lte('data_lista', `${anoAtual}-12-31`);
@@ -520,15 +522,15 @@ async function carregarGraficoGastoAnualLavagem() {
         if (error) throw error;
 
         const valoresMensais = new Array(12).fill(0);
-        (data || []).forEach(lista => {
-            const dataObj = parseSupabaseDateValue(lista.data_lista);
-            if (!dataObj) return;
-
-            const totalLista = (lista.lavagem_itens || []).reduce((sum, item) => {
-                return ['REALIZADO', 'OK'].includes(normalizarStatus(item.status)) ? sum + Number(item.valor || 0) : sum;
-            }, 0);
-
-            valoresMensais[dataObj.getUTCMonth()] += totalLista;
+        const itensComData = (data || []).flatMap(lista =>
+            (lista.lavagem_itens || []).map(item => ({ ...item, data_lista: lista.data_lista }))
+        );
+        const itensFiltrados = await filtrarItensPorFilial(itensComData);
+        itensFiltrados.forEach(item => {
+            const dataObj = parseSupabaseDateValue(item.data_lista);
+            if (dataObj && ['REALIZADO', 'OK'].includes(normalizarStatus(item.status))) {
+                valoresMensais[dataObj.getUTCMonth()] += Number(item.valor || 0);
+            }
         });
 
         if (chartGastoAnualLavagem) chartGastoAnualLavagem.destroy();
@@ -566,13 +568,14 @@ async function carregarGraficoGastoMensalEngraxe() {
     try {
         const { data, error } = await supabaseClient
             .from('engraxe_itens')
-            .select('status, engraxe_listas!inner(status)')
+            .select('placa, status, engraxe_listas!inner(status)')
             .in('status', ['OK', 'REALIZADO'])
             .eq('engraxe_listas.status', 'FINALIZADA');
 
         if (error) throw error;
 
-        const totalQtd = (data || []).length;
+        const itensFiltrados = await filtrarItensPorFilial(data);
+        const totalQtd = itensFiltrados.length;
         const valorTotal = totalQtd * 60;
 
         if (chartGastoMensalEngraxe) chartGastoMensalEngraxe.destroy();
@@ -618,7 +621,7 @@ async function carregarGraficoGastoAnualEngraxe() {
         const anoAtual = new Date().getFullYear();
         const { data, error } = await supabaseClient
             .from('engraxe_itens')
-            .select('status, engraxe_listas!inner(status, data_lista)')
+            .select('placa, status, engraxe_listas!inner(status, data_lista)')
             .in('status', ['OK', 'REALIZADO'])
             .eq('engraxe_listas.status', 'FINALIZADA')
             .gte('engraxe_listas.data_lista', `${anoAtual}-01-01`)
@@ -627,7 +630,8 @@ async function carregarGraficoGastoAnualEngraxe() {
         if (error) throw error;
 
         const valoresMensais = new Array(12).fill(0);
-        (data || []).forEach(item => {
+        const itensFiltrados = await filtrarItensPorFilial(data);
+        itensFiltrados.forEach(item => {
             const dataObj = parseSupabaseDateValue(item.engraxe_listas?.data_lista);
             if (dataObj) valoresMensais[dataObj.getUTCMonth()] += 60;
         });

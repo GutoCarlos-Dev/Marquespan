@@ -45,12 +45,12 @@ export async function buscarLancamentosManutencao({ filtros, sortConfig, oficina
 
     let query = supabaseClient
         .from('coletas_manutencao')
-        .select('*, veiculos!inner(filial)')
+        .select('*')
         .gte('data_hora', `${filtros.dataInicial}T00:00:00`)
         .lte('data_hora', `${filtros.dataFinal}T23:59:59`);
 
     if (filialUsuario) {
-        query = query.eq('veiculos.filial', filialUsuario);
+        query = query.eq('filial', filialUsuario);
     }
 
     if (usuarioRestritoPorNome(nomeUsuario, nivel)) {
@@ -121,4 +121,3 @@ export async function buscarLancamentosManutencao({ filtros, sortConfig, oficina
         emptyReason: null
     };
 }
-

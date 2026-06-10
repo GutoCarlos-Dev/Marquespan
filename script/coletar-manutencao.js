@@ -37,6 +37,7 @@ const ColetarManutencaoUI = {
         this.initTabs();
         this.veiculosData = [];
         this.editingId = null; // Variável para controlar o estado de edição
+        this.editingFilial = null;
         this.currentSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação
         this.currentReportSort = { column: 'data_hora', direction: 'desc' }; // Estado inicial da ordenação do relatório
         this.reportData = []; // Cache dos dados do relatório
@@ -49,6 +50,7 @@ const ColetarManutencaoUI = {
         this.carregarFiltrosDinamicos().then(() => {
             this.aplicarRestricoesPerfil(); 
         });
+        this.carregarFiliaisManutencao();
 
         this.setupLancamentosTab(); // Prepara a aba de lançamentos sem carregar dados
         this.carregarChecklistDinamico().then(() => {
@@ -112,6 +114,7 @@ const ColetarManutencaoUI = {
         this.formColeta = document.getElementById('formLancamentoColeta');
         this.coletaDataHoraInput = document.getElementById('coletaDataHora');
         this.coletaUsuarioInput = document.getElementById('coletaUsuario');
+        this.coletaFilialInput = document.getElementById('coletaFilial');
         this.coletaPlacaInput = document.getElementById('coletaPlaca');
         this.coletaModeloInput = document.getElementById('coletaModelo');
         this.veiculosList = document.getElementById('veiculosList');
@@ -132,6 +135,7 @@ const ColetarManutencaoUI = {
         this.modalImportacao = document.getElementById('modalImportacaoMassa');
         this.btnCloseModalImportacao = this.modalImportacao?.querySelector('.close-button');
         this.formImportacao = document.getElementById('formImportacaoMassa');
+        this.filialImportacaoInput = document.getElementById('filialImportacaoManutencao');
 
         // Exportação
         this.formExportacao = document.getElementById('formExportacao');
@@ -434,7 +438,7 @@ const ColetarManutencaoUI = {
 
         // Exibe mensagem inicial na tabela
         if (this.tableBodyLancamentos) {
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Utilize os filtros e clique em "Filtrar" para buscar os lançamentos.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center">Utilize os filtros e clique em "Filtrar" para buscar os lançamentos.</td></tr>';
         }
     },
 
@@ -442,6 +446,7 @@ const ColetarManutencaoUI = {
     abrirModal() {
         sessionStorage.setItem('marquespan_modal_coleta_open', 'true');
         this.editingId = null; // Reseta o ID de edição para criar um novo
+        this.editingFilial = null;
         this.formColeta.reset();
         this.preencherDadosPadrao();
         if (this.coletaValorTotalInput) this.coletaValorTotalInput.value = 'R$ 0,00';
@@ -537,6 +542,7 @@ const ColetarManutencaoUI = {
     // Abre o modal de importação em massa
     abrirModalImportacao() {
         this.formImportacao.reset();
+        this.aplicarFilialPadrao(this.filialImportacaoInput);
         this.modalImportacao.classList.remove('hidden');
     },
     // Fecha o modal de importação em massa
@@ -558,8 +564,11 @@ const ColetarManutencaoUI = {
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
             const usuario = JSON.parse(localStorage.getItem('usuarioLogado'))?.nome || 'Sistema';
+            const filial = this.filialImportacaoInput?.value || null;
+            if (!filial) throw new Error('Selecione a filial onde as manutencoes foram realizadas.');
             await processarImportacaoColetaManutencao(tipo, arquivo, {
                 usuario,
+                filial,
                 calcularSemana: this.calculateCurrentWeek.bind(this)
             });
             
@@ -587,12 +596,56 @@ const ColetarManutencaoUI = {
         if (usuario && usuario.nome) {
             this.coletaUsuarioInput.value = usuario.nome;
         }
+        this.aplicarFilialPadrao(this.coletaFilialInput);
 
         // Preenche Semana (Calculada a partir de 28/12/2025)
         const semana = this.calculateCurrentWeek(now); // Passa 'now' para obter o ano correto
         const semanaInput = document.getElementById('coletaSemana');
         if (semanaInput) {
             semanaInput.value = semana;
+        }
+    },
+
+    async carregarFiliaisManutencao() {
+        const selects = [this.coletaFilialInput, this.filialImportacaoInput].filter(Boolean);
+        if (selects.length === 0) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('filiais')
+                .select('nome, sigla')
+                .order('nome');
+
+            if (error) throw error;
+
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">Selecione a filial</option>';
+                (data || []).forEach(filial => {
+                    const valor = String(filial.sigla || filial.nome || '').trim().toUpperCase();
+                    if (valor) {
+                        const texto = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+                        select.add(new Option(texto, valor));
+                    }
+                });
+                this.aplicarFilialPadrao(select);
+            });
+        } catch (error) {
+            console.error('Erro ao carregar filiais da manutencao:', error);
+        }
+    },
+
+    aplicarFilialPadrao(select) {
+        if (!select) return;
+        const filialUsuario = String(
+            JSON.parse(localStorage.getItem('usuarioLogado'))?.filial || ''
+        ).trim().toUpperCase();
+
+        select.disabled = Boolean(filialUsuario);
+        if (filialUsuario) {
+            if (!Array.from(select.options).some(option => option.value === filialUsuario)) {
+                select.add(new Option(filialUsuario, filialUsuario));
+            }
+            select.value = filialUsuario;
         }
     },
 
@@ -610,17 +663,11 @@ const ColetarManutencaoUI = {
     // Carrega a lista de veículos para o datalist
     async carregarVeiculos() {
         try {
-            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
             let query = supabaseClient
                 .from('veiculos')
-                .select('placa, modelo')
+                .select('placa, modelo, filial')
                 .eq('situacao', 'ativo') // Garante que só traga veículos ativos
                 .order('placa');
-
-            // Filtra por filial se o usuário tiver uma definida. Se não, mostra todos.
-            if (usuario && usuario.filial) {
-                query = query.eq('filial', usuario.filial);
-            }
 
             const { data, error } = await query;
             if (error) throw error;
@@ -730,6 +777,12 @@ const ColetarManutencaoUI = {
         const placa = document.getElementById('coletaPlaca').value.trim().toUpperCase();
         const modelo = document.getElementById('coletaModelo').value;
         const km = document.getElementById('coletaKm').value;
+        const filial = String(this.coletaFilialInput?.value || '').trim().toUpperCase();
+
+        if (!filial) {
+            alert('Selecione a filial onde a manutencao foi realizada.');
+            return;
+        }
         
         // Captura o valor total calculado
         const valorTotalStr = this.coletaValorTotalInput ? this.coletaValorTotalInput.value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim() : '0';
@@ -819,6 +872,7 @@ const ColetarManutencaoUI = {
                         placa,
                         modelo,
                         km: parseInt(km),
+                        filial,
                         valor_total: valorTotal
                     })
                     .eq('id', this.editingId);
@@ -854,6 +908,7 @@ const ColetarManutencaoUI = {
                     .select('*, coletas_manutencao_checklist(*)')
                     .eq('placa', placa)
                     .eq('semana', semana)
+                    .eq('filial', filial)
                     .order('data_hora', { ascending: false });
 
                 if (fetchError) throw fetchError;
@@ -916,7 +971,7 @@ const ColetarManutencaoUI = {
                     const { data: coleta, error: coletaError } = await supabaseClient
                         .from('coletas_manutencao')
                         .insert([{
-                            semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km), valor_total: valorTotal
+                            semana, data_hora: dataHora, usuario, placa, modelo, km: parseInt(km), filial, valor_total: valorTotal
                         }])
                         .select()
                         .single();
@@ -1018,7 +1073,7 @@ const ColetarManutencaoUI = {
                     // C. Atualizar Headers (Data/Usuário)
                     if (headersToUpdate.size > 0) {
                         await supabaseClient.from('coletas_manutencao')
-                            .update({ data_hora: dataHora, usuario: usuario })
+                            .update({ data_hora: dataHora, usuario: usuario, filial })
                             .in('id', Array.from(headersToUpdate));
                     }
                 }
@@ -1070,7 +1125,7 @@ const ColetarManutencaoUI = {
     // Carrega os lançamentos recentes para a tabela principal
     async carregarLancamentos() {
         if (!this.tableBodyLancamentos) return;
-        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+        this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center">Carregando...</td></tr>';
 
         try {
             const filtros = {
@@ -1083,7 +1138,7 @@ const ColetarManutencaoUI = {
             };
 
             if (!filtros.dataInicial || !filtros.dataFinal) {
-                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center">Por favor, selecione o período de data.</td></tr>';
+                this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center">Por favor, selecione o período de data.</td></tr>';
                 return;
             }
 
@@ -1097,7 +1152,7 @@ const ColetarManutencaoUI = {
                 const mensagem = resultado.emptyReason === 'filters'
                     ? 'Nenhum lançamento encontrado para os filtros.'
                     : 'Nenhum lançamento encontrado.';
-                this.tableBodyLancamentos.innerHTML = `<tr><td colspan="6" class="text-center">${mensagem}</td></tr>`;
+                this.tableBodyLancamentos.innerHTML = `<tr><td colspan="7" class="text-center">${mensagem}</td></tr>`;
                 return;
             }
 
@@ -1110,7 +1165,7 @@ const ColetarManutencaoUI = {
             });
         } catch (err) {
             console.error('Erro ao carregar lançamentos:', err);
-            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+            this.tableBodyLancamentos.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
         }
     },
     // Lida com a ordenação da tabela de lançamentos
@@ -1158,6 +1213,10 @@ const ColetarManutencaoUI = {
 
             // 3. Preencher o formulário
             this.editingId = id;
+            this.editingFilial = coleta.filial || null;
+            if (this.coletaFilialInput) {
+                this.coletaFilialInput.value = String(coleta.filial || '').trim().toUpperCase();
+            }
             document.getElementById('coletaSemana').value = coleta.semana;
             
             // Garante que o formato da semana seja XX-YYYY ao carregar para edição
@@ -1330,7 +1389,7 @@ const ColetarManutencaoUI = {
 
     async buscarRelatorio() {
         if (!this.tableBodyRelatorio) return;
-        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="13" class="text-center">Buscando...</td></tr>';
         
         try {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -1345,7 +1404,7 @@ const ColetarManutencaoUI = {
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
-                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum registro encontrado.</td></tr>';
+                this.tableBodyRelatorio.innerHTML = '<tr><td colspan="13" class="text-center">Nenhum registro encontrado.</td></tr>';
                 if (this.graficosContainer) this.graficosContainer.style.display = 'none';
                 return;
             }
@@ -1356,7 +1415,7 @@ const ColetarManutencaoUI = {
 
         } catch (err) {
             console.error('Erro ao buscar relatório:', err);
-            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
+            this.tableBodyRelatorio.innerHTML = '<tr><td colspan="13" class="text-center text-danger">Erro ao buscar dados.</td></tr>';
         }
     },
 

@@ -26,10 +26,11 @@ const STATUS_COLORS = {
 const REFRESH_INTERVAL = 600000;
 let refreshTimer;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     randomizarGraficos(); // Embaralha a ordem antes de iniciar
+    const perfilCarregado = await carregarFiliais();
+    if (!perfilCarregado) return;
     initDashboard();
-    carregarFiliais();
     iniciarRolagemAutomatica(); // Inicia a animação
 });
 
@@ -194,8 +195,9 @@ async function carregarDados() {
                         id,
                         data_hora,
                         placa,
+                        filial,
                         veiculos!inner (
-                            filial
+                            tipo
                         )
                     ),
                     oficinas (
@@ -208,7 +210,7 @@ async function carregarDados() {
                 .range(from, from + step - 1); // Paginação
 
             if (filial) {
-                query = query.eq('coletas_manutencao.veiculos.filial', filial);
+                query = query.eq('coletas_manutencao.filial', filial);
             }
             if (status) {
                 if (status === 'PENDENTE') {
@@ -264,7 +266,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         const applyKPIFilters = (query) => {
             // Exclui tipos conforme solicitação
             query = query.not('coletas_manutencao.veiculos.tipo', 'in', '("EMPILHADEIRA","GERADOR")');
-            if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
+            if (filial) query = query.eq('coletas_manutencao.filial', filial);
 
             if (!status) return query; 
             if (status === 'PENDENTE') {
@@ -280,7 +282,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // Filtro igual ao da página de coleta: Status PENDENTE (incluindo variações)
         let queryPendentes = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .in('status', ['PENDENTE', 'NAO REALIZADO', 'NÃO REALIZADO']);
         queryPendentes = applyKPIFilters(queryPendentes);
 
@@ -295,7 +297,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // Removido filtro de data para mostrar o total GERAL (Status Atual)
         let queryInternados = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .eq('status', 'INTERNADO');
         queryInternados = applyKPIFilters(queryInternados);
 
@@ -311,7 +313,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // FINALIZADO (inclui OK)
         let queryFinalizadosPeriodo = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .in('status', ['FINALIZADO', 'OK'])
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
@@ -322,7 +324,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // CHECK-IN OFICINA (Status Atual - Sem filtro de data)
         let queryCheckinOficina = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .eq('status', 'CHECK-IN OFICINA');
         queryCheckinOficina = applyKPIFilters(queryCheckinOficina);
         const { count: countCheckinOficina } = await queryCheckinOficina;
@@ -335,7 +337,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // CHECK-IN ROTA (Status Atual - Sem filtro de data)
         let queryCheckinRota = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .eq('status', 'CHECK-IN ROTA');
         queryCheckinRota = applyKPIFilters(queryCheckinRota);
         const { count: countCheckinRota } = await queryCheckinRota;
@@ -348,7 +350,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         // FINALIZADO ROTA
         let queryFinalizadoRota = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .eq('status', 'FINALIZADO ROTA')
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
@@ -364,7 +366,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
 
         let queryFinalizados = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('*, coletas_manutencao!inner(id, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .in('status', ['FINALIZADO', 'FINALIZADO ROTA', 'OK'])
             .gte('coletas_manutencao.data_hora', `${hojeStr}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${hojeStr}T23:59:59`);
@@ -380,7 +382,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         const statusesParaContar = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'INTERNADO', 'FINALIZADO', 'OK'];
         let queryManutencoes = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('id, coletas_manutencao!inner(data_hora, veiculos!inner(filial))', { count: 'exact', head: true })
+            .select('id, coletas_manutencao!inner(data_hora, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
             .in('status', statusesParaContar)
             .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
             .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`);
@@ -402,7 +404,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         while (keepFetching) {
             let queryValores = supabaseClient
                 .from('coletas_manutencao_checklist')
-                .select('valor, coletas_manutencao!inner(id, veiculos!inner(filial))')
+                .select('valor, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))')
                 .gte('coletas_manutencao.data_hora', `${dtIni}T00:00:00`)
                 .lte('coletas_manutencao.data_hora', `${dtFim}T23:59:59`)
                 .range(from, from + step - 1);
@@ -456,21 +458,50 @@ async function carregarFiliais() {
     if (!select) return;
     
     try {
+        const {
+            data: { user },
+            error: authError
+        } = await supabaseClient.auth.getUser();
+        if (authError || !user?.id) throw authError || new Error('Usuario autenticado nao encontrado.');
+
+        const { data: perfil, error: perfilError } = await supabaseClient
+            .from('usuarios')
+            .select('filial')
+            .eq('auth_user_id', user.id)
+            .single();
+        if (perfilError) throw perfilError;
+
+        const filialUsuario = String(perfil?.filial || '').trim().toUpperCase();
         const { data, error } = await supabaseClient
             .from('filiais')
             .select('nome, sigla')
             .order('nome');
-            
+
+        if (error) throw error;
+        select.innerHTML = filialUsuario ? '' : '<option value="">Todas</option>';
+
         if (data) {
-            data.forEach(f => {
+            data
+                .filter(f => !filialUsuario || String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario)
+                .forEach(f => {
                 const opt = document.createElement('option');
-                opt.value = f.sigla || f.nome;
+                opt.value = String(f.sigla || f.nome || '').trim().toUpperCase();
                 opt.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
                 select.appendChild(opt);
             });
         }
+
+        if (filialUsuario) {
+            if (!select.options.length) select.add(new Option(filialUsuario, filialUsuario));
+            select.value = filialUsuario;
+            select.disabled = true;
+        }
+        return true;
     } catch (err) {
         console.error("Erro ao carregar filiais", err);
+        select.innerHTML = '<option value="">Acesso indisponivel</option>';
+        select.disabled = true;
+        return false;
     }
 }
 
@@ -538,11 +569,11 @@ async function carregarEmManutencaoAtual(filial) {
     try {
         let query = supabaseClient
             .from('coletas_manutencao_checklist')
-            .select('status, coletas_manutencao!inner(veiculos!inner(filial))')
+            .select('status, coletas_manutencao!inner(filial, veiculos!inner(tipo))')
             .in('status', ['INTERNADO', 'CHECK-IN OFICINA', 'CHECK-IN ROTA'])
             .not('coletas_manutencao.veiculos.tipo', 'in', '("EMPILHADEIRA","GERADOR")');
 
-        if (filial) query = query.eq('coletas_manutencao.veiculos.filial', filial);
+        if (filial) query = query.eq('coletas_manutencao.filial', filial);
 
         // Paginação para buscar todos os registros sem limite
         let allData = [];
@@ -703,8 +734,9 @@ async function carregarDadosTopPlacas(dtIni, dtFim, filial) {
             .select(`
                 placa,
                 valor_total,
+                filial,
                 veiculos!inner (
-                    filial
+                    tipo
                 )
             `)
             .not('veiculos.tipo', 'in', '("EMPILHADEIRA","GERADOR")')
@@ -713,7 +745,7 @@ async function carregarDadosTopPlacas(dtIni, dtFim, filial) {
             .gt('valor_total', 0); // Apenas com valor preenchido/maior que zero
 
         if (filial) {
-            query = query.eq('veiculos.filial', filial);
+            query = query.eq('filial', filial);
         }
 
         // Paginação para buscar todos os registros sem limite

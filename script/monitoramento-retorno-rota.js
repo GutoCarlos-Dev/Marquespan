@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { configurarFiltroFilialUsuario, normalizarFilial } from './shared/filtro-filial-usuario.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -30,7 +31,10 @@ let veiculosPorPlaca = new Map();
 let retornoChannel = null;
 let refreshTimer = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
+    if (!perfil) return;
+
     initRetornoRealTime();
 });
 
@@ -48,32 +52,10 @@ function initRetornoRealTime() {
 
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
 
-    carregarFiliais();
     carregarDados();
     configurarRealtime();
 
     refreshTimer = setInterval(carregarDados, REFRESH_INTERVAL);
-}
-
-async function carregarFiliais() {
-    const select = document.getElementById('filtroFilial');
-    if (!select) return;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('filiais')
-            .select('nome, sigla')
-            .order('nome');
-
-        if (error) throw error;
-
-        (data || []).forEach(filial => {
-            const valor = filial.sigla || filial.nome;
-            if (valor) select.appendChild(new Option(valor, valor));
-        });
-    } catch (error) {
-        console.error('Erro ao carregar filiais:', error);
-    }
 }
 
 async function carregarDados() {
@@ -87,12 +69,16 @@ async function carregarDados() {
     }
 
     try {
-        const { data, error } = await supabaseClient
+        const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
+        let query = supabaseClient
             .from('retorno_rota')
             .select('*')
             .eq('data_retorno', dataRetorno)
             .order('rota', { ascending: true });
 
+        if (filial) query = query.eq('filial', filial);
+
+        const { data, error } = await query;
         if (error) throw error;
 
         registrosRetorno = data || [];
@@ -168,14 +154,14 @@ function renderDashboard() {
 }
 
 function filtrarRegistros(registros) {
-    const filial = document.getElementById('filtroFilial')?.value || '';
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
     const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
 
     return registros.filter(item => {
         const placa = normalizarPlaca(item.placa);
         const veiculo = veiculosPorPlaca.get(placa);
 
-        if (filial && veiculo?.filial !== filial) return false;
+        if (filial && normalizarFilial(item.filial) !== filial) return false;
 
         if (!termo) return true;
 
@@ -186,6 +172,7 @@ function filtrarRegistros(registros) {
             item.nome_mot,
             item.nome_aux,
             item.operador_recebimento,
+            item.filial,
             veiculo?.modelo,
             veiculo?.filial
         ].join(' ').toUpperCase();
@@ -226,7 +213,7 @@ function montarCard(item, chegou) {
                 <div class="truck-details">
                     <span><i class="fas fa-user"></i> ${escapeHtml(item.nome_mot || 'Motorista não informado')}</span>
                     <span><i class="fas fa-user-plus"></i> ${escapeHtml(item.nome_aux || 'Sem auxiliar')}</span>
-                    <span><i class="fas fa-building"></i> ${escapeHtml(veiculo?.filial || 'Filial N/I')}</span>
+                    <span><i class="fas fa-building"></i> ${escapeHtml(item.filial || veiculo?.filial || 'Filial N/I')}</span>
                     ${item.operador_recebimento ? `<span><i class="fas fa-clipboard-check"></i> ${escapeHtml(item.operador_recebimento)}</span>` : ''}
                 </div>
             </div>

@@ -111,6 +111,7 @@
             <tr>
               <th data-sort="data_hora">DATA/HORA <i class="fas fa-sort"></i></th>
               <th data-sort="semana">SEMANA <i class="fas fa-sort"></i></th>
+              <th data-sort="filial">FILIAL <i class="fas fa-sort"></i></th>
               <th data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
               <th data-sort="usuario">USUÁRIO <i class="fas fa-sort"></i></th>
               <th>VALOR TOTAL</th>
@@ -225,6 +226,7 @@
                 <tr>
                     <th data-sort="data_hora">DATA <i class="fas fa-sort"></i></th>
                     <th data-sort="semana">SEM <i class="fas fa-sort"></i></th>
+                    <th data-sort="filial">FILIAL <i class="fas fa-sort"></i></th>
                     <th data-sort="usuario">USUÁRIO <i class="fas fa-sort"></i></th>
                     <th data-sort="placa">PLACA <i class="fas fa-sort"></i></th>
                     <th data-sort="modelo">MODELO <i class="fas fa-sort"></i></th>
@@ -292,6 +294,12 @@
                             <label>Usuário</label>
                             <input type="text" id="coletaUsuario" class="glass-input" readonly>
                         </div>
+                        <div class="form-group">
+                            <label for="coletaFilial">Filial da Manutenção</label>
+                            <select id="coletaFilial" class="glass-input" required>
+                                <option value="">Selecione a filial</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Card 2: Veículo -->
@@ -351,6 +359,12 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="filialImportacaoManutencao">Filial da Manutenção</label>
+                    <select id="filialImportacaoManutencao" class="glass-input" required>
+                        <option value="">Selecione a filial</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Arquivo Excel (.xlsx)</label>
                     <input type="file" id="arquivoImportacao" accept=".xlsx" class="glass-input" required>
                 </div>
@@ -368,6 +382,6 @@
   <!-- 🚀 Scripts -->
    <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/coletar-manutencao.js"></script>
+  <script type="module" src="./script/coletar-manutencao.js?v=20260610-2"></script>
 </body>
 </html>

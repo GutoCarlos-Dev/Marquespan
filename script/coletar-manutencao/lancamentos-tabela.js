@@ -81,6 +81,7 @@ export function renderizarTabelaLancamentos({ tbody, data, roleFilterItem, podeE
         tr.innerHTML = `
             <td>${escapeHtml(new Date(item.data_hora).toLocaleString('pt-BR'))}</td>
             <td>${escapeHtml(item.semana)}</td>
+            <td>${escapeHtml(item.filial || '-')}</td>
             <td>${escapeHtml(item.placa)}</td>
             <td>${escapeHtml(item.usuario)}</td>
             <td style="${valorStyle}">${valorDisplay}</td>

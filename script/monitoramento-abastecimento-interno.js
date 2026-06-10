@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
+import { configurarFiltroFilialUsuario, normalizarFilial } from './shared/filtro-filial-usuario.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -42,7 +43,10 @@ let retornoChannel = null;
 let refreshTimer = null;
 let wakeLockSentinel = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
+    if (!perfil) return;
+
     initAbastecimentoRealTime();
 });
 
@@ -61,7 +65,6 @@ function initAbastecimentoRealTime() {
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
     document.addEventListener('visibilitychange', restaurarWakeLockQuandoVisivel);
 
-    carregarFiliais();
     carregarDados();
     configurarRealtime();
     ativarBloqueioDescansoTela();
@@ -103,27 +106,6 @@ async function liberarBloqueioDescansoTela() {
     }
 }
 
-async function carregarFiliais() {
-    const select = document.getElementById('filtroFilial');
-    if (!select) return;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('filiais')
-            .select('nome, sigla')
-            .order('nome');
-
-        if (error) throw error;
-
-        (data || []).forEach(filial => {
-            const valor = filial.sigla || filial.nome;
-            if (valor) select.appendChild(new Option(valor, valor));
-        });
-    } catch (error) {
-        console.error('Erro ao carregar filiais:', error);
-    }
-}
-
 async function carregarDados() {
     const btnRefresh = document.getElementById('btn-refresh');
     btnRefresh?.classList.add('fa-spin');
@@ -136,18 +118,27 @@ async function carregarDados() {
 
     try {
         const intervalo = getIntervaloDiaSaoPaulo(dataAbastecimento);
+        const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
+        let querySaidas = supabaseClient
+            .from('saidas_combustivel')
+            .select('*, bicos!inner(bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel, filial, capacidade)))')
+            .gte('data_hora', intervalo.inicio)
+            .lte('data_hora', intervalo.fim)
+            .order('data_hora', { ascending: false });
+        let queryRetornos = supabaseClient
+            .from('retorno_rota')
+            .select('id, data_retorno, placa, rota, nome_mot, hora_mot, operador_recebimento, filial')
+            .eq('data_retorno', dataAbastecimento);
+
+        if (filial) {
+            querySaidas = querySaidas.eq('bicos.bombas.tanques.filial', filial);
+            queryRetornos = queryRetornos.eq('filial', filial);
+        }
+
         const [resSaidas, resRetornos, estoqueAtual] = await Promise.all([
-            supabaseClient
-                .from('saidas_combustivel')
-                .select('*, bicos(bombas(tanque_id, tanques(id, nome, tipo_combustivel, filial, capacidade)))')
-                .gte('data_hora', intervalo.inicio)
-                .lte('data_hora', intervalo.fim)
-                .order('data_hora', { ascending: false }),
-            supabaseClient
-                .from('retorno_rota')
-                .select('id, data_retorno, placa, rota, nome_mot, hora_mot, operador_recebimento')
-                .eq('data_retorno', dataAbastecimento),
-            calcularEstoqueAtual(supabaseClient)
+            querySaidas,
+            queryRetornos,
+            calcularEstoqueAtual(supabaseClient, filial)
         ]);
 
         if (resSaidas.error) throw resSaidas.error;
@@ -250,12 +241,12 @@ async function carregarVeiculosRecebimento(registros) {
 }
 
 function filtrarRegistros(registros) {
-    const filial = document.getElementById('filtroFilial')?.value || '';
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
     const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
 
     return registros.filter(item => {
         const tanque = obterTanque(item);
-        if (filial && tanque?.filial !== filial) return false;
+        if (filial && normalizarFilial(tanque?.filial) !== filial) return false;
 
         if (!termo) return true;
 
@@ -343,7 +334,7 @@ function agruparPorOrigem(registros) {
 
 function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
     const placasAbastecidas = new Set((veiculosAbastecidos || []).map(item => normalizarPlaca(item.placa)));
-    const filial = document.getElementById('filtroFilial')?.value || '';
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
     const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
     const mapa = new Map();
 
@@ -352,7 +343,7 @@ function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
         if (!placa || placasAbastecidas.has(placa)) return;
 
         const veiculo = veiculosRecebimentoPorPlaca.get(placa);
-        if (filial && veiculo?.filial !== filial) return;
+        if (filial && normalizarFilial(item.filial) !== filial) return;
 
         const recebido = Boolean((item.operador_recebimento && item.operador_recebimento.trim()) || item.hora_mot);
         if (!recebido) return;
@@ -363,6 +354,7 @@ function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
                 item.rota,
                 item.nome_mot,
                 item.operador_recebimento,
+                item.filial,
                 veiculo?.modelo,
                 veiculo?.filial
             ].join(' ').toUpperCase();
@@ -376,7 +368,7 @@ function calcularFaltamAbastecer(retornos, veiculosAbastecidos) {
                 motorista: item.nome_mot || '',
                 horaRetorno: item.hora_mot || '',
                 operador: item.operador_recebimento || '',
-                filial: veiculo?.filial || '',
+                filial: item.filial || veiculo?.filial || '',
                 modelo: veiculo?.modelo || ''
             });
         }
