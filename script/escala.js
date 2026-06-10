@@ -6997,7 +6997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const filialUsuario = usuarioLogado?.filial || '';
-        const podeVerTodasFiliais = isAdministradorEscala || (podeGerenciarEscala && filialUsuario === 'SP');
+        const podeVerTodasFiliais = isAdministradorEscala || !filialUsuario || (podeGerenciarEscala && filialUsuario === 'SP');
 
         filiaisCache = podeVerTodasFiliais
             ? (data || [])
