@@ -159,16 +159,6 @@ function valorExisteNoDatalist(datalistId, value) {
         .some(option => String(option.value || '').trim().toUpperCase() === valor);
 }
 
-function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, char => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    }[char]));
-}
-
 /**
  * Obtém o ID do item selecionado a partir do texto digitado.
  * @param {string} textoDigitado O texto digitado no campo item
@@ -889,10 +879,12 @@ function calcularResumoCarregamento() {
  */
 async function gerarPDF() {
     const botao = document.getElementById('btnGerarPDF');
-    let elementoPDF = null;
 
     try {
-        // Verifica se há dados para gerar o PDF
+        if (!window.jspdf) {
+            alert('Biblioteca PDF não carregada.');
+            return;
+        }
         if (carregamentoState.requisicoesCarregamento.length === 0 &&
             carregamentoState.requisicoesTrocaRetirada.length === 0) {
             alert('⚠️ Adicione pelo menos uma requisição ao carregamento antes de gerar o PDF.');
@@ -939,190 +931,155 @@ async function gerarPDF() {
             botao.textContent = 'Gerando PDF...';
         }
 
-        // Cria o conteúdo HTML do PDF seguindo o layout especificado
-        const conteudoPDF = `
-            <div class="pdf-relatorio">
-                <style>
-                    .pdf-relatorio {
-                        font-family: Arial, sans-serif;
-                        font-size: 12px;
-                        line-height: 1.4;
-                        padding: 20px;
-                    }
-                    .pdf-relatorio .header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 2px solid #333;
-                        padding-bottom: 10px;
-                        margin-bottom: 20px;
-                    }
-                    .pdf-relatorio .header-left {
-                        flex: 1;
-                    }
-                    .pdf-relatorio .header-right {
-                        flex: 1;
-                        text-align: right;
-                    }
-                    .pdf-relatorio .header h1 {
-                        margin: 0;
-                        font-size: 24px;
-                        color: #333;
-                        font-weight: bold;
-                    }
-                    .pdf-relatorio .header .subtitle {
-                        font-size: 14px;
-                        color: #666;
-                        margin: 5px 0;
-                    }
-                    .pdf-relatorio .info-section {
-                        margin-bottom: 20px;
-                    }
-                    .pdf-relatorio .info-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 20px;
-                        margin-bottom: 15px;
-                    }
-                    .pdf-relatorio .info-item {
-                        margin-bottom: 5px;
-                    }
-                    .pdf-relatorio .info-label {
-                        font-weight: bold;
-                        display: inline-block;
-                        width: 80px;
-                    }
-                    .pdf-relatorio table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 20px;
-                        font-size: 12px;
-                        page-break-inside: auto;
-                    }
-                    .pdf-relatorio tr {
-                        page-break-inside: avoid;
-                        page-break-after: auto;
-                    }
-                    .pdf-relatorio th,
-                    .pdf-relatorio td {
-                        border: 1px solid #333;
-                        padding: 8px;
-                        text-align: center;
-                        vertical-align: middle;
-                    }
-                    .pdf-relatorio th {
-                        background-color: #f0f0f0;
-                        font-weight: bold;
-                    }
-                    .pdf-relatorio .total-row {
-                        background-color: #e8f4fd !important;
-                        font-weight: bold;
-                    }
-                    .pdf-relatorio h2 {
-                        font-size: 16px;
-                        margin: 20px 0 8px;
-                    }
-                    .pdf-relatorio .empty-row {
-                        color: #666;
-                        font-style: italic;
-                    }
-                    .pdf-relatorio .logo-placeholder {
-                        width: 100px;
-                        height: 60px;
-                        background-color: #f9f9f9;
-                        border: 2px dashed #ccc;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 10px;
-                        color: #666;
-                        text-align: center;
-                    }
-                </style>
-                <div class="header">
-                    <div class="header-left">
-                        <h1>🏢 MARQUESPAN</h1>
-                        <div class="subtitle">Relatório de Carregamento</div>
-                        <div class="subtitle">Semana ${escapeHtml(semana)} - ${escapeHtml(dataFormatada)}</div>
-                    </div>
-                    <div class="header-right">
-                        <div class="logo-placeholder">
-                            LOGO DA<br>EMPRESA
-                        </div>
-                    </div>
-                </div>
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margem = 8;
+        const verde = [0, 105, 55];
+        const resumo = calcularResumoCarregamento();
 
-                <div class="info-section">
-                    <div class="info-grid">
-                        <div class="info-item"><span class="info-label">SEMANA:</span> ${escapeHtml(semana)}</div>
-                        <div class="info-item"><span class="info-label">DATA/HORA:</span> ${escapeHtml(dataFormatada)}</div>
-                        <div class="info-item"><span class="info-label">PLACA:</span> ${escapeHtml(placa)}</div>
-                        <div class="info-item"><span class="info-label">MOTORISTA:</span> ${escapeHtml(motoristaNome || motoristaTexto)}</div>
-                        <div class="info-item"><span class="info-label">CONFERENTE:</span> ${escapeHtml(conferente)}</div>
-                        <div class="info-item"><span class="info-label">SUPERVISOR:</span> ${escapeHtml(supervisor || 'N/A')}</div>
-                    </div>
-                </div>
-
-                <div class="info-section">
-                    ${gerarResumoPDF()}
-                </div>
-
-                <h2>Itens carregados para entrega</h2>
-                ${gerarTabelaItensPDF(carregamentoState.requisicoesCarregamento)}
-
-                <h2>Itens de troca e retirada</h2>
-                ${gerarTabelaItensPDF(carregamentoState.requisicoesTrocaRetirada)}
-
-                <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #666;">
-                    <p>Relatório gerado em ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Sistema de Gerenciamento de Carregamentos - Marquespan</p>
-                </div>
-            </div>
-        `;
-
-        elementoPDF = document.createElement('div');
-        elementoPDF.innerHTML = conteudoPDF;
-        elementoPDF.style.position = 'fixed';
-        elementoPDF.style.left = '0';
-        elementoPDF.style.top = '0';
-        elementoPDF.style.width = '27.7cm';
-        elementoPDF.style.background = '#ffffff';
-        elementoPDF.style.pointerEvents = 'none';
-        elementoPDF.style.zIndex = '99999';
-        document.body.appendChild(elementoPDF);
-        await document.fonts?.ready;
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-        // Configurações do PDF melhoradas
-        const opcoes = {
-            margin: [1, 1, 1, 1], // Margens: topo, direita, baixo, esquerda
-            filename: `carregamento_semana_${semana}_${dataFormatada.replace(/[/:,\s]/g, '-')}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff'
-            },
-            jsPDF: {
-                unit: 'cm',
-                format: 'a4',
-                orientation: 'landscape',
-                compress: true
+        try {
+            const response = await fetch('logo.png');
+            if (response.ok) {
+                const blob = await response.blob();
+                const logo = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                doc.addImage(logo, 'PNG', margem, 7, 40, 10);
             }
-        };
+        } catch (error) {
+            console.warn('Logo não carregado no PDF:', error);
+        }
 
-        // Gera o PDF
-        await html2pdf().set(opcoes).from(elementoPDF).save();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(17);
+        doc.setTextColor(...verde);
+        doc.text('RELATÓRIO DE CARREGAMENTO', pageWidth / 2, 14, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(`Semana ${semana}`, pageWidth / 2, 20, { align: 'center' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margem, 9, { align: 'right' });
 
+        doc.autoTable({
+            startY: 25,
+            margin: { left: margem, right: margem },
+            theme: 'grid',
+            body: [
+                ['SEMANA', semana, 'DATA/HORA', dataFormatada, 'PLACA', placa],
+                ['MOTORISTA', motoristaNome || motoristaTexto, 'CONFERENTE', conferente, 'SUPERVISOR', supervisor || '-']
+            ],
+            styles: { fontSize: 8, cellPadding: 1.8, valign: 'middle' },
+            columnStyles: {
+                0: { fontStyle: 'bold', fillColor: [235, 244, 239], cellWidth: 22 },
+                1: { cellWidth: 45 },
+                2: { fontStyle: 'bold', fillColor: [235, 244, 239], cellWidth: 25 },
+                3: { cellWidth: 60 },
+                4: { fontStyle: 'bold', fillColor: [235, 244, 239], cellWidth: 23 },
+                5: { cellWidth: 58 }
+            }
+        });
+
+        let finalY = doc.lastAutoTable.finalY + 5;
+
+        finalY = adicionarTituloSecaoPDF(doc, 'MOVIMENTAÇÃO DE EQUIPAMENTOS', finalY, pageWidth, pageHeight, margem, verde);
+        doc.autoTable({
+            startY: finalY,
+            margin: { left: margem, right: margem },
+            theme: 'grid',
+            head: [[
+                'ENTREGA\nDEMAIS', 'ENTREGA\nESTEIRAS', 'ENTREGA\nFORMAS', 'TOTAL\nENTREGA',
+                'RETORNO\nDEMAIS', 'RETORNO\nESTEIRAS', 'RETORNO\nFORMAS', 'TOTAL\nRETORNO',
+                'TOTAL\nMOVIMENTADO', 'TOTAL\nCLIENTES'
+            ]],
+            body: [[
+                resumo.movimentacao.entrega.demais,
+                resumo.movimentacao.entrega.esteiras,
+                resumo.movimentacao.entrega.formas,
+                resumo.movimentacao.entrega.total,
+                resumo.movimentacao.retorno.demais,
+                resumo.movimentacao.retorno.esteiras,
+                resumo.movimentacao.retorno.formas,
+                resumo.movimentacao.retorno.total,
+                resumo.movimentacao.total,
+                resumo.totalClientes
+            ]],
+            styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle' },
+            headStyles: { fillColor: verde, textColor: 255, fontStyle: 'bold' },
+            bodyStyles: { fillColor: [247, 251, 248], fontStyle: 'bold' }
+        });
+
+        finalY = doc.lastAutoTable.finalY + 5;
+        finalY = adicionarTituloSecaoPDF(doc, 'REQUISIÇÕES POR MOTIVO', finalY, pageWidth, pageHeight, margem, verde);
+        doc.autoTable({
+            startY: finalY,
+            margin: { left: margem, right: margem },
+            theme: 'grid',
+            head: [[
+                'CLIENTE NOVO\n(REQ.)', 'AUMENTO', 'AUMENTO+\nTROCA', 'TROCA',
+                'RET.\nPARCIAL', 'RET.\nEMPRÉSTIMO', 'RET.\nTOTAL',
+                'TOTAL\nREQUISIÇÕES', 'CLI. NOVOS\nÚNICOS', 'TOTAL\nCLIENTES'
+            ]],
+            body: [[
+                resumo.motivos['Cliente Novo'],
+                resumo.motivos['Aumento'],
+                resumo.motivos['Aumento+Troca'],
+                resumo.motivos['Troca'],
+                resumo.motivos['Retirada Parcial'],
+                resumo.motivos['Retirada de Empréstimo'],
+                resumo.motivos['Retirada Total'],
+                resumo.totalRequisicoes,
+                resumo.clientesNovos,
+                resumo.totalClientes
+            ]],
+            styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle' },
+            headStyles: { fillColor: verde, textColor: 255, fontStyle: 'bold' },
+            bodyStyles: { fillColor: [247, 251, 248], fontStyle: 'bold' }
+        });
+
+        finalY = doc.lastAutoTable.finalY + 5;
+        finalY = adicionarTabelaItensPDF(
+            doc,
+            'ITENS CARREGADOS PARA ENTREGA',
+            carregamentoState.requisicoesCarregamento,
+            finalY,
+            pageWidth,
+            pageHeight,
+            margem,
+            verde
+        );
+        adicionarTabelaItensPDF(
+            doc,
+            'ITENS DE TROCA E RETIRADA',
+            carregamentoState.requisicoesTrocaRetirada,
+            finalY,
+            pageWidth,
+            pageHeight,
+            margem,
+            verde
+        );
+
+        const totalPaginas = doc.internal.getNumberOfPages();
+        for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+            doc.setPage(pagina);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text('Sistema de Gerenciamento de Carregamentos - Marquespan', margem, pageHeight - 5);
+            doc.text(`Página ${pagina} de ${totalPaginas}`, pageWidth - margem, pageHeight - 5, { align: 'right' });
+        }
+
+        const nomeData = dataFormatada.replace(/[/:,\s]+/g, '-').replace(/-+/g, '-');
+        doc.save(`carregamento_semana_${semana}_${nomeData}.pdf`);
         alert('✅ PDF gerado com sucesso!');
 
     } catch (error) {
         console.error('Erro ao gerar PDF:', error);
         alert('❌ Erro ao gerar PDF. Tente novamente.');
     } finally {
-        elementoPDF?.remove();
         if (botao) {
             botao.disabled = false;
             botao.innerHTML = '📄 Gerar PDF';
@@ -1130,128 +1087,74 @@ async function gerarPDF() {
     }
 }
 
-/**
- * Gera as linhas da tabela para o PDF
- */
-function gerarLinhasTabela(requisicoes) {
+function agruparItensPDF(requisicoes) {
     const itensAgrupados = {};
 
-    // Agrupa itens idênticos
     requisicoes.forEach(req => {
-        req.itens.forEach(item => {
+        (req.itens || []).forEach(item => {
             const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
             if (itensAgrupados[chave]) {
-                itensAgrupados[chave].quantidade += item.quantidade;
+                itensAgrupados[chave].quantidade += Number(item.quantidade) || 0;
                 itensAgrupados[chave].motivos.push(req.motivo);
             } else {
                 itensAgrupados[chave] = {
                     ...item,
+                    quantidade: Number(item.quantidade) || 0,
                     motivos: [req.motivo]
                 };
             }
         });
     });
 
-    return Object.values(itensAgrupados).map(item => `
-        <tr>
-            <td>${escapeHtml(item.item_nome)}</td>
-            <td>${escapeHtml(item.modelo)}</td>
-            <td>${escapeHtml(item.tipo)}</td>
-            <td style="text-align: center;">${item.quantidade}</td>
-            <td>${escapeHtml([...new Set(item.motivos)].join(', '))}</td>
-        </tr>
-    `).join('');
+    return Object.values(itensAgrupados);
 }
 
-function gerarTabelaItensPDF(requisicoes) {
-    const linhas = gerarLinhasTabela(requisicoes);
-    return `
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Modelo</th>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                    <th>Motivo</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${linhas || '<tr><td colspan="5" class="empty-row">Nenhum item neste grupo.</td></tr>'}
-            </tbody>
-        </table>
-    `;
+function adicionarTituloSecaoPDF(doc, titulo, y, pageWidth, pageHeight, margem, verde) {
+    if (y > pageHeight - 25) {
+        doc.addPage();
+        y = 12;
+    }
+    doc.setFillColor(...verde);
+    doc.rect(margem, y, pageWidth - (margem * 2), 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255);
+    doc.text(titulo, pageWidth / 2, y + 4.2, { align: 'center' });
+    return y + 7;
 }
 
-/**
- * Gera as tabelas de resumo para o PDF.
- */
-function gerarResumoPDF() {
-    const resumo = calcularResumoCarregamento();
-    return `
-        <table>
-            <thead>
-                <tr><th colspan="10">Movimentação de equipamentos</th></tr>
-                <tr>
-                    <th>Entrega demais</th>
-                    <th>Entrega esteiras</th>
-                    <th>Entrega formas</th>
-                    <th>Total entrega</th>
-                    <th>Retorno demais</th>
-                    <th>Retorno esteiras</th>
-                    <th>Retorno formas</th>
-                    <th>Total retorno</th>
-                    <th>Total movimentado</th>
-                    <th>Total clientes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>${resumo.movimentacao.entrega.demais}</td>
-                    <td>${resumo.movimentacao.entrega.esteiras}</td>
-                    <td>${resumo.movimentacao.entrega.formas}</td>
-                    <td><strong>${resumo.movimentacao.entrega.total}</strong></td>
-                    <td>${resumo.movimentacao.retorno.demais}</td>
-                    <td>${resumo.movimentacao.retorno.esteiras}</td>
-                    <td>${resumo.movimentacao.retorno.formas}</td>
-                    <td><strong>${resumo.movimentacao.retorno.total}</strong></td>
-                    <td><strong>${resumo.movimentacao.total}</strong></td>
-                    <td><strong>${resumo.totalClientes}</strong></td>
-                </tr>
-            </tbody>
-        </table>
-        <table>
-            <thead>
-                <tr><th colspan="10">Requisições por motivo</th></tr>
-                <tr>
-                    <th>Cliente novo (req.)</th>
-                    <th>Aumento</th>
-                    <th>Aumento+Troca</th>
-                    <th>Troca</th>
-                    <th>Ret. parcial</th>
-                    <th>Ret. empréstimo</th>
-                    <th>Ret. total</th>
-                    <th>Total requisições</th>
-                    <th>Clientes novos únicos</th>
-                    <th>Total clientes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>${resumo.motivos['Cliente Novo']}</td>
-                    <td>${resumo.motivos['Aumento']}</td>
-                    <td>${resumo.motivos['Aumento+Troca']}</td>
-                    <td>${resumo.motivos['Troca']}</td>
-                    <td>${resumo.motivos['Retirada Parcial']}</td>
-                    <td>${resumo.motivos['Retirada de Empréstimo']}</td>
-                    <td>${resumo.motivos['Retirada Total']}</td>
-                    <td><strong>${resumo.totalRequisicoes}</strong></td>
-                    <td><strong>${resumo.clientesNovos}</strong></td>
-                    <td><strong>${resumo.totalClientes}</strong></td>
-                </tr>
-            </tbody>
-        </table>
-    `;
+function adicionarTabelaItensPDF(doc, titulo, requisicoes, y, pageWidth, pageHeight, margem, verde) {
+    const itens = agruparItensPDF(requisicoes);
+    const inicioTabela = adicionarTituloSecaoPDF(doc, titulo, y, pageWidth, pageHeight, margem, verde);
+    const body = itens.length
+        ? itens.map(item => [
+            item.item_nome || '',
+            item.modelo || '',
+            item.tipo || '',
+            String(item.quantidade),
+            [...new Set(item.motivos)].join(', ')
+        ])
+        : [['Nenhum item neste grupo.', '', '', '', '']];
+
+    doc.autoTable({
+        startY: inicioTabela,
+        margin: { left: margem, right: margem, bottom: 12 },
+        theme: 'grid',
+        head: [['ITEM', 'MODELO', 'TIPO', 'QUANTIDADE', 'MOTIVO']],
+        body,
+        styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
+        headStyles: { fillColor: verde, textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [242, 247, 244] },
+        columnStyles: {
+            0: { cellWidth: 82 },
+            1: { cellWidth: 42 },
+            2: { cellWidth: 28, halign: 'center' },
+            3: { cellWidth: 24, halign: 'center' },
+            4: { cellWidth: 70 }
+        }
+    });
+
+    return doc.lastAutoTable.finalY + 5;
 }
 
 
