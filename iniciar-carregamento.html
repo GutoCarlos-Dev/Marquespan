@@ -23,20 +23,20 @@
         <div class="form-grid">
           <div class="form-group">
             <label for="semana">Semana:</label>
-            <input type="text" id="semana" placeholder="Número da Semana" required class="glass-input">
+            <input type="text" id="semana" placeholder="Ex.: 24-2026" required class="glass-input">
           </div>
           <div class="form-group">
-            <label for="dataCarregamento">Data:</label>
-            <input type="date" id="dataCarregamento" required class="glass-input">
+            <label for="dataCarregamento">Data/Hora:</label>
+            <input type="datetime-local" id="dataCarregamento" step="60" required class="glass-input">
           </div>
           <div class="form-group">
             <label for="placa">Placa do Veículo:</label>
-            <input type="text" id="placa" placeholder="Placa" list="placasVeiculosList" required class="glass-input">
+            <input type="text" id="placa" placeholder="Selecione um veículo cadastrado" list="placasVeiculosList" required class="glass-input">
             <datalist id="placasVeiculosList"></datalist>
           </div>
           <div class="form-group">
             <label for="motoristaInput">Motorista:</label>
-            <input type="text" id="motoristaInput" placeholder="Nome do Motorista" list="motoristasList" required class="glass-input">
+            <input type="text" id="motoristaInput" placeholder="Selecione um motorista ativo" list="motoristasList" required class="glass-input">
             <datalist id="motoristasList"></datalist>
           </div>
           <div class="form-group">
@@ -71,7 +71,7 @@
               <option value="Troca">Troca</option>
               <option value="Aumento+Troca">Aumento+Troca</option>
               <option value="Cliente Novo">Cliente Novo</option>
-              <option value="Retirada Emprestimo">Retirada de Empréstimo</option>
+              <option value="Retirada de Empréstimo">Retirada de Empréstimo</option>
               <option value="Retirada Parcial">Retirada Parcial</option>
               <option value="Retirada Total">Retirada Total</option> 
             </select>
@@ -117,7 +117,7 @@
     </section>
 
     <footer class="footer">
-      &copy; 2025 Marquespan. Todos os direitos reservados.
+      &copy; 2026 Marquespan. Todos os direitos reservados.
     </footer>
   </div>
 
@@ -138,37 +138,6 @@
           </div>
           <div class="form-actions" style="margin-top: 20px;">
             <button type="submit" class="btn-glass btn-green">✅ Salvar Cliente</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Cadastro Veículo -->
-  <div id="modalVeiculo" class="modal-backdrop hidden">
-    <div class="glass-modal">
-      <div class="modal-header">
-        <h3><i class="fas fa-truck"></i> Cadastrar Novo Veículo</h3>
-        <button class="close-button" id="fecharModalVeiculo">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="formNovoVeiculo">
-          <div class="form-grid">
-            <div class="form-group"><label>Filial</label><input type="text" id="filialVeiculoModal" required class="glass-input"></div>
-            <div class="form-group"><label>Placa</label><input type="text" id="placaVeiculoModal" required class="glass-input"></div>
-            <div class="form-group"><label>Modelo</label><input type="text" id="modeloVeiculoModal" required class="glass-input"></div>
-            <div class="form-group"><label>Renavan</label><input type="text" id="renavanVeiculoModal" required class="glass-input"></div>
-            <div class="form-group"><label>Tipo</label><input type="text" id="tipoVeiculoModal" required class="glass-input"></div>
-            <div class="form-group">
-              <label>Situação</label>
-              <select id="situacaoVeiculoModal" required class="glass-input">
-                <option value="Ativo">Ativo</option>
-                <option value="Inativo">Inativo</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-actions" style="margin-top: 20px;">
-            <button type="submit" class="btn-glass btn-green">✅ Salvar Veículo</button>
           </div>
         </form>
       </div>
@@ -199,29 +168,8 @@
     </div>
   </div>
 
-  <!-- Modal Cadastro Motorista -->
-  <div id="modalMotorista" class="modal-backdrop hidden">
-    <div class="glass-modal">
-      <div class="modal-header">
-        <h3><i class="fas fa-truck-moving"></i> Cadastrar Novo Motorista</h3>
-        <button class="close-button" id="fecharModalMotorista">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="formNovoMotorista">
-          <div class="form-grid">
-            <div class="form-group"><label>Nome</label><input type="text" id="nomeMotoristaModal" required class="glass-input"></div>
-            <div class="form-group"><label>Nome Completo</label><input type="text" id="nomeCompletoMotoristaModal" class="glass-input"></div>
-          </div>
-          <div class="form-actions" style="margin-top: 20px;">
-            <button type="submit" class="btn-glass btn-green">✅ Salvar Motorista</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/iniciar-carregamento.js"></script>
+  <script type="module" src="./script/iniciar-carregamento.js?v=20260610-5"></script>
 </body>
 </html>

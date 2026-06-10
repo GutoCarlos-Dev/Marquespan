@@ -5,51 +5,84 @@
   <title>Buscar Carregamento - Marquespan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/iniciar-carregamento.css">
+  <link rel="stylesheet" href="css/buscar-carregamento.css">
 </head>
 <body>
-  <!-- 🟩 Menu Dinâmico -->
   <div id="menu-container"></div>
 
-  <!-- 🧱 Conteúdo principal -->
-  <div class="main-content">
-    <header class="header">🔍 Buscar Carregamento</header>
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-magnifying-glass"></i> Buscar Carregamento</h1>
+    </header>
 
-    <section class="secao">
-      <h3>📋 Filtros de Busca</h3>
-      <div class="campo-busca">
-        <input type="text" id="termoBusca" placeholder="Buscar por placa, requisição ou cliente">
+    <section class="glass-panel">
+      <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
+      <div class="form-grid search-grid">
+        <div class="form-group search-term">
+          <label for="termoBusca">Termo:</label>
+          <input type="search" id="termoBusca" class="glass-input" placeholder="Placa, cliente, motorista, conferente, item ou motivo">
+        </div>
+        <div class="form-group">
+          <label for="dataInicial">Data inicial:</label>
+          <input type="date" id="dataInicial" class="glass-input">
+        </div>
+        <div class="form-group">
+          <label for="dataFinal">Data final:</label>
+          <input type="date" id="dataFinal" class="glass-input">
+        </div>
       </div>
-      <div class="botoes-form">
-        <button id="btnBuscar">🔍 Buscar</button>
-        <button id="btnLimpar">🗑️ Limpar</button>
+      <div class="form-actions search-actions">
+        <button type="button" id="btnLimpar" class="btn-glass btn-red"><i class="fas fa-eraser"></i> Limpar</button>
+        <button type="button" id="btnBuscar" class="btn-glass btn-green"><i class="fas fa-magnifying-glass"></i> Buscar</button>
       </div>
+    </section>
 
-      <table id="tabelaCarregamentos" class="tabela-usuarios">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Placa</th>
-            <th>Requisição</th>
-            <th>Cliente</th>
-            <th>Usuário</th>
-            <th>Situação</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaCarregamentos"></tbody>
-      </table>
+    <section class="glass-panel">
+      <div class="results-header">
+        <h3><i class="fas fa-truck-loading"></i> Carregamentos</h3>
+        <span id="totalResultados" class="result-count">0 registros</span>
+      </div>
+      <div class="table-responsive">
+        <table id="tabelaCarregamentos" class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Semana</th>
+              <th>Placa</th>
+              <th>Motorista</th>
+              <th>Clientes</th>
+              <th>Requisições</th>
+              <th>Conferente</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaCarregamentos">
+            <tr><td colspan="8" class="empty-cell">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <footer class="footer">
-      &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+      &copy; 2026 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>
+  </main>
+
+  <div id="modalDetalhesCarregamento" class="modal-backdrop hidden">
+    <div class="glass-modal details-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-clipboard-list"></i> Detalhes do Carregamento</h3>
+        <button type="button" class="close-button" id="fecharModalDetalhes">&times;</button>
+      </div>
+      <div class="modal-body" id="conteudoDetalhesCarregamento"></div>
+    </div>
   </div>
 
-  <!-- 🚀 Scripts -->
-  <script type="module" src="./script/menu.js" defer></script>
   <script type="module" src="./script/auth-guard.js"></script>
-  
-
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/buscar-carregamento.js?v=20260610-3"></script>
 </body>
 </html>

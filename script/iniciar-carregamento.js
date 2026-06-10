@@ -3,6 +3,74 @@ import { supabaseClient as supabase } from './supabase.js';
 // === CONSTANTES PARA CONTROLE DE MOTIVOS ===
 const MOTIVOS_QUE_ADICIONAM = ['Aumento', 'Aumento+Troca', 'Cliente Novo'];
 const MOTIVOS_QUE_NAO_ADICIONAM = ['Troca', 'Retirada Parcial', 'Retirada Total', 'Retirada de Empréstimo'];
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
+function obterPartesDataHoraSaoPaulo(date = new Date()) {
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+}
+
+function obterDataHoraLocalAtual() {
+    const partes = obterPartesDataHoraSaoPaulo();
+    return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+}
+
+function obterHoraLocalAtual() {
+    const partes = obterPartesDataHoraSaoPaulo();
+    return `${partes.hour}:${partes.minute}`;
+}
+
+function formatarDataHoraLocal(value) {
+    if (!value) return '';
+    const data = new Date(`${value}:00-03:00`);
+    if (Number.isNaN(data.getTime())) return '';
+    return data.toLocaleString('pt-BR', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function converterDataHoraSaoPauloParaIso(value) {
+    const data = new Date(`${value}:00-03:00`);
+    return Number.isNaN(data.getTime()) ? null : data.toISOString();
+}
+
+function obterSemanaIso(value) {
+    const dataTexto = String(value || '').slice(0, 10);
+    const match = dataTexto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+
+    const data = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    const diaSemana = data.getUTCDay() || 7;
+    data.setUTCDate(data.getUTCDate() + 4 - diaSemana);
+
+    const anoIso = data.getUTCFullYear();
+    const inicioAno = new Date(Date.UTC(anoIso, 0, 1));
+    const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
+    return `${String(semana).padStart(2, '0')}-${anoIso}`;
+}
+
+function preencherSemanaPelaData() {
+    const campoSemana = document.getElementById('semana');
+    const campoData = document.getElementById('dataCarregamento');
+    if (!campoSemana || !campoData) return;
+
+    campoSemana.value = obterSemanaIso(campoData.value);
+}
 
 // === ESTADO DA APLICAÇÃO ===
 let carregamentoState = {
@@ -82,6 +150,14 @@ function obterIdMotoristaPorTexto(textoDigitado) {
     return null;
 }
 
+function valorExisteNoDatalist(datalistId, value) {
+    const valor = String(value || '').trim().toUpperCase();
+    if (!valor) return false;
+
+    return Array.from(document.getElementById(datalistId)?.options || [])
+        .some(option => String(option.value || '').trim().toUpperCase() === valor);
+}
+
 /**
  * Obtém o ID do item selecionado a partir do texto digitado.
  * @param {string} textoDigitado O texto digitado no campo item
@@ -131,7 +207,7 @@ async function carregarVeiculosNoDatalist() {
 
     const { data: veiculos, error } = await supabase
         .from('veiculos')
-        .select('placa')
+        .select('placa, modelo, situacao')
         .order('placa', { ascending: true });
 
     if (error) {
@@ -139,8 +215,13 @@ async function carregarVeiculosNoDatalist() {
         return;
     }
 
-    veiculos.forEach(veiculo => {
-        datalist.innerHTML += `<option value="${veiculo.placa}"></option>`;
+    veiculos
+        .filter(veiculo => !veiculo.situacao || String(veiculo.situacao).toLowerCase() === 'ativo')
+        .forEach(veiculo => {
+        const option = document.createElement('option');
+        option.value = veiculo.placa;
+        option.label = veiculo.modelo || '';
+        datalist.appendChild(option);
     });
 }
 
@@ -432,20 +513,20 @@ async function carregarMotoristasNoDatalist() {
 
     const { data: motoristas, error } = await supabase
         .from('funcionario')
-        .select('id, nome')
+        .select('id, nome, nome_completo, funcao, status')
         .ilike('funcao', 'Motorista%')
         .eq('status', 'Ativo')
         .order('nome', { ascending: true });
 
     if (error) {
         console.error('Erro ao carregar motoristas:', error);
-        selectMotorista.innerHTML = '<option value="">Erro ao carregar</option>';
         return;
     }
 
     motoristas.forEach(motorista => {
         const option = document.createElement('option');
         option.value = motorista.nome;
+        option.label = motorista.nome_completo || motorista.funcao || '';
         option.setAttribute('data-id', motorista.id);
         datalist.appendChild(option);
     });
@@ -527,123 +608,6 @@ async function salvarNovoCliente(event) {
     if (clienteInput) {
         clienteInput.value = `${data.codigo} - ${data.nome}`;
     }
-}
-
-/**
- * Salva um novo veículo a partir do modal.
- */
-async function salvarNovoVeiculo(event) {
-    event.preventDefault();
-
-    const filial = document.getElementById('filialVeiculoModal').value.trim();
-    const placa = document.getElementById('placaVeiculoModal').value.trim().toUpperCase();
-    const modelo = document.getElementById('modeloVeiculoModal').value.trim();
-    const renavan = document.getElementById('renavanVeiculoModal').value.trim();
-    const tipo = document.getElementById('tipoVeiculoModal').value.trim();
-    const situacao = document.getElementById('situacaoVeiculoModal').value;
-
-    // Validação dos campos obrigatórios
-    if (!filial || !placa || !modelo || !renavan || !tipo) {
-        alert('⚠️ Preencha todos os campos obrigatórios.');
-        return;
-    }
-
-    // Validação do formato da placa (formato brasileiro)
-    const placaRegex = /^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9]{1}[A-Z]{1}[0-9]{2}$/;
-    if (!placaRegex.test(placa)) {
-        alert('⚠️ Formato da placa inválido. Use o formato ABC1234 ou ABC1D23.');
-        return;
-    }
-
-    // Verificar se a placa já existe
-    const { data: veiculoExistente, error: erroVerificacao } = await supabase
-        .from('veiculos')
-        .select('id')
-        .eq('placa', placa)
-        .single();
-
-    if (erroVerificacao && erroVerificacao.code !== 'PGRST116') {
-        console.error('Erro ao verificar placa:', erroVerificacao);
-        alert('❌ Erro ao verificar se a placa já existe.');
-        return;
-    }
-
-    if (veiculoExistente) {
-        alert('❌ Já existe um veículo cadastrado com esta placa.');
-        return;
-    }
-
-    // Preparar dados do veículo com todos os campos necessários
-    const veiculoData = {
-        filial,
-        placa,
-        modelo,
-        renavan,
-        tipo,
-        situacao,
-        marca: '', // Campo adicional que pode ser necessário
-        chassi: null,
-        anofab: null,
-        anomod: null,
-        qtdtanque: null,
-        qrcode: null
-    };
-
-    const { data, error } = await supabase
-        .from('veiculos')
-        .insert([veiculoData])
-        .select();
-
-    if (error) {
-        console.error('Erro detalhado do Supabase:', error);
-        alert(`❌ Erro ao salvar veículo: ${error.message || 'Erro desconhecido'}. Verifique os dados e tente novamente.`);
-        return;
-    }
-
-    alert('✅ Veículo salvo com sucesso!');
-
-    // Fechar modal e resetar formulário
-    document.getElementById('formNovoVeiculo').reset();
-    document.getElementById('modalVeiculo').style.display = 'none';
-
-    // Recarregar a lista de veículos e preencher o campo com a nova placa
-    await carregarVeiculosNoDatalist();
-    document.getElementById('placa').value = placa;
-}
-
-/**
- * Salva um novo motorista a partir do modal.
- */
-async function salvarNovoMotorista(event) {
-    event.preventDefault();
-
-    const nome = document.getElementById('nomeMotoristaModal').value.trim();
-    const nome_completo = document.getElementById('nomeCompletoMotoristaModal').value.trim();
-
-    if (!nome) {
-        alert('⚠️ O campo "Nome" é obrigatório.');
-        return;
-    }
-
-    const { data, error } = await supabase
-        .from('motoristas')
-        .insert([{ nome, nome_completo }])
-        .select('id')
-        .single();
-
-    if (error) {
-        alert('❌ Erro ao salvar motorista.');
-        console.error(error);
-        return;
-    }
-
-    alert('✅ Motorista salvo com sucesso!');
-    document.getElementById('formNovoMotorista').reset();
-    document.getElementById('modalMotorista').style.display = 'none';
-
-    // Recarrega a lista de motoristas e seleciona o novo
-    await carregarMotoristasNoDatalist();
-    document.getElementById('motoristaInput').value = data.nome;
 }
 
 /**
@@ -867,8 +831,8 @@ async function gerarPDF() {
 
         const motoristaNome = await getMotoristaNomeById(motoristaId);
 
-        // Formata a data
-        const dataFormatada = new Date(dataCarregamento).toLocaleDateString('pt-BR');
+        // Formata a data e hora informadas no formulario.
+        const dataFormatada = formatarDataHoraLocal(dataCarregamento);
 
         // Cria o conteúdo HTML do PDF seguindo o layout especificado
         const conteudoPDF = `
@@ -978,7 +942,7 @@ async function gerarPDF() {
                 <div class="info-section">
                     <div class="info-grid">
                         <div class="info-item"><span class="info-label">SEMANA:</span> ${semana || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">DATA:</span> ${dataFormatada || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">DATA/HORA:</span> ${dataFormatada || 'N/A'}</div>
                         <div class="info-item"><span class="info-label">PLACA:</span> ${placa || 'N/A'}</div>
                         <div class="info-item"><span class="info-label">MOTORISTA:</span> ${motoristaNome || 'N/A'}</div>
                         <div class="info-item"><span class="info-label">CONFERENTE:</span> ${conferente || 'N/A'}</div>
@@ -1018,7 +982,7 @@ async function gerarPDF() {
         // Configurações do PDF melhoradas
         const opcoes = {
             margin: [1, 1, 1, 1], // Margens: topo, direita, baixo, esquerda
-            filename: `carregamento_semana_${semana}_${dataFormatada.replace(/\//g, '-')}.pdf`,
+            filename: `carregamento_semana_${semana}_${dataFormatada.replace(/[/:,\s]/g, '-')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
                 scale: 2,
@@ -1185,22 +1149,38 @@ function renderizarTabelaTrocaRetirada() {
 async function salvarCarregamentoCompleto() {
     // 1. Validações
     const semana = document.getElementById('semana').value.trim();
-    const data = document.getElementById('dataCarregamento').value;
+    const dataLocal = document.getElementById('dataCarregamento').value;
     const placa = document.getElementById('placa').value.trim();
     const motoristaTexto = document.getElementById('motoristaInput').value.trim();
     const motoristaId = obterIdMotoristaPorTexto(motoristaTexto);
     const conferente = document.getElementById('conferente').value.trim();
     const supervisor = document.getElementById('supervisor').value.trim();
 
+    if (!valorExisteNoDatalist('placasVeiculosList', placa)) {
+        alert('⚠️ Selecione uma placa válida cadastrada em Veículos.');
+        return;
+    }
+
     if (!motoristaId) {
-        alert('⚠️ Selecione um motorista válido da lista.');
+        alert('⚠️ Selecione um motorista ativo cadastrado em Funcionários.');
+        return;
+    }
+
+    if (supervisor && !valorExisteNoDatalist('supervisoresList', supervisor)) {
+        alert('⚠️ Selecione um supervisor ativo cadastrado em Supervisores.');
         return;
     }
 
     const motoristaNome = await getMotoristaNomeById(motoristaId);
 
-    if (!semana || !data || !placa || !conferente) {
-        alert('⚠️ Preencha todos os campos obrigatórios do cabeçalho (Semana, Data, Placa, Motorista, Conferente).');
+    if (!semana || !dataLocal || !placa || !conferente) {
+        alert('⚠️ Preencha todos os campos obrigatórios do cabeçalho (Semana, Data/Hora, Placa, Motorista, Conferente).');
+        return;
+    }
+
+    const data = converterDataHoraSaoPauloParaIso(dataLocal);
+    if (!data) {
+        alert('⚠️ Informe uma data e hora válidas.');
         return;
     }
     if (carregamentoState.requisicoesCarregamento.length === 0 && carregamentoState.requisicoesTrocaRetirada.length === 0) {
@@ -1211,7 +1191,7 @@ async function salvarCarregamentoCompleto() {
     // 2. Insere o cabeçalho do carregamento
     const { data: carregamentoData, error: carregamentoError } = await supabase
         .from('carregamentos')
-        .insert([{ semana, data, placa, motorista_nome: motoristaNome, conferente_nome: conferente, supervisor_nome: supervisor }])
+        .insert([{ semana, data_hora: data, placa, motorista_nome: motoristaNome, conferente_nome: conferente, supervisor_nome: supervisor }])
         .select('id')
         .single();
 
@@ -1303,7 +1283,7 @@ function checkForImportedData() {
                 const dateParts = data.data.split('/');
                 if (dateParts.length === 3) {
                     const formattedDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
-                    document.getElementById('dataCarregamento').value = formattedDate;
+                    document.getElementById('dataCarregamento').value = `${formattedDate}T${obterHoraLocalAtual()}`;
                 }
             }
 
@@ -1402,7 +1382,10 @@ document.addEventListener('DOMContentLoaded', () => {
     checkForImportedData();
 
     // Preenche campos automáticos
-    document.getElementById('dataCarregamento').valueAsDate = new Date();
+    const campoDataCarregamento = document.getElementById('dataCarregamento');
+    campoDataCarregamento.value = obterDataHoraLocalAtual();
+    preencherSemanaPelaData();
+    campoDataCarregamento.addEventListener('change', preencherSemanaPelaData);
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (usuario && usuario.nome) {
         document.getElementById('conferente').value = usuario.nome;
@@ -1413,14 +1396,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAbrirCliente = document.getElementById('btnAbrirModalCliente');
     const btnFecharCliente = document.getElementById('fecharModalCliente');
 
-    btnAbrirCliente.onclick = () => { modalCliente.style.display = 'block'; }
+    btnAbrirCliente.onclick = () => { modalCliente.style.display = 'flex'; }
     btnFecharCliente.onclick = () => { modalCliente.style.display = 'none'; }
-
-    // Lógica para o Modal de Veículos
-    const modalVeiculo = document.getElementById('modalVeiculo');
-    const btnFecharVeiculo = document.getElementById('fecharModalVeiculo');
-
-    btnFecharVeiculo.onclick = () => { modalVeiculo.style.display = 'none'; }
 
     // Lógica para o Modal de Adicionar Item
     const modalAdicionarItem = document.getElementById('modalAdicionarItem');
@@ -1431,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const buscaItens = document.getElementById('buscaItens');
 
     btnAbrirAdicionarItem.onclick = async () => {
-        modalAdicionarItem.style.display = 'block';
+        modalAdicionarItem.style.display = 'flex';
         await carregarTodosItensParaModal();
     }
 
@@ -1462,32 +1439,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lógica para o Modal de Motorista
-    const modalMotorista = document.getElementById('modalMotorista');
-    const btnFecharMotorista = document.getElementById('fecharModalMotorista');
-
-    btnFecharMotorista.onclick = () => { modalMotorista.style.display = 'none'; }
-
     // Lógica para fechar modais clicando fora
     window.addEventListener('click', (event) => {
         if (event.target == modalCliente) {
             modalCliente.style.display = 'none';
         }
-        if (event.target == modalVeiculo) {
-            modalVeiculo.style.display = 'none';
-        }
         if (event.target == modalAdicionarItem) {
             modalAdicionarItem.style.display = 'none';
-        }
-        if (event.target == modalMotorista) {
-            modalMotorista.style.display = 'none';
         }
     });
 
     // Event Listeners dos formulários e botões principais
     document.getElementById('formNovoCliente').addEventListener('submit', salvarNovoCliente);
-    document.getElementById('formNovoVeiculo').addEventListener('submit', salvarNovoVeiculo);
-    document.getElementById('formNovoMotorista').addEventListener('submit', salvarNovoMotorista);
     document.getElementById('btnIncluirRequisicao').addEventListener('click', handleIncluirRequisicao);
     document.getElementById('btnSalvarCarregamento').addEventListener('click', salvarCarregamentoCompleto);
     document.getElementById('btnGerarPDF').addEventListener('click', gerarPDF);

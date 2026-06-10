@@ -9,21 +9,22 @@ async function obterProximoCodigoItem() {
   const { data, error } = await supabaseClient
     .from('itens')
     .select('codigo')
-    .order('codigo', { ascending: false, nullsFirst: false, foreignTable: undefined }) // Ordena como número
-    .limit(1)
-    .single();
+    .limit(1000);
 
-  if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
+  if (error) {
     console.error('Erro ao obter o próximo código:', error);
     return null;
   }
 
-  if (!data || !data.codigo) {
+  if (!data?.length) {
     return '1'; // Se não houver itens, começa com 1
   }
 
-  const codigoInt = parseInt(data.codigo, '');
-  return !isNaN(codigoInt) ? (codigoInt + 1).toString() : '1';
+  const maiorCodigo = data.reduce((maior, item) => {
+    const codigo = parseInt(item.codigo, 10);
+    return Number.isFinite(codigo) ? Math.max(maior, codigo) : maior;
+  }, 0);
+  return String(maiorCodigo + 1);
 }
 
 // === ITENS ===
@@ -55,8 +56,8 @@ export async function carregarItens() {
       <td>${item.nome}</td>
       <td>${item.tipo}</td>
       <td>
-        <button onclick="editarItem('${item.id}')">✏️</button>
-        <button onclick="excluirItem('${item.id}')">🗑️</button>
+        <button class="btn-icon edit" onclick="editarItem('${item.id}')" title="Editar"><i class="fas fa-pen"></i></button>
+        <button class="btn-icon delete" onclick="excluirItem('${item.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
     corpoTabela.appendChild(linha);
@@ -202,8 +203,8 @@ export async function carregarClientes() {
       <td>${cliente.cidade}</td>
       <td>${cliente.estado}</td>
       <td>
-        <button onclick="editarCliente('${cliente.id}')">✏️</button>
-        <button onclick="excluirCliente('${cliente.id}')">🗑️</button>
+        <button class="btn-icon edit" onclick="editarCliente('${cliente.id}')" title="Editar"><i class="fas fa-pen"></i></button>
+        <button class="btn-icon delete" onclick="excluirCliente('${cliente.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
     corpoTabela.appendChild(linha);
@@ -317,8 +318,8 @@ export async function carregarMotoristas() {
       <td>${motorista.nome}</td>
       <td>${motorista.nome_completo || ''}</td>
       <td>
-        <button onclick="editarMotorista('${motorista.id}')">✏️</button>
-        <button onclick="excluirMotorista('${motorista.id}')">🗑️</button>
+        <button class="btn-icon edit" onclick="editarMotorista('${motorista.id}')" title="Editar"><i class="fas fa-pen"></i></button>
+        <button class="btn-icon delete" onclick="excluirMotorista('${motorista.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
     corpoTabela.appendChild(linha);
