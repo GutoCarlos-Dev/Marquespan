@@ -837,6 +837,7 @@ function preencherVeiculoNaLinha(row, substituirValores = false) {
         row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
     }
     row.status_percentual = calcularPercentual(row);
+    row._dirty = true;
 }
 
 function renderGrid() {
@@ -1209,6 +1210,7 @@ function handleGridInput(event) {
     } else {
         row[field] = value;
     }
+    row._dirty = true;
 
     if (field === 'semana') {
         aplicarRetornoPrevisto(row);
@@ -1237,6 +1239,8 @@ async function handleGridChange(event) {
     const rowIndex = Number(event.target.dataset.rowIndex);
     const row = gridData[rowIndex];
     if (!row) return;
+
+    row._dirty = true;
 
     if (field === 'placa') {
         await buscarEPreencherVeiculo(row, rowIndex);
@@ -1420,6 +1424,7 @@ function adicionarLinha() {
         semana_ano: getSemanaAnoSelecionada(),
         dia_retorno: calcularDataRetornoPrevista(getSemanaAnoSelecionada(), semana, 1)
     });
+    row._dirty = true;
 
     gridData.push(row);
     renderGrid();
@@ -1440,14 +1445,14 @@ async function salvarTudo() {
         await preencherVeiculosDasLinhas();
 
         let payload = gridData
-            .filter(row => normalizarTexto(row.rota))
+            .filter(row => row._dirty && normalizarTexto(row.rota))
             .filter(row => row.id || temDadosPreenchidos(row))
             .map(row => prepararPayload(row));
 
         payload = deduplicarPayloadPorRota(payload);
 
         if (payload.length === 0) {
-            alert('Nenhuma rota preenchida para salvar.');
+            alert('Nenhuma alteração para salvar.');
             return;
         }
 
@@ -1482,6 +1487,7 @@ async function salvarTudo() {
         }
 
         atualizarIdsSalvos(data || []);
+        gridData.forEach(row => { row._dirty = false; });
         await carregarDados();
         alert(`${data.length} linha(s) de peso de rota salvas e conferidas no banco.`);
     } catch (error) {
