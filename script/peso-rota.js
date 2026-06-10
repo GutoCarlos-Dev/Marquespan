@@ -99,6 +99,15 @@ function getUserFilial() {
     }
 }
 
+function getUsuarioLogadoNome() {
+    try {
+        const u = JSON.parse(localStorage.getItem('usuarioLogado'));
+        return u?.nome || u?.usuario_login || u?.email || 'Sistema';
+    } catch {
+        return 'Sistema';
+    }
+}
+
 const ORDEM_DIAS_ROTA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
 const CLASSES_DIA_RETORNO = [
     'dia-retorno-segunda',
@@ -609,7 +618,7 @@ function aplicarRetornoPrevisto(row) {
 
 async function carregarDados() {
     const tbody = document.getElementById('tbodyPesoRota');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="16" class="loading-cell">Carregando...</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="17" class="loading-cell">Carregando...</td></tr>`;
 
     try {
         veiculosPorPlaca.clear();
@@ -652,7 +661,7 @@ async function carregarDados() {
     } catch (error) {
         console.error('Erro ao carregar peso de rota:', error);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="16" class="loading-cell error-cell">Erro ao carregar dados. Verifique se a tabela peso_rota foi criada/atualizada.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="17" class="loading-cell error-cell">Erro ao carregar dados. Verifique se a tabela peso_rota foi criada/atualizada.</td></tr>`;
         }
     }
 }
@@ -834,7 +843,7 @@ function renderGrid() {
 
     const linhas = getLinhasVisiveis();
     if (linhas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="16" class="loading-cell">Nenhuma rota encontrada.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="17" class="loading-cell">Nenhuma rota encontrada.</td></tr>`;
         atualizarContadores();
         return;
     }
@@ -882,6 +891,12 @@ function ordenarLinhas(linhas) {
     });
 }
 
+function formatarAuditoria(por, em) {
+    if (!por && !em) return '<span class="audit-vazio">Não salvo</span>';
+    const data = em ? new Date(em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    return `<span class="audit-usuario">${escapeHtml(por || '')}</span>${data ? `<span class="audit-data">${data}</span>` : ''}`;
+}
+
 function renderLinha(row, index) {
     const status = getStatus(row);
     const retornoStatus = getStatusPrazoRetorno(row);
@@ -905,6 +920,7 @@ function renderLinha(row, index) {
             <td class="col-data dia-retorno-cell ${classeDiaRetorno} ${retornoStatus ? `retorno-${retornoStatus}-cell` : ''}">${selectDiaRetorno(index, row.dia_semana_retorno)}</td>
             <td class="col-hora ${horarioChegadaAlerta ? 'horario-chegada-alerta' : ''}">${inputTime(index, 'horario_chegada', row.horario_chegada)}</td>
             <td class="col-descricao">${textarea(index, 'descricao', row.descricao)}</td>
+            <td class="col-auditoria">${formatarAuditoria(row.ultima_alteracao_por, row.ultima_alteracao_em)}</td>
         </tr>
     `;
 }
@@ -1581,7 +1597,9 @@ function prepararPayload(row) {
         dia_retorno: row.dia_retorno || getDataDaSemana(getSemanaAnoSelecionada(), row.semana),
         horario_chegada: row.horario_chegada || null,
         descricao: normalizarTexto(row.descricao) || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        ultima_alteracao_por: getUsuarioLogadoNome(),
+        ultima_alteracao_em: new Date().toISOString()
     };
 
     return payload;
